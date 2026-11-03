@@ -341,6 +341,10 @@
         // 21/10/2026: pendências da Assistência técnica abrem o chamado, a O.S. ou a fila (JS_Assistencia.html).
         if (typeof Assistencia_irPara_ === "function") Assistencia_irPara_(acao); else abrir(acao.mod || "assistencia");
         break;
+      case "representacao":
+        // 03/11/2026: pedido da representada (aviso na tela, pendência e link do WhatsApp) abre o pedido em Representação > Pedidos
+        if (typeof Representacao_irPara_ === "function") Representacao_irPara_(acao); else abrir("representacao");
+        break;
       case "licitacao":
         // 02/11/2026: link de alerta de licitação abre a ficha da oportunidade na aba Prazos (JS_Licitacoes.html).
         if (typeof Licitacoes_irPara_ === "function") Licitacoes_irPara_(acao); else abrir("licitacoes");

@@ -17,19 +17,23 @@
  *  - Toda leitura da visão da representada passa por Rep_escopo_(eu): só o que é da representada do usuário. Registro de
  *    outra representada recebe a mesma resposta de "não encontrado" que um registro que não existe.
  *
- * Tabelas novas (todas com REPRESENTADA_ID): REP_REPRESENTADAS, REP_MODELOS, REP_MENSAGENS (só inclusão), REP_ANEXOS,
+ * Tabelas novas (todas com REPRESENTADA_ID): REP_REPRESENTADAS, REP_MODELOS (e REP_MODELOS_HIST, 03/11/2026), REP_MENSAGENS (só inclusão), REP_ANEXOS,
  * REP_ACESSOS (ações da representada no módulo: buscas, cadastros, pedidos, cancelamentos) e REP_DOCUMENTOS (documentos A4
  * gerados, com o público que pode abrir; 29/10/2026).
  * Colunas novas (só acrescentadas): CAD_USUARIOS, ATEC_CHAMADOS, ATEC_SOLICITACOES, CAD_EQUIPAMENTOS, CAD_CLIENTES, CAD_UNIDADES, ATEC_FOTOS.
  * Nenhuma função devolve Date cru.
  ****************************************************/
 
-var REP_ABAS = { REPRESENTADAS: 'REP_REPRESENTADAS', ACESSOS: 'REP_ACESSOS', MODELOS: 'REP_MODELOS', MENSAGENS: 'REP_MENSAGENS', ANEXOS: 'REP_ANEXOS', DOCUMENTOS: 'REP_DOCUMENTOS' };
+var REP_ABAS = { REPRESENTADAS: 'REP_REPRESENTADAS', ACESSOS: 'REP_ACESSOS', MODELOS: 'REP_MODELOS', MENSAGENS: 'REP_MENSAGENS', ANEXOS: 'REP_ANEXOS', DOCUMENTOS: 'REP_DOCUMENTOS', MODELOS_HIST: 'REP_MODELOS_HIST' };
 var REP_COLUNAS = {
   REP_REPRESENTADAS: ['ID', 'NOME', 'CNPJ', 'SITUACAO', 'CONTRATO', 'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'CONTATO_NOME', 'CONTATO_EMAIL', 'PRAZOS_JSON', 'OBS',
     'CRIADO_POR_NOME', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   REP_ACESSOS: ['ID', 'REPRESENTADA_ID', 'USUARIO_ID', 'USUARIO_NOME', 'EMAIL', 'ACAO', 'DETALHE', 'IP', 'NAVEGADOR', 'EM'],
-  REP_MODELOS: ['ID', 'REPRESENTADA_ID', 'CODIGO', 'NOME', 'FAMILIA', 'TIPO_EQUIPAMENTO', 'GARANTIA_MESES', 'PADRAO_SERIE', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  // 03/11/2026: a representada cadastra os próprios modelos (SGO_Representacao_Modelos.js): quem cadastrou, de que lado, e a inativação
+  REP_MODELOS: ['ID', 'REPRESENTADA_ID', 'CODIGO', 'NOME', 'FAMILIA', 'TIPO_EQUIPAMENTO', 'GARANTIA_MESES', 'PADRAO_SERIE', 'ATIVO', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM',
+    'CRIADO_POR_LADO', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_POR_LADO', 'ATUALIZADO_POR_ID', 'INATIVADO_EM', 'INATIVADO_POR_NOME'],
+  // 03/11/2026: histórico de cada modelo (uma linha por mudança: quem, de que lado, quando, antes e depois, motivo); só inclusão
+  REP_MODELOS_HIST: ['ID', 'REPRESENTADA_ID', 'MODELO_ID', 'CODIGO', 'ACAO', 'LADO', 'POR_ID', 'POR_NOME', 'ANTES_JSON', 'DEPOIS_JSON', 'MOTIVO', 'EM', 'CRIADO_EM'],
   REP_MENSAGENS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'REF_NUMERO', 'AUTOR_LADO', 'AUTOR_ID', 'AUTOR_NOME', 'TEXTO', 'INTERNA', 'RESPONDE_A', 'ANEXO_ID', 'EM', 'CRIADO_EM'],
   REP_ANEXOS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'TIPO', 'NOME', 'MIME', 'TAMANHO', 'SHA256', 'ARQUIVO_ID', 'PUBLICO', 'POR_LADO', 'POR_ID', 'POR_NOME', 'EM', 'CRIADO_EM'],
   // 29/10/2026: documentos A4 gerados (relatório do atendimento e do período), com o público que pode abrir (SGO_Representacao_Documentos.js)
@@ -38,7 +42,7 @@ var REP_COLUNAS = {
 };
 var REP_COLUNAS_TEXTO = {
   REP_REPRESENTADAS: ['CNPJ', 'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'ATUALIZADO_EM'],
-  REP_ACESSOS: ['EM'], REP_MODELOS: ['CODIGO', 'ATUALIZADO_EM'], REP_MENSAGENS: ['EM', 'REF_NUMERO'], REP_ANEXOS: ['EM', 'SHA256'],
+  REP_ACESSOS: ['EM'], REP_MODELOS: ['CODIGO', 'ATUALIZADO_EM', 'INATIVADO_EM'], REP_MENSAGENS: ['EM', 'REF_NUMERO'], REP_ANEXOS: ['EM', 'SHA256'], REP_MODELOS_HIST: ['EM', 'CODIGO'],
   REP_DOCUMENTOS: ['EM', 'NUMERO', 'CHAMADO_NUMERO', 'PERIODO_DE', 'PERIODO_ATE', 'MARCA']
 };
 /** Colunas acrescentadas em tabelas que já existem (nada é apagado nem renomeado). */
@@ -47,7 +51,9 @@ var REP_COLUNAS_EXTRAS = {
   ATEC_CHAMADOS: ['REPRESENTADA_ID', 'REPRESENTADA_NOME', 'PROTOCOLO_REPRESENTADA', 'ENQUADRAMENTO_PRETENDIDO', 'REP_SEM_REGISTRO_ALERTA_EM'],
   ATEC_SOLICITACOES: ['REPRESENTADA_ID', 'REPRESENTADA_NOME', 'PROTOCOLO_REPRESENTADA', 'RELATO_JSON', 'ENQUADRAMENTO_PRETENDIDO', 'SETOR', 'CONTATO_NOME',
     'CONTATO_TELEFONE', 'CONTATO_EMAIL', 'COMPLEMENTO_PERGUNTA', 'COMPLEMENTO_EM', 'COMPLEMENTO_POR_NOME', 'COMPLEMENTO_RESPOSTA', 'COMPLEMENTO_RESPONDIDO_EM',
-    'ACEITE_MIN_UTEIS', 'PAUSA_DESDE', 'PAUSA_MIN', 'ALERTA_RISCO_EM', 'ALERTA_VENCIDO_EM', 'CANCELADA_EM', 'CANCELADA_MOTIVO', 'CANCELADA_POR_NOME', 'ATUALIZADO_EM'],
+    'ACEITE_MIN_UTEIS', 'PAUSA_DESDE', 'PAUSA_MIN', 'ALERTA_RISCO_EM', 'ALERTA_VENCIDO_EM', 'CANCELADA_EM', 'CANCELADA_MOTIVO', 'CANCELADA_POR_NOME', 'ATUALIZADO_EM',
+    // 03/11/2026: avisos com ciência na central de Avisos (pedido novo e prazo em risco), para não repetir e para arquivar quando o pedido é tratado
+    'AVISO_CIENCIA_ID', 'AVISO_RISCO_ID'],
   CAD_EQUIPAMENTOS: ['DATA_INSTALACAO', 'NF_VENDA_NUMERO', 'NF_VENDA_DATA', 'NF_VENDA_ARQUIVO_ID', 'GARANTIA_MESES', 'GARANTIA_ATE', 'REVENDA', 'MODELO_CODIGO',
     'ORIGEM_REPRESENTADA_ID', 'FOTO_ETIQUETA_ARQUIVO_ID', 'CRIADO_POR_NOME', 'CRIADO_PELA_REPRESENTADA_EM'],
   CAD_CLIENTES: ['ORIGEM', 'ORIGEM_REPRESENTADA_ID'],
@@ -124,7 +130,7 @@ var REP_MEMO = {};
 function Rep_memoLimpar_() { REP_MEMO = {}; }
 function Rep_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V2')) return; } catch (e) { cache = null; }
+  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V3')) return; } catch (e) { cache = null; }
   Object.keys(REP_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, REP_COLUNAS[aba]);
     REP_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
@@ -134,7 +140,7 @@ function Rep_garantirAbas_() {
     REP_COLUNAS_EXTRAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (REP_COLUNAS_EXTRAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('REP_ABAS_OK_V2', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('REP_ABAS_OK_V3', '1', 21600); } catch (e) {}
 }
 function Rep_ler_(aba) {
   if (REP_MEMO[aba]) return REP_MEMO[aba];

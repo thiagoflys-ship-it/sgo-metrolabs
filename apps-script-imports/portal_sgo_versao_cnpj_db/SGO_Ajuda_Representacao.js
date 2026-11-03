@@ -5,6 +5,8 @@
  * sem termos internos; é a que a pessoa da representada lê na aba "Como usar" do módulo, Representacao_api > ajuda).
  * Texto conferido com JS_Representacao.html, SGO_Representacao.js, SGO_Representacao_Config.js e
  * SGO_Representacao_Avisos.js. Texto puro, sem HTML.
+ * 03/11/2026: catálogo de modelos pela representada (SGO_Representacao_Modelos.js) e aviso na tela, aviso com ciência e
+ * WhatsApp dos pedidos novos (SGO_Representacao_Alertas.js).
  ****************************************************/
 function SGO_ajudaTelas_Representacao_() {
   return {
@@ -14,7 +16,7 @@ function SGO_ajudaTelas_Representacao_() {
       antesDeComecar: [
         "A pessoa da representada entra no SGO+ pela entrada normal, com o e-mail cadastrado e a senha (perfil \"Representada\"); se esquecer a senha, usa \"Esqueci minha senha\" na tela de entrada. Ela só vê o módulo Representação e só os pedidos e chamados da empresa dela.",
         "As contas da representada são criadas e inativadas em Administração > Usuários: perfil \"Representada\", a empresa (representada) e o papel (administrador da representada, atendente, financeiro de garantia ou leitura).",
-        "Antes de criar a primeira conta, cadastre a representada na aba \"Representadas\" e os modelos dela na aba \"Catálogo de modelos\" (código, nome, tipo de equipamento e garantia em meses). Sem modelo no catálogo, a representada não consegue cadastrar equipamento.",
+        "Antes de criar a primeira conta, cadastre a representada na aba \"Representadas\". Os modelos a própria representada cadastra (na abertura do pedido ou no catálogo dela); a Metrolabs também pode incluir na aba \"Catálogo de modelos\".",
         "Quem responde pela representação fica em Assistência técnica > Regras da assistência > Representação. Sem ninguém lá, os pedidos vão para quem faz a triagem."
       ],
       passos: [
@@ -34,6 +36,14 @@ function SGO_ajudaTelas_Representacao_() {
           "Recusar: escreva o motivo (por exemplo, equipamento que não é da representada ou cliente fora da área de atendimento). A representada vê o motivo e recebe e-mail.",
           "Os mesmos botões aparecem em Assistência técnica > Solicitações dos clientes, com o selo da representada."
         ] },
+        { titulo: "Aviso de pedido novo (na tela, em Avisos e no WhatsApp)", itens: [
+          "Quem trata a fila (a gestão da Assistência técnica, quem faz a triagem e quem responde pela representação) vê um aviso no canto da tela, em qualquer tela do SGO+, quando entra pedido novo da representada, quando ela responde um complemento e quando o pedido chega a 75% do prazo de aceite sem aceite. O SGO+ confere a cada 45 segundos, sem recarregar a tela e sem mexer no que você está digitando.",
+          "O aviso mostra o número do pedido, a representada, o cliente, o equipamento e quanto falta (em horas úteis) para o prazo de aceite. \"Abrir pedido\" abre o pedido aqui na aba Pedidos; \"Dispensar\" tira o aviso só para você (ele não volta, mas o aviso de 75% do mesmo pedido ainda aparece). O pedido continua na fila até ser tratado.",
+          "O aviso toca um som curto. Se o navegador bloquear o som, aparece \"Clique para ativar o som\": clique uma vez na página. O botão \"Som\" liga ou desliga o som neste navegador.",
+          "Quem responde pela representação (Regras da assistência > Representação; sem ninguém, quem faz a triagem) recebe também um aviso em \"Avisos\", que fica até tocar em \"Li e estou ciente\", e o WhatsApp do sistema com o link do pedido, mais o e-mail. Um segundo aviso sai a 75% do prazo de aceite, se o pedido ainda não foi aceito.",
+          "O WhatsApp sai só no expediente e em dia útil; o pedido que chega fora dele é avisado na abertura do próximo expediente. Cada pessoa recebe no máximo 10 WhatsApp de pedidos por dia; passou disso, o aviso vai por e-mail e fica no sistema.",
+          "Pedido aceito, recusado ou cancelado: nenhum aviso novo sai, o aviso no canto some e o aviso em \"Avisos\" que ainda não teve ciência é arquivado. O WhatsApp que ainda esperava o expediente não sai."
+        ] },
         { titulo: "Conversar com a representada", itens: [
           "Na aba \"Conversas\" ficam as conversas por pedido, por chamado e o canal geral de cada representada. Escolha a representada para abrir o canal geral.",
           "Escreva e toque em \"Enviar\". A representada recebe e-mail com a mensagem.",
@@ -43,7 +53,9 @@ function SGO_ajudaTelas_Representacao_() {
         { titulo: "Cadastrar a representada e os modelos", itens: [
           "Aba \"Representadas\": nome, CNPJ, contrato, vigência, contato e os prazos (aceite em minutos úteis, padrão 240 = 4 horas; alerta a 75% do prazo; chamado sem registro em 3 dias úteis). Marque se a consulta de CNPJ na base pública da Receita fica ligada e se a representada pode cancelar antes da visita.",
           "Representada inativa: as pessoas dela não abrem mais o módulo; nada é apagado.",
-          "Aba \"Catálogo de modelos\": escolha a representada, preencha código, nome, tipo, família, garantia em meses e, se souber, o padrão do número de série. O mesmo código altera o modelo."
+          "Aba \"Catálogo de modelos\": escolha a representada. A tabela mostra quem cadastrou cada modelo (por exemplo, \"cadastrado por Fulano (Brasmedical)\" quando foi a representada), quantos equipamentos usam o modelo, a situação e o botão \"Histórico\" (quem cadastrou, alterou, inativou ou reativou, quando, o antes e o depois e o motivo).",
+          "Para incluir: preencha código, nome, tipo, família, garantia em meses e, se souber, o padrão do número de série. Para alterar: toque em \"Alterar\" na linha, mude o que precisar e escreva o motivo (obrigatório; a representada vê no histórico). O mesmo código altera o modelo.",
+          "Mudar a garantia vale para os equipamentos cadastrados depois; os já cadastrados mantêm a garantia gravada no cadastro deles. O código de um modelo que já está em equipamento não muda."
         ] },
         { titulo: "Relatórios A4 (atendimento e período)", itens: [
           "Relatório do atendimento: na ficha do chamado (Assistência técnica), parte \"Relatórios do atendimento\", toque em \"Gerar (Metrolabs, uso interno)\", \"Gerar a versão do cliente\" ou \"Gerar a versão da representada\". Cada versão mostra só o que o público dela pode ler.",
@@ -76,7 +88,11 @@ function SGO_ajudaTelas_Representacao_() {
       ],
       problemas: [
         { situacao: "Aparece \"o cadastro da representada e do catálogo é do Administrador, da Diretoria, dos gestores e dos responsáveis pela representação\"", oQueFazer: "Peça a um deles, ou peça ao Administrador para colocar você como responsável em Regras da assistência > Representação." },
-        { situacao: "A representada diz que o modelo dela não aparece no cadastro de equipamento", oQueFazer: "Inclua o modelo em \"Catálogo de modelos\" (situação Ativo)." },
+        { situacao: "A representada diz que o modelo dela não aparece no cadastro de equipamento", oQueFazer: "Ela mesma cadastra em \"Cadastrar modelo novo\" (no pedido) ou no catálogo dela. Se o modelo existe e está inativo, reative (situação Ativo)." },
+        { situacao: "Ao alterar um modelo aparece \"escreva o motivo da alteração\"", oQueFazer: "Escreva o motivo (pelo menos 10 letras) no campo \"Motivo da alteração\" e salve de novo. Modelo novo não pede motivo." },
+        { situacao: "Não aparece o aviso de pedido novo no canto da tela", oQueFazer: "O aviso vai para a gestão da Assistência técnica, para quem faz a triagem e para quem responde pela representação. Confira em Regras da assistência (Triagem e Representação). Atualize a página (F5) depois de mudar." },
+        { situacao: "O aviso aparece, mas sem som", oQueFazer: "Clique em \"Clique para ativar o som\" (o navegador só toca som depois de um clique na página) e confira se o botão diz \"Som: ligado\" e se o som do computador está ligado." },
+        { situacao: "O WhatsApp do pedido não chegou", oQueFazer: "Fora do expediente ou em dia não útil, ele sai na abertura do próximo expediente. Confira o celular em Administração > Usuários. Em Administração > Matriz de avisos > Avisos da gestão aparece cada aviso com o motivo (aguardando modelo, sem celular, teto do dia)." },
         { situacao: "Ao aceitar, aparece que o equipamento já tem chamado em aberto", oQueFazer: "Confira se é o mesmo problema. Se for outro, aceite mesmo assim; se for o mesmo, recuse com o motivo e indique o chamado aberto." },
         { situacao: "A foto não aparece no relatório do cliente ou da representada", oQueFazer: "Libere a foto na ficha do chamado (Relatórios do atendimento > Quem vê nos relatórios) e gere o relatório de novo. Foto grande que ficou de fora: libere de novo para a tela gerar a cópia reduzida." },
         { situacao: "Ao gerar a versão da representada do período, aparece \"escolha a representada\"", oQueFazer: "Escolha a representada no filtro \"Representada\" do Painel: a versão dela só traz a carteira dela." },
@@ -91,7 +107,9 @@ function SGO_ajudaTelas_Representacao_() {
       perguntas: [
         { p: "A representada vê os outros clientes da Metrolabs?", r: "Não. Ela busca cliente só pelo CNPJ ou CPF completo e equipamento só pela série exata, sem lista e sem busca por nome. Ela vê só os pedidos e chamados da empresa dela." },
         { p: "A representada vê valores?", r: "Não nesta etapa. Custos e fechamento entram em etapas seguintes do projeto." },
-        { p: "Onde fica o que a representada faz?", r: "Na aba \"Registro de ações\": buscas, cadastros, pedidos e cancelamentos, com nome, data e hora." },
+        { p: "Onde fica o que a representada faz?", r: "Na aba \"Registro de ações\": buscas, cadastros (também de modelos), pedidos e cancelamentos, com nome, data e hora." },
+        { p: "A representada pode apagar um modelo?", r: "Só se nenhum equipamento usa o modelo. Se algum equipamento já usa, o modelo fica inativo: some da lista de escolha, mas o histórico e a garantia dos equipamentos continuam guardados." },
+        { p: "Por que o aviso de pedido novo não volta depois de dispensado?", r: "Dispensar vale para você e para aquele aviso. O pedido continua na fila (aba Pedidos) e o aviso de 75% do prazo do mesmo pedido ainda aparece." },
         { p: "Por que o técnico vê menos chamados no Painel?", r: "O Painel mostra só os chamados que a pessoa pode abrir na Assistência técnica: o técnico vê os dele e os da fila livre; a gestão vê todos. A fila de pedidos é a mesma para todos." },
         { p: "Quem abre cada relatório gerado?", r: "A versão interna, só a equipe da Metrolabs. A da representada, só as pessoas daquela representada (o servidor confere a cada abertura do arquivo). A do cliente, só o cliente daquele chamado, em \"Meus chamados\" e no Arquivo de documentos do equipamento." },
         { p: "O que a representada vê no painel dela?", r: "Os mesmos índices de aceite, visita e conclusão, o Kanban e o Gantt, só da empresa dela. Ela não vê primeiro contato, fila de outras representadas, carga por técnico, notas internas nem valores." }
@@ -119,6 +137,7 @@ function SGO_ajudaTelas_Representacao_() {
         { titulo: "Pedir um atendimento", itens: [
           "Toque em \"Novo pedido\".",
           "Cliente: digite o CNPJ ou o CPF completo e toque em \"Buscar\". Achou: escolha a unidade. Não achou: preencha o cadastro completo (o botão da base pública da Receita preenche razão social e endereço; o contato precisa vir do cliente) e marque \"Ciente\".",
+          "Modelo que não está na lista: toque em \"Cadastrar modelo novo\", logo abaixo do campo Modelo, preencha código, nome, tipo de equipamento, garantia em meses e, se souber, o padrão da série, e toque em \"Cadastrar o modelo\". O que você já digitou continua no formulário e o modelo novo já fica escolhido.",
           "Equipamento: digite o número de série como está na etiqueta e toque em \"Buscar\". Não achou: escolha o modelo, informe a série, a data da instalação, a nota fiscal de venda (se tiver), envie a foto da etiqueta e marque \"Ciente\". A garantia é calculada pelo modelo a partir da instalação ou da nota fiscal.",
           "Relato: setor, contato no local, sintoma (pelo menos 30 letras), quando começou, código de erro do visor (ou marque que não exibe), se o equipamento está parado, o risco de uso, o que já foi tentado e o enquadramento pretendido. Envie pelo menos 1 foto do equipamento e 1 da etiqueta; vídeo é opcional (até 50 MB).",
           "Toque em \"Enviar o pedido à Metrolabs\". A tela diz até quando a Metrolabs responde."
@@ -134,6 +153,14 @@ function SGO_ajudaTelas_Representacao_() {
           "A primeira folha traz o quadro \"Situação em\": situação, prazo de atendimento, aceite do pedido, visita, conclusão, com quem está o chamado e o próximo passo. Depois vêm o sumário, o resumo, cliente e equipamento com a garantia, o relato da abertura, os marcos previsto e realizado (aceite, visita e conclusão, com a diferença escrita), a linha do tempo, a visita, o diagnóstico e o serviço, as peças, as fotos liberadas pela Metrolabs, a conversa do chamado, os arquivos, a assinatura de quem recebeu o atendimento e o que quer dizer cada etapa.",
           "No Painel, \"Relatório do período\" gera o relatório da carteira da sua empresa no período escolhido: na capa, os abertos, o prazo cumprido e os pontos de atenção; depois os índices do painel, os gráficos, o Gantt, a lista dos pedidos e chamados e as definições dos índices.",
           "A aba \"Relatórios gerados\" do Painel e a ficha do chamado listam os documentos já gerados para abrir de novo. Cada emissão é uma versão nova; nenhuma é apagada. Só as pessoas da sua empresa abrem esses documentos."
+        ] },
+        { titulo: "Catálogo de modelos da sua empresa", itens: [
+          "A aba \"Catálogo de modelos\" mostra os modelos da sua empresa: código, nome, tipo, família, garantia, padrão da série, situação, quem cadastrou e quantos equipamentos usam cada um. Só aparecem os modelos da sua empresa.",
+          "\"Cadastrar modelo novo\": preencha e salve. O código é único na sua empresa.",
+          "\"Alterar\": mude o que precisar e salve. Mudar a garantia vale para os equipamentos cadastrados daqui em diante; os já cadastrados mantêm a garantia gravada no cadastro deles. O código não muda depois que algum equipamento usa o modelo.",
+          "\"Excluir\": se nenhum equipamento usa o modelo, ele sai do catálogo. Se algum equipamento já usa, o botão diz \"Inativar\": o modelo some da lista de escolha do pedido, mas o histórico e a garantia dos equipamentos continuam guardados. \"Reativar\" volta o modelo para a lista.",
+          "\"Histórico\": quem cadastrou, alterou, inativou ou reativou, quando, o que mudou (antes e depois) e o motivo. Alterações feitas pela Metrolabs aparecem com \"(Metrolabs)\".",
+          "Cadastram e alteram modelos o Administrador da representada e o Atendente. Os demais papéis consultam."
         ] },
         { titulo: "Conversar com a Metrolabs", itens: [
           "Cada pedido e cada chamado tem a sua conversa. Assuntos fora de um chamado (dúvida, inclusão de pessoa da sua equipe) vão no \"Canal geral\".",
@@ -156,7 +183,9 @@ function SGO_ajudaTelas_Representacao_() {
         { situacao: "Aparece que o CNPJ ou CPF não confere", oQueFazer: "Digite o número completo e confira os dígitos com o cliente ou na nota fiscal." },
         { situacao: "Aparece \"Muitas buscas seguidas\"", oQueFazer: "Espere o tempo indicado e busque de novo com o documento ou a série conferidos." },
         { situacao: "Aparece que a série já está cadastrada em outro cliente", oQueFazer: "Escreva no \"Canal geral\" para a Metrolabs conferir (equipamento vendido, transferido ou série digitada errada)." },
-        { situacao: "O modelo do equipamento não aparece na lista", oQueFazer: "Peça à Metrolabs pelo \"Canal geral\" para incluir o modelo no catálogo." },
+        { situacao: "O modelo do equipamento não aparece na lista", oQueFazer: "Toque em \"Cadastrar modelo novo\" logo abaixo do campo Modelo (ou cadastre na aba \"Catálogo de modelos\"). Se o modelo está inativo no catálogo, toque em \"Reativar\". O seu papel não cadastra? Peça ao administrador da sua empresa no sistema." },
+        { situacao: "Ao cadastrar o modelo aparece que o código já existe", oQueFazer: "O modelo já está no catálogo: escolha-o na lista. Se ele estiver inativo, reative no \"Catálogo de modelos\" em vez de cadastrar de novo." },
+        { situacao: "Ao alterar aparece que o código não muda", oQueFazer: "O código já está em equipamentos. Mantenha o código e altere os outros campos; se o código estava errado, cadastre um modelo novo com o código certo e inative o antigo." },
         { situacao: "Aparece que o seu papel não permite", oQueFazer: "Peça ao administrador da sua empresa ou à Metrolabs. O papel Leitura só consulta; o Financeiro de garantia consulta e conversa." },
         { situacao: "Aparece que a foto passa de 2 MB ou o vídeo passa de 50 MB", oQueFazer: "Tire a foto de novo pelo próprio botão (ela é reduzida no aparelho) ou grave um vídeo mais curto." }
       ],
@@ -166,6 +195,7 @@ function SGO_ajudaTelas_Representacao_() {
       perguntas: [
         { p: "Por que não há busca por nome do cliente?", r: "Para proteger os dados dos clientes atendidos pela Metrolabs. A busca é só pelo CNPJ ou CPF completo." },
         { p: "Como incluir ou tirar uma pessoa da minha equipe?", r: "Escreva no \"Canal geral\". A Metrolabs cria e inativa os acessos." },
+        { p: "Se eu mudar a garantia de um modelo, muda a garantia dos equipamentos que já cadastrei?", r: "Não. A garantia de cada equipamento é gravada no cadastro dele. A garantia nova vale para os equipamentos cadastrados depois." },
         { p: "Onde vejo o relatório do atendimento?", r: "O relatório final no módulo vem numa próxima etapa. Enquanto isso, peça pela conversa do chamado." },
         { p: "Por que o painel não muda sozinho?", r: "Para não atrapalhar quem está digitando. Toque em \"Atualizar\" no alto da tela." }
       ]

@@ -89,7 +89,7 @@ function RepA_inicio_(eu) {
     .map(function (s) { return { tipo: 'SOLICITACAO', id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO), texto: 'A Metrolabs pediu complemento: ' + Rep_s_(s.COMPLEMENTO_PERGUNTA).slice(0, 200) }; });
   return { eu: { nome: eu.nome, papel: eu.papel, papelNome: eu.perm.nome, perm: eu.perm }, representada: { nome: eu.repNome },
     etapas: REP_ETAPAS.map(function (e) { return { n: e.n, nome: e.nome, quantidade: cont[e.n] }; }), pendencias: pend,
-    modelos: Rep_modelosDe_(eu.repId), paradas: REP_PARADA, enquadramentos: REP_ENQUADRAMENTO, tiposAnexo: REP_TIPOS_ANEXO, limites: REP_LIMITES,
+    modelos: Rep_modelosDe_(eu.repId), podeCadastrarModelo: !!eu.perm.abrir, explicaModelo: typeof REP_MODELO_EXPLICA !== 'undefined' ? REP_MODELO_EXPLICA : {}, paradas: REP_PARADA, enquadramentos: REP_ENQUADRAMENTO, tiposAnexo: REP_TIPOS_ANEXO, limites: REP_LIMITES,
     avisoCadastro: CADQ_AVISO, ciente: CADQ_CIENTE, consultaReceita: !!eu.prazos.consultaReceita, cancelarAntesVisita: !!eu.prazos.cancelarAntesVisita, ufs: CADQ_UFS };
 }
 
@@ -232,7 +232,7 @@ function RepA_cadastrarEquipamento_(eu, d) {
   var un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Rep_s_(d.unidadeId)];
   if (!un || Rep_s_(un.CLIENTE_ID) !== Rep_s_(cli.ID)) Rep_campoFalta_(faltam, 'unidadeId', 'escolha a unidade do cliente onde o equipamento está instalado');
   var mod = Rep_modelosDe_(eu.repId).filter(function (m) { return m.codigo === Rep_up_(d.modeloCodigo); })[0];
-  if (!mod) Rep_campoFalta_(faltam, 'modeloCodigo', 'escolha o modelo na lista (se o modelo não aparece, peça à Metrolabs pela conversa para incluir no catálogo)');
+  if (!mod) Rep_campoFalta_(faltam, 'modeloCodigo', 'escolha o modelo na lista (se o modelo não aparece, toque em "Cadastrar modelo novo" logo abaixo da lista ou cadastre no Catálogo de modelos)');
   var serie = Rep_serieNorm_(d.serie);
   if (serie.length < 3) Rep_campoFalta_(faltam, 'serie', 'informe o número de série completo, como está na etiqueta');
   else if (mod && mod.padraoSerie) { var ok = true; try { ok = new RegExp('^(?:' + mod.padraoSerie + ')$', 'i').test(serie); } catch (e) { ok = true; } if (!ok) Rep_campoFalta_(faltam, 'serie', 'a série não segue o padrão do modelo ' + mod.nome + '; confira na etiqueta'); }
@@ -310,8 +310,13 @@ function RepA_abrir_(eu, d) {
   if (video) Rep_salvarAnexo_(eu, eu.repId, 'SOLICITACAO', s.ID, 'VIDEO', video);
   Ast_evento_('SOLICITACAO', s.ID, 'ABERTURA', Rep_comoAst_(eu), 'Pedido enviado pela ' + eu.repNome + ': ' + r.sintoma.slice(0, 300), { numero: s.NUMERO, publico: 'REPRESENTADA', para: 'Enviado' });
   var pz = Rep_prazoAceite_(s, Date.now(), prazos), resp = Rep_responsaveis_();
-  Ast_avisar_(resp.ids, 'REP_PEDIDO', 'Pedido da ' + eu.repNome + ': ' + s.NUMERO + ' (' + Ast_clienteNome_(cli) + ')', Ast_equipTexto_(eq) + '\n' + desc.slice(0, 500) +
-    '\nAceite, peça complemento ou recuse até ' + Rep_br_(pz.ate) + ' em Representação > Pedidos.', s.ID, { evento: r.parada === 'TOTAL' ? 'RP02' : 'RP01' });
+  // 03/11/2026: o WhatsApp e o e-mail de quem responde pela representação saem pela fila dos avisos da gestão (link que abre o
+  // pedido; o que ainda estiver na fila não sai se o pedido for tratado antes); aviso com ciência na central de Avisos; aviso na tela
+  var tituloAv = 'Pedido da ' + eu.repNome + ': ' + s.NUMERO + ' (' + Ast_clienteNome_(cli) + ')';
+  var textoAv = Ast_equipTexto_(eq) + '\n' + desc.slice(0, 500) + '\nAceite, peça complemento ou recuse até ' + Rep_br_(pz.ate) + ' em Representação > Pedidos.';
+  Ast_avisar_(resp.ids, 'REP_PEDIDO', tituloAv, textoAv, s.ID, { evento: r.parada === 'TOTAL' ? 'RP02' : 'RP01', tela: { tipo: 'representacao', mod: 'representacao', id: Rep_s_(s.ID) }, resolvePor: 'REPSOL:' + Rep_s_(s.ID) });
+  if (typeof Rep_avisoCiencia_ === 'function') Rep_avisoCiencia_(s, 'NOVO', tituloAv, textoAv + '\nO prazo de aceite é de ' + Ast_duracaoTxt_(prazos.aceiteMin) + ' úteis. Toque em "Li e estou ciente" e trate o pedido em Representação > Pedidos.');
+  if (typeof RepAl_invalidar_ === 'function') RepAl_invalidar_();
   Rep_acesso_('PEDIDO', eu, d.ctx, s.NUMERO);
   return { solicitacao: { id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO) }, message: 'Pedido ' + s.NUMERO + ' enviado. A Metrolabs responde (aceita, pede complemento ou recusa com o motivo) até ' + Rep_br_(pz.ate) + '; você acompanha em Chamados.' };
 }
@@ -326,6 +331,7 @@ function RepA_responderComplemento_(eu, d) {
   Ast_comTrava_(function () { Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'NOVA', COMPLEMENTO_RESPOSTA: t, COMPLEMENTO_RESPONDIDO_EM: Ast_agora_(), PAUSA_DESDE: '', PAUSA_MIN: pausa, ATUALIZADO_EM: Ast_agora_() }); });
   fotos.forEach(function (f) { Rep_salvarAnexo_(eu, eu.repId, 'SOLICITACAO', s.ID, 'FOTO_EQUIPAMENTO', f); });
   Ast_evento_('SOLICITACAO', s.ID, 'COMPLEMENTO_RESPONDIDO', Rep_comoAst_(eu), t.slice(0, 2000), { numero: s.NUMERO, publico: 'REPRESENTADA', de: 'Complemento pedido', para: 'Enviado' });
+  if (typeof RepAl_invalidar_ === 'function') RepAl_invalidar_();
   Ast_avisar_(Rep_responsaveis_().ids, 'REP_COMPLEMENTO', 'Complemento respondido: ' + s.NUMERO + ' (' + eu.repNome + ')', t.slice(0, 600) + '\nO prazo de aceite voltou a contar. Trate em Representação > Pedidos.', s.ID, { evento: 'RP03' });
   return { message: 'Resposta enviada. O pedido ' + s.NUMERO + ' voltou para a Metrolabs.' };
 }
@@ -343,6 +349,7 @@ function RepA_cancelar_(eu, d) {
     Ast_comTrava_(function () { Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'CANCELADA', CANCELADA_EM: Ast_agora_(), CANCELADA_MOTIVO: motivo, CANCELADA_POR_NOME: Rep_quem_(eu), ATUALIZADO_EM: Ast_agora_() }); });
     Ast_evento_('SOLICITACAO', s.ID, 'CANCELAMENTO', Rep_comoAst_(eu), motivo, { numero: s.NUMERO, publico: 'REPRESENTADA', para: 'Cancelado' });
     Ast_avisar_(Rep_responsaveis_().ids, 'REP_CANCELADO', 'Pedido cancelado pela ' + eu.repNome + ': ' + s.NUMERO, motivo, s.ID, { evento: 'RP04' });
+    if (typeof Rep_aoTratarSolicitacao_ === 'function') Rep_aoTratarSolicitacao_(s, 'cancelado pela representada');
     Rep_acesso_('CANCELAMENTO', eu, d.ctx, s.NUMERO + ': ' + motivo);
     return { message: 'Pedido ' + s.NUMERO + ' cancelado.' };
   }
@@ -456,6 +463,9 @@ var REP_ACOES_REPRESENTADA = {
   inicio: RepA_inicio_, buscarCliente: RepA_buscarCliente_, consultarCnpj: RepA_consultarCnpj_, cadastrarCliente: RepA_cadastrarCliente_, cadastrarUnidade: RepA_cadastrarUnidade_,
   buscarEquipamento: RepA_buscarEquipamento_, cadastrarEquipamento: RepA_cadastrarEquipamento_, abrir: RepA_abrir_, responderComplemento: RepA_responderComplemento_, cancelar: RepA_cancelar_,
   chamados: RepA_chamados_, chamado: RepA_chamado_, mensagens: RepA_mensagens_, enviarMensagem: RepA_enviarMensagem_, equipamentos: RepA_equipamentos_, equipe: RepA_equipe_,
+  // 03/11/2026: a representada cadastra, altera, exclui (ou inativa) e reativa os próprios modelos (SGO_Representacao_Modelos.js)
+  catalogo: function (eu, d) { return RepA_catalogo_(eu, d); }, salvarModelo: function (eu, d) { return RepA_salvarModelo_(eu, d); },
+  excluirModelo: function (eu, d) { return RepA_excluirModelo_(eu, d); }, reativarModelo: function (eu, d) { return RepA_reativarModelo_(eu, d); },
   // 29/10/2026: painel de abertura e acompanhamento (índices, Kanban e Gantt) em SGO_Representacao_Painel.js
   painel: function (eu, d) { return RepA_painel_(eu, d); },
   // 29/10/2026: documentos A4 da versão da representada (SGO_Representacao_Documentos.js)
@@ -502,23 +512,14 @@ function RepI_salvarRepresentada_(eu, d) {
   var r = atual ? (Rep_atualizar_(REP_ABAS.REPRESENTADAS, atual.ID, campos), Object.assign({}, atual, campos)) : Rep_inserir_(REP_ABAS.REPRESENTADAS, Object.assign({ CRIADO_POR_NOME: eu.nome }, campos));
   return { representada: Rep_publicoRepresentada_(r), representadas: RepI_representadas_(), message: 'Representada ' + nome + ' salva.' + (campos.SITUACAO === 'INATIVA' ? ' Inativa: os usuários dela não abrem mais o módulo.' : '') };
 }
+/** 03/11/2026: o mesmo cadastro da representada (SGO_Representacao_Modelos.js), com o lado METROLABS no histórico e motivo obrigatório ao alterar. */
 function RepI_salvarModelo_(eu, d) {
   RepI_exigirAdm_(eu, 'salvar o modelo');
   d = d || {};
-  var rep = Rep_representada_(d.representadaId), faltam = [];
-  if (!rep) Rep_campoFalta_(faltam, 'representadaId', 'escolha a representada');
-  var cod = Rep_up_(d.codigo).replace(/\s+/g, ''), nome = Rep_txt_(d.nome, 120), g = Number(d.garantiaMeses);
-  if (cod.length < 2) Rep_campoFalta_(faltam, 'codigo', 'informe o código do modelo');
-  if (nome.length < 2) Rep_campoFalta_(faltam, 'nome', 'informe o nome do modelo');
-  if (Rep_txt_(d.tipo, 80).length < 3) Rep_campoFalta_(faltam, 'tipo', 'informe o tipo de equipamento (ex.: Autoclave, Lavadora ultrassônica)');
-  if (!(g >= 0 && g <= 120 && Math.round(g) === g)) Rep_campoFalta_(faltam, 'garantiaMeses', 'garantia em meses inteiros, de 0 a 120');
-  if (Rep_s_(d.padraoSerie)) { try { new RegExp(d.padraoSerie); } catch (e) { Rep_campoFalta_(faltam, 'padraoSerie', 'o padrão da série não é válido; deixe em branco se não souber'); } }
-  Rep_falhou_(faltam, 'salvar o modelo');
-  var atual = Rep_ler_(REP_ABAS.MODELOS).filter(function (m) { return Rep_s_(m.REPRESENTADA_ID) === Rep_s_(rep.ID) && Rep_up_(m.CODIGO) === cod; })[0];
-  var campos = { REPRESENTADA_ID: rep.ID, CODIGO: cod, NOME: nome, FAMILIA: Rep_txt_(d.familia, 80), TIPO_EQUIPAMENTO: Rep_txt_(d.tipo, 80), GARANTIA_MESES: g, PADRAO_SERIE: Rep_txt_(d.padraoSerie, 120),
-    ATIVO: d.ativo === false || Rep_up_(d.ativo) === 'NAO' ? 'NAO' : 'SIM', ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Rep_agora_() };
-  if (atual) Rep_atualizar_(REP_ABAS.MODELOS, atual.ID, campos); else Rep_inserir_(REP_ABAS.MODELOS, campos);
-  return { modelos: Rep_modelosDe_(rep.ID, true), message: 'Modelo ' + nome + ' salvo. Equipamentos já cadastrados mantêm a garantia calculada no cadastro.' };
+  var rep = Rep_representada_(d.representadaId);
+  if (!rep) { var e = Rep_erro_('INCOMPLETO', 'Não foi possível salvar o modelo: escolha a representada. Nada foi gravado.'); e.faltam = [{ campo: 'representadaId', texto: 'Escolha a representada.' }]; throw e; }
+  var r = RepM_salvar_(eu, rep.ID, d, { porCodigo: !Rep_s_(d.id) });
+  return { modelos: RepM_lista_(rep.ID), message: RepM_msgSalvo_(r) + (r.novo || !r.mudou ? '' : ' A representada vê a alteração e o motivo no histórico do modelo.') };
 }
 function RepI_solPublica_(s) {
   var rep = Rep_representada_(s.REPRESENTADA_ID), pz = Rep_prazoAceite_(s, Date.now(), Rep_prazos_(rep));
@@ -625,11 +626,15 @@ function RepI_usuarios_(eu, d) {
 
 var REP_ACOES_INTERNAS = {
   iniciar: RepI_iniciar_, salvarRepresentada: RepI_salvarRepresentada_, representadas: function () { return { representadas: RepI_representadas_() }; },
-  modelos: function (eu, d) { return { modelos: Rep_modelosDe_(d && d.representadaId, true) }; }, salvarModelo: RepI_salvarModelo_,
+  // 03/11/2026: catálogo com quem cadastrou (e de que lado), uso em equipamentos e histórico (SGO_Representacao_Modelos.js)
+  modelos: function (eu, d) { return { modelos: RepM_lista_(Rep_s_(d && d.representadaId)), explica: REP_MODELO_EXPLICA }; }, salvarModelo: RepI_salvarModelo_,
+  reativarModelo: function (eu, d) { RepI_exigirAdm_(eu, 'reativar o modelo'); var m = Rep_porId_(REP_ABAS.MODELOS, d && d.id); if (!m) throw Rep_erro_('NAO_ENCONTRADO', 'Modelo não encontrado. Atualize a lista.'); var r = RepM_reativar_(eu, m.REPRESENTADA_ID, d); return { modelos: RepM_lista_(m.REPRESENTADA_ID), message: r.message }; },
   solicitacoes: RepI_solicitacoes_, aceitar: RepI_aceitar_,
   complemento: function (eu, d) { return AstC_complemento_(eu, d); }, recusar: function (eu, d) { return AstC_descartar_(eu, d); },
   conversas: RepI_conversas_, mensagens: RepI_mensagens_, enviarMensagem: RepI_enviarMensagem_, chamado: RepI_chamado_, acessos: RepI_acessos_, usuarios: RepI_usuarios_,
   painel: function (eu, d) { return RepI_painel_(eu, d); },
+  // 03/11/2026: aviso na tela (pop-up e som) dos pedidos da representada, em qualquer tela do SGO+ (SGO_Representacao_Alertas.js)
+  alertasPedidos: function (eu, d) { return RepI_alertasPedidos_(eu, d); }, dispensarAlertaPedido: function (eu, d) { return RepI_dispensarAlertaPedido_(eu, d); },
   // 29/10/2026: documentos A4 (as três versões), fotos do chamado e liberação para os documentos externos
   relatorioAtendimento: function (eu, d) { return RepDI_relatorioAtendimento_(eu, d); }, relatorioPeriodo: function (eu, d) { return RepDI_relatorioPeriodo_(eu, d); },
   documentos: function (eu, d) { return RepDI_documentos_(eu, Object.assign({}, d || {}, { soRepresentadas: true })); }, fotosChamado: function (eu, d) { return RepD_fotosDoChamado_(eu, d); }, liberarFoto: function (eu, d) { return RepD_liberarFoto_(eu, d); },

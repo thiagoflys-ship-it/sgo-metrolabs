@@ -47,6 +47,14 @@
  *
  * ENTRA NA RODADA DE 15 MINUTOS DA GESTÃO (SGO_Gestao_Escada.js Ges_rodada_), antes do corte do expediente (a Diretoria
  * recebe a qualquer hora): gera os avisos da Caixa de decisões (GS01, GS02, GS03), marca o que foi resolvido e envia.
+ * PEDIDO DA REPRESENTADA (03/11/2026, pedido do dono; SGO_Representacao_Alertas.js): os eventos RP01 e RP02 (pedido novo) e
+ * RP07 (prazo de aceite a 75% e vencido) vão também para quem responde pela representação (Regras da assistência >
+ * Representação; sem ninguém, quem faz a triagem), mesmo quem não é da gestão: o celular dessas pessoas entra na lista da gestão
+ * do piloto só para o modelo sgo_gestao_acao. Para esses eventos: só no expediente e em dia útil para todos, inclusive a
+ * Diretoria (fora dele, na abertura do próximo expediente); RP01 e RP02 saem na hora (o prazo de aceite é de 4 horas úteis);
+ * teto de AVG_REP_TETO_DIA WhatsApp por pessoa por dia (passou, o aviso vai só por e-mail, com o motivo); e o que ainda está na
+ * fila sai como resolvido, sem mensagem, se o pedido foi aceito, recusado ou cancelado antes (RESOLVE_POR = REPSOL:<id>).
+ *
  * Nenhuma função devolve Date cru. Nunca mostra token, chave ou número de telefone. Mensagens sóbrias, sem emoji.
  ****************************************************/
 
@@ -74,7 +82,13 @@ var AVG_CAIXA_FORA = ['atividade_atrasada'];
 var AVG_APROVACOES = ['comercial_desconto', 'comercial_reabertura', 'comercial_preco', 'atividade_justificativa', 'compras_aprovar', 'conduta_homologar', 'conduta_julgar',
   'conduta_missao', 'conduta_sugestao', 'frota_abast_justificativa', 'ast_orc_recusado', 'ast_orc_ajuste'];
 var AVG_SITUACOES = { NA_FILA: 'Na fila', ENVIANDO: 'Enviando', ENVIADO: 'Enviado', FALHOU: 'Falhou', RESOLVIDO: 'Resolvido' };
-var AVG_WA_ROTULOS = { ENVIADO: 'WhatsApp enviado', ENTREGUE: 'WhatsApp entregue', LIDO: 'WhatsApp lido', AGUARDANDO_MODELO: 'WhatsApp aguardando modelo', SEM_NUMERO: 'Sem celular no cadastro', FALHOU: 'WhatsApp falhou', FORA_DA_GESTAO: 'Fora da gestão: regra comum' };
+var AVG_WA_ROTULOS = { ENVIADO: 'WhatsApp enviado', ENTREGUE: 'WhatsApp entregue', LIDO: 'WhatsApp lido', AGUARDANDO_MODELO: 'WhatsApp aguardando modelo', SEM_NUMERO: 'Sem celular no cadastro', FALHOU: 'WhatsApp falhou', FORA_DA_GESTAO: 'Fora da gestão: regra comum',
+  TETO: 'Teto do dia: só e-mail' };
+// 03/11/2026: pedido da representada (ver o cabeçalho). Quem responde pela representação vem de Rep_responsaveisWhatsapp_ (SGO_Representacao_Alertas.js).
+var AVG_REP_EVENTOS = ['RP01', 'RP02', 'RP07'];
+var AVG_NA_HORA_EVENTOS = ['RP01', 'RP02'];
+var AVG_SO_EXPEDIENTE_EVENTOS = ['RP01', 'RP02', 'RP07'];
+var AVG_REP_TETO_DIA = 10;
 var AVG_SIGILO_TITULO = 'Julgamento registrado no Programa de Conduta';
 
 /** Eventos novos da matriz (gestao = tipo do aviso da gestão). Os de módulos que já existiam ganham o tipo em AVG_MARCAR. */
@@ -195,6 +209,17 @@ function AvG_filtroGestao_(us) { var resp = AvG_responsaveisDeArea_(); return fu
 
 function AvG_usuarios_() { return typeof Mtz_usuarios_ === 'function' ? Mtz_usuarios_() : (typeof Ges_usuarios_ === 'function' ? Ges_usuarios_() : {}); }
 
+/** 03/11/2026: pessoas que recebem o aviso deste evento pela fila da gestão sem ser da gestão: { id: true } (pedido da representada). */
+function AvG_extras_(evento) {
+  var m = {};
+  if (AVG_REP_EVENTOS.indexOf(AvG_up_(evento)) < 0 || typeof Rep_responsaveisWhatsapp_ !== 'function') return m;
+  try { (Rep_responsaveisWhatsapp_() || []).forEach(function (id) { if (AvG_s_(id)) m[AvG_s_(id)] = true; }); } catch (e) {}
+  return m;
+}
+/** A linha sai na hora (sem o agrupamento de 30 minutos)? Atraso, irreversível e o pedido novo da representada. */
+function AvG_ehUrgente_(tipo, evento) { return AVG_URGENTES.indexOf(AvG_up_(tipo)) >= 0 || AVG_NA_HORA_EVENTOS.indexOf(AvG_up_(evento)) >= 0; }
+function AvG_linhaUrgente_(l) { return AvG_ehUrgente_(l.TIPO, l.EVENTO); }
+
 /**
  * Ids da gestão que recebem o WhatsApp da gestão sem piloto (decisão 5). Entram na lista de telefones que o servidor confere
  * (SGO_waPilotoTelefones_, SGO_WhatsappPiloto.js). Vazio se nenhum evento da gestão estiver ligado. Nunca lança.
@@ -204,8 +229,10 @@ function AvG_idsGestaoWhatsapp_() {
     AvG_registrarEventos_();
     var regras = typeof Mtz_regras_ === 'function' ? Mtz_regras_() : {};
     if (!Object.keys(regras).some(function (k) { return AvG_tipoLigado_(regras[k]); })) return [];
-    var us = AvG_usuarios_();
-    return Object.keys(us).filter(AvG_filtroGestao_(us));
+    var us = AvG_usuarios_(), ehG = AvG_filtroGestao_(us);
+    // 03/11/2026: quem responde pela representação recebe RP01, RP02 e RP07 por esta fila (só se algum deles estiver ligado)
+    var extras = AVG_REP_EVENTOS.some(function (k) { return regras[k] && AvG_tipoLigado_(regras[k]); }) ? AvG_extras_('RP01') : {};
+    return Object.keys(us).filter(function (id) { return ehG(id) || (extras[id] && us[id] && us[id].ativo); });
   } catch (e) { return []; }
 }
 
@@ -215,9 +242,9 @@ function AvG_mascarar_(fone) { var d = AvG_s_(fone).replace(/\D/g, ''); return d
 // ------------------------------------------------------------
 // HORÁRIO (decisão 1)
 // ------------------------------------------------------------
-/** Pode receber agora? Diretoria: sempre. Gestor: só no expediente. */
-function AvG_podeAgora_(u, quando) {
-  if (u && u.diretoria) return true;
+/** Pode receber agora? Diretoria: sempre (menos os eventos só de expediente, 03/11/2026). Gestor: só no expediente. */
+function AvG_podeAgora_(u, quando, evento) {
+  if (u && u.diretoria && AVG_SO_EXPEDIENTE_EVENTOS.indexOf(AvG_up_(evento)) < 0) return true;
   if (typeof SGO_dentroDoExpediente_ !== 'function') return true;
   return !!SGO_dentroDoExpediente_(quando || new Date()).dentro;
 }
@@ -238,8 +265,8 @@ function AvG_proximoExpediente_(quando) {
 }
 
 /** Quando o aviso desta pessoa pode sair: agora (Diretoria, ou gestor no expediente) ou a abertura do próximo expediente. */
-function AvG_liberarEm_(u, quando) {
-  return AvG_podeAgora_(u, quando) ? AvG_agora_(quando) : AvG_proximoExpediente_(quando);
+function AvG_liberarEm_(u, quando, evento) {
+  return AvG_podeAgora_(u, quando, evento) ? AvG_agora_(quando) : AvG_proximoExpediente_(quando);
 }
 
 // ------------------------------------------------------------
@@ -304,7 +331,7 @@ function AvG_enfileirar_(x, existentes) {
     AVISO_ID: ('AG' + AvG_hash_(chave + '|' + agora) + AvG_hash_(ref)).slice(0, 24), CHAVE: chave, USUARIO_ID: u.id, USUARIO_NOME: u.nome || '', DIRETORIA: u.diretoria ? 'SIM' : '',
     EVENTO: AvG_up_(x.evento), TIPO: x.tipo, MODULO: AvG_s_(x.modulo), TITULO: titulo, TEXTO: texto, LINHA: AvG_linhaCurta_(x.tipo, nomeMod, titulo),
     TELA_JSON: JSON.stringify(AvG_telaSegura_(x.tela)), REF_ID: ref.slice(0, 120), RESOLVE_POR: AvG_s_(x.resolvePor).slice(0, 400), PRAZO: AvG_s_(x.prazo).slice(0, 19),
-    QUANDO: agora, LIBERAR_EM: AvG_liberarEm_(u, quando), SITUACAO: 'NA_FILA', TENTATIVAS: 0, ENVIADO_EM: '', MENSAGEM_ID: '', EMAIL_SITUACAO: '', EMAIL_MOTIVO: '',
+    QUANDO: agora, LIBERAR_EM: AvG_liberarEm_(u, quando, x.evento), SITUACAO: 'NA_FILA', TENTATIVAS: 0, ENVIADO_EM: '', MENSAGEM_ID: '', EMAIL_SITUACAO: '', EMAIL_MOTIVO: '',
     WA_SITUACAO: '', WA_MOTIVO: '', WA_ID: '', ENTREGUE_EM: '', LIDO_EM: '', ABERTO_EM: '', RESOLVIDO_EM: '', RESOLUCAO: '', ORIGEM: AvG_s_(x.origem).slice(0, 40)
   };
   AvG_garantirAba_();
@@ -312,7 +339,7 @@ function AvG_enfileirar_(x, existentes) {
   if (existentes) existentes.push(gravada);
   try { if (cache) cache.put(ck, '1', 21600); } catch (e) {}
   var espera = linha.LIBERAR_EM > agora ? ' Fora do expediente: sai em ' + AvG_br_(linha.LIBERAR_EM) + '.' : '';
-  return { novo: true, linha: gravada, motivo: 'Aviso da gestão (' + AVG_TIPOS[x.tipo] + '): vai por WhatsApp e e-mail' + (AVG_URGENTES.indexOf(x.tipo) >= 0 ? ' na hora.' : ', agrupado em até 30 minutos.') + espera };
+  return { novo: true, linha: gravada, motivo: 'Aviso da gestão (' + AVG_TIPOS[x.tipo] + '): vai por WhatsApp e e-mail' + (AvG_ehUrgente_(x.tipo, x.evento) ? ' na hora.' : ', agrupado em até 30 minutos.') + espera };
 }
 
 /**
@@ -323,8 +350,9 @@ function AvG_enfileirar_(x, existentes) {
 function AvG_preparar_(o, internos, regra, evento) {
   var tipo = AvG_tipoLigado_(regra);
   if (!tipo || AVG_MODULOS_FORA.indexOf(regra.modulo) >= 0) return null;
-  var us = AvG_usuarios_();
-  var ids = (internos || []).filter(AvG_filtroGestao_(us));
+  var us = AvG_usuarios_(), ehG = AvG_filtroGestao_(us), extras = AvG_extras_(evento);
+  // 03/11/2026: quem responde pela representação entra aqui mesmo sem ser da gestão (RP01, RP02, RP07)
+  var ids = (internos || []).filter(function (id) { return ehG(id) || (extras[id] && us[id] && us[id].ativo); });
   if (!ids.length) return null;
   var tela = o.tela && typeof o.tela === 'object' ? o.tela : AvG_telaDoLink_(o.link);
   var lista = AvG_ler_(), saida = { ids: {}, urgentes: [] };
@@ -334,7 +362,7 @@ function AvG_preparar_(o, internos, regra, evento) {
     // revisão 01/11/2026: chave repetida (já avisado) não tira a pessoa do e-mail comum do notificador
     if (!r.novo) return;
     saida.ids[uid] = r.motivo;
-    if (AVG_URGENTES.indexOf(tipo) >= 0) saida.urgentes.push(uid);
+    if (AvG_ehUrgente_(tipo, evento)) saida.urgentes.push(uid);
   });
   return Object.keys(saida.ids).length ? saida : null;
 }
@@ -392,8 +420,9 @@ function AvG_enviarPessoa_(u, linhas, quando) {
   try {
     var c = typeof Notificar_contatos_ === 'function' ? Notificar_contatos_([u.id])[u.id] : null;
     var prov = typeof Notificar_provedorWhatsapp_ === 'function' ? Notificar_provedorWhatsapp_() : { provedor: '' };
-    var st = AvG_situacaoModelo_();
-    if (!c || !c.telefone) wa = { situacao: 'SEM_NUMERO', motivo: 'Sem celular válido no cadastro (Administração > Usuários > Celular): o aviso foi só por e-mail.' };
+    var st = AvG_situacaoModelo_(), teto = AvG_tetoRep_(u.id, linhas, quando);
+    if (teto) wa = { situacao: 'TETO', motivo: teto };
+    else if (!c || !c.telefone) wa = { situacao: 'SEM_NUMERO', motivo: 'Sem celular válido no cadastro (Administração > Usuários > Celular): o aviso foi só por e-mail.' };
     else if (!prov.provedor) wa = { situacao: 'FALHOU', motivo: AvG_texto_(prov.motivo || 'WhatsApp não configurado.', 300) + ' O aviso foi por e-mail.' };
     else if (prov.provedor === 'meta' && st !== 'APPROVED') wa = { situacao: 'AGUARDANDO_MODELO', motivo: 'WhatsApp aguardando modelo: o modelo ' + AVG_MODELO + ' ainda não está aprovado na Meta (situação: ' + (st || 'não cadastrado') + '). O aviso foi por e-mail; cadastre em Chaves e senhas > Cadastrar modelos na Meta.' };
     else {
@@ -418,6 +447,22 @@ function AvG_enviarPessoa_(u, linhas, quando) {
   return { email: em, whatsapp: wa };
 }
 
+/**
+ * 03/11/2026: teto diário do WhatsApp do pedido da representada (lote só com RP01, RP02 ou RP07). Conta as mensagens de hoje
+ * desses eventos que saíram pelo WhatsApp para a pessoa. Devolve o motivo ('' = pode).
+ */
+function AvG_tetoRep_(uid, linhas, quando) {
+  if (!linhas.length || !linhas.every(function (l) { return AVG_REP_EVENTOS.indexOf(AvG_up_(l.EVENTO)) >= 0; })) return '';
+  var hoje = AvG_agora_(quando).slice(0, 10), msgs = {};
+  AvG_ler_().forEach(function (l) {
+    if (AvG_s_(l.USUARIO_ID) !== AvG_s_(uid) || AVG_REP_EVENTOS.indexOf(AvG_up_(l.EVENTO)) < 0) return;
+    if (['ENVIADO', 'ENTREGUE', 'LIDO'].indexOf(AvG_up_(l.WA_SITUACAO)) < 0 || AvG_s_(l.ENVIADO_EM).slice(0, 10) !== hoje) return;
+    msgs[AvG_s_(l.MENSAGEM_ID) || AvG_s_(l.ID)] = true;
+  });
+  var n = Object.keys(msgs).length;
+  return n >= AVG_REP_TETO_DIA ? 'Teto do dia: esta pessoa já recebeu hoje ' + n + ' WhatsApp de pedidos da representada (limite de ' + AVG_REP_TETO_DIA + ' por dia). O aviso foi por e-mail e está no sistema (aviso na tela e em Avisos).' : '';
+}
+
 /** A linha está pronta para sair agora? (liberada pelo horário; falha passageira ainda com tentativa; ENVIANDO abandonado) */
 function AvG_pronta_(l, agora, velho) {
   var s = AvG_up_(l.SITUACAO);
@@ -436,7 +481,7 @@ function AvG_enviarProntos_(quando, soUrgentes, uids) {
   quando = quando || new Date();
   var agora = AvG_agora_(quando), limite = AvG_menosMin_(quando, AVG_AGRUPAR_MIN);
   var velho = AvG_menosMin_(quando, AVG_ENVIANDO_MAX_MIN);
-  var us = AvG_usuarios_(), ehG = AvG_filtroGestao_(us), res = { mensagens: 0, itens: 0 }, lotes = [];
+  var us = AvG_usuarios_(), ehG = AvG_filtroGestao_(us), res = { mensagens: 0, itens: 0 }, lotes = [], extras = AvG_extras_('RP01');
   // revisão 01/11/2026: escolher e marcar ENVIANDO sob trava (a rodada de 15 minutos e o envio na hora não mandam a mesma linha
   // duas vezes); os envios (e-mail e Meta) ficam fora da trava
   var lock = null;
@@ -450,16 +495,26 @@ function AvG_enviarProntos_(quando, soUrgentes, uids) {
       (porPessoa[uid] = porPessoa[uid] || []).push(l);
     });
     Object.keys(porPessoa).forEach(function (uid) {
-      var u = us[uid], lista = porPessoa[uid], comum = !ehG(uid);
-      if (!comum && !AvG_podeAgora_(u, quando)) return;
-      var urg = lista.filter(function (l) { return AVG_URGENTES.indexOf(l.TIPO) >= 0; });
-      var norm = soUrgentes ? [] : lista.filter(function (l) { return AVG_URGENTES.indexOf(l.TIPO) < 0; });
-      var maisAntiga = norm.reduce(function (a, l) { return !a || AvG_s_(l.QUANDO) < a ? AvG_s_(l.QUANDO) : a; }, '');
-      var enviar = comum ? lista : urg.concat(norm.length && maisAntiga <= limite ? norm : []);
-      if (!enviar.length) return;
-      enviar.sort(function (a, b) { return (AVG_URGENTES.indexOf(b.TIPO) >= 0) - (AVG_URGENTES.indexOf(a.TIPO) >= 0) || AvG_s_(a.QUANDO).localeCompare(AvG_s_(b.QUANDO)); });
-      enviar.forEach(function (l) { SGO_DATA.update(AVG_ABA, l.ID, { SITUACAO: 'ENVIANDO', ENVIANDO_EM: agora }); l.SITUACAO = 'ENVIANDO'; });
-      lotes.push({ u: u, uid: uid, linhas: enviar, comum: comum });
+      var u = us[uid], todas = porPessoa[uid], gestao = ehG(uid);
+      // 03/11/2026: quem responde pela representação sem ser da gestão: as linhas do pedido da representada seguem esta fila;
+      // as demais (de quando a pessoa era da gestão) vão pela regra comum
+      var ext = !gestao && extras[uid] && u && u.ativo;
+      var grupos = gestao ? [[todas, false]] : ext ? [[todas.filter(function (l) { return AVG_REP_EVENTOS.indexOf(AvG_up_(l.EVENTO)) >= 0; }), false], [todas.filter(function (l) { return AVG_REP_EVENTOS.indexOf(AvG_up_(l.EVENTO)) < 0; }), true]] : [[todas, true]];
+      grupos.forEach(function (g) {
+        var lista = g[0], comum = g[1];
+        // pedido da representada: só no expediente também para a Diretoria (a linha que ficou para trás não sai à noite)
+        if (!comum) lista = lista.filter(function (l) { return AVG_SO_EXPEDIENTE_EVENTOS.indexOf(AvG_up_(l.EVENTO)) < 0 || AvG_podeAgora_(u, quando, l.EVENTO); });
+        if (!lista.length) return;
+        if (!comum && !AvG_podeAgora_(u, quando)) return;
+        var urg = lista.filter(AvG_linhaUrgente_);
+        var norm = soUrgentes ? [] : lista.filter(function (l) { return !AvG_linhaUrgente_(l); });
+        var maisAntiga = norm.reduce(function (a, l) { return !a || AvG_s_(l.QUANDO) < a ? AvG_s_(l.QUANDO) : a; }, '');
+        var enviar = comum ? lista : urg.concat(norm.length && maisAntiga <= limite ? norm : []);
+        if (!enviar.length) return;
+        enviar.sort(function (a, b) { return AvG_linhaUrgente_(b) - AvG_linhaUrgente_(a) || AvG_s_(a.QUANDO).localeCompare(AvG_s_(b.QUANDO)); });
+        enviar.forEach(function (l) { SGO_DATA.update(AVG_ABA, l.ID, { SITUACAO: 'ENVIANDO', ENVIANDO_EM: agora }); l.SITUACAO = 'ENVIANDO'; });
+        lotes.push({ u: u, uid: uid, linhas: enviar, comum: comum });
+      });
     });
   } finally { try { if (lock) lock.releaseLock(); } catch (e) {} }
   lotes.forEach(function (x) {
@@ -653,6 +708,10 @@ function AvG_resolver_(quando) {
       }
       var it = rp.slice(6);
       if (conhecidos[it] && !abertos[it]) { resolvido = true; como = 'O item saiu da Caixa de decisões (decidido ou resolvido na origem).'; }
+    } else if (rp.indexOf('REPSOL:') === 0 && typeof Rep_solicitacaoTratada_ === 'function') {
+      // 03/11/2026: pedido da representada aceito, recusado ou cancelado: o aviso que ainda não saiu não sai mais
+      var txt = Rep_solicitacaoTratada_(rp.slice(7));
+      if (txt) { resolvido = true; como = txt; }
     } else if (rp.indexOf('ATV:') === 0 && typeof Atividades_todas_ === 'function' && typeof Atividades_vencida_ === 'function') {
       if (atv === null) { atv = {}; try { Atividades_todas_().forEach(function (a) { atv[AvG_s_(a.ID)] = a; }); } catch (e) { atv = {}; } }
       var agoraAtv = typeof Atividades_agora_ === 'function' ? Atividades_agora_() : agora.slice(0, 16);

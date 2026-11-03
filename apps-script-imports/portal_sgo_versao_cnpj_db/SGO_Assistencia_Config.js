@@ -934,7 +934,9 @@ function Ast_avisar_(destIds, tipo, titulo, texto, refId, opcoes) {
   if (o.evento && typeof SGO_notificar_ === 'function') {
     Ast_depois_(function () {
       if (typeof Assistencia_registrarTipos_ === 'function') Assistencia_registrarTipos_();
-      SGO_notificar_({ usuarios: ids, canais: o.canais || ['email', 'whatsapp'], titulo: titulo, texto: texto, origem: 'ASSISTENCIA', categoria: 'ASSISTENCIA', evento: o.evento, refId: Ast_s_(refId) });
+      // 03/11/2026: tela (abre o item exato pelo link) e resolvePor (o que está na fila dos avisos da gestão não sai se o item já foi tratado)
+      SGO_notificar_({ usuarios: ids, canais: o.canais || ['email', 'whatsapp'], titulo: titulo, texto: texto, origem: 'ASSISTENCIA', categoria: 'ASSISTENCIA', evento: o.evento, refId: Ast_s_(refId),
+        tela: o.tela || undefined, resolvePor: o.resolvePor || undefined });
     });
   }
   return ids.length;

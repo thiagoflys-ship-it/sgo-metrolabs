@@ -54,6 +54,7 @@ Regras:
 - Cada item avisa uma vez por marco: um segundo marco do mesmo item (prazo em risco e depois vencido, um segundo pedido de nova data) avisa de novo.
 - Informativo (venda ganha, comentário, atividade concluída, itens de acompanhamento) continua como antes, sem WhatsApp da gestão.
 - O ponto continua fora.
+- Pedido da representada (03/11/2026, pedido do dono): RP01, RP02 e RP07 vão também para quem responde pela representação (Regras da assistência › Representação; sem ninguém, quem faz a triagem), mesmo sem ser da gestão; o celular dessas pessoas entra na lista da gestão do piloto só para estes avisos. Para estes três eventos: só no expediente e em dia útil para todos, inclusive a Diretoria; RP01 e RP02 saem na hora (sem o agrupamento de 30 minutos); no máximo 10 WhatsApp por pessoa por dia (passou disso, "Teto do dia: só e-mail"); e o aviso que ainda espera o expediente não sai se o pedido foi aceito, recusado ou cancelado antes (fica "Resolvido" com o motivo).
 - Enquanto o modelo `sgo_gestao_acao` não for aprovado pela Meta, o aviso sai só por e-mail com a marca "WhatsApp aguardando modelo". Sem celular no cadastro ou com erro da Meta, também vai o e-mail, e o motivo fica registrado.
 - Cada aviso tem um ciclo registrado: criado, na fila, enviado (e-mail e WhatsApp), entregue ou lido (quando a Meta devolver), aberto e resolvido (quando o item sai da pendência). Sem ação no prazo, a escada da Caixa de decisões e a SEDNA continuam cobrando.
 

@@ -9,7 +9,7 @@ const path = require('node:path');
 const { ambiente, ok, FOTO, em } = require('./_assistencia_ambiente.cjs');
 
 const pasta = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
-const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js'];
+const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js'];
 const CNPJ_B = '04.252.011/0001-10';
 const foto = (nome) => ({ nome: nome || 'foto.jpg', tipo: 'image/jpeg', base64: FOTO });
 

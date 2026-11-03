@@ -872,6 +872,8 @@ function AstC_converter_(eu, d) {
   Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { SITUACAO: 'CONVERTIDA', CHAMADO_ID: r.chamado.id, CHAMADO_NUMERO: r.chamado.numero, TRATADA_POR_NOME: eu.nome, TRATADA_EM: Ast_agora_(), PAUSA_DESDE: '' });
   if (rep) {
     Ast_evento_('SOLICITACAO', s.ID, 'ACEITE', eu, 'Pedido aceito pela Metrolabs: virou o chamado ' + r.chamado.numero + '.', { numero: s.NUMERO, publico: 'REPRESENTADA', de: 'Enviado', para: 'Aceito' });
+    // 03/11/2026: aviso com ciência ainda não lido é arquivado e o aviso na tela sai (SGO_Representacao_Alertas.js)
+    if (typeof Rep_aoTratarSolicitacao_ === 'function') Rep_aoTratarSolicitacao_(s, 'aceito: chamado ' + r.chamado.numero);
     if (typeof Rep_avisarRepresentada_ === 'function') Rep_avisarRepresentada_(rep, s.POR_ID, 'Pedido ' + s.NUMERO + ' aceito: chamado ' + r.chamado.numero, 'A Metrolabs aceitou o pedido ' + s.NUMERO + ' (' + Ast_s_(s.CLIENTE_NOME) + ', ' + Ast_s_(s.EQUIPAMENTO_TEXTO) + '). Ele virou o chamado ' + r.chamado.numero + '.', r.chamado.id, 'RP06');
   }
   return r;
@@ -890,6 +892,7 @@ function AstC_descartar_(eu, d) {
   if (rep) {
     // 29/10/2026: a representada vê o motivo da recusa e é avisada por e-mail
     Ast_evento_('SOLICITACAO', s.ID, 'RECUSA', eu, 'Pedido recusado pela Metrolabs: ' + m, { numero: s.NUMERO, publico: 'REPRESENTADA', de: 'Enviado', para: 'Recusado' });
+    if (typeof Rep_aoTratarSolicitacao_ === 'function') Rep_aoTratarSolicitacao_(s, 'recusado');
     if (typeof Rep_avisarRepresentada_ === 'function') Rep_avisarRepresentada_(rep, s.POR_ID, 'Pedido ' + s.NUMERO + ' recusado', 'A Metrolabs recusou o pedido ' + s.NUMERO + ' (' + Ast_s_(s.CLIENTE_NOME) + '). Motivo: ' + m + '\nSe houver engano, responda pela conversa do pedido.', s.ID, 'RP06');
     return { message: 'Pedido ' + s.NUMERO + ' recusado. A representada vê o motivo e foi avisada por e-mail.' };
   }

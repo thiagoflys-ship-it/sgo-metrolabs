@@ -1,6 +1,6 @@
 # Manual da área da representada no SGO+ Metrolabs
 
-Metrolabs · versão de 29/10/2026 · para a equipe da empresa representada
+Metrolabs · versão de 03/11/2026 · para a equipe da empresa representada
 
 ## 1. Para que serve
 
@@ -20,6 +20,7 @@ Nesta área você pede atendimento técnico da Metrolabs para os clientes finais
    - Não achou: preencha o cadastro completo com os dados informados pelo cliente ou pela nota fiscal: razão social, endereço (CEP, logradouro, número, bairro, cidade, UF) e o contato responsável com nome, e-mail e telefone. O botão da base pública da Receita preenche a razão social e o endereço; o contato precisa vir do cliente. Marque "Ciente".
 3. Equipamento: digite o número de série como está na etiqueta e toque em "Buscar".
    - Não achou: escolha o modelo, confira a série, informe a data da instalação e a nota fiscal de venda (número, data e arquivo, se tiver), a revenda, o setor e o patrimônio do cliente, envie a foto da etiqueta e marque "Ciente". A garantia é calculada pelo modelo a partir da instalação ou da nota fiscal.
+   - O modelo não está na lista: toque em "Cadastrar modelo novo", logo abaixo do campo Modelo. Preencha código, nome, tipo de equipamento, garantia em meses (0 a 120) e, se souber, a família e o padrão da série, e toque em "Cadastrar o modelo". O que você já digitou continua no formulário e o modelo novo já fica escolhido.
    - Se aparecer que a série já está cadastrada em outro cliente, escreva no Canal geral para a Metrolabs conferir.
 4. Relato: setor, contato no local (nome, telefone e e-mail), sintoma com pelo menos 30 letras, quando começou, código de erro do visor (ou marque que não exibe), se o equipamento está parado, o risco de continuar usando, o que já foi tentado e o enquadramento pretendido (garantia, fora de garantia ou não sei). Se a sua empresa usa número de protocolo, informe.
 5. Arquivos: pelo menos 1 foto do equipamento e 1 da etiqueta de série. As fotos são reduzidas no seu aparelho para até 2 MB. Vídeo é opcional, até 50 MB. Fotos e vídeos não podem mostrar pacientes, prontuários ou documentos pessoais.
@@ -57,6 +58,15 @@ O Painel é a primeira tela da sua área.
 - No Painel, "Relatório do período" gera o relatório da carteira da sua empresa no período escolhido: na capa, os abertos, o prazo cumprido e os pontos de atenção pelo número do chamado; depois os índices do painel, os gráficos (por etapa, prazo cumprido, tempos médios, por cliente e UF, garantia e reincidência por modelo), o Gantt (com a etapa e a situação do prazo escritas na barra), a lista dos pedidos e chamados e as definições dos índices.
 - A aba "Relatórios gerados" do Painel e a ficha do chamado listam os documentos já gerados para abrir de novo. Cada emissão é uma versão nova; nenhuma é apagada. Só as pessoas da sua empresa abrem esses documentos.
 
+## 6.1 Catálogo de modelos da sua empresa
+
+- Aba "Catálogo de modelos": os modelos da sua empresa, com código, nome, tipo, família, garantia, padrão da série, situação, quem cadastrou e quantos equipamentos usam cada um. Só aparecem os modelos da sua empresa.
+- "Cadastrar modelo novo": o código é único na sua empresa (contando os inativos).
+- "Alterar": mudar a garantia vale para os equipamentos cadastrados daqui em diante; os já cadastrados mantêm a garantia gravada no cadastro deles. O código não muda depois que algum equipamento usa o modelo.
+- "Excluir": se nenhum equipamento usa o modelo, ele sai do catálogo. Se algum já usa, o botão diz "Inativar": o modelo some da lista de escolha do pedido, mas o histórico e a garantia dos equipamentos continuam guardados. "Reativar" volta o modelo para a lista.
+- "Histórico": quem cadastrou, alterou, inativou ou reativou, quando, o que mudou (antes e depois) e o motivo. Alterações feitas pela Metrolabs aparecem com "(Metrolabs)".
+- Cadastram e alteram modelos o Administrador da representada e o Atendente. Os demais papéis consultam.
+
 ## 7. Conversar
 
 - Cada pedido e cada chamado tem a própria conversa. Assuntos gerais vão no "Canal geral".
@@ -68,7 +78,7 @@ O Painel é a primeira tela da sua área.
 | Papel | Pode |
 |---|---|
 | Administrador da representada | Tudo, mais ver a equipe com acesso e as ações registradas |
-| Atendente | Buscar e cadastrar cliente e equipamento, pedir atendimento, conversar e cancelar antes da visita |
+| Atendente | Buscar e cadastrar cliente, equipamento e modelo, pedir atendimento, conversar e cancelar antes da visita |
 | Financeiro de garantia | Consultar e conversar |
 | Leitura | Só consultar |
 
@@ -76,5 +86,7 @@ O Painel é a primeira tela da sua área.
 
 - Por que não há busca por nome? Para proteger os dados dos clientes atendidos pela Metrolabs. A busca é pelo CNPJ ou CPF completo.
 - Aparece "Muitas buscas seguidas": espere o tempo indicado e busque de novo com o documento ou a série conferidos.
-- O modelo não aparece na lista: peça à Metrolabs, pelo Canal geral, para incluir no catálogo.
+- O modelo não aparece na lista: toque em "Cadastrar modelo novo" no próprio pedido (ou cadastre na aba "Catálogo de modelos"). Se ele estiver inativo, toque em "Reativar". Se o seu papel não cadastra, peça ao administrador da sua empresa no sistema.
+- Aparece que o código do modelo já existe: o modelo já está no catálogo; escolha-o na lista ou reative.
+- Mudei a garantia do modelo: muda a garantia dos equipamentos já cadastrados? Não. A garantia nova vale para os equipamentos cadastrados depois.
 - O relatório final no portal, o aceite do encerramento, as peças e os custos entram nas próximas etapas; enquanto isso, combine pela conversa do chamado.

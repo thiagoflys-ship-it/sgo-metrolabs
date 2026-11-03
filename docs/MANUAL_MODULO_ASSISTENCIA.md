@@ -383,6 +383,8 @@ tinham. A atividade cancelada em Minhas atividades não volta sozinha: se o aten
 - Linha do tempo com três públicos: interno (sem marca), representada e cliente final. O que a equipe registra com público para o cliente aparece também para a representada; o resto é interno.
 - Regras da assistência > Representação: quem responde pela conta da representada (recebe pedidos, alertas e mensagens). Sem ninguém marcado, vale quem faz a triagem.
 - Alertas: 75% do prazo de aceite (responsável), prazo vencido (responsável, gestão da área Técnica e Caixa de decisões) e chamado de representada sem registro em 3 dias úteis (responsável e Caixa de decisões).
+- Aviso de pedido novo (03/11/2026): quem faz a triagem, a gestão da área Técnica e quem responde pela representação veem um aviso no canto da tela, com som, em qualquer tela do SGO+ (pedido novo, complemento respondido e 75% do prazo de aceite), com "Abrir pedido" e "Dispensar"; o SGO+ confere a cada 45 segundos sem recarregar a tela. Quem responde pela representação recebe também o aviso em Avisos (até a ciência) e o WhatsApp do sistema com o link do pedido, só no expediente e em dia útil, um por marco e até 10 por dia. Nada sai depois que o pedido é aceito, recusado ou cancelado.
+- A representada cadastra os próprios modelos (na abertura do pedido e no catálogo dela), com histórico; a garantia de cada equipamento fica gravada no cadastro dele.
 - Detalhes no Manual do módulo Representação.
 
 ## Ficha da O.S. e do chamado no celular (01/11/2026)

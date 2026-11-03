@@ -62,17 +62,19 @@
     }, function (m) { Rp_$_("rpSub").textContent = ""; Rp_msg_("rpMsg", m); });
   }
   function Rp_montarAbas_() {
-    var abas = RP.externo ? [["painel", "Painel"]].concat(RP.ini.eu.perm.abrir ? [["novo", "Novo pedido"]] : []).concat([["chamados", "Chamados"], ["equipamentos", "Equipamentos"], ["geral", "Canal geral"]]).concat(RP.ini.eu.perm.equipe ? [["equipe", "Equipe"]] : []).concat([["ajuda", "Como usar"]])
+    var abas = RP.externo ? [["painel", "Painel"]].concat(RP.ini.eu.perm.abrir ? [["novo", "Novo pedido"]] : []).concat([["chamados", "Chamados"], ["equipamentos", "Equipamentos"], ["catalogo", "Catálogo de modelos"], ["geral", "Canal geral"]]).concat(RP.ini.eu.perm.equipe ? [["equipe", "Equipe"]] : []).concat([["ajuda", "Como usar"]])
       : [["painel", "Painel"], ["pedidos", "Pedidos"], ["conversas", "Conversas"], ["representadas", "Representadas"], ["modelos", "Catálogo de modelos"], ["usuarios", "Usuários"], ["acessos", "Registro de ações"], ["ajuda", "Como usar"]];
     Rp_$_("rpAbas").innerHTML = abas.map(function (a) { return '<button type="button" class="at-tab" data-a="' + a[0] + '">' + Rp_esc_(a[1]) + "</button>"; }).join("");
     Rp_$_("rpAbas").querySelectorAll(".at-tab").forEach(function (b) { b.onclick = function () { Rp_irAba_(b.getAttribute("data-a")); }; });
+    // 03/11/2026: "Abrir pedido" do aviso na tela (ou o link do WhatsApp) abre direto o pedido, sem passar pelo painel
+    if (!RP.externo && RP.abrirPedido) { var idP = RP.abrirPedido; RP.abrirPedido = ""; RpI_abrirPedidoPorId_(idP); return; }
     Rp_irAba_(abas[0][0]);
   }
   function Rp_irAba_(a) {
     RP.aba = a; Rp_msg_("rpMsg", "");
     document.querySelectorAll("#rpAbas .at-tab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-a") === a); });
     var c = Rp_$_("rpCorpo"); c.innerHTML = '<div class="at-vazio">Carregando…</div>';
-    var mapa = { painel: RP.externo ? Rp_painel_ : RpI_painel_, inicio: Rp_painel_, novo: Rp_novo_, chamados: Rp_chamados_, equipamentos: Rp_equipamentos_, geral: function (el) { el.innerHTML = '<div class="at-caixa" id="rpConvGeral"></div>'; Rp_conversa_(Rp_$_("rpConvGeral"), "GERAL", "", "Canal geral com a Metrolabs"); }, equipe: Rp_equipe_, ajuda: Rp_ajuda_,
+    var mapa = { painel: RP.externo ? Rp_painel_ : RpI_painel_, inicio: Rp_painel_, novo: Rp_novo_, chamados: Rp_chamados_, equipamentos: Rp_equipamentos_, catalogo: Rp_catalogo_, geral: function (el) { el.innerHTML = '<div class="at-caixa" id="rpConvGeral"></div>'; Rp_conversa_(Rp_$_("rpConvGeral"), "GERAL", "", "Canal geral com a Metrolabs"); }, equipe: Rp_equipe_, ajuda: Rp_ajuda_,
       pedidos: RpI_pedidos_, conversas: RpI_conversas_, representadas: RpI_representadas_, modelos: RpI_modelos_, usuarios: RpI_usuarios_, acessos: RpI_acessos_ };
     (mapa[a] || mapa.painel)(c);
   }
@@ -318,15 +320,33 @@
   function Rp_formEquip_(msg) {
     var res = Rp_$_("rpEqRes");
     if (!RP.ini.eu.perm.cadastrar) { res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + " O seu papel não cadastra equipamentos.</div>"; return; }
-    if (!RP.ini.modelos.length) { res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + " O catálogo de modelos da sua empresa ainda está vazio: peça à Metrolabs pelo Canal geral para cadastrar os modelos.</div>"; return; }
+    if (!RP.ini.modelos.length && !RP.ini.podeCadastrarModelo) { res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + " O catálogo de modelos da sua empresa ainda está vazio e o seu papel não cadastra modelos: peça ao Administrador da sua empresa no sistema (ou à Metrolabs, pelo Canal geral) para cadastrar o modelo.</div>"; return; }
+    // 03/11/2026: o modelo que não está na lista é cadastrado aqui mesmo, sem sair do pedido; o novo já fica escolhido
     res.innerHTML = '<div class="at-faixa aviso">' + Rp_esc_(msg) + "</div>" + Rp_avisoCadastro_() + '<div class="at-grade3">' +
-      Rp_campo_("Modelo *", Rp_select_("modeloCodigo", RP.ini.modelos.map(function (m) { return [m.codigo, m.nome + " (garantia " + m.garantiaMeses + " meses)"]; }), "Escolha o modelo")) +
+      Rp_campo_("Modelo *", Rp_select_("modeloCodigo", RP.ini.modelos.map(function (m) { return [m.codigo, m.nome + " (garantia " + m.garantiaMeses + " meses)"]; }), RP.ini.modelos.length ? "Escolha o modelo" : "Catálogo vazio: cadastre o modelo abaixo") +
+        (RP.ini.podeCadastrarModelo ? '<button type="button" class="btn-secondary" id="rpModNovoAbrir" style="margin-top:6px"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Cadastrar modelo novo</button>' : ""),
+        RP.ini.podeCadastrarModelo ? "O modelo não está na lista? Cadastre aqui mesmo: o que você já digitou continua no formulário." : "") +
       Rp_campo_("Série *", Rp_input_("serie2")) + Rp_campo_("Data da instalação", Rp_input_("dataInstalacao", "", "date")) + Rp_campo_("Nota fiscal de venda (número)", Rp_input_("nfNumero")) +
       Rp_campo_("Data da nota fiscal", Rp_input_("nfData", "", "date")) + Rp_campo_("Arquivo da nota fiscal (PDF ou foto)", '<input id="rp_nfArquivo" type="file" accept="application/pdf,image/*">') +
       Rp_campo_("Revenda ou canal de venda", Rp_input_("revenda")) + Rp_campo_("Setor", Rp_input_("setorEq")) + Rp_campo_("Patrimônio do cliente", Rp_input_("patrimonio")) +
-      Rp_campo_("Foto da etiqueta de série *", '<input id="rp_fotoEtiqueta" type="file" accept="image/*" capture="environment">', "Foto legível da etiqueta. Não fotografe pacientes nem documentos pessoais.") + "</div>" +
+      Rp_campo_("Foto da etiqueta de série *", '<input id="rp_fotoEtiqueta" type="file" accept="image/*" capture="environment">', "Foto legível da etiqueta. Não fotografe pacientes nem documentos pessoais.") + "</div>" + '<div id="rpModNovo"></div>' +
       Rp_ciente_("ciente") + '<div id="rpEqMsg"></div><div class="at-acoes">' + Rp_btn_("rpEqSalvar", "Cadastrar o equipamento", true) + "</div>";
     Rp_$_("rp_serie2").value = Rp_val_("serie");
+    var bMod = Rp_$_("rpModNovoAbrir");
+    if (bMod) {
+      var abrirModNovo = function () {
+        var caixa = Rp_$_("rpModNovo");
+        Rp_formModelo_(caixa, null, function (r) {
+          RP.ini.modelos = r.modelos;
+          var sel = Rp_$_("rp_modeloCodigo");
+          sel.innerHTML = '<option value="">Escolha o modelo</option>' + RP.ini.modelos.map(function (m) { return '<option value="' + Rp_esc_(m.codigo) + '">' + Rp_esc_(m.nome + " (garantia " + m.garantiaMeses + " meses)") + "</option>"; }).join("");
+          sel.value = r.modelo.codigo;
+          caixa.innerHTML = '<div class="at-faixa ok">' + Rp_esc_(r.message) + " Ele já está escolhido no campo Modelo.</div>";
+        }, function () { caixa.innerHTML = ""; });
+      };
+      bMod.onclick = abrirModNovo;
+      if (!RP.ini.modelos.length) abrirModNovo();
+    }
     Rp_$_("rpEqSalvar").onclick = function () {
       Rp_lerArquivos_(Rp_$_("rp_fotoEtiqueta"), function (fotos) {
         Rp_lerArquivos_(Rp_$_("rp_nfArquivo"), function (nf) {
@@ -470,6 +490,62 @@
   }
 
   // ---------------- visão da Metrolabs ----------------
+  // ---------------- catálogo de modelos (lado da representada; 03/11/2026) ----------------
+  function Rp_erroCamposPfx_(r, pfx) {
+    document.querySelectorAll(".rp-erro-m").forEach(function (e) { e.remove(); });
+    (r && r.faltam || []).forEach(function (f) { var el = Rp_$_("rp_" + pfx + f.campo); if (el && el.parentNode) { var d = document.createElement("div"); d.className = "at-ajuda-campo rp-erro-m"; d.style.color = "var(--danger)"; d.textContent = f.texto; el.parentNode.appendChild(d); } });
+  }
+  /** Formulário do modelo (novo ou edição). m: modelo do catálogo ou null. ok(r) depois de salvar; cancelar() no "Cancelar". */
+  function Rp_formModelo_(caixa, m, ok, cancelar) {
+    var ex = RP.ini.explicaModelo || {}, travaCod = !!(m && m.usos);
+    caixa.innerHTML = '<div class="at-caixa" style="margin-top:10px"><h3>' + (m ? "Alterar o modelo " + Rp_esc_(m.nome) : "Cadastrar modelo novo") + '</h3><div class="at-grade3">' +
+      Rp_campo_("Código *", Rp_input_("m_codigo", "Ex.: AC21", "text", travaCod ? " disabled" : ""), travaCod ? "Já está em " + m.usos + " equipamento(s): o código não muda." : (ex.codigo || "")) +
+      Rp_campo_("Nome do modelo *", Rp_input_("m_nome", "Ex.: Autoclave 21 litros")) + Rp_campo_("Tipo de equipamento *", Rp_input_("m_tipo", "Ex.: Autoclave")) +
+      Rp_campo_("Família (opcional)", Rp_input_("m_familia", "Ex.: Linha hospitalar")) + Rp_campo_("Garantia (meses) *", Rp_input_("m_garantiaMeses", "Ex.: 12", "number", ' min="0" max="120" step="1"'), m ? (ex.garantia || "") : "0 = sem garantia.") +
+      Rp_campo_("Padrão da série (opcional)", Rp_input_("m_padraoSerie", "Ex.: BM[0-9]{6}"), "Deixe em branco se não souber. Com o padrão, a série digitada é conferida no cadastro do equipamento.") +
+      '</div><div id="rpModFormMsg"></div><div class="at-acoes">' + Rp_btn_("rpModFormSalvar", m ? "Salvar alterações" : "Cadastrar o modelo", true) + Rp_btn_("rpModFormCancelar", "Cancelar") + "</div></div>";
+    if (m) { Rp_$_("rp_m_codigo").value = m.codigo; Rp_$_("rp_m_nome").value = m.nome; Rp_$_("rp_m_tipo").value = m.tipo; Rp_$_("rp_m_familia").value = m.familia || ""; Rp_$_("rp_m_garantiaMeses").value = m.garantiaMeses; Rp_$_("rp_m_padraoSerie").value = m.padraoSerie || ""; }
+    Rp_$_("rpModFormCancelar").onclick = function () { if (cancelar) cancelar(); else caixa.innerHTML = ""; };
+    Rp_$_("rpModFormSalvar").onclick = function () {
+      var d = { id: m ? m.id : "", codigo: Rp_val_("m_codigo"), nome: Rp_val_("m_nome"), tipo: Rp_val_("m_tipo"), familia: Rp_val_("m_familia"), garantiaMeses: Rp_val_("m_garantiaMeses"), padraoSerie: Rp_val_("m_padraoSerie") };
+      Rp_chamar_("salvarModelo", d, function (r) { ok(r); }, function (msg, r) { Rp_msg_("rpModFormMsg", msg); Rp_erroCamposPfx_(r, "m_"); }, "Salvando o modelo…");
+    };
+  }
+  function Rp_histModeloHtml_(h) {
+    return h.length ? '<div class="at-hist">' + h.map(function (x) {
+      return '<div><span class="q">' + Rp_esc_(x.em + " · " + x.por + " · " + x.acaoNome) + "</span>" + (x.mudancas.length ? "<br>" + x.mudancas.map(function (c) { return Rp_esc_(c.campo + ": " + c.de + " → " + c.para); }).join("<br>") : "") + (x.motivo ? "<br>Motivo: " + Rp_esc_(x.motivo) : "") + "</div>";
+    }).join("") + "</div>" : '<p class="at-meta">Sem histórico registrado (modelo cadastrado antes de 03/11/2026).</p>';
+  }
+  function Rp_catalogo_(c) {
+    Rp_chamar_("catalogo", {}, function (r) {
+      var ex = r.explica || {};
+      c.innerHTML = '<div class="at-faixa">' + Rp_esc_(ex.excluir || "") + " " + Rp_esc_(ex.garantia || "") + "</div>" + (r.message ? '<div class="at-faixa aviso">' + Rp_esc_(r.message) + "</div>" : "") +
+        (r.podeEditar ? '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpCatNovo", '<i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Cadastrar modelo novo', true) + '</div><div id="rpCatForm"></div>' : "") +
+        (r.modelos.length ? '<div class="at-lista">' + r.modelos.map(function (m, i) {
+          return '<div class="at-card' + (m.ativo ? "" : " fim") + '"><p class="at-card-tit">' + Rp_esc_(m.nome) + " · " + Rp_esc_(m.codigo) + " " + Rp_selo_(m.ativo ? 10 : 12, m.situacao) + "</p>" +
+            '<p class="at-txt">' + Rp_esc_([m.tipo, m.familia].filter(Boolean).join(" · ")) + " · garantia de " + m.garantiaMeses + " meses" + (m.padraoSerie ? " · série no padrão " + Rp_esc_(m.padraoSerie) : "") + "</p>" +
+            '<p class="at-meta">Cadastrado por ' + Rp_esc_(m.criadoPor) + (m.criadoEm ? " em " + Rp_esc_(m.criadoEm) : "") + " · " + (m.usos ? m.usos + " equipamento(s) usam este modelo" : "nenhum equipamento usa este modelo") + (m.ativo ? "" : " · inativado em " + Rp_esc_(m.inativadoEm || "-")) + "</p>" +
+            '<div class="at-acoes">' + (r.podeEditar ? Rp_btn_("rpCatEd" + i, "Alterar") + (m.ativo ? Rp_btnPerigo_("rpCatEx" + i, m.usos ? "Inativar" : "Excluir") : Rp_btn_("rpCatRe" + i, "Reativar")) : "") + Rp_btn_("rpCatHi" + i, "Histórico") + "</div>" +
+            '<div id="rpCatHist' + i + '" hidden>' + Rp_histModeloHtml_(m.historico) + "</div></div>";
+        }).join("") + "</div>" : '<div class="at-vazio">Nenhum modelo no catálogo da sua empresa ainda.' + (r.podeEditar ? ' Toque em "Cadastrar modelo novo".' : "") + "</div>");
+      var recarregar = function (msg) { Rp_msg_("rpMsg", msg, "ok"); Rp_chamar_("inicio", {}, function (x) { RP.ini.modelos = x.modelos; }, function () {}); Rp_catalogo_(c); };
+      var bn = Rp_$_("rpCatNovo");
+      if (bn) bn.onclick = function () { Rp_formModelo_(Rp_$_("rpCatForm"), null, function (x) { recarregar(x.message); }); Rp_$_("rpCatForm").scrollIntoView({ behavior: "smooth", block: "start" }); };
+      r.modelos.forEach(function (m, i) {
+        var b;
+        if ((b = Rp_$_("rpCatHi" + i))) b.onclick = function () { var h = Rp_$_("rpCatHist" + i); h.hidden = !h.hidden; };
+        if ((b = Rp_$_("rpCatEd" + i))) b.onclick = function () { Rp_formModelo_(Rp_$_("rpCatForm"), m, function (x) { recarregar(x.message); }); Rp_$_("rpCatForm").scrollIntoView({ behavior: "smooth", block: "start" }); };
+        if ((b = Rp_$_("rpCatRe" + i))) b.onclick = function () { Rp_chamar_("reativarModelo", { id: m.id }, function (x) { recarregar(x.message); }, function (msg) { Rp_msg_("rpMsg", msg); }, "Reativando…"); };
+        if ((b = Rp_$_("rpCatEx" + i))) b.onclick = function () {
+          var txt = m.usos ? "O modelo " + m.nome + " já está em " + m.usos + " equipamento(s), por isso não sai do catálogo: ele fica INATIVO (some da lista de escolha do pedido; o histórico e a garantia dos equipamentos continuam guardados). Inativar?"
+            : "Nenhum equipamento usa o modelo " + m.nome + ": ele sai do catálogo (o registro da exclusão fica no histórico). Excluir?";
+          if (!confirm(txt)) return;
+          Rp_chamar_("excluirModelo", { id: m.id }, function (x) { recarregar(x.message); }, function (msg) { Rp_msg_("rpMsg", msg); }, m.usos ? "Inativando…" : "Excluindo…");
+        };
+      });
+    }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
+  }
+
   function RpI_selRep_(id, todas) { return Rp_select_(id, RP.ini.representadas.map(function (r) { return [r.id, r.nome]; }), todas ? "Todas as representadas" : "Escolha a representada"); }
   function RpI_seloPrazo_(p) { var cor = { VENCIDO: "vermelho", EM_RISCO: "laranja", PAUSADO: "cinza", EM_DIA: "verde" }[p.estado] || "cinza"; return p.texto ? '<span class="at-selo ' + cor + '">' + Rp_esc_(p.texto) + "</span>" : ""; }
   /** Abre um pedido pelo id (vindo do painel): a fila completa traz o pedido com os anexos e as opções de aceite. */
@@ -564,14 +640,27 @@
       var rid = Rp_val_("repMod"); RP.repMod = rid;
       if (!rid) { Rp_$_("rpModLista").innerHTML = '<div class="at-vazio">Escolha a representada.</div>'; return; }
       Rp_chamar_("modelos", { representadaId: rid }, function (r) {
-        Rp_$_("rpModLista").innerHTML = (r.modelos.length ? '<table class="at-tabela"><thead><tr><th>Código</th><th>Modelo</th><th>Tipo</th><th>Família</th><th class="n">Garantia</th><th>Padrão da série</th><th>Situação</th></tr></thead><tbody>' + r.modelos.map(function (m) {
-          return '<tr><td data-r="Código"><b>' + Rp_esc_(m.codigo) + '</b></td><td data-r="Modelo">' + Rp_esc_(m.nome) + '</td><td data-r="Tipo">' + Rp_esc_(m.tipo) + '</td><td data-r="Família">' + Rp_esc_(m.familia || "—") + '</td><td class="n" data-r="Garantia">' + m.garantiaMeses + ' meses</td><td data-r="Padrão da série">' + Rp_esc_(m.padraoSerie || "—") + '</td><td data-r="Situação">' + (m.ativo ? Rp_selo_(10, "Ativo") : Rp_selo_(12, "Inativo")) + "</td></tr>";
+        // 03/11/2026: a representada também cadastra modelos; aqui aparece quem cadastrou (e de que lado), o uso e o histórico
+        Rp_$_("rpModLista").innerHTML = '<div class="at-faixa">A representada cadastra e altera os próprios modelos. Aqui aparece quem cadastrou (com a empresa), quantos equipamentos usam cada modelo e o histórico. ' + Rp_esc_((r.explica || {}).garantia || "") + "</div>" +
+          (r.modelos.length ? '<table class="at-tabela"><thead><tr><th>Código</th><th>Modelo</th><th>Tipo</th><th class="n">Garantia</th><th>Padrão da série</th><th>Cadastrado por</th><th class="n">Equipamentos</th><th>Situação</th><th></th></tr></thead><tbody>' + r.modelos.map(function (m, i) {
+          return '<tr><td data-r="Código"><b>' + Rp_esc_(m.codigo) + '</b></td><td data-r="Modelo">' + Rp_esc_(m.nome) + (m.familia ? "<br><span class=\"at-meta\">" + Rp_esc_(m.familia) + "</span>" : "") + '</td><td data-r="Tipo">' + Rp_esc_(m.tipo) + '</td><td class="n" data-r="Garantia">' + m.garantiaMeses + ' meses</td><td data-r="Padrão da série">' + Rp_esc_(m.padraoSerie || "—") +
+            '</td><td data-r="Cadastrado por">' + Rp_esc_(m.criadoPor) + (m.criadoEm ? "<br><span class=\"at-meta\">" + Rp_esc_(m.criadoEm) + "</span>" : "") + '</td><td class="n" data-r="Equipamentos">' + m.usos + '</td><td data-r="Situação">' + (m.ativo ? Rp_selo_(10, "Ativo") : Rp_selo_(12, "Inativo")) +
+            '</td><td data-r=""><button type="button" class="btn-secondary" data-ed="' + i + '">' + (RP.ini.podeAdministrar ? "Alterar" : "Ver") + '</button> <button type="button" class="btn-secondary" data-hi="' + i + '">Histórico</button></td></tr>' +
+            '<tr id="rpModHist' + i + '" hidden><td colspan="9">' + Rp_histModeloHtml_(m.historico) + "</td></tr>";
         }).join("") + "</tbody></table>" : '<div class="at-vazio">Catálogo vazio.</div>') +
-          (RP.ini.podeAdministrar ? '<div class="at-caixa" style="margin-top:12px"><h3>Incluir ou alterar modelo (mesmo código altera)</h3><div class="at-grade3">' + Rp_campo_("Código *", Rp_input_("mcod")) + Rp_campo_("Nome *", Rp_input_("mnome")) + Rp_campo_("Tipo de equipamento *", Rp_input_("mtipo", "Ex.: Autoclave")) +
+          (RP.ini.podeAdministrar ? '<div class="at-caixa" style="margin-top:12px" id="rpModForm"><h3>Incluir ou alterar modelo (mesmo código altera)</h3><div class="at-grade3">' + Rp_campo_("Código *", Rp_input_("mcod")) + Rp_campo_("Nome *", Rp_input_("mnome")) + Rp_campo_("Tipo de equipamento *", Rp_input_("mtipo", "Ex.: Autoclave")) +
             Rp_campo_("Família", Rp_input_("mfam")) + Rp_campo_("Garantia (meses) *", Rp_input_("mgar", "", "number")) + Rp_campo_("Padrão da série (opcional)", Rp_input_("mpad", "Ex.: BM[0-9]{6}"), "Deixe em branco se não souber.") +
-            Rp_campo_("Situação", Rp_select_("mativo", [["SIM", "Ativo"], ["NAO", "Inativo"]])) + '</div><div id="rpModMsg"></div><div class="at-acoes">' + Rp_btn_("rpModSalvar", "Salvar modelo", true) + "</div></div>" : "");
+            Rp_campo_("Situação", Rp_select_("mativo", [["SIM", "Ativo"], ["NAO", "Inativo"]])) + Rp_campo_("Motivo da alteração", '<textarea id="rp_motivo" rows="2"></textarea>', "Obrigatório para alterar um modelo que já existe (fica no histórico e a representada vê). Para incluir modelo novo, pode ficar em branco.") +
+            '</div><div id="rpModMsg"></div><div class="at-acoes">' + Rp_btn_("rpModSalvar", "Salvar modelo", true) + "</div></div>" : "");
+        Rp_$_("rpModLista").querySelectorAll("[data-hi]").forEach(function (b) { b.onclick = function () { var h = Rp_$_("rpModHist" + b.getAttribute("data-hi")); h.hidden = !h.hidden; }; });
+        Rp_$_("rpModLista").querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () {
+          var m = r.modelos[Number(b.getAttribute("data-ed"))];
+          if (!Rp_$_("rpModForm")) { var h = Rp_$_("rpModHist" + b.getAttribute("data-ed")); h.hidden = false; return; }
+          Rp_$_("rp_mcod").value = m.codigo; Rp_$_("rp_mnome").value = m.nome; Rp_$_("rp_mtipo").value = m.tipo; Rp_$_("rp_mfam").value = m.familia || ""; Rp_$_("rp_mgar").value = m.garantiaMeses; Rp_$_("rp_mpad").value = m.padraoSerie || ""; Rp_$_("rp_mativo").value = m.ativo ? "SIM" : "NAO"; Rp_$_("rp_motivo").value = "";
+          Rp_$_("rpModForm").scrollIntoView({ behavior: "smooth", block: "start" });
+        }; });
         var b = Rp_$_("rpModSalvar");
-        if (b) b.onclick = function () { Rp_chamar_("salvarModelo", { representadaId: rid, codigo: Rp_val_("mcod"), nome: Rp_val_("mnome"), tipo: Rp_val_("mtipo"), familia: Rp_val_("mfam"), garantiaMeses: Number(Rp_val_("mgar")), padraoSerie: Rp_val_("mpad"), ativo: Rp_val_("mativo") }, function (x) { Rp_msg_("rpMsg", x.message, "ok"); carregar(); }, function (m) { Rp_msg_("rpModMsg", m); }, "Salvando…"); };
+        if (b) b.onclick = function () { Rp_chamar_("salvarModelo", { representadaId: rid, codigo: Rp_val_("mcod"), nome: Rp_val_("mnome"), tipo: Rp_val_("mtipo"), familia: Rp_val_("mfam"), garantiaMeses: Rp_val_("mgar"), padraoSerie: Rp_val_("mpad"), ativo: Rp_val_("mativo"), motivo: Rp_val_("motivo") }, function (x) { Rp_msg_("rpMsg", x.message, "ok"); carregar(); }, function (m, x) { Rp_msg_("rpModMsg", m); Rp_erroCampos_(x); }, "Salvando…"); };
       }, function (m) { Rp_msg_("rpMsg", m); });
     };
     Rp_$_("rp_repMod").value = RP.repMod || (RP.ini.representadas[0] || {}).id || "";
@@ -591,5 +680,141 @@
         return '<tr><td data-r="Quando">' + Rp_esc_(a.em) + '</td><td data-r="Representada">' + Rp_esc_(a.representada) + '</td><td data-r="Quem">' + Rp_esc_(a.quem) + '</td><td data-r="Ação">' + Rp_esc_(a.acao) + '</td><td data-r="Detalhe">' + Rp_esc_(a.detalhe) + "</td></tr>";
       }).join("") + "</tbody></table>" : '<p class="at-meta">Nada registrado.</p>') + "</div>";
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
+  }
+  // =====================================================================
+  // AVISO NA TELA DOS PEDIDOS DA REPRESENTADA (03/11/2026, pedido do dono). Para quem trata a fila de pedidos (o servidor
+  // decide: gestão da Assistência, triagem e responsáveis pela representação; os demais recebem { ligado: false } e a tela
+  // para de perguntar). Em qualquer tela do SGO+, a cada 45 s com a aba visível, pergunta só a lista curta dos pedidos na fila
+  // (Representacao_api "alertasPedidos") e mostra no canto: pedido novo, complemento respondido e prazo de aceite a 75%.
+  // Som curto pelo WebAudio (sem arquivo). Navegador que bloqueia o som: o aviso aparece com "Clique para ativar o som".
+  // Ligar ou desligar o som fica guardado neste navegador. Nunca mexe no conteúdo da tela aberta (só no canto).
+  // =====================================================================
+  var REPAL = { timer: null, falhas: 0, emCurso: false, ultimo: 0, cartoes: {}, tocados: {}, ctx: null, bloqueado: false, dispensadosAqui: {}, ouvindo: false };
+  var REPAL_INTERVALO_MS = 45000;
+  var REPAL_CHAVE_SOM = "sgo_rep_alerta_som";
+  function RepAl_somLigado_() { try { return window.localStorage.getItem(REPAL_CHAVE_SOM) !== "desligado"; } catch (e) { return true; } }
+  function RepAl_gravarSom_(ligado) { try { window.localStorage.setItem(REPAL_CHAVE_SOM, ligado ? "ligado" : "desligado"); } catch (e) {} }
+  function RepAlertas_iniciar_() {
+    if (REPAL.timer || !SESSION) return;
+    if (typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_()) return;
+    var perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
+    if (!perfil || perfil === "CLIENTE" || perfil === "AUVO_SYNC") return;
+    REPAL.falhas = 0;
+    REPAL.timer = setInterval(function () { if (document.visibilityState === "visible") RepAl_verificar_(); }, REPAL_INTERVALO_MS);
+    if (!REPAL.ouvindo) {
+      REPAL.ouvindo = true;
+      document.addEventListener("visibilitychange", function () { if (REPAL.timer && document.visibilityState === "visible" && Date.now() - REPAL.ultimo > 20000) RepAl_verificar_(); });
+    }
+    setTimeout(RepAl_verificar_, 4000);
+  }
+  function RepAlertas_parar_() { if (REPAL.timer) { clearInterval(REPAL.timer); REPAL.timer = null; } }
+  function RepAl_verificar_() {
+    if (REPAL.emCurso || !SESSION || !REPAL.timer) return;
+    REPAL.emCurso = true; REPAL.ultimo = Date.now();
+    google.script.run.withSuccessHandler(function (r) {
+      REPAL.emCurso = false;
+      if (!r || !r.ok) { if (++REPAL.falhas >= 3) RepAlertas_parar_(); return; }
+      REPAL.falhas = 0;
+      if (r.ligado === false) { RepAlertas_parar_(); return; }
+      RepAl_mostrar_(r.itens || []);
+    }).withFailureHandler(function () {
+      REPAL.emCurso = false;
+      // sessão vencida ou servidor fora: três falhas seguidas param o aviso (como o acompanhamento do Auvo e da Frota)
+      if (++REPAL.falhas >= 3) RepAlertas_parar_();
+    }).Representacao_api(SESSION, "alertasPedidos", {});
+  }
+  function RepAl_caixa_() {
+    var el = document.getElementById("repAlertasCaixa");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "repAlertasCaixa"; el.className = "auvo-toast-container"; el.setAttribute("aria-live", "assertive"); el.setAttribute("role", "region"); el.setAttribute("aria-label", "Avisos de pedidos da representada");
+      el.style.maxWidth = "360px";
+      document.body.appendChild(el);
+    }
+    return el;
+  }
+  function RepAl_textoCartao_(x) {
+    return '<div class="auvo-toast-titulo">' + Rp_esc_(x.titulo) + "</div>" +
+      '<div class="auvo-toast-detalhe">' + Rp_esc_(x.representada + " · " + x.cliente) + "</div>" +
+      (x.equipamento ? '<div class="auvo-toast-detalhe">' + Rp_esc_(x.equipamento) + (x.parado ? " · <b>equipamento parado</b>" : "") + "</div>" : "") +
+      '<div class="auvo-toast-detalhe" data-repal-resta="1"' + (x.marco === "RISCO" ? ' style="color:var(--danger);font-weight:600"' : "") + ">" + Rp_esc_(x.resta) + "</div>";
+  }
+  function RepAl_mostrar_(itens) {
+    var caixa = RepAl_caixa_(), agora = {}, novo = false;
+    itens.forEach(function (x) {
+      if (REPAL.dispensadosAqui[x.chave]) return;
+      agora[x.chave] = true;
+      var card = REPAL.cartoes[x.chave];
+      if (card && document.body.contains(card)) {
+        // já na tela: atualiza só o tempo que falta (nada mais muda)
+        var r = card.querySelector("[data-repal-resta]"); if (r) r.textContent = x.resta;
+        return;
+      }
+      card = document.createElement("div");
+      card.className = "auvo-toast"; card.style.cursor = "default"; card.style.flexDirection = "column"; card.style.borderLeftColor = x.marco === "RISCO" ? "var(--danger)" : "var(--warning)";
+      card.setAttribute("role", "alert");
+      card.innerHTML = '<div style="display:flex;gap:10px;align-items:flex-start"><span class="auvo-toast-icone"><i class="fas ' + (x.marco === "RISCO" ? "fa-hourglass-half" : "fa-briefcase") + '" aria-hidden="true"></i></span><div class="auvo-toast-corpo">' + RepAl_textoCartao_(x) + "</div></div>" +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn-primary" data-repal="abrir">Abrir pedido</button><button type="button" class="btn-secondary" data-repal="dispensar">Dispensar</button>' +
+        '<button type="button" class="btn-secondary" data-repal="som" title="Liga ou desliga o som destes avisos neste navegador">' + (RepAl_somLigado_() ? "Som: ligado" : "Som: desligado") + "</button></div>" +
+        '<div data-repal-bloqueado="1" style="margin-top:6px;font-size:12px' + (REPAL.bloqueado && RepAl_somLigado_() ? "" : ";display:none") + '"><a href="#" data-repal="ativar">Clique para ativar o som</a> (o navegador só toca som depois de um clique na página).</div>';
+      card.querySelector('[data-repal="abrir"]').onclick = function () { RepAl_dispensar_(x, card); if (typeof Representacao_irPara_ === "function") Representacao_irPara_({ tipo: "representacao", mod: "representacao", id: x.id }); };
+      card.querySelector('[data-repal="dispensar"]').onclick = function () { RepAl_dispensar_(x, card); };
+      card.querySelector('[data-repal="som"]').onclick = function (ev) { var lig = !RepAl_somLigado_(); RepAl_gravarSom_(lig); document.querySelectorAll('#repAlertasCaixa [data-repal="som"]').forEach(function (b) { b.textContent = lig ? "Som: ligado" : "Som: desligado"; }); if (lig) RepAl_tocar_(true); RepAl_marcarBloqueio_(); };
+      card.querySelector('[data-repal="ativar"]').onclick = function (ev) { ev.preventDefault(); RepAl_tocar_(true); };
+      caixa.appendChild(card);
+      REPAL.cartoes[x.chave] = card;
+      if (!REPAL.tocados[x.chave]) { REPAL.tocados[x.chave] = true; novo = true; }
+    });
+    // pedido aceito, recusado ou cancelado (ou que mudou de marco): o aviso antigo sai do canto
+    Object.keys(REPAL.cartoes).forEach(function (k) { if (!agora[k]) { var c = REPAL.cartoes[k]; if (c && c.parentNode) c.parentNode.removeChild(c); delete REPAL.cartoes[k]; } });
+    if (novo) RepAl_tocar_(false);
+  }
+  function RepAl_dispensar_(x, card) {
+    REPAL.dispensadosAqui[x.chave] = true;
+    if (card && card.parentNode) card.parentNode.removeChild(card);
+    delete REPAL.cartoes[x.chave];
+    google.script.run.withSuccessHandler(function () {}).withFailureHandler(function () {}).Representacao_api(SESSION, "dispensarAlertaPedido", { chave: x.chave });
+  }
+  function RepAl_marcarBloqueio_() {
+    document.querySelectorAll("#repAlertasCaixa [data-repal-bloqueado]").forEach(function (d) { d.style.display = REPAL.bloqueado && RepAl_somLigado_() ? "" : "none"; });
+  }
+  /** Som curto (dois bipes). porClique: veio de um clique (o navegador libera o som). */
+  function RepAl_tocar_(porClique) {
+    if (!RepAl_somLigado_()) return;
+    try {
+      var Ref = window.AudioContext || window.webkitAudioContext;
+      if (!Ref) return;
+      if (!REPAL.ctx) REPAL.ctx = new Ref();
+      var ctx = REPAL.ctx;
+      var bipar = function () {
+        [880, 660].forEach(function (f, i) {
+          var ini = ctx.currentTime + i * 0.18, osc = ctx.createOscillator(), g = ctx.createGain();
+          osc.type = "sine"; osc.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, ini); g.gain.exponentialRampToValueAtTime(0.12, ini + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, ini + 0.16);
+          osc.connect(g); g.connect(ctx.destination); osc.start(ini); osc.stop(ini + 0.17);
+        });
+      };
+      if (ctx.state === "suspended") {
+        var p = ctx.resume();
+        if (p && p.then) p.then(function () { if (ctx.state === "running") { REPAL.bloqueado = false; RepAl_marcarBloqueio_(); bipar(); } }, function () {});
+        // sem clique na página, o navegador mantém o som parado: mostra "Clique para ativar o som"
+        setTimeout(function () { if (ctx.state !== "running") { REPAL.bloqueado = true; RepAl_marcarBloqueio_(); RepAl_esperarClique_(); } }, 400);
+        return;
+      }
+      REPAL.bloqueado = false; RepAl_marcarBloqueio_();
+      bipar();
+    } catch (e) { REPAL.bloqueado = true; RepAl_marcarBloqueio_(); }
+  }
+  /** Primeiro clique em qualquer lugar da página libera o som (e toca o aviso que ficou mudo). */
+  function RepAl_esperarClique_() {
+    if (REPAL.esperandoClique) return;
+    REPAL.esperandoClique = true;
+    var f = function () { document.removeEventListener("click", f, true); REPAL.esperandoClique = false; try { if (REPAL.ctx && REPAL.ctx.state === "suspended") REPAL.ctx.resume().then(function () { REPAL.bloqueado = false; RepAl_marcarBloqueio_(); }, function () {}); } catch (e) {} };
+    document.addEventListener("click", f, true);
+  }
+  /** Abre o pedido em Representação > Pedidos (do aviso na tela, do Início e do link do WhatsApp ou do e-mail). */
+  function Representacao_irPara_(acao) {
+    RP.abrirPedido = acao && acao.id ? String(acao.id) : "";
+    abrir("representacao");
   }
 </script>

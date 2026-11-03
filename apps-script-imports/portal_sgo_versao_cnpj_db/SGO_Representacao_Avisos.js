@@ -18,13 +18,13 @@ var REP_PEND_TIPOS = {
 };
 var REP_GES_TIPOS = { rep_aceite_vencido: { prazo: 1 }, rep_sem_registro: { prazo: 1 } };
 var REP_MTZ_EVENTOS = [
-  { cod: 'RP01', modulo: 'representacao', evento: 'Pedido de atendimento da representada na fila', origem: 'SGO_Representacao.js', publico: 'Responsável pela representação', email: 'HORA', whatsapp: 'NAO', limite: '1 por pedido', obs: 'Prazo de aceite de 4 horas úteis (configurável por representada).', area: 'TECNICA', obrigatorio: true },
-  { cod: 'RP02', modulo: 'representacao', evento: 'Pedido da representada com equipamento parado', origem: 'SGO_Representacao.js', publico: 'Responsável pela representação', email: 'HORA', whatsapp: 'NAO', limite: '1 por pedido', area: 'TECNICA', obrigatorio: true },
+  { cod: 'RP01', modulo: 'representacao', evento: 'Pedido de atendimento da representada na fila', origem: 'SGO_Representacao.js', publico: 'Responsável pela representação', email: 'HORA', whatsapp: 'NAO', limite: '1 por pedido', obs: 'Prazo de aceite de 4 horas úteis (configurável por representada). 03/11/2026: quem responde pela representação recebe também o aviso com ciência em Avisos e o WhatsApp do sistema (modelo sgo_gestao_acao, pela fila dos avisos da gestão): na hora, só no expediente, até 10 por pessoa por dia.', area: 'TECNICA', obrigatorio: true },
+  { cod: 'RP02', modulo: 'representacao', evento: 'Pedido da representada com equipamento parado', origem: 'SGO_Representacao.js', publico: 'Responsável pela representação', email: 'HORA', whatsapp: 'NAO', limite: '1 por pedido', obs: 'Como o RP01 (aviso com ciência e WhatsApp do sistema para quem responde pela representação, 03/11/2026).', area: 'TECNICA', obrigatorio: true },
   { cod: 'RP03', modulo: 'representacao', evento: 'Complemento respondido pela representada', origem: 'SGO_Representacao.js', publico: 'Responsável pela representação', email: 'HORA', whatsapp: 'NAO', limite: '1 por resposta', area: 'TECNICA' },
   { cod: 'RP04', modulo: 'representacao', evento: 'Pedido ou chamado cancelado pela representada', origem: 'SGO_Representacao.js', publico: 'Responsável pela representação; gestão da área Técnica', email: 'HORA', whatsapp: 'NAO', limite: '1 por cancelamento', area: 'TECNICA' },
   { cod: 'RP05', modulo: 'representacao', evento: 'Mensagem da representada na conversa', origem: 'SGO_Representacao.js', publico: 'Responsável pela representação; técnico do chamado', email: 'RESUMO', whatsapp: 'NAO', limite: 'No resumo do dia', area: 'TECNICA' },
   { cod: 'RP06', modulo: 'representacao', evento: 'Pedido aceito, complemento pedido, pedido recusado ou mensagem da Metrolabs (à representada)', origem: 'SGO_Representacao.js; SGO_Assistencia_Chamados.js', publico: 'Representada (quem abriu e o administrador dela)', email: 'HORA', whatsapp: 'NAO', limite: '1 por evento', obs: 'Só e-mail nesta etapa; WhatsApp à representada depende dos modelos aprovados pela Meta.' },
-  { cod: 'RP07', modulo: 'representacao', evento: 'Prazo de aceite do pedido da representada em risco (75%) ou vencido', origem: 'SGO_Representacao_Avisos.js (rotina da Assistência)', publico: 'Responsável pela representação; vencido: gestão da área Técnica', email: 'HORA', whatsapp: 'NAO', limite: '1 por marco', area: 'TECNICA', obrigatorio: true },
+  { cod: 'RP07', modulo: 'representacao', evento: 'Prazo de aceite do pedido da representada em risco (75%) ou vencido', origem: 'SGO_Representacao_Avisos.js (rotina da Assistência)', publico: 'Responsável pela representação; vencido: gestão da área Técnica', email: 'HORA', whatsapp: 'NAO', limite: '1 por marco', obs: '03/11/2026: a 75% também o aviso com ciência em Avisos e o WhatsApp do sistema para quem responde pela representação (só no expediente); nada depois do aceite, da recusa ou do cancelamento.', area: 'TECNICA', obrigatorio: true },
   { cod: 'RP08', modulo: 'representacao', evento: 'Chamado de representada sem registro em 3 dias úteis', origem: 'SGO_Representacao_Avisos.js (rotina da Assistência)', publico: 'Responsável pela representação', email: 'HORA', whatsapp: 'NAO', limite: '1 por chamado por período parado', area: 'TECNICA' }
 ];
 
@@ -113,11 +113,15 @@ function Representacao_rotina_(agoraMs) {
       var s = x.s, p = x.prazo;
       if (p.estado === 'VENCIDO' && !Rep_s_(s.ALERTA_VENCIDO_EM)) {
         Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { ALERTA_VENCIDO_EM: agora, ALERTA_RISCO_EM: Rep_s_(s.ALERTA_RISCO_EM) || agora });
-        Ast_avisar_(resp.ids.concat(gest), 'REP_ACEITE_VENCIDO', 'Prazo de aceite VENCIDO: ' + s.NUMERO + ' (' + Rep_s_(x.rep.NOME) + ')', Rep_s_(s.CLIENTE_NOME) + ' · ' + Rep_s_(s.EQUIPAMENTO_TEXTO) + '\n' + p.texto + '. Trate em Representação > Pedidos; o item está na Caixa de decisões.', s.ID, { evento: 'RP07' });
+        Ast_avisar_(resp.ids.concat(gest), 'REP_ACEITE_VENCIDO', 'Prazo de aceite VENCIDO: ' + s.NUMERO + ' (' + Rep_s_(x.rep.NOME) + ')', Rep_s_(s.CLIENTE_NOME) + ' · ' + Rep_s_(s.EQUIPAMENTO_TEXTO) + '\n' + p.texto + '. Trate em Representação > Pedidos; o item está na Caixa de decisões.', s.ID,
+          { evento: 'RP07', tela: { tipo: 'representacao', mod: 'representacao', id: Rep_s_(s.ID) }, resolvePor: 'REPSOL:' + Rep_s_(s.ID) });
         n++;
       } else if (p.estado === 'EM_RISCO' && !Rep_s_(s.ALERTA_RISCO_EM)) {
         Ast_atualizar_(AST_ABAS.SOLICITACOES, s.ID, { ALERTA_RISCO_EM: agora });
-        Ast_avisar_(resp.ids, 'REP_ACEITE_RISCO', 'Prazo de aceite em risco: ' + s.NUMERO + ' (' + Rep_s_(x.rep.NOME) + ')', Rep_s_(s.CLIENTE_NOME) + ' · ' + Rep_s_(s.EQUIPAMENTO_TEXTO) + '\n' + p.texto + '. Aceite, peça complemento ou recuse em Representação > Pedidos.', s.ID, { evento: 'RP07' });
+        // 03/11/2026: segundo aviso (sistema, aviso com ciência, WhatsApp e e-mail) a 75% do prazo, só se o pedido continua sem aceite
+        var tRisco = 'Prazo de aceite em risco: ' + s.NUMERO + ' (' + Rep_s_(x.rep.NOME) + ')', xRisco = Rep_s_(s.CLIENTE_NOME) + ' · ' + Rep_s_(s.EQUIPAMENTO_TEXTO) + '\n' + p.texto + '. Aceite, peça complemento ou recuse em Representação > Pedidos.';
+        Ast_avisar_(resp.ids, 'REP_ACEITE_RISCO', tRisco, xRisco, s.ID, { evento: 'RP07', tela: { tipo: 'representacao', mod: 'representacao', id: Rep_s_(s.ID) }, resolvePor: 'REPSOL:' + Rep_s_(s.ID) });
+        if (typeof Rep_avisoCiencia_ === 'function') Rep_avisoCiencia_(s, 'RISCO', tRisco, xRisco + '\nToque em "Li e estou ciente" e trate o pedido agora.');
         n++;
       }
     });

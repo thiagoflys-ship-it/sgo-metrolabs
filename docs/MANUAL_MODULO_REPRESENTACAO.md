@@ -1,6 +1,6 @@
 # Manual do módulo Representação
 
-Metrolabs · SGO+ · versão de 29/10/2026 (com o Painel) · equipe da Metrolabs
+Metrolabs · SGO+ · versão de 03/11/2026 (catálogo de modelos pela representada e aviso de pedido novo na tela, em Avisos e no WhatsApp) · equipe da Metrolabs
 
 ## 1. Para que serve
 
@@ -19,7 +19,7 @@ O módulo Representação é a área do SGO+ em que a empresa representada (Bras
 1. Representação > Representadas > "Nova representada": nome, CNPJ, contrato, vigência, contato e prazos.
 2. Prazos (padrão do estudo, configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis.
 3. Opções: consulta de CNPJ na base pública da Receita ao cadastrar cliente (ligada no padrão) e cancelamento pela representada antes da visita, com motivo (ligado no padrão).
-4. Representação > Catálogo de modelos: código, nome, tipo de equipamento, família, garantia em meses e, se houver, o padrão do número de série. Sem modelo, a representada não cadastra equipamento.
+4. Catálogo de modelos: a própria representada cadastra os modelos dela (seção 10.1). A Metrolabs também pode incluir em Representação > Catálogo de modelos (código, nome, tipo de equipamento, família, garantia em meses e, se houver, o padrão do número de série).
 5. Assistência técnica > Regras da assistência > Representação: marque quem responde pela conta da representada. Sem ninguém marcado, vale quem faz a triagem.
 6. Administração > Usuários: crie as contas da representada.
 
@@ -104,12 +104,35 @@ O Painel é a primeira aba do módulo, para a Metrolabs e para a representada, e
 
 | Marco | Quem recebe | Onde |
 |---|---|---|
-| Pedido novo | Responsável pela representação (sem ninguém, quem faz a triagem) | Aviso na Assistência e e-mail na hora (RP01; RP02 se o equipamento está parado) |
-| 75% do prazo de aceite | Responsável pela representação | Central de pendências e e-mail uma vez (RP07) |
+| Pedido novo | Responsável pela representação (sem ninguém, quem faz a triagem) | Aviso na Assistência, aviso com ciência em Avisos, WhatsApp do sistema e e-mail na hora (RP01; RP02 se o equipamento está parado) |
+| Pedido novo, complemento respondido e 75% do prazo | Gestão da área Técnica, quem faz a triagem e o responsável pela representação | Aviso no canto da tela, com som, em qualquer tela do SGO+ (seção 6.1) |
+| 75% do prazo de aceite | Responsável pela representação | Central de pendências, aviso com ciência em Avisos, WhatsApp do sistema e e-mail uma vez (RP07) |
 | Prazo de aceite vencido | Responsável e gestão da área Técnica | Central de pendências, Caixa de decisões e e-mail uma vez (RP07) |
 | Chamado sem registro em 3 dias úteis | Responsável pela representação | Central de pendências, Caixa de decisões e e-mail uma vez por período parado (RP08) |
 
-O tempo com complemento pedido não conta. Os avisos seguem a Matriz de avisos (Administração > Matriz de avisos, módulo Representação); nesta etapa nada sai pelo WhatsApp.
+O tempo com complemento pedido não conta. Os avisos seguem a Matriz de avisos (Administração > Matriz de avisos, módulo Representação). Pedido aceito, recusado ou cancelado não gera aviso novo.
+
+### 6.1 Aviso na tela (pop-up e som), 03/11/2026
+
+- Quem recebe: a gestão da Assistência técnica (Administrador, Diretoria, Gestor da área Técnica e responsáveis da área Técnica na Caixa de decisões), quem faz a triagem (Regras da assistência > Triagem) e quem responde pela representação (Regras da assistência > Representação). Os demais não recebem.
+- Em qualquer tela do SGO+, com a aba visível, o sistema confere a cada 45 segundos só a lista curta dos pedidos na fila. Não recarrega a tela e não mexe no que está sendo digitado: o aviso aparece no canto.
+- Três avisos por pedido: pedido novo; complemento respondido pela representada; pedido que chegou a 75% do prazo de aceite sem aceite (com o prazo vencido, o mesmo aviso diz "vencido"). Cada um mostra o número, a representada, o cliente, o equipamento e quanto falta, em horas úteis, para o prazo de aceite.
+- "Abrir pedido" abre o pedido em Representação > Pedidos. "Dispensar" tira o aviso só para quem dispensou, em qualquer computador; dispensar o de 75% tira também o de pedido novo. O pedido continua na fila até ser tratado. Pedido aceito, recusado ou cancelado sai do canto da tela de todos.
+- Som: dois bipes curtos, sem arquivo. O navegador só toca som depois de um clique na página; enquanto isso, o aviso aparece com "Clique para ativar o som". O botão "Som" liga ou desliga neste navegador.
+
+### 6.2 Aviso com ciência, WhatsApp e e-mail, 03/11/2026
+
+| O quê | Regra |
+|---|---|
+| Quem recebe | Quem responde pela representação (Regras da assistência > Representação); sem ninguém marcado, quem faz a triagem. Vale também para quem não é da gestão. |
+| Aviso com ciência | Em Avisos (menu Principal), com a janela ao entrar no SGO+, até "Li e estou ciente". Um ao entrar o pedido e outro (urgente) a 75% do prazo de aceite. Publicado por "SGO+ (Representação)". |
+| Pedido tratado | Aceito, recusado ou cancelado: o aviso com ciência que ainda não foi lido é arquivado (não cobra mais) e o arquivamento diz o porquê. |
+| WhatsApp | Número do sistema, modelo sgo_gestao_acao (o mesmo dos avisos da gestão), com o link que abre o pedido depois do login. Sai na hora, sem esperar o agrupamento de 30 minutos. Enquanto o modelo não estiver aprovado na Meta, sai só o e-mail, com a marca "WhatsApp aguardando modelo". |
+| Horário | Só no expediente e em dia útil, para todos (também para a Diretoria). O que nasce fora dele sai na abertura do próximo expediente. |
+| Sem repetir | Um por pedido, por marco (pedido novo, 75%, vencido) e por pessoa. O WhatsApp que ainda espera o expediente não sai se o pedido foi tratado antes. |
+| Teto | No máximo 10 WhatsApp de pedidos por pessoa por dia. Passou disso, o aviso vai por e-mail e fica no sistema; a linha mostra "Teto do dia: só e-mail". |
+| E-mail | Sai junto com o WhatsApp. |
+| Onde conferir | Administração > Matriz de avisos > Avisos da gestão: cada aviso, a pessoa, os canais e o motivo. |
 
 ## 7. Conversas
 
@@ -135,12 +158,25 @@ O tempo com complemento pedido não conta. Os avisos seguem a Matriz de avisos (
 ## 10. Cadastros feitos pela representada
 
 - Cliente completo (CNPJ ou CPF válido, endereço em partes, contato com e-mail e telefone) com "Ciente"; unidade com cidade e UF.
-- Equipamento com modelo do catálogo, série, data de instalação, nota fiscal de venda (número, data e arquivo), revenda, setor, patrimônio e foto da etiqueta. Garantia calculada: data da instalação (ou da nota) mais os meses do modelo.
+- Equipamento com modelo do catálogo, série, data de instalação, nota fiscal de venda (número, data e arquivo), revenda, setor, patrimônio e foto da etiqueta. Garantia calculada no cadastro: data da instalação (ou da nota) mais os meses do modelo; a data fim da garantia fica gravada no equipamento.
+- Modelos do catálogo da representada (seção 10.1).
 - Tudo fica com a origem "REPRESENTADA", quem cadastrou e o "Ciente" com data e hora, e entra em Cadastros > Correções de cadastro e no histórico dos cadastros.
+
+### 10.1 Catálogo de modelos da representada (03/11/2026)
+
+- Quem cadastra: o Administrador da representada e o Atendente (os papéis que abrem pedido). Financeiro de garantia e Leitura só consultam.
+- Na abertura do pedido: o modelo que não está na lista é cadastrado ali mesmo ("Cadastrar modelo novo", logo abaixo do campo Modelo): código, nome, tipo de equipamento, família (opcional), garantia em meses (0 a 120) e padrão da série (opcional). O que já foi digitado continua no formulário e o modelo novo já fica escolhido.
+- Na aba "Catálogo de modelos" do lado dela: lista com quem cadastrou, uso em equipamentos e histórico; "Cadastrar modelo novo", "Alterar", "Excluir" (ou "Inativar") e "Reativar".
+- Código único na representada, contando os inativos. Duas representadas podem usar o mesmo código. O código não muda depois que algum equipamento usa o modelo.
+- Excluir: sem nenhum equipamento com o modelo, ele sai do catálogo. Com equipamento, vira INATIVO: some da lista de escolha do pedido, mas o histórico e a garantia dos equipamentos continuam. Inativo pode ser reativado.
+- Garantia: mudar a garantia vale para os equipamentos cadastrados depois. Os já cadastrados mantêm a garantia gravada no cadastro deles; nada é recalculado.
+- Histórico de cada modelo: quem cadastrou, alterou, inativou, reativou ou excluiu, de que lado (representada ou Metrolabs), quando, o antes e o depois de cada campo e o motivo. A Metrolabs vê "cadastrado por Fulano (Brasmedical)"; a representada vê "Fulano (Metrolabs)" nas alterações da Metrolabs.
+- A Metrolabs continua alterando pelo lado interno (Representação > Catálogo de modelos > "Alterar"), com o motivo obrigatório; modelo novo não pede motivo.
+- A representada só vê e altera os modelos da empresa dela; modelo de outra representada recebe a mesma resposta de "não encontrado".
 
 ## 11. Registro de ações
 
-A aba "Registro de ações" mostra buscas, cadastros, pedidos e cancelamentos das representadas, com nome, data e hora. O administrador da representada vê o da própria equipe.
+A aba "Registro de ações" mostra buscas, cadastros (também de modelos: cadastro, alteração, exclusão, inativação e reativação), pedidos e cancelamentos das representadas, com nome, data e hora. O administrador da representada vê o da própria equipe.
 
 ## 12. Documentos A4: relatório do atendimento e relatório do período
 
