@@ -220,6 +220,8 @@
     var hb = t.habilitacao;
     h += '<div class="cm-caixa"><h3>Habilitação</h3>' + (!hb ? '<p class="cm-vazio">Cruzamento da habilitação indisponível neste ambiente.</p>' : hb.erro ? Lic_faixa_(hb.erro, "aviso") : !(hb.itens || []).length ? '<p class="cm-vazio">Nenhuma exigência de habilitação lida ainda.</p>' :
       '<p class="cm-meta">' + Lic_esc_(hb.contagens.total + " exigência(s), " + hb.contagens.pendencias + " pendente(s)") + '</p><ul class="lpa-lista">' + hb.itens.map(function (x) { return "<li>" + LicPa_selo_(x.cor || "cinza", x.situacaoNome) + " " + Lic_esc_(x.texto) + "</li>"; }).join("") + "</ul>") + "</div>";
+    // 03/11/2026: o mercado (quem costuma ganhar e, conforme a área, o preço praticado): JS_Licitacoes_Mercado.html
+    if (t.mercado && typeof LicMk_htmlParecer_ === "function") h += LicMk_htmlParecer_(t.mercado);
     if (t.atual) h += '<div class="cm-caixa"><h3>Parecer que vale hoje desta área</h3><p class="cm-txt">' + LicPa_posicaoSelo_(t.atual) + " versão " + Lic_esc_(t.atual.versao) + " · " + Lic_esc_(t.atual.por) + " · " + Lic_esc_(t.atual.emBr) + "</p><p class=\"cm-txt\">" + Lic_esc_(t.atual.motivo) + "</p></div>";
     if (t.podeRegistrar) {
       h += '<div class="cm-caixa"><h3>Registrar o parecer</h3><fieldset style="border:0;padding:0;margin:0"><legend class="cm-meta">Posição</legend><div class="lpa-posicoes">' +

@@ -11,7 +11,7 @@
 function SGO_ajudaTelas_Licitacoes_() {
   var quem = [
     { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), ver a agenda e confirmar datas, receber os alertas de licitação e dar ciência, mudar a etapa no Kanban (com motivo), pedir parecer às áreas e aprovar a participação pela alçada, ver o Gantt e o Painel, mudar as regras dos alertas (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
-    { perfil: "GESTOR,COMERCIAL,FINANCEIRO,TECNICO,METROLOGIA,RH,CLIENTE", pode: "Não usa este módulo: o menu não aparece e o servidor recusa as chamadas (decisão do dono, 01/11/2026). A exceção é quem recebe um pedido de parecer da Diretoria: vê só a oportunidade do pedido, sem custo, em Meus pareceres, enquanto ele está aberto." }
+    { perfil: "GESTOR,COMERCIAL,FINANCEIRO,TECNICO,METROLOGIA,RH,CLIENTE", pode: "Não usa este módulo: o menu não aparece e o servidor recusa as chamadas (decisão do dono, 01/11/2026). A exceção é quem recebe um pedido de parecer da Diretoria: vê só a oportunidade do pedido, sem custo, em Meus pareceres, enquanto ele está aberto (com o quadro do mercado: Técnica e Comercial sem valor nenhum)." }
   ];
   return {
     "licitacoes": {
@@ -145,6 +145,11 @@ function SGO_ajudaTelas_Licitacoes_() {
           "A pessoa vê só esta oportunidade, sem custo, piso nem margem, enquanto o pedido está aberto, e registra favorável, com ressalva ou contrário com o motivo. O parecer não muda depois; uma versão nova (pedido novo) substitui a anterior, que fica no histórico.",
           "O quadro mostra o parecer que vale de cada área e as divergências calculadas pelo sistema (sem IA): parecer contrário, pareceres opostos, Técnico favorável com a capacidade técnica baixa na análise, Financeiro contrário com a simulação acima do piso, Licitações favorável com trava ou habilitação pendente, Comercial favorável com nota baixa e parecer dado sobre versão antiga.",
           "\"Aprovar a participação\" pede o motivo e confere a alçada: a simulação salva (o preço mínimo), os pareceres obrigatórios e as aprovações da Diretoria da faixa de valor. Faltando aprovação, a sua fica registrada e a passagem para Decisão espera a próxima pessoa. Completa, a licitação vai para Decisão com os nomes no histórico. Só contam as aprovações e os pareceres obrigatórios sobre a simulação atual. Aprovar, descartar, abrir a disputa ou registrar o contrato cancela os pedidos ainda abertos e as atividades deles; reabrir não os traz de volta. Descartar (rejeitar) continua com um diretor, também depois de aprovada."
+        ] },
+        { titulo: "Mercado (concorrentes e preço praticado)", itens: [
+          "A aba Mercado mostra quem costuma ganhar neste órgão e neste tipo de objeto (vitórias, itens, valor e desconto médio sobre o estimado), com a fonte de cada número: resultados publicados no PNCP, disputas da Metrolabs e registros da Diretoria.",
+          "Preço praticado no mercado: cada item da simulação salva comparado com o preço unitário de quem venceu itens do mesmo serviço e equipamento (1º quartil, mediana, 3º quartil, n e período). Menos de 5 preços aparece \"amostra pequena\"; sem preço, \"sem dados\". O sistema não muda preço nenhum.",
+          "\"Buscar resultados no PNCP agora\" passa esta licitação na frente da fila do coletor; quando o órgão publicar, o resultado desta licitação aparece na mesma aba. Mais em Licitações › Inteligência de mercado."
         ] },
         { titulo: "Proposta (A4)", itens: [
           "A aba Proposta monta o rascunho da proposta técnica e comercial: itens do edital, serviços do catálogo com a descrição técnica, os pontos ou condições, as normas citadas no catálogo e os entregáveis, os prazos e o pagamento com a frase do edital (leitura) e a planilha de preços, que é sempre a simulação salva da aba Preço, com a versão e o hash. Sem simulação salva não há proposta comercial.",

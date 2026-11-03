@@ -91,7 +91,9 @@ var LIC_ACOES = {
   // contratos conquistados e integração com os módulos (02/11/2026, SGO_Licitacoes_Contratos.js): { op: lista | tela | criar | versao | ... }
   contratos: function (eu, d) { return LicC_acao_(eu, d); },
   // pareceres por área e alçadas de decisão (03/11/2026, SGO_Licitacoes_Pareceres.js): { op: meus | tela | registrar | ficha | pedir | aprovar | cfg | ... }
-  pareceres: function (eu, d) { if (typeof LicPar_acao_ !== 'function') throw new Error('Não foi possível: os pareceres não estão disponíveis neste ambiente. Atualize a página (F5)'); return LicPar_acao_(eu, d); }
+  pareceres: function (eu, d) { if (typeof LicPar_acao_ !== 'function') throw new Error('Não foi possível: os pareceres não estão disponíveis neste ambiente. Atualize a página (F5)'); return LicPar_acao_(eu, d); },
+  // fornecedores, concorrentes e inteligência de mercado (03/11/2026, SGO_Licitacoes_Mercado.js): { op: tela | concorrentes | orgaos | referencia | ficha | fornecedorSalvar | ... }
+  mercado: function (eu, d) { if (typeof LicM_acao_ !== 'function') throw new Error('Não foi possível: a inteligência de mercado não está disponível neste ambiente. Atualize a página (F5)'); return LicM_acao_(eu, d); }
 };
 /** Ações que passam sem a gestão: "acesso" e os pareceres (a pessoa do pedido vê só a oportunidade dele; LicPar_acao_ confere cada operação). */
 var LIC_ACOES_FORA_DA_GESTAO = ['acesso', 'pareceres'];
@@ -129,6 +131,8 @@ function Lic_aposColeta_(resumo) {
   try { Lic_garantirAbas_(); } catch (e) {}
   var r = Lic_sincronizar_(null);
   try { if (typeof Lic_acertarNotasPendentes_ === 'function') Lic_acertarNotasPendentes_(); } catch (e) {}
+  // 03/11/2026: resultados do ramo (vencedores e preços homologados no PNCP) para o cadastro de concorrentes e a inteligência de mercado
+  try { if (typeof LicM_sincronizar_ === 'function') r.mercado = LicM_sincronizar_(null, {}); } catch (e) { r.mercadoAviso = 'A inteligência de mercado sincroniza na próxima rodada (' + Lic_s_(e && e.message) + ').'; }
   try { PropertiesService.getScriptProperties().setProperty('LIC_ULTIMA_COLETA', JSON.stringify({ em: Lic_agora_(), resumo: resumo || null, sincronia: r })); } catch (e) {}
   return r;
 }

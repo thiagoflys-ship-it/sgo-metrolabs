@@ -63,7 +63,9 @@ var SGO_AJUDA_NOMES = {
   // 02/11/2026: contratos conquistados e integração com os módulos (SGO_Ajuda_LicitacoesContratos.js)
   licitacoes_contratos: 'Contratos (Licitações)',
   // 03/11/2026: pareceres por área e alçadas de decisão (SGO_Ajuda_LicitacoesPareceres.js)
-  licitacoes_pareceres: 'Meus pareceres (Licitações)'
+  licitacoes_pareceres: 'Meus pareceres (Licitações)',
+  // 03/11/2026: fornecedores, concorrentes e inteligência de mercado (SGO_Ajuda_LicitacoesMercado.js)
+  licitacoes_mercado: 'Inteligência de mercado (Licitações)'
 };
 
 /**
@@ -123,6 +125,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_LicitacoesContratos_ === 'function') fontes.push(['LicitacoesContratos', SGO_ajudaTelas_LicitacoesContratos_]);
   // 03/11/2026: Pareceres por área e alçadas de decisão (SGO_Ajuda_LicitacoesPareceres.js).
   if (typeof SGO_ajudaTelas_LicitacoesPareceres_ === 'function') fontes.push(['LicitacoesPareceres', SGO_ajudaTelas_LicitacoesPareceres_]);
+  // 03/11/2026: Fornecedores, concorrentes e inteligência de mercado (SGO_Ajuda_LicitacoesMercado.js).
+  if (typeof SGO_ajudaTelas_LicitacoesMercado_ === 'function') fontes.push(['LicitacoesMercado', SGO_ajudaTelas_LicitacoesMercado_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

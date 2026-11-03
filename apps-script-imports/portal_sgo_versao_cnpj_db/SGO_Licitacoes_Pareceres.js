@@ -688,6 +688,9 @@ function LicPar_tela_(eu, d) {
       // a "margem" sai sem o texto do cálculo para quem não é da gestão (o texto cita a sobra e o piso)
       criterios: Object.keys(crit).map(function (k) { var c = crit[k] || {}; return { codigo: k, nome: (typeof LIC_ALTA_CRITERIOS_NOMES !== 'undefined' && LIC_ALTA_CRITERIOS_NOMES[k]) || k, pontos: Number(c.pontos), peso: Number(c.peso), como: k === 'margem' && nivelPreco !== 'COMPLETO' ? '' : Lic_texto_(c.como, 300) }; }) },
     leitura: LicPar_leitura_(l), preco: preco, nivelPreco: nivelPreco, temSimulacao: !!s, habilitacao: ctx.habilitacao,
+    // 03/11/2026 (inteligência de mercado, SGO_Licitacoes_Mercado.js): quem costuma ganhar neste órgão e neste tipo de objeto e, conforme a
+    // área (o mesmo nivelPreco), o preço praticado; Técnica e Comercial veem só nomes e contagens, sem valor nenhum
+    mercado: typeof LicM_paraParecer_ === 'function' ? LicM_paraParecer_(l, nivelPreco) : null,
     atual: atual ? LicPar_parecerTela_(atual) : null, posicoes: LICPAR_POSICOES
   };
 }
