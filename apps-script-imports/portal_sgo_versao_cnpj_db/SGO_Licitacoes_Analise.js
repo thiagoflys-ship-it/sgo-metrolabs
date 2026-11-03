@@ -1504,6 +1504,8 @@ function Lic_analisar_(eu, l, o) {
     texto: (o.origem === 'AUTOMATICA' ? 'Análise automática (arquivos ou dados da fonte mudaram). ' : 'Análise pedida' + (o.motivo ? ': ' + o.motivo + '. ' : '. ')) + Lic_s_(reg.RESUMO) + (saida && saida.caidos ? ' ' + saida.caidos + ' ponto(s) da resposta da IA não conferiram com as fontes: ficaram fora da nota e viraram pendência "não conferido".' : '') + (saida && reg.TRAVADA === 'SIM' ? ' Travas: ' + mudOp.NOTA_TRAVA + '.' : '') + (saida && nf.aConfirmar.length ? ' Trava(s) a confirmar pela Diretoria: ' + nf.aConfirmar.map(function (t) { return t.nome; }).join('; ') + ' (a nota só vai a 0 depois de "Confirmar trava").' : '') + ' A decisão continua com a Diretoria.',
     versao: versao, fonte: 'IA (' + reg.MODELO + ') sobre a versão ' + reg.FONTE_VERSAO + ' da fonte e ' + arqs.length + ' arquivo(s): ' + arqs.map(function (a) { return a.ref + ' ' + Lic_s_(a.sha256).slice(0, 12); }).join(', '),
     hash: reg.HASH });
+  // 03/11/2026: nota alta sem trava e prazo em aberto vira alerta de nova oportunidade de alta aderência (SGO_Licitacoes_Alertas.js)
+  if (saida && typeof Lic_altaAvaliarTalvez_ === 'function') resultado.altaAderencia = Lic_altaAvaliarTalvez_(l.ID, { versao: versao, origem: o.origem || 'PEDIDO' });
   resultado.versao = versao; resultado.id = reg.ID;
   return resultado;
 }
@@ -1529,19 +1531,21 @@ function Lic_notaPendenteGuardar_(id, mudOp, notaBase) {
 function Lic_acertarNotasPendentes_() {
   var props, m;
   try { props = PropertiesService.getScriptProperties(); m = Lic_json_(props.getProperty(LIC_NOTA_PENDENTE), {}); } catch (e) { return 0; }
-  var ids = Object.keys(m || {}), feitas = 0;
+  var ids = Object.keys(m || {}), feitas = 0, acertadas = [];
   if (!ids.length) return 0;
   try {
     Lic_comTrava_(function () {
       ids.forEach(function (id) {
         var x = m[id], l = Lic_acharOp_(id);
         // só se ninguém gravou uma análise mais nova depois
-        if (l && x && x.mudOp && (Number(l.ANALISE_VERSAO) || 0) <= (Number(x.mudOp.ANALISE_VERSAO) || 0)) { Lic_gravarNaOportunidade_(id, x.mudOp, x.notaBase); feitas++; }
+        if (l && x && x.mudOp && (Number(l.ANALISE_VERSAO) || 0) <= (Number(x.mudOp.ANALISE_VERSAO) || 0)) { Lic_gravarNaOportunidade_(id, x.mudOp, x.notaBase); feitas++; if (x.notaBase) acertadas.push({ id: id, versao: x.mudOp.ANALISE_VERSAO }); }
         delete m[id];
       });
     });
   } catch (e) { return 0; }
   try { props.setProperty(LIC_NOTA_PENDENTE, JSON.stringify(m)); } catch (e) {}
+  // 03/11/2026: a nota acertada agora também passa pelo alerta de alta aderência (fora da trava de gravação)
+  if (typeof Lic_altaAvaliarTalvez_ === 'function') acertadas.forEach(function (x) { Lic_altaAvaliarTalvez_(x.id, { versao: x.versao, origem: 'AUTOMATICA' }); });
   return feitas;
 }
 
@@ -1612,6 +1616,8 @@ function Lic_travaDecidirAcao_(eu, d) {
   if (motivo.length < 10) throw new Error('Escreva o motivo (pelo menos 10 letras): ele fica no histórico com o seu nome, a data e o trecho. Nada foi alterado');
   // conferência de 1f353a5: dentro da trava de gravação, relendo a oportunidade (duas decisões ao mesmo tempo não se apagam)
   var res = Lic_comTrava_(function () { return Lic_travaDecidirGravar_(eu, d, motivo, dec); });
+  // 03/11/2026: "Não é trava" pode deixar a nota alta sem trava (alerta de alta aderência); "Confirmar trava" marca a queda
+  if (typeof Lic_altaAvaliarTalvez_ === 'function') Lic_altaAvaliarTalvez_(d.id, { origem: 'TRAVA' });
   var l2 = Lic_acharOp_(d.id);
   return { nota: res.nota, classe: res.classe, analise: Lic_analiseFicha_(l2, Lic_lerFonteServidor_(l2)) };
 }

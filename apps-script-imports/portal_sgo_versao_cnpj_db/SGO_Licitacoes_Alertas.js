@@ -36,6 +36,15 @@
  *
  * Rodada: Licitacoes_rotinaAlertas, a cada 5 minutos (agenda que mudou → programar → escalonar → enviar → concluir).
  * Nunca mostra token, chave ou telefone (só "final 1234"). Mensagens sóbrias, sem emoji.
+ *
+ * NOVA OPORTUNIDADE DE ALTA ADERÊNCIA (03/11/2026, pedido da missão): análise CONCLUÍDA (automática ou pedida) com nota maior ou
+ * igual ao limite das regras (padrão 70, com versão e motivo), sem trava (nem trava a confirmar, nem triagem travada) e com o fim
+ * das propostas em aberto cria UM alerta do tipo ALTA_ADERENCIA (Lic_altaAvaliar_), pela mesma fila: agrupamento por licitação
+ * e pessoa, tetos, lembrete, escalonamento e ciência. Nível importante; crítico com o fim das propostas em até 72 h (vai para
+ * os dois). Uma vez por subida da nota: reanálise com a nota ainda alta não repete; nota que cai abaixo do limite (ou trava que
+ * aparece) marca a queda e não alerta; se subir de novo, sai UM alerta "a nota voltou a ficar alta". O texto traz órgão, UF,
+ * objeto curto, valor estimado, fim das propostas com a natureza, nota e classe, os critérios mais fortes calculados pelo
+ * sistema (nunca os da IA) e o link da ficha.
  ****************************************************/
 
 var LIC_MODELO_WA = 'sgo_licitacao_prazo';
@@ -77,8 +86,12 @@ var LIC_ALERTAS_PADRAO = {
     CONTRATO_RENOVACAO: [{ min: 43200, nivel: 'IMPORTANTE' }, { min: 10080, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'CRITICO' }],
     CONTRATO_FIM: [{ min: 43200, nivel: 'IMPORTANTE' }, { min: 10080, nivel: 'CRITICO' }, { min: 1440, nivel: 'CRITICO' }]
   },
-  mudancas: { RETIFICACAO: 'IMPORTANTE', REABERTURA: 'IMPORTANTE', SUSPENSAO: 'CRITICO', REVOGACAO: 'CRITICO', ANULACAO: 'CRITICO' }
+  mudancas: { RETIFICACAO: 'IMPORTANTE', REABERTURA: 'IMPORTANTE', SUSPENSAO: 'CRITICO', REVOGACAO: 'CRITICO', ANULACAO: 'CRITICO' },
+  // 03/11/2026: nova oportunidade de alta aderência (nota da análise concluída maior ou igual ao limite, sem trava, prazo em aberto)
+  altaAderencia: { ligado: true, limite: 70 }
 };
+/** Fim das propostas em até 72 h: o alerta de alta aderência sai como crítico (para os dois, fora do teto do dia). */
+var LIC_ALTA_CRITICO_MS = 72 * 3600e3;
 
 // ------------------------------------------------------------ configuração (versão, motivo, merge)
 function Lic_copia_(o) { return JSON.parse(JSON.stringify(o)); }
@@ -88,7 +101,7 @@ function Lic_alertasCfg_() {
   var l = Lic_alertasCfgLinha_(), v = l ? Lic_json_(l.VALOR_JSON, {}) : {}, c = Lic_copia_(LIC_ALERTAS_PADRAO);
   ['ligado', 'alertarTravadas', 'titularId', 'tetoPorAlerta', 'tetoDia'].forEach(function (k) { if (v[k] !== undefined) c[k] = v[k]; });
   if (Array.isArray(v.destinatarios)) c.destinatarios = v.destinatarios.slice();
-  ['canais', 'escalonarMin', 'mudancas'].forEach(function (k) { if (v[k] && typeof v[k] === 'object') Object.keys(v[k]).forEach(function (x) { c[k][x] = v[k][x]; }); });
+  ['canais', 'escalonarMin', 'mudancas', 'altaAderencia'].forEach(function (k) { if (v[k] && typeof v[k] === 'object') Object.keys(v[k]).forEach(function (x) { c[k][x] = v[k][x]; }); });
   if (v.pessoas && typeof v.pessoas === 'object') Object.keys(v.pessoas).forEach(function (u) { c.pessoas[u] = Object.assign({}, c.pessoas[u] || {}, v.pessoas[u]); });
   if (v.antecedencias && typeof v.antecedencias === 'object') Object.keys(v.antecedencias).forEach(function (t) { if (Array.isArray(v.antecedencias[t])) c.antecedencias[t] = v.antecedencias[t]; });
   c.foraDoExpediente = true;
@@ -173,6 +186,17 @@ function Lic_alertasCfgSalvar_(eu, d) {
     if (c.mudancas) {
       novo.mudancas = Object.assign({}, gravado.mudancas || {});
       Object.keys(c.mudancas).forEach(function (k) { var n = Lic_up_(c.mudancas[k]); if (!LIC_MUDANCAS_NOMES[k] || !LIC_NIVEIS[n]) throw new Error('Nível de mudança inválido. Nada foi alterado'); poe('Nível: ' + LIC_MUDANCAS_NOMES[k], antes.mudancas[k], n); novo.mudancas[k] = n; });
+    }
+    // 03/11/2026: alerta de nova oportunidade de alta aderência (ligado e a nota mínima)
+    if (c.altaAderencia && typeof c.altaAderencia === 'object') {
+      novo.altaAderencia = Object.assign({}, gravado.altaAderencia || {});
+      var ca = c.altaAderencia;
+      if (ca.ligado !== undefined) { var lg = ca.ligado === true || ca.ligado === 'SIM'; poe('Alerta de alta aderência ligado', antes.altaAderencia.ligado !== false, lg); novo.altaAderencia.ligado = lg; }
+      if (ca.limite !== undefined) {
+        var lm = Math.round(Number(Lic_s_(ca.limite).replace(',', '.')));
+        if (Lic_s_(ca.limite) === '' || !isFinite(lm) || lm < 50 || lm > 100) throw new Error('Nota mínima da alta aderência: use um número inteiro de 50 a 100 (padrão 70). Nada foi alterado');
+        poe('Nota mínima da alta aderência', antes.altaAderencia.limite, lm); novo.altaAderencia.limite = lm;
+      }
     }
     // trava de segurança: alertas ligados sem ninguém para receber deixariam a Diretoria no escuro
     var efetivo = Object.assign(Lic_copia_(LIC_ALERTAS_PADRAO), novo), pessoas = Object.assign({}, efetivo.pessoas || {});
@@ -299,6 +323,8 @@ function Lic_alertaSemValer_(a, ops, evPorId, cfg, agoraMs) {
     var e = evPorId[Lic_s_(a.EVENTO_ID)];
     if (!e || Lic_up_(e.SITUACAO) !== 'ATIVO') return e ? (Lic_s_(e.MOTIVO_MUDANCA) || 'O prazo deixou de valer.') : 'O prazo não existe mais.';
   }
+  // 03/11/2026: alta aderência que deixou de valer antes de sair (nota caiu, trava apareceu, limite subiu nas regras)
+  if (Lic_s_(a.TIPO) === 'ALTA_ADERENCIA') { var xa = Lic_altaMotivo_(l, cfg, agoraMs); if (xa.motivo) return 'Alta aderência não vale mais: ' + xa.motivo + '.'; }
   if (Lic_s_(a.ALVO_ISO) && Date.parse(Lic_s_(a.ALVO_ISO)) <= agoraMs) return 'O prazo passou.';
   return '';
 }
@@ -441,6 +467,176 @@ function Lic_agendaAposSituacao_(id) {
   try { Lic_alertasProgramar_(new Date(), { opIds: [id] }); } catch (e) { console.error('Licitações, alertas depois da situação: ' + ((e && e.message) || e)); }
 }
 
+// ------------------------------------------------------------ nova oportunidade de alta aderência (03/11/2026)
+/** Critérios que o SISTEMA calcula (nunca a IA): prazo, localização, valor, margem (com ou sem simulação) e a documentação pela habilitação. */
+var LIC_ALTA_ORIGENS = ['CODIGO', 'SIMULACAO', 'HABILITACAO'];
+var LIC_ALTA_CRITERIOS_NOMES = { capacidade: 'Capacidade técnica', margem: 'Margem', documentacao: 'Documentação', localizacao: 'Localização', prazo: 'Prazo', valor: 'Valor', riscos: 'Riscos' };
+function Lic_altaLimite_(cfg) { var n = Number(((cfg || {}).altaAderencia || {}).limite); return isFinite(n) && n > 0 ? n : 70; }
+function Lic_altaNumTxt_(n) { return String(Math.round(Number(n) * 10) / 10).replace('.', ','); }
+function Lic_altaCorta_(t, max) { t = Lic_s_(t).replace(/\s+/g, ' ').trim(); return t.length > max ? t.slice(0, max - 1).replace(/[\s,;.]+$/, '') + '…' : t; }
+function Lic_altaClasse_(l) { return (typeof LIC_CLASSES !== 'undefined' && LIC_CLASSES[Lic_s_(l && l.NOTA_CLASSE)]) || Lic_s_(l && l.NOTA_CLASSE) || 'sem classe'; }
+/**
+ * '' = a oportunidade vale como alta aderência agora; senão o motivo. queda = o motivo é da nota (abaixo do limite ou trava,
+ * a confirmar ou confirmada): depois de um alerta, marca a queda (a próxima subida alerta "a nota voltou a ficar alta").
+ * Prazo encerrado, descarte ou triagem travada não são queda da nota. Devolve { motivo, queda }.
+ */
+function Lic_altaMotivo_(l, cfg, agoraMs) {
+  cfg = cfg || Lic_alertasCfg_();
+  if (!l || Lic_s_(l.EXCLUIDO_EM)) return { motivo: 'a oportunidade saiu da lista' };
+  var m = Lic_opSemAlerta_(l, cfg);
+  if (m) return { motivo: 'oportunidade ' + m };
+  if (Lic_s_(l.SITUACAO) === 'RADAR' && Lic_s_(l.TRIAGEM) === 'TRAVADA') return { motivo: 'travada pela triagem do radar' };
+  // o prazo vem antes da nota: prazo vencido zera a nota (trava do código), mas não é queda da nota
+  var fimMs = Date.parse(Lic_s_(l.ENCERRAMENTO_ISO));
+  if (!isFinite(fimMs)) return { motivo: 'fim das propostas não informado pela fonte' };
+  if (fimMs <= agoraMs) return { motivo: 'o prazo de propostas encerrou' };
+  var nota = Number(l.NOTA), lim = Lic_altaLimite_(cfg);
+  if (l.NOTA === '' || l.NOTA === null || l.NOTA === undefined || !isFinite(nota)) return { motivo: 'sem nota de análise concluída' };
+  if (Number(l.TRAVAS_A_CONFIRMAR) > 0 || Lic_up_(l.NOTA_CLASSE) === 'TRAVA_A_CONFIRMAR') return { motivo: 'trava a confirmar pela Diretoria', queda: true };
+  if (Lic_s_(l.NOTA_TRAVA)) return { motivo: 'trava confirmada (' + Lic_altaCorta_(l.NOTA_TRAVA, 120) + ')', queda: true };
+  if (nota < lim) return { motivo: 'nota ' + Lic_altaNumTxt_(nota) + ' abaixo do limite de ' + lim + ' das regras dos alertas', queda: true };
+  return { motivo: '' };
+}
+/** O fim das propostas na agenda (a versão ativa), quando existe. */
+function Lic_altaEvento_(l) {
+  return Lic_ler_(LIC_ABAS.EVENTOS).filter(function (e) { return Lic_s_(e.OPORTUNIDADE_ID) === Lic_s_(l && l.ID) && Lic_s_(e.TIPO) === 'LIMITE_PROPOSTA' && Lic_up_(e.SITUACAO) === 'ATIVO'; })
+    .sort(function (a, b) { return (Number(b.VERSAO) || 0) - (Number(a.VERSAO) || 0); })[0] || null;
+}
+/** Os 2 ou 3 critérios mais fortes calculados pelo sistema na análise que vale (pontos sobre o peso; nunca os da IA). */
+function Lic_altaCriterios_(l) {
+  var an = Lic_s_(l && l.ANALISE_ID) ? SGO_DATA.getById(LIC_ABAS.ANALISES, Lic_s_(l.ANALISE_ID)) : null;
+  if (!an || Lic_up_(an.SITUACAO) !== 'CONCLUIDA') an = Lic_ler_(LIC_ABAS.ANALISES).filter(function (x) { return Lic_s_(x.OPORTUNIDADE_ID) === Lic_s_(l && l.ID) && Lic_up_(x.SITUACAO) === 'CONCLUIDA'; })
+    .sort(function (a, b) { return (Number(b.VERSAO) || 0) - (Number(a.VERSAO) || 0); })[0] || null;
+  var crit = Lic_json_(an && an.CRITERIOS_JSON, {}) || {};
+  return Object.keys(crit).map(function (k) { var c = crit[k] || {}; return { nome: LIC_ALTA_CRITERIOS_NOMES[k] || k, pontos: Number(c.pontos), peso: Number(c.peso), origem: Lic_up_(c.origem), como: Lic_s_(c.como) }; })
+    .filter(function (c) { return LIC_ALTA_ORIGENS.indexOf(c.origem) >= 0 && isFinite(c.pontos) && c.pontos > 0 && isFinite(c.peso) && c.peso > 0; })
+    .sort(function (a, b) { return b.pontos / b.peso - a.pontos / a.peso || b.peso - a.peso; }).slice(0, 3)
+    .map(function (c) { return { nome: c.nome, pontos: c.pontos, peso: c.peso, texto: c.nome + ' ' + Lic_altaNumTxt_(c.pontos) + ' de ' + Lic_altaNumTxt_(c.peso) + (c.como ? ' (' + Lic_altaCorta_(c.como.replace(/\.$/, ''), 110) + ')' : ''), curto: c.nome.toLowerCase() + ' ' + Lic_altaNumTxt_(c.pontos) + ' de ' + Lic_altaNumTxt_(c.peso) }; });
+}
+/** Dados do texto: nota, classe, valor, fim das propostas (com a natureza e a fonte), critérios do sistema e o limite. */
+function Lic_altaDados_(l, e) {
+  var cfg = Lic_alertasCfg_(), ev = e && Lic_up_(e.SITUACAO) === 'ATIVO' ? e : Lic_altaEvento_(l), v = Number(l && l.VALOR_ESTIMADO);
+  var presumido = ev ? Lic_up_(ev.FUSO_PRESUMIDO) === 'SIM' : Lic_up_(l && l.FUSO_PRESUMIDO) === 'SIM';
+  var fimIso = (ev && Lic_s_(ev.QUANDO_ISO)) || Lic_s_(l && l.ENCERRAMENTO_ISO);
+  var fimTxt = (ev ? Lic_eventoQuandoTxt_(ev) : Lic_brDiaHora_(fimIso) || 'data a informar') + ' (horário de Brasília' + (presumido ? ', presumido' : '') + ')';
+  var natureza = ev ? (LIC_NATUREZAS[Lic_up_(ev.NATUREZA)] || Lic_s_(ev.NATUREZA)) + ' · fonte: ' + Lic_s_(ev.FONTE_REF) : 'da fonte (' + (Lic_s_(l && l.PORTAL_ORIGEM) === 'COMPRAS_GOV' ? 'Compras.gov.br' : 'PNCP') + '), ainda sem o prazo na agenda';
+  return { nota: Number(l && l.NOTA), notaTxt: Lic_altaNumTxt_(l && l.NOTA), classeNome: Lic_altaClasse_(l),
+    valorTxt: v > 0 ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'não informado (ou sigiloso)', fimIso: fimIso, fimTxt: fimTxt, natureza: natureza,
+    criterios: Lic_altaCriterios_(l), limite: Lic_altaLimite_(cfg), versao: Lic_s_(l && l.ANALISE_VERSAO), uf: Lic_s_(l && l.UF) || 'não informada' };
+}
+/** Item do alerta de alta aderência no mesmo formato dos prazos (para o envio agrupado com os prazos da mesma licitação). */
+function Lic_altaItem_(a, l, e, agoraMs) {
+  var d = Lic_altaDados_(l, e), voltou = Lic_s_(a.ANTECEDENCIA) === 'VOLTOU', alvoMs = Date.parse(Lic_s_(a.ALVO_ISO) || d.fimIso);
+  var prazo = (voltou ? 'Nota voltou a ficar alta: ' + d.notaTxt : 'Oportunidade com nota ' + d.notaTxt) + ' (alta aderência)';
+  var acao = Lic_acaoAlerta_(a, l), esc = Lic_s_(a.PAPEL) === 'ESCALONAMENTO', reenvio = Lic_s_(a.PAPEL) === 'REENVIO';
+  if (esc) acao = 'sem ciência de ' + Lic_s_(a.ESCALONADO_PARA || 'quem recebeu primeiro') + ': confirme a ciência e ' + acao;
+  if (reenvio) acao = 'lembrete (sem ciência): ' + acao;
+  var extra = ['UF: ' + d.uf, 'Valor estimado: ' + d.valorTxt, 'Nota: ' + d.notaTxt + ' de 100 · classe ' + d.classeNome + (d.versao ? ' (análise versão ' + d.versao + ')' : ''),
+    'Critérios mais fortes (calculados pelo sistema): ' + (d.criterios.length ? d.criterios.map(function (c) { return c.texto; }).join('; ') : 'nenhum critério do sistema pontuou')];
+  return { mud: false, alta: true, voltou: voltou, nivel: LIC_NIVEIS[Lic_up_(a.NIVEL)] || 'importante', prazo: prazo, alvoMs: alvoMs, quandoTxt: 'fim das propostas ' + d.fimTxt, interno: '',
+    restante: Lic_tempoRestante_(alvoMs - agoraMs), acao: acao, esc: esc, reenvio: reenvio, natureza: d.natureza, extra: extra, dados: d };
+}
+/** Conteúdo do alerta de alta aderência: { titulo, texto (e-mail), params (as 9 variáveis do modelo sgo_licitacao_prazo) }. */
+function Lic_altaConteudo_(a, l, e, quando) {
+  var agoraMs = (quando instanceof Date ? quando : new Date()).getTime(), cb = Lic_alertaCabecalho_(a, l), it = Lic_altaItem_(a, l, e, agoraMs), d = it.dados;
+  var titulo = (it.esc ? 'Sem ciência · ' : it.reenvio ? 'Lembrete · ' : '') + 'Licitação ' + Lic_s_(a.CODIGO) + ': ' + (it.voltou ? 'a nota voltou a ficar alta' : 'nova oportunidade de alta aderência') + ', nota ' + d.notaTxt + ' (propostas em ' + it.restante + ') · ' + Lic_texto_(cb.orgao, 60);
+  var link = Lic_linkAviso_(a.AVISO_ID);
+  var texto = ['METROLABS · ' + (it.voltou ? 'OPORTUNIDADE DE ALTA ADERÊNCIA: A NOTA VOLTOU A FICAR ALTA' : 'NOVA OPORTUNIDADE DE ALTA ADERÊNCIA') + ' (' + it.nivel + ')', '',
+    'Órgão: ' + cb.orgao + (cb.local ? ' (' + cb.local + ')' : ''), 'UF: ' + d.uf, 'Processo: ' + cb.processo, 'Objeto: ' + cb.objeto, 'Valor estimado: ' + d.valorTxt,
+    'Fim das propostas: ' + d.fimTxt + '; faltam ' + it.restante, 'Natureza do prazo: ' + d.natureza,
+    'Nota: ' + d.notaTxt + ' de 100 · classe ' + d.classeNome + (d.versao ? ' (análise versão ' + d.versao + ')' : '') + '. Alerta a partir de ' + d.limite + ', sem trava (regras dos alertas).',
+    'Critérios mais fortes (calculados pelo sistema, não pela IA):']
+    .concat(d.criterios.length ? d.criterios.map(function (c, i) { return '   ' + (i + 1) + '. ' + c.texto; }) : ['   nenhum critério do sistema pontuou (veja a aba Análise)'])
+    .concat(['Responsável: ' + cb.resp, 'Ação necessária: ' + it.acao])
+    .concat(it.voltou ? ['', 'Depois do primeiro alerta, a nota tinha caído abaixo do limite (ou apareceu trava). Nesta análise ela voltou a ficar alta.'] : [])
+    .concat(['', 'Ficha da oportunidade (aba Análise): ' + (link || 'SGO+ › Licitações › Oportunidades › ' + Lic_s_(a.CODIGO)), '',
+      'Confirmar ciência (registra que você viu este alerta; não decide a participação): ' + Lic_linkCiencia_(a.AVISO_ID, 'e'), '',
+      'A nota é da análise por IA com verificador; quem decide é a Diretoria. Alerta da Diretoria de Licitações: pode chegar fora do expediente (decisão do dono, 01/11/2026).']).join('\n');
+  // {{8}} até 200 caracteres: a classe, os critérios mais fortes e a ação
+  var p8 = Lic_texto_('classe ' + d.classeNome + (d.criterios.length ? '; mais fortes: ' + d.criterios.map(function (c) { return c.curto; }).join(', ') : '') + '; ' + it.acao, 200);
+  var params = [it.nivel, cb.orgao + (cb.local ? ' (' + cb.local + ')' : ''), cb.processo, cb.objeto || '-', it.prazo, it.quandoTxt, it.restante, p8, link || '@LINK'];
+  return { titulo: titulo, texto: texto, params: params };
+}
+/**
+ * Depois de uma análise CONCLUÍDA (ou da decisão de uma trava): cria o alerta de alta aderência se a nota chegou ao limite sem
+ * trava e com o prazo em aberto. Uma vez por subida da nota (ALTA_ADERENCIA_ESTADO = ALTA): reanálise com a nota ainda alta não
+ * repete; a queda (nota abaixo do limite ou trava) marca CAIU, sem alerta; a próxima subida alerta "a nota voltou a ficar alta".
+ * Crítico (fim das propostas em até 72 h) vai para os dois; importante, para quem recebe primeiro. o: { versao, origem }.
+ * Devolve { criados, nivel, voltou, ciclo, caiu, repetida, motivo }. Lança só se a trava de gravação não vier.
+ */
+function Lic_altaAvaliar_(opId, quando, o) {
+  quando = quando instanceof Date ? quando : new Date(quando || Date.now());
+  o = o || {};
+  var cfg = Lic_alertasCfg_(), agora = quando.toISOString(), agoraMs = quando.getTime(), sis = { id: '', nome: 'Alertas de licitação (sistema)' };
+  if (!cfg.ligado) return { criados: 0, motivo: 'alertas de licitação desligados nas regras' };
+  if ((cfg.altaAderencia || {}).ligado === false) return { criados: 0, motivo: 'alerta de alta aderência desligado nas regras dos alertas' };
+  var integ = Lic_integrantes_(cfg);
+  return Lic_comTrava_(function () {
+    var l = SGO_DATA.getById(LIC_ABAS.OPORTUNIDADES, Lic_s_(opId));
+    if (!l || Lic_s_(l.EXCLUIDO_EM)) return { criados: 0, motivo: 'a oportunidade não foi encontrada' };
+    // a nota da lista ainda não é desta análise (gravação adiada): a avaliação fica para quando a nota for acertada
+    if (o.versao && Number(l.ANALISE_VERSAO) !== Number(o.versao)) return { criados: 0, motivo: 'a oportunidade ainda não aponta para a análise ' + o.versao };
+    var est = Lic_up_(l.ALTA_ADERENCIA_ESTADO), ciclo = Number(l.ALTA_ADERENCIA_CICLO) || 0, x = Lic_altaMotivo_(l, cfg, agoraMs);
+    var fonte = 'Análise versão ' + Lic_s_(l.ANALISE_VERSAO) + ' · regras dos alertas versão ' + cfg.versao;
+    if (x.motivo) {
+      if (x.queda && est === 'ALTA') {
+        SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { ALTA_ADERENCIA_ESTADO: 'CAIU', ATUALIZADO_EM: agora });
+        Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'ALTA_ADERENCIA_CAIU', sis, { de: 'alta aderência (nota ' + Lic_altaNumTxt_(l.ALTA_ADERENCIA_NOTA) + ')', para: Lic_texto_(x.motivo, 300),
+          texto: 'Depois do alerta de alta aderência: ' + x.motivo + '. Não alerta de novo; se a nota voltar a ficar alta (sem trava), sai um alerta "a nota voltou a ficar alta".', versao: Lic_s_(l.ANALISE_VERSAO), fonte: fonte });
+        return { criados: 0, caiu: true, motivo: x.motivo };
+      }
+      return { criados: 0, motivo: x.motivo };
+    }
+    if (est === 'ALTA') return { criados: 0, repetida: true, motivo: 'o alerta desta subida da nota já saiu em ' + Lic_brDiaHora_(l.ALTA_ADERENCIA_EM) + ' (nota ' + Lic_altaNumTxt_(l.ALTA_ADERENCIA_NOTA) + '); reanálise com a nota ainda alta não repete' };
+    var voltou = est === 'CAIU', nc = ciclo + 1, ev = Lic_altaEvento_(l), alvo = (ev && Lic_s_(ev.QUANDO_ISO)) || Lic_s_(l.ENCERRAMENTO_ISO), alvoMs = Date.parse(alvo);
+    if (!isFinite(alvoMs) || alvoMs <= agoraMs) return { criados: 0, motivo: 'o prazo de propostas encerrou' };
+    var nivel = alvoMs - agoraMs <= LIC_ALTA_CRITICO_MS ? 'CRITICO' : 'IMPORTANTE', para = nivel === 'CRITICO' ? integ : Lic_titulares_(l, cfg, integ);
+    if (!para.length) return { criados: 0, motivo: 'ninguém da Diretoria de Licitações recebe alertas agora (regras dos alertas)' };
+    var existe = {}; Lic_ler_(LIC_ABAS.ALERTAS).forEach(function (a) { existe[Lic_s_(a.CHAVE)] = true; });
+    var grupo = 'H|' + Lic_s_(l.ID) + '|' + nc, papel = para.length > 1 ? 'TODOS' : 'TITULAR', notaTxt = Lic_altaNumTxt_(l.NOTA), novos = [];
+    para.forEach(function (u) {
+      var ch = grupo + '|' + u.id;
+      if (existe[ch]) return;
+      existe[ch] = true;
+      novos.push({ AVISO_ID: Lic_avisoId_(), CHAVE: ch, GRUPO: grupo, OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), EVENTO_ID: ev ? Lic_s_(ev.ID) : '', EVENTO_TIPO: '',
+        TIPO: 'ALTA_ADERENCIA', PAPEL: papel, ANTECEDENCIA_MIN: 0, ANTECEDENCIA: voltou ? 'VOLTOU' : 'NOVA', NIVEL: nivel, USUARIO_ID: u.id, USUARIO_NOME: u.nome, CANAIS: '',
+        TITULO: (voltou ? 'A nota voltou a ficar alta' : 'Nova oportunidade de alta aderência') + ' (nota ' + notaTxt + ')', TEXTO: '', ALVO_ISO: alvo, LIBERAR_EM: agora, SITUACAO: 'PROGRAMADO', TENTATIVAS: 0, ATUALIZADO_EM: agora, CRIADO_EM: agora });
+    });
+    if (novos.length) { if (typeof SGO_DATA.insertMany === 'function') SGO_DATA.insertMany(LIC_ABAS.ALERTAS, novos); else novos.forEach(function (n) { SGO_DATA.insert(LIC_ABAS.ALERTAS, n); }); }
+    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { ALTA_ADERENCIA_ESTADO: 'ALTA', ALTA_ADERENCIA_CICLO: nc, ALTA_ADERENCIA_EM: agora, ALTA_ADERENCIA_NOTA: Number(l.NOTA), ATUALIZADO_EM: agora });
+    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'ALERTA_ALTA_ADERENCIA', sis, { de: voltou ? 'a nota tinha caído' : '', para: 'nota ' + notaTxt + ' · ' + Lic_altaClasse_(l),
+      texto: (voltou ? 'A nota voltou a ficar alta' : 'Nova oportunidade de alta aderência') + ': nota ' + notaTxt + ' (limite ' + Lic_altaLimite_(cfg) + '), sem trava, fim das propostas em ' + Lic_brDiaHora_(alvo) + '. Alerta ' + LIC_NIVEIS[nivel] + ' para ' + para.map(function (u) { return u.nome; }).join(' e ') + (o.origem === 'AUTOMATICA' ? ' (análise automática).' : o.origem === 'TRAVA' ? ' (depois da decisão da trava).' : '.'),
+      versao: Lic_s_(l.ANALISE_VERSAO), fonte: fonte });
+    return { criados: novos.length, nivel: nivel, voltou: voltou, ciclo: nc };
+  });
+}
+/** Chamado depois da análise, da nota acertada e da decisão de trava: nunca derruba quem chamou. */
+function Lic_altaAvaliarTalvez_(opId, o) {
+  try { return Lic_altaAvaliar_(opId, new Date(), o); } catch (e) { console.error('Licitações, alerta de alta aderência: ' + ((e && e.message) || e)); return { criados: 0, erro: Lic_s_(e && e.message) }; }
+}
+/**
+ * Oportunidades com alerta de alta aderência criado nas últimas N horas (uma por oportunidade; lembrete e escalonamento não
+ * contam) que continuam valendo agora (nota maior ou igual ao limite, sem trava, prazo em aberto, não descartada). É a mesma
+ * conta do Hoje, do Painel e da lista filtrada. Devolve { ids, alertadas, limite }.
+ */
+function Lic_altaRecentes_(horas, todas, cfg, alertas) {
+  cfg = cfg || Lic_alertasCfg_();
+  var agoraMs = Date.now(), desde = new Date(agoraMs - horas * 3600e3).toISOString(), porOp = {}, ops = {};
+  (alertas || Lic_ler_(LIC_ABAS.ALERTAS)).forEach(function (a) {
+    if (Lic_s_(a.TIPO) !== 'ALTA_ADERENCIA' || Lic_s_(a.PAPEL) === 'ESCALONAMENTO' || Lic_s_(a.PAPEL) === 'REENVIO' || Lic_s_(a.CRIADO_EM) < desde) return;
+    porOp[Lic_s_(a.OPORTUNIDADE_ID)] = true;
+  });
+  (todas || Lic_ativas_()).forEach(function (l) { ops[Lic_s_(l.ID)] = l; });
+  var ids = Object.keys(porOp).filter(function (id) { return ops[id] && !Lic_altaMotivo_(ops[id], cfg, agoraMs).motivo; });
+  return { ids: ids, alertadas: Object.keys(porOp).length, limite: Lic_altaLimite_(cfg) };
+}
+/** Contagem do Hoje e do Painel: últimas 24 h e 7 dias, com a fonte (alertas: as linhas de LIC_ALERTAS já lidas, se houver). */
+function Lic_altaResumo_(todas, alertas) {
+  var cfg = Lic_alertasCfg_(), linhas = alertas || Lic_ler_(LIC_ABAS.ALERTAS), h24 = Lic_altaRecentes_(24, todas, cfg, linhas), d7 = Lic_altaRecentes_(168, todas, cfg, linhas);
+  return { h24: h24.ids.length, d7: d7.ids.length, limite: h24.limite, ligado: cfg.ligado !== false && (cfg.altaAderencia || {}).ligado !== false,
+    fonte: 'LIC_ALERTAS (tipo ALTA_ADERENCIA criado nas últimas 24 h ou 7 dias, uma por oportunidade; lembretes e escalonamentos não contam) cruzado com LIC_OPORTUNIDADES: só as que continuam com nota maior ou igual a ' + h24.limite + ', sem trava, com o prazo de propostas em aberto e não descartadas (' + d7.alertadas + ' alertadas em 7 dias).' };
+}
+
 // ------------------------------------------------------------ texto do alerta
 var LIC_ACOES_TIPO = {
   LIMITE_PROPOSTA: { RADAR: 'decidir se participa e, se sim, enviar a proposta no portal antes do fim', ANALISE: 'concluir a análise e enviar a proposta no portal antes do fim', OUTRA: 'conferir se a proposta foi enviada no portal' },
@@ -454,6 +650,7 @@ var LIC_ACOES_TIPO = {
 };
 function Lic_acaoAlerta_(a, l) {
   if (Lic_s_(a.TIPO) === 'MUDANCA') return Lic_s_(a.ANTECEDENCIA) === 'SUSPENSAO' ? 'acompanhar a reabertura; os alertas pendentes foram cancelados' : /REVOGACAO|ANULACAO/.test(Lic_s_(a.ANTECEDENCIA)) ? 'conferir o ato na fonte; os alertas pendentes foram cancelados' : 'conferir a mudança na fonte e os prazos novos na agenda';
+  if (Lic_s_(a.TIPO) === 'ALTA_ADERENCIA') return Lic_s_(l && l.SITUACAO) === 'RADAR' ? 'abrir a ficha, conferir a análise e decidir se envia para análise (ou descarta, com o motivo) antes do fim das propostas' : 'abrir a ficha, conferir a análise e decidir a participação antes do fim das propostas';
   var x = LIC_ACOES_TIPO[Lic_s_(a.EVENTO_TIPO)];
   if (x && typeof x === 'object') return x[Lic_s_(l && l.SITUACAO)] || x.OUTRA;
   return x || 'conferir o prazo na agenda';
@@ -494,6 +691,7 @@ function Lic_alertaCabecalho_(a, l) {
 }
 /** Um prazo (ou mudança) do alerta: nome, quando, limite interno, tempo restante, natureza e fonte, ação (com o lembrete). */
 function Lic_alertaItem_(a, l, e, agoraMs) {
+  if (Lic_s_(a.TIPO) === 'ALTA_ADERENCIA') return Lic_altaItem_(a, l, e, agoraMs);
   var mud = Lic_s_(a.TIPO) === 'MUDANCA', nivel = LIC_NIVEIS[Lic_up_(a.NIVEL)] || 'normal';
   var prazo = mud ? (Lic_s_(a.TITULO) || 'Mudança na licitação') : (e ? Lic_s_(e.NOME) : 'Prazo');
   var alvoMs = Date.parse(Lic_s_(a.ALVO_ISO)), quandoTxt = mud ? 'detectado em ' + Lic_brDiaHora_(a.CRIADO_EM) : (e ? Lic_eventoQuandoTxt_(e) : Lic_brDiaHora_(a.ALVO_ISO)) + ' (horário de Brasília' + (e && Lic_up_(e.FUSO_PRESUMIDO) === 'SIM' ? ', presumido' : '') + ')';
@@ -508,6 +706,7 @@ function Lic_alertaItem_(a, l, e, agoraMs) {
 /** Conteúdo do alerta: { titulo, texto (e-mail), params (os 9 do modelo do WhatsApp) }. */
 function Lic_alertaConteudo_(a, l, e, quando) {
   if (Lic_s_(a.TIPO) === 'DOCUMENTO' && typeof LicH_alertaConteudo_ === 'function') return LicH_alertaConteudo_(a, l, quando);
+  if (Lic_s_(a.TIPO) === 'ALTA_ADERENCIA') return Lic_altaConteudo_(a, l, e, quando);
   var agoraMs = (quando instanceof Date ? quando : new Date()).getTime(), cb = Lic_alertaCabecalho_(a, l), it = Lic_alertaItem_(a, l, e, agoraMs);
   var orgao = cb.orgao, local = cb.local, mud = it.mud, prazo = it.prazo, interno = it.interno;
   var titulo = (it.esc ? 'Sem ciência · ' : it.reenvio ? 'Lembrete · ' : '') + 'Licitação ' + Lic_s_(a.CODIGO) + ': ' + prazo + (mud ? '' : ' (' + Lic_tempoRestante_(it.alvoMs - agoraMs) + ')') + ' · ' + Lic_texto_(orgao, 60);
@@ -527,10 +726,11 @@ var LIC_PESO_NIVEL = { NORMAL: 1, IMPORTANTE: 2, CRITICO: 3 };
 function Lic_listaE_(xs) { return xs.length < 2 ? xs.join('') : xs.slice(0, -1).join(', ') + ' e ' + xs[xs.length - 1]; }
 /** Nível do grupo: o mais grave entre os alertas (crítico, se houver um). */
 function Lic_nivelGrupo_(linhas) { return linhas.map(function (a) { return Lic_up_(a.NIVEL); }).sort(function (n1, n2) { return (LIC_PESO_NIVEL[n2] || 0) - (LIC_PESO_NIVEL[n1] || 0); })[0] || 'NORMAL'; }
-/** Ordem dos itens no envio agrupado: mudanças primeiro, depois os prazos do mais próximo ao mais distante. */
+/** Ordem dos itens no envio agrupado: mudanças e alta aderência primeiro, depois os prazos do mais próximo ao mais distante. */
 function Lic_ordemGrupo_(linhas) {
+  var alvo = function (a) { return Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' ? NaN : Date.parse(Lic_s_(a.ALVO_ISO)); };
   return linhas.slice().sort(function (x, y) {
-    var ax = Date.parse(Lic_s_(x.ALVO_ISO)), ay = Date.parse(Lic_s_(y.ALVO_ISO));
+    var ax = alvo(x), ay = alvo(y);
     ax = isFinite(ax) ? ax : -Infinity; ay = isFinite(ay) ? ay : -Infinity;
     return ax === ay ? (LIC_PESO_NIVEL[Lic_up_(y.NIVEL)] || 0) - (LIC_PESO_NIVEL[Lic_up_(x.NIVEL)] || 0) : ax - ay;
   });
@@ -539,7 +739,7 @@ function Lic_ordemGrupo_(linhas) {
 function Lic_resumoGrupo_(linhas, curto, evs) {
   var todosPrazo = linhas.every(function (a) { return Lic_s_(a.TIPO) === 'PRAZO'; }), nomes = [];
   Lic_ordemGrupo_(linhas).forEach(function (a) {
-    var n = Lic_s_(a.TIPO) === 'MUDANCA' ? (Lic_s_(a.TITULO) || 'mudança na licitação').toLowerCase() : curto ? (LIC_NOMES_CURTOS[Lic_s_(a.EVENTO_TIPO)] || Lic_s_(a.EVENTO_TIPO).toLowerCase()) : Lic_s_((evs[Lic_s_(a.EVENTO_ID)] || {}).NOME) || LIC_NOMES_CURTOS[Lic_s_(a.EVENTO_TIPO)] || 'prazo';
+    var n = Lic_s_(a.TIPO) === 'MUDANCA' ? (Lic_s_(a.TITULO) || 'mudança na licitação').toLowerCase() : Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' ? 'alta aderência' : curto ? (LIC_NOMES_CURTOS[Lic_s_(a.EVENTO_TIPO)] || Lic_s_(a.EVENTO_TIPO).toLowerCase()) : Lic_s_((evs[Lic_s_(a.EVENTO_ID)] || {}).NOME) || LIC_NOMES_CURTOS[Lic_s_(a.EVENTO_TIPO)] || 'prazo';
     if (nomes.indexOf(n) < 0) nomes.push(n);
   });
   // revisão de 03/11/2026: com 4 ou mais tipos, o resumo fica curto (os 3 primeiros e "outros N"); a lista toda vai no e-mail
@@ -554,7 +754,7 @@ function Lic_resumoGrupo_(linhas, curto, evs) {
 function Lic_alertaConteudoGrupo_(linhas, l, evs, quando, envioId) {
   var agoraMs = (quando instanceof Date ? quando : new Date()).getTime(), ord = Lic_ordemGrupo_(linhas), a0 = ord[0], cb = Lic_alertaCabecalho_(a0, l);
   var itens = ord.map(function (a) { var e = evs[Lic_s_(a.EVENTO_ID)] || null, it = Lic_alertaItem_(a, l, e, agoraMs); it.linha = a; return it; });
-  var comPrazo = itens.filter(function (it) { return !it.mud && isFinite(it.alvoMs); }), urg = comPrazo[0] || itens[0];
+  var comPrazo = itens.filter(function (it) { return !it.mud && !it.alta && isFinite(it.alvoMs); }), urg = comPrazo[0] || itens[0];
   var rs = Lic_resumoGrupo_(linhas, false, evs), rc = Lic_resumoGrupo_(linhas, true, evs);
   var nivelG = LIC_NIVEIS[Lic_nivelGrupo_(linhas)] || 'normal';
   var todosEsc = itens.every(function (it) { return it.esc; }), todosLemb = itens.every(function (it) { return it.esc || it.reenvio; });
@@ -564,7 +764,7 @@ function Lic_alertaConteudoGrupo_(linhas, l, evs, quando, envioId) {
     janela = h <= 48 ? (h === 1 ? ' na próxima hora' : ' nas próximas ' + h + ' h') : ' nos próximos ' + Math.ceil(maxMs / 864e5) + ' dias';
   }
   var titulo = (todosEsc ? 'Sem ciência · ' : todosLemb ? 'Lembrete · ' : '') + 'Licitação ' + Lic_s_(a0.CODIGO) + ': ' + rs.rotulo + janela + ' · ' + Lic_texto_(cb.orgao, 60);
-  var abre = rs.rotulo.charAt(0).toUpperCase() + rs.rotulo.slice(1) + ' desta licitação nesta mensagem. ' + (urg.mud ? 'Primeiro: ' + urg.prazo + ' (' + urg.quandoTxt + ').' : 'O mais urgente: ' + urg.prazo + ', ' + urg.quandoTxt + ' (faltam ' + urg.restante + ').');
+  var abre = rs.rotulo.charAt(0).toUpperCase() + rs.rotulo.slice(1) + ' desta licitação nesta mensagem. ' + (urg.mud || urg.alta ? 'Primeiro: ' + urg.prazo + ' (' + urg.quandoTxt + ').' : 'O mais urgente: ' + urg.prazo + ', ' + urg.quandoTxt + ' (faltam ' + urg.restante + ').');
   var texto = ['METROLABS · ALERTAS DE LICITAÇÃO (' + nivelG + ')', '', abre]
     .concat(todosEsc ? ['Sem ciência de quem recebeu primeiro: confirme a ciência.'] : todosLemb ? ['Lembrete: a ciência ainda não foi registrada.'] : [])
     .concat(['', 'Órgão: ' + cb.orgao + (cb.local ? ' (' + cb.local + ')' : ''), 'Processo: ' + cb.processo, 'Objeto: ' + cb.objeto, 'Responsável: ' + cb.resp, '', rs.todosPrazo ? 'Prazos:' : 'Alertas:']);
@@ -575,6 +775,7 @@ function Lic_alertaConteudoGrupo_(linhas, l, evs, quando, envioId) {
       texto.push('   Quando: ' + it.quandoTxt + (it.interno ? '; ' + it.interno : ''));
       texto.push('   Tempo restante: ' + it.restante);
       if (it.natureza) texto.push('   Natureza: ' + it.natureza);
+      (it.extra || []).forEach(function (x) { texto.push('   ' + x); });   // alta aderência: valor, nota e critérios
     }
     texto.push('   Ação: ' + it.acao);
   });
@@ -655,7 +856,7 @@ function Lic_alertaEnviarUm_(a, quando, cfg, ops, evs) {
   Object.keys(campos).forEach(function (k) { a[k] = campos[k]; });
   var resumo = 'interno: registrado na Central de alertas' + (em ? '; e-mail: ' + (em.situacao === 'ENVIADO' ? 'entregue ao serviço de e-mail' : em.motivo) : '') + (wa ? '; WhatsApp: ' + (LIC_WA_ROTULOS[wa.situacao] || wa.situacao) + (wa.situacao === 'ACEITO' ? '' : ' (' + wa.motivo + ')') : '') + (alt ? '; ' + alt : '');
   Lic_historico_('OPORTUNIDADE', a.OPORTUNIDADE_ID, a.CODIGO, chegou ? 'ALERTA_ENVIADO' : 'ALERTA_FALHOU', { id: '', nome: 'Alertas de licitação (sistema)' },
-    { para: Lic_s_(a.USUARIO_NOME), texto: Lic_s_(a.AVISO_ID) + ' · ' + ct.titulo + ' · ' + LIC_NIVEIS[Lic_up_(a.NIVEL)] + ' · ' + resumo, fonte: 'Alertas (' + (papel === 'ESCALONAMENTO' ? 'escalonamento' : papel === 'REENVIO' ? 'reenvio por outro canal' : 'antecedência ' + Lic_s_(a.ANTECEDENCIA)) + ')' });
+    { para: Lic_s_(a.USUARIO_NOME), texto: Lic_s_(a.AVISO_ID) + ' · ' + ct.titulo + ' · ' + LIC_NIVEIS[Lic_up_(a.NIVEL)] + ' · ' + resumo, fonte: 'Alertas (' + (papel === 'ESCALONAMENTO' ? 'escalonamento' : papel === 'REENVIO' ? 'reenvio por outro canal' : Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' ? 'alta aderência' : 'antecedência ' + Lic_s_(a.ANTECEDENCIA)) + ')' });
   return { chegou: chegou, email: em, whatsapp: wa };
 }
 
@@ -693,7 +894,7 @@ function Lic_alertaEnviarGrupo_(linhas, quando, cfg, ops, evs) {
     SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, campos);
     Object.keys(campos).forEach(function (k) { a[k] = campos[k]; });
     Lic_historico_('OPORTUNIDADE', a.OPORTUNIDADE_ID, a.CODIGO, chegou ? 'ALERTA_ENVIADO' : 'ALERTA_FALHOU', { id: '', nome: 'Alertas de licitação (sistema)' },
-      { para: Lic_s_(a.USUARIO_NOME), texto: Lic_s_(a.AVISO_ID) + ' · ' + cA.titulo + ' · ' + LIC_NIVEIS[Lic_up_(a.NIVEL)] + ' · ' + juntos + ' · ' + resumo, fonte: 'Alertas (' + (papel === 'ESCALONAMENTO' ? 'escalonamento' : papel === 'REENVIO' ? 'reenvio por outro canal' : 'antecedência ' + Lic_s_(a.ANTECEDENCIA)) + ', envio agrupado)' });
+      { para: Lic_s_(a.USUARIO_NOME), texto: Lic_s_(a.AVISO_ID) + ' · ' + cA.titulo + ' · ' + LIC_NIVEIS[Lic_up_(a.NIVEL)] + ' · ' + juntos + ' · ' + resumo, fonte: 'Alertas (' + (papel === 'ESCALONAMENTO' ? 'escalonamento' : papel === 'REENVIO' ? 'reenvio por outro canal' : Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' ? 'alta aderência' : 'antecedência ' + Lic_s_(a.ANTECEDENCIA)) + ', envio agrupado)' });
   });
   return { chegou: chegou, email: em, whatsapp: wa };
 }
@@ -1174,7 +1375,7 @@ function Lic_alertaParaTela_(a) {
   return {
     id: Lic_s_(a.ID), avisoId: Lic_s_(a.AVISO_ID), opId: Lic_s_(a.OPORTUNIDADE_ID), codigo: Lic_s_(a.CODIGO), eventoId: Lic_s_(a.EVENTO_ID), eventoTipo: Lic_s_(a.EVENTO_TIPO), tipo: Lic_s_(a.TIPO), papel: Lic_s_(a.PAPEL),
     antecedencia: Lic_s_(a.ANTECEDENCIA), nivel: Lic_up_(a.NIVEL), nivelNome: LIC_NIVEIS[Lic_up_(a.NIVEL)] || '', pessoa: Lic_s_(a.USUARIO_NOME), pessoaId: Lic_s_(a.USUARIO_ID), titulo: Lic_s_(a.TITULO), texto: Lic_s_(a.TIPO) === 'MUDANCA' || Lic_s_(a.TIPO) === 'DOCUMENTO' ? Lic_s_(a.TEXTO) : '',
-    abrirAba: Lic_s_(a.TIPO) === 'DOCUMENTO' ? 'habilitacao' : 'prazos',
+    abrirAba: Lic_s_(a.TIPO) === 'DOCUMENTO' ? 'habilitacao' : Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' ? 'analise' : 'prazos',
     situacao: s, situacaoNome: LIC_ALERTA_SITUACOES[s] || s, liberarEm: Lic_s_(a.LIBERAR_EM), alvoIso: Lic_s_(a.ALVO_ISO), email: em, emailMotivo: Lic_s_(a.EMAIL_MOTIVO), whatsapp: wa,
     whatsappNome: wa ? LIC_WA_ROTULOS[wa] || wa : '', whatsappMotivo: Lic_s_(a.WA_MOTIVO), alternativo: Lic_s_(a.CANAL_ALTERNATIVO), cienteEm: Lic_s_(a.CIENTE_EM), cientePor: Lic_s_(a.CIENTE_POR_NOME),
     cienteCanal: LIC_CANAIS_CIENCIA[Lic_s_(a.CIENTE_CANAL).replace(/_OUTRO$/, '')] || Lic_s_(a.CIENTE_CANAL), cienteOutro: /_OUTRO$/.test(Lic_s_(a.CIENTE_CANAL)), escalonarEm: Lic_s_(a.ESCALONAR_EM),
@@ -1200,10 +1401,10 @@ function Lic_alertasPorEvento_() {
   Object.keys(m).forEach(function (k) { if (m[k].proximo) m[k].proximoTxt = Lic_brDiaHora_(m[k].proximo); });
   return m;
 }
-/** Alertas enviados e sem ciência cujo prazo ainda não passou (eu = null: de todos). */
-function Lic_alertasSemCiencia_(eu) {
+/** Alertas enviados e sem ciência cujo prazo ainda não passou (eu = null: de todos; linhas: LIC_ALERTAS já lida, se houver). */
+function Lic_alertasSemCiencia_(eu, linhas) {
   var agora = Lic_agora_();
-  return Lic_ler_(LIC_ABAS.ALERTAS).filter(function (a) {
+  return (linhas || Lic_ler_(LIC_ABAS.ALERTAS)).filter(function (a) {
     var s = Lic_up_(a.SITUACAO);
     if (LIC_SITUACOES_SEM_CIENCIA.indexOf(s) < 0 || Lic_s_(a.CIENTE_EM)) return false;
     if (Lic_s_(a.ALVO_ISO) && Lic_s_(a.ALVO_ISO) < agora) return false;
@@ -1243,6 +1444,9 @@ function Lic_avisoAbrir_(s, avisoId) {
   // aviso de documento de habilitação: sem licitação, abre o cadastro; com licitação, a aba Habilitação da ficha
   if (Lic_s_(a.TIPO) === 'DOCUMENTO') return { ok: true, tela: Lic_s_(a.OPORTUNIDADE_ID) ? { tipo: 'licitacao', id: Lic_s_(a.OPORTUNIDADE_ID), aba: 'habilitacao', alerta: Lic_s_(a.ID) } : { tipo: 'licitacao', mod: 'licitacoes_habilitacao', alerta: Lic_s_(a.ID) },
     message: Lic_s_(a.CIENTE_EM) ? '' : 'Confirme a ciência deste aviso na Central de alertas (botão "Ciente") ou pelo link do e-mail.' };
+  // 03/11/2026: alta aderência abre a ficha na aba Análise (a nota, os critérios e as fontes)
+  if (Lic_s_(a.TIPO) === 'ALTA_ADERENCIA') return { ok: true, tela: { tipo: 'licitacao', id: Lic_s_(a.OPORTUNIDADE_ID), aba: 'analise', alerta: Lic_s_(a.ID) },
+    message: Lic_s_(a.CIENTE_EM) ? '' : 'Confirme a ciência deste alerta na Central de alertas (botão "Ciente") ou pelo botão do WhatsApp.' };
   return { ok: true, tela: { tipo: 'licitacao', id: Lic_s_(a.OPORTUNIDADE_ID), aba: 'prazos', alerta: Lic_s_(a.ID) },
     message: Lic_s_(a.CIENTE_EM) ? '' : 'Confirme a ciência deste alerta na aba Prazos (botão "Ciente") ou pelo botão do WhatsApp.' };
 }

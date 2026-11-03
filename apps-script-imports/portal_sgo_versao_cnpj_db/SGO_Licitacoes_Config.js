@@ -40,7 +40,10 @@ var LIC_COLUNAS = {
     // quando entrou, as tentativas com erro da IA, a próxima tentativa (espera ou reserva) e o último erro
     'ANALISE_PENDENTE_SITUACAO', 'ANALISE_PENDENTE_BASE', 'ANALISE_PENDENTE_EM', 'ANALISE_PENDENTE_TENTATIVAS', 'ANALISE_PENDENTE_PROXIMA', 'ANALISE_PENDENTE_ERRO',
     // revisão de fe62a18: reserva comum da análise (fila e "Analisar agora"; nunca duas da mesma oportunidade ao mesmo tempo)
-    'ANALISE_PENDENTE_RESERVA_ATE'],
+    'ANALISE_PENDENTE_RESERVA_ATE',
+    // 03/11/2026: alerta de nova oportunidade de alta aderência (SGO_Licitacoes_Alertas.js, Lic_altaAvaliar_): ALTA (já alertada nesta
+    // subida da nota) ou CAIU (depois do alerta, a nota caiu abaixo do limite ou apareceu trava); o ciclo conta as subidas alertadas
+    'ALTA_ADERENCIA_ESTADO', 'ALTA_ADERENCIA_CICLO', 'ALTA_ADERENCIA_EM', 'ALTA_ADERENCIA_NOTA'],
   LIC_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'CODIGO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'VERSAO', 'FONTE', 'HASH', 'USUARIO_ID', 'USUARIO_NOME', 'DATA'],
   LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).
@@ -170,14 +173,15 @@ function Lic_garantirAbas_() {
   // V6 (02/11/2026, etapa 4): coluna DURACAO_MS em LIC_ANALISES
   // V7 (03/11/2026): coluna ENVIO_GRUPO em LIC_ALERTAS (envio agrupado por licitação e pessoa)
   // V8 (03/11/2026): colunas ANALISE_PENDENTE_* em LIC_OPORTUNIDADES (fila da análise automática)
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V8')) return; } catch (e) {}
+  // V9 (03/11/2026): colunas ALTA_ADERENCIA_* em LIC_OPORTUNIDADES (alerta de nova oportunidade de alta aderência)
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V9')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V8', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V9', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */

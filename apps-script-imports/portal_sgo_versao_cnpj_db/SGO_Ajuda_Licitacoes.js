@@ -25,6 +25,7 @@ function SGO_ajudaTelas_Licitacoes_() {
         { titulo: "Ler o resumo", itens: [
           "A faixa do alto diz quando foi a última coleta e quantos registros foram lidos, novos, candidatos, travados e descartados pela regra. Faixa amarela ou vermelha explica a falha e o que fazer.",
           "Toque num número (\"Para analisar\", \"Travadas\", \"Em análise\", \"Prazos de proposta em 7 dias\") para abrir a lista de Oportunidades já na parte certa.",
+          "\"Alta aderência (24 h)\" e \"Alta aderência (7 dias)\" contam as oportunidades que receberam o alerta de nova oportunidade de alta aderência no período e continuam com a nota no limite ou acima (padrão 70), sem trava e com o prazo em aberto. A fonte fica logo abaixo dos números. O toque abre a lista de Oportunidades filtrada (de todas as partes); \"Ver a aba\" tira o filtro.",
           "Em \"Prazos de proposta nos próximos 7 dias\" ficam as oportunidades no radar ou em análise com proposta encerrando em até 7 dias. O selo de tempo fica vermelho com menos de 2 dias e amarelo com menos de 5.",
           "\"Abrir ficha\" leva direto à ficha da licitação."
         ] },
@@ -218,7 +219,8 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Liga e desliga os alertas de licitação, escolhe quem recebe (só Diretoria e Administrador) e por onde (e-mail e WhatsApp por pessoa; o interno vale sempre), quem recebe primeiro quando a oportunidade não tem responsável, os minutos até escalonar (padrão 60, 15 e 5) e as antecedências de cada prazo.",
           "Antecedências se escrevem como \"7d normal, 3d importante, 24h importante, 4h crítico, 1h crítico\" (d = dias, h = horas, min = minutos).",
           "O motivo é obrigatório; cada salvamento vira versão nova, e só o que mudou é gravado (o resto fica como estava). Os alertas programados passam a seguir a regra nova; os que saem dela são cancelados com o motivo.",
-          "A faixa do alto diz se o modelo sgo_licitacao_prazo do WhatsApp está aprovado na Meta e quando chegou o último retorno de status."
+          "A faixa do alto diz se o modelo sgo_licitacao_prazo do WhatsApp está aprovado na Meta e quando chegou o último retorno de status.",
+          "Nova oportunidade de alta aderência: liga ou desliga o alerta e define a nota mínima (de 50 a 100, padrão 70). Com versão, motivo e histórico, como o resto das regras. Subir a nota mínima cancela, com o motivo, os alertas de alta aderência ainda não enviados que ficaram abaixo dela."
         ] },
         { titulo: "Regras do radar", itens: [
           "\"Coletor ligado\" liga ou desliga a coleta automática. Porte da matriz: EPP (decisão do dono).",
@@ -309,6 +311,12 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Cada alerta continua com a sua linha nesta tela, com a situação e o histórico próprios. A mensagem sai no nível do mais grave: com um crítico no grupo, ela sai na hora e fora do teto do dia.",
           "O lembrete sem ciência também é um só por licitação e por pessoa. O teto do dia conta cada mensagem uma vez, com quantos prazos ela tiver; o teto por alerta continua contando cada alerta. Avisos de documento de habilitação continuam um por mensagem."
         ] },
+        { titulo: "Nova oportunidade de alta aderência", itens: [
+          "Quando uma análise concluída (automática ou pedida) dá nota no limite das regras ou acima (padrão 70), sem trava (nem trava a confirmar) e com o fim das propostas em aberto, sai UM alerta \"Nova oportunidade de alta aderência\". \"Não é trava\" que deixa a nota alta também gera o alerta.",
+          "O e-mail traz o órgão, a UF, o processo, o objeto resumido, o valor estimado, o fim das propostas com a natureza e a fonte, a nota e a classe, os 2 ou 3 critérios mais fortes calculados pelo sistema (localização, prazo, valor, margem, documentação pela habilitação; nunca os da IA) e o link da ficha, que abre na aba Análise. No WhatsApp, o campo do prazo diz \"Oportunidade com nota 78 (alta aderência)\"; o valor fica no e-mail e no SGO+.",
+          "Nível importante, para quem recebe primeiro (o responsável ou o titular das regras); crítico, para os dois, quando o fim das propostas é em até 72 horas. Segue a mesma fila dos prazos: vai junto com os prazos da mesma licitação na mesma mensagem, conta nos tetos, tem lembrete e escalonamento e a ciência de um vale para os dois.",
+          "Uma vez por subida da nota: reanálise com a nota ainda alta não manda de novo. Se a nota cair abaixo do limite (ou aparecer trava), nada é enviado e o histórico registra a queda; se depois ela voltar a ficar alta, sai um alerta \"a nota voltou a ficar alta\". Se a nota cair antes de o alerta sair, ele é cancelado com o motivo."
+        ] },
         { titulo: "Entender os estados", itens: [
           "1 Criado, 2 Enviado ao provedor, 3 Aceito pelo provedor, 4 Entregue, 5 Lido, 6 Ciência, 7 Em atendimento (abriu pelo link), 8 Concluído (o prazo passou com ciência), 9 Falha, 10 Escalonado.",
           "Entregue e Lido só aparecem quando a Meta manda o retorno de status. Sem retorno, o último estado garantido é \"Aceito pela Meta\".",
@@ -335,7 +343,8 @@ function SGO_ajudaTelas_Licitacoes_() {
       perguntas: [
         { p: "Por que um alerta de 7 dias não saiu?", r: "A oportunidade entrou no radar quando a antecedência de 7 dias já tinha passado. Sai só o aviso mais recente; os anteriores não são enviados para não mandar vários de uma vez." },
         { p: "Por que recebi um e-mail com 3 prazos e não 3 e-mails?", r: "Desde 03/11/2026 os alertas da mesma licitação que vencem na mesma rodada vão juntos, para não encher a caixa com mensagens quase iguais. Nenhum alerta some: cada um tem a sua linha aqui na Central." },
-        { p: "O valor estimado vai no WhatsApp?", r: "Não. A mensagem leva o órgão, o processo, o objeto resumido, o prazo, o tempo restante e a ação; o valor fica só no SGO+." }
+        { p: "O valor estimado vai no WhatsApp?", r: "Não. A mensagem leva o órgão, o processo, o objeto resumido, o prazo, o tempo restante e a ação; o valor fica no SGO+ e, no alerta de alta aderência, também no e-mail." },
+        { p: "Por que a mesma oportunidade não mandou outro alerta de alta aderência depois da reanálise?", r: "O alerta sai uma vez por subida da nota. Enquanto a nota continua no limite ou acima, reanálise não repete. Só depois de a nota cair abaixo do limite (ou aparecer trava) e voltar a ficar alta sai um novo, \"a nota voltou a ficar alta\"." }
       ]
     },
     "licitacoes_kanban": {
@@ -423,6 +432,7 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Toque num número ou numa barra para abrir a lista que o compõe: o Kanban já filtrado (etapa; UF, nota e travas só com as em andamento; situação da análise por IA), Oportunidades › Descartadas só da regra do radar, a Agenda no período (a barra \"por tipo\" abre só aquele tipo de prazo), a Central de alertas em \"Sem ciência\" ou Portais e configurações (a barra de situação abre a lista de portais filtrada por ela).",
           "Os prazos de 7 e 30 dias seguem a mesma regra da Agenda (sem descartadas e sem travadas), por isso o número bate com a lista que abre.",
           "\"Em andamento por UF\" mostra primeiro a prioridade da pontuação: GO e DF, os vizinhos de GO e o RJ (filial), mesmo quando estão em zero.",
+          "\"Alta aderência (24 h)\" e \"(7 dias)\": oportunidades com o alerta de nova oportunidade de alta aderência no período que continuam com a nota no limite ou acima, sem trava e com o prazo em aberto (a mesma conta do Hoje). O toque abre Oportunidades filtrada.",
           "\"Análises por IA\" conta as oportunidades pela situação da última análise (concluída, recusada pelo verificador ou erro da IA); as tentativas registradas aparecem à parte. O tempo médio vale para as análises feitas desde a etapa 4 (antes a duração não era gravada)."
         ] }
       ],

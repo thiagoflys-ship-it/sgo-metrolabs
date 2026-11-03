@@ -303,7 +303,11 @@ function Lic_oportunidades_(eu, d) {
   todas.forEach(function (l) { contagens[Lic_abaDe_(l)]++; var c = Lic_up_(l.PORTAL_SESSAO); if (c && portais[c]) sessoes[c] = Lic_s_(portais[c].NOME); });
   // revisão de 02/11/2026: origem = REGRA (descartada só pela regra do radar) ou PESSOA (pela Diretoria), na aba Descartadas
   var origem = Lic_up_(d.origem);
-  var lista = todas.filter(function (l) { return Lic_abaDe_(l) === aba && (aba !== 'descartadas' || !origem || (origem === 'PESSOA') === (Lic_s_(l.DESCARTE_ORIGEM) === 'PESSOA')); }).map(function (l) { return Lic_cartao_(l, portais); }).filter(function (o) {
+  // 03/11/2026: lista filtrada da alta aderência (clique no Hoje e no Painel): as alertadas nas últimas 24 h ou 7 dias que continuam
+  // com nota maior ou igual ao limite, sem trava e com prazo em aberto, de qualquer aba (a mesma conta do número)
+  var horasAlta = Number(d.alta) === 24 || Number(d.alta) === 168 ? Number(d.alta) : 0, alta = null;
+  if (horasAlta && typeof Lic_altaRecentes_ === 'function') { var ra = Lic_altaRecentes_(horasAlta, todas); alta = { horas: horasAlta, limite: ra.limite, ids: ra.ids }; }
+  var lista = todas.filter(function (l) { if (alta) return alta.ids.indexOf(Lic_s_(l.ID)) >= 0; return Lic_abaDe_(l) === aba && (aba !== 'descartadas' || !origem || (origem === 'PESSOA') === (Lic_s_(l.DESCARTE_ORIGEM) === 'PESSOA')); }).map(function (l) { return Lic_cartao_(l, portais); }).filter(function (o) {
     if (busca && [o.orgao, o.objeto, o.numeroControle, o.municipio, o.codigo, o.unidade].join(' ').toLowerCase().indexOf(busca) < 0) return false;
     if (uf === 'PRIO' && LIC_UFS_PRIORIDADE.indexOf(o.uf) < 0) return false;
     if (uf && uf !== 'PRIO' && o.uf !== uf) return false;
@@ -313,7 +317,7 @@ function Lic_oportunidades_(eu, d) {
     return true;
   }).sort(Lic_s_(d.ordem) === 'nota' ? Lic_ordenarNota_ : Lic_s_(d.ordem) === 'prazo' ? Lic_ordenarPrazo_ : Lic_ordenar_);
   var total = lista.length;
-  return { aba: aba, origem: aba === 'descartadas' && (origem === 'REGRA' || origem === 'PESSOA') ? origem : '', ordem: ['nota', 'prazo'].indexOf(Lic_s_(d.ordem)) >= 0 ? Lic_s_(d.ordem) : 'prioridade', iaDisponivel: Lic_iaDisponivel_(), contagens: contagens, total: total, lista: lista.slice(0, 300), cortada: total > 300, sessoes: sessoes, coletorNoServidor: Lic_temColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null) };
+  return { aba: aba, alta: alta ? { horas: alta.horas, limite: alta.limite, rotulo: alta.horas === 24 ? 'últimas 24 h' : 'últimos 7 dias' } : null, origem: aba === 'descartadas' && (origem === 'REGRA' || origem === 'PESSOA') ? origem : '', ordem: ['nota', 'prazo'].indexOf(Lic_s_(d.ordem)) >= 0 ? Lic_s_(d.ordem) : 'prioridade', iaDisponivel: Lic_iaDisponivel_(), contagens: contagens, total: total, lista: lista.slice(0, 300), cortada: total > 300, sessoes: sessoes, coletorNoServidor: Lic_temColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null) };
 }
 
 function Lic_acharOp_(id) {
@@ -408,10 +412,14 @@ function Lic_hoje_(eu) {
   novas.sort(function (a, b) { return (b.situacaoDesde || '') < (a.situacaoDesde || '') ? -1 : 1; });
   // etapa 3: alertas enviados e sem ciência (da Diretoria de Licitações inteira), para a faixa de cima
   var semC = [];
-  try { if (typeof Lic_alertasSemCiencia_ === 'function') semC = Lic_alertasSemCiencia_(null).map(Lic_alertaParaTela_).sort(function (a, b) { return a.criadoEm < b.criadoEm ? 1 : -1; }); } catch (e) { semC = []; }
+  var alertasLidos = null;
+  try { if (typeof Lic_alertasSemCiencia_ === 'function') { alertasLidos = Lic_ler_(LIC_ABAS.ALERTAS); semC = Lic_alertasSemCiencia_(null, alertasLidos).map(Lic_alertaParaTela_).sort(function (a, b) { return a.criadoEm < b.criadoEm ? 1 : -1; }); } } catch (e) { semC = []; }
   // 03/11/2026: fila da análise automática (SGO_Licitacoes_Analise.js)
   var fila = typeof Lic_filaContagem_ === 'function' ? Lic_filaContagem_(todas) : null;
-  return { semCiencia: semC.slice(0, 5), semCienciaTotal: semC.length, kpis: k, filaAnalise: fila, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_(),
+  // 03/11/2026: novas oportunidades de alta aderência (alertas ALTA_ADERENCIA nas últimas 24 h e 7 dias), com a fonte
+  var alta = null;
+  try { if (typeof Lic_altaResumo_ === 'function') alta = Lic_altaResumo_(todas, alertasLidos); } catch (e) { alta = null; }
+  return { semCiencia: semC.slice(0, 5), semCienciaTotal: semC.length, kpis: k, filaAnalise: fila, altaAderencia: alta, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_(),
     // documentos de habilitação (SGO_Licitacoes_Habilitacao.js): vencimentos e pendências das licitações, com a fonte
     habilitacao: typeof LicH_resumo_ === 'function' ? LicH_resumo_() : null };
 }

@@ -375,7 +375,9 @@ function Lic_painel_(eu) {
       var tp = Lic_s_(e.TIPO), nm = (LIC_EVENTO_TIPOS[tp] || {}).nome || Lic_s_(e.NOME) || tp; if (!pz.porTipo7[tp]) pz.porTipo7[tp] = { nome: nm, n: 0 }; pz.porTipo7[tp].n++;
     }
   });
-  var semC = typeof Lic_alertasSemCiencia_ === 'function' ? Lic_alertasSemCiencia_(null) : [];
+  // 03/11/2026: LIC_ALERTAS lida uma vez (sem ciência e alta aderência)
+  var alertasLidos = typeof Lic_alertasSemCiencia_ === 'function' ? Lic_ler_(LIC_ABAS.ALERTAS) : [];
+  var semC = typeof Lic_alertasSemCiencia_ === 'function' ? Lic_alertasSemCiencia_(null, alertasLidos) : [];
   // análises por IA: uma linha por tentativa registrada (LIC_ANALISES); tempo médio só das que têm a medida (DURACAO_MS, desde 02/11/2026)
   var ia = { concluidas: iaOp.CONCLUIDA, recusadas: iaOp.RECUSADA, erro: iaOp.ERRO, total: 0, tentativas: { CONCLUIDA: 0, RECUSADA: 0, ERRO: 0 }, medidas: 0, somaMs: 0, ultima: '' };
   Lic_lerColunas_(LIC_ABAS.ANALISES, ['OPORTUNIDADE_ID', 'SITUACAO', 'DURACAO_MS', 'CRIADO_EM']).forEach(function (a) {
@@ -411,6 +413,8 @@ function Lic_painel_(eu) {
     prazos: { d7: pz.d7, d30: pz.d30, criticos7: pz.criticos7, pendentes30: pz.pendentes30, porTipo7: Object.keys(pz.porTipo7).map(function (t) { return { tipo: t, nome: pz.porTipo7[t].nome, n: pz.porTipo7[t].n }; }).sort(function (a, b) { return b.n - a.n; }),
       fonte: 'LIC_EVENTOS (' + pz.eventosLidos + ' linhas lidas): prazos com data de hoje até ' + Lic_somarDia_(hoje, 7).split('-').reverse().join('/') + ' (7 dias) e até ' + ate30.split('-').reverse().join('/') + ' (30 dias), horário de Brasília, sem versões substituídas, sem descartadas e sem travadas (a mesma regra da Agenda). Pendentes de confirmação: os da janela de 30 dias e os sem data (não cancelados), como no contador da Agenda.' },
     alertas: { semCiencia: semC.length, fonte: 'LIC_ALERTAS: enviados, sem ciência e com o prazo ainda por vir (a mesma regra da Central de alertas, aba "Sem ciência").' },
+    // 03/11/2026: novas oportunidades de alta aderência nas últimas 24 h e 7 dias (a mesma conta do Hoje e da lista filtrada)
+    altaAderencia: typeof Lic_altaResumo_ === 'function' ? Lic_altaResumo_(todas, alertasLidos) : null,
     // documentos de habilitação (SGO_Licitacoes_Habilitacao.js): vencimentos e pendências das licitações, com a fonte
     habilitacao: typeof LicH_resumo_ === 'function' ? LicH_resumo_() : null,
     travas: { n: k.travasAConfirmar, fonte: 'LIC_OPORTUNIDADES, coluna TRAVAS_A_CONFIRMAR maior que zero (a IA apontou trava e a Diretoria ainda não decidiu), das ' + k.andamento + ' em andamento.' },

@@ -164,7 +164,7 @@
 </style>
 <script>
   // ---------------- estado e utilitários ----------------
-  var LIC = { nivel: "NENHUM", nome: "", mod: "", seq: 0, aba: "analisar", ordem: "prioridade", filtros: { busca: "", uf: "", selo: "", sessao: "" }, lista: null, portais: null, portaisAba: "portais", fichaAba: "resumo", fichaId: "", abrirFicha: "" };
+  var LIC = { nivel: "NENHUM", nome: "", mod: "", seq: 0, aba: "analisar", alta: 0, ordem: "prioridade", filtros: { busca: "", uf: "", selo: "", sessao: "" }, lista: null, portais: null, portaisAba: "portais", fichaAba: "resumo", fichaId: "", abrirFicha: "" };
   var LIC_ORDENS = [["prioridade", "Prioridade da UF e prazo"], ["nota", "Nota (maior primeiro, descarte no fim)"], ["prazo", "Prazo (mais perto primeiro)"]];
   var LIC_CLASSE_CSS = { ALTA: "n-alta", MEDIA: "n-media", BAIXA: "n-baixa", DESCARTE: "n-descarte", TRAVA_A_CONFIRMAR: "n-descarte" };
   var LIC_CLASSE_NOME = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa", DESCARTE: "descarte", TRAVA_A_CONFIRMAR: "trava a confirmar" };
@@ -299,7 +299,7 @@
       licitacoes_contratos: "Contratos conquistados: vigência, valores, versões e aditivos, o arquivo assinado com SHA-256, os prazos na agenda e a integração com os módulos do SGO+ (sempre por ação da Diretoria)." }[LIC.mod];
     div.innerHTML = Lic_cascaHtml_(LIC.mod, sub, botoes, celular);
     if (typeof atualizarTituloMobile_ === "function") { try { atualizarTituloMobile_(LIC_TITULOS[LIC.mod]); } catch (e) {} }
-    div.querySelectorAll("[data-lic-nav]").forEach(function (b) { b.onclick = function () { var m = b.getAttribute("data-lic-nav"); if (m !== LIC.mod) abrir(m); }; });
+    div.querySelectorAll("[data-lic-nav]").forEach(function (b) { b.onclick = function () { var m = b.getAttribute("data-lic-nav"); LIC.alta = 0; if (m !== LIC.mod) abrir(m); }; });
     var at = div.querySelector("[data-lic-atualizar]"); if (at) at.onclick = function () { Lic_atualizar_(); };
     var co = div.querySelector("[data-lic-coletar]"); if (co) co.onclick = function () { Lic_coletarAgora_(co); };
     var rt = div.querySelector("[data-lic-recarregar-tela]"); if (rt) rt.onclick = function () { var fn = LIC_TELAS_RECARREGAR[LIC.mod]; if (fn) fn(); };
@@ -366,12 +366,22 @@
       '<div class="cm-kpis">' + Lic_kpiHtml_(k.analisar || 0, "Para analisar", (k.analisar ? "aviso" : ""), "analisar") + Lic_kpiHtml_(k.travadas || 0, "Travadas (decisão da Diretoria)", "", "travadas") +
       Lic_kpiHtml_(k.analise || 0, "Em análise", "", "analise") + Lic_kpiHtml_(k.prazos7 || 0, "Prazos de proposta em 7 dias", (k.prazos7 ? "erro" : ""), "analisar") +
       Lic_kpiHtml_(k.descartadasRegra7 || 0, "Descartadas pela regra (7 dias)", "", "descartadas") + Lic_kpiHtml_(k.retificadas7 || 0, "Com versão nova da fonte (7 dias)", "", "analisar") +
-      (d.filaAnalise ? Lic_kpiHtml_(d.filaAnalise.naFila || 0, "Na fila de análise por IA", "", "analisar") : "") + "</div>" + Lic_filaHojeHtml_(d.filaAnalise) +
+      (d.filaAnalise ? Lic_kpiHtml_(d.filaAnalise.naFila || 0, "Na fila de análise por IA", "", "analisar") : "") + Lic_altaKpisHtml_(d.altaAderencia) + "</div>" + Lic_altaFonteHtml_(d.altaAderencia) + Lic_filaHojeHtml_(d.filaAnalise) +
       '<h3 class="cm-sec">Prazos de proposta nos próximos 7 dias</h3>' +
       ((d.prazos || []).length ? (d.prazos || []).map(Lic_linhaCurtaHtml_).join("") : '<div class="cm-vazio">Nenhum prazo de proposta nos próximos 7 dias entre as oportunidades no radar e em análise.</div>') +
       '<h3 class="cm-sec">Últimas que entraram no radar</h3>' +
       ((d.novas || []).length ? (d.novas || []).map(Lic_linhaCurtaHtml_).join("") : '<div class="cm-vazio">Nada no radar ainda. Com o coletor ligado, as candidatas aparecem aqui depois da primeira rodada.</div>') +
       '<p class="cm-modo-dica">Horários das propostas: como a fonte informa, presumidos de Brasília (o PNCP não informa o fuso). A nota de 0 a 100 e a leitura do edital pela IA ficam na ficha de cada oportunidade; os prazos com a fonte e a natureza estão em Agenda e prazos, e os alertas da Diretoria de Licitações na Central de alertas.</p>';
+  }
+  /** Alta aderência (03/11/2026): alertas de nova oportunidade com nota alta nas últimas 24 h e 7 dias; o clique abre a lista filtrada. */
+  function Lic_altaKpisHtml_(a) {
+    if (!a) return "";
+    var rot = function (p) { return "Alta aderência (" + p + ", nota " + a.limite + " ou mais)"; };
+    return Lic_pnKpi_(a.h24 || 0, rot("24 h"), a.h24 ? "ok" : "", { mod: "licitacoes_oportunidades", alta: 24 }, a.fonte) + Lic_pnKpi_(a.d7 || 0, rot("7 dias"), "", { mod: "licitacoes_oportunidades", alta: 168 }, a.fonte);
+  }
+  function Lic_altaFonteHtml_(a) {
+    if (!a) return "";
+    return '<p class="cm-meta"><b>Alta aderência</b> · fonte: ' + Lic_esc_(a.fonte) + (a.ligado ? "" : " O alerta de alta aderência está desligado nas regras dos alertas.") + "</p>";
   }
   /** Fila da análise automática no Hoje: as que esperam nova tentativa e as que falharam 3 vezes (03/11/2026). */
   function Lic_filaHojeHtml_(f) {
@@ -390,7 +400,7 @@
       Lic_ligarFaixa_(c);
       Lic_ligarCiencia_(c, Lic_renderHoje_);
       Lic_ligarLinks_(c);
-      c.querySelectorAll("[data-lic-kpi]").forEach(function (b) { b.onclick = function () { var a = b.getAttribute("data-lic-kpi"); if (a) LIC.aba = a; abrir("licitacoes_oportunidades"); }; });
+      c.querySelectorAll("[data-lic-kpi]").forEach(function (b) { b.onclick = function () { var a = b.getAttribute("data-lic-kpi"); if (a) LIC.aba = a; LIC.alta = 0; abrir("licitacoes_oportunidades"); }; });
       c.querySelectorAll("[data-lic-ficha]").forEach(function (b) { b.onclick = function () { LIC.abrirFicha = b.getAttribute("data-lic-ficha"); abrir("licitacoes_oportunidades"); }; });
     }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, Lic_renderHoje_); });
   }
@@ -501,6 +511,7 @@
   }
   function Lic_htmlListaItens_(d, aba, f) {
     var lista = Lic_filtrar_(d.lista, f);
+    if (d.alta && !(d.lista || []).length) return '<div class="cm-vazio">Nenhuma oportunidade de alta aderência nos ' + Lic_esc_(d.alta.rotulo) + " que continue com nota " + Lic_esc_(d.alta.limite) + " ou mais, sem trava e com o prazo em aberto.</div>";
     if (!(d.lista || []).length) return '<div class="cm-vazio">' + Lic_esc_({ analisar: "Nenhuma candidata no radar agora. Com o coletor ligado, as novas aparecem aqui depois de cada rodada.", travadas: "Nenhuma oportunidade travada.", analise: "Nada em análise. Use \"Enviar para análise\" numa candidata.", descartadas: "Nenhuma descartada." }[aba] || "Nada aqui.") + "</div>";
     if (!lista.length) return '<div class="cm-vazio">Nenhuma oportunidade com estes filtros (' + (d.lista || []).length + ' nesta aba). <button type="button" class="btn-secondary" data-lic-limpar>Limpar filtros</button></div>';
     return '<p class="cm-meta">' + lista.length + " de " + (d.lista || []).length + (d.cortada ? " (mostrando as 300 primeiras pela prioridade)" : "") + "</p>" + lista.map(Lic_cartaoHtml_).join("");
@@ -510,10 +521,14 @@
     if (LIC.fichaId) { Lic_renderFicha_(LIC.fichaId); return; }
     c.innerHTML = Lic_carregando_(4);
     var aba = LIC.aba;
-    Lic_chamar_("oportunidades", { aba: aba, ordem: LIC.ordem, origem: aba === "descartadas" ? LIC.filtros.origem || "" : "" }, function (d) {
+    Lic_chamar_("oportunidades", { aba: aba, ordem: LIC.ordem, origem: aba === "descartadas" ? LIC.filtros.origem || "" : "", alta: LIC.alta || 0 }, function (d) {
       LIC.lista = d;
-      c.innerHTML = Lic_modosHtml_("licitacoes_oportunidades") + Lic_htmlListaCab_(d, aba, LIC.filtros) + '<div id="licLista" class="cm-lista" aria-live="polite">' + Lic_htmlListaItens_(d, aba, LIC.filtros) + "</div>";
-      c.querySelectorAll("[data-lic-aba]").forEach(function (b) { b.onclick = function () { var de = LIC.aba, para = b.getAttribute("data-lic-aba"); if (de === para) return; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Oportunidades: " + b.textContent, function () { LIC.aba = de; if (LIC.mod === "licitacoes_oportunidades") Lic_renderOportunidades_(); }); LIC.aba = para; Lic_renderOportunidades_(); }; });
+      // 03/11/2026: filtro da alta aderência (vindo do Hoje ou do Painel): faixa com o critério e o botão para voltar à aba
+      var faixaAlta = d.alta ? Lic_faixa_("Alta aderência nos " + Lic_esc_(d.alta.rotulo) + ": as oportunidades com alerta de nova oportunidade de alta aderência que continuam com nota " + Lic_esc_(d.alta.limite) + " ou mais, sem trava e com o prazo em aberto (de todas as abas). " +
+        '<button type="button" class="btn-secondary" data-lic-alta-sair style="margin-left:6px">Ver a aba ' + Lic_esc_(((LIC_ABAS_OP.filter(function (x) { return x[0] === aba; })[0]) || ["", "da lista"])[1]) + "</button>", "info", true) : "";
+      c.innerHTML = Lic_modosHtml_("licitacoes_oportunidades") + faixaAlta + Lic_htmlListaCab_(d, aba, LIC.filtros) + '<div id="licLista" class="cm-lista" aria-live="polite">' + Lic_htmlListaItens_(d, aba, LIC.filtros) + "</div>";
+      var sairAlta = c.querySelector("[data-lic-alta-sair]"); if (sairAlta) sairAlta.onclick = function () { LIC.alta = 0; Lic_renderOportunidades_(); };
+      c.querySelectorAll("[data-lic-aba]").forEach(function (b) { b.onclick = function () { var de = LIC.aba, para = b.getAttribute("data-lic-aba"); if (de === para && !LIC.alta) return; LIC.alta = 0; if (window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Oportunidades: " + b.textContent, function () { LIC.aba = de; if (LIC.mod === "licitacoes_oportunidades") Lic_renderOportunidades_(); }); LIC.aba = para; Lic_renderOportunidades_(); }; });
       Lic_ligarModos_(c);
       var redesenhar = function () { var l = Lic_$_("licLista"); if (l) { l.innerHTML = Lic_htmlListaItens_(LIC.lista, aba, LIC.filtros); Lic_ligarCartoes_(l); } };
       [["licFBusca", "busca", "input"], ["licFUf", "uf", "change"], ["licFSelo", "selo", "change"], ["licFSessao", "sessao", "change"]].forEach(function (x) {
@@ -1248,6 +1263,8 @@
       '<div class="cm-campo"><label for="licATetoD">Teto de mensagens de licitação por pessoa no dia</label><input id="licATetoD" inputmode="numeric" value="' + Lic_esc_(c.tetoDia) + '"><p class="cm-ajuda-campo">Padrão 30. O que o teto segura fica na Central de alertas, com o motivo.</p></div></div></div>' +
       '<div class="cm-caixa"><h3>Antecedências por prazo</h3><p class="cm-ajuda-campo">Escreva como "7d normal, 3d importante, 24h importante, 4h crítico, 1h crítico" (d = dias, h = horas, min = minutos). Impugnação, esclarecimento e recurso contam do limite interno (1 dia útil antes, às 17:00, ou o fim do expediente). Antecedência que já tinha passado quando o prazo entrou na agenda não é enviada; sai só a mais recente. Vazio = sem alerta para aquele prazo.</p>' +
       (c.tipos || []).map(function (t) { return '<div class="cm-campo"><label for="licAAnt-' + t.tipo + '">' + Lic_esc_(t.nome) + '</label><input id="licAAnt-' + t.tipo + '" value="' + Lic_esc_(Lic_antTexto_(c.antecedencias[t.tipo])) + '" autocomplete="off"></div>'; }).join("") + "</div>" +
+      '<div class="cm-caixa"><h3>Nova oportunidade de alta aderência</h3>' + ch("licAAltaLig", (c.altaAderencia || {}).ligado !== false, "Alertar quando uma análise concluída der nota alta, sem trava e com o prazo em aberto") +
+      '<div class="cm-campo"><label for="licAAltaLim">Nota mínima (50 a 100)</label><input id="licAAltaLim" inputmode="numeric" value="' + Lic_esc_((c.altaAderencia || {}).limite) + '"><p class="cm-ajuda-campo">Padrão 70. Um alerta por oportunidade a cada subida da nota (reanálise com a nota ainda alta não repete; se a nota cair abaixo do limite e voltar, sai um alerta "a nota voltou a ficar alta"). Importante para quem recebe primeiro; crítico, para os dois, com o fim das propostas em até 72 h. Entra no envio agrupado da licitação, nos tetos, no lembrete e na ciência.</p></div></div>' +
       '<div class="cm-caixa"><h3>Mudanças na fonte</h3><div class="cm-grade3">' + Object.keys(c.mudancasNomes || {}).map(function (k) { return '<div class="cm-campo"><label for="licAMud-' + k + '">' + Lic_esc_(c.mudancasNomes[k]) + '</label><select id="licAMud-' + k + '">' + Lic_opcoes_(niv, c.mudancas[k]) + "</select></div>"; }).join("") +
       '</div><p class="cm-ajuda-campo">Crítico vai para os dois na hora; importante e normal, para quem recebe primeiro. Retificação, suspensão, revogação ou anulação cancelam os alertas pendentes com o motivo.</p></div>' +
       '<div class="cm-caixa"><div class="cm-campo"><label for="licAMot">Motivo da mudança (obrigatório para salvar)</label><input id="licAMot" maxlength="500"></div><div id="licAMsg" aria-live="assertive"></div><div class="lic-acoes-linha"><button type="button" class="btn-primary" data-lic-alertas-salvar>Salvar versão nova</button></div></div>';
@@ -1275,6 +1292,8 @@
         var ant = {}; (c.tipos || []).forEach(function (tp) { var v = ($("licAAnt-" + tp.tipo) || {}).value || ""; if (v.trim() === Lic_antTexto_(c.antecedencias[tp.tipo])) return; var x = Lic_antLer_(v); if (x.erro) erro = erro || tp.nome + ": " + x.erro; else ant[tp.tipo] = x.lista; });
         if (erro) { msg.innerHTML = Lic_faixa_(erro + " Nada foi alterado.", "erro"); return; }
         if (Object.keys(ant).length) campos.antecedencias = ant;
+        var aa = c.altaAderencia || {}, alta = {}; if (b("licAAltaLig") !== (aa.ligado !== false)) alta.ligado = b("licAAltaLig");
+        var lim = String(($("licAAltaLim") || {}).value || "").trim(); if (lim !== String(aa.limite)) alta.limite = lim; if (Object.keys(alta).length) campos.altaAderencia = alta;
         var mud = {}; Object.keys(c.mudancasNomes || {}).forEach(function (k) { var v = ($("licAMud-" + k) || {}).value; if (v && v !== c.mudancas[k]) mud[k] = v; }); if (Object.keys(mud).length) campos.mudancas = mud;
         if (!Object.keys(campos).length) { msg.innerHTML = Lic_faixa_("Nada mudou: os valores são iguais aos atuais.", "aviso"); return; }
         bt.disabled = true;
@@ -1310,6 +1329,8 @@
   /** Destino de um número do Painel: a lista filtrada (Kanban, Agenda, Central de alertas, Portais ou Oportunidades). */
   function Lic_irLink_(x) {
     if (!x || !x.mod) return;
+    LIC.alta = x.alta === 24 || x.alta === 168 ? x.alta : 0;
+    if (x.alta) LIC.filtros = { busca: "", uf: "", selo: "", sessao: "", origem: "" };
     if (x.kanban) { LIC.kanbanFiltros = Object.assign(LIC_KB_VAZIO(), x.kanban); if (x.coluna) LIC.kanbanColMob = x.coluna; }
     if (x.agenda) { LIC.agendaPeriodo = x.agenda.periodo || "7"; LIC.agendaFiltros = { nivel: x.agenda.nivel || "", natureza: x.agenda.natureza || "", sessao: "", travadas: false, tipo: x.agenda.tipo || "" }; }
     if (x.alertas) LIC.alertasFiltro = x.alertas;
@@ -1609,9 +1630,9 @@
       Lic_pnKpi_(p.d7, "Prazos nos próximos 7 dias", p.criticos7 ? "erro" : "", { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, p.fonte) +
       Lic_pnKpi_(p.d30, "Prazos nos próximos 30 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "30" } }, p.fonte) +
       Lic_pnKpi_(d.alertas.semCiencia, "Alertas sem ciência", d.alertas.semCiencia ? "erro" : "", { mod: "licitacoes_alertas", alertas: "semCiencia" }, d.alertas.fonte) +
-      Lic_pnKpi_(d.travas.n, "Travas a confirmar", d.travas.n ? "aviso" : "", kbA({ nota: "TRAVA" }), d.travas.fonte) +
+      Lic_pnKpi_(d.travas.n, "Travas a confirmar", d.travas.n ? "aviso" : "", kbA({ nota: "TRAVA" }), d.travas.fonte) + Lic_altaKpisHtml_(d.altaAderencia) +
       Lic_pnKpi_(po.operacionais + " de " + po.total, "Portais operacionais", po.falha ? "erro" : "", { mod: "licitacoes_portais", portais: "portais" }, col.fonte) + "</div>" +
-      '<p class="cm-modo-dica">Todos os números são contados agora, a partir das abas do módulo e do coletor do servidor (' + Lic_esc_(Lic_dataHora_(d.geradoEm)) + '). Toque num número ou numa barra para abrir a lista que o compõe. "Fonte" diz de onde vem cada um.</p>';
+      Lic_altaFonteHtml_(d.altaAderencia) + '<p class="cm-modo-dica">Todos os números são contados agora, a partir das abas do módulo e do coletor do servidor (' + Lic_esc_(Lic_dataHora_(d.geradoEm)) + '). Toque num número ou numa barra para abrir a lista que o compõe. "Fonte" diz de onde vem cada um.</p>';
     var g = '<div class="atv-ind-grade lic-pn-grade">';
     g += Lic_pnCaixa_("Oportunidades por etapa (Kanban)", Lic_pnBarras_(e.itens.map(function (x) { return { t: x.nome, sub: x.futura ? "(próxima etapa)" : "", n: x.n, link: kb({}, x.codigo), dica: "Abre o Kanban nesta etapa." }; })) +
       '<p class="cm-meta">' + e.travadas + " travadas no Radar (decisão da Diretoria) · " + e.descartadasPessoa + ' descartadas pela Diretoria (na coluna Decisão) · <button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_oportunidades", aba: "descartadas", origem: "REGRA" }) + ">" + e.descartadasRegra + " descartadas só pela regra</button> (fora do Kanban)." + (e.situacaoDesconhecida ? " " + e.situacaoDesconhecida + " com situação que não é etapa do Kanban (ver na Lista)." : "") + "</p>", e.fonte);
