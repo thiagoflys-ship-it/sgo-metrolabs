@@ -107,7 +107,7 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Se o PNCP de arquivos estiver fora do ar, a faixa vermelha diz o erro e a hora da nova tentativa automática. Enquanto isso, leia o edital pelo botão \"Ver no PNCP\"."
         ] },
         { titulo: "Análise por IA", itens: [
-          "A aba Análise mostra a nota de 0 a 100, a classe, o resumo, os critérios (capacidade técnica, margem, documentação, localização, prazo, valor e riscos) e quem pontuou cada um: o sistema (dados reais), a IA conferida, ou, na capacidade técnica, a IA classifica cada item e o sistema calcula os pontos.",
+          "A aba Análise mostra a nota de 0 a 100, a classe, o resumo, os critérios (capacidade técnica, margem, documentação, localização, prazo, valor e riscos) e quem pontuou cada um: o sistema (dados reais), a IA conferida, ou, na capacidade técnica, a IA classifica cada item e o sistema calcula os pontos. Com documento no cadastro de habilitação, a documentação é do sistema (cadastro de habilitação): atende conta inteiro, a conferir metade, falta e vence antes da sessão zero. Fato repetido (mesma fonte e mesmo trecho) aparece uma vez só.",
           "Fatos vêm com o trecho entre aspas e a fonte (arquivo A1, A2... com o nome e o SHA-256, ou o campo do PNCP). Inferências são conclusões a partir dos fatos. Pendências são o que falta conferir para decidir.",
           "Trava encontrada pela IA (por exemplo, exige laboratório acreditado RBC sem aceitar rastreabilidade) não zera a nota sozinha: fica \"trava a confirmar\", com o selo na lista e no Hoje. Leia o trecho e toque em \"Confirmar trava\" (a nota vai a 0) ou \"Não é trava\", com o motivo; a decisão fica no histórico e vale quando a análise for refeita (se o parágrafo do trecho mudar no edital, a trava volta a pedir confirmação). Só o prazo vencido zera direto.",
           "\"Analisar agora\" faz a primeira análise; \"Refazer análise\" pede o motivo (pelo menos 10 letras). Cada análise é uma versão nova: a anterior continua guardada em \"Todas as versões da análise\".",
@@ -125,8 +125,9 @@ function SGO_ajudaTelas_Licitacoes_() {
         { titulo: "Preço (simulador)", itens: [
           "A aba Preço simula o preço desta licitação com a tabela de Preços de licitação da Diretoria: os itens do edital (lidos do PNCP quando houver, ou digitados) recebem o serviço da tabela, a quantidade, os pontos (calibração por pontos) e o preço do edital e da proposta.",
           "Em \"Onde é executado\" ficam a UF, o município, o km do trecho (só a ida; o SGO+ sugere pela tabela de distâncias quando conhece), as viagens, a equipe, os dias e as noites, o pedágio e a passagem. RJ e ES saem da equipe do Rio; o resto, da equipe de Goiânia.",
-          "\"Calcular\" mostra a conta inteira sem gravar: custo por item, deslocamento diluído no unitário, impostos, piso (sobra mínima de 35%) e alvo (40%), a sobra no preço do edital e na proposta, as premissas e as versões da política usadas. Item abaixo do piso fica em vermelho com o texto \"abaixo do piso\".",
-          "\"Salvar simulação\" pede o motivo e grava uma versão nova, que nunca muda. Para corrigir, escolha a versão em \"Ver\", toque em \"Começar uma versão nova a partir desta\" e salve outra. A nota da análise passa a usar a última versão no critério margem depois de \"Refazer análise\"."
+          "\"Calcular\" mostra a conta inteira sem gravar: custo por item, deslocamento diluído no unitário, impostos, piso (sobra mínima de 35%) e alvo (40%), a sobra no preço do edital e na proposta, as premissas e as versões da política usadas. Item abaixo do piso fica em vermelho com o texto \"abaixo do piso\". Item com preço a confirmar (sem piso) não recebe deslocamento nem seguro: o rateio vai só aos itens com piso, com aviso.",
+          "Edital que só traz o total do lote: escreva em \"Total do lote no edital\". Abaixo da soma dos pisos, vira pendência.",
+          "\"Salvar simulação\" pede o motivo e grava uma versão nova, que nunca muda. Para corrigir, escolha a versão em \"Ver\", toque em \"Começar uma versão nova a partir desta\" e salve outra. A nota da análise passa a usar a última versão no critério margem depois de \"Refazer análise\". Com muitos itens e pendências, a pendência repetida é gravada numa linha só; se ainda não couber, a mensagem diz o que fazer (resolver as pendências dos itens ou dividir a simulação)."
         ] },
         { titulo: "Habilitação (documentos do edital)", itens: [
           "A aba Habilitação lista cada exigência de habilitação do edital: as do checklist \"O que realmente precisamos\" da Leitura do edital (temas jurídica, fiscal, econômica, técnica, atestados, equipe, RBC e Inmetro, visita) e as exigências de documentação da Análise, com a frase do edital e a página.",
@@ -250,7 +251,7 @@ function SGO_ajudaTelas_Licitacoes_() {
       ],
       passos: [
         { titulo: "Ler a agenda", itens: [
-          "Escolha o período: Hoje, 7 dias, 30 dias ou Tudo. Os filtros escolhem a prioridade, a situação da data e onde é a sessão.",
+          "Escolha o período: Hoje, 7 dias, 30 dias ou Tudo. Os filtros escolhem a prioridade, a situação da data, onde é a sessão e o tipo de prazo (a barra \"por tipo\" do Painel já abre com ele).",
           "Cada dia tem o cabeçalho com a data; feriado nacional aparece com o aviso de que não conta como dia útil.",
           "Cada prazo mostra a hora, o fuso, o órgão, a natureza (Confirmado, Calculado ou Pendente de confirmação), a fonte, a regra do cálculo, o limite interno e os alertas.",
           "Prazo riscado está suspenso ou cancelado na fonte; a data antiga de um prazo retificado fica na ficha, aba Prazos."
@@ -409,7 +410,7 @@ function SGO_ajudaTelas_Licitacoes_() {
       ],
       passos: [
         { titulo: "Ler e abrir", itens: [
-          "Toque num número ou numa barra para abrir a lista que o compõe: o Kanban já filtrado (etapa; UF, nota e travas só com as em andamento; situação da análise por IA), Oportunidades › Descartadas só da regra do radar, a Agenda no período, a Central de alertas em \"Sem ciência\" ou Portais e configurações.",
+          "Toque num número ou numa barra para abrir a lista que o compõe: o Kanban já filtrado (etapa; UF, nota e travas só com as em andamento; situação da análise por IA), Oportunidades › Descartadas só da regra do radar, a Agenda no período (a barra \"por tipo\" abre só aquele tipo de prazo), a Central de alertas em \"Sem ciência\" ou Portais e configurações (a barra de situação abre a lista de portais filtrada por ela).",
           "Os prazos de 7 e 30 dias seguem a mesma regra da Agenda (sem descartadas e sem travadas), por isso o número bate com a lista que abre.",
           "\"Em andamento por UF\" mostra primeiro a prioridade da pontuação: GO e DF, os vizinhos de GO e o RJ (filial), mesmo quando estão em zero.",
           "\"Análises por IA\" conta as oportunidades pela situação da última análise (concluída, recusada pelo verificador ou erro da IA); as tentativas registradas aparecem à parte. O tempo médio vale para as análises feitas desde a etapa 4 (antes a duração não era gravada)."

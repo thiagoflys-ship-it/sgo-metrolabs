@@ -226,7 +226,7 @@
     h += "</div>";
     // agenda única
     h += '<div><h4>Agenda única (Minhas atividades)</h4><ul class="lct-lista">' + (ag.marcos || []).map(function (x) {
-      return "<li>" + Lic_esc_(x.nome) + " · " + Lic_esc_(LicCt_dia_(x.dia)) + " " + (x.atividade ? LicCt_selo_(x.atividade.desatualizada ? "laranja" : "verde", x.atividade.desatualizada ? "na agenda com o prazo antigo (" + LicCt_dia_(x.atividade.dia) + ")" : "na agenda única") : x.emAndamento ? LicCt_selo_("laranja", "sendo lançada agora") : x.passou ? LicCt_selo_("cinza", "já passou") : LicCt_selo_("azul", "a levar")) + "</li>";
+      return "<li>" + Lic_esc_(x.nome) + " · " + Lic_esc_(LicCt_dia_(x.dia)) + " " + (x.atividade ? LicCt_selo_(x.atividade.desatualizada ? "laranja" : "verde", x.atividade.desatualizada ? "na agenda com o prazo antigo (" + LicCt_dia_(x.atividade.dia) + ")" : "na agenda única") : x.emAndamento ? LicCt_selo_("laranja", "sendo lançada agora") : x.passou ? LicCt_selo_("cinza", "já passou") : LicCt_selo_("azul", "a levar")) + (x.anterior && !x.atividade ? ' <span class="cm-meta">' + Lic_esc_("(" + x.anterior.texto + ": lance de novo com a data nova)") + "</span>" : "") + "</li>";
     }).join("") + "</ul>" + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-agenda' + (ag.aLevar ? "" : ' disabled aria-disabled="true"') + ">Levar " + Lic_esc_(ag.aLevar || 0) + " marco(s) à agenda única</button></div></div>";
     // execução
     h += '<div><h4>Planejar a execução</h4><p class="cm-meta">' + Lic_esc_(ex.aviso || "") + "</p>" + (ex.grupos || []).map(function (g) {

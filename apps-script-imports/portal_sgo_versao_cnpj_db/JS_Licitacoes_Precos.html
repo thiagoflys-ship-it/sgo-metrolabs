@@ -200,7 +200,8 @@
           '<div><label for="lprIr' + i + '">Preço da proposta, unitário (R$)</label><input id="lprIr' + i + '" data-lpr-i="' + i + ':precoProposta" inputmode="decimal" value="' + Lic_esc_(LicPr_campo_(it.precoProposta)) + '"></div>' +
           (t && t.execucao === "PARCEIRO" ? '<div><label for="lprIk' + i + '">Custo do parceiro por equipamento (R$)</label><input id="lprIk' + i + '" data-lpr-i="' + i + ':custoParceiro" inputmode="decimal" value="' + Lic_esc_(LicPr_campo_(it.custoParceiro)) + '"></div>' : "") +
           "</div></div>";
-      }).join("") + '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpr-mais>Adicionar item</button></div></div>' +
+      }).join("") + '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpr-mais>Adicionar item</button></div>' +
+      '<div class="lpr-grade"><div class="lpr-largo"><label for="lprLote">Total do lote no edital (R$), quando o edital não dá o preço por item</label><input id="lprLote" data-lpr-lote inputmode="decimal" value="' + Lic_esc_(LicPr_campo_(r.loteEdital)) + '"><p class="cm-ajuda-campo">O SGO+ compara com a soma dos pisos: abaixo dela, vira pendência.</p></div></div></div>' +
       '<div class="lic-acoes-linha" style="margin:8px 0 12px"><button type="button" class="btn-primary" data-lpr-calcular>Calcular (não grava)</button><button type="button" class="btn-secondary" data-lpr-salvar>Salvar simulação (versão nova)</button></div>';
     return h;
   }
@@ -213,7 +214,7 @@
     var pl = (res.politica && res.politica.licitacao) || {};
     h += '<div class="lpr-tot">' + caixa("Custo total", LicPr_moeda_(t.custo)) + caixa("Deslocamento (" + (v.baseNome || "") + ")", LicPr_moeda_(t.deslocamento)) + (t.seguro ? caixa("Seguro-garantia", LicPr_moeda_(t.seguro)) : "") +
       caixa("Piso (" + LicPr_pct_(pl.margemMinPct) + ")" + (t.pisoCompleto ? "" : " — parcial"), LicPr_moeda_(t.piso)) + caixa("Alvo (" + LicPr_pct_(pl.margemAlvoPct) + ")", LicPr_moeda_(t.alvo)) +
-      caixa("Preço do edital", t.edital ? LicPr_moeda_(t.edital) : "—") + caixa("Sobra no edital", LicPr_pct_(t.margemEditalPct), t.margemEditalPct !== null && t.margemEditalPct < pl.margemMinPct) +
+      caixa("Preço do edital", t.edital ? LicPr_moeda_(t.edital) : "—") + (t.loteEdital ? caixa("Total do lote no edital" + (t.loteEditalAbaixo ? " — abaixo dos pisos" : ""), LicPr_moeda_(t.loteEdital), t.loteEditalAbaixo) : "") +caixa("Sobra no edital", LicPr_pct_(t.margemEditalPct), t.margemEditalPct !== null && t.margemEditalPct < pl.margemMinPct) +
       caixa("Preço da proposta", t.proposta ? LicPr_moeda_(t.proposta) : "—") + caixa("Sobra na proposta", LicPr_pct_(t.margemPropostaPct), t.margemPropostaPct !== null && t.margemPropostaPct < pl.margemMinPct) +
       (res.valorEstimado ? caixa("Valor estimado da contratação", LicPr_moeda_(res.valorEstimado)) : "") + "</div>";
     var cab = ["Item", "Serviço", "Qtd", "Custo unitário (com deslocamento)", "Piso unitário", "Alvo unitário", "Edital unitário", "Sobra no edital", "Proposta unitária", "Sobra na proposta"];
@@ -274,6 +275,7 @@
     });
     var bas = el.querySelector("[data-lpr-basear]"); if (bas) bas.onclick = function () { st.rascunho = JSON.parse(JSON.stringify(st.verSim.entrada || {})); st.ver = 0; st.verSim = null; st.resultado = null; st.msg = "Rascunho a partir da versão escolhida: mude o que precisar e salve uma versão nova."; st.msgTipo = "ok"; LicPr_desenharAba_(id); };
     el.querySelectorAll("[data-lpr-x]").forEach(function (e) { e.addEventListener("input", function () { r.execucao[e.getAttribute("data-lpr-x")] = e.value; if (e.getAttribute("data-lpr-x") === "kmTrecho") r.execucao.kmFonte = ""; }); e.addEventListener("change", function () { r.execucao[e.getAttribute("data-lpr-x")] = e.value; }); });
+    var lote = el.querySelector("[data-lpr-lote]"); if (lote) { var fl = function () { r.loteEdital = lote.value; }; lote.addEventListener("input", fl); lote.addEventListener("change", fl); }
     el.querySelectorAll("[data-lpr-s]").forEach(function (e) { var f = function () { var k = e.getAttribute("data-lpr-s"); r.seguro[k] = k === "exige" ? e.value === "SIM" : e.value; }; e.addEventListener("input", f); e.addEventListener("change", f); });
     el.querySelectorAll("[data-lpr-i]").forEach(function (e) {
       var p = e.getAttribute("data-lpr-i").split(":"), i = Number(p[0]), k = p[1];

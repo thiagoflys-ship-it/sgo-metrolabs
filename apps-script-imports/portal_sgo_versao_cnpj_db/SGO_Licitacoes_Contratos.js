@@ -683,14 +683,37 @@ function LicC_vinculoAtual_(lista, modulo, chave, agoraMs) {
 function LicC_reservar_(eu, r, l, modulo, chave, texto) { return LicC_vincular_(eu, r, l, modulo, 'RESERVA', chave, { id: '', codigo: '', texto: texto || 'Reserva enquanto o outro módulo grava' }, '', Lic_agora_()); }
 /** A reserva vira o vínculo (com trava própria). */
 function LicC_fecharReserva_(eu, l, r, res, acao, ref, motivo) {
-  return Lic_comTrava_(function () {
-    var agora = Lic_agora_(), x = { CONTRATO_ID: Lic_s_(r.ID), OPORTUNIDADE_ID: Lic_s_(r.OPORTUNIDADE_ID), MODULO: Lic_s_(res.MODULO), ACAO: acao, CHAVE: Lic_s_(res.CHAVE), REF_ID: Lic_s_(ref.id), REF_CODIGO: Lic_texto_(ref.codigo, 80),
-      REF_TEXTO: Lic_texto_(ref.texto, 1000), MOTIVO: Lic_texto_(motivo, 1000), POR_ID: eu.id, POR_NOME: eu.nome, EM: agora };
-    x.HASH = LicC_hashVinculo_(x);
-    SGO_DATA.update(LICC_ABAS.VINCULOS, res.ID, x);
-    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'CONTRATO_VINCULO', eu, { de: x.MODULO, para: acao + (x.REF_CODIGO ? ' ' + x.REF_CODIGO : ''), texto: 'Contrato ' + Lic_s_(r.NUMERO) + ' · ' + x.REF_TEXTO + (x.MOTIVO ? '. Motivo: ' + x.MOTIVO : ''), versao: LICC_REGRAS, fonte: 'Contratos', hash: x.HASH });
-    return x;
-  });
+  return Lic_comTrava_(function () { return LicC_fecharReservaSemTrava_(eu, l, r, res, acao, ref, motivo); });
+}
+/**
+ * Marca da reserva no texto da atividade criada em Minhas atividades (03/11/2026, revisão independente): se a execução cair entre
+ * criar a atividade e fechar a reserva, a reserva vence em LICC_RESERVA_MIN minutos e, antes de criar de novo, o SGO+ procura a
+ * atividade com esta marca (LicC_recuperarReserva_) em vez de lançar outra igual.
+ */
+function LicC_marcaReserva_(res) { return '[Ref. Licitações: reserva ' + Lic_s_(res && res.ID) + ']'; }
+/**
+ * Sob a trava de quem chama: reserva VENCIDA (nunca fechada) do módulo e da chave cuja atividade foi criada em Minhas atividades
+ * (achada pela marca). { res, atividade } ou null. Sem Minhas atividades ou sem reserva vencida: null, sem ler a aba.
+ */
+function LicC_recuperarReserva_(lista, modulo, chave, agoraMs, cacheAtv) {
+  var ms = agoraMs || Date.now();
+  var vencidas = (lista || []).filter(function (v) { return Lic_up_(v.MODULO) === modulo && Lic_s_(v.CHAVE) === chave && Lic_up_(v.ACAO) === 'RESERVA' && ms - Date.parse(Lic_s_(v.EM)) > LICC_RESERVA_MIN * 60000; });
+  if (!vencidas.length || typeof Atividades_abas_ !== 'function') return null;
+  if (!cacheAtv.lista) { try { cacheAtv.lista = SGO_DATA.getAll(Atividades_abas_().ATIVIDADES) || []; } catch (e) { cacheAtv.lista = []; } }
+  for (var i = vencidas.length - 1; i >= 0; i--) {
+    var marca = LicC_marcaReserva_(vencidas[i]);
+    var a = cacheAtv.lista.filter(function (x) { return Lic_s_(x.DESCRICAO).indexOf(marca) >= 0 && Lic_s_(x.SITUACAO) !== 'Cancelada'; })[0];
+    if (a) return { res: vencidas[i], atividade: a };
+  }
+  return null;
+}
+function LicC_fecharReservaSemTrava_(eu, l, r, res, acao, ref, motivo) {
+  var agora = Lic_agora_(), x = { CONTRATO_ID: Lic_s_(r.ID), OPORTUNIDADE_ID: Lic_s_(r.OPORTUNIDADE_ID), MODULO: Lic_s_(res.MODULO), ACAO: acao, CHAVE: Lic_s_(res.CHAVE), REF_ID: Lic_s_(ref.id), REF_CODIGO: Lic_texto_(ref.codigo, 80),
+    REF_TEXTO: Lic_texto_(ref.texto, 1000), MOTIVO: Lic_texto_(motivo, 1000), POR_ID: eu.id, POR_NOME: eu.nome, EM: agora };
+  x.HASH = LicC_hashVinculo_(x);
+  SGO_DATA.update(LICC_ABAS.VINCULOS, res.ID, x);
+  Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'CONTRATO_VINCULO', eu, { de: x.MODULO, para: acao + (x.REF_CODIGO ? ' ' + x.REF_CODIGO : ''), texto: 'Contrato ' + Lic_s_(r.NUMERO) + ' · ' + x.REF_TEXTO + (x.MOTIVO ? '. Motivo: ' + x.MOTIVO : ''), versao: LICC_REGRAS, fonte: 'Contratos', hash: x.HASH });
+  return x;
 }
 /** A criação no outro módulo falhou: a reserva é desfeita, com o erro (a chave fica livre para tentar de novo). Nunca lança. */
 function LicC_desfazerReserva_(eu, res, erro) {
@@ -868,8 +891,14 @@ function LicC_agendaUnicaTela_(r, m) {
   Lic_eventosDe_(r.OPORTUNIDADE_ID).forEach(function (x) { chaves[Lic_s_(x.ID)] = x; });
   var marcos = m.eventos.filter(function (e) { return e.situacao === 'ATIVO'; }).map(function (e) {
     var ev = chaves[e.id] || {}, ch = Lic_s_(ev.CHAVE), v = LicC_vinculoAtual_(lista, 'ATIVIDADES', ch), a = v ? Lic_up_(v.ACAO) : '';
-    return { eventoId: e.id, chave: ch, nome: e.nome, dia: e.dia, passou: e.dia < hoje, emAndamento: a === 'RESERVA',
-      atividade: a === 'ATIVIDADE' || a === 'REPLANEJADA' ? { id: Lic_s_(v.REF_ID), dia: Lic_s_(v.REF_CODIGO), desatualizada: Lic_s_(v.REF_CODIGO) !== e.dia } : null };
+    var atv = a === 'ATIVIDADE' || a === 'REPLANEJADA' ? { id: Lic_s_(v.REF_ID), dia: Lic_s_(v.REF_CODIGO), desatualizada: Lic_s_(v.REF_CODIGO) !== e.dia } : null, anterior = null;
+    // 03/11/2026 (revisão independente): a atividade foi concluída (ou cancelada) ANTES de um aditivo mudar a data: ela não se
+    // ajusta mais; o marco volta a "a levar", com a explicação (nunca "ajuste em Minhas atividades" para atividade concluída)
+    if (atv && atv.desatualizada) {
+      var reg = LicC_atividade_(atv.id);
+      if (reg && !LicC_atividadeAberta_(reg)) { anterior = { id: atv.id, dia: atv.dia, situacao: Lic_s_(reg.SITUACAO), texto: 'a atividade anterior (prazo ' + LicC_br_(atv.dia) + ') foi ' + (Lic_s_(reg.SITUACAO) === 'Concluída' ? 'concluída' : 'cancelada') + ' antes da mudança da data' }; atv = null; }
+    }
+    return { eventoId: e.id, chave: ch, nome: e.nome, dia: e.dia, passou: e.dia < hoje, emAndamento: a === 'RESERVA', atividade: atv, anterior: anterior };
   });
   return { disponivel: typeof Atividades_apiCriar === 'function', responsavel: Lic_s_(m.dados.responsavelNome), marcos: marcos, aLevar: marcos.filter(function (x) { return !x.passou && !x.atividade && !x.emAndamento; }).length };
 }
@@ -885,26 +914,39 @@ function LicC_agendaUnica_(eu, d) {
     var l = Lic_acharOp_(d.id), r = LicC_acharContrato_(l.ID), m = LicC_montar_(r, { semAlertas: true }), t = LicC_agendaUnicaTela_(r, m);
     if (m.dados.situacao !== 'VIGENTE') throw new Error('O contrato está ' + (LICC_SITUACOES[m.dados.situacao] || m.dados.situacao).toLowerCase() + ': não há prazo para levar à agenda única. Nada foi criado');
     if (d.confirmar !== true) throw new Error('Confirme na janela: o SGO+ lança ' + t.aLevar + ' atividade(s) em Minhas atividades para ' + t.responsavel + '. Nada foi criado');
-    var lev = t.marcos.filter(function (mc) { return !mc.passou && !mc.atividade && !mc.emAndamento; }).map(function (mc) { return { mc: mc, res: LicC_reservar_(eu, r, l, 'ATIVIDADES', mc.chave, 'Atividade em lançamento: ' + mc.nome) }; });
-    return { l: l, r: r, m: m, t: t, lev: lev };
+    // 03/11/2026: reserva vencida (a execução caiu depois de criar a atividade): a atividade com a marca da reserva é recuperada
+    var lista = LicC_vinculosDe_(r.ID), cacheAtv = {}, recuperadas = [], lev = [];
+    t.marcos.filter(function (mc) { return !mc.passou && !mc.atividade && !mc.emAndamento; }).forEach(function (mc) {
+      var rec = mc.anterior ? null : LicC_recuperarReserva_(lista, 'ATIVIDADES', mc.chave, null, cacheAtv);
+      if (rec) {
+        LicC_fecharReservaSemTrava_(eu, l, r, rec.res, 'ATIVIDADE', { id: Lic_s_(rec.atividade.ID), codigo: mc.dia, texto: 'Atividade em Minhas atividades: ' + mc.nome + ' (recuperada pela marca da reserva; a gravação anterior foi interrompida)' }, '');
+        recuperadas.push(mc.nome); return;
+      }
+      lev.push({ mc: mc, res: LicC_reservar_(eu, r, l, 'ATIVIDADES', mc.chave, 'Atividade em lançamento: ' + mc.nome) });
+    });
+    return { l: l, r: r, m: m, t: t, lev: lev, recuperadas: recuperadas };
   });
-  var l = p.l, r = p.r, m = p.m, t = p.t, criadas = [], erros = [], ajustadas = [];
+  var l = p.l, r = p.r, m = p.m, t = p.t, criadas = [], erros = [], ajustadas = [], relancadas = [], semVinculo = [];
   p.lev.forEach(function (x) {
     var mc = x.mc, ev = SGO_DATA.getById(LIC_ABAS.EVENTOS, mc.eventoId) || {}, pz = LicC_prazoAtividade_(mc.dia), res = null;
     try {
       res = Atividades_apiCriar(sid, { titulo: Lic_texto_(mc.nome, 200), descricao: 'Contrato ' + m.dados.numeroContrato + ' (' + m.numero + ') da licitação ' + Lic_s_(l.CODIGO) + ' · ' + Lic_texto_(l.ORGAO_NOME, 150) + '.\n' + (Lic_s_(ev.REGRA) ? Lic_s_(ev.REGRA) + '\n' : '') +
-        (pz.ajustado ? 'O marco é em ' + LicC_br_(mc.dia) + '; a atividade ficou para o próximo dia útil para não nascer atrasada.\n' : '') + 'O prazo também está na agenda de Licitações, com os alertas da Diretoria. Detalhes: Licitações › Contratos › ' + m.numero + '.',
+        (pz.ajustado ? 'O marco é em ' + LicC_br_(mc.dia) + '; a atividade ficou para o próximo dia útil para não nascer atrasada.\n' : '') + 'O prazo também está na agenda de Licitações, com os alertas da Diretoria. Detalhes: Licitações › Contratos › ' + m.numero + '.' +
+        (mc.anterior ? '\nA atividade anterior deste marco (prazo ' + LicC_br_(mc.anterior.dia) + ') foi ' + (mc.anterior.situacao === 'Concluída' ? 'concluída' : 'cancelada') + ' antes de a data mudar.' : '') + '\n' + LicC_marcaReserva_(x.res),
         prazo: pz.dia + 'T09:00', prioridade: LICC_PRIORIDADE_MARCO[Lic_s_(ev.TIPO)] || 'Normal', responsavelId: Lic_s_(m.dados.responsavelId), modulo: 'licitacoes', moduloNome: 'Licitações › Contratos', clienteId: Lic_s_(r.CLIENTE_ID),
         porQue: 'Prazo do contrato de licitação ' + m.dados.numeroContrato + '.', onde: 'Licitações › Contratos › ' + m.numero, como: 'Conferir no contrato assinado e registrar o que foi feito.', restrita: 'SIM' });
     } catch (e) { res = { ok: false, message: Lic_s_(e && e.message) }; }
     if (!res || !res.ok || !res.item) { erros.push(mc.nome + ': ' + Lic_s_(res && res.message)); LicC_desfazerReserva_(eu, x.res, res && res.message); return; }
     var id = Lic_s_(res.item.ID || res.item.id);
-    LicC_fecharReserva_(eu, l, r, x.res, 'ATIVIDADE', { id: id, codigo: mc.dia, texto: 'Atividade em Minhas atividades: ' + mc.nome + ' (prazo ' + LicC_br_(pz.dia) + (pz.ajustado ? ', próximo dia útil' : '') + ', ' + m.dados.responsavelNome + ')' }, '');
-    criadas.push(id); if (pz.ajustado) ajustadas.push(mc.nome);
+    // 03/11/2026: a atividade já existe; se o vínculo não gravar agora (trava ocupada), a reserva vence e a próxima vez a recupera pela marca
+    try { LicC_fecharReserva_(eu, l, r, x.res, 'ATIVIDADE', { id: id, codigo: mc.dia, texto: 'Atividade em Minhas atividades: ' + mc.nome + ' (prazo ' + LicC_br_(pz.dia) + (pz.ajustado ? ', próximo dia útil' : '') + ', ' + m.dados.responsavelNome + ')' + (mc.anterior ? '; ' + mc.anterior.texto : '') }, ''); }
+    catch (eF) { semVinculo.push(mc.nome + ': a atividade foi lançada em Minhas atividades, mas o vínculo com o contrato não gravou agora (' + Lic_s_(eF && eF.message).replace(/[.\s]+$/, '') + '). Não lance outra: daqui a ' + LICC_RESERVA_MIN + ' minutos toque de novo em "Levar à agenda única" e o SGO+ reconhece a atividade pela marca'); }
+    criadas.push(id); if (pz.ajustado) ajustadas.push(mc.nome); if (mc.anterior) relancadas.push(mc.nome + ' (' + mc.anterior.texto + ')');
   });
   var desat = t.marcos.filter(function (x) { return x.atividade && x.atividade.desatualizada; });
-  return { criadas: criadas.length, erros: erros, texto: (criadas.length ? criadas.length + ' atividade(s) lançada(s) em Minhas atividades para ' + t.responsavel + '.' : 'Nenhuma atividade nova (os marcos futuros já estão na agenda única).') +
-    (ajustadas.length ? ' Para o próximo dia útil (o marco é hoje): ' + ajustadas.join('; ') + '.' : '') + (erros.length ? ' Não lançadas (tente de novo): ' + erros.join('; ') + '.' : '') +
+  return { criadas: criadas.length, erros: erros.concat(semVinculo), texto: (criadas.length ? criadas.length + ' atividade(s) lançada(s) em Minhas atividades para ' + t.responsavel + '.' : 'Nenhuma atividade nova (os marcos futuros já estão na agenda única).') +
+    (relancadas.length ? ' Lançada(s) de novo com a data nova: ' + relancadas.join('; ') + '.' : '') + (p.recuperadas.length ? ' Recuperada(s) pela marca da reserva (já estavam em Minhas atividades; nada repetido): ' + p.recuperadas.join('; ') + '.' : '') +
+    (ajustadas.length ? ' Para o próximo dia útil (o marco é hoje): ' + ajustadas.join('; ') + '.' : '') + (erros.length ? ' Não lançadas (tente de novo): ' + erros.join('; ') + '.' : '') + (semVinculo.length ? ' Atenção: ' + semVinculo.join('; ') + '.' : '') +
     (desat.length ? ' Atividade(s) com o prazo antigo: ' + desat.map(function (x) { return x.nome + ' (agora ' + LicC_br_(x.dia) + ')'; }).join('; ') + '. Ajuste o prazo em Minhas atividades.' : '') };
 }
 /**
@@ -914,7 +956,7 @@ function LicC_agendaUnica_(eu, d) {
  * Atividade já concluída ou cancelada não é mexida. Falha fica no texto da resposta (e a tela mostra o que fazer). Nunca lança.
  */
 function LicC_atividadesAcompanhar_(eu, oid, ag, motivo, encerrado) {
-  var out = { replanejadas: [], canceladas: [], erros: [] };
+  var out = { replanejadas: [], canceladas: [], erros: [], concluidas: [] };
   if (!eu || !eu.sessao || typeof Atividades_apiMudarSituacao !== 'function') return out;
   try {
     var l = Lic_acharOp_(oid), r = LicC_acharContrato_(l.ID), lista = LicC_vinculosDe_(r.ID), novos = [];
@@ -928,7 +970,9 @@ function LicC_atividadesAcompanhar_(eu, oid, ag, motivo, encerrado) {
     (ag.mudados || []).forEach(function (x) {
       var v = LicC_vinculoAtual_(lista, 'ATIVIDADES', x.chave), a = v ? Lic_up_(v.ACAO) : '';
       if ((a !== 'ATIVIDADE' && a !== 'REPLANEJADA') || Lic_s_(v.REF_CODIGO) === x.dia) return;
-      if (!LicC_atividadeAberta_(LicC_atividade_(v.REF_ID))) return;
+      var atA = LicC_atividade_(v.REF_ID);
+      // 03/11/2026: concluída (ou cancelada) antes da mudança: não se mexe nela; o marco volta a "a levar" na Agenda única do contrato
+      if (!LicC_atividadeAberta_(atA)) { if (atA) out.concluidas.push(x.nome + ' (a atividade foi ' + (Lic_s_(atA.SITUACAO) === 'Concluída' ? 'concluída' : 'cancelada') + ' antes da mudança; o marco, agora em ' + LicC_br_(x.dia) + ', volta a "a levar" na Agenda única do contrato)'); return; }
       var pz = LicC_prazoAtividade_(x.dia), res = Atividades_apiEditar(eu.sessao, { id: Lic_s_(v.REF_ID), prazo: pz.dia + 'T09:00', titulo: Lic_texto_(x.nome, 200) });
       if (!res || !res.ok) { out.erros.push(x.nome + ': ' + Lic_s_(res && res.message)); return; }
       out.replanejadas.push(x.nome + ' para ' + LicC_br_(pz.dia));
@@ -941,7 +985,7 @@ function LicC_atividadesAcompanhar_(eu, oid, ag, motivo, encerrado) {
   return out;
 }
 function LicC_atividadesTexto_(x) {
-  return (x.replanejadas.length ? ' Minhas atividades replanejadas: ' + x.replanejadas.join('; ') + '.' : '') + (x.canceladas.length ? ' Minhas atividades canceladas: ' + x.canceladas.join('; ') + '.' : '') +
+  return ((x.concluidas || []).length ? ' Data nova em marco com atividade já fechada: ' + x.concluidas.join('; ') + '.' : '') + (x.replanejadas.length ? ' Minhas atividades replanejadas: ' + x.replanejadas.join('; ') + '.' : '') + (x.canceladas.length ? ' Minhas atividades canceladas: ' + x.canceladas.join('; ') + '.' : '') +
     (x.erros.length ? ' Não foi possível acompanhar em Minhas atividades (ajuste lá): ' + x.erros.join('; ') + '.' : '');
 }
 
@@ -979,14 +1023,22 @@ function LicC_execucaoCriar_(eu, d) {
     if (!g) throw new Error('O contrato não tem item da área ' + x.nome + '. Nada foi criado');
     if (g.criado) throw new Error('O planejamento de ' + x.nome + ' já foi criado em ' + g.criado.emBr + ' por ' + g.criado.por + ' (atividade ' + g.criado.refId + '). Nada foi criado');
     if (g.emAndamento) throw new Error('O planejamento de ' + x.nome + ' está sendo lançado agora por outra pessoa. Espere um minuto e toque em "Atualizar"; nada foi criado');
+    // 03/11/2026: reserva vencida com a atividade já criada (achada pela marca): refaz o vínculo em vez de lançar outra
+    var rec = LicC_recuperarReserva_(LicC_vinculosDe_(r.ID), 'EXECUCAO', area, null, {});
+    if (rec) {
+      LicC_fecharReservaSemTrava_(eu, l, r, rec.res, 'PLANEJAMENTO', { id: Lic_s_(rec.atividade.ID), codigo: Lic_s_(rec.atividade.PRAZO).slice(0, 10), texto: 'Planejamento de ' + x.nome + ' em ' + x.moduloNome + ' (recuperado pela marca da reserva; a gravação anterior foi interrompida)' }, '');
+      return { recuperada: Lic_s_(rec.atividade.ID) };
+    }
     return { l: l, r: r, m: m, t: t, g: g, res: LicC_reservar_(eu, r, l, 'EXECUCAO', area, 'Planejamento em lançamento: ' + x.nome) };
   });
+  if (p.recuperada) return { atividadeId: p.recuperada, recuperada: true, texto: 'O planejamento de ' + x.nome + ' já estava em Minhas atividades (atividade ' + p.recuperada + '; a gravação anterior foi interrompida antes de ligar ao contrato). O vínculo foi refeito; nada foi repetido.' };
   var l = p.l, r = p.r, m = p.m, g = p.g;
   var prazo = pzDig || (m.dados.inicio > hoje ? m.dados.inicio : Lic_diasUteisDepois_(hoje, 2).dia);
   var entregas = (m.dados.entregas || []).map(function (e) { return '- ' + e.descricao + ' até ' + LicC_br_(e.prazo); }).join('\n');
   var desc = 'Planejar a execução do contrato de licitação ' + m.dados.numeroContrato + ' (' + m.numero + ') · ' + Lic_texto_(l.ORGAO_NOME, 150) + (Lic_s_(r.CLIENTE_NOME) ? ' (cliente ' + Lic_s_(r.CLIENTE_NOME) + ')' : '') + '.\n' +
     'Vigência: ' + LicC_br_(m.dados.inicio) + ' a ' + LicC_br_(m.dados.fim) + '.\n\nItens desta área:\n' + g.itens.map(function (i) { return '- Item ' + i.item + ': ' + LicP_qtd_(i.quantidade) + ' · ' + (i.codigo ? i.codigo + ' ' : '') + Lic_texto_(i.nome, 160); }).join('\n') +
     (entregas ? '\n\nEntregas do contrato:\n' + entregas : '') + '\n\nOnde executar: ' + x.onde + '. ' + x.depende + (Lic_s_(d.obs) ? '\n\nObservação da Diretoria: ' + LicD_txt_(d.obs, 800) : '') + '\n\nAo concluir, conte o que foi planejado (O.S., cronograma, equipe).';
+  desc = Lic_texto_(desc, 3990 - 60) + '\n' + LicC_marcaReserva_(p.res);
   var res;
   try {
     res = Atividades_apiCriar(sid, { titulo: Lic_texto_('Planejar execução · ' + x.nome + ' · contrato ' + m.dados.numeroContrato, 200), descricao: Lic_texto_(desc, 3990), prazo: prazo + 'T17:00', prioridade: 'Alta', responsavelId: Lic_s_(d.responsavelId),
@@ -994,7 +1046,8 @@ function LicC_execucaoCriar_(eu, d) {
   } catch (e) { res = { ok: false, message: Lic_s_(e && e.message) }; }
   if (!res || !res.ok || !res.item) { var em = Lic_s_(res && res.message).replace(/[.\s]+$/, '') || 'Minhas atividades não respondeu'; LicC_desfazerReserva_(eu, p.res, em); throw new Error(em + '. Nada foi criado'); }
   var aid = Lic_s_(res.item.ID || res.item.id), resp = (p.t.usuarios.filter(function (u) { return u.id === Lic_s_(d.responsavelId); })[0] || {}).nome || '';
-  LicC_fecharReserva_(eu, l, r, p.res, 'PLANEJAMENTO', { id: aid, codigo: prazo, texto: 'Planejamento de ' + x.nome + ' lançado em ' + x.moduloNome + ' (prazo ' + LicC_br_(prazo) + (resp ? ', ' + resp : '') + '): ' + g.itens.length + ' item(ns)' }, LicD_txt_(d.obs, 800));
+  try { LicC_fecharReserva_(eu, l, r, p.res, 'PLANEJAMENTO', { id: aid, codigo: prazo, texto: 'Planejamento de ' + x.nome + ' lançado em ' + x.moduloNome + ' (prazo ' + LicC_br_(prazo) + (resp ? ', ' + resp : '') + '): ' + g.itens.length + ' item(ns)' }, LicD_txt_(d.obs, 800)); }
+  catch (eF) { throw new Error('O planejamento de ' + x.nome + ' foi lançado em Minhas atividades (atividade ' + aid + '), mas o vínculo com o contrato não gravou agora (' + Lic_s_(eF && eF.message).replace(/[.\s]+$/, '') + '). Não lance outro: daqui a ' + LICC_RESERVA_MIN + ' minutos toque de novo em "Criar o planejamento" e o SGO+ reconhece a atividade pela marca'); }
   return { atividadeId: aid, texto: 'Planejamento de ' + x.nome + ' lançado (' + x.onde + '), com prazo ' + LicC_br_(prazo) + '. Nenhuma O.S. foi criada.' };
 }
 

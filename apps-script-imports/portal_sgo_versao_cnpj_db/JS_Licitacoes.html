@@ -727,7 +727,7 @@
       '<p class="cm-meta" style="margin:6px 0 0">Análise versão ' + Lic_esc_(at.versao) + " · " + Lic_esc_(Lic_dataHora_(at.em)) + " · " + Lic_esc_(at.origem === "AUTOMATICA" ? "rotina automática" : "pedida por " + at.por) + (at.motivo ? " (" + Lic_esc_(at.motivo) + ")" : "") + " · versão " + Lic_esc_(at.fonteVersao) + " da fonte · modelo " + Lic_esc_(at.modelo) + "</p></div></div></div>";
     var tab = Lic_tabelaHtml_(["Critério", "Pontos", "Quem pontuou", "Como"], LIC_CRITERIOS.map(function (c) {
       var x = crit[c[0]] || {}, pct = x.peso ? Math.max(0, Math.min(100, Math.round(100 * Number(x.pontos || 0) / Number(x.peso)))) : 0;
-      return [Lic_esc_(c[1]), "<b>" + Lic_esc_(Lic_num_(x.pontos || 0)) + "</b> de " + Lic_esc_(Lic_num_(x.peso || 0)) + '<span class="lic-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span>', Lic_esc_(x.origem === "CODIGO" ? "Sistema (dados reais)" : x.origem === "IA_CODIGO" ? "IA classifica, sistema calcula" : "IA (conferida)"), Lic_esc_(x.como || "")];
+      return [Lic_esc_(c[1]), "<b>" + Lic_esc_(Lic_num_(x.pontos || 0)) + "</b> de " + Lic_esc_(Lic_num_(x.peso || 0)) + '<span class="lic-barra" aria-hidden="true"><i style="width:' + pct + '%"></i></span>', Lic_esc_(x.origem === "CODIGO" ? "Sistema (dados reais)" : x.origem === "IA_CODIGO" ? "IA classifica, sistema calcula" : x.origem === "HABILITACAO" ? "Sistema (cadastro de habilitação)" : "IA (conferida)"), Lic_esc_(x.como || "")];
     }));
     h += cab + '<div class="cm-caixa"><h3>Critérios (doc 03, B6)</h3>' + tab + "</div>";
     if ((at.itens || []).length) h += '<div class="cm-caixa"><h3>Itens e serviços do edital</h3>' + Lic_tabelaHtml_(["Item", "Grau", "Serviço", "Fonte"], at.itens.map(function (i) {
@@ -851,14 +851,17 @@
       return '<button type="button" class="cm-tab' + (a[0] === aba ? " active" : "") + '" role="tab" aria-selected="' + (a[0] === aba) + '" data-lic-pab="' + a[0] + '">' + Lic_esc_(a[1]) + "</button>";
     }).join("") + '</div><div id="licPortaisCorpo"></div>';
   }
-  function Lic_htmlPortais_(d, cat) {
+  function Lic_htmlPortais_(d, cat, sit) {
     var t = d.porTipo || {};
-    var lista = (d.portais || []).filter(function (p) { return !cat || p.categoria === cat; });
+    // 03/11/2026: filtro por situação (o clique das barras do Painel chega com ele); "LIGADOS" = ligados para a coleta
+    var lista = (d.portais || []).filter(function (p) { return (!cat || p.categoria === cat) && (!sit || (sit === "LIGADOS" ? !!p.ligado : p.situacao === sit)); });
+    var sits = [["", "Todas"]].concat(Object.keys(LIC_CORES_SITUACAO_PORTAL).map(function (k) { return [k, k]; })).concat([["LIGADOS", "Ligados para a coleta"]]);
     return Lic_coletorFaixaHtml_(d.coletor, d.cfg) +
       '<div class="cm-kpis"><div class="cm-kpi ok"><span class="v">' + (t.A || 0) + '</span><span class="r">API pública (tipo A)</span></div><div class="cm-kpi aviso"><span class="v">' + (t.B || 0) + '</span><span class="r">API com chave (tipo B)</span></div>' +
       '<div class="cm-kpi aviso"><span class="v">' + (t.C || 0) + '</span><span class="r">Parceiro, depende de contrato (tipo C)</span></div><div class="cm-kpi"><span class="v">' + (t.E || 0) + '</span><span class="r">Operação manual assistida (tipo E)</span></div></div>' +
       '<p class="cm-modo-dica"><span class="lic-tipo A">A</span> API pública · <span class="lic-tipo B">B</span> API com chave · <span class="lic-tipo C">C</span> parceiro comercial · <span class="lic-tipo D">D</span> consulta automatizada permitida · <span class="lic-tipo E">E</span> manual assistida. Os editais dos portais públicos chegam pelo PNCP; sessão, lances e chat não.</p>' +
-      '<div class="cm-filtros"><div><label for="licFCat">Categoria</label><select id="licFCat">' + Lic_opcoes_(LIC_CATEGORIAS, cat) + "</select></div></div>" +
+      '<div class="cm-filtros"><div><label for="licFCat">Categoria</label><select id="licFCat">' + Lic_opcoes_(LIC_CATEGORIAS, cat) + "</select></div>" +
+      '<div><label for="licFSit">Situação</label><select id="licFSit">' + Lic_opcoes_(sits, sit || "") + "</select></div></div>" + (sit ? '<p class="cm-meta">' + lista.length + " portal(is) " + Lic_esc_(sit === "LIGADOS" ? "ligados para a coleta" : "em " + sit) + ".</p>" : "") +
       '<div class="cm-caixa">' + Lic_tabelaHtml_(["Código", "Portal", "Tipo", "Situação", "Último teste", "Ação"], lista.map(function (p) {
         var acoes = '<div class="lic-acoes-linha">' + (Lic_url_(p.url) ? '<a class="btn-secondary" href="' + Lic_esc_(Lic_url_(p.url)) + '" target="_blank" rel="noopener noreferrer" title="Abre o portal em nova aba">Acessar</a>' : "") + '<button type="button" class="btn-secondary" data-lic-param="' + Lic_esc_(p.codigo) + '">Parametrizar</button>' +
           (p.testavel ? '<button type="button" class="btn-secondary" data-lic-testar="' + Lic_esc_(p.codigo) + '">Testar conexão</button>' : "") + "</div>" +
@@ -924,9 +927,10 @@
         return;
       }
       var desenhar = function (cat) {
-        corpo.innerHTML = Lic_htmlPortais_(d, cat);
+        corpo.innerHTML = Lic_htmlPortais_(d, cat, LIC.portaisSituacao || "");
         Lic_ligarFaixa_(corpo);
         var fc = Lic_$_("licFCat"); if (fc) fc.onchange = function () { desenhar(fc.value); };
+        var fs = Lic_$_("licFSit"); if (fs) fs.onchange = function () { LIC.portaisSituacao = fs.value; desenhar(cat); };
         corpo.querySelectorAll("[data-lic-param]").forEach(function (b) { b.onclick = function () { Lic_janelaParametrizar_(b.getAttribute("data-lic-param"), b); }; });
         corpo.querySelectorAll("[data-lic-testar]").forEach(function (b) { b.onclick = function () { Lic_testar_(b.getAttribute("data-lic-testar"), b); }; });
       };
@@ -984,7 +988,7 @@
   var LIC_SIT_ALERTA_SELO = { PROGRAMADO: "cinza", ENVIANDO: "azul", ENVIADO: "azul", CIENTE: "verde", ESCALONADO: "laranja", FALHOU: "vermelho", CANCELADO: "cinza", CONCLUIDO: "verde", PULADO: "cinza" };
   var LIC_PERIODOS = [["hoje", "Hoje"], ["7", "7 dias"], ["30", "30 dias"], ["todos", "Tudo"]];
   var LIC_FILTROS_ALERTA = [["semCiencia", "Sem ciência"], ["programados", "Programados"], ["enviados", "Enviados"], ["falhas", "Falhas e canal alternativo"], ["cancelados", "Cancelados"], ["todos", "Todos"]];
-  LIC.agendaPeriodo = LIC.agendaPeriodo || "30"; LIC.agendaFiltros = LIC.agendaFiltros || { nivel: "", natureza: "", sessao: "", travadas: false }; LIC.alertasFiltro = LIC.alertasFiltro || "semCiencia";
+  LIC.agendaPeriodo = LIC.agendaPeriodo || "30"; LIC.agendaFiltros = LIC.agendaFiltros || { nivel: "", natureza: "", sessao: "", travadas: false, tipo: "" }; LIC.alertasFiltro = LIC.alertasFiltro || "semCiencia";
 
   /** Link de alerta (?aviso=) ou ação do Início: abre a ficha da oportunidade na aba pedida. */
   function Licitacoes_irPara_(acao) {
@@ -1050,6 +1054,7 @@
       '<div class="cm-filtros"><div><label for="licAgNivel">Prioridade</label><select id="licAgNivel">' + Lic_opcoes_([["", "Todas"], ["CRITICO", "Crítico"], ["IMPORTANTE", "Importante"], ["NORMAL", "Normal"]], f.nivel) + "</select></div>" +
       '<div><label for="licAgNat">Situação da data</label><select id="licAgNat">' + Lic_opcoes_([["", "Todas"], ["PENDENTE", "Pendente de confirmação"]], f.natureza) + "</select></div>" +
       '<div><label for="licAgSessao">Onde é a sessão</label><select id="licAgSessao">' + Lic_opcoes_(sessoes, f.sessao) + "</select></div>" +
+      '<div><label for="licAgTipo">Tipo de prazo</label><select id="licAgTipo">' + Lic_opcoes_([["", "Todos"]].concat(d.tipos || []), f.tipo || "") + "</select></div>" +
       '<div><label class="cm-check" style="display:flex;gap:8px;align-items:center;min-height:44px;margin-top:18px"><input type="checkbox" id="licAgTrav"' + (f.travadas ? " checked" : "") + "> Mostrar as travadas</label></div></div>" +
       '<div class="cm-kpis"><div class="cm-kpi"><span class="v">' + (c.total || 0) + '</span><span class="r">Prazos no período</span></div><div class="cm-kpi' + (c.criticos ? " erro" : "") + '"><span class="v">' + (c.criticos || 0) + '</span><span class="r">Críticos</span></div>' +
       '<div class="cm-kpi' + (c.pendentes ? " aviso" : "") + '"><span class="v">' + (c.pendentes || 0) + '</span><span class="r">Pendentes de confirmação</span></div><div class="cm-kpi"><span class="v">' + (c.suspensos || 0) + '</span><span class="r">Suspensos ou cancelados</span></div></div>' +
@@ -1071,11 +1076,11 @@
     var c = Lic_corpo_(); if (!c) return;
     c.innerHTML = Lic_carregando_(3);
     var f = LIC.agendaFiltros;
-    Lic_chamar_("agenda", { periodo: LIC.agendaPeriodo, nivel: f.nivel, natureza: f.natureza, sessao: f.sessao, incluirTravadas: f.travadas }, function (d) {
+    Lic_chamar_("agenda", { periodo: LIC.agendaPeriodo, nivel: f.nivel, natureza: f.natureza, sessao: f.sessao, incluirTravadas: f.travadas, tipo: f.tipo || "" }, function (d) {
       LIC.agenda = d;
       c.innerHTML = Lic_htmlAgenda_(d);
       c.querySelectorAll("[data-lic-periodo]").forEach(function (b) { b.onclick = function () { LIC.agendaPeriodo = b.getAttribute("data-lic-periodo"); Lic_renderAgenda_(); }; });
-      [["licAgNivel", "nivel"], ["licAgNat", "natureza"], ["licAgSessao", "sessao"]].forEach(function (x) { var el = Lic_$_(x[0]); if (el) el.onchange = function () { LIC.agendaFiltros[x[1]] = el.value; Lic_renderAgenda_(); }; });
+      [["licAgNivel", "nivel"], ["licAgNat", "natureza"], ["licAgSessao", "sessao"], ["licAgTipo", "tipo"]].forEach(function (x) { var el = Lic_$_(x[0]); if (el) el.onchange = function () { LIC.agendaFiltros[x[1]] = el.value; Lic_renderAgenda_(); }; });
       var tv = Lic_$_("licAgTrav"); if (tv) tv.onchange = function () { LIC.agendaFiltros.travadas = tv.checked; Lic_renderAgenda_(); };
       Lic_ligarCiencia_(c, Lic_renderAgenda_);
       Lic_ligarConfirmarEvento_(c, function (id) { var ev = null; (d.dias || []).concat([{ eventos: d.pendentes || [] }]).forEach(function (x) { x.eventos.forEach(function (e) { if (e.id === id) ev = e; }); }); return ev; }, Lic_renderAgenda_);
@@ -1286,9 +1291,9 @@
   function Lic_irLink_(x) {
     if (!x || !x.mod) return;
     if (x.kanban) { LIC.kanbanFiltros = Object.assign(LIC_KB_VAZIO(), x.kanban); if (x.coluna) LIC.kanbanColMob = x.coluna; }
-    if (x.agenda) { LIC.agendaPeriodo = x.agenda.periodo || "7"; LIC.agendaFiltros = { nivel: x.agenda.nivel || "", natureza: x.agenda.natureza || "", sessao: "", travadas: false }; }
+    if (x.agenda) { LIC.agendaPeriodo = x.agenda.periodo || "7"; LIC.agendaFiltros = { nivel: x.agenda.nivel || "", natureza: x.agenda.natureza || "", sessao: "", travadas: false, tipo: x.agenda.tipo || "" }; }
     if (x.alertas) LIC.alertasFiltro = x.alertas;
-    if (x.portais) LIC.portaisAba = x.portais;
+    if (x.portais) { LIC.portaisAba = x.portais; LIC.portaisSituacao = x.portaisSituacao || ""; }
     if (x.aba) { LIC.aba = x.aba; LIC.filtros = { busca: "", uf: "", selo: "", sessao: "", origem: x.origem || "" }; }
     if (x.ordem) LIC.ordem = x.ordem;
     if (x.ficha) { Lic_irFicha_(x.ficha, x.fichaAba || "resumo"); return; }
@@ -1599,7 +1604,7 @@
       '<p class="cm-meta">' + n.comNota + " de " + e.andamento + " em andamento têm nota. A nota é da IA com verificador; quem decide é a Diretoria.</p>", n.fonte);
     g += Lic_pnCaixa_("Prazos dos próximos dias", '<div class="cm-kpis lic-pn-mini">' + Lic_pnKpi_(p.d7, "em 7 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, p.fonte) + Lic_pnKpi_(p.criticos7, "críticos em 7 dias", p.criticos7 ? "erro" : "", { mod: "licitacoes_agenda", agenda: { periodo: "7", nivel: "CRITICO" } }, p.fonte) +
       Lic_pnKpi_(p.d30, "em 30 dias", "", { mod: "licitacoes_agenda", agenda: { periodo: "30" } }, p.fonte) + Lic_pnKpi_(p.pendentes30, "pendentes de confirmação (30 dias)", p.pendentes30 ? "aviso" : "", { mod: "licitacoes_agenda", agenda: { periodo: "30", natureza: "PENDENTE" } }, p.fonte) + "</div>" +
-      (p.porTipo7.length ? '<p class="cm-sec">Nos próximos 7 dias, por tipo</p>' + Lic_pnBarras_(p.porTipo7.map(function (x) { return { t: x.nome, n: x.n, link: { mod: "licitacoes_agenda", agenda: { periodo: "7" } }, dica: "Abre a Agenda dos próximos 7 dias." }; })) : '<p class="cm-meta">Nenhum prazo nos próximos 7 dias.</p>') +
+      (p.porTipo7.length ? '<p class="cm-sec">Nos próximos 7 dias, por tipo</p>' + Lic_pnBarras_(p.porTipo7.map(function (x) { return { t: x.nome, n: x.n, link: { mod: "licitacoes_agenda", agenda: { periodo: "7", tipo: x.tipo || "" } }, dica: "Abre a Agenda dos próximos 7 dias só com este tipo de prazo." }; })) : '<p class="cm-meta">Nenhum prazo nos próximos 7 dias.</p>') +
       '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_gantt" }) + ">Ver no Gantt</button></p>", p.fonte);
     var quando = function (iso) { return iso ? Lic_dataHora_(iso) : "ainda não houve"; };
     var saude = !col.noServidor ? Lic_faixa_(col.aviso || "O coletor roda só no servidor próprio do SGO+.", "aviso") :
@@ -1610,9 +1615,9 @@
       "<dt>Chamadas nas últimas 24 h</dt><dd>" + (cx.erroLeitura ? Lic_esc_(cx.erroLeitura) : (cx.noLimite ? "300 ou mais (o registro lido traz as 300 mais recentes)" : (cx.chamadas24h || 0)) + " · " + (cx.erros24h ? '<span class="cm-selo vermelho">' + (cx.noLimite ? "pelo menos " : "") + cx.erros24h + " com erro</span>" : "nenhuma com erro")) + "</dd>" +
       (cx.ultimoErro ? "<dt>Último erro</dt><dd>" + Lic_esc_(cx.ultimoErro) + "</dd>" : "") + (col.ultimoErro ? "<dt>Erro da rodada</dt><dd>" + Lic_esc_(col.ultimoErro) + "</dd>" : "") + "</dl>" + (col.aviso ? Lic_faixa_(col.aviso, "aviso") : "");
     g += Lic_pnCaixa_("Saúde do coletor e dos portais", saude + Lic_pnBarras_([
-      { t: "Operacionais", n: po.operacionais, cor: "var(--success)", link: { mod: "licitacoes_portais", portais: "portais" } }, { t: "Operacionais com restrições", n: po.restricoes, cor: "var(--warning)", link: { mod: "licitacoes_portais", portais: "portais" } },
-      { t: "Em teste", n: po.emTeste, link: { mod: "licitacoes_portais", portais: "portais" } }, { t: "Com falha", n: po.falha, cor: "var(--danger)", link: { mod: "licitacoes_portais", portais: "portais" } },
-      { t: "Ligados para a coleta", n: po.ligados, link: { mod: "licitacoes_portais", portais: "portais" } }], po.total) +
+      { t: "Operacionais", n: po.operacionais, cor: "var(--success)", link: { mod: "licitacoes_portais", portais: "portais", portaisSituacao: "Operacional" }, dica: "Abre os portais só nesta situação." }, { t: "Operacionais com restrições", n: po.restricoes, cor: "var(--warning)", link: { mod: "licitacoes_portais", portais: "portais", portaisSituacao: "Operacional com restrições" }, dica: "Abre os portais só nesta situação." },
+      { t: "Em teste", n: po.emTeste, link: { mod: "licitacoes_portais", portais: "portais", portaisSituacao: "Em teste" }, dica: "Abre os portais só nesta situação." }, { t: "Com falha", n: po.falha, cor: "var(--danger)", link: { mod: "licitacoes_portais", portais: "portais", portaisSituacao: "Falha" }, dica: "Abre os portais só nesta situação." },
+      { t: "Ligados para a coleta", n: po.ligados, link: { mod: "licitacoes_portais", portais: "portais", portaisSituacao: "LIGADOS" }, dica: "Abre só os portais ligados para a coleta." }], po.total) +
       '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_portais", portais: "registro" }) + ">Ver o registro das chamadas</button> · " + po.total + " portais cadastrados.</p>", col.fonte);
     g += Lic_pnCaixa_("Análises por IA", Lic_pnBarras_([{ t: "Concluídas", n: ia.concluidas, cor: "var(--success)", link: kb({ ia: "CONCLUIDA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi concluída." },
       { t: "Recusadas pelo verificador", n: ia.recusadas, cor: "var(--warning)", link: kb({ ia: "RECUSADA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi recusada." }, { t: "Erro da IA (não respondeu)", n: ia.erro, cor: "var(--danger)", link: kb({ ia: "ERRO" }), dica: "Abre o Kanban só com as oportunidades cuja última análise deu erro da IA." }]) +

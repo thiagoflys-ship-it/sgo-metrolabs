@@ -22,6 +22,8 @@
  *     meio, o resto zero; revisão de 02/11/2026);
  *   - pela IA, conferidos pelo verificador: documentação (até 7,5 dos 15 enquanto o SGO+ não
  *     tiver o cadastro de habilitação: metade, como pendência), riscos (5 menos 1 por risco provado com trecho) e travas.
+ *     03/11/2026: com documento em uso no cadastro de habilitação, a documentação passa a ser do CÓDIGO, pelo cruzamento
+ *     da aba Habilitação (Lic_docHabilitacao_: atende conta inteiro, a conferir metade, falta e vence antes da sessão zero).
  *   - trava provada com trecho = nota 0 (com o motivo). Classes: 75+ alta, 50–74 média, 30–49 baixa, abaixo de 30 ou
  *     com trava "candidata a descarte" (quem descarta é a Diretoria; a IA nunca decide).
  *
@@ -493,9 +495,16 @@ function Lic_cortaNegacao_(ft, texto, a, b, fn) {
   // (o que vem antes do ":"): "Não serão exigidos: alvará; certificado RBC" põe "certificado RBC" sob o "não". O ponto ou o
   // parêntese que fecha a numeração do item ("8.8.", "1)", "a)") não é fim de frase, e item numerado não corta a frase
   // (reconferência de 02/11/2026: "Não serão exigidos os seguintes documentos:\n8.8 certificado..." e "conforme o item\n8.8 do edital").
-  var estado = '';
+  var estado = '', cx = Lic_caixasAntes_(texto, ft.ini[a]);
   for (var k = a - 1, passos = 0; k >= 0 && passos < LIC_NEGACAO_LISTA_MAX; k--, passos++) {
     var entre = texto.slice(ft.fim[k], ft.ini[k + 1]);
+    // formulário de marcar (03/11/2026): o trecho é de uma opção MARCADA; as opções vizinhas (de "( )" em diante) são outras
+    // orações e a negação delas não vale para este trecho. O texto antes da primeira caixa (o enunciado) continua valendo.
+    if (cx && ft.fim[k] > cx.ini) {
+      while (k >= 0 && ft.fim[k] > cx.ini) k--;
+      if (k < 0) break;
+      entre = texto.slice(ft.fim[k], cx.ini);
+    }
     if (Lic_numeracaoDaLinha_(ft, texto, k)) entre = entre.replace(/^[.)]/, '');
     if (/[.!?]|\n[ \t]*\n/.test(entre)) break;
     if (/;/.test(entre) && !estado) estado = 'lista';
@@ -504,14 +513,38 @@ function Lic_cortaNegacao_(ft, texto, a, b, fn) {
     if (LIC_NEGACAO.test(ft.toks[k]) && estado !== 'lista') return ft.toks[k];
   }
   var d = b + 1;
+  // a caixa MARCADA logo depois ("...técnica? (X) Não") é transparente: a resposta marcada é a palavra seguinte
+  if (d + 1 < ft.toks.length && /^x$/.test(ft.toks[d]) && /[(\[][ \t]*$/.test(texto.slice(ft.fim[b], ft.ini[d])) && /^[ \t]*[)\]]/.test(texto.slice(ft.fim[d], ft.ini[d + 1]))) d++;
   if (d < ft.toks.length && LIC_NEGACAO.test(ft.toks[d])) {
     var sep = texto.slice(ft.fim[b], ft.ini[d]);
+    // a negação é o rótulo da opção seguinte, NÃO marcada ("(X) Exige visita ( ) Não"): não responde ao trecho da opção marcada
+    if (cx && LIC_RX_CAIXA_VAZIA.test(sep)) return '';
     // ponto final ou ponto e vírgula = outra frase ("HORA_ENGENHEIRO.\nSEM serviço..."); "?" continua valendo ("laboratório? Não.")
     // negação SOZINHA (o resto da linha ou da frase vazio ou só pontuação) é a resposta àquele trecho: recusa com qualquer separador
     var sozinha = /^[^\p{L}\p{N}.;!?\n]*([.;!?\n]|$)/u.test(texto.slice(ft.fim[d], ft.fim[d] + 80));
     if (sozinha || ((/[^\s\p{L}\p{N}]/u.test(sep) || /\n/.test(sep)) && !/[.;]/.test(sep))) return ft.toks[d];
   }
   return '';
+}
+/**
+ * Formulário de marcar ("( ) Sim ( ) Não (X) Dispensa", "[ ]", "[X]"), revisão independente de 03/11/2026: cada opção é uma
+ * oração. Se a caixa mais perto ANTES do trecho (na mesma frase) está MARCADA (X, x, ✓), devolve { ini, fim, marcada }: ini = o
+ * começo da primeira caixa do grupo (caixas seguidas sem fim de frase entre elas, até 300 caracteres de uma para outra), fim = o
+ * fim da caixa do trecho. Caixa vazia antes do trecho (o trecho é de opção NÃO marcada) ou sem caixa: null, e a regra de sempre vale.
+ */
+var LIC_RX_CAIXA = /(^|[^\p{L}\p{N}])([(\[][ \t]*[xX✓✔]?[ \t]*[)\]])/gu;
+var LIC_RX_CAIXA_VAZIA = /(^|[^\p{L}\p{N}])[(\[][ \t]*[)\]]/u;
+function Lic_caixasAntes_(texto, pos) {
+  // até 4 caracteres depois: o trecho pode começar dentro da própria caixa ("x) Dispensa")
+  var de = Math.max(0, pos - 3000), s = texto.slice(de, Math.min(texto.length, pos + 4)), m, cx = [];
+  LIC_RX_CAIXA.lastIndex = 0;
+  while ((m = LIC_RX_CAIXA.exec(s))) { var i = de + m.index + m[1].length; if (i < pos) cx.push([i, i + m[2].length, /[xX✓✔]/.test(m[2])]); }
+  if (!cx.length) return null;
+  var ult = cx[cx.length - 1], fimFrase = /[.!?](\s|$)|\n[ \t]*\n/;
+  if (!ult[2] || fimFrase.test(texto.slice(ult[1], pos))) return null;
+  var ini = ult[0];
+  for (var j = cx.length - 2; j >= 0; j--) { var gap = texto.slice(cx[j][1], ini); if (fimFrase.test(gap) || gap.length > 300) break; ini = cx[j][0]; }
+  return { ini: ini, fim: ult[1], marcada: true };
 }
 /** A palavra k é numeração que abre a linha ("8.8", "12", "a" de "a)")? */
 function Lic_numeracaoDaLinha_(ft, texto, k) {
@@ -902,7 +935,7 @@ function Lic_verificarAnalise_(j, ctx) {
     if (negA) { saida.afirmacoes.push({ tipo: 'PENDENCIA', criterio: Lic_s_(a.criterio).toLowerCase().slice(0, 20), texto: Lic_texto_('Confirmar no edital: há negação ou exceção perto do trecho ("' + negA + '"). A IA afirmou: ' + texto, 600), fonte: fo, origem: 'IA', rede: true }); return; }
     saida.afirmacoes.push({ tipo: tipo, criterio: Lic_s_(a.criterio).toLowerCase().slice(0, 20), texto: texto, fonte: fo, origem: 'IA' });
   });
-  saida.afirmacoes = saida.afirmacoes.concat(rede);
+  saida.afirmacoes = Lic_afirmacoesSemRepetir_(saida.afirmacoes.concat(rede));
   if (!nTipos.FATO) problemas.push('afirmações: nenhum FATO com fonte');
   if (ctx.triagemTravada && !saida.travas.length && !saida.afirmacoes.some(function (a) { return a.tipo === 'PENDENCIA' && a.criterio === 'trava'; }))
     problemas.push('trava: a triagem por regras travou esta oportunidade (' + Lic_texto_(ctx.triagemMotivo, 160) + '); prove a trava com o trecho ou escreva uma PENDENCIA com criterio "trava" dizendo o que confirmar no edital');
@@ -1036,12 +1069,13 @@ function Lic_notaPelasTravas_(soma, travas, decisoes) {
 }
 
 /** Nota final e classe (código). Trava do código (prazo vencido) ou confirmada pela Diretoria = 0; trava da IA fica a confirmar. */
-function Lic_notaFinal_(saida, codigo, pesos, decisoes) {
+function Lic_notaFinal_(saida, codigo, pesos, decisoes, docHab) {
   var riscosPts = Math.max(0, pesos.riscos - saida.riscos.length);
   var crit = {
     capacidade: { pontos: saida.capacidade.pontos, peso: pesos.capacidade, origem: 'IA_CODIGO', como: (saida.capacidade.como ? saida.capacidade.como + ' ' : '') + saida.capacidade.justificativa },
     margem: codigo.criterios.margem,
-    documentacao: { pontos: saida.documentacao.pontos, peso: pesos.documentacao, origem: 'IA', como: saida.documentacao.justificativa },
+    // 03/11/2026: com documentos no cadastro de habilitação, a documentação é do CÓDIGO (cruzamento da aba Habilitação)
+    documentacao: docHab ? docHab.criterio : { pontos: saida.documentacao.pontos, peso: pesos.documentacao, origem: 'IA', como: saida.documentacao.justificativa },
     localizacao: codigo.criterios.localizacao, prazo: codigo.criterios.prazo, valor: codigo.criterios.valor,
     riscos: { pontos: riscosPts, peso: pesos.riscos, origem: 'IA', como: saida.riscos.length ? 'Começa em ' + pesos.riscos + ' e perde 1 por risco provado: ' + saida.riscos.map(function (r) { return r.nome; }).join('; ') + '.' : 'Nenhum risco da lista provado com trecho.' }
   };
@@ -1051,6 +1085,46 @@ function Lic_notaFinal_(saida, codigo, pesos, decisoes) {
   if (codigo.prazo.vencido && codigo.fimIso) travas.push({ codigo: 'PRAZO_VENCIDO', nome: 'Prazo de propostas encerrado', texto: 'O fim das propostas (' + Lic_brDia_(codigo.fimIso) + ') já passou.', fonte: { ref: 'CAMPO:encerramento', rotulo: 'Fim das propostas (PNCP)', trecho: codigo.fimIso }, estado: 'CODIGO', chave: 'PRAZO_VENCIDO' });
   var r = Lic_notaPelasTravas_(soma, travas, decisoes);
   return { nota: r.nota, soma: Lic_r1_(soma), classe: r.classe, classeNome: r.classeNome, criterios: crit, travas: r.travas, efetivas: r.efetivas, aConfirmar: r.aConfirmar };
+}
+/**
+ * Documentação pelo cruzamento da habilitação (03/11/2026, revisão independente): com pelo menos um documento em uso no
+ * cadastro (SGO_Licitacoes_Habilitacao.js), o CÓDIGO pontua a documentação pelas exigências desta oportunidade: "atende" conta
+ * inteiro, "a conferir" conta metade (pendência), "falta", "vence antes da sessão" e "não atende" contam zero. A IA não pontua.
+ * exigencias: as da análise que está sendo gravada (null = as da última análise concluída, como a aba Habilitação mostra).
+ * Devolve null (vale o comportamento anterior: IA, no máximo metade) sem o módulo, sem documento em uso ou sem exigência.
+ * assinatura: muda só quando a situação de alguma exigência desta oportunidade muda (entra na base da análise).
+ */
+function Lic_docHabilitacao_(l, exigencias, pesos) {
+  if (typeof LicH_contexto_ !== 'function' || typeof LicH_cruzar_ !== 'function') return null;
+  var ctx, cr;
+  try {
+    ctx = LicH_contexto_({ opIds: [Lic_s_(l.ID)] });
+    if (!ctx.docs.some(LicH_ativo_)) return null;
+    if (exigencias) ctx.analises[Lic_s_(l.ID)] = [{ OPORTUNIDADE_ID: Lic_s_(l.ID), SITUACAO: 'CONCLUIDA', VERSAO: 1e9, EXIGENCIAS_JSON: JSON.stringify(exigencias) }];
+    cr = LicH_cruzar_(l, ctx);
+  } catch (e) { console.error('Licitações, documentação pela habilitação: ' + ((e && e.message) || e)); return null; }
+  if (!cr.itens.length) return null;
+  pesos = pesos || LIC_NOTA_PADRAO;
+  var c = cr.contagens, n = c.total, conta = c.ATENDE + 0.5 * c.A_CONFERIR;
+  var partes = [c.ATENDE + ' atende', c.A_CONFERIR + ' a conferir', c.FALTA + ' falta', c.VENCE_ANTES + ' vence antes da sessão'].concat(c.NAO_ATENDE ? [c.NAO_ATENDE + ' não atende (Diretoria)'] : []);
+  var como = n + ' exigência(s) de habilitação cruzadas com o cadastro de documentos (aba Habilitação): ' + partes.join(', ') + '. Atende conta inteiro, a conferir conta metade (pendência), falta, vence antes da sessão e não atende contam zero. Calculado pelo sistema, não pela IA.';
+  var afs = [];
+  var pend = c.FALTA + c.VENCE_ANTES + c.NAO_ATENDE;
+  if (pend) afs.push({ tipo: 'PENDENCIA', criterio: 'documentacao', origem: 'SISTEMA', texto: 'Habilitação: ' + pend + ' exigência(s) com documento faltando, vencendo antes da sessão ou marcada "não atende". Veja a aba Habilitação e providencie antes da sessão.' });
+  if (c.A_CONFERIR) afs.push({ tipo: 'PENDENCIA', criterio: 'documentacao', origem: 'SISTEMA', texto: 'Habilitação: ' + c.A_CONFERIR + ' exigência(s) a conferir pela Diretoria (contam metade até a conferência). Marque "atende" ou "não atende" na aba Habilitação.' });
+  var assinatura = Lic_hash_(JSON.stringify(cr.itens.map(function (x) { return [x.chave, x.efetivo]; }).sort())).slice(0, 24);
+  return { criterio: { pontos: Lic_r1_(pesos.documentacao * conta / n), peso: pesos.documentacao, origem: 'HABILITACAO', como: como, habAssinatura: assinatura, contagens: { total: n, atende: c.ATENDE, aConferir: c.A_CONFERIR, falta: c.FALTA, venceAntes: c.VENCE_ANTES, naoAtende: c.NAO_ATENDE } }, afirmacoes: afs, assinatura: assinatura };
+}
+/**
+ * Parte da habilitação na base da análise: só quando a última análise concluída já foi pontuada pelo cruzamento (tem a
+ * assinatura). Assim, publicar esta regra ou cadastrar o primeiro documento NÃO muda a base de todas as oportunidades
+ * (nada de reanálise em massa): a base muda só quando a habilitação DAQUELA oportunidade muda.
+ */
+function Lic_habBase_(l, concluida) {
+  var crit = concluida ? Lic_json_(concluida.CRITERIOS_JSON, {}) : {};
+  if (!crit || !crit.documentacao || !crit.documentacao.habAssinatura) return '';
+  var d = Lic_docHabilitacao_(l, null);
+  return d ? d.assinatura : 'SEM_CRUZAMENTO';
 }
 /** Contexto do verificador: fontes, pesos, fabricantes, números permitidos (fontes + cálculos do sistema) e a triagem. */
 function Lic_ctxVerificador_(l, fontes, pesos, codigo) {
@@ -1116,11 +1190,12 @@ function Lic_promptAnalise_(l, fontes, codigo, pesos, hojeIso, marca) {
 }
 
 // ------------------------------------------------------------ base (versão do que foi analisado)
-function Lic_baseAnalise_(l, fonte, arqs, pesos) {
+function Lic_baseAnalise_(l, fonte, arqs, pesos, hab) {
   var itens = ((fonte && fonte.itens) || []).map(function (i) { return [i.numeroItem, i.hash || Lic_s_(i.descricao).slice(0, 80)]; });
   // 02/11/2026: a simulação de preço salva entra na base (só quando existe: a base das análises sem simulação não muda)
   var sim = typeof LicP_baseNota_ === 'function' ? LicP_baseNota_(l) : '';
-  return Lic_hash_(JSON.stringify([LIC_ANALISE_REGRAS, LIC_CAPACIDADE_VERSAO, pesos.versao, Lic_s_(l.VERSAO_HASH), itens, arqs ? arqs.baseHash : ''].concat(sim ? [sim] : [])));
+  // 03/11/2026: a situação da habilitação entra só quando existe (Lic_habBase_): a base das análises antigas não muda
+  return Lic_hash_(JSON.stringify([LIC_ANALISE_REGRAS, LIC_CAPACIDADE_VERSAO, pesos.versao, Lic_s_(l.VERSAO_HASH), itens, arqs ? arqs.baseHash : ''].concat(sim ? [sim] : []).concat(hab ? [['HAB', hab]] : [])));
 }
 function Lic_analisesDe_(oid) {
   return Lic_ler_(LIC_ABAS.ANALISES).filter(function (a) { return Lic_s_(a.OPORTUNIDADE_ID) === Lic_s_(oid); })
@@ -1145,7 +1220,8 @@ function Lic_analisar_(eu, l, o) {
   o = o || {};
   var pesos = Lic_pesos_(), hoje = Lic_hojeSp_();
   var srv = Lic_lerFonteServidor_(l);
-  var base = Lic_baseAnalise_(l, srv.fonte, srv.arquivos, pesos);
+  var concluidaAntes = Lic_analisesDe_(l.ID).filter(function (a) { return Lic_s_(a.SITUACAO) === 'CONCLUIDA'; })[0] || null;
+  var base = Lic_baseAnalise_(l, srv.fonte, srv.arquivos, pesos, Lic_habBase_(l, concluidaAntes));
   if (!o.forcar && base === Lic_s_(l.ANALISE_BASE_HASH)) return { semMudanca: true, texto: 'A análise já está em dia com a versão atual da fonte e dos arquivos. Nada foi refeito.' };
   if (!Lic_iaDisponivel_()) return { indisponivel: true, texto: LIC_MSG_SEM_IA + '.' };
   var textos = [];
@@ -1182,8 +1258,13 @@ function Lic_analisar_(eu, l, o) {
   var resultado;
   if (saida) {
     // a decisão da Diretoria sobre a mesma trava e o mesmo trecho vale de novo (não se pede a mesma coisa duas vezes)
-    var nf = Lic_notaFinal_(saida, codigo, pesos, Lic_json_(l.TRAVAS_DECISOES_JSON, {}));
-    var afirmacoes = codigo.afirmacoes.map(function (a) { return Object.assign({ origem: 'SISTEMA' }, a, { fonte: a.fonte ? Object.assign({ rotulo: (fontes[a.fonte.ref] || {}).rotulo || a.fonte.ref }, a.fonte) : null }); }).concat(saida.afirmacoes);
+    // 03/11/2026: documentação pelo cruzamento da habilitação com as exigências DESTA análise (a base passa a levar a assinatura)
+    var docHab = Lic_docHabilitacao_(l, saida.documentacao.exigencias, pesos);
+    base = Lic_baseAnalise_(l, srv.fonte, srv.arquivos, pesos, docHab ? docHab.assinatura : '');
+    reg.BASE_HASH = base; mudOp.ANALISE_BASE_HASH = base;
+    var nf = Lic_notaFinal_(saida, codigo, pesos, Lic_json_(l.TRAVAS_DECISOES_JSON, {}), docHab);
+    var afirmacoes = codigo.afirmacoes.map(function (a) { return Object.assign({ origem: 'SISTEMA' }, a, { fonte: a.fonte ? Object.assign({ rotulo: (fontes[a.fonte.ref] || {}).rotulo || a.fonte.ref }, a.fonte) : null }); }).concat(docHab ? docHab.afirmacoes : []).concat(saida.afirmacoes);
+    afirmacoes = Lic_afirmacoesSemRepetir_(afirmacoes);
     Object.assign(reg, { SITUACAO: 'CONCLUIDA', NOTA: nf.nota, SOMA: nf.soma, CLASSE: nf.classe, TRAVADA: nf.efetivas.length ? 'SIM' : nf.aConfirmar.length ? 'A_CONFIRMAR' : 'NAO', RESUMO: Lic_texto_(saida.resumo, 1500),
       CRITERIOS_JSON: JSON.stringify(nf.criterios), ITENS_JSON: JSON.stringify(saida.capacidade.itens).slice(0, 30000), EXIGENCIAS_JSON: JSON.stringify(saida.documentacao.exigencias).slice(0, 30000),
       RISCOS_JSON: JSON.stringify(saida.riscos).slice(0, 20000), TRAVAS_JSON: JSON.stringify(nf.travas).slice(0, 20000), AFIRMACOES_JSON: JSON.stringify(afirmacoes).slice(0, 45000) });
@@ -1277,12 +1358,28 @@ function Lic_motivoRecusaSimples_(recusas, textos, arquivos) {
   return partes.join(' ');
 }
 
+/**
+ * Fatos repetidos (03/11/2026, revisão independente): FATO com a mesma fonte e o mesmo trecho aparece uma vez só (o primeiro, na
+ * ordem em que veio). Vale na gravação e na tela (análises antigas já gravadas).
+ */
+function Lic_afirmacoesSemRepetir_(lista) {
+  var vistos = {};
+  return (Array.isArray(lista) ? lista : []).filter(function (a) {
+    if (!a || typeof a !== 'object') return false;
+    var f = a.fonte && typeof a.fonte === 'object' ? a.fonte : null;
+    // só FATO com fonte: inferência e pendência (inclusive as da rede, que dizem de onde vieram) ficam como estão
+    if (Lic_up_(a.tipo) !== 'FATO' || !f || !(Lic_s_(f.ref) || Lic_s_(f.trecho))) return true;
+    var ch = Lic_s_(f.ref) + '|' + Lic_normTrecho_(f.trecho);
+    if (vistos[ch]) return false;
+    vistos[ch] = true; return true;
+  });
+}
 /** O que a tela mostra de uma linha de LIC_ANALISES. */
 function Lic_analiseTela_(a) {
   if (!a) return null;
   return { id: Lic_s_(a.ID), versao: Number(a.VERSAO) || 0, situacao: Lic_s_(a.SITUACAO), nota: a.NOTA === '' || a.NOTA === null || a.NOTA === undefined ? null : Number(a.NOTA), soma: a.SOMA === '' || a.SOMA === undefined ? null : Number(a.SOMA),
     classe: Lic_s_(a.CLASSE), classeNome: LIC_CLASSES[Lic_s_(a.CLASSE)] || '', travada: Lic_s_(a.TRAVADA) === 'SIM', aConfirmar: Lic_s_(a.TRAVADA) === 'A_CONFIRMAR', resumo: Lic_s_(a.RESUMO), criterios: Lic_json_(a.CRITERIOS_JSON, {}), itens: Lic_json_(a.ITENS_JSON, []),
-    exigencias: Lic_json_(a.EXIGENCIAS_JSON, []), riscos: Lic_json_(a.RISCOS_JSON, []), travas: Lic_json_(a.TRAVAS_JSON, []), afirmacoes: Lic_json_(a.AFIRMACOES_JSON, []), arquivos: Lic_json_(a.ARQUIVOS_JSON, []),
+    exigencias: Lic_json_(a.EXIGENCIAS_JSON, []), riscos: Lic_json_(a.RISCOS_JSON, []), travas: Lic_json_(a.TRAVAS_JSON, []), afirmacoes: Lic_afirmacoesSemRepetir_(Lic_json_(a.AFIRMACOES_JSON, [])), arquivos: Lic_json_(a.ARQUIVOS_JSON, []),
     recusas: Lic_json_(a.RECUSAS_JSON, []), respostas: Lic_json_(a.RESPOSTAS_IA_JSON, []), modelo: Lic_s_(a.MODELO), tentativas: Number(a.TENTATIVAS) || 0, motivo: Lic_s_(a.MOTIVO), origem: Lic_s_(a.ORIGEM_PEDIDO), por: Lic_s_(a.PEDIDO_POR_NOME),
     em: Lic_s_(a.CRIADO_EM), baseHash: Lic_s_(a.BASE_HASH), fonteVersao: Number(a.FONTE_VERSAO) || 1, regras: Lic_s_(a.REGRAS), hash: Lic_s_(a.HASH) };
 }
@@ -1334,7 +1431,7 @@ function Lic_travaDecidirGravar_(eu, d, motivo, dec) {
 function Lic_analiseFicha_(l, srv) {
   var lista = Lic_analisesDe_(l.ID), pesos = Lic_pesos_();
   var concluida = lista.filter(function (a) { return Lic_s_(a.SITUACAO) === 'CONCLUIDA'; })[0] || null;
-  var base = Lic_baseAnalise_(l, srv && srv.fonte, srv && srv.arquivos, pesos);
+  var base = Lic_baseAnalise_(l, srv && srv.fonte, srv && srv.arquivos, pesos, Lic_habBase_(l, concluida));
   return {
     iaDisponivel: Lic_iaDisponivel_(), aviso: Lic_iaDisponivel_() ? '' : LIC_MSG_SEM_IA + '.',
     atual: Lic_comDecisoes_(Lic_analiseTela_(concluida), l), ultima: Lic_analiseTela_(lista[0] || null),

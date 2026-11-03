@@ -474,3 +474,56 @@ test('revisão 3, 5, 6, 7 e 9: pendentes iguais à Agenda, "300 ou mais", prazo 
   a.ctx.SGO_LICITACOES.conexoes = () => [{ portal: 'PUB-001', rota: '/x', inicio: new Date(agora).toISOString(), status: 200, erro: '' }];
   assert.equal(a.api('s_cha', 'painel').coletor.conexoes.noLimite, false);
 });
+
+test('ajuste final 4a: barras "por tipo" de prazo abrem a Agenda filtrada pelo tipo (o número bate); barras de portais abrem a lista filtrada pela situação', () => {
+  const a = ambiente({ ops: opsBase() });
+  a.ctx.Lic_agendaAtualizar_({ limite: 50 });
+  const d = a.api('s_cha', 'painel');
+  assert.ok(d.prazos.porTipo7.length >= 1);
+  d.prazos.porTipo7.forEach((x) => {
+    assert.ok(x.tipo, 'cada barra leva o código do tipo');
+    const ag = a.api('s_cha', 'agenda', { periodo: '7', tipo: x.tipo });
+    assert.equal(ag.contagens.total, x.n, 'a Agenda filtrada por ' + x.tipo + ' bate com a barra');
+    assert.equal(ag.tipo, x.tipo);
+    assert.ok(ag.dias.every((dia) => dia.eventos.every((e) => e.tipo === x.tipo)));
+  });
+  const js = ler('JS_Licitacoes.html');
+  assert.match(js, /agenda: \{ periodo: "7", tipo: x\.tipo \|\| "" \}/);
+  assert.match(js, /tipo: x\.agenda\.tipo \|\| ""/);
+  assert.match(js, /<label for="licAgTipo">Tipo de prazo<\/label>/);
+  for (const s of ['Operacional', 'Operacional com restrições', 'Em teste', 'Falha', 'LIGADOS']) assert.ok(js.includes('portaisSituacao: "' + s + '"'), 'barra de portais ' + s);
+  assert.match(js, /LIC\.portaisSituacao = x\.portaisSituacao \|\| ""/);
+  // o filtro da lista de portais: por situação e "ligados para a coleta"
+  const vm2 = require('node:vm');
+  const corte = js.slice(js.indexOf('function Lic_htmlPortais_('), js.indexOf('function Lic_htmlRegistro_('));
+  const sb = { LIC_CORES_SITUACAO_PORTAL: { Operacional: 'verde', Falha: 'vermelho' }, LIC_CATEGORIAS: [['', 'Todas']], Lic_coletorFaixaHtml_: () => '', Lic_opcoes_: () => '', Lic_esc_: (x) => String(x), Lic_url_: () => '', Lic_dataHora_: () => '',
+    Lic_tabelaHtml_: (cab, linhas) => 'LINHAS:' + linhas.map((l) => l[0]).join(',') };
+  vm2.createContext(sb); vm2.runInContext(corte, sb);
+  const dd = { portais: [{ codigo: 'P1', situacao: 'Operacional', ligado: true }, { codigo: 'P2', situacao: 'Falha', ligado: false }, { codigo: 'P3', situacao: 'Operacional', ligado: false }] };
+  assert.match(sb.Lic_htmlPortais_(dd, '', 'Operacional'), /LINHAS:<span class="lic-mono">P1<\/span>,<span class="lic-mono">P3<\/span>/);
+  assert.match(sb.Lic_htmlPortais_(dd, '', 'LIGADOS'), /LINHAS:<span class="lic-mono">P1<\/span><\/div>$/);
+  assert.match(sb.Lic_htmlPortais_(dd, '', ''), /P1.*P2.*P3/);
+});
+
+test('ajuste final 4b: o Painel lê de LIC_ANALISES só as colunas que conta (sem RESPOSTAS_IA_JSON); sem a planilha, a leitura de sempre', () => {
+  const a = ambiente({ ops: opsBase() });
+  const cab = ['ID', 'OPORTUNIDADE_ID', 'VERSAO', 'SITUACAO', 'RESPOSTAS_IA_JSON', 'AFIRMACOES_JSON', 'DURACAO_MS', 'CRIADO_EM'];
+  const linhas = [['an1', 'op_imbe', 1, 'CONCLUIDA', 'x'.repeat(40000), 'y'.repeat(40000), 90000, new Date('2026-11-02T11:00:00.000Z')], ['an2', 'op_casc', 1, 'RECUSADA', 'z', '', '', '2026-11-01T11:00:00.000Z'], ['', '', '', '', '', '', '', '']];
+  const pedidas = [];
+  const sh = { getLastRow: () => linhas.length + 1, getRange: (r, c, n, k) => { pedidas.push(cab[c - 1]); assert.equal(k, 1); return { getValues: () => linhas.slice(r - 2, r - 2 + n).map((l) => [l[c - 1]]) }; } };
+  a.ctx.SGO_DATA.getSheet = (t) => { if (t !== 'LIC_ANALISES') throw new Error('Aba não encontrada: ' + t); return sh; };
+  a.ctx.SGO_DATA.getHeaders = () => cab.slice();
+  a.ctx.SGO_DATA.formatDateForOutput_ = (v) => v.toISOString();
+  const r = JSON.parse(JSON.stringify(a.ctx.Lic_lerColunas_('LIC_ANALISES', ['OPORTUNIDADE_ID', 'SITUACAO', 'DURACAO_MS', 'CRIADO_EM'])));
+  assert.deepEqual(pedidas.sort(), ['CRIADO_EM', 'DURACAO_MS', 'OPORTUNIDADE_ID', 'SITUACAO']);
+  assert.equal(r.length, 2, 'linha vazia fica fora');
+  assert.deepEqual(r[0], { OPORTUNIDADE_ID: 'op_imbe', SITUACAO: 'CONCLUIDA', DURACAO_MS: 90000, CRIADO_EM: '2026-11-02T11:00:00.000Z' });
+  const d = a.api('s_cha', 'painel');
+  assert.equal(d.ia.total, 2); assert.equal(d.ia.tentativas.CONCLUIDA, 1); assert.equal(d.ia.tempoMedioMs, 90000); assert.equal(d.ia.ultima, '2026-11-02T11:00:00.000Z');
+  assert.ok(!pedidas.includes('RESPOSTAS_IA_JSON') && !pedidas.includes('AFIRMACOES_JSON'));
+  assert.equal(a.leituras.LIC_ANALISES || 0, 0, 'a aba inteira não é lida');
+  // sem getSheet (servidor sem planilha): cai na leitura inteira
+  delete a.ctx.SGO_DATA.getSheet;
+  a.tabelas.LIC_ANALISES = [{ ID: 'an9', OPORTUNIDADE_ID: 'op_casc', SITUACAO: 'ERRO', CRIADO_EM: '2026-11-01T10:00:00.000Z' }];
+  assert.equal(JSON.parse(JSON.stringify(a.ctx.Lic_lerColunas_('LIC_ANALISES', ['SITUACAO']))).length, 1);
+});

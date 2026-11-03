@@ -393,6 +393,7 @@ function Lic_agenda_(eu, d) {
     var x = Lic_eventoParaTela_(e, agoraMs, porId);
     if (d.nivel && x.nivel !== Lic_up_(d.nivel)) return;
     if (Lic_s_(d.natureza) === 'PENDENTE' && x.natureza !== 'PREVISTO') return;
+    if (d.tipo && Lic_s_(x.tipo) !== Lic_s_(d.tipo)) return;   // 03/11/2026: clique do Painel "por tipo"
     var ps = Lic_up_(l.PORTAL_SESSAO);
     if (Lic_up_(d.sessao) === 'OUTRO' && ps) return;
     if (d.sessao && Lic_up_(d.sessao) !== 'OUTRO' && ps !== Lic_up_(d.sessao)) return;
@@ -416,7 +417,7 @@ function Lic_agenda_(eu, d) {
   var proximo = lista.filter(function (x) { return x.situacao === 'ATIVO' && !x.passou && x.natureza !== 'PREVISTO'; })[0] || null;
   var sessoes = {}; Object.keys(ops).forEach(function (k) { var c = Lic_up_(ops[k].PORTAL_SESSAO); if (c && portais[c]) sessoes[c] = Lic_s_(portais[c].NOME); });
   return { periodo: periodo, hoje: hoje, hojeRotulo: LIC_DIAS_SEMANA_LONGO[Lic_semanaDe_(hoje)] + ' ' + hoje.slice(8, 10) + '/' + hoje.slice(5, 7), ate: ate, dias: dias, pendentes: pendentes.slice(0, 200),
-    contagens: cont, proximo: proximo, sessoes: sessoes, semCiencia: typeof Lic_alertasSemCiencia_ === 'function' ? Lic_alertasSemCiencia_(eu).length : 0, regras: LIC_AGENDA_REGRAS };
+    contagens: cont, proximo: proximo, sessoes: sessoes, tipo: Lic_s_(d.tipo), tipos: Object.keys(LIC_EVENTO_TIPOS).map(function (k) { return [k, LIC_EVENTO_TIPOS[k].nome]; }), semCiencia: typeof Lic_alertasSemCiencia_ === 'function' ? Lic_alertasSemCiencia_(eu).length : 0, regras: LIC_AGENDA_REGRAS };
 }
 
 /** Aba "Prazos" da ficha: todas as versões de cada prazo, os alertas de cada uma. */

@@ -773,3 +773,20 @@ test('trava de gravação ocupada no fim da análise: a análise fica gravada, o
   assert.equal(a.ctx.Lic_aposArquivos_({ chaves: [] }).notasAcertadas, 0, 'uma vez só');
 });
 function Lic_s(v) { return v === null || v === undefined ? '' : String(v); }
+
+test('ajuste final 6: fato repetido (mesma fonte e mesmo trecho) aparece uma vez só, na gravação e na tela das análises antigas', () => {
+  const fato = { tipo: 'FATO', criterio: 'capacidade', texto: 'O objeto é manutenção corretiva de quatro equipamentos médicos e fisioterapêuticos.', fonte: { ref: 'CAMPO:objeto', trecho: 'MANUTENÇÃO CORRETIVA DE 04 (QUATRO) EQUIPAMENTOS MÉDICOS' } };
+  const outroTexto = Object.assign({}, fato, { texto: 'A contratação cobre manutenção corretiva de equipamentos médicos.' });
+  const base = respostaValida();
+  const a = ambiente({ respostas: [respostaValida({ afirmacoes: base.afirmacoes.concat([fato, outroTexto]) })] });
+  const r = a.api('s_dora', 'analisar', { id: 'op1' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.resultado.analisada, true);
+  const af = JSON.parse(a.analises()[0].AFIRMACOES_JSON);
+  const iguais = af.filter((x) => x.tipo === 'FATO' && x.fonte && x.fonte.ref === 'CAMPO:objeto' && /MANUTENÇÃO CORRETIVA DE 04/.test(x.fonte.trecho));
+  assert.equal(iguais.length, 1, 'três vezes o mesmo fato com a mesma fonte e trecho: fica um');
+  assert.equal(iguais[0].texto, fato.texto, 'fica o primeiro');
+  assert.ok(af.some((x) => x.tipo === 'INFERENCIA') && af.some((x) => x.tipo === 'PENDENCIA'), 'os outros tipos continuam');
+  // análise antiga gravada com repetição: a tela mostra uma vez
+  const tela = JSON.parse(JSON.stringify(a.ctx.Lic_analiseTela_({ ID: 'x', VERSAO: 1, AFIRMACOES_JSON: JSON.stringify([fato, fato, { tipo: 'PENDENCIA', texto: 'Ler o TR.' }, { tipo: 'PENDENCIA', texto: 'Ler o TR.' }, Object.assign({}, fato, { tipo: 'INFERENCIA' })]) })));
+  assert.deepEqual(tela.afirmacoes.map((x) => x.tipo), ['FATO', 'PENDENCIA', 'PENDENCIA', 'INFERENCIA'], 'só o FATO repetido sai; pendência e inferência ficam');
+});

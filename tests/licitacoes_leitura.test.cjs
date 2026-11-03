@@ -1001,3 +1001,26 @@ test('conferência de 31c18d0: checklist gravado uma linha por item (150 itens, 
   assert.ok(Object.keys(partes).every((k) => !/^[=+\-@']/.test(partes[k])), JSON.stringify(Object.keys(partes).map((k) => partes[k].charAt(0))));
   assert.equal(J(c.LicLeit_lerPartes_(partes, 'ITENS_JSON', null)).length, 40);
 });
+
+test('ajuste final 5: formulário de marcar — a negação de uma opção NÃO marcada não recusa o trecho da opção vizinha MARCADA; as outras proteções continuam', () => {
+  const a = ambiente();
+  const c = a.ctx;
+  const fonte = (t) => ({ ref: 'A6', rotulo: 'DFD', texto: t, norm: c.Lic_normTrecho_(t) });
+  const ok = (tr, t) => c.Lic_trechoNaFonte_(tr, fonte(t), {});
+  // caso real: DFD de Aparecida do Rio Doce/GO (PNCP 24859316000100-1-000276/2026), como o PDF foi extraído
+  const DFD = '2.0 TDENTTFTCAçÃO DA DEMANDA (DESCR!çÃO DO OBJETO) (ART. 7e,t,b - rN 009/23)\n(x) Serviços não Continuado\n( ) Serviço comum de engenharia\n( ) Serviços continuado SEM Dedicação Exclusiva de Mão de Obra\n' +
+    '( ) Serviços continuado COM dedicação exclusiva de Mão de Obra\n( ) Material de consumo\n( ) Material permanente / equipamento\n2.1 FORMA DE CONTRATAçÃO SUGERTDA:\n(X) Dispensa de Licitação\n( ) lnexigibilidade de Licitação\n2.2. OBJETO: Contratação de empresa especializada.';
+  assert.equal(ok('Dispensa de Licitação', DFD).ok, true, 'opção marcada: o "SEM" e o "não" das opções vizinhas não valem');
+  // opção NÃO marcada continua recusada (nada afrouxa para quem cita a opção errada)
+  for (const tr of ['Serviços continuado COM dedicação exclusiva de Mão de Obra', 'Material permanente / equipamento', 'Serviço comum de engenharia']) assert.equal(ok(tr, DFD).ok, false, tr);
+  // ( ) Sim ( ) Não (X) Dispensa — e com colchetes
+  assert.equal(ok('Dispensa da visita técnica', 'Visita técnica: ( ) Obrigatória ( ) Não exigida (X) Dispensa da visita técnica, com declaração.').ok, true);
+  assert.equal(ok('Dispensa da visita técnica', 'Visita técnica: [ ] Obrigatória [ ] Não exigida [X] Dispensa da visita técnica, com declaração.').ok, true);
+  // a negação logo depois, rótulo da opção seguinte NÃO marcada, não responde ao trecho marcado
+  assert.equal(ok('Exige atestado de capacidade técnica', 'Habilitação técnica: (X) Exige atestado de capacidade técnica ( ) Não').ok, true);
+  // proteções que continuam: resposta MARCADA "(X) Não" depois do trecho; enunciado negativo antes das caixas; sem caixa marcada
+  assert.equal(ok('Exige atestado de capacidade técnica', 'Habilitação técnica: Exige atestado de capacidade técnica? (X) Não ( ) Sim').ok, false);
+  assert.equal(ok('certificado de acreditação RBC', 'Não serão exigidos os documentos abaixo: ( ) alvará sanitário (X) certificado de acreditação RBC').ok, false, 'o enunciado negativo vale para todas as opções');
+  assert.equal(ok('Dispensa da visita técnica', 'Visita técnica: ( ) Obrigatória ( ) Não exigida ( ) Dispensa da visita técnica, com declaração.').ok, false, 'opção não marcada: a regra de sempre');
+  assert.equal(ok('admitida a participação de empresas em consórcio', '4.3. Não será admitida a participação de empresas em consórcio conforme justificativa').ok, false, 'sem formulário: igual');
+});

@@ -600,3 +600,63 @@ test('revisão BAIXA 7: hash do resumo cobre valor, vigência e CNPJ; cliente in
   assert.match(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', prazo: '2026-10-19', confirmar: true }).message, /precisa ser de amanhã em diante/);
   assert.match(ler('JS_Licitacoes_Contratos.html'), /Lic_faixa_\(Lic_esc_\(r\.texto\)/);
 });
+
+test('ajuste final 3a: atividade concluída antes de um aditivo que muda a data: o marco volta a "a levar" (com a explicação), nunca "ajuste em Minhas atividades"', () => {
+  const a = ambienteContratos();
+  a.criar();
+  ok(a.c('agendaUnica', { confirmar: true }));
+  const vFim = vinc(a, { MODULO: 'ATIVIDADES', ACAO: 'ATIVIDADE' }).find((v) => /Fim da vigência/.test(v.REF_TEXTO));
+  atv(a, vFim.REF_ID).SITUACAO = 'Concluída';
+  const r = ok(a.c('versao', { tipo: 'ADITIVO', aditivoNumero: '1º', motivo: 'Prorrogação do contrato por mais um ano', fonte: 'termo aditivo publicado no PNCP', campos: { fim: '2028-11-30' } }));
+  assert.match(r.texto, /Data nova em marco com atividade já fechada: .*Fim da vigência.*concluída antes da mudança.*volta a "a levar"/);
+  assert.equal(atv(a, vFim.REF_ID).SITUACAO, 'Concluída', 'a concluída não é mexida');
+  const ag = a.tela().integracao.agendaUnica;
+  const mFim = ag.marcos.find((m) => /Fim da vigência/.test(m.nome));
+  assert.equal(mFim.atividade, null); assert.match(mFim.anterior.texto, /foi concluída antes da mudança da data/);
+  assert.ok(ag.aLevar >= 1);
+  const antes = a.tabelas.ATV_ATIVIDADES.length;
+  const r2 = ok(a.c('agendaUnica', { confirmar: true }));
+  assert.doesNotMatch(r2.texto, /Ajuste o prazo em Minhas atividades/);
+  assert.match(r2.texto, /Lançada\(s\) de novo com a data nova: .*Fim da vigência/);
+  const nova = a.tabelas.ATV_ATIVIDADES.slice(antes).find((x) => /Fim da vigência/.test(x.TITULO));
+  assert.ok(nova && /foi concluída antes de a data mudar/.test(nova.DESCRICAO));
+  const m2 = a.tela().integracao.agendaUnica.marcos.find((m) => /Fim da vigência/.test(m.nome));
+  assert.equal(m2.atividade.id, nova.ID); assert.equal(m2.atividade.desatualizada, false);
+  // tela: o motivo aparece ao lado do "a levar"
+  assert.match(ler('JS_Licitacoes_Contratos.html'), /x\.anterior && !x\.atividade/);
+});
+
+test('ajuste final 3b: o vínculo não grava depois de criar a atividade: a resposta avisa; vencida a reserva, a atividade é achada pela marca e não se repete', () => {
+  const a = ambienteContratos();
+  a.criar();
+  const fechar = a.ctx.LicC_fecharReserva_;
+  a.ctx.LicC_fecharReserva_ = function (eu, l, r, res) { if (/Fim da vigência/.test(res.REF_TEXTO)) throw new Error('A trava de gravação não veio em 20 s'); return fechar.apply(this, arguments); };
+  const r = ok(a.c('agendaUnica', { confirmar: true }));
+  a.ctx.LicC_fecharReserva_ = fechar;
+  assert.match(r.texto, /Atenção: Fim da vigência.*foi lançada em Minhas atividades, mas o vínculo com o contrato não gravou agora \(A trava de gravação não veio em 20 s\).*Não lance outra/);
+  const res = vinc(a, { MODULO: 'ATIVIDADES', ACAO: 'RESERVA' });
+  assert.equal(res.length, 1);
+  const criada = a.tabelas.ATV_ATIVIDADES.find((x) => x.DESCRICAO.indexOf('[Ref. Licitações: reserva ' + res[0].ID + ']') >= 0);
+  assert.ok(criada, 'a atividade leva a marca da reserva');
+  // ainda dentro dos 10 minutos: "sendo lançada agora", nada novo
+  assert.equal(a.tela().integracao.agendaUnica.marcos.find((m) => /Fim da vigência/.test(m.nome)).emAndamento, true);
+  // a reserva vence: antes de criar de novo, a atividade com a marca é recuperada (nada repetido)
+  res[0].EM = new Date(a.relogio.agora - 11 * 60000).toISOString();
+  const n = a.tabelas.ATV_ATIVIDADES.length;
+  const r2 = ok(a.c('agendaUnica', { confirmar: true }));
+  assert.match(r2.texto, /Recuperada\(s\) pela marca da reserva .*Fim da vigência/);
+  assert.equal(a.tabelas.ATV_ATIVIDADES.length, n, 'nenhuma atividade repetida');
+  const v = vinc(a, { MODULO: 'ATIVIDADES', ACAO: 'ATIVIDADE' }).find((x) => x.REF_ID === criada.ID);
+  assert.ok(v && /recuperada pela marca/.test(v.REF_TEXTO));
+  // planejamento: mesma recuperação
+  const criar = a.ctx.Atividades_apiCriar; let feita = null;
+  a.ctx.Atividades_apiCriar = function () { const x = criar.apply(this, arguments); feita = x; return x; };
+  a.ctx.LicC_fecharReserva_ = () => { throw new Error('caiu a execução'); };
+  assert.match(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', confirmar: true }).message, /foi lançado em Minhas atividades \(atividade .*o vínculo com o contrato não gravou agora \(caiu a execução\).*Não lance outro/);
+  a.ctx.LicC_fecharReserva_ = fechar; a.ctx.Atividades_apiCriar = criar;
+  vinc(a, { MODULO: 'EXECUCAO', ACAO: 'RESERVA' })[0].EM = new Date(a.relogio.agora - 11 * 60000).toISOString();
+  const n2 = a.tabelas.ATV_ATIVIDADES.length;
+  const e = ok(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', confirmar: true }));
+  assert.equal(e.recuperada, true); assert.equal(e.atividadeId, feita.item.ID); assert.equal(a.tabelas.ATV_ATIVIDADES.length, n2);
+  assert.equal(vinc(a, { MODULO: 'EXECUCAO', ACAO: 'PLANEJAMENTO' }).length, 1);
+});

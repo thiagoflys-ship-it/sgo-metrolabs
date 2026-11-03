@@ -226,6 +226,8 @@ test('decisão da Diretoria: "não atende" e "atende" com motivo e documento, hi
 
 test('pendências no Hoje e no Painel com a fonte; relação para conferência versionada, escapada e sem envio', () => {
   const a = cenario();
+  const fichaDe = () => { const x = a.tabelas.LIC_OPORTUNIDADES.find((y) => y.ID === 'op_hab1'); return J(a.ctx.Lic_analiseFicha_(x, a.ctx.Lic_lerFonteServidor_(x))); };
+  assert.equal(fichaDe().desatualizada, false);
   const aba = a.ok(a.hab('s_cha', 'aba', { id: 'op_hab1' })).habilitacao;
   const hoje = a.ok(a.api('s_cha', 'hoje')).habilitacao;
   assert.equal(hoje.licitacoes.pendencias, aba.contagens.pendencias); assert.equal(hoje.licitacoes.comPendencia, 1);
@@ -545,6 +547,8 @@ test('revisão menores 10 e 12: aviso de falta reconfere antes de sair; aviso ma
   const f = a.al({ EVENTO_TIPO: 'HAB_FALTA' })[0];
   assert.equal(f.SITUACAO, 'PROGRAMADO');
   // de madrugada a Diretoria resolve todas as faltas
+  const fichaDe = () => { const x = a.tabelas.LIC_OPORTUNIDADES.find((y) => y.ID === 'op_hab1'); return J(a.ctx.Lic_analiseFicha_(x, a.ctx.Lic_lerFonteServidor_(x))); };
+  assert.equal(fichaDe().desatualizada, false);
   const aba = a.ok(a.hab('s_cha', 'aba', { id: 'op_hab1' })).habilitacao;
   aba.itens.filter((e) => e.efetivo === 'FALTA').forEach((e) => a.ok(a.hab('s_cha', 'conferir', { id: 'op_hab1', chave: e.chave, decisao: 'ATENDE', motivo: 'conferido no edital, dispensado' })));
   a.rodada('2026-11-03T08:05:00-03:00');
@@ -615,4 +619,70 @@ test('reconferência 3 (MENOR): procuração com poderes específicos ou firma r
     const r = efetivo(a, frase, docs);
     assert.equal(r.efetivo, 'A_CONFERIR', frase); assert.match(r.texto, /poderes específicos ou firma reconhecida/);
   }
+});
+
+test('ajuste final 1: a documentação da nota sai do cruzamento da habilitação (código), sem reanálise em massa; sem documento, vale a regra antiga', () => {
+  const a = cenario();
+  const l = a.tabelas.LIC_OPORTUNIDADES.find((x) => x.ID === 'op_hab1');
+  // cruzamento do cenário: 1 atende, 3 a conferir, 3 falta, 1 vence antes da sessão (8 exigências)
+  const d = J(a.ctx.Lic_docHabilitacao_(l, null));
+  assert.deepEqual(d.criterio.contagens, { total: 8, atende: 1, aConferir: 3, falta: 3, venceAntes: 1, naoAtende: 0 });
+  assert.equal(d.criterio.pontos, 4.7, '15 × (1 + 3 × 0,5) / 8');
+  assert.equal(d.criterio.origem, 'HABILITACAO');
+  assert.match(d.criterio.como, /Calculado pelo sistema, não pela IA/);
+  assert.equal(d.afirmacoes.length, 2);
+  assert.ok(d.afirmacoes.every((x) => x.tipo === 'PENDENCIA' && x.origem === 'SISTEMA' && x.criterio === 'documentacao'));
+  // a nota usa o critério do código (os 7,5 da IA são ignorados)
+  const saida = { capacidade: { pontos: 10, como: '', justificativa: '' }, documentacao: { pontos: 7.5, justificativa: 'da IA', exigencias: [] }, riscos: [], travas: [] };
+  const codigo = { criterios: { margem: { pontos: 5, peso: 15 }, localizacao: { pontos: 0, peso: 15 }, prazo: { pontos: 0, peso: 10 }, valor: { pontos: 0, peso: 10 } }, prazo: { vencido: false } };
+  const pesos = J(a.ctx.LIC_NOTA_PADRAO);
+  assert.equal(J(a.ctx.Lic_notaFinal_(saida, codigo, pesos, {}, d)).criterios.documentacao.pontos, 4.7);
+  assert.equal(J(a.ctx.Lic_notaFinal_(saida, codigo, pesos, {})).criterios.documentacao.pontos, 7.5, 'sem o cruzamento: a regra antiga (IA, metade)');
+  // base: análise antiga (sem assinatura) não muda de base, mesmo com documentos no cadastro (nada de reanálise em massa)
+  const antiga = a.tabelas.LIC_ANALISES.find((x) => x.ID === 'an1');
+  assert.equal(a.ctx.Lic_habBase_(l, antiga), '');
+  assert.equal(a.ctx.Lic_baseAnalise_(l, null, null, pesos, ''), a.ctx.Lic_baseAnalise_(l, null, null, pesos));
+  // análise já pontuada pelo cruzamento: a base acompanha a habilitação DESTA oportunidade
+  antiga.CRITERIOS_JSON = JSON.stringify({ documentacao: d.criterio });
+  assert.equal(a.ctx.Lic_habBase_(l, antiga), d.assinatura);
+  const bal = a.novo({ tipo: 'BALANCO', validade: '2027-05-31', palavras: 'exercícios sociais' }, PDF('balanco'));
+  const d2 = J(a.ctx.Lic_docHabilitacao_(l, null));
+  assert.equal(d2.criterio.contagens.atende, 2); assert.notEqual(d2.assinatura, d.assinatura, 'o balanço cadastrado muda a habilitação desta oportunidade');
+  assert.equal(a.ctx.Lic_habBase_(l, antiga), d2.assinatura);
+  // outra oportunidade sem exigências: o cruzamento não pontua (vale a regra antiga)
+  a.tabelas.LIC_OPORTUNIDADES.push(OP('op_vaz', { SITUACAO: 'ANALISE' }));
+  assert.equal(a.ctx.Lic_docHabilitacao_(a.tabelas.LIC_OPORTUNIDADES.find((x) => x.ID === 'op_vaz'), null), null);
+  // sem nenhum documento em uso: comportamento atual
+  a.tabelas.LIC_HAB_DOCUMENTOS.forEach((x) => { x.ATIVO = 'NAO'; });
+  assert.equal(a.ctx.Lic_docHabilitacao_(l, null), null);
+  void bal;
+});
+
+test('ajuste final 1: a análise grava a documentação do cruzamento e a base com a assinatura; a habilitação mudada desatualiza só esta oportunidade', () => {
+  const a = cenario();
+  a.props.GEMINI_API_KEY = 'chave-de-teste';
+  a.ctx.SGO_LICITACOES = { listar: () => ({ itens: [] }), obter: () => ({ itens: [] }), arquivos: () => ({ arquivos: [], baseHash: 'b'.repeat(64) }), textos: () => [] };
+  a.ctx.SGO_DocA4_chamarGemini_ = () => '{}';
+  const exig = [{ texto: 'Exige FGTS', fonte: { ref: 'A1', trecho: 'Prova de regularidade relativa ao Fundo de Garantia por Tempo de Serviço (FGTS).' } }];
+  // o verificador é o da etapa 2 (testado em licitacoes_analise); aqui a resposta aceita é simulada
+  a.ctx.Lic_verificarAnalise_ = () => ({ ok: true, saida: { resumo: 'Resumo. Teste.', capacidade: { pontos: 0, itens: [], justificativa: '', como: '' }, documentacao: { pontos: 7.5, justificativa: 'da IA', exigencias: exig }, riscos: [], travas: [], afirmacoes: [] } });
+  const l = a.tabelas.LIC_OPORTUNIDADES.find((x) => x.ID === 'op_hab1');
+  const r = J(a.ctx.Lic_analisar_({ id: 'u_cha', nome: 'CHARLES DIRETOR TESTE' }, l, { origem: 'PEDIDO', motivo: 'teste do cruzamento', forcar: true }));
+  assert.equal(r.analisada, true);
+  const an = a.tabelas.LIC_ANALISES.filter((x) => x.OPORTUNIDADE_ID === 'op_hab1').sort((x, y) => y.VERSAO - x.VERSAO)[0];
+  const crit = JSON.parse(an.CRITERIOS_JSON);
+  assert.equal(crit.documentacao.origem, 'HABILITACAO');
+  assert.ok(crit.documentacao.habAssinatura);
+  assert.ok(JSON.parse(an.AFIRMACOES_JSON).some((x) => x.origem === 'SISTEMA' && /^Habilitação:/.test(x.texto)));
+  const op = a.tabelas.LIC_OPORTUNIDADES.find((x) => x.ID === 'op_hab1');
+  assert.equal(op.ANALISE_BASE_HASH, an.BASE_HASH);
+  // de novo, sem forçar: a base é a mesma (a assinatura gravada é a das exigências desta análise)
+  assert.equal(J(a.ctx.Lic_analisar_(null, op, { origem: 'AUTOMATICA' })).semMudanca, true);
+  // a Diretoria marca "não atende" numa exigência: só então a base desta oportunidade muda
+  const fichaDe = () => { const x = a.tabelas.LIC_OPORTUNIDADES.find((y) => y.ID === 'op_hab1'); return J(a.ctx.Lic_analiseFicha_(x, a.ctx.Lic_lerFonteServidor_(x))); };
+  assert.equal(fichaDe().desatualizada, false);
+  const aba = a.ok(a.hab('s_cha', 'aba', { id: 'op_hab1' })).habilitacao;
+  const alvo = aba.itens.find((x) => x.efetivo === 'ATENDE');
+  a.ok(a.hab('s_cha', 'conferir', { id: 'op_hab1', chave: alvo.chave, decisao: 'NAO_ATENDE', motivo: 'Documento não serve para este edital' }));
+  assert.equal(fichaDe().desatualizada, true);
 });

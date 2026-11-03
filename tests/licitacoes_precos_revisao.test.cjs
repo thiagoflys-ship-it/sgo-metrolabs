@@ -141,3 +141,58 @@ test('revisão 10 e 11: a IA externa recebe só a pontuação da margem; manual 
   assert.match(manual, /Agenda, Alertas, Preços, Portais e configurações\)/);
   assert.match(manual, /- Preços de licitação\r?\n- Portais e configurações/);
 });
+
+test('ajuste final 2a: item "a confirmar" não recebe rateio de viagem nem de seguro; o rateio fica só nos itens com piso, com aviso', () => {
+  const a = base();
+  const r = calc(a, 'op1', [{ numero: '1', codigo: 'CAL-001', quantidade: 10 }, { numero: '2', codigo: 'QT-AUTOCLAVE-BT', quantidade: 2 }], null, { exige: true, custo: '100' });
+  const [cal, eto] = r.itens;
+  assert.equal(eto.semPiso, true); assert.ok(eto.custoUnitBase > 0, 'o item a confirmar tem custo, mas fica fora do rateio');
+  assert.equal(eto.rateioDeslocamento, 0); assert.equal(eto.rateioSeguro, 0);
+  assert.equal(cal.rateioDeslocamento, r.viagem.custo); assert.equal(cal.rateioSeguro, 100);
+  assert.ok(r.avisos.some((x) => /Item\(ns\) 2 sem piso/.test(x) && /só nos itens com piso/.test(x)));
+  // só o item a confirmar: nada onde diluir, pendência dizendo o que fazer
+  const s = calc(a, 'op1', [{ numero: '1', codigo: 'QT-AUTOCLAVE-BT', quantidade: 2 }]);
+  assert.equal(s.itens[0].rateioDeslocamento, 0);
+  assert.ok(s.pendencias.some((p) => p.codigo === 'RATEIO' && /confirme o preço dos itens "a confirmar"/.test(p.texto)));
+});
+
+test('ajuste final 2b: edital só com o total do lote: abaixo da soma dos pisos vira pendência; acima, aviso; a nota fica como pendência', () => {
+  const a = base();
+  const itens = [{ numero: '1', codigo: 'CAL-001', quantidade: 100 }];
+  const ref = calc(a, 'op1', itens);
+  const piso = ref.totais.piso;
+  const ent = (lote) => ({ itens, execucao: exec(), seguro: { exige: false }, loteEdital: lote });
+  const baixo = ok(a.lic('s_dora', 'simulacaoCalcular', { id: 'op1', entrada: ent(String(Math.floor(piso - 100)).replace('.', ',')) })).resultado;
+  assert.equal(baixo.totais.loteEditalAbaixo, true);
+  assert.ok(baixo.pendencias.some((p) => p.codigo === 'LOTE_EDITAL' && /abaixo da soma dos pisos/.test(p.texto)));
+  const alto = ok(a.lic('s_dora', 'simulacaoCalcular', { id: 'op1', entrada: ent(String(Math.ceil(piso + 1000))) })).resultado;
+  assert.equal(alto.totais.loteEditalAbaixo, false);
+  assert.ok(!alto.pendencias.some((p) => p.codigo === 'LOTE_EDITAL')); assert.ok(alto.avisos.some((x) => /cobre a soma dos pisos/.test(x)));
+  assert.match(a.lic('s_dora', 'simulacaoCalcular', { id: 'op1', entrada: ent('abc') }).message, /o total do lote no edital/);
+  // salvar guarda o total na entrada; a margem da nota fica como pendência (5 de 15)
+  ok(a.lic('s_dora', 'simulacaoSalvar', { id: 'op1', entrada: ent(String(Math.floor(piso - 100))), motivo: 'Edital só com o total do lote' }));
+  assert.equal(JSON.parse(a.tabelas.LIC_SIMULACOES[0].ENTRADA_JSON).loteEdital, String(Math.floor(piso - 100)));
+  const { pesos, c } = margem(a, 'op1');
+  assert.equal(c.criterios.margem.pontos, 5 * pesos.margem / 15);
+  // tela: campo do total do lote
+  const js = a.ler('JS_Licitacoes_Precos.html');
+  assert.match(js, /id="lprLote" data-lpr-lote/); assert.match(js, /r\.loteEdital = lote\.value/);
+});
+
+test('ajuste final 2c: "Salvar" grande demais agrupa as pendências repetidas; se nem assim couber, a mensagem diz o que fazer', () => {
+  const a = base();
+  const itens = Array.from({ length: 40 }, (_, k) => ({ numero: String(k + 1), descricao: 'Item sem serviço escolhido ' + k, codigo: '', quantidade: '' }));
+  const res = ok(a.lic('s_dora', 'simulacaoCalcular', { id: 'op1', entrada: { itens, execucao: exec() } })).resultado;
+  const cheio = JSON.stringify(res).length;
+  a.ctx.LICP_MAX_RESULTADO = cheio - 1;   // força o caminho do resultado enxuto
+  ok(a.lic('s_dora', 'simulacaoSalvar', { id: 'op1', entrada: { itens, execucao: exec() }, motivo: 'Quarenta itens sem serviço' }));
+  const g = JSON.parse(a.tabelas.LIC_SIMULACOES[0].RESULTADO_JSON);
+  assert.equal(g.pendenciasAgrupadas, true);
+  const grupo = g.pendencias.find((p) => /escolha o serviço da tabela/.test(p.texto));
+  assert.equal(grupo.itens, 40); assert.match(grupo.texto, /^Itens 1, 2, 3/);
+  assert.equal(g.itens.length, 40, 'a conta de cada item continua gravada');
+  a.ctx.LICP_MAX_RESULTADO = 1000;   // nem o enxuto cabe
+  const m = a.lic('s_dora', 'simulacaoSalvar', { id: 'op1', entrada: { itens, execucao: exec() }, motivo: 'Quarenta itens sem serviço' }).message;
+  assert.match(m, /40 itens e \d+ pendências/); assert.match(m, /resolva antes as pendências dos itens/); assert.match(m, /divida a simulação/); assert.match(m, /itens 1 a 20/); assert.match(m, /Nada foi gravado.?$/);
+  assert.equal(a.tabelas.LIC_SIMULACOES.length, 1);
+});

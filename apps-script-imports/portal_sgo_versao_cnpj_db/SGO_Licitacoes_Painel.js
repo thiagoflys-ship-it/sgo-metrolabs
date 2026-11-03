@@ -302,6 +302,34 @@ function Lic_conexoesPainel_(agoraMs) {
   } catch (e) { return { erroLeitura: 'Não foi possível ler o registro das chamadas agora (' + Lic_s_(e && e.message) + ').' }; }
 }
 
+/**
+ * Só as colunas pedidas de uma aba (03/11/2026, revisão independente): o Painel conta LIC_ANALISES sem trazer RESPOSTAS_IA_JSON,
+ * AFIRMACOES_JSON e os outros textos grandes (uma leitura por coluna, a partir da linha 2). Linha toda vazia fica fora, como em
+ * SGO_DATA.getAll; data vira texto pelo mesmo formato. Sem a planilha (ou qualquer erro): a leitura inteira de sempre (Lic_ler_).
+ */
+function Lic_lerColunas_(aba, colunas) {
+  try {
+    if (typeof SGO_DATA.getSheet !== 'function' || typeof SGO_DATA.getHeaders !== 'function') return Lic_ler_(aba);
+    var sh = SGO_DATA.getSheet(aba), cab = SGO_DATA.getHeaders(aba), n = sh.getLastRow() - 1;
+    if (n < 1) return [];
+    var cols = colunas.filter(function (c) { return cab.indexOf(c) >= 0; });
+    var vals = cols.map(function (c) { return sh.getRange(2, cab.indexOf(c) + 1, n, 1).getValues(); });
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var row = {}, vazia = true;
+      cols.forEach(function (c, k) {
+        var v = vals[k][i][0];
+        if (Object.prototype.toString.call(v) === "[object Date]") v = typeof SGO_DATA.formatDateForOutput_ === 'function' ? SGO_DATA.formatDateForOutput_(v) : v.toISOString();
+        row[c] = v; if (v !== '' && v !== null && v !== undefined) vazia = false;
+      });
+      if (!vazia) out.push(row);
+    }
+    return out;
+  } catch (e) {
+    if (/Aba não encontrada/i.test(String((e && e.message) || e))) return [];
+    return Lic_ler_(aba);
+  }
+}
 /** Tela Painel: números reais, cada um com a fonte e o destino do clique. */
 function Lic_painel_(eu) {
   var t0 = Date.now(), agoraMs = t0, agoraIso = new Date(t0).toISOString(), hoje = Lic_diaSp_(agoraIso);
@@ -343,13 +371,14 @@ function Lic_painel_(eu) {
     if (dia <= ate7) {
       pz.d7++;
       if (Lic_up_(e.NIVEL) === 'CRITICO' && sit === 'ATIVO') pz.criticos7++;
-      var nm = (LIC_EVENTO_TIPOS[Lic_s_(e.TIPO)] || {}).nome || Lic_s_(e.NOME) || Lic_s_(e.TIPO); pz.porTipo7[nm] = (pz.porTipo7[nm] || 0) + 1;
+      // 03/11/2026: agrupado pelo código do tipo (o clique abre a Agenda filtrada por ele)
+      var tp = Lic_s_(e.TIPO), nm = (LIC_EVENTO_TIPOS[tp] || {}).nome || Lic_s_(e.NOME) || tp; if (!pz.porTipo7[tp]) pz.porTipo7[tp] = { nome: nm, n: 0 }; pz.porTipo7[tp].n++;
     }
   });
   var semC = typeof Lic_alertasSemCiencia_ === 'function' ? Lic_alertasSemCiencia_(null) : [];
   // análises por IA: uma linha por tentativa registrada (LIC_ANALISES); tempo médio só das que têm a medida (DURACAO_MS, desde 02/11/2026)
   var ia = { concluidas: iaOp.CONCLUIDA, recusadas: iaOp.RECUSADA, erro: iaOp.ERRO, total: 0, tentativas: { CONCLUIDA: 0, RECUSADA: 0, ERRO: 0 }, medidas: 0, somaMs: 0, ultima: '' };
-  Lic_ler_(LIC_ABAS.ANALISES).forEach(function (a) {
+  Lic_lerColunas_(LIC_ABAS.ANALISES, ['OPORTUNIDADE_ID', 'SITUACAO', 'DURACAO_MS', 'CRIADO_EM']).forEach(function (a) {
     ia.total++;
     var s = Lic_up_(a.SITUACAO);
     if (ia.tentativas[s] !== undefined) ia.tentativas[s]++;
@@ -379,7 +408,7 @@ function Lic_painel_(eu) {
     notas: { faixas: [{ codigo: 'ALTA', nome: 'Alta (75 a 100)', n: notas.ALTA }, { codigo: 'MEDIA', nome: 'Média (50 a 74)', n: notas.MEDIA }, { codigo: 'BAIXA', nome: 'Baixa (30 a 49)', n: notas.BAIXA },
       { codigo: 'DESCARTE', nome: 'Descarte (abaixo de 30 ou trava confirmada)', n: notas.DESCARTE }, { codigo: 'TRAVA', nome: 'Trava a confirmar', n: notas.TRAVA }, { codigo: 'SEM', nome: 'Sem nota da IA', n: notas.SEM }],
       comNota: k.comNota, fonte: 'LIC_OPORTUNIDADES, colunas NOTA, NOTA_CLASSE e TRAVAS_A_CONFIRMAR (nota da última análise por IA concluída), das ' + k.andamento + ' em andamento.' },
-    prazos: { d7: pz.d7, d30: pz.d30, criticos7: pz.criticos7, pendentes30: pz.pendentes30, porTipo7: Object.keys(pz.porTipo7).map(function (t) { return { nome: t, n: pz.porTipo7[t] }; }).sort(function (a, b) { return b.n - a.n; }),
+    prazos: { d7: pz.d7, d30: pz.d30, criticos7: pz.criticos7, pendentes30: pz.pendentes30, porTipo7: Object.keys(pz.porTipo7).map(function (t) { return { tipo: t, nome: pz.porTipo7[t].nome, n: pz.porTipo7[t].n }; }).sort(function (a, b) { return b.n - a.n; }),
       fonte: 'LIC_EVENTOS (' + pz.eventosLidos + ' linhas lidas): prazos com data de hoje até ' + Lic_somarDia_(hoje, 7).split('-').reverse().join('/') + ' (7 dias) e até ' + ate30.split('-').reverse().join('/') + ' (30 dias), horário de Brasília, sem versões substituídas, sem descartadas e sem travadas (a mesma regra da Agenda). Pendentes de confirmação: os da janela de 30 dias e os sem data (não cancelados), como no contador da Agenda.' },
     alertas: { semCiencia: semC.length, fonte: 'LIC_ALERTAS: enviados, sem ciência e com o prazo ainda por vir (a mesma regra da Central de alertas, aba "Sem ciência").' },
     // documentos de habilitação (SGO_Licitacoes_Habilitacao.js): vencimentos e pendências das licitações, com a fonte

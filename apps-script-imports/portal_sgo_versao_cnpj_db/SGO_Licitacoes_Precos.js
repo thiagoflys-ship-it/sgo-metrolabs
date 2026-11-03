@@ -430,7 +430,7 @@ function LicP_rascunho_(l, fonte) {
   });
   if (!itens.length) itens.push({ numero: '1', descricao: '', codigo: '', quantidade: 1, pontos: '', precoEdital: '', precoProposta: '', custoParceiro: '', origem: 'DIGITADO' });
   return { cortados: Math.max(0, todos.length - LICP_MAX_ITENS), itens: itens, execucao: { uf: Lic_up_(l.UF), municipio: Lic_s_(l.MUNICIPIO), kmTrecho: dist ? dist.km : '', kmFonte: dist ? 'SUGERIDO' : '', viagens: 1, tecnicos: 1, engenheiros: 0, dias: 1, noites: 0,
-    transporte: 'VEICULO_EMPRESA', passagem: '', pedagio: '', outros: '', outrosDescricao: '' }, seguro: { exige: false, custo: '', obs: '' } };
+    transporte: 'VEICULO_EMPRESA', passagem: '', pedagio: '', outros: '', outrosDescricao: '' }, seguro: { exige: false, custo: '', obs: '' }, loteEdital: '' };
 }
 function LicP_int_(v, padrao, min, max, rotulo) {
   if (Lic_s_(v) === '') return padrao;
@@ -485,6 +485,8 @@ function LicP_calcular_(l, e) {
   var sg = e.seguro || {}, exige = sg.exige === true || Lic_up_(sg.exige) === 'SIM', sgCusto = LicP_valorOuNull_(sg.custo, 'o custo do seguro-garantia');
   if (exige && sgCusto === null) pend.push({ codigo: 'SEGURO', texto: 'O edital exige seguro-garantia: informe o custo cotado com a corretora (entra no preço). Sem o custo, o piso fica incompleto.' });
   var seguro = { exige: exige, custo: exige ? sgCusto || 0 : 0, obs: Lic_texto_(sg.obs, 300) };
+  // 03/11/2026: edital que só traz o total do lote (sem preço por item): conferido contra a soma dos pisos
+  var loteEdital = LicP_valorOuNull_(e.loteEdital, 'o total do lote no edital');
   // ---- itens
   var entrada = Array.isArray(e.itens) ? e.itens : [];
   if (!entrada.length) pend.push({ codigo: 'ITENS', texto: 'Inclua pelo menos um item do edital.' });
@@ -527,8 +529,10 @@ function LicP_calcular_(l, e) {
     return r;
   });
   // ---- rateio do deslocamento e do seguro (em centavos; o resto vai ao último item com custo)
-  var comCusto = itens.filter(function (r) { return r.custoUnitBase !== null && r.custoUnitBase > 0 && r.quantidade > 0; });
+  // 03/11/2026 (revisão independente): item sem piso (preço "a confirmar") não recebe rateio; a viagem e o seguro vão só aos itens com piso
+  var comCusto = itens.filter(function (r) { return r.custoUnitBase !== null && r.custoUnitBase > 0 && r.quantidade > 0 && !r.semPiso; });
   var propria = comCusto.filter(function (r) { return r.execucao !== 'PARCEIRO'; });
+  var foraRateio = itens.filter(function (r) { return r.custoUnitBase !== null && r.custoUnitBase > 0 && r.quantidade > 0 && r.semPiso; });
   itens.forEach(function (r) { r.custoDireto = r.custoUnitBase !== null && r.quantidade > 0 ? LicP_r2_(r.custoUnitBase * r.quantidade) : 0; r.rateioDeslocamento = 0; r.rateioSeguro = 0; });
   var soma = function (l) { return l.reduce(function (s, r) { return s + r.custoDireto; }, 0); };
   var linhaExtra = null, sobraExtra = 0;
@@ -542,7 +546,8 @@ function LicP_calcular_(l, e) {
     // a viagem só entre os itens da equipe própria; o seguro entre todos os itens com custo
     if (viagem.custo > 0) { if (propria.length) ratear(viagem.custo, 'rateioDeslocamento', propria); else naoDiluido += viagem.custo; }
     if (seguro.custo > 0) { if (comCusto.length) ratear(seguro.custo, 'rateioSeguro', comCusto); else naoDiluido += seguro.custo; }
-    if (naoDiluido > 0) pend.push({ codigo: 'RATEIO', texto: 'Nenhum item ' + (viagem.custo > 0 && !propria.length ? 'da equipe própria ' : '') + 'tem custo: o deslocamento e o seguro não têm onde ser diluídos. Informe o custo dos itens.' });
+    if (naoDiluido > 0) pend.push({ codigo: 'RATEIO', texto: 'Nenhum item ' + (viagem.custo > 0 && !propria.length ? 'da equipe própria ' : '') + 'tem custo e piso: o deslocamento e o seguro não têm onde ser diluídos. Informe o custo dos itens' + (foraRateio.length ? ' ou confirme o preço dos itens "a confirmar"' : '') + '.' });
+    if (foraRateio.length && (viagem.custo > 0 || seguro.custo > 0) && naoDiluido < viagem.custo + seguro.custo) avisos.push('Item(ns) ' + foraRateio.map(function (r) { return r.numero || r.n; }).join(', ') + ' sem piso (preço a confirmar): o deslocamento e o seguro foram diluídos só nos itens com piso. Quando o preço for confirmado, calcule de novo: o rateio muda.');
   } else naoDiluido = viagem.custo + seguro.custo;
   if (naoDiluido > 0) {
     var cx = LicP_r2_(naoDiluido);
@@ -588,6 +593,15 @@ function LicP_calcular_(l, e) {
     if (tot.propostaItens) tot.propostaSobra -= sobraExtra;
     tot.linhaPropriaCusto = sobraExtra;
     avisos.push('Deslocamento e seguro numa linha própria (' + LicP_moeda_(sobraExtra) + ' de custo): a sobra do lote no edital e na proposta já desconta esse custo. Para cobrir, a proposta precisa da linha com o preço de ' + (linhaExtra.piso === null ? '(sem piso)' : LicP_moeda_(linhaExtra.piso)) + ' ou mais.');
+  }
+  // total do lote no edital (quando o edital não dá o preço por item): abaixo da soma dos pisos = pendência
+  tot.loteEdital = loteEdital; tot.loteEditalAbaixo = false;
+  if (loteEdital !== null && loteEdital > 0) {
+    var pisoLote = LicP_r2_(tot.piso);
+    if (pisoLote > 0 && loteEdital < pisoLote - 0.004) {
+      tot.loteEditalAbaixo = true;
+      pend.push({ codigo: 'LOTE_EDITAL', texto: 'O total do lote no edital (' + LicP_moeda_(loteEdital) + ') está abaixo da soma dos pisos (' + LicP_moeda_(pisoLote) + (tot.pisoCompleto ? '' : ', ainda parcial: há item sem piso') + '): participar por esse valor não deixa a sobra mínima de ' + LicP_pct_(lp.margemMinPct, 0) + '. Leve à Diretoria antes de propor.' });
+    } else if (pisoLote > 0) avisos.push('O total do lote no edital (' + LicP_moeda_(loteEdital) + ') cobre a soma dos pisos (' + LicP_moeda_(pisoLote) + (tot.pisoCompleto ? '' : ', ainda parcial: há item sem piso') + ').');
   }
   // revisão de ca99fe5: item com piso e sem preço do edital (a nota não calcula a sobra só com parte dos itens)
   tot.semEdital = itens.filter(function (r) { return r.pisoUnit !== null && r.precoEdital === null; }).length;
@@ -649,15 +663,15 @@ function LicP_entradaLimpa_(e) {
   return { itens: (Array.isArray(e.itens) ? e.itens : []).slice(0, LICP_MAX_ITENS + 1).map(function (i) { return { numero: Lic_texto_(i.numero, 20), descricao: Lic_texto_(i.descricao, 300), codigo: Lic_up_(i.codigo), quantidade: Lic_texto_(i.quantidade, 20), pontos: Lic_texto_(i.pontos, 10), precoEdital: Lic_texto_(i.precoEdital, 20), precoProposta: Lic_texto_(i.precoProposta, 20), custoParceiro: Lic_texto_(i.custoParceiro, 20), origem: Lic_up_(i.origem) === 'PNCP' ? 'PNCP' : 'DIGITADO' }; }),
     execucao: { uf: Lic_up_(x.uf), municipio: Lic_texto_(x.municipio, 120), kmTrecho: Lic_texto_(x.kmTrecho, 10), kmFonte: Lic_up_(x.kmFonte) === 'SUGERIDO' ? 'SUGERIDO' : '', viagens: Lic_texto_(x.viagens, 5), tecnicos: Lic_texto_(x.tecnicos, 3), engenheiros: Lic_texto_(x.engenheiros, 3), dias: Lic_texto_(x.dias, 5), noites: Lic_texto_(x.noites, 5),
       transporte: Lic_up_(x.transporte), passagem: Lic_texto_(x.passagem, 20), pedagio: Lic_texto_(x.pedagio, 20), outros: Lic_texto_(x.outros, 20), outrosDescricao: Lic_texto_(x.outrosDescricao, 200) },
-    seguro: { exige: s.exige === true || Lic_up_(s.exige) === 'SIM', custo: Lic_texto_(s.custo, 20), obs: Lic_texto_(s.obs, 300) } };
+    seguro: { exige: s.exige === true || Lic_up_(s.exige) === 'SIM', custo: Lic_texto_(s.custo, 20), obs: Lic_texto_(s.obs, 300) }, loteEdital: Lic_texto_(e.loteEdital, 20) };
 }
 /** Salvar: a conta é refeita no servidor (nunca vale a da tela) e vira a VERSÃO NOVA; nada anterior muda. d: { id, entrada, motivo } */
 function LicP_simulacaoSalvar_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva o motivo desta versão da simulação (pelo menos 10 letras): ele fica no histórico com o seu nome e a data. Nada foi gravado');
   var l = Lic_acharOp_(d.id), entrada = LicP_entradaLimpa_(d.entrada), res = LicP_calcular_(l, entrada);
-  var resJson = JSON.stringify(res);
-  if (resJson.length > 48000) throw new Error('A simulação ficou grande demais para gravar (' + res.itens.length + ' itens com textos longos). Encurte as descrições dos itens ou separe o edital em lotes. Nada foi gravado');
+  var resJson = LicP_resultadoParaGravar_(res);
+  if (resJson.length > LICP_MAX_RESULTADO) throw new Error(LicP_msgGrandeDemais_(res, resJson.length));
   return Lic_comTrava_(function () {
     var ant = LicP_simulacoesDe_(l.ID)[0] || null, versao = (ant ? Number(ant.VERSAO) || 0 : 0) + 1, agora = Lic_agora_(), t = res.totais;
     var reg = { OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), VERSAO: versao, MOTIVO: motivo, SITUACAO: res.situacao, ENTRADA_JSON: JSON.stringify(entrada), RESULTADO_JSON: resJson,
@@ -673,6 +687,33 @@ function LicP_simulacaoSalvar_(eu, d) {
       versao: 'simulação ' + versao + ' · política ' + res.politica.licitacao.versao + ' · Comercial ' + res.politica.comercial.versao, fonte: 'Aba Preço (simulador)', hash: reg.HASH });
     return { versao: versao, simulacao: LicP_simulacaoCompleta_(reg), texto: 'Simulação salva na versão ' + versao + '. Ela não muda mais; para corrigir, salve uma versão nova. A nota da análise passa a usar esta simulação no critério margem: abra a aba Análise e toque em "Refazer análise".' };
   });
+}
+var LICP_MAX_RESULTADO = 48000;
+/**
+ * Resultado gravado (03/11/2026, revisão independente): com muitos itens e pendências, a pendência repetida em vários itens vira
+ * uma linha só ("Itens 1, 4, 7: ...") e a descrição do item, que já está na entrada, é encurtada. A conta não muda.
+ */
+function LicP_resultadoParaGravar_(res) {
+  var j = JSON.stringify(res);
+  if (j.length <= LICP_MAX_RESULTADO) return j;
+  var r = JSON.parse(j), grupos = {}, ordem = [], outras = [];
+  r.pendencias.forEach(function (p) {
+    if (p.codigo !== 'ITEM') { outras.push(p); return; }
+    var txt = Lic_s_(p.texto).replace(/^Item [^:]+: /, '');
+    if (!grupos[txt]) { grupos[txt] = []; ordem.push(txt); }
+    grupos[txt].push(p.item);
+  });
+  r.pendencias = outras.concat(ordem.map(function (t) { var its = grupos[t]; return { codigo: 'ITEM', item: its.join(', '), itens: its.length, texto: (its.length > 1 ? 'Itens ' + its.join(', ') : 'Item ' + its[0]) + ': ' + t }; }));
+  r.pendenciasAgrupadas = true;
+  r.itens.forEach(function (it) { it.descricao = Lic_texto_(it.descricao, 40); });
+  return JSON.stringify(r);
+}
+/** O que fazer quando nem o resultado enxuto cabe (o que mais pesa é a lista de pendências por item). */
+function LicP_msgGrandeDemais_(res, tamanho) {
+  var porItem = res.pendencias.filter(function (p) { return p.codigo === 'ITEM'; }).length;
+  return 'A simulação não cabe para gravar (' + res.itens.length + ' itens e ' + res.pendencias.length + ' pendências; ' + Math.ceil(tamanho / 1000) + ' mil caracteres, o limite é ' + (LICP_MAX_RESULTADO / 1000) + ' mil). O que fazer: ' +
+    (porItem ? 'resolva antes as pendências dos itens (' + porItem + ': escolha o serviço da tabela, informe a quantidade e o custo do parceiro) ou ' : '') +
+    'divida a simulação: salve uma versão com parte dos itens (por exemplo, os itens 1 a ' + Math.ceil(res.itens.length / 2) + ') e escreva no motivo onde está o resto. "Calcular" continua funcionando sem gravar. Nada foi gravado';
 }
 function LicP_simulacaoVer_(eu, d) {
   var l = Lic_acharOp_(d.id), s = LicP_simulacoesDe_(l.ID).filter(function (x) { return Number(x.VERSAO) === Number(d.versao); })[0];
