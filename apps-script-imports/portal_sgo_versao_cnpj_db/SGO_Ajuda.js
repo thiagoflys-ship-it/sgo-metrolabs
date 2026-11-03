@@ -59,7 +59,9 @@ var SGO_AJUDA_NOMES = {
   // 02/11/2026: relatórios em A4 (SGO_Ajuda_LicitacoesRelatorios.js)
   licitacoes_relatorios: 'Relatórios de Licitações',
   // 02/11/2026: Central de disputas, modo assistido (SGO_Ajuda_LicitacoesDisputas.js)
-  licitacoes_disputas: 'Central de disputas (Licitações)'
+  licitacoes_disputas: 'Central de disputas (Licitações)',
+  // 02/11/2026: contratos conquistados e integração com os módulos (SGO_Ajuda_LicitacoesContratos.js)
+  licitacoes_contratos: 'Contratos (Licitações)'
 };
 
 /**
@@ -115,6 +117,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_LicitacoesRelatorios_ === 'function') fontes.push(['LicitacoesRelatorios', SGO_ajudaTelas_LicitacoesRelatorios_]);
   // 02/11/2026: Central de disputas, modo assistido (SGO_Ajuda_LicitacoesDisputas.js).
   if (typeof SGO_ajudaTelas_LicitacoesDisputas_ === 'function') fontes.push(['LicitacoesDisputas', SGO_ajudaTelas_LicitacoesDisputas_]);
+  // 02/11/2026: Contratos de Licitações (SGO_Ajuda_LicitacoesContratos.js).
+  if (typeof SGO_ajudaTelas_LicitacoesContratos_ === 'function') fontes.push(['LicitacoesContratos', SGO_ajudaTelas_LicitacoesContratos_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

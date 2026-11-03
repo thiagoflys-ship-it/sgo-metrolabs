@@ -59,7 +59,15 @@ var LIC_ALERTAS_PADRAO = {
     PRAZO_ESCLARECIMENTO: [{ min: 2880, nivel: 'NORMAL' }, { min: 1440, nivel: 'IMPORTANTE' }, { min: 240, nivel: 'IMPORTANTE' }],
     PRAZO_RECURSO: [{ min: 2880, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'IMPORTANTE' }, { min: 240, nivel: 'CRITICO' }],
     PRAZO_CONTRARRAZOES: [{ min: 2880, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'IMPORTANTE' }, { min: 240, nivel: 'CRITICO' }],
-    ABERTURA_PROPOSTAS: []
+    ABERTURA_PROPOSTAS: [],
+    // contratos (02/11/2026, SGO_Licitacoes_Contratos.js): o alvo é o limite interno do marco (09:00 do dia)
+    CONTRATO_INICIO: [{ min: 10080, nivel: 'NORMAL' }, { min: 1440, nivel: 'IMPORTANTE' }],
+    CONTRATO_ENTREGA: [{ min: 10080, nivel: 'NORMAL' }, { min: 2880, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'CRITICO' }],
+    CONTRATO_OBRIGACAO: [{ min: 10080, nivel: 'NORMAL' }, { min: 2880, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'CRITICO' }],
+    CONTRATO_REAJUSTE: [{ min: 43200, nivel: 'NORMAL' }, { min: 10080, nivel: 'IMPORTANTE' }],
+    CONTRATO_GARANTIA: [{ min: 43200, nivel: 'IMPORTANTE' }, { min: 10080, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'CRITICO' }],
+    CONTRATO_RENOVACAO: [{ min: 43200, nivel: 'IMPORTANTE' }, { min: 10080, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'CRITICO' }],
+    CONTRATO_FIM: [{ min: 43200, nivel: 'IMPORTANTE' }, { min: 10080, nivel: 'CRITICO' }, { min: 1440, nivel: 'CRITICO' }]
   },
   mudancas: { RETIFICACAO: 'IMPORTANTE', REABERTURA: 'IMPORTANTE', SUSPENSAO: 'CRITICO', REVOGACAO: 'CRITICO', ANULACAO: 'CRITICO' }
 };
@@ -429,7 +437,12 @@ function Lic_agendaAposSituacao_(id) {
 var LIC_ACOES_TIPO = {
   LIMITE_PROPOSTA: { RADAR: 'decidir se participa e, se sim, enviar a proposta no portal antes do fim', ANALISE: 'concluir a análise e enviar a proposta no portal antes do fim', OUTRA: 'conferir se a proposta foi enviada no portal' },
   SESSAO_PUBLICA: 'acompanhar a abertura da sessão no portal', PRAZO_IMPUGNACAO: 'decidir se impugna o edital até o limite interno', PRAZO_ESCLARECIMENTO: 'enviar o pedido de esclarecimento, se houver dúvida, até o limite interno',
-  PRAZO_RECURSO: 'protocolar as razões de recurso no portal até o limite interno', PRAZO_CONTRARRAZOES: 'protocolar as contrarrazões no portal até o limite interno', ABERTURA_PROPOSTAS: 'conferir o edital: o recebimento das propostas começou'
+  PRAZO_RECURSO: 'protocolar as razões de recurso no portal até o limite interno', PRAZO_CONTRARRAZOES: 'protocolar as contrarrazões no portal até o limite interno', ABERTURA_PROPOSTAS: 'conferir o edital: o recebimento das propostas começou',
+  // contratos (02/11/2026)
+  CONTRATO_INICIO: 'conferir a equipe e o planejamento: o contrato começa', CONTRATO_ENTREGA: 'conferir se a entrega do contrato está pronta e registrar no órgão',
+  CONTRATO_OBRIGACAO: 'cumprir a obrigação do contrato até o prazo', CONTRATO_REAJUSTE: 'pedir o reajuste ao órgão (índice e cláusula no contrato)',
+  CONTRATO_GARANTIA: 'renovar a garantia ou pedir a liberação ao órgão', CONTRATO_RENOVACAO: 'decidir se renova e, se sim, pedir o aditivo antes do fim',
+  CONTRATO_FIM: 'decidir o aditivo de prorrogação ou preparar o encerramento'
 };
 function Lic_acaoAlerta_(a, l) {
   if (Lic_s_(a.TIPO) === 'MUDANCA') return Lic_s_(a.ANTECEDENCIA) === 'SUSPENSAO' ? 'acompanhar a reabertura; os alertas pendentes foram cancelados' : /REVOGACAO|ANULACAO/.test(Lic_s_(a.ANTECEDENCIA)) ? 'conferir o ato na fonte; os alertas pendentes foram cancelados' : 'conferir a mudança na fonte e os prazos novos na agenda';

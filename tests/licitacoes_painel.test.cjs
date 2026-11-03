@@ -93,10 +93,10 @@ test('Kanban: 7 colunas na ordem do pedido do dono, cartão com o que a Diretori
   assert.deepEqual(ids(r, 'DECISAO'), ['op_desp'], 'Decisão = descartadas pela Diretoria');
   assert.equal(r.foraDoQuadro.descartadasRegra, 1, 'a descartada só pela regra fica fora, contada');
   assert.equal(r.total, 8); assert.equal(r.semFiltro, 8);
-  for (const c of ['PROPOSTA', 'CONTRATO']) { assert.equal(col(r, c).qtd, 0); assert.match(col(r, c).futura, /^Chega na etapa de /, c); }
-  // Central de disputas (02/11/2026): Disputa e Resultado deixaram de ser etapas futuras
-  for (const c of ['DISPUTA', 'RESULTADO']) { assert.equal(col(r, c).qtd, 0); assert.equal(col(r, c).futura, '', c); assert.match(col(r, c).dica, /Central de disputas|Resultado de cada item/, c); }
-  assert.match(col(r, 'PROPOSTA').futura, /etapa de preços e proposta/); assert.match(col(r, 'CONTRATO').futura, /etapa de contratos/);
+  for (const c of ['PROPOSTA']) { assert.equal(col(r, c).qtd, 0); assert.match(col(r, c).futura, /^Chega na etapa de /, c); }
+  // Central de disputas (02/11/2026): Disputa e Resultado deixaram de ser etapas futuras; Contrato também (contratos, 02/11/2026)
+  for (const c of ['DISPUTA', 'RESULTADO', 'CONTRATO']) { assert.equal(col(r, c).qtd, 0); assert.equal(col(r, c).futura, '', c); assert.match(col(r, c).dica, /Central de disputas|Resultado de cada item|Contrato registrado/, c); }
+  assert.match(col(r, 'PROPOSTA').futura, /etapa de preços e proposta/);
   // ordem: prazo mais perto primeiro; vencido e sem data no fim
   assert.deepEqual(col(r, 'RADAR').cartoes.map((x) => x.id), ['op_casc', 'op_ansn', 'op_goia', 'op_venc', 'op_sem0']);
   const im = col(r, 'ANALISE').cartoes.find((x) => x.id === 'op_imbe');
@@ -136,7 +136,10 @@ test('Kanban: só as transições que existem, sempre com motivo e histórico (f
   assert.equal(g['RADAR>ANALISE'].acao, 'enviarAnalise'); assert.equal(g['RADAR>DECISAO'].acao, 'descartar'); assert.equal(g['ANALISE>DECISAO'].acao, 'descartar'); assert.equal(g['DESCARTADA>RADAR'].acao, 'reabrir');
   assert.match(g['ANALISE>RADAR'].porque, /Não há volta direta/); assert.match(g['DESCARTADA>ANALISE'].porque, /Reabra primeiro/);
   assert.match(g['RADAR>RADAR'].porque, /já está em Radar/); assert.match(g['DESCARTADA>DECISAO'].porque, /já está em Decisão/);
-  for (const de of ['RADAR', 'ANALISE', 'DESCARTADA']) for (const p of ['PROPOSTA', 'CONTRATO']) { assert.equal(g[de + '>' + p].acao, undefined); assert.match(g[de + '>' + p].porque, /Chega na etapa de/); }
+  for (const de of ['RADAR', 'ANALISE', 'DESCARTADA']) for (const p of ['PROPOSTA']) { assert.equal(g[de + '>' + p].acao, undefined); assert.match(g[de + '>' + p].porque, /Chega na etapa de/); }
+  // contratos (02/11/2026): Contrato é registrado na aba Contrato da ficha (tests/licitacoes_contratos.test.cjs)
+  for (const de of ['RADAR', 'ANALISE']) { assert.equal(g[de + '>CONTRATO'].acao, undefined); assert.match(g[de + '>CONTRATO'].porque, /aba Contrato/); }
+  assert.match(g['DESCARTADA>CONTRATO'].porque, /Reabra primeiro/);
   // Central de disputas (02/11/2026): a entrada em Disputa é pela aba Disputa da ficha; Resultado só a partir de Disputa
   for (const de of ['RADAR', 'ANALISE']) { assert.equal(g[de + '>DISPUTA'].acao, undefined); assert.match(g[de + '>DISPUTA'].porque, /aba Disputa/); assert.equal(g[de + '>RESULTADO'].acao, undefined); assert.match(g[de + '>RESULTADO'].porque, /Só uma licitação em Disputa/); }
   assert.match(g['DESCARTADA>DISPUTA'].porque, /Reabra primeiro/); assert.equal(g['DISPUTA>RESULTADO'].acao, 'resultado');
@@ -326,7 +329,7 @@ test('telas: Kanban (computador: 7 colunas; celular: uma etapa por aba), Gantt (
   let h = pc.ctx.Lic_htmlKanban_(kb, false);
   assert.equal((h.match(/class="cmk-col[" ]/g) || []).length, 7);
   assert.match(h, /class="cm-modos" role="tablist"[\s\S]*data-lic-modo="licitacoes_kanban"/);
-  assert.equal((h.match(/lic-kb-col-futura/g) || []).length, 2, 'Proposta e Contrato (Disputa e Resultado chegaram com a Central de disputas)');
+  assert.equal((h.match(/lic-kb-col-futura/g) || []).length, 1, 'só Proposta (Disputa e Resultado chegaram com a Central de disputas; Contrato com os contratos)');
   assert.match(h, /Etapa futura<\/b>Chega na etapa de preços e proposta/);
   assert.match(h, /cm-selo vermelho">Trava a confirmar/); assert.match(h, /Travada \(decisão da Diretoria\)/); assert.match(h, /Descartada pela Diretoria/);
   assert.match(h, /Responsável: CHARLES DIRETOR TESTE/); assert.match(h, /Nota 55,5 · média/); assert.match(h, /Sem nota da IA/);
@@ -345,7 +348,7 @@ test('telas: Kanban (computador: 7 colunas; celular: uma etapa por aba), Gantt (
   vm.runInContext('LIC.kanbanColMob = "DISPUTA";', cel.ctx);
   assert.match(cel.ctx.Lic_htmlKanban_(kb, true), /Central de disputas \(aba Disputa da ficha\)/);
   vm.runInContext('LIC.kanbanColMob = "CONTRATO";', cel.ctx);
-  assert.match(cel.ctx.Lic_htmlKanban_(kb, true), /Chega na etapa de contratos/);
+  assert.match(cel.ctx.Lic_htmlKanban_(kb, true), /Contrato registrado \(aba Contrato da ficha e tela Contratos\)/);
   // Gantt
   h = pc.ctx.Lic_htmlGantt_(gt, false, 1300);
   assert.match(h, /<svg [^>]*role="img" aria-label="Gantt dos prazos de/);

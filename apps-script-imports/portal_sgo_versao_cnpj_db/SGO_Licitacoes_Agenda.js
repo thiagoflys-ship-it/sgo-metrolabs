@@ -33,7 +33,15 @@ var LIC_EVENTO_TIPOS = {
   SESSAO_PUBLICA: { nome: 'Abertura da sessão pública', nivel: 'CRITICO', ordem: 5 },
   PRAZO_RECURSO: { nome: 'Razões de recurso', nivel: 'IMPORTANTE', ordem: 6, manual: true },
   // Central de disputas (02/11/2026, SGO_Licitacoes_Disputa.js): criado pelo resultado do item "em recurso", pendente de confirmação
-  PRAZO_CONTRARRAZOES: { nome: 'Contrarrazões de recurso', nivel: 'IMPORTANTE', ordem: 7, manual: true }
+  PRAZO_CONTRARRAZOES: { nome: 'Contrarrazões de recurso', nivel: 'IMPORTANTE', ordem: 7, manual: true },
+  // contratos (02/11/2026, SGO_Licitacoes_Contratos.js): marcos do contrato assinado; o recálculo pela fonte e a situação na fonte não mexem neles
+  CONTRATO_INICIO: { nome: 'Início da vigência do contrato', nivel: 'NORMAL', ordem: 10, manual: true, contrato: true },
+  CONTRATO_ENTREGA: { nome: 'Entrega do contrato', nivel: 'IMPORTANTE', ordem: 11, manual: true, contrato: true },
+  CONTRATO_OBRIGACAO: { nome: 'Obrigação do contrato', nivel: 'IMPORTANTE', ordem: 12, manual: true, contrato: true },
+  CONTRATO_REAJUSTE: { nome: 'Reajuste do contrato', nivel: 'NORMAL', ordem: 13, manual: true, contrato: true },
+  CONTRATO_GARANTIA: { nome: 'Validade da garantia do contrato', nivel: 'IMPORTANTE', ordem: 14, manual: true, contrato: true },
+  CONTRATO_RENOVACAO: { nome: 'Decidir a renovação do contrato', nivel: 'IMPORTANTE', ordem: 15, manual: true, contrato: true },
+  CONTRATO_FIM: { nome: 'Fim da vigência do contrato', nivel: 'CRITICO', ordem: 16, manual: true, contrato: true }
 };
 var LIC_NATUREZAS = { CONFIRMADO: 'Confirmado', CALCULADO: 'Calculado (regra legal)', PREVISTO: 'Pendente de confirmação' };
 var LIC_EVENTO_SITUACOES = { ATIVO: 'Valendo', RETIFICADO: 'Substituído por versão nova', SUSPENSO: 'Suspenso na fonte', CANCELADO: 'Cancelado' };
@@ -223,6 +231,8 @@ function Lic_eventosSincronizar_(l, existentes, agora) {
   var primeira = !(existentes || []).length, valendo = {}, versaoMax = {};
   (existentes || []).forEach(function (e) {
     var t = Lic_s_(e.TIPO);
+    // contratos (02/11/2026): os marcos do contrato têm a versão e a situação próprias (SGO_Licitacoes_Contratos.js); a fonte não mexe neles
+    if (LIC_EVENTO_TIPOS[t] && LIC_EVENTO_TIPOS[t].contrato) return;
     versaoMax[t] = Math.max(versaoMax[t] || 0, Number(e.VERSAO) || 0);
     if (Lic_eventoValendo_(e)) valendo[t] = e;
   });

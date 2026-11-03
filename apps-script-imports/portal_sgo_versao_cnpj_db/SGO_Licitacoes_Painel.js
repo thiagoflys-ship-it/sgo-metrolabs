@@ -33,7 +33,7 @@ var LIC_KANBAN_COLUNAS = [
   { codigo: 'PROPOSTA', nome: 'Proposta', futura: 'Chega na etapa de preços e proposta (tabela de preços de licitação, simulador e proposta em A4 aprovada pela Diretoria).' },
   { codigo: 'DISPUTA', nome: 'Disputa', dica: 'Disputa aberta na Central de disputas (aba Disputa da ficha): lances digitados pela Diretoria, nunca abaixo do piso autorizado. O SGO+ não envia lance.' },
   { codigo: 'RESULTADO', nome: 'Resultado', dica: 'Resultado de cada item registrado com a fonte (ganho, perdido, fracassado, deserto, desclassificado, habilitação pendente, recurso).' },
-  { codigo: 'CONTRATO', nome: 'Contrato', futura: 'Chega na etapa de contratos (licitação ganha vira contrato e oportunidade ganha no Comercial).' }
+  { codigo: 'CONTRATO', nome: 'Contrato', dica: 'Contrato registrado (aba Contrato da ficha e tela Contratos): vigência, valores, versões e aditivos, prazos na agenda e a integração com os módulos.' }
 ];
 var LIC_KANBAN_MAX_COLUNA = 120;
 var LIC_GANTT_MAX_LINHAS = 150;
@@ -61,6 +61,11 @@ function Lic_kanbanRegra_(de, para) {
     : de === 'RESULTADO' || de === 'CONTRATO' ? { porque: 'A disputa desta licitação já terminou: o resultado fica na ficha, aba Disputa.' }
     : { porque: 'A disputa abre na ficha, aba Disputa: ela exige a proposta emitida, a simulação de preço e o piso de cada item. O Kanban não abre disputa sem esses dados.', aba: 'disputa' };
   if (para === 'RESULTADO') return de === 'DISPUTA' ? { acao: 'resultado', nome: 'Concluir o resultado (todos os itens registrados)' } : { porque: 'Só uma licitação em Disputa vai para Resultado: registre o resultado de cada item na ficha, aba Disputa.', aba: de === 'CONTRATO' ? '' : 'disputa' };
+  // contratos (02/11/2026, SGO_Licitacoes_Contratos.js): o contrato é registrado na aba Contrato (número, vigência, valores e o arquivo assinado)
+  if (para === 'CONTRATO') return de === 'RESULTADO' ? { porque: 'O contrato é registrado na ficha, aba Contrato (número, vigência, valores e o arquivo assinado). Ao gravar, com o motivo, a licitação vai para Contrato.', aba: 'contrato' }
+    : de === 'DESCARTADA' ? { porque: 'Reabra primeiro (volta para o Radar, com o motivo).' } : de === 'DISPUTA' ? { porque: 'Conclua o resultado na aba Disputa; depois registre o contrato na aba Contrato.', aba: 'disputa' }
+    : { porque: 'Sem o resultado da disputa no SGO+, o contrato é registrado manualmente na ficha, aba Contrato (com o motivo e a fonte do resultado).', aba: 'contrato' };
+  if (de === 'CONTRATO') return { porque: 'O contrato está registrado: a licitação fica em Contrato. Mudanças são versões (correção, aditivo, apostilamento, encerramento) na aba Contrato.', aba: 'contrato' };
   if (de === 'DISPUTA') return { porque: 'A disputa está aberta: registre o resultado de cada item na ficha, aba Disputa (item que a Diretoria desistiu também recebe o resultado, por exemplo "perdido"). Depois, "Concluir o resultado" leva para Resultado.', aba: 'disputa' };
   if (col.futura) return { porque: col.futura + ' Até lá, nenhuma licitação entra em ' + col.nome + ' pelo SGO+.' };
   if (de === 'RADAR' && para === 'ANALISE') return { acao: 'enviarAnalise', nome: 'Enviar para análise' };

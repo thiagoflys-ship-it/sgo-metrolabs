@@ -145,6 +145,11 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Durante a sessão, digite o melhor lance do concorrente e o nosso lance (o que você deu no portal). O SGO+ mostra a sobra, a distância ao piso e a sugestão do próximo lance (melhor lance menos o intervalo, nunca abaixo do piso; a IA não sugere valor) e recusa lance abaixo do piso, com o porquê.",
           "\"Piso do item\" muda o piso com o motivo (abaixo do custo mais os impostos, só com \"Assumo o prejuízo\"); \"Desistir do item\" e \"Parar sugestões\" ficam no registro. Cada lance e decisão fica gravado para sempre, com a hora de Brasília, quem e o hash.",
           "Depois da sessão, registre o resultado de cada item com a fonte; recurso cria os prazos de razões e contrarrazões na agenda como pendentes de confirmação. \"Concluir o resultado\" leva a licitação para Resultado no Kanban. Mais detalhes na ajuda da Central de disputas."
+        ] },
+        { titulo: "Contrato", itens: [
+          "A aba Contrato registra o contrato a partir do resultado homologado (itens ganhos e valor final vêm da disputa) ou manualmente, com o motivo e a fonte do resultado. Ao gravar, a licitação vai para Contrato no Kanban.",
+          "Mudanças são versões novas (correção, termo aditivo, apostilamento, encerramento), com o motivo; o arquivo assinado fica restrito, com o SHA-256. Os prazos do contrato entram na agenda com os alertas da Diretoria.",
+          "Cliente, Comercial, Minhas atividades e o planejamento da execução só recebem algo quando você toca no botão e confirma. Mais detalhes na ajuda da tela Contratos."
         ] }
       ],
       cores: [
@@ -319,7 +324,7 @@ function SGO_ajudaTelas_Licitacoes_() {
       paraQueServe: "Mostra cada licitação numa etapa, do Radar ao Contrato: Radar, Em análise, Decisão, Proposta, Disputa, Resultado e Contrato. Mudar de etapa pede o motivo e fica no histórico com quem e quando.",
       antesDeComecar: [
         "Só as passagens que já existem no SGO+ estão liberadas: Radar para Em análise (enviar para análise), Radar ou Em análise para Decisão (descartar) e Decisão para Radar (reabrir uma descartada).",
-        "Proposta, Disputa, Resultado e Contrato aparecem vazias e dizem em que etapa do módulo chegam. \"Participar\" (na coluna Decisão) chega com a etapa de preços e proposta, porque exige o preço mínimo aprovado pela Diretoria.",
+        "Proposta aparece vazia e diz em que etapa do módulo chega; Disputa, Resultado e Contrato explicam onde a passagem acontece (aba Disputa e aba Contrato da ficha). \"Participar\" (na coluna Decisão) chega com a etapa de preços e proposta, porque exige o preço mínimo aprovado pela Diretoria.",
         "As descartadas só pela regra do radar não entram no quadro: ficam em Oportunidades › Descartadas (o quadro diz quantas são)."
       ],
       passos: [

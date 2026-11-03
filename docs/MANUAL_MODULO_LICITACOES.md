@@ -414,7 +414,7 @@ Uma coluna por etapa, na ordem do pedido do dono: Radar, Em análise, Decisão, 
 | Proposta | Vazia: chega na etapa de preços e proposta (tabela de preços de licitação, simulador e proposta em A4) |
 | Disputa | As licitações com a disputa aberta na Central de disputas (aba Disputa da ficha) |
 | Resultado | As licitações com o resultado de todos os itens registrado ("Concluir o resultado") |
-| Contrato | Vazia: chega na etapa de contratos |
+| Contrato | As licitações com o contrato registrado (aba Contrato da ficha e tela Contratos) |
 
 As descartadas só pela regra do radar ficam fora do quadro (Oportunidades › Descartadas); o quadro diz quantas são.
 
@@ -430,8 +430,9 @@ Mudar de etapa: arrastar o cartão (computador) ou "Mover para" (qualquer aparel
 | Radar ou Em análise | Decisão | Descartar (decisão da Diretoria; os alertas pendentes são cancelados) |
 | Decisão (descartada) | Radar | Reabrir (a regra do radar não descarta de novo) |
 | Disputa | Resultado | Concluir o resultado (só com o resultado de todos os itens registrado na aba Disputa, com a fonte) |
+| Resultado | Contrato | Explica e abre a aba Contrato da ficha: o contrato é registrado lá (com o motivo), e a licitação vai para Contrato ao gravar |
 
-O motivo é obrigatório em todas (pelo menos 10 letras) e vai para o histórico da ficha com quem, quando, de → para e a fonte "Kanban". As outras passagens ficam desabilitadas com o porquê escrito embaixo do botão (Em análise não volta direto ao Radar: descarte e reabra; Proposta e Contrato chegam nas próximas etapas; a entrada em Disputa é pela aba Disputa da ficha, que pede a proposta emitida e o piso de cada item, e o botão "Abrir a ficha" leva até lá; "Participar" exige o preço mínimo aprovado). Soltar numa coluna travada abre a janela com o porquê e "Nada foi alterado". Se outra pessoa mudou a oportunidade enquanto o quadro estava aberto, a mudança é recusada com "alguém mudou agora há pouco" e nada é alterado.
+O motivo é obrigatório em todas (pelo menos 10 letras) e vai para o histórico da ficha com quem, quando, de → para e a fonte "Kanban". As outras passagens ficam desabilitadas com o porquê escrito embaixo do botão (Em análise não volta direto ao Radar: descarte e reabra; Proposta chega na próxima etapa; o Contrato é registrado na aba Contrato da ficha; a entrada em Disputa é pela aba Disputa da ficha, que pede a proposta emitida e o piso de cada item, e o botão "Abrir a ficha" leva até lá; "Participar" exige o preço mínimo aprovado). Soltar numa coluna travada abre a janela com o porquê e "Nada foi alterado". Se outra pessoa mudou a oportunidade enquanto o quadro estava aberto, a mudança é recusada com "alguém mudou agora há pouco" e nada é alterado.
 
 No celular (390 px), o quadro vira uma lista por etapa: as abas no alto (com a quantidade de cada uma) escolhem a etapa; a página não rola para os lados.
 
@@ -606,6 +607,63 @@ Modo assistido: o SGO+ nunca envia lance e nunca acessa o portal da disputa (nã
 - **Concluir o resultado** (com o motivo; também pelo Kanban, Disputa → Resultado): só com o resultado de todos os itens. A licitação vai para "Resultado" (histórico RESULTADO_REGISTRADO) e o dado dos itens ganhos (itens, valor final, total, adjudicação, homologação, fontes e o que ainda está pendente) fica preparado em LIC_DISPUTAS.CONTRATO_JSON para a etapa de Contrato. Depois disso, o resultado de um item ainda pode ser atualizado (versão nova), sem mexer no Kanban; o dado do Contrato é refeito a cada resultado novo (histórico DISPUTA_CONTRATO_ATUALIZADO).
 - **Relatório da disputa (A4)**: identificação, itens com valor inicial e pisos, decisões da Diretoria, histórico de lances (com a conferência da cadeia de hash) e o resultado, cada parte com a fonte. Versão imutável em LIC_RELATORIOS (tipo DISPUTA), com o SHA-256; aparece também em Licitações › Relatórios.
 - Quem pode: só Diretoria e Administrador (o servidor confere em toda ação).
+
+## Contratos (tela Contratos e aba Contrato da ficha)
+
+A licitação ganha vira contrato e o contrato alimenta os outros módulos do SGO+, sempre por ação explícita da Diretoria: nada é criado em outro módulo sozinho, e nenhum cadastro é duplicado. Módulo que não existe (ou que existe sem forma segura de receber o contrato) fica como dependência declarada.
+
+### Levantamento dos módulos do SGO+ (02/11/2026)
+
+| Módulo da missão | Existe no SGO+? Onde | O que integra (sem cadastro duplicado) | Dependência declarada |
+|---|---|---|---|
+| Comercial (catálogo, propostas, resultados) | Sim: COM_OPORTUNIDADES (situação ABERTA, GANHA, PERDIDA; origem "Licitação"; ORIGEM_REF), COM_PROPOSTAS, COM_PRODUTOS (catálogo oficial); SGO_Comercial_*.js | "Registrar como ganha no Comercial": a oportunidade é criada pelas regras do Comercial (ComOpo_salvar_, com cliente, contato e próxima ação) e marcada como ganha (ComOpo_ganhar_), com ORIGEM_REF = o contrato; a que já existe com a mesma referência é só vinculada | Nenhuma proposta do Comercial é criada (a proposta é a de Licitações). Perdidas ficam só em LIC_RESULTADOS |
+| CRM e Clientes (órgão, unidades, contatos) | Sim: CAD_CLIENTES e CAD_UNIDADES (SGO_Clientes.js, SGO_Unidades.js, SGO_Vinculos.js; regra de cadastro completo em SGO_CadastroQualidade.js); contatos em CAD_CONTATOS (Comercial › Contatos); utilidades de CNPJ em SGO_Utilis.js | O órgão é procurado pelo CNPJ do PNCP no cliente e na unidade. Achou: "Vincular". Não achou: "Cadastrar o órgão como cliente" com os dados públicos do PNCP preenchidos, pela regra do cadastro (completo e "Ciente"); o CNPJ nunca é duplicado | O contato do órgão é cadastrado no Comercial (Comercial › Contatos) |
+| Contratos | Não há módulo de contratos de clientes (a Assistência guarda só o prazo de atendimento por cliente, ATEC_CONFIG) | O contrato de licitação fica em LIC_CONTRATOS, com versões e aditivos | Contratos que não vieram de licitação |
+| Assistência e engenharia clínica (O.S.) | Sim: ATEC_CHAMADOS, ATEC_OS (SGO_Assistencia_*.js) | "Planejar a execução" lança a atividade da Assistência em Minhas atividades (sem valores) | Chamado e O.S. abertos pela Assistência: a abertura automática só existe a partir de proposta do Comercial (Assistencia_doPedidoComercial_) |
+| Metrologia (calibrações, certificados) | Sim: CertCal (CERT_CALIBRACAO), Cronograma de execução, Planejamento CME | "Planejar a execução" lança a atividade no Kanban do Cronograma de execução (módulo cronograma_execucao) para os itens CAL | Calibração e certificado são feitos no CertCal depois da execução |
+| Qualificação (receitas, ensaios, relatórios) | Sim: Autoclave, Lavadora, Estufa e banho (QUALIF_EMISSOES) | Igual à Metrologia, para os itens QUA | Relatório emitido no módulo do equipamento |
+| NR-13 | Sim: NR13_LAUDOS | Igual à Metrologia, para os itens NR13 | Laudo emitido no módulo NR-13 |
+| Estoque e Compras | Sim: CMP_REQUISICOES, CMP_PEDIDOS (SGO_Compras_*.js) | Atividade de Compras pelo "Planejar a execução", quando o contrato tem produto | A requisição é aberta em Compras (a automática só existe a partir de proposta do Comercial) |
+| Financeiro (faturamento, recebimentos, garantias) | Não há módulo de faturamento nem de contas a receber (só o pagamento das compras) | Previsão de faturamento por entrega e por mês, só leitura, no contrato e no relatório | Lançamento de previsão, faturamento e recebimento |
+| RH (equipes, qualificações, RT) | Usuários, ponto e Programa de conduta existem, sem alocação por contrato | A equipe é definida no planejamento da área; os documentos de RT ficam em Documentos de habilitação | Alocação de equipe por contrato |
+| Logística e Veículos | Frota existe (CAD_VEICULOS, REG_FROTA_*), sem reserva por contrato | O deslocamento entra no planejamento da área | Reserva de veículo por contrato |
+| Documentos e Qualidade | Documentos (DOC_DOCUMENTOS), PGT/POP, registros | O contrato e os aditivos ficam restritos em Licitações, com SHA-256 e versões | Cópia automática para Documentos |
+| Notificações | Sim: alertas de Licitações (LIC_ALERTAS, SGO_Licitacoes_Alertas.js), WhatsApp oficial pelo modelo aprovado | Os prazos do contrato usam os mesmos alertas, só para a Diretoria de Licitações | — |
+| Agenda única (Minhas atividades) | Sim: ATV_ATIVIDADES (SGO_Atividades.js) | "Levar à agenda única": uma atividade por marco futuro, para o responsável | — |
+
+### Registrar o contrato
+
+- **Pelo resultado homologado** (licitação em Resultado, disputa concluída e CONTRATO_JSON pronto: itens ganhos com a homologação, sem item pendente): os itens ganhos, o valor unitário homologado e a homologação vêm do resultado. A quantidade pode ser menor que a ganha (contrato parcial de uma ata); valor diferente do homologado, item que não foi ganho ou quantidade acima da ganha são recusados com o que fazer. Disputa alterada fora do SGO+ (hash) bloqueia o registro pelo resultado.
+- **Registro manual** (resultado fora do SGO+, homologação pendente, disputa sem registro): motivo de pelo menos 20 letras e a fonte do resultado; os itens são digitados. Vale para licitação no Radar, Em análise, Decisão, Proposta ou Resultado; descartada precisa ser reaberta; disputa aberta precisa do resultado concluído.
+- **Campos**: número (como está no documento), tipo (contrato ou ata de registro de preços), assinatura, vigência (início e fim; até 10 anos, Lei 14.133/2021, art. 107), itens (quantidade e valor unitário; o total é a soma), reajuste (índice, data-base e de onde vem, quando o edital disser), garantia contratual (caução, títulos, seguro-garantia, fiança ou título de capitalização, Lei 14.133/2021, art. 96; valor, validade e de onde vem), renovação (prevista e até quando decidir; vazio = 60 dias antes do fim), entregas (descrição, prazo e valor), obrigações (descrição e prazo opcional), responsável (Diretoria ou Administrador) e observações. Valores em reais com vírgula nos centavos (a mesma leitura estrita da disputa).
+- **Arquivo** (contrato assinado; depois, os termos aditivos): PDF ou imagem até 10 MB, conferido pela assinatura dos bytes e guardado restrito com o SHA-256 (se não ficar restrito, nada é gravado). "Abrir" e "Baixar" conferem o SHA-256; arquivo que não confere não é entregue (histórico CONTRATO_ARQUIVO_NAO_CONFERE).
+- Ao gravar (motivo obrigatório), a licitação vai para "Contrato" no Kanban pela mesma regra de passagem (histórico CONTRATO_REGISTRADO, fonte "Contratos"). No Kanban, "Resultado → Contrato" explica e abre a aba Contrato da ficha. Uma licitação tem um contrato; as ordens de uma ata são entregas.
+
+### Versões (nada é apagado)
+
+- "Nova versão": correção de digitação, termo aditivo (número e fonte obrigatórios), apostilamento (só reajuste: valores dos itens, índice e data-base; fonte obrigatória) ou encerramento (encerrado ou rescindido, com a fonte). Só o que mudou entra; cada versão guarda a foto completa dos dados (LIC_CONTRATO_VERSOES.DADOS_JSON), o que mudou (de → para), o motivo, quem, quando e o hash ligado ao da versão anterior. Nada mudou = nenhuma versão nova.
+- Avisos: aditivo acima de 25% do valor inicial (Lei 14.133/2021, art. 125) e correção com valor diferente do homologado ficam marcados na versão e no histórico (CONTRATO_VERSAO).
+- Contrato encerrado ou rescindido só aceita correção de digitação. Versão mexida ou apagada na planilha (hash) para as gravações e diz para avisar o Administrador.
+
+### Prazos na agenda e alertas
+
+- Marcos do contrato em LIC_EVENTOS (fonte CONTRATO, natureza confirmada, dia todo, limite interno 09:00): início, fim, decidir a renovação, reajustes (a cada 12 meses da data-base, dentro da vigência; Lei 14.133/2021, art. 25, § 7º, e art. 92, § 3º), validade da garantia, entregas e obrigações com prazo.
+- Versão nova que muda um marco cria a versão nova do prazo (a anterior fica "substituída", com o motivo); marco que saiu, ou contrato encerrado, fica "cancelado" com o motivo (histórico AGENDA_CONTRATO). O recálculo da agenda pela fonte (retificação, suspensão, revogação) não mexe nos marcos do contrato.
+- Alertas: os mesmos da etapa 3 (Central de alertas, e-mail e WhatsApp pelo modelo aprovado sgo_licitacao_prazo; ciência e escalonamento), só para a Diretoria de Licitações. Antecedências padrão (ajustáveis em Regras dos alertas): início 7 dias e 1 dia; entregas e obrigações 7 dias, 2 dias e 1 dia; reajuste 30 e 7 dias; garantia, renovação e fim 30 dias, 7 dias e 1 dia.
+
+### Integração (ação explícita, com confirmação; tudo em LIC_CONTRATO_VINCULOS)
+
+- **Cliente**: vincular ao cliente do cadastro com o mesmo CNPJ (cliente ou unidade); cliente com outro CNPJ só com o motivo. Cadastrar o órgão abre o formulário com os dados do PNCP (razão social, CNPJ, cidade e UF); o cadastro segue a regra de Cadastros › Clientes (completo e "Ciente"; cria a unidade principal); CNPJ já cadastrado é recusado antes ("vincule").
+- **Comercial**: exige o cliente vinculado e um contato do órgão no Comercial. Cria a oportunidade "Contrato de licitação ..." (funil Engenharia, etapa Aprovado, origem Licitação, valor do contrato, ORIGEM_REF LIC-CONTRATO:...) e a marca como ganha; a próxima ação obrigatória do Comercial é concluída na hora pela regra do "ganhar". A oportunidade que já existe com a mesma referência é só vinculada.
+- **Agenda única**: uma atividade por marco futuro em Minhas atividades (módulo Licitações › Contratos, restrita), para o responsável; marco já levado não se repete; se o contrato mudar depois, a tela e a resposta avisam qual atividade ficou com o prazo antigo (ajuste em Minhas atividades).
+- **Planejar a execução**: os itens por área pelo código do catálogo (CAL Metrologia, QUA Qualificação, NR13 NR-13, produto Compras, os demais Assistência). "Criar o planejamento" (quem planeja e prazo; padrão o início do contrato) lança uma atividade por área com os itens, as quantidades e as entregas, sem valores; Metrologia, Qualificação e NR-13 caem no Kanban do Cronograma de execução. Uma por área; nunca O.S., chamado, requisição, certificado ou laudo.
+- **Previsão de faturamento**: por entrega (entregas com valor somadas por mês; aviso se a soma difere do valor total) ou estimativa linear pela vigência. Só leitura (dependência declarada do Financeiro).
+
+### Tela Contratos e relatório
+
+- **Contratos** (menu Licitações › Contratos): vigentes, a vencer em 90 dias, vigência terminada sem registro e o valor dos vigentes; busca e filtro por situação; "Resultados prontos para virar contrato" leva à aba Contrato.
+- **Relatório do contrato (A4)**: identificação, itens, condições, entregas e obrigações, prazos na agenda, previsão de faturamento, integração e versões, cada parte com a fonte. Versão imutável em LIC_RELATORIOS (tipo CONTRATO, número REL-CTR-...), com o SHA-256; aparece também em Licitações › Relatórios.
+- Quem pode: só Diretoria e Administrador (o servidor confere em toda ação). Quem recebe uma atividade a vê em Minhas atividades.
 
 ## 7. Problemas comuns
 

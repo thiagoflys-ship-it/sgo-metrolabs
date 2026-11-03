@@ -1,0 +1,357 @@
+<!--
+  SGO+ LICITAÇÕES — CONTRATOS CONQUISTADOS (02/11/2026): a tela "Contratos" (menu Licitações) e a aba "Contrato" da ficha.
+  O contrato nasce do resultado homologado da disputa (ou é registrado manualmente, com o motivo), tem versões (correção, termo aditivo,
+  apostilamento, encerramento), o arquivo assinado restrito com SHA-256, os prazos na agenda de Licitações com os alertas da Diretoria,
+  a previsão de faturamento (só leitura) e a integração com os módulos do SGO+ (cliente do cadastro único, Comercial, Minhas atividades,
+  planejamento da execução), sempre por ação explícita e com confirmação. Servidor: SGO_Licitacoes_Contratos.js (Licitacoes_api ação
+  "contratos" com { op }). Usa os utilitários de JS_Licitacoes.html (Lic_esc_, Lic_chamar_, Lic_janela_, Lic_faixa_, Lic_tabelaHtml_,
+  Lic_brl_, Lic_toast_, Lic_carregando_, Lic_erroTela_, Lic_ligarRefazer_, Lic_irFicha_) e a janela segura do A4 de JS_Licitacoes_Proposta.html.
+  Todo texto passa por Lic_esc_. Sem atualização automática: só redesenha depois de uma ação de quem está na tela.
+-->
+<style>
+  .lct-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+  .lct-grade label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .lct-grade input, .lct-grade select, .lct-grade textarea { width: 100%; min-height: 44px; box-sizing: border-box; max-width: 100%; }
+  .lct-grade .lct-largo { grid-column: 1 / -1; }
+  .lct-grade fieldset { grid-column: 1 / -1; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 0; min-width: 0; }
+  .lct-grade legend { font-weight: 700; font-size: 12.5px; padding: 0 4px; }
+  .lct-linha { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; align-items: end; padding: 6px 0; border-top: 1px dashed var(--border); }
+  .lct-linha input { width: 100%; min-height: 44px; box-sizing: border-box; }
+  .lct-linha button { min-height: 44px; }
+  .lct-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px 14px; margin: 8px 0; font-size: 12.5px; }
+  .lct-dl div { min-width: 0; }
+  .lct-dl span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+  .lct-dl b { font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .lct-duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .lct-aceite { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 700; cursor: pointer; }
+  .lct-aceite input { width: 20px; height: 20px; }
+  .lct-lista { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; }
+  .lct-lista li { padding: 5px 0; border-top: 1px dashed var(--border); overflow-wrap: anywhere; }
+  .lct-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  @media (max-width: 900px) { .lct-acoes .btn-primary, .lct-acoes .btn-secondary { flex: 1 1 140px; } }
+</style>
+<script>
+  var LICCT = { aba: {}, lista: null, filtro: { busca: "", situacao: "" }, form: {} };
+  var LICCT_SIT_FILTRO = [["", "Todos"], ["VIGENTE", "Vigentes"], ["A_VENCER", "A vencer"], ["VENCIDO", "Vigência terminada"], ["ENCERRADO", "Encerrados ou rescindidos"]];
+
+  function LicCt_chamar_(op, dados, ok, erro, o) { Lic_chamar_("contratos", Object.assign({ op: op }, dados || {}), ok, erro, Object.assign({ ignorarVelha: true }, o || {})); }
+  function LicCt_selo_(cor, texto) { return '<span class="cm-selo ' + Lic_esc_(cor || "cinza") + '">' + Lic_esc_(texto) + "</span>"; }
+  function LicCt_valor_(id) { var e = Lic_$_(id); return e ? e.value : ""; }
+  function LicCt_marcado_(id) { var e = Lic_$_(id); return !!(e && e.checked); }
+  function LicCt_dia_(d) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || "")); return m ? m[3] + "/" + m[2] + "/" + m[1] : ""; }
+  function LicCt_curto_(h) { return '<span class="lic-hash" title="' + Lic_esc_(h) + '">' + Lic_esc_(String(h || "").slice(0, 12)) + (h ? "…" : "—") + "</span>"; }
+  function LicCt_num_(v) { return v === "" || v === null || v === undefined ? "" : String(v).replace(".", ","); }
+  function LicCt_qtd_(v) { var n = Number(v) || 0; return n.toLocaleString("pt-BR", { maximumFractionDigits: 4 }); }
+
+  // ================= tela "Contratos" (menu) =================
+  function LicCt_renderLista_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(2);
+    LicCt_chamar_("lista", LICCT.filtro, function (r) { LICCT.lista = r; c.innerHTML = LicCt_htmlLista_(r); LicCt_ligarLista_(c); },
+      function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, LicCt_renderLista_); });
+  }
+  function LicCt_htmlLista_(r) {
+    var k = r.contagens || {};
+    var h = '<div class="cm-kpis"><div class="cm-kpi"><span class="v">' + Lic_esc_(k.vigentes || 0) + '</span><span class="r">Vigentes</span></div><div class="cm-kpi"><span class="v">' + Lic_esc_(k.aVencer || 0) + '</span><span class="r">A vencer em ' + Lic_esc_(r.aVencerDias) + ' dias</span></div>' +
+      '<div class="cm-kpi"><span class="v">' + Lic_esc_(k.vencidos || 0) + '</span><span class="r">Vigência terminada sem registro</span></div><div class="cm-kpi"><span class="v">' + Lic_esc_(Lic_brl_(k.valorVigente || 0)) + '</span><span class="r">Valor dos vigentes e a começar</span></div></div>';
+    h += '<div class="cm-caixa"><div class="lct-grade"><div><label for="lctBusca">Buscar</label><input id="lctBusca" maxlength="80" value="' + Lic_esc_(LICCT.filtro.busca) + '" placeholder="Número, órgão, cliente"></div>' +
+      '<div><label for="lctSit">Situação</label><select id="lctSit">' + LICCT_SIT_FILTRO.map(function (x) { return '<option value="' + x[0] + '"' + (LICCT.filtro.situacao === x[0] ? " selected" : "") + ">" + Lic_esc_(x[1]) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="lic-acoes-linha lct-acoes" style="align-self:end"><button type="button" class="btn-secondary" data-lct-filtrar>Filtrar</button></div></div></div>';
+    h += '<div class="cm-caixa"><h3>Contratos (' + Lic_esc_((r.contratos || []).length) + " de " + Lic_esc_(r.total || 0) + ")</h3>" + ((r.contratos || []).length ? Lic_tabelaHtml_(["Contrato", "Órgão", "Vigência", "Situação", "Valor", "Vínculos", ""], r.contratos.map(function (x) {
+      return ['<span class="lic-mono">' + Lic_esc_(x.numeroContrato) + '</span><br><span class="cm-meta">' + Lic_esc_(x.tipoNome + " · " + x.numero + " · versão " + x.versao) + "</span>", Lic_esc_(x.orgao) + " · " + Lic_esc_(x.uf),
+        Lic_esc_(LicCt_dia_(x.inicio) + " a " + LicCt_dia_(x.fim)), LicCt_selo_(x.situacao.cor, x.situacao.nome) + (x.integra ? "" : " " + LicCt_selo_("vermelho", "alterado fora do SGO+")), Lic_esc_(Lic_brl_(x.valor)),
+        Lic_esc_((x.cliente ? "Cliente: " + x.cliente : "sem cliente") + (x.comercial ? " · Comercial " + x.comercial : "")), '<button type="button" class="btn-secondary" data-lct-ficha="' + Lic_esc_(x.opId) + '">Abrir o contrato</button>'];
+    })) : '<p class="cm-vazio">Nenhum contrato ' + (r.total ? "com este filtro" : "registrado ainda") + '. O contrato nasce na ficha da licitação, aba Contrato, depois do resultado.</p>') + "</div>";
+    h += '<div class="cm-caixa"><h3>Resultados prontos para virar contrato</h3><p class="cm-meta">Licitações em Resultado, sem contrato registrado.</p>' + ((r.prontos || []).length ? Lic_tabelaHtml_(["Licitação", "Órgão", "Itens ganhos", "Total", "Situação", ""], r.prontos.map(function (x) {
+      return ['<span class="lic-mono">' + Lic_esc_(x.codigo) + "</span>", Lic_esc_(x.orgao) + " · " + Lic_esc_(x.uf), Lic_esc_(x.itens), Lic_esc_(Lic_brl_(x.total)), x.pronto ? LicCt_selo_("verde", "pronto") : LicCt_selo_("laranja", "falta algo") + '<br><span class="cm-meta">' + Lic_esc_(x.porque) + "</span>",
+        '<button type="button" class="btn-secondary" data-lct-ficha="' + Lic_esc_(x.opId) + '">Registrar o contrato</button>'];
+    })) : '<p class="cm-vazio">Nenhum resultado esperando contrato.</p>') + "</div>";
+    return h;
+  }
+  function LicCt_ligarLista_(c) {
+    c.querySelectorAll("[data-lct-ficha]").forEach(function (b) { b.onclick = function () { Lic_irFicha_(b.getAttribute("data-lct-ficha"), "contrato"); }; });
+    var f = c.querySelector("[data-lct-filtrar]"); if (f) f.onclick = function () { LICCT.filtro = { busca: LicCt_valor_("lctBusca"), situacao: LicCt_valor_("lctSit") }; LicCt_renderLista_(); };
+  }
+
+  // ================= aba "Contrato" da ficha =================
+  function LicCt_htmlAba_(d) { return '<div id="licContrato">' + Lic_carregando_(2) + "</div>"; }
+  function LicCt_ligarAba_(c, d, id) {
+    LicCt_chamar_("tela", { id: id }, function (r) { LICCT.aba[id] = r; LicCt_desenhar_(id); },
+      function (m) { var el = Lic_$_("licContrato"); if (el) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, function () { LicCt_ligarAba_(c, d, id); }); } });
+  }
+  function LicCt_desenhar_(id) {
+    var el = Lic_$_("licContrato"), t = LICCT.aba[id]; if (!el || !t) return;
+    el.innerHTML = LicCt_htmlAbaDados_(t);
+    LicCt_ligarDados_(el, t, id);
+  }
+  function LicCt_htmlAbaDados_(t) { return Lic_faixa_(t.aviso || "", "aviso") + (t.contrato ? LicCt_htmlContrato_(t) : LicCt_htmlPrevia_(t)); }
+
+  /** Formulário do contrato (registro e versões). pre: prefixo dos ids; d: dados de partida; o: { itensEditaveis, manual }. */
+  function LicCt_formHtml_(pre, d, t, o) {
+    d = d || {}; o = o || {};
+    var resp = (t.responsaveis || []).map(function (u) { return '<option value="' + Lic_esc_(u.id) + '"' + ((d.responsavelId || (t.eu && t.eu.id)) === u.id ? " selected" : "") + ">" + Lic_esc_(u.nome) + "</option>"; }).join("");
+    var gar = '<option value="">Sem garantia</option>' + Object.keys(t.garantias || {}).map(function (k) { return '<option value="' + k + '"' + (d.garantiaTipo === k ? " selected" : "") + ">" + Lic_esc_(t.garantias[k]) + "</option>"; }).join("");
+    var tipos = Object.keys(t.tipos || {}).map(function (k) { return '<option value="' + k + '"' + ((d.tipo || "CONTRATO") === k ? " selected" : "") + ">" + Lic_esc_(t.tipos[k]) + "</option>"; }).join("");
+    LICCT.form[pre] = { itens: (d.itens || []).map(function (i) { return Object.assign({}, i); }), entregas: (d.entregas || []).map(function (e) { return Object.assign({}, e); }), obrigacoes: (d.obrigacoes || []).map(function (e) { return Object.assign({}, e); }), itensEditaveis: !!o.itensEditaveis };
+    return '<div class="lct-grade">' +
+      '<div><label for="' + pre + 'Num">Número do contrato ou da ata</label><input id="' + pre + 'Num" maxlength="60" value="' + Lic_esc_(d.numeroContrato || "") + '" placeholder="Ex.: 012/2026"></div>' +
+      '<div><label for="' + pre + 'Tipo">Tipo</label><select id="' + pre + 'Tipo">' + tipos + "</select></div>" +
+      '<div><label for="' + pre + 'Ass">Assinatura</label><input id="' + pre + 'Ass" type="date" value="' + Lic_esc_(d.assinatura || "") + '"></div>' +
+      '<div><label for="' + pre + 'Ini">Início da vigência</label><input id="' + pre + 'Ini" type="date" value="' + Lic_esc_(d.inicio || "") + '"></div>' +
+      '<div><label for="' + pre + 'Fim">Fim da vigência</label><input id="' + pre + 'Fim" type="date" value="' + Lic_esc_(d.fim || "") + '"></div>' +
+      '<div><label for="' + pre + 'Resp">Responsável (Diretoria)</label><select id="' + pre + 'Resp">' + resp + "</select></div>" +
+      '<fieldset><legend>Itens' + (o.itensEditaveis ? "" : " (do resultado homologado)") + '</legend><div id="' + pre + 'Itens"></div>' + (o.itensEditaveis && o.manual ? '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lct-add="itens" data-lct-pre="' + pre + '">Adicionar item</button></div>' : "") + "</fieldset>" +
+      '<fieldset><legend>Reajuste (se o edital disser)</legend><div class="lct-grade"><div><label for="' + pre + 'RjI">Índice</label><input id="' + pre + 'RjI" maxlength="80" value="' + Lic_esc_(d.reajusteIndice || "") + '" placeholder="Ex.: IPCA"></div>' +
+      '<div><label for="' + pre + 'RjD">Data-base</label><input id="' + pre + 'RjD" type="date" value="' + Lic_esc_(d.reajusteDataBase || "") + '"></div><div class="lct-largo"><label for="' + pre + 'RjF">De onde vem</label><input id="' + pre + 'RjF" maxlength="300" value="' + Lic_esc_(d.reajusteFonte || "") + '" placeholder="Ex.: cláusula 8 do contrato"></div></div></fieldset>' +
+      '<fieldset><legend>Garantia contratual</legend><div class="lct-grade"><div><label for="' + pre + 'GaT">Tipo</label><select id="' + pre + 'GaT">' + gar + "</select></div>" +
+      '<div><label for="' + pre + 'GaV">Valor</label><input id="' + pre + 'GaV" inputmode="decimal" value="' + Lic_esc_(LicCt_num_(d.garantiaValor)) + '" placeholder="Ex.: 925,00"></div><div><label for="' + pre + 'GaD">Validade</label><input id="' + pre + 'GaD" type="date" value="' + Lic_esc_(d.garantiaValidade || "") + '"></div>' +
+      '<div class="lct-largo"><label for="' + pre + 'GaF">De onde vem</label><input id="' + pre + 'GaF" maxlength="300" value="' + Lic_esc_(d.garantiaFonte || "") + '" placeholder="Ex.: cláusula 10, 5% do valor"></div></div></fieldset>' +
+      '<fieldset><legend>Renovação</legend><div class="lct-grade"><div><label class="lct-aceite"><input type="checkbox" id="' + pre + 'RnP"' + (d.renovacaoPrevista ? " checked" : "") + '> <span>Renovação prevista</span></label></div>' +
+      '<div><label for="' + pre + 'RnD">Decidir até (vazio: 60 dias antes do fim)</label><input id="' + pre + 'RnD" type="date" value="' + Lic_esc_(d.renovacaoDecidirAte || "") + '"></div></div></fieldset>' +
+      '<fieldset><legend>Entregas (prazo e valor para a previsão de faturamento)</legend><div id="' + pre + 'Ent"></div><div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lct-add="entregas" data-lct-pre="' + pre + '">Adicionar entrega</button></div></fieldset>' +
+      '<fieldset><legend>Obrigações</legend><div id="' + pre + 'Obr"></div><div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lct-add="obrigacoes" data-lct-pre="' + pre + '">Adicionar obrigação</button></div></fieldset>' +
+      '<div class="lct-largo"><label for="' + pre + 'Obs">Observações</label><textarea id="' + pre + 'Obs" rows="2" maxlength="1000">' + Lic_esc_(d.obs || "") + "</textarea></div></div>";
+  }
+  function LicCt_linhasHtml_(pre, lista) {
+    var f = LICCT.form[pre]; if (!f) return "";
+    if (lista === "itens") return f.itens.length ? f.itens.map(function (i, n) {
+      if (!f.itensEditaveis) return '<div class="lct-linha"><div><b>Item ' + Lic_esc_(i.item) + "</b> · " + Lic_esc_(i.codigo || "") + " " + Lic_esc_(i.nome || i.descricao || "") + '</div><div><label for="' + pre + "iQ" + n + '">Quantidade</label><input id="' + pre + "iQ" + n + '" inputmode="decimal" value="' + Lic_esc_(LicCt_num_(i.quantidade)) + '"></div><div><span class="cm-meta">Valor unitário homologado</span><br><b>' + Lic_esc_(Lic_brl_(i.valorUnit)) + "</b></div></div>";
+      return '<div class="lct-linha"><div><label for="' + pre + "iN" + n + '">Item</label><input id="' + pre + "iN" + n + '" maxlength="20" value="' + Lic_esc_(i.item || "") + '"></div><div><label for="' + pre + "iC" + n + '">Código</label><input id="' + pre + "iC" + n + '" maxlength="20" value="' + Lic_esc_(i.codigo || "") + '" placeholder="CAL-001"></div>' +
+        '<div><label for="' + pre + "iD" + n + '">Serviço</label><input id="' + pre + "iD" + n + '" maxlength="200" value="' + Lic_esc_(i.nome || i.descricao || "") + '"></div><div><label for="' + pre + "iQ" + n + '">Quantidade</label><input id="' + pre + "iQ" + n + '" inputmode="decimal" value="' + Lic_esc_(LicCt_num_(i.quantidade)) + '"></div>' +
+        '<div><label for="' + pre + "iV" + n + '">Valor unitário</label><input id="' + pre + "iV" + n + '" inputmode="decimal" value="' + Lic_esc_(LicCt_num_(i.valorUnit)) + '"></div><div><button type="button" class="btn-secondary" data-lct-del="itens" data-lct-pre="' + pre + '" data-lct-n="' + n + '">Tirar</button></div></div>';
+    }).join("") : '<p class="cm-vazio">Nenhum item. Toque em "Adicionar item".</p>';
+    var arr = lista === "entregas" ? f.entregas : f.obrigacoes, k = lista === "entregas" ? "e" : "o";
+    return arr.length ? arr.map(function (e, n) {
+      return '<div class="lct-linha"><div><label for="' + pre + k + "D" + n + '">Descrição</label><input id="' + pre + k + "D" + n + '" maxlength="300" value="' + Lic_esc_(e.descricao || "") + '"></div><div><label for="' + pre + k + "P" + n + '">Prazo</label><input id="' + pre + k + "P" + n + '" type="date" value="' + Lic_esc_(e.prazo || "") + '"></div>' +
+        (k === "e" ? '<div><label for="' + pre + "eV" + n + '">Valor (opcional)</label><input id="' + pre + "eV" + n + '" inputmode="decimal" value="' + Lic_esc_(LicCt_num_(e.valor)) + '"></div>' : "") + '<div><button type="button" class="btn-secondary" data-lct-del="' + lista + '" data-lct-pre="' + pre + '" data-lct-n="' + n + '">Tirar</button></div></div>';
+    }).join("") : '<p class="cm-vazio">Nenhuma.</p>';
+  }
+  /** Lê as linhas da tela para o estado (antes de adicionar, tirar ou gravar). */
+  function LicCt_lerLinhas_(pre) {
+    var f = LICCT.form[pre]; if (!f) return;
+    f.itens.forEach(function (i, n) { if (Lic_$_(pre + "iQ" + n)) i.quantidade = LicCt_valor_(pre + "iQ" + n); if (f.itensEditaveis && Lic_$_(pre + "iN" + n)) { i.item = LicCt_valor_(pre + "iN" + n); i.codigo = LicCt_valor_(pre + "iC" + n); i.nome = LicCt_valor_(pre + "iD" + n); i.valorUnit = LicCt_valor_(pre + "iV" + n); } });
+    f.entregas.forEach(function (e, n) { if (Lic_$_(pre + "eD" + n)) { e.descricao = LicCt_valor_(pre + "eD" + n); e.prazo = LicCt_valor_(pre + "eP" + n); e.valor = LicCt_valor_(pre + "eV" + n); } });
+    f.obrigacoes.forEach(function (e, n) { if (Lic_$_(pre + "oD" + n)) { e.descricao = LicCt_valor_(pre + "oD" + n); e.prazo = LicCt_valor_(pre + "oP" + n); } });
+  }
+  function LicCt_redesenharLinhas_(raiz, pre) {
+    [["itens", "Itens"], ["entregas", "Ent"], ["obrigacoes", "Obr"]].forEach(function (x) { var el = Lic_$_(pre + x[1]); if (el) el.innerHTML = LicCt_linhasHtml_(pre, x[0]); });
+    (raiz || document).querySelectorAll("[data-lct-del]").forEach(function (b) { b.onclick = function () { var p = b.getAttribute("data-lct-pre"), l = b.getAttribute("data-lct-del"); LicCt_lerLinhas_(p); LICCT.form[p][l].splice(Number(b.getAttribute("data-lct-n")), 1); LicCt_redesenharLinhas_(raiz, p); }; });
+  }
+  function LicCt_ligarForm_(raiz, pre) {
+    LicCt_redesenharLinhas_(raiz, pre);
+    (raiz || document).querySelectorAll('[data-lct-add][data-lct-pre="' + pre + '"]').forEach(function (b) { b.onclick = function () { var l = b.getAttribute("data-lct-add"); LicCt_lerLinhas_(pre); LICCT.form[pre][l].push(l === "itens" ? { item: String(LICCT.form[pre].itens.length + 1) } : {}); LicCt_redesenharLinhas_(raiz, pre); }; });
+  }
+  function LicCt_lerForm_(pre) {
+    LicCt_lerLinhas_(pre);
+    var f = LICCT.form[pre] || { itens: [], entregas: [], obrigacoes: [] };
+    return { numeroContrato: LicCt_valor_(pre + "Num"), tipo: LicCt_valor_(pre + "Tipo"), assinatura: LicCt_valor_(pre + "Ass"), inicio: LicCt_valor_(pre + "Ini"), fim: LicCt_valor_(pre + "Fim"), responsavelId: LicCt_valor_(pre + "Resp"),
+      itens: f.itens.map(function (i) { return { item: i.item, codigo: i.codigo, nome: i.nome, descricao: i.descricao, quantidade: i.quantidade, valorUnit: i.valorUnit }; }),
+      reajusteIndice: LicCt_valor_(pre + "RjI"), reajusteDataBase: LicCt_valor_(pre + "RjD"), reajusteFonte: LicCt_valor_(pre + "RjF"), garantiaTipo: LicCt_valor_(pre + "GaT"), garantiaValor: LicCt_valor_(pre + "GaV"), garantiaValidade: LicCt_valor_(pre + "GaD"), garantiaFonte: LicCt_valor_(pre + "GaF"),
+      renovacaoPrevista: LicCt_marcado_(pre + "RnP"), renovacaoDecidirAte: LicCt_valor_(pre + "RnD"), entregas: f.entregas.filter(function (e) { return String(e.descricao || "").trim() || e.prazo; }), obrigacoes: f.obrigacoes.filter(function (e) { return String(e.descricao || "").trim(); }), obs: LicCt_valor_(pre + "Obs") };
+  }
+  /** Arquivo escolhido (PDF ou imagem até 10 MB): lê e chama fn(arquivo | null); erro vai para msg. */
+  function LicCt_arquivo_(inputId, msg, fn) {
+    var inp = Lic_$_(inputId), f = inp && inp.files && inp.files[0];
+    if (!f) { fn(null); return; }
+    if (f.size > 10 * 1024 * 1024) { if (msg) msg.innerHTML = Lic_faixa_("O arquivo passa de 10 MB. Salve o PDF em tamanho menor e escolha de novo. Nada foi gravado.", "erro"); return; }
+    var rd = new FileReader();
+    rd.onload = function () { fn({ nome: f.name, tipo: f.type, base64: String(rd.result || "").replace(/^data:[^,]*,/, "") }); };
+    rd.onerror = function () { if (msg) msg.innerHTML = Lic_faixa_("Não foi possível ler o arquivo no aparelho. Escolha de novo. Nada foi gravado.", "erro"); };
+    rd.readAsDataURL(f);
+  }
+
+  // ---------- prévia (sem contrato)
+  function LicCt_htmlPrevia_(t) {
+    var p = t.previa || {}, r = p.resultado || {}, m = p.manual || {}, h = "";
+    h += '<div class="cm-caixa"><h3>Registrar o contrato pelo resultado homologado</h3><p class="cm-txt">Os itens ganhos, o valor final e a homologação vêm do resultado da disputa (aba Disputa). Complete o número, a vigência, o reajuste, a garantia, as entregas e as obrigações como estão no contrato assinado. A licitação vai para "Contrato" no Kanban, com o motivo no histórico.</p>';
+    if ((r.bloqueios || []).length) h += Lic_faixa_("<b>Antes de registrar pelo resultado:</b><ul class=\"lct-lista\">" + r.bloqueios.map(function (b) { return "<li>" + Lic_esc_(b) + "</li>"; }).join("") + "</ul>", "erro", true) + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-ir="disputa">Ir para a aba Disputa</button></div>';
+    if (r.pode && r.base) h += LicCt_formHtml_("lctR", r.base, t, { itensEditaveis: false }) + '<div class="lct-grade"><div class="lct-largo"><label for="lctRArq">Contrato assinado (PDF ou foto, até 10 MB; opcional agora)</label><input id="lctRArq" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*"></div>' +
+      '<div class="lct-largo"><label for="lctRMot">Motivo (obrigatório)</label><textarea id="lctRMot" rows="2" maxlength="1000" placeholder="Ex.: contrato assinado recebido do órgão por e-mail"></textarea></div></div><div id="lctRMsg" aria-live="assertive"></div>' +
+      '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-primary" data-lct-criar="RESULTADO">Registrar o contrato</button></div>';
+    else h += '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-primary" disabled aria-disabled="true">Registrar o contrato</button></div>';
+    h += "</div>";
+    h += '<details class="cm-caixa lct-det"' + (!r.pode && m.pode ? " open" : "") + '><summary>Registro manual (resultado fora do SGO+ ou homologação pendente)</summary><p class="cm-txt">Use quando a disputa não foi registrada no SGO+ ou o resultado tem pendência. Os itens são digitados do resultado publicado, com a fonte e o motivo (pelo menos 20 letras).</p>';
+    if ((m.bloqueios || []).length) h += Lic_faixa_("<ul class=\"lct-lista\">" + m.bloqueios.map(function (b) { return "<li>" + Lic_esc_(b) + "</li>"; }).join("") + "</ul>", "erro", true);
+    else h += LicCt_formHtml_("lctM", m.base, t, { itensEditaveis: true, manual: true }) + '<div class="lct-grade"><div class="lct-largo"><label for="lctMFonte">Fonte do resultado (obrigatória)</label><input id="lctMFonte" maxlength="300" placeholder="Ex.: termo de homologação publicado no PNCP em 20/11/2026"></div>' +
+      '<div class="lct-largo"><label for="lctMArq">Contrato assinado (opcional agora)</label><input id="lctMArq" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*"></div><div class="lct-largo"><label for="lctMMot">Motivo (obrigatório, pelo menos 20 letras)</label><textarea id="lctMMot" rows="2" maxlength="1000"></textarea></div></div><div id="lctMMsg" aria-live="assertive"></div>' +
+      '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-primary" data-lct-criar="MANUAL">Registrar manualmente</button></div>';
+    return h + "</details>";
+  }
+
+  // ---------- contrato registrado
+  function LicCt_htmlContrato_(t) {
+    var m = t.contrato, d = m.dados || {}, ig = t.integracao || {}, h = "";
+    h += '<div class="cm-caixa"><div class="lic-acoes-linha" style="justify-content:space-between"><h3 style="margin:0">' + Lic_esc_(m.tipoNome + " " + m.numeroContrato) + " " + LicCt_selo_(m.situacaoTela.cor, m.situacaoTela.nome) + (m.cadeia.integra ? "" : " " + LicCt_selo_("vermelho", "alterado fora do SGO+")) + "</h3></div>" +
+      (m.cadeia.integra ? "" : Lic_faixa_("O registro do contrato não confere com o hash gravado (" + m.cadeia.problema + "). O SGO+ não grava versões novas até o Administrador conferir a planilha.", "erro")) +
+      '<div class="lct-dl"><div><span>Registro no SGO+</span><b>' + Lic_esc_(m.numero + " · versão " + m.versao) + "</b></div><div><span>Vigência</span><b>" + Lic_esc_(LicCt_dia_(d.inicio) + " a " + LicCt_dia_(d.fim)) + "</b></div><div><span>Valor total</span><b>" + Lic_esc_(Lic_brl_(d.valorTotal)) + "</b></div>" +
+      "<div><span>Responsável</span><b>" + Lic_esc_(d.responsavelNome) + "</b></div><div><span>Origem</span><b>" + Lic_esc_(m.origemNome) + "</b></div><div><span>Assinatura</span><b>" + Lic_esc_(LicCt_dia_(d.assinatura) || "—") + "</b></div>" +
+      "<div><span>Contrato assinado</span><b>" + (m.arquivo ? Lic_esc_(m.arquivo.nome) + " · " + LicCt_curto_(m.arquivo.sha256) : "não anexado") + "</b></div></div>" +
+      '<div class="lic-acoes-linha lct-acoes">' + (m.arquivo ? '<button type="button" class="btn-secondary" data-lct-arq="">Abrir o contrato assinado</button><button type="button" class="btn-secondary" data-lct-arq-baixar="">Baixar</button>' : "") +
+      '<button type="button" class="btn-primary" data-lct-versao>Nova versão (correção, aditivo, reajuste, encerramento)</button><button type="button" class="btn-secondary" data-lct-rel>Relatório do contrato (A4)</button></div></div>';
+    h += '<div class="cm-caixa"><h3>Itens</h3>' + Lic_tabelaHtml_(["Item", "Serviço", "Qtd.", "Valor unitário", "Total"], (d.itens || []).map(function (i) { return [Lic_esc_(i.item), "<b>" + Lic_esc_(i.codigo || "") + "</b> " + Lic_esc_(i.nome || i.descricao || ""), Lic_esc_(LicCt_qtd_(i.quantidade)), Lic_esc_(Lic_brl_(i.valorUnit)), Lic_esc_(Lic_brl_(i.total))]; })) +
+      '<div class="lct-dl"><div><span>Reajuste</span><b>' + Lic_esc_(d.reajusteIndice ? d.reajusteIndice + ", data-base " + LicCt_dia_(d.reajusteDataBase) + " (" + d.reajusteFonte + ")" : "não previsto") + "</b></div><div><span>Garantia</span><b>" +
+      Lic_esc_(d.garantiaTipo ? (t.garantias[d.garantiaTipo] || d.garantiaTipo) + ", " + Lic_brl_(d.garantiaValor) + ", validade " + LicCt_dia_(d.garantiaValidade) : "não exigida") + "</b></div><div><span>Renovação</span><b>" + Lic_esc_(d.renovacaoPrevista ? "prevista" + (d.renovacaoDecidirAte ? ", decidir até " + LicCt_dia_(d.renovacaoDecidirAte) : " (decidir 60 dias antes do fim)") : "não prevista") + "</b></div></div></div>";
+    h += '<div class="cm-caixa"><h3>Prazos na agenda (' + Lic_esc_(m.eventos.length) + ')</h3><p class="cm-meta">Natureza confirmada (do contrato assinado). Os alertas vão para a Diretoria de Licitações (Central de alertas, e-mail e WhatsApp pelo modelo aprovado).</p>' +
+      (m.eventos.length ? Lic_tabelaHtml_(["Prazo", "Quando", "Situação", "Versão", "Alertas"], m.eventos.map(function (e) { return [Lic_esc_(e.nome) + (e.regra ? '<br><span class="cm-meta">' + Lic_esc_(e.regra) + "</span>" : ""), Lic_esc_(e.quandoTxt), Lic_esc_(e.situacaoNome), Lic_esc_(e.versao), Lic_esc_(e.alertas || 0)]; })) : '<p class="cm-vazio">Nenhum prazo (contrato encerrado ou sem datas).</p>') + "</div>";
+    var pv = m.previsao || { meses: [] };
+    h += '<div class="cm-caixa"><h3>Previsão de faturamento (' + Lic_esc_(pv.baseNome || "") + ")</h3>" + Lic_tabelaHtml_(["Mês", "Entregas", "Valor previsto"], pv.meses.map(function (x) { return [Lic_esc_(x.rotulo), Lic_esc_(x.itens.join("; ") || "—"), Lic_esc_(Lic_brl_(x.valor))]; }).concat([["<b>Total</b>", "", "<b>" + Lic_esc_(Lic_brl_(pv.total)) + "</b>"]])) +
+      (pv.aviso ? Lic_faixa_(pv.aviso, "aviso") : "") + '<p class="cm-meta">' + Lic_esc_(pv.dependencia || "") + "</p></div>";
+    h += LicCt_htmlIntegracao_(t, m, ig);
+    h += '<details class="cm-caixa lct-det"><summary>Versões (' + Lic_esc_(m.versoes.length) + ") e vínculos (" + Lic_esc_(m.vinculos.length) + ")</summary>" + Lic_tabelaHtml_(["Versão", "Tipo", "O que mudou", "Motivo", "Quem e quando", "Arquivo"], m.versoes.map(function (v) {
+      return [Lic_esc_(v.versao) + (v.integra ? "" : " " + LicCt_selo_("vermelho", "alterada")), Lic_esc_(v.tipoNome + (v.aditivo ? " " + v.aditivo : "")), Lic_esc_(v.mudou), Lic_esc_(v.motivo + (v.fonte ? " · " + v.fonte : "")), Lic_esc_(v.por + " · " + v.emBr),
+        v.arquivo ? '<button type="button" class="btn-secondary" data-lct-arq="' + Lic_esc_(v.id) + '">' + Lic_esc_(v.arquivo.nome) + "</button>" : "—"];
+    })) + (m.vinculos.length ? Lic_tabelaHtml_(["Módulo", "O que foi feito", "Quem e quando"], m.vinculos.map(function (v) { return [Lic_esc_(v.modulo), Lic_esc_(v.texto + (v.motivo ? " (motivo: " + v.motivo + ")" : "")), Lic_esc_(v.por + " · " + v.emBr)]; })) : "") + "</details>";
+    return h;
+  }
+  function LicCt_htmlIntegracao_(t, m, ig) {
+    var cl = ig.cliente || {}, co = ig.comercial || {}, ag = ig.agendaUnica || {}, ex = ig.execucao || {}, h = '<div class="cm-caixa"><h3>Integração com os módulos do SGO+</h3><p class="cm-meta">Nada é criado em outro módulo sem você tocar no botão e confirmar.</p><div class="lct-duas">';
+    // cliente
+    h += '<div><h4>Cliente (cadastro único)</h4>';
+    if (cl.vinculado) h += '<p class="cm-txt">' + LicCt_selo_("verde", "vinculado") + " " + Lic_esc_(cl.vinculado.nome) + "</p>";
+    else if (!cl.cnpjValido) h += Lic_faixa_(cl.semCnpj, "aviso");
+    else if ((cl.encontrados || []).length) h += '<p class="cm-txt">CNPJ do órgão no PNCP: <span class="lic-mono">' + Lic_esc_(cl.cnpj) + "</span>. Já está no cadastro:</p>" + '<ul class="lct-lista">' + cl.encontrados.map(function (x) {
+      return "<li><b>" + Lic_esc_(x.fantasia || x.razao) + "</b> · " + Lic_esc_(x.cnpj) + " · " + Lic_esc_(x.onde) + (x.status === "INATIVO" ? " " + LicCt_selo_("cinza", "inativo") : ' <button type="button" class="btn-secondary" data-lct-vincular="' + Lic_esc_(x.id) + '">Vincular</button>') + "</li>";
+    }).join("") + "</ul>";
+    else h += '<p class="cm-txt">O CNPJ do órgão (<span class="lic-mono">' + Lic_esc_(cl.cnpj) + "</span>) não está no cadastro de clientes.</p>" + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-primary" data-lct-cli-criar>Cadastrar o órgão como cliente</button></div>';
+    h += "</div>";
+    // comercial
+    h += '<div><h4>Comercial (oportunidade ganha)</h4>';
+    if (co.vinculado) h += '<p class="cm-txt">' + LicCt_selo_("verde", "no Comercial") + " oportunidade " + Lic_esc_(co.vinculado.codigo) + "</p>";
+    else if (co.jaExiste) h += Lic_faixa_(co.porque, "aviso") + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-com-vincular="' + Lic_esc_(co.jaExiste.id) + '">Vincular a existente</button></div>';
+    else if (co.porque) h += Lic_faixa_(co.porque, "aviso");
+    else h += '<div class="lct-grade">' + (co.unidades.length ? '<div><label for="lctComUn">Unidade</label><select id="lctComUn">' + co.unidades.map(function (u) { return '<option value="' + Lic_esc_(u.id) + '">' + Lic_esc_(u.nome) + "</option>"; }).join("") + "</select></div>" : "") +
+      '<div><label for="lctComCt">Contato do órgão</label><select id="lctComCt">' + co.contatos.map(function (c) { return '<option value="' + Lic_esc_(c.id) + '">' + Lic_esc_(c.nome + (c.cargo ? " (" + c.cargo + ")" : "")) + "</option>"; }).join("") + "</select></div></div>" +
+      '<p class="cm-meta">Cria a oportunidade com origem "Licitação" e a marca como ganha. Nenhuma proposta é criada no Comercial.</p><div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-primary" data-lct-com>Registrar como ganha no Comercial</button></div>';
+    h += "</div>";
+    // agenda única
+    h += '<div><h4>Agenda única (Minhas atividades)</h4><ul class="lct-lista">' + (ag.marcos || []).map(function (x) {
+      return "<li>" + Lic_esc_(x.nome) + " · " + Lic_esc_(LicCt_dia_(x.dia)) + " " + (x.atividade ? LicCt_selo_(x.atividade.desatualizada ? "laranja" : "verde", x.atividade.desatualizada ? "na agenda com o prazo antigo (" + LicCt_dia_(x.atividade.dia) + ")" : "na agenda única") : x.passou ? LicCt_selo_("cinza", "já passou") : LicCt_selo_("azul", "a levar")) + "</li>";
+    }).join("") + "</ul>" + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-agenda' + (ag.aLevar ? "" : ' disabled aria-disabled="true"') + ">Levar " + Lic_esc_(ag.aLevar || 0) + " marco(s) à agenda única</button></div></div>";
+    // execução
+    h += '<div><h4>Planejar a execução</h4><p class="cm-meta">' + Lic_esc_(ex.aviso || "") + "</p>" + (ex.grupos || []).map(function (g) {
+      return '<div class="cm-caixa" style="margin:6px 0"><b>' + Lic_esc_(g.nome) + "</b>" + '<ul class="lct-lista">' + g.itens.map(function (i) { return "<li>Item " + Lic_esc_(i.item) + ": " + Lic_esc_(LicCt_qtd_(i.quantidade)) + " · " + Lic_esc_((i.codigo ? i.codigo + " " : "") + (i.nome || "")) + "</li>"; }).join("") + "</ul>" +
+        '<p class="cm-meta">No SGO+: ' + Lic_esc_(g.existe) + ". " + Lic_esc_(g.dependencia) + "</p>" + (g.criado ? '<p class="cm-txt">' + LicCt_selo_("verde", "planejamento lançado") + " " + Lic_esc_(g.criado.texto) + "</p>" :
+          '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-exec="' + Lic_esc_(g.area) + '">Criar o planejamento</button></div>') + "</div>";
+    }).join("") + "</div>";
+    h += '</div><details class="lct-det"><summary>Módulos sem integração (dependência declarada)</summary><ul class="lct-lista">' + (t.dependencias || []).map(function (x) { return "<li><b>" + Lic_esc_(x.modulo) + ":</b> " + Lic_esc_(x.texto) + "</li>"; }).join("") + "</ul></details></div>";
+    return h;
+  }
+
+  // ---------- ações
+  function LicCt_ligarDados_(el, t, id) {
+    el.querySelectorAll("[data-lct-ir]").forEach(function (b) { b.onclick = function () { if (typeof LIC !== "undefined") { LIC.fichaAba = b.getAttribute("data-lct-ir"); Lic_irFicha_(id, LIC.fichaAba); } }; });
+    if (!t.contrato) {
+      if (Lic_$_("lctRNum")) LicCt_ligarForm_(el, "lctR");
+      if (Lic_$_("lctMNum")) LicCt_ligarForm_(el, "lctM");
+      el.querySelectorAll("[data-lct-criar]").forEach(function (b) { b.onclick = function () { LicCt_criar_(id, b.getAttribute("data-lct-criar"), b); }; });
+      return;
+    }
+    el.querySelectorAll("[data-lct-arq]").forEach(function (b) { b.onclick = function () { LicCt_abrirArquivo_(id, b.getAttribute("data-lct-arq"), false); }; });
+    el.querySelectorAll("[data-lct-arq-baixar]").forEach(function (b) { b.onclick = function () { LicCt_abrirArquivo_(id, "", true); }; });
+    var v = el.querySelector("[data-lct-versao]"); if (v) v.onclick = function () { LicCt_janelaVersao_(id, v); };
+    var rl = el.querySelector("[data-lct-rel]"); if (rl) rl.onclick = function () { LicCt_relatorio_(id, rl); };
+    el.querySelectorAll("[data-lct-vincular]").forEach(function (b) { b.onclick = function () { LicCt_janelaConfirmar_(id, "clienteVincular", { clienteId: b.getAttribute("data-lct-vincular") }, "Vincular ao cliente", "O contrato passa a apontar para este cliente do cadastro único. Nenhum cadastro é criado nem alterado.", false, b); }; });
+    var cc = el.querySelector("[data-lct-cli-criar]"); if (cc) cc.onclick = function () { LicCt_janelaCliente_(id, t, cc); };
+    var cm = el.querySelector("[data-lct-com]"); if (cm) cm.onclick = function () { LicCt_janelaConfirmar_(id, "comercial", { unidadeId: LicCt_valor_("lctComUn"), contatoId: LicCt_valor_("lctComCt") }, "Registrar como ganha no Comercial", "Cria no Comercial a oportunidade (origem Licitação, valor do contrato) e a marca como ganha. Nenhuma proposta é criada no Comercial.", false, cm); };
+    var cv = el.querySelector("[data-lct-com-vincular]"); if (cv) cv.onclick = function () { LicCt_janelaConfirmar_(id, "comercial", { vincularId: cv.getAttribute("data-lct-com-vincular") }, "Vincular à oportunidade do Comercial", "O contrato passa a apontar para a oportunidade que já existe. Nada é criado.", false, cv); };
+    var ag = el.querySelector("[data-lct-agenda]"); if (ag) ag.onclick = function () { LicCt_janelaConfirmar_(id, "agendaUnica", { confirmar: true }, "Levar à agenda única", "Lança uma atividade em Minhas atividades para cada marco futuro do contrato, para o responsável (" + (t.integracao.agendaUnica.responsavel || "") + "). Marco já levado não se repete.", false, ag); };
+    el.querySelectorAll("[data-lct-exec]").forEach(function (b) { b.onclick = function () { LicCt_janelaExecucao_(id, t, b.getAttribute("data-lct-exec"), b); }; });
+  }
+  function LicCt_criar_(id, origem, bt) {
+    var pre = origem === "MANUAL" ? "lctM" : "lctR", msg = Lic_$_(pre + "Msg"), mot = LicCt_valor_(pre + "Mot");
+    if (mot.trim().length < (origem === "MANUAL" ? 20 : 10)) { if (msg) msg.innerHTML = Lic_faixa_("Escreva o motivo com pelo menos " + (origem === "MANUAL" ? 20 : 10) + " letras. Nada foi gravado.", "erro"); return; }
+    var campos = LicCt_lerForm_(pre);
+    LicCt_arquivo_(pre + "Arq", msg, function (arquivo) {
+      bt.disabled = true;
+      LicCt_chamar_("criar", { id: id, origem: origem, motivo: mot, fonte: LicCt_valor_("lctMFonte"), campos: campos, arquivo: arquivo }, function (r) { Lic_toast_(r.texto || "Contrato registrado."); LicCt_ligarAba_(null, null, id); },
+        function (m) { bt.disabled = false; if (msg) msg.innerHTML = Lic_faixa_(m, "erro"); }, { carregando: arquivo ? "Guardando o contrato e calculando o SHA-256…" : "" });
+    });
+  }
+  function LicCt_janelaConfirmar_(id, op, dados, titulo, texto, comMotivo, origem) {
+    var ov = Lic_janela_(titulo, '<p class="cm-txt">' + Lic_esc_(texto) + '</p><div class="cm-campo"><label for="lctMotJ">Motivo' + (comMotivo ? " (obrigatório)" : " (opcional)") + '</label><textarea id="lctMotJ" rows="2" maxlength="1000"></textarea></div><div id="lctMotMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lct-ok>Confirmar</button>', origem);
+    ov.querySelector("[data-lct-ok]").onclick = function () {
+      var bt = this, mot = LicCt_valor_("lctMotJ");
+      if (comMotivo && mot.trim().length < 10) { Lic_$_("lctMotMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi gravado.", "erro"); return; }
+      bt.disabled = true;
+      LicCt_chamar_(op, Object.assign({ id: id, motivo: mot }, dados), function (r) { ov.fechar(); Lic_toast_(r.texto || "Feito.", r.erros && r.erros.length ? "erro" : "ok"); LicCt_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; Lic_$_("lctMotMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicCt_janelaCliente_(id, t, origem) {
+    var cl = t.integracao.cliente, s = cl.sugestao || {}, campo = function (k, rot, v, extra) { return '<div' + (extra || "") + '><label for="lctCl' + k + '">' + Lic_esc_(rot) + '</label><input id="lctCl' + k + '" maxlength="200" value="' + Lic_esc_(v || "") + '"></div>'; };
+    var corpo = '<p class="cm-txt">Dados públicos do PNCP já preenchidos (' + Lic_esc_(cl.fontePublica) + '). Complete com o contrato ou o edital: o cadastro de clientes exige endereço, contato, e-mail e telefone. O CNPJ é o do órgão e não muda.</p><div class="lct-grade">' +
+      campo("RAZAO_SOCIAL", "Razão social", s.RAZAO_SOCIAL, ' class="lct-largo"') + campo("NOME_FANTASIA", "Nome fantasia", "") + '<div><label>CNPJ (do PNCP)</label><input value="' + Lic_esc_(cl.cnpj) + '" disabled></div>' + campo("CEP", "CEP", "") + campo("LOGRADOURO", "Logradouro", "") + campo("NUMERO", "Número", "") +
+      campo("COMPLEMENTO", "Complemento", "") + campo("BAIRRO", "Bairro", "") + campo("CIDADE", "Cidade", s.CIDADE) + campo("UF", "UF", s.UF) + campo("CONTATO", "Contato (gestor ou fiscal do contrato)", "") + campo("EMAIL", "E-mail", "") + campo("TELEFONE", "Telefone", "") +
+      '<div class="lct-largo"><label class="lct-aceite"><input type="checkbox" id="lctClCiente"> <span>' + Lic_esc_(cl.ciente) + "</span></label></div></div>" + '<div id="lctClMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_("Cadastrar o órgão como cliente", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lct-ok>Cadastrar e vincular</button>', origem);
+    ov.querySelector("[data-lct-ok]").onclick = function () {
+      var bt = this, c = {};
+      ["RAZAO_SOCIAL", "NOME_FANTASIA", "CEP", "LOGRADOURO", "NUMERO", "COMPLEMENTO", "BAIRRO", "CIDADE", "UF", "CONTATO", "EMAIL", "TELEFONE"].forEach(function (k) { c[k] = LicCt_valor_("lctCl" + k); });
+      c.CIENTE = LicCt_marcado_("lctClCiente");
+      bt.disabled = true;
+      LicCt_chamar_("clienteCriar", { id: id, cliente: c }, function (r) {
+        if (!r.criado) { bt.disabled = false; Lic_$_("lctClMsg").innerHTML = Lic_faixa_(r.texto + ((r.faltam || []).length ? "<ul class=\"lct-lista\">" + r.faltam.map(function (f) { return "<li>" + Lic_esc_(f.texto) + "</li>"; }).join("") + "</ul>" : ""), "erro", true); return; }
+        ov.fechar(); Lic_toast_(r.texto); LicCt_ligarAba_(null, null, id);
+      }, function (m) { bt.disabled = false; Lic_$_("lctClMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicCt_janelaExecucao_(id, t, area, origem) {
+    var ex = t.integracao.execucao, g = (ex.grupos || []).filter(function (x) { return x.area === area; })[0] || {};
+    var corpo = '<p class="cm-txt">Lança em Minhas atividades a atividade de planejamento de <b>' + Lic_esc_(g.nome) + "</b> (" + Lic_esc_(g.onde) + "), com os itens, as quantidades e as entregas, sem valores. Nenhuma O.S., chamado ou requisição é criado.</p>" +
+      '<div class="lct-grade"><div><label for="lctExResp">Quem planeja</label><select id="lctExResp"><option value="">Escolha</option>' + (ex.usuarios || []).map(function (u) { return '<option value="' + Lic_esc_(u.id) + '">' + Lic_esc_(u.nome) + "</option>"; }).join("") + "</select></div>" +
+      '<div><label for="lctExPrazo">Prazo (vazio: o início do contrato)</label><input id="lctExPrazo" type="date"></div><div class="lct-largo"><label for="lctExObs">Observação</label><textarea id="lctExObs" rows="2" maxlength="800"></textarea></div></div><div id="lctExMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_("Planejar a execução", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lct-ok>Criar o planejamento</button>', origem);
+    ov.querySelector("[data-lct-ok]").onclick = function () {
+      var bt = this; bt.disabled = true;
+      LicCt_chamar_("execucao", { id: id, area: area, responsavelId: LicCt_valor_("lctExResp"), prazo: LicCt_valor_("lctExPrazo"), obs: LicCt_valor_("lctExObs"), confirmar: true }, function (r) { ov.fechar(); Lic_toast_(r.texto); LicCt_ligarAba_(null, null, id); },
+        function (m) { bt.disabled = false; Lic_$_("lctExMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicCt_janelaVersao_(id, origem) {
+    var t = LICCT.aba[id], m = t.contrato;
+    var tipos = ["CORRECAO", "ADITIVO", "APOSTILAMENTO", "ENCERRAMENTO"].map(function (k) { return '<option value="' + k + '">' + Lic_esc_(t.versoesTipos[k]) + "</option>"; }).join("");
+    var corpo = '<div class="lct-grade"><div><label for="lctVTipo">Tipo da versão</label><select id="lctVTipo">' + tipos + '</select></div><div><label for="lctVAd">Número do aditivo</label><input id="lctVAd" maxlength="40" placeholder="Ex.: 1º termo aditivo"></div>' +
+      '<div><label for="lctVSit">Encerramento</label><select id="lctVSit"><option value="">—</option><option value="ENCERRADO">Encerrado (cumprido)</option><option value="RESCINDIDO">Rescindido</option></select></div>' +
+      '<div class="lct-largo"><label for="lctVFonte">Fonte (aditivo, apostilamento e encerramento)</label><input id="lctVFonte" maxlength="300" placeholder="Ex.: termo aditivo publicado no PNCP em 10/03/2027"></div></div>' +
+      LicCt_formHtml_("lctV", m.dados, t, { itensEditaveis: true, manual: true }) +
+      '<div class="lct-grade"><div class="lct-largo"><label for="lctVArq">Arquivo (termo aditivo ou contrato assinado, opcional)</label><input id="lctVArq" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*"></div>' +
+      '<div class="lct-largo"><label for="lctVMot">Motivo (obrigatório)</label><textarea id="lctVMot" rows="2" maxlength="1000"></textarea></div></div><p class="cm-ajuda-campo">Só o que mudou entra na versão nova; a anterior fica no histórico. Nada é apagado.</p><div id="lctVMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_("Nova versão do contrato " + m.numeroContrato, corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lct-ok>Gravar a versão</button>', origem);
+    LicCt_ligarForm_(ov, "lctV");
+    ov.querySelector("[data-lct-ok]").onclick = function () {
+      var bt = this, msg = Lic_$_("lctVMsg"), tipo = LicCt_valor_("lctVTipo"), mot = LicCt_valor_("lctVMot");
+      if (mot.trim().length < 10) { msg.innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi gravado.", "erro"); return; }
+      var campos = tipo === "ENCERRAMENTO" ? { situacao: LicCt_valor_("lctVSit") } : LicCt_lerForm_("lctV");
+      // apostilamento: só o reajuste (valores dos itens, índice e data-base); o resto é termo aditivo (o servidor confere)
+      if (tipo === "APOSTILAMENTO") campos = { itens: campos.itens, reajusteIndice: campos.reajusteIndice, reajusteDataBase: campos.reajusteDataBase, reajusteFonte: campos.reajusteFonte, obs: campos.obs };
+      LicCt_arquivo_("lctVArq", msg, function (arquivo) {
+        bt.disabled = true;
+        LicCt_chamar_("versao", { id: id, tipo: tipo, aditivoNumero: LicCt_valor_("lctVAd"), fonte: LicCt_valor_("lctVFonte"), motivo: mot, campos: campos, arquivo: arquivo }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Versão gravada.", r.avisos && r.avisos.length ? "erro" : "ok"); LicCt_ligarAba_(null, null, id); },
+          function (e) { bt.disabled = false; msg.innerHTML = Lic_faixa_(e, "erro"); }, { carregando: arquivo ? "Guardando o arquivo e calculando o SHA-256…" : "" });
+      });
+    };
+  }
+  /** Abrir (nova aba, aberta no toque) ou baixar o arquivo de uma versão. O servidor confere o SHA-256 antes de entregar. */
+  function LicCt_abrirArquivo_(id, versaoId, baixar) {
+    var janela = null;
+    if (!baixar) { try { janela = window.open("", "_blank"); if (janela && janela.document) janela.document.title = "Abrindo o contrato…"; } catch (e) { janela = null; } }
+    LicCt_chamar_("arquivo", { id: id, versaoId: versaoId || "", baixar: !!baixar }, function (r) {
+      var bin = atob(r.base64 || ""), u8 = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      var seguro = !r.forcarBaixar;
+      if (!seguro) { baixar = true; if (janela) { try { janela.close(); } catch (e) {} janela = null; } }
+      var url = URL.createObjectURL(new Blob([u8], { type: seguro ? r.tipo : "application/octet-stream" }));
+      if (janela && !baixar) janela.location.href = url;
+      else { var a = document.createElement("a"); a.href = url; a.download = r.nome || "contrato"; document.body.appendChild(a); a.click(); try { a.remove(); } catch (e) {} }
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 120000);
+      Lic_toast_((baixar ? "Baixado: " : "Aberto: ") + (r.nome || "contrato") + " (SHA-256 conferido no servidor).");
+    }, function (m) { if (janela) { try { janela.close(); } catch (e) {} } Lic_toast_(m, "erro"); }, { carregando: "Buscando o arquivo no servidor…" });
+  }
+  function LicCt_relatorio_(id, bt) {
+    var abrir = typeof LicPp_abrirJanela_ === "function" ? LicPp_abrirJanela_ : function () { return null; };
+    var j = abrir("Gerando o relatório do contrato…");
+    bt.disabled = true;
+    LicCt_chamar_("relatorio", { id: id }, function (r) { bt.disabled = false; if (typeof LicPp_escreverJanela_ === "function") LicPp_escreverJanela_(j, r.html); Lic_toast_(r.texto || "Relatório gerado."); },
+      function (m) { bt.disabled = false; if (typeof LicPp_fecharJanela_ === "function") LicPp_fecharJanela_(j); Lic_toast_(m, "erro"); }, { carregando: "Gerando e guardando o relatório…" });
+  }
+</script>

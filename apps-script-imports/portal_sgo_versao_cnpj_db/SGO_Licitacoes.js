@@ -84,7 +84,9 @@ var LIC_ACOES = {
   proposta: function (eu, d) { return LicProp_acao_(eu, d); },
   relatorios: function (eu, d) { return LicRel_acao_(eu, d); },
   // Central de disputas, modo assistido, e resultado (02/11/2026, SGO_Licitacoes_Disputa.js): { op: central | tela | abrir | lance | ... }
-  disputa: function (eu, d) { return LicD_acao_(eu, d); }
+  disputa: function (eu, d) { return LicD_acao_(eu, d); },
+  // contratos conquistados e integração com os módulos (02/11/2026, SGO_Licitacoes_Contratos.js): { op: lista | tela | criar | versao | ... }
+  contratos: function (eu, d) { return LicC_acao_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
@@ -93,6 +95,8 @@ function Licitacoes_api(sessionId, acao, dados) {
     var fn = LIC_ACOES[Lic_s_(acao)];
     if (!fn) return { ok: false, message: 'Ação de Licitações desconhecida (' + Lic_s_(acao) + '). Atualize a página (F5) e tente de novo.' };
     var eu = Lic_eu_(sessionId);
+    // contratos (02/11/2026): a ação explícita da Diretoria em outro módulo (cliente, Comercial, Minhas atividades) passa pela sessão dela; não enumerável (nunca vai para planilha nem tela)
+    Object.defineProperty(eu, 'sessao', { value: sessionId, enumerable: false });
     if (acao !== 'acesso') Lic_exigir_(eu, 'abrir');
     if (eu.gestao) { try { Lic_garantirAbas_(); } catch (e) {} try { if (typeof Lic_garantirRotinaTalvez_ === 'function') Lic_garantirRotinaTalvez_(); } catch (e) {} }
     var r = fn(eu, dados || {});
@@ -343,7 +347,7 @@ function Lic_mudarSituacaoSemTrava_(eu, d, de, para, tipo, extra, texto) {
   if (de.indexOf(Lic_s_(l.SITUACAO)) < 0) throw new Error('Não foi possível ' + texto + ': a oportunidade está "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '" (alguém mudou agora há pouco). Atualize a lista e confira; nada foi alterado');
   var agora = Lic_agora_(), mud = Object.assign({ SITUACAO: para, SITUACAO_DESDE: agora, ATUALIZADO_EM: agora }, extra || {});
   SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mud);
-  var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: d.fonte === 'Kanban' || d.fonte === 'Central de disputas' ? d.fonte : 'Tela Oportunidades' });
+  var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: d.fonte === 'Kanban' || d.fonte === 'Central de disputas' || d.fonte === 'Contratos' ? d.fonte : 'Tela Oportunidades' });
   return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), situacao: para, hash: h.HASH };
 }
 
