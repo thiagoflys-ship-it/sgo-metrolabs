@@ -64,7 +64,7 @@ function AstApp_os_(os, eu, opcoes) {
     id: Ast_s_(os.ID), numero: Ast_s_(os.NUMERO), chamadoId: Ast_s_(os.CHAMADO_ID), chamadoNumero: Ast_s_(os.CHAMADO_NUMERO), situacao: s, situacaoNome: AST_OS_SITUACOES[s] || s,
     ordem: Number(os.ORDEM_DIA) || 0, agendadoPara: Ast_iso_(os.AGENDADO_PARA), duracaoMin: Number(os.DURACAO_MIN) || 0,
     prioridade: Ast_up_(c.PRIORIDADE), prioridadeNome: AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || '', prazoAtendimento: { ate: sla.ate || '', estado: sla.estado },
-    tipo: { codigo: tipo.codigo, nome: tipo.nome, grupo: tipo.grupo || '', exige: AstApp_exige_(tipo), logistica: AstApp_logistica_(tipo) },
+    tipo: { codigo: tipo.codigo, nome: tipo.nome, grupo: tipo.grupo || '', exige: Object.assign(AstApp_exige_(tipo), { assinaturaColaborador: AstO_exigeAssColab_(os, tipo) && !Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) }), logistica: AstApp_logistica_(tipo) },
     abertaEmCampo: Ast_sim_(os.ABERTA_EM_CAMPO),
     sintoma: Ast_s_(c.SINTOMA), orientacao: Ast_s_(os.ORIENTACAO),
     cliente: { id: Ast_s_(os.CLIENTE_ID), nome: Ast_s_(os.CLIENTE_NOME) || Ast_clienteNome_(cli), cnpj: Ast_s_(cli.CNPJ), telefone: Ast_s_(cli.TELEFONE) },
@@ -129,7 +129,7 @@ function AstApp_enviarCliente_(eu, ev) {
  */
 function AstApp_exige_(tipo) {
   var ex = tipo.exige || {}, logi = !!tipo.logistica;
-  return { relato: !!ex.relato, assinatura: !!ex.assinatura, fotosMin: Number(ex.fotosMin) || 0, qrOuSerie: !!ex.qrOuSerie && !logi, checklist: !!ex.checklist,
+  return { relato: !!ex.relato, assinatura: !!ex.assinatura, fotosMin: Number(ex.fotosMin) || 0, qrOuSerie: !!ex.qrOuSerie && !logi, checklist: !!ex.checklist, assinaturaColaborador: !tipo.semVisita,
     relatoCampos: ex.relato && !logi ? ['servicoRealizado'].concat(tipo.semVisita ? [] : ['condicaoEncontrada']).concat(tipo.grupo === 'TECNICO' ? ['testeFuncional'] : []) : [] };
 }
 /**

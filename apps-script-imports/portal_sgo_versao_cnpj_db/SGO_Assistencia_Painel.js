@@ -618,6 +618,7 @@ var AST_ACOES = {
   osEventos: function (eu, d) { return AstO_eventosTela_(eu, d); },
   osFoto: function (eu, d) { var r = AstO_salvarFoto_(eu, d); return { duplicado: r.duplicado, os: AstO_publico_(Ast_porId_(AST_ABAS.OS, d.osId), eu), message: r.duplicado ? 'Esta foto já tinha sido recebida.' : 'Foto recebida.' }; },
   osEncerrar: function (eu, d) { return AstO_encerrar_(eu, d); },
+  osDispensarAssTecnico: function (eu, d) { return AstO_dispensarAssColab_(eu, d); },
   osDocumento: function (eu, d) { return AstO_ligarDocumento_(eu, d); },
   serieTratada: function (eu, d) {
     Ast_exigir_(eu, 'GESTAO', 'marcar a série como conferida');
@@ -687,9 +688,9 @@ var AST_ACOES = {
 };
 var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos', 'responderOrcamento', 'relatorioAtendimento', 'relatorioPeriodoCliente', 'documentosGerados'];
 /** Ações que criam trabalho novo e ficam bloqueadas com a Assistência desligada (as de leitura, as regras e o "ligar" continuam). */
-var AST_ACOES_DESLIGADA = ['abrir', 'assumir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar'];
+var AST_ACOES_DESLIGADA = ['abrir', 'assumir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'osDispensarAssTecnico', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar'];
 var AST_ACOES_DESLIGADA_NOMES = { abrir: 'abrir o chamado', assumir: 'assumir o chamado', triagem: 'fazer a triagem', retomar: 'liberar o chamado', voltarTriagem: 'voltar o chamado à triagem', encerrarRemoto: 'encerrar o chamado', aguardarPeca: 'marcar aguardando peça', converter: 'converter a solicitação',
-  agendar: 'agendar o atendimento', ordenar: 'mudar a ordem do dia', reservarVeiculo: 'reservar o veículo', osEventos: 'registrar o atendimento', osFoto: 'enviar a foto', osEncerrar: 'encerrar a O.S.',
+  agendar: 'agendar o atendimento', ordenar: 'mudar a ordem do dia', reservarVeiculo: 'reservar o veículo', osEventos: 'registrar o atendimento', osFoto: 'enviar a foto', osEncerrar: 'encerrar a O.S.', osDispensarAssTecnico: 'encerrar sem a assinatura do técnico',
   salvarOrcamento: 'preencher o orçamento', emitirOrcamento: 'emitir o orçamento', revisarOrcamento: 'revisar o orçamento', decidirOrcamento: 'registrar a resposta do cliente', enviarOrcamento: 'enviar o orçamento com o link de aceite', orcLinkCopiar: 'gerar o link de aceite' };
 
 /** google.script.run: Assistencia_api(sessionId, acao, dados). Nunca lança. */

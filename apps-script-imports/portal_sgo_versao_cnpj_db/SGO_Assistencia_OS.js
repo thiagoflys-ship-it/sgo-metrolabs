@@ -95,8 +95,38 @@ function AstO_faltas_(os, fotos, regras) {
     var semOk = AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] && Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR).length >= 3 && Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA).length >= 10;
     if (!semOk) f.push(logi ? 'a assinatura de ' + rot.contraparte + ' (ou "responsável ausente" com o nome de quem acompanhou e a justificativa)' : 'a assinatura do cliente (ou "responsável ausente" com o nome de quem recebeu e a justificativa)');
   }
+  if (AstO_exigeAssColab_(os, tipo) && !Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) && Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA).length < 10)
+    f.push(logi ? 'a assinatura do colaborador da Metrolabs (' + rot.papelColab.replace(/ \(Metrolabs\)$/, '').toLowerCase() + ')' : 'a assinatura do técnico que atendeu');
   if (Ast_sim_(os.AGUARDANDO_PECA)) f.push('a peça que falta (pedido de compra aberto); depois de trocar, conclua de novo');
   return f;
+}
+/** A O.S. exige a assinatura do técnico ou colaborador? Toda O.S. com visita, menos as que já tinham chegada antes da regra (03/11/2026). */
+function AstO_exigeAssColab_(os, tipo) {
+  tipo = tipo || Ast_tipo_(os && os.TIPO_CODIGO) || { semVisita: false };
+  if (tipo.semVisita) return false;
+  var cheg = Ast_dia_(os && os.CHEGOU_EM);
+  return !(cheg && cheg < ((Ast_regras_().assinatura || {}).colaboradorDesde || AST_ASS_COLAB_DESDE));
+}
+/**
+ * Gestão, pela tela do computador: encerra sem a assinatura do técnico, com justificativa (pelo menos 10 letras) gravada na O.S.
+ * e no histórico. Só a gestão; só quando é o que falta (o resto da documentação continua exigido). d: { osId, justificativa }
+ */
+function AstO_dispensarAssColab_(eu, d) {
+  d = d || {};
+  var os = AstO_obter_(eu, d.osId, 'encerrar sem a assinatura do técnico');
+  if (!eu.gestao) throw new Error('Não foi possível: só a gestão encerra a O.S. sem a assinatura do técnico. Peça ao técnico para assinar pelo SGO+ Campo');
+  var just = Ast_texto_(d.justificativa, 1000);
+  if (just.replace(/[^A-Za-zÀ-ÿ]/g, '').length < 10) throw new Error('Não foi possível: escreva a justificativa (pelo menos 10 letras), por que a O.S. fecha sem a assinatura do técnico');
+  if (Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID)) throw new Error('Não foi possível: a O.S. ' + os.NUMERO + ' já tem a assinatura do técnico');
+  var r = Ast_comTrava_(function () {
+    var agora = Ast_agora_();
+    Ast_atualizar_(AST_ABAS.OS, os.ID, { COLAB_DISPENSA_JUSTIFICATIVA: just, COLAB_DISPENSA_POR_NOME: eu.nome, COLAB_DISPENSA_EM: agora, ATUALIZADO_EM: agora });
+    Ast_evento_('OS', os.ID, 'ASSINATURA_TECNICO_DISPENSADA', eu, 'Encerramento sem a assinatura do técnico, pela gestão: ' + just, { numero: os.NUMERO });
+    return Ast_up_(os.SITUACAO) === 'DOC_PENDENTE' ? AstO_tentarEncerrar_(eu, os.ID) : { encerrada: false, faltas: AstO_faltas_(Ast_porId_(AST_ABAS.OS, os.ID)) };
+  });
+  var final = Ast_porId_(AST_ABAS.OS, os.ID);
+  return { os: AstO_publico_(final, eu), message: r.encerrada ? 'O.S. ' + os.NUMERO + ' encerrada sem a assinatura do técnico; a justificativa ficou no histórico e o relatório A4 foi gerado.' :
+    'Justificativa registrada: a assinatura do técnico não é mais exigida nesta O.S.' + (r.faltas.length ? ' Ainda falta: ' + r.faltas.join('; ') + '.' : '') };
 }
 
 /** Leva o chamado até a situação alvo pelos passos permitidos (ex.: Agendado -> No local -> Em execução -> Documentação pendente). */
@@ -312,7 +342,9 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
       // 03/11/2026 (logística): a assinatura do colaborador da Metrolabs (quem entrega ou quem recebe) fica ao lado da do cliente
       var colab = Ast_up_(d.papel) === 'COLABORADOR';
       var nome = Ast_texto_(d.nome, 120), img = String(d.imagem || '');
-      if (nome.length < 3) return { ok: false, definitivo: false, motivo: 'falta o nome de quem assinou', corrigir: 'Escreva o nome de quem assinou e sincronize de novo.' };
+      if (!Ast_nomeCompletoOk_(nome)) return { ok: false, definitivo: false, motivo: 'falta o nome completo de quem assinou (nome e sobrenome)' + (nome ? ': veio "' + nome + '"' : ''), corrigir: 'Escreva o nome e o sobrenome de quem assinou e assine de novo.' };
+      var erroDoc = Ast_documentoErro_(d.documento);
+      if (erroDoc) return { ok: false, definitivo: false, motivo: erroDoc, corrigir: 'Corrija o documento (ou deixe em branco) e assine de novo.' };
       if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(img) || img.length < AST_ASS_MIN) return { ok: false, definitivo: false, motivo: 'a assinatura veio vazia ou em formato errado', corrigir: 'Peça para o cliente assinar no quadro de novo (imagem PNG).' };
       if (img.length > AST_ASS_MAX) return { ok: false, definitivo: false, motivo: 'a imagem da assinatura está grande demais', corrigir: 'Limpe o quadro e peça para assinar de novo.' };
       var arq = null;
@@ -435,6 +467,9 @@ function AstO_publico_(os, eu) {
     logistica: tipo && tipo.logistica ? { sentido: tipo.logistica.sentido, rotulos: AST_LOG_ROTULOS[tipo.logistica.sentido] || AST_LOG_ROTULOS.ENTREGA, termo: AstO_logistica_(os),
       estados: AST_LOG_ESTADOS, destinos: AST_LOG_DESTINOS, embalagens: AST_LOG_EMBALAGENS } : null,
     assinaturaColaborador: Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.COLAB_ASSINATURA_NOME), documento: Ast_s_(os.COLAB_ASSINATURA_DOCUMENTO), em: Ast_br_(os.COLAB_ASSINATURA_EM) } : null,
+    // 03/11/2026: dispensa da assinatura do técnico pela gestão (com justificativa) e se ela ainda pode ser feita
+    dispensaColaborador: Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) ? { justificativa: Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA), por: Ast_s_(os.COLAB_DISPENSA_POR_NOME), em: Ast_br_(os.COLAB_DISPENSA_EM) } : null,
+    podeDispensarColaborador: !!(eu && eu.gestao) && AST_OS_ABERTAS.indexOf(s) >= 0 && faltas.some(function (x) { return /assinatura do (técnico|colaborador)/.test(x); }),
     faltas: faltas, podeEncerrar: s === 'DOC_PENDENTE' && !faltas.length,
     docTecnico: Ast_s_(os.DOC_TECNICO_REF) ? { tipo: Ast_s_(os.DOC_TECNICO_TIPO), nome: Ast_s_(os.DOC_TECNICO_REF), url: Ast_s_(os.DOC_TECNICO_URL) } : null,
     documentoTecnicoTipo: tipo ? tipo.documentoTecnico : '', documentoTecnicoNome: tipo && tipo.documentoTecnico ? AST_DOCS_TECNICOS[tipo.documentoTecnico] : '',

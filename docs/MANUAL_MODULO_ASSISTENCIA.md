@@ -166,12 +166,18 @@ O técnico registra pelo aplicativo do celular (funciona sem internet) ou em Ass
    como "retorno a agendar"; o técnico e a gestão são avisados e o cliente recebe o e-mail "peça chegou, retorno será
    agendado". A gestão toca em "Agendar o retorno" (mesma O.S.) e o cliente recebe "retorno agendado para dd/mm".
    Recebimento com divergência não devolve o chamado (só depois de "Divergência resolvida").
-5. Assinatura do cliente no quadro, com o nome (e o documento, se quiser). Sem o responsável: "Responsável ausente",
-   com o nome de quem recebeu e a justificativa.
+5. Assinatura do cliente no quadro, com o nome completo (nome e sobrenome); o documento é opcional e, preenchido, é
+   conferido (CPF com os dígitos). Sem o responsável: "Responsável ausente", com o nome de quem recebeu e a justificativa.
+5a. Assinatura do técnico ou colaborador que atendeu (03/11/2026, decisão da Diretoria): toda O.S. com visita tem as
+   duas assinaturas. O técnico assina no SGO+ Campo, com o nome completo (documento opcional). Sem ela a O.S. fica em
+   "Documentação pendente"; só a gestão, na ficha da O.S., pode "Encerrar sem a assinatura do técnico (justificar)": a
+   justificativa (pelo menos 10 letras) fica na O.S., no histórico e no relatório. O.S. com a chegada antes de 03/11/2026
+   não pedem essa assinatura e o relatório mostra a linha "assinatura não registrada".
 6. Concluí: registra a conclusão.
 
 A O.S. só fecha com a documentação completa do tipo de serviço: chegada, relato, condição encontrada, teste
-funcional, conferência do equipamento, checklist obrigatório, fotos mínimas e assinatura (ou a exceção). Faltando
+funcional, conferência do equipamento, checklist obrigatório, fotos mínimas, assinatura do cliente (ou a exceção) e
+assinatura do técnico (ou a justificativa da gestão). Faltando
 algo, fica "Documentação pendente": o técnico vê o que falta e recebe a cobrança; passadas 24 horas, a gestão também.
 Quando o que falta chega, a O.S. fecha sozinha.
 
@@ -192,7 +198,7 @@ tipos novos que a gestão criar nesse grupo) têm formulário próprio, o **term
 Para fechar, a O.S. de logística pede chegada, o termo com pelo menos um item, o checklist do tipo, as fotos mínimas e a
 assinatura de quem recebe ou entrega (ou a exceção). **Não pede** condição encontrada, causa, teste funcional, peças nem
 conferência de QR ou série, mesmo que o tipo esteja marcado com QR/série. A assinatura do colaborador é cobrada pelo
-aplicativo; sem ela, o termo sai com o nome do colaborador da O.S. e a linha em branco. O.S. de logística registrada antes
+aplicativo e pelo servidor, como em toda O.S. (só a gestão encerra sem, com justificativa). O.S. de logística registrada antes
 de 03/11/2026 (só com o relato escrito) continua fechando pelo relato e o documento mostra o equipamento da O.S. como item
 e o relato nas observações.
 
@@ -212,7 +218,8 @@ equipamento emitido depois da chegada é ligado sozinho à O.S. ao encerrar; tam
 ## Relatório da O.S.
 
 Relatório de atendimento técnico em A4: identificação, chamado, atendimento (com a hora do aparelho quando difere da
-hora do servidor), serviço, checklist, peças, fotos, assinaturas e linha do tempo. Antes do encerramento sai como
+hora do servidor), serviço, checklist, peças, fotos, as duas assinaturas (cliente e técnico responsável, com o nome e o
+documento só quando informado; sem a do técnico, "assinatura não registrada") e linha do tempo. Antes do encerramento sai como
 rascunho e fica numa pasta privada. Encerrada, a versão é salva na pasta "4. Ordens de Serviço" do equipamento (a
 mesma do QR), registrada no Arquivo de documentos (também quando o encerramento vem pela rotina, sem sessão) e aparece
 na ficha do equipamento e no portal do cliente. Nenhuma versão é sobrescrita.

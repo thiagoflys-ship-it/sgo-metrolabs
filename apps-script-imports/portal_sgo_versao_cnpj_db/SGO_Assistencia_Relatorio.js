@@ -80,15 +80,14 @@ function AstR_htmlTermo_(os, o, tipo, rascunho) {
     corpo += RelA4_secao_('Fotos', (typeof SGO_DocA4_fotos_ === 'function' ? SGO_DocA4_fotos_(lf) : '') + (fotos.length > AST_REL_MAX_FOTOS ? '<p class="nota">Mais ' + (fotos.length - AST_REL_MAX_FOTOS) + ' foto(s) guardadas no SGO+ (O.S. ' + Ast_esc_(os.NUMERO) + ').</p>' : ''));
     lf = null;
   }
-  var imgCli = Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.ASSINATURA_ARQUIVO_ID) : null, imgCol = Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.COLAB_ASSINATURA_ARQUIVO_ID) : null;
+  var imgCli = Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.ASSINATURA_ARQUIVO_ID) : null;
   var assCli = { papel: rot.papelCliente, nome: Ast_s_(os.ASSINATURA_NOME) || Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) || ctp.nome || ' ',
     cargo: Ast_s_(os.ASSINATURA_DOCUMENTO) || (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? 'Sem assinatura: ' + (AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || '') : ctp.documento || ''), imagemBase64: imgCli ? { mimeType: 'image/png', data: imgCli.data } : null };
-  var assCol = { papel: rot.papelColab, nome: Ast_s_(os.COLAB_ASSINATURA_NOME) || Ast_s_(os.TECNICO_NOME), cargo: Ast_s_(os.COLAB_ASSINATURA_DOCUMENTO) || 'Metrolabs', imagemBase64: imgCol ? { mimeType: 'image/png', data: imgCol.data } : null };
+  var assCol = AstR_assinaturaColab_(os, rot.papelColab);
   var ass = s === 'RETIRADA' ? [assCli, assCol] : [assCol, assCli];
   corpo += RelA4_secao_('Assinaturas', '<p>' + Ast_esc_(rot.declaracao) + '</p>' + (typeof SGO_DocA4_assinaturas_ === 'function' ? SGO_DocA4_assinaturas_(ass) : '') +
     (Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA) ? '<p class="nota">Justificativa da falta de assinatura: ' + Ast_esc_(os.SEM_ASSINATURA_JUSTIFICATIVA) + '</p>' : '') +
-    (Ast_s_(os.ASSINATURA_EM) || Ast_s_(os.COLAB_ASSINATURA_EM) ? '<p class="nota">Assinado na tela do aparelho' + (Ast_s_(os.ASSINATURA_EM) ? ' (' + Ast_esc_(rot.papelCliente.toLowerCase()) + ' em ' + Ast_esc_(Ast_br_(os.ASSINATURA_EM)) + ')' : '') +
-      (Ast_s_(os.COLAB_ASSINATURA_EM) ? ' (colaborador em ' + Ast_esc_(Ast_br_(os.COLAB_ASSINATURA_EM)) + ')' : '') + '.</p>' : ''));
+    AstR_notaAssinaturas_(os));
   var evs = Ast_ler_(AST_ABAS.EVENTOS).filter(function (e) { return (Ast_up_(e.ENTIDADE) === 'OS' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(os.ID)) || (Ast_up_(e.ENTIDADE) === 'CHAMADO' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(os.CHAMADO_ID) && Ast_sim_(e.PUBLICO)); })
     .sort(function (a, b) { return String(a.EM).localeCompare(String(b.EM)); });
   corpo += RelA4_secao_('Linha do tempo', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'O que aconteceu' }, { t: 'Por' }], evs.slice(-40).map(function (e) {
@@ -98,6 +97,21 @@ function AstR_htmlTermo_(os, o, tipo, rascunho) {
   return RelA4_documento_({ titulo: rot.titulo + (rascunho ? ' (rascunho)' : ''), subtitulo: Ast_s_(os.CLIENTE_NOME), tituloCurto: rot.titulo, tituloArquivo: AstR_nomeTermo_(s),
     numero: Ast_s_(os.NUMERO), revisao: Number(o.revisao) || 0, identificacao: itens.length ? itens.map(function (i) { return i.descricao; }).join('; ').slice(0, 120) : Ast_s_(os.CLIENTE_NOME), rotuloIdentificacao: itens.length > 1 ? 'Itens' : 'Item',
     ficha: [['Tipo de serviço', tipo.nome], ['Colaborador', Ast_s_(os.TECNICO_NOME)], ['Situação', rascunho ? 'Rascunho' : 'Encerrada em ' + Ast_br_(os.ENCERRADA_EM)]], corpo: corpo, capa: false, sumario: false });
+}
+/**
+ * 03/11/2026 (decisão do dono): assinatura do técnico ou colaborador da Metrolabs no A4 (relatório e termo). Sem ela (O.S. antiga ou
+ * dispensada pela gestão), a linha sai com o nome do técnico da O.S. e "assinatura não registrada" (com a justificativa, se houver).
+ */
+function AstR_assinaturaColab_(os, papel) {
+  var img = Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.COLAB_ASSINATURA_ARQUIVO_ID) : null, doc = Ast_s_(os.COLAB_ASSINATURA_DOCUMENTO);
+  return { papel: papel, nome: Ast_s_(os.COLAB_ASSINATURA_NOME) || Ast_s_(os.TECNICO_NOME) || ' ',
+    cargo: Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? (doc ? doc + ' · ' : '') + 'Metrolabs' : 'Metrolabs · assinatura não registrada' + (Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) ? ' (dispensada pela gestão)' : ''),
+    imagemBase64: img ? { mimeType: 'image/png', data: img.data } : null };
+}
+function AstR_notaAssinaturas_(os) {
+  return (Ast_s_(os.ASSINATURA_EM) || Ast_s_(os.COLAB_ASSINATURA_EM) ? '<p class="nota">Assinado na tela do aparelho' + (Ast_s_(os.ASSINATURA_EM) ? ' (cliente em ' + Ast_esc_(Ast_br_(os.ASSINATURA_EM)) + ')' : '') +
+      (Ast_s_(os.COLAB_ASSINATURA_EM) ? ' (Metrolabs em ' + Ast_esc_(Ast_br_(os.COLAB_ASSINATURA_EM)) + ')' : '') + '.</p>' : '') +
+    (Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) ? '<p class="nota">Encerrada sem a assinatura do técnico, por ' + Ast_esc_(Ast_s_(os.COLAB_DISPENSA_POR_NOME) || 'gestão') + (Ast_s_(os.COLAB_DISPENSA_EM) ? ' em ' + Ast_esc_(Ast_br_(os.COLAB_DISPENSA_EM)) : '') + ': ' + Ast_esc_(os.COLAB_DISPENSA_JUSTIFICATIVA) + '</p>' : '');
 }
 /** Nome do arquivo do termo, sem acento (como "Relatorio da OS"). */
 function AstR_nomeTermo_(sentido) { return { ENTREGA: 'Termo de entrega da OS', RETIRADA: 'Termo de retirada da OS', ENVIO: 'Termo de envio da OS' }[sentido] || 'Termo de entrega da OS'; }
@@ -163,10 +177,10 @@ function AstR_htmlOS_(os, opcoes) {
   var img = Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.ASSINATURA_ARQUIVO_ID) : null;
   ass.push({ papel: 'Recebido por (cliente)', nome: Ast_s_(os.ASSINATURA_NOME) || Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) || ' ', cargo: Ast_s_(os.ASSINATURA_DOCUMENTO) || (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? 'Sem assinatura: ' + (AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || '') : ''),
     imagemBase64: img ? { mimeType: 'image/png', data: img.data } : null });
-  ass.push({ papel: 'Técnico responsável', nome: Ast_s_(os.TECNICO_NOME), cargo: 'Metrolabs' });
+  ass.push(AstR_assinaturaColab_(os, 'Técnico responsável'));
   corpo += RelA4_secao_('Assinaturas', (typeof SGO_DocA4_assinaturas_ === 'function' ? SGO_DocA4_assinaturas_(ass) : '') +
     (Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA) ? '<p class="nota">Justificativa da falta de assinatura: ' + Ast_esc_(os.SEM_ASSINATURA_JUSTIFICATIVA) + '</p>' : '') +
-    (Ast_s_(os.ASSINATURA_EM) ? '<p class="nota">Assinado na tela do aparelho em ' + Ast_esc_(Ast_br_(os.ASSINATURA_EM)) + '.</p>' : ''));
+    AstR_notaAssinaturas_(os));
   if (Ast_s_(os.DOC_TECNICO_REF)) corpo += RelA4_secao_('Documento técnico', '<p>Documento emitido para este atendimento: ' + Ast_esc_(os.DOC_TECNICO_REF) + (Ast_s_(os.DOC_TECNICO_URL) ? ' (' + Ast_esc_(os.DOC_TECNICO_URL) + ')' : '') + '.</p>');
   var evs = Ast_ler_(AST_ABAS.EVENTOS).filter(function (e) { return (Ast_up_(e.ENTIDADE) === 'OS' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(os.ID)) || (Ast_up_(e.ENTIDADE) === 'CHAMADO' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(os.CHAMADO_ID) && Ast_sim_(e.PUBLICO)); })
     .sort(function (a, b) { return String(a.EM).localeCompare(String(b.EM)); });
@@ -225,7 +239,7 @@ function AstR_emitirRelatorioOS_(eu, osId, opcoes) {
     var versao = (Number(os.RELATORIO_VERSAO) || 0) + 1;
     var revisao = rascunho ? 0 : (o.revisao ? Math.max(1, (Number(os.RELATORIO_REVISAO) || 0) + 1) : 0);
     var marca = Ast_marca_(JSON.stringify([os.NUMERO, versao, os.RESPOSTAS_JSON, os.RELATO, os.SERVICO_REALIZADO, os.ASSINATURA_ARQUIVO_ID, os.QTD_FOTOS, os.QTD_PECAS, os.ENCERRADA_EM]
-      .concat(Ast_s_(os.LOGISTICA_JSON) || Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? [os.LOGISTICA_JSON, os.COLAB_ASSINATURA_ARQUIVO_ID] : [])));
+      .concat(Ast_s_(os.LOGISTICA_JSON) || Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) || Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) ? [os.LOGISTICA_JSON, os.COLAB_ASSINATURA_ARQUIVO_ID, os.COLAB_DISPENSA_JUSTIFICATIVA] : [])));
     var tipoDoc = Ast_tipo_(os.TIPO_CODIGO), tituloDoc = AstR_tituloDocOS_(os);
     var rev = null;
     if (revisao > 0 && typeof SGO_DocRev_historico_ === 'function') {

@@ -67,7 +67,9 @@ var AST_COLUNAS = {
     // 27/10/2026: O.S. de chamado excluído (teste ou simulação) sai junto, pela mesma exclusão (EXCLUSAO_ID); nada é apagado
     'EXCLUSAO_ID', 'EXCLUIDO_EM', 'EXCLUIDO_POR_NOME', 'EXCLUIDO_MOTIVO', 'ATUALIZADO_EM', 'CRIADO_EM',
     // 03/11/2026 (logística): termo de entrega ou retirada (itens, de quem/para quem, motivo e destino) e a assinatura do colaborador da Metrolabs
-    'LOGISTICA_JSON', 'COLAB_ASSINATURA_ARQUIVO_ID', 'COLAB_ASSINATURA_NOME', 'COLAB_ASSINATURA_DOCUMENTO', 'COLAB_ASSINATURA_EM'],
+    'LOGISTICA_JSON', 'COLAB_ASSINATURA_ARQUIVO_ID', 'COLAB_ASSINATURA_NOME', 'COLAB_ASSINATURA_DOCUMENTO', 'COLAB_ASSINATURA_EM',
+    // 03/11/2026 (decisão do dono): a gestão encerra sem a assinatura do técnico só com justificativa (fica no histórico)
+    'COLAB_DISPENSA_JUSTIFICATIVA', 'COLAB_DISPENSA_POR_NOME', 'COLAB_DISPENSA_EM'],
   ATEC_EVENTOS: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'NUMERO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'PUBLICO', 'USUARIO_ID', 'USUARIO_NOME', 'EM', 'EM_APARELHO', 'ID_LOCAL', 'CRIADO_EM'],
   ATEC_FOTOS: ['ID', 'OS_ID', 'ID_LOCAL', 'PERGUNTA_ID', 'LEGENDA', 'NOME', 'ARQUIVO_ID', 'URL', 'TAMANHO', 'SHA256', 'TIRADA_EM', 'RECEBIDA_EM', 'POR_ID', 'POR_NOME', 'ATIVA', 'CRIADO_EM'],
   ATEC_PECAS: ['ID', 'OS_ID', 'ID_LOCAL', 'DESCRICAO', 'CODIGO', 'QUANTIDADE', 'UNIDADE', 'SITUACAO', 'URGENCIA', 'REQUISICAO_ID', 'REQUISICAO_NUMERO', 'ATIVA', 'REMOVIDA_EM',
@@ -96,7 +98,7 @@ var AST_COLUNAS_TEXTO = {
     'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'ATUALIZADO_EM', 'CONTATO', 'PECA_DISPONIVEL_EM', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM', 'ASSUMIDO_EM', 'FILA_LIVRE_EM',
     'EXCLUIDO_EM', 'RESTAURADO_EM'],
   ATEC_OS: ['NUMERO', 'AGENDADO_PARA', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'INICIO_EM', 'CONCLUIU_EM', 'CONCLUIU_EM_APARELHO', 'ASSINATURA_EM', 'RELATORIO_EM',
-    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM', 'COLAB_ASSINATURA_EM'],
+    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM', 'COLAB_ASSINATURA_EM', 'COLAB_DISPENSA_EM'],
   ATEC_EVENTOS: ['EM', 'EM_APARELHO'], ATEC_FOTOS: ['TIRADA_EM', 'RECEBIDA_EM'], ATEC_SYNC: ['EM_APARELHO', 'RECEBIDO_EM', 'ID_LOCAL'],
   ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM', 'EXCLUIDO_EM'],
   ATEC_RELATORIOS: ['EMITIDO_EM'], ATEC_AVISOS: ['DATA', 'LIDO_EM'], ATEC_CONFIG: ['ATUALIZADO_EM'], ATEC_TIPOS: ['ATUALIZADO_EM'], ATEC_MODELOS: ['ATUALIZADO_EM'],
@@ -192,6 +194,30 @@ var AST_LOG_ROTULOS = {
   ENVIO: { titulo: 'Termo de envio', verbo: 'enviado', contraparte: 'o destinatário', papelCliente: 'Recebido por', papelColab: 'Despachado por (Metrolabs)',
     declaracao: 'Os itens relacionados acima foram despachados nas condições descritas neste termo.' }
 };
+/**
+ * 03/11/2026 (decisão do dono): toda O.S. com visita pede DUAS assinaturas, a do cliente (quem recebe ou acompanha) e a do técnico
+ * ou colaborador da Metrolabs que atendeu. Nas duas, nome completo (nome e sobrenome) obrigatório; documento sempre opcional (se
+ * preenchido, o formato é conferido). O.S. com a chegada registrada antes de AST_ASS_COLAB_DESDE (já em execução quando a regra
+ * entrou) não exigem a do técnico; continuam abrindo e gerando o relatório, com a linha "não registrada".
+ */
+var AST_ASS_COLAB_DESDE = '2026-11-03';
+function Ast_nomeCompletoOk_(nome) {
+  var partes = Ast_s_(nome).split(/\s+/).filter(function (p) { return p.replace(/[^A-Za-zÀ-ÿ]/g, '').length >= 2; });
+  return partes.length >= 2;
+}
+/** Documento de quem assina: vazio = aceito. CPF (11 números) com os dígitos conferentes; outro documento com ao menos 3 letras ou números. '' = ok; senão o erro. */
+function Ast_documentoErro_(doc) {
+  var s = Ast_s_(doc);
+  if (!s) return '';
+  var dig = s.replace(/\D/g, '');
+  if (/^[\d.\-\s\/]+$/.test(s) && dig.length === 11) {
+    var n = dig.split('').map(Number), dv = function (k) { var t = 0; for (var i = 0; i < k; i++) t += n[i] * (k + 1 - i); var r = (t * 10) % 11; return r === 10 ? 0 : r; };
+    if (/^(\d)\1{10}$/.test(dig) || dv(9) !== n[9] || dv(10) !== n[10]) return 'o CPF informado não confere (confira os números ou deixe o documento em branco)';
+    return '';
+  }
+  if (s.replace(/[^A-Za-z0-9À-ÿ]/g, '').length < 3) return 'o documento está incompleto (escreva o CPF, o RG ou a matrícula, ou deixe em branco)';
+  return '';
+}
 function Ast_sentidoLogistica_(codigo, nome) {
   var s = Ast_semAcento_(Ast_s_(codigo) + ' ' + Ast_s_(nome));
   if (/ENVIO|ENVIAR|TRANSPORTADORA|CORREIO/.test(s)) return 'ENVIO';

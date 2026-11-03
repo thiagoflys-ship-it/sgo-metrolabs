@@ -115,6 +115,10 @@ test('logística sem termo e sem relato: falta "o termo: o que foi retirado"; te
   ok(sync(amb2, [ev('CHEGUEI', b.os.id, 1, {}, '2026-10-20T09:05:00')]));
   const r = ok(sync(amb2, [ev('RELATO', b.os.id, 2, { logistica: TERMO_ENTREGA })]));
   assert.equal(r.recusados.length, 1); assert.equal(r.recusados[0].definitivo, true); assert.match(r.recusados[0].motivo, /só vale para O.S. de logística/);
+  // decisão do dono (03/11/2026): a assinatura do técnico (papel COLABORADOR) vale também na O.S. técnica e fica à parte da do cliente
+  const rc = ok(sync(amb2, [ev('ASSINATURA', b.os.id, 3, { papel: 'COLABORADOR', nome: 'TIAGO TECNICO TESTE', imagem: ASSINATURA })]));
+  assert.equal(rc.recusados.length, 0, JSON.stringify(rc.recusados));
+  assert.ok(linhaOs(amb2, b.os.id).COLAB_ASSINATURA_ARQUIVO_ID && !linhaOs(amb2, b.os.id).ASSINATURA_ARQUIVO_ID, 'só a do técnico');
   // e a técnica continua exigindo condição encontrada e teste funcional
   const ft = amb2.ctx.AstO_faltas_(linhaOs(amb2, b.os.id));
   assert.ok(ft.some((f) => /condição encontrada/.test(f)) && ft.some((f) => /teste funcional/.test(f)), ft.join(' | '));

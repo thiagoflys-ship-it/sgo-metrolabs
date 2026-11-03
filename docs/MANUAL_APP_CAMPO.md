@@ -102,9 +102,13 @@ feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
    Compras e a O.S. fica aguardando peça), com urgência Normal ou Urgente. Lançou errado: **Desfazer**.
 7. **Relato**: condição encontrada, causa, serviço realizado, teste funcional, recomendações e observações. Pode usar o
    microfone do teclado para ditar. Toque em **Guardar relato** (sair da tela também guarda): o app guarda e segue para o próximo passo que falta.
-8. **Assinatura do cliente**: o responsável assina no quadro com o dedo e informa nome e documento (CPF, RG ou
-   matrícula). Sem quem assine: **Registrar sem assinatura**, com o motivo, o nome de quem recebeu o serviço e a
+8. **Assinatura do cliente**: o responsável assina no quadro com o dedo e informa o **nome completo** (nome e
+   sobrenome). O documento (CPF, RG ou matrícula) é **opcional**: em branco é aceito; preenchido, o app confere (CPF com
+   os dígitos certos). Sem quem assine: **Registrar sem assinatura**, com o motivo, o nome de quem recebeu o serviço e a
    justificativa.
+8a. **Sua assinatura (técnico que atendeu)** (03/11/2026): toda O.S. tem também a assinatura de quem atendeu pela
+   Metrolabs, com o nome completo (documento opcional). Sem ela a O.S. não fecha pelo aplicativo; só a gestão, pela tela do
+   SGO+, pode encerrar sem, com justificativa. O.S. que já estava em atendimento antes de 03/11/2026 não pede.
 9. **Concluí**: só libera quando não falta nada. A tela diz em palavras o que falta (por exemplo: "1 foto (mínimo 2)",
    "A assinatura do cliente ou o motivo de não haver assinatura"). Ao concluir, o app pede a localização de novo, com o
    mesmo aviso. Depois de concluída, a O.S. não muda mais no celular; correções são feitas pela gestão na tela do SGO+.
@@ -157,7 +161,8 @@ Passo a passo:
 5. **Assinatura de quem recebe** (entrega) ou **de quem entrega** (retirada): nome e documento já vêm do termo. Sem quem
    assine, "Registrar sem assinatura" com quem acompanhou e a justificativa.
 6. **Sua assinatura**: o colaborador da Metrolabs assina com o dedo (na entrega, como quem entrega; na retirada, como
-   quem recebe). No envio sem visita esse passo não aparece.
+   quem recebe). No envio sem visita esse passo não aparece. Nas duas assinaturas, nome completo obrigatório e documento
+   opcional.
 7. **Concluí**. O documento gerado no encerramento é o **Termo de entrega** ou o **Termo de retirada (recebimento)**:
    itens com quantidade, identificação e estado, avarias, de quem e para quem, motivo e destino, fotos e as duas
    assinaturas, com a declaração de recebimento. Ele vai ao cliente pelo mesmo "Enviar ao cliente por e-mail".
@@ -171,6 +176,9 @@ Passo a passo:
 - Quando o sinal volta, o app envia sozinho, na ordem em que as coisas foram feitas, uma foto de cada vez. Se a conexão
   cair no meio, ele tenta de novo; o servidor reconhece o que já recebeu e **nada é registrado duas vezes**.
 - Para forçar, toque na barra e em **Enviar agora**.
+- Quando a agenda é atualizada ou um envio termina com você no meio de uma assinatura, do termo, do relato ou de outro
+  passo, a tela não é redesenhada: o quadro e o campo onde você digita ficam como estão. Aparece só o aviso "Dados
+  atualizados"; a lista nova vale ao voltar para a O.S. ou para o Meu dia.
 - **Nada é apagado do celular antes do servidor confirmar.**
 - Se a sessão terminar no servidor (muitas horas sem uso), o app mostra "A sua sessão terminou" e o botão **Entrar de
   novo**. O que está guardado não se perde: depois de entrar, o envio continua.

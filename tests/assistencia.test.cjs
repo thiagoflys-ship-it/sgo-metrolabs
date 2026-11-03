@@ -227,7 +227,7 @@ test('série divergente: aceita, avisa a gestão, vira pendência até a confer�
   assert.equal(amb.tabelas.CAD_EQUIPAMENTOS.find((e) => e.ID === 'eq1').SERIE, 'S-100');
   assert.ok(amb.tabelas.ATEC_AVISOS.some((a) => a.DESTINATARIO_ID === 'u_gt' && /Série divergente/.test(a.TITULO)));
   documentar(amb, os.id);
-  ok(sync(amb, 's_tiago', [ev('RELATO', os.id, 400, { serieConfirmada: 'S-999' }), ev('ASSINATURA', os.id, 401, { nome: 'Rui', imagem: ASSINATURA }), ev('CONCLUI', os.id, 402, {}, '2026-10-20T11:00:00')]));
+  ok(sync(amb, 's_tiago', [ev('RELATO', os.id, 400, { serieConfirmada: 'S-999' }), ev('ASSINATURA', os.id, 401, { nome: 'Rui Responsável', imagem: ASSINATURA }), ev('CONCLUI', os.id, 402, {}, '2026-10-20T11:00:00')]));
   assert.equal(amb.tabelas.ATEC_OS.find((x) => x.ID === os.id).SITUACAO, 'ENCERRADA');
   assert.equal(amb.pend('s_gil').filter((i) => i.tipo === 'ast_serie').length, 1);
   ok(amb.api('s_gil', 'serieTratada', { osId: os.id, texto: 'Cadastro conferido com a placa no local' }));
