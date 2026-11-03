@@ -589,3 +589,31 @@ test('revisão BAIXA 10: número negativo no começo do texto fica; mais frases 
   assert.ok(av.some((x) => /A IA mandou 8 frases na apresentação; só as 6 primeiras foram conferidas/.test(x)));
   assert.ok(av.some((x) => /A IA mandou 10 frases na metodologia de CAL-001; só as 8 primeiras/.test(x)));
 });
+
+// ---------------------------------------------------------------- conferência de 94beba7
+test('conferência 1 (ALTA): "Rede Brasileira de Calibração" e variações contam como RBC, para a IA e para a Diretoria, sem "assumo"', () => {
+  const a = base(); montar(a); const at = tela(a).atual;
+  const ed = (texto, assumo) => a.prop('s_dora', 'trechoEditar', { id: 'op1', propostaId: at.id, trecho: 'observacoes', texto, motivo: 'Texto da Diretoria aqui', assumo });
+  for (const t of ['A Metrolabs integra a Rede Brasileira de Calibração.', 'A Metrolabs integra a rede brasileira de calibracao.', 'Padrões da Rede Brasileira de Laboratórios de Calibração.']) {
+    assert.match(ed(t, false).message, /RBC só na forma fixa/, t); assert.match(ed(t, true).message, /não pode ser assumido/, t);
+  }
+  assert.equal(a.tabelas.LIC_PROPOSTA_EDICOES.length, 0);
+  const p = []; a.ctx.LicProp_conferirRegras_('x', 'A Metrolabs integra a Rede Brasileira de Calibração.', p, {});
+  assert.ok(p.some((x) => /Rede Brasileira de Calibração \(RBC\)/.test(x)) && p.some((x) => /RBC só na forma fixa/.test(x)));
+});
+
+test('conferência 2 (MÉDIA): Cgcre, credenciamento e Inmetro fora de balança e esfigmomanômetro não podem ser assumidos', () => {
+  const a = base(); montar(a); const at = tela(a).atual;
+  const ed = (trecho, texto) => a.prop('s_dora', 'trechoEditar', { id: 'op1', propostaId: at.id, trecho, texto, motivo: 'Texto da Diretoria aqui', assumo: true });
+  for (const t of ['A Metrolabs é credenciada pela Cgcre.', 'A Metrolabs tem credenciamento no órgão.', 'O serviço é autorizado pelo Inmetro.', 'A calibração é aprovada pelo Inmetro.'])
+    assert.match(ed('observacoes', t).message, /não pode ser assumido/, t);
+  assert.equal(a.tabelas.LIC_PROPOSTA_EDICOES.length, 0);
+  ok(ed('observacoes', 'O serviço tem garantia de um ano.'));   // o que não é duro continua podendo ser assumido
+});
+
+test('conferência 3 (BAIXA): fraseAceitar só aceita índice com dígitos ("" não vira a frase 0)', () => {
+  const a = base({ ia: () => JSON.stringify({ apresentacao: [BOA_AP], metodologia: [] }) }); montar(a); const at = tela(a).atual;
+  for (const indice of ['', ' ', null, '0.0', '-1', 'x', true]) assert.match(a.prop('s_dora', 'fraseAceitar', { id: 'op1', propostaId: at.id, trecho: 'apresentacao', indice, aceitar: true }).message, /Escolha uma frase da IA/, String(indice));
+  assert.equal(tela(a).atual.trechos.find((x) => x.chave === 'apresentacao').aceitas, 0);
+  ok(a.prop('s_dora', 'fraseAceitar', { id: 'op1', propostaId: at.id, trecho: 'apresentacao', indice: '0', aceitar: true }));
+});

@@ -385,7 +385,7 @@ var LICPROP_EXTENSO = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cin
   dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90, cem: 100, cento: 100, duzentos: 200, trezentos: 300, mil: 1000 };
 var LICPROP_UNIDADE_CONTA = /^(ano|anos|mes|meses|dia|dias|hora|horas|semana|semanas|minuto|minutos|ponto|pontos|vez|vezes|ciclo|ciclos|equipamento|equipamentos|visita|visitas)$/;
 /** Lista de bloqueio (texto sem acento, com espaço nas pontas). Cada item: [regra, o que aparece na recusa]. */
-var LICPROP_BLOQUEIO = [[/ credenciad\w* /, 'credenciada'], [/ homologad\w* /, 'homologada'], [/ certificad\w* /, 'certificada'], [/ acredita\w* | 17025 /, 'acreditação'],
+var LICPROP_BLOQUEIO = [[/ credencia\w* /, 'credenciada'], [/ rede brasileira de (calibra|laboratorio)\w* /, 'Rede Brasileira de Calibração (RBC)'], [/ homologad\w* /, 'homologada'], [/ certificad\w* /, 'certificada'], [/ acredita\w* | 17025 /, 'acreditação'],
   [/ unic[oa]s? /, 'única'], [/ exclusiv\w* /, 'exclusiva'], [/ lider\w* /, 'líder'], [/ melhor\w* /, 'melhor'], [/ otim[oa]s? /, 'ótimo'], [/ ageis | agil /, 'ágil'],
   [/ anvisa /, 'ANVISA'], [/ cgcre /, 'Cgcre'], [/ iso(?! (iec )?\d{4,5} )/, 'ISO sem o número completo da norma'], [/ garanti\w* /, 'garantia'], [/ o mais | a mais | os mais | as mais /, 'o mais']];
 /** "certificado de calibração" e "emissão de certificado" são entregáveis do catálogo, não qualidade da empresa. */
@@ -396,7 +396,7 @@ function LicProp_semEntregavel_(n) {
 var LICPROP_FRASE_RBC = 'padrões com rastreabilidade a laboratórios da RBC';
 function LicProp_regraRbc_(onde, n, problemas) {
   var fixa = ' ' + LicProp_norm_(LICPROP_FRASE_RBC) + ' ', resto = n.split(fixa).join(' ');
-  if (/ rbc /.test(resto)) problemas.push(onde + ': RBC só na forma fixa "' + LICPROP_FRASE_RBC + '" (a Metrolabs é rastreável, não acreditada RBC); qualquer outra menção é recusada');
+  if (/ rbc | rede brasileira de (calibra|laboratorio)\w* /.test(resto)) problemas.push(onde + ': RBC só na forma fixa "' + LICPROP_FRASE_RBC + '" (a Metrolabs é rastreável, não acreditada RBC); qualquer outra menção é recusada');
 }
 /** Palavras da frase (4 letras ou mais) que não estão nas fontes citadas; as comuns de proposta ficam de fora. */
 function LicProp_palavrasFora_(texto, textosFonte) {
@@ -714,9 +714,10 @@ function LicProp_trechoEditar_(eu, d) {
     var de = LicProp_textoTrecho_(c.trechos[k]);
     if (de === texto && c.trechos[k].origem === 'DIRETORIA') return { semMudanca: true, texto: 'O texto é o mesmo de antes: nada foi gravado.' };
     var probs = texto ? LicProp_problemasEdicao_(k, texto, c) : [];
-    // RBC fora da forma fixa e acreditação nunca passam, nem com "assumo este texto" (a Metrolabs é rastreável, não acreditada)
-    var duros = probs.filter(function (p) { return /RBC só na forma fixa|\("acreditação"\)|nem prometa acreditação/.test(p); });
-    if (duros.length) throw new Error('Não foi possível gravar o trecho: ' + duros.join('; ') + '. Este ponto não pode ser assumido: a proposta só fala de RBC como "' + LICPROP_FRASE_RBC + '" e nunca de acreditação. Nada foi alterado');
+    // nunca passam, nem com "assumo este texto": RBC fora da forma fixa (também "Rede Brasileira de Calibração"), acreditação,
+    // Cgcre ou credenciamento e Inmetro fora de balança e esfigmomanômetro (a Metrolabs é rastreável, não acreditada)
+    var duros = probs.filter(function (p) { return /RBC só na forma fixa|\("acreditação"\)|nem prometa acreditação|\("Rede Brasileira de Calibração \(RBC\)"\)|\("Cgcre"\)|\("credenciada"\)|registro do Inmetro da Metrolabs/.test(p); });
+    if (duros.length) throw new Error('Não foi possível gravar o trecho: ' + duros.join('; ') + '. Este ponto não pode ser assumido: a proposta só fala de RBC como "' + LICPROP_FRASE_RBC + '", nunca de acreditação, Cgcre ou credenciamento, e de Inmetro só em balança e esfigmomanômetro. Nada foi alterado');
     if (probs.length && !assumo) throw new Error('Não foi possível gravar o trecho: ' + probs.join('; ') + '. Corrija o texto e grave de novo; se o texto está certo, marque "Assumo este texto" e explique no motivo (fica registrado e aparece na aprovação). Nada foi alterado');
     var agora = Lic_agora_();
     c.trechos[k] = { texto: texto, origem: 'DIRETORIA', frases: [], editadoPor: eu.nome, editadoEm: agora, antes: c.trechos[k].origem,
@@ -730,7 +731,7 @@ function LicProp_trechoEditar_(eu, d) {
  * d: { id, propostaId, trecho, indice, aceitar (true|false) }. Cada decisão vai para LIC_PROPOSTA_EDICOES e LIC_HISTORICO.
  */
 function LicProp_fraseAceitar_(eu, d) {
-  var k = Lic_s_(d.trecho), i = Number(d.indice), aceitar = d.aceitar === true || d.aceitar === 'SIM';
+  var k = Lic_s_(d.trecho), i = /^\d{1,3}$/.test(Lic_s_(d.indice)) ? Number(d.indice) : -1, aceitar = d.aceitar === true || d.aceitar === 'SIM';
   var l = Lic_acharOp_(d.id);
   return Lic_comTrava_(function () {
     var r = LicProp_linhaEditavel_(l, d.propostaId, 'aceitar a frase'), c = LicProp_conteudo_(r), t = c && c.trechos ? c.trechos[k] : null;
