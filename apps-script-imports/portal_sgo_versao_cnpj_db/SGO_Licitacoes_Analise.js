@@ -1580,8 +1580,8 @@ function Lic_aposArquivos_(d) {
  *     fila as elegíveis ainda sem análise em dia (nunca analisadas, último erro da IA, ou arquivos mais novos que a análise);
  *   - a rotina própria (Licitacoes_rotinaAnalise, gatilho de uma vez, 1 minuto depois, que se instala sozinho e se remove
  *     sem fila, no padrão da leitura do edital) analisa até 2 por execução, e só começa uma análise antes de 140 s (300 s do
- *     pool menos os 140 s de uma análise e a margem da gravação), na ordem: UF prioritária (GO, DF, vizinhos e RJ) primeiro e,
- *     dentro do grupo, o prazo de propostas mais próximo;
+ *     pool menos os 140 s de uma análise e a margem da gravação), na ordem: fim das propostas em até 72 h (qualquer UF), depois
+ *     UF prioritária (GO, DF, vizinhos e RJ), depois as demais; em cada grupo, o prazo de propostas mais próximo;
  *   - a rotina dos alertas (a cada 5 min) chama Lic_filaVigiar_: varredura e, se há análise vencida na fila, agenda a rotina;
  *   - sem a chave da IA: a fila fica parada e nada é agendado (nada de laço); cadastrada a chave, a vigia retoma sozinha;
  *   - erro da IA conta tentativa e a oportunidade volta à fila com espera (1 h, depois 6 h); na 3ª falha da mesma base sai da
@@ -1615,9 +1615,18 @@ function Lic_filaPor_(l) {
   Object.assign(l, m);
   return true;
 }
-/** Ordem da fila: UF prioritária (GO, DF, vizinhos e RJ) primeiro; no grupo, o prazo de propostas mais próximo; depois quem entrou antes. */
+var LIC_FILA_PRAZO_CURTO_MS = 72 * 3600e3;
+/**
+ * Ordem da fila (03/11/2026, decisão da coordenação: prazo curto passa na frente): (1) fim das propostas em até 72 h, qualquer UF;
+ * (2) UF prioritária (GO, DF, vizinhos e RJ); (3) as demais. Em cada grupo, o prazo mais próximo; depois quem entrou antes.
+ */
+function Lic_filaGrupo_(l, agoraMs) {
+  var enc = Date.parse(Lic_s_(l.ENCERRAMENTO_ISO));
+  if (isFinite(enc) && enc - agoraMs <= LIC_FILA_PRAZO_CURTO_MS) return 0;
+  return LIC_UFS_PRIORIDADE.indexOf(Lic_up_(l.UF)) >= 0 ? 1 : 2;
+}
 function Lic_filaOrdem_(a, b) {
-  var pa = LIC_UFS_PRIORIDADE.indexOf(Lic_up_(a.UF)) >= 0 ? 0 : 1, pb = LIC_UFS_PRIORIDADE.indexOf(Lic_up_(b.UF)) >= 0 ? 0 : 1;
+  var agora = Date.now(), pa = Lic_filaGrupo_(a, agora), pb = Lic_filaGrupo_(b, agora);
   if (pa !== pb) return pa - pb;
   var ea = Lic_s_(a.ENCERRAMENTO_ISO) || '9999', eb = Lic_s_(b.ENCERRAMENTO_ISO) || '9999';
   if (ea !== eb) return ea < eb ? -1 : 1;
@@ -1650,7 +1659,7 @@ function Lic_filaEstado_(l, todas) {
   var hora = espera ? new Date(px - 3 * 3600e3).toISOString() : '';
   return { situacao: 'NA_FILA', posicao: pos, total: fila.length, tentativas: tent, proxima: espera ? Lic_s_(l.ANALISE_PENDENTE_PROXIMA) : '', erro: Lic_s_(l.ANALISE_PENDENTE_ERRO), desde: Lic_s_(l.ANALISE_PENDENTE_EM),
     texto: 'Na fila de análise' + (pos ? ' (posição ' + pos + ' de ' + fila.length + ')' : '') + '.' +
-      (espera ? ' A IA não respondeu na tentativa anterior (' + (Lic_s_(l.ANALISE_PENDENTE_ERRO) || 'erro') + '): nova tentativa a partir de ' + hora.slice(8, 10) + '/' + hora.slice(5, 7) + ' às ' + hora.slice(11, 16) + ' (tentativa ' + (tent + 1) + ' de ' + LIC_FILA_TENTATIVAS + ').' : ' A rotina analisa até 2 por vez, a UF prioritária e o prazo mais próximo primeiro.') +
+      (espera ? ' A IA não respondeu na tentativa anterior (' + (Lic_s_(l.ANALISE_PENDENTE_ERRO) || 'erro') + '): nova tentativa a partir de ' + hora.slice(8, 10) + '/' + hora.slice(5, 7) + ' às ' + hora.slice(11, 16) + ' (tentativa ' + (tent + 1) + ' de ' + LIC_FILA_TENTATIVAS + ').' : ' A rotina analisa até 2 por vez: prazo de até 72 h primeiro, depois a UF prioritária, cada grupo pelo prazo mais próximo.') +
       (Lic_iaDisponivel_() ? '' : ' Sem a chave da IA, a fila fica parada.') };
 }
 /** Erro da IA: conta a tentativa; volta à fila com espera (1 h, 6 h) ou, na 3ª, sai da fila como falha. */

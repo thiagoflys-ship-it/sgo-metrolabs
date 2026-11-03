@@ -403,3 +403,20 @@ test('ajuda, manual e base do assistente explicam a fila e os ajustes visuais', 
   assert.match(man, /Na fila de análise por IA/);
   assert.match(base, /Fila da análise automática \(03\/11\/2026\)/, 'base do assistente gerada de novo');
 });
+
+test('ordem da fila: prazo de propostas em até 72 h passa na frente (qualquer UF); depois UF prioritária por prazo; depois as demais por prazo', () => {
+  // relógio de teste: 03/11 09:00 (Brasília) = 12:00Z; 72 h = 06/11 12:00Z
+  const ops = [op('opgo', 'GO', '2026-11-20T14:00:00.000Z'), op('opsp1', 'SP', '2026-11-05T12:00:00.000Z'), op('opsp2', 'SP', '2026-11-15T14:00:00.000Z'),
+    op('oprj', 'RJ', '2026-11-08T14:00:00.000Z'), op('opba', 'BA', '2026-11-04T12:00:00.000Z'), op('opsp3', 'SP', '2026-11-06T12:00:00.000Z'), op('oppr', 'PR', '2026-11-06T12:00:01.000Z')];
+  const a = ambiente({ ops });
+  assert.equal(a.ctx.Lic_filaVarrerTalvez_(null, true), 7);
+  const fila = a.ctx.Lic_filaOrdenada_(a.ctx.Lic_ativas_()).map((l) => l.ID);
+  assert.deepEqual(fila, ['opba', 'opsp1', 'opsp3', 'oprj', 'opgo', 'oppr', 'opsp2'],
+    'até 72 h: BA (04/11), SP (05/11), SP (06/11 12:00, exatamente 72 h); prioritárias: RJ (08/11), GO (20/11); demais: PR (1 s depois das 72 h), SP (15/11)');
+  assert.match(a.api('s_dora', 'ficha', { id: 'opsp1' }).analise.fila.texto, /^Na fila de análise \(posição 2 de 7\)\. A rotina analisa até 2 por vez: prazo de até 72 h primeiro, depois a UF prioritária/);
+  assert.equal(a.ctx.LIC_FILA_PRAZO_CURTO_MS, 72 * 3600e3);
+  // o relógio anda até 17/11: as de prazo vencido saem da fila e a GO (20/11, agora dentro das 72 h) segue
+  a.relogio.agora = Date.parse('2026-11-17T15:00:00.000Z');
+  const fila2 = a.ctx.Lic_filaOrdenada_(a.ctx.Lic_ativas_()).map((l) => l.ID);
+  assert.deepEqual(fila2, ['opgo'], 'as de prazo vencido saem da fila; a GO (20/11) segue');
+});
