@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "72be52b9e049",
+ "versao": "2f3999392c87",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -928,7 +928,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Abrir um chamado > Aberta em campo (pelo técnico, no aplicativo)",
-     "texto": "Desde 22/10/2026 o técnico abre atendimento fora da agenda pelo SGO+ Campo (botão \"Novo atendimento\"): localiza ou cadastra\no cliente, a unidade e o equipamento e abre a O.S. na hora, inclusive sem internet. No SGO+:\nO chamado nasce com canal \"Presencial\", a triagem feita em campo pelo próprio técnico (sintomas confirmados no local,\n decisão \"visita\") e a O.S. já no nome dele; não entra na fila de triagem. Chamado e O.S. levam o selo Aberta em campo\n (lista e ficha), e a gestão da área Técnica recebe o aviso AT01 \"atendimento aberto em campo\".\nO cadastro feito em campo entra marcado criado em campo por <técnico> em <data> e vira a pendência \"cadastro criado em\n campo para conferir\" na Central e na Caixa de decisões da área Técnica (2 dias úteis). Em Assistência técnica > Chamados, o\n quadro \"Cadastros criados em campo a conferir\" lista cada um: confira em Cadastros (Clientes, Unidades, Equipamentos ou\n Vínculos), corrija se precisar e toque em \"Conferido\" (com o que foi conferido). Nada fica bloqueado enquanto isso.\nNunca em dobro: antes de criar, o servidor confere CNPJ, nome, série e TAG; se já existir, usa o existente e avisa o\n técnico (\"já cadastrado como ...\"). Vale o original: cadastro repetido é consolidado em Vínculos.\nEquipamento que já tem O.S. aberta com o mesmo técnico: o aplicativo continua nela."
+     "texto": "Desde 22/10/2026 o técnico (e, desde 03/11/2026, qualquer colaborador da Metrolabs, de qualquer área ou vínculo) abre atendimento fora da agenda pelo SGO+ Campo (botão \"Novo atendimento\"): localiza ou cadastra\no cliente, a unidade e o equipamento e abre a O.S. na hora, inclusive sem internet. No SGO+:\nO chamado nasce com canal \"Presencial\", a triagem feita em campo pelo próprio técnico (sintomas confirmados no local,\n decisão \"visita\") e a O.S. já no nome dele; não entra na fila de triagem. Chamado e O.S. levam o selo Aberta em campo\n (lista e ficha), e a gestão da área Técnica recebe o aviso AT01 \"atendimento aberto em campo\".\nO cadastro feito em campo entra marcado criado em campo por <técnico> em <data> e vira a pendência \"cadastro criado em\n campo para conferir\" na Central e na Caixa de decisões da área Técnica (2 dias úteis). Em Assistência técnica > Chamados, o\n quadro \"Cadastros criados em campo a conferir\" lista cada um: confira em Cadastros (Clientes, Unidades, Equipamentos ou\n Vínculos), corrija se precisar e toque em \"Conferido\" (com o que foi conferido). Nada fica bloqueado enquanto isso.\nNunca em dobro: antes de criar, o servidor confere CNPJ, nome, série e TAG; se já existir, usa o existente e avisa o\n técnico (\"já cadastrado como ...\"). Vale o original: cadastro repetido é consolidado em Vínculos.\nEquipamento que já tem O.S. aberta com o mesmo técnico: o aplicativo continua nela."
     },
     {
      "titulo": "Triagem > Chamado pendente de triagem e fila livre (27/10/2026) (parte 1)",

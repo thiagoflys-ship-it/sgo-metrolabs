@@ -32,7 +32,8 @@ test('Meu dia versão 2: tipos com checklist e exigências, prioridades e regras
   assert.equal(md.campo.podeAbrir, true);
   assert.equal(md.campo.limiteBusca, 20);
   assert.ok(md.campo.prioridades.some((p) => p.codigo === 'P3'));
-  assert.equal(ok(amb.app('Ast_appMeuDia', 's_mara', {})).campo.podeAbrir, false, 'quem não é técnico nem gestão não abre em campo');
+  // 03/11/2026 (pedido do dono): qualquer colaborador abre O.S. em campo (retirada, entrega, serviço), assina e colhe a assinatura
+  assert.equal(ok(amb.app('Ast_appMeuDia', 's_mara', {})).campo.podeAbrir, true, 'colaborador de outra área também abre em campo');
 });
 
 test('busca no cadastro: cliente por nome e CNPJ, equipamento por série ou TAG, unidades e equipamentos do cliente; nunca mais de 20 por busca', () => {
@@ -154,8 +155,8 @@ test('cadastro em campo: cria pelas funções da tela Cadastros, marcado "criado
   assert.equal(amb.pend('s_gil').filter((i) => i.tipo === 'ast_cadastro_campo').length, 2);
   assert.equal(ok(amb.api('s_gil', 'iniciar', {})).cadastrosCampo, 2);
   assert.ok(!amb.trava.aninhamentos, 'sem trava aninhada');
-  // quem não é técnico não cadastra pelo aplicativo
-  assert.match(amb.app('Ast_appCadastrar', 's_mara', { idLocal: 'cad-cli-0009', tipo: 'CLIENTE', dados: { nome: 'Outro' } }).message, /é do técnico/);
+  // cliente do portal não usa o aplicativo (03/11/2026: qualquer colaborador da Metrolabs cadastra em campo)
+  assert.equal(amb.app('Ast_appCadastrar', 's_cliente.alfa', { idLocal: 'cad-cli-0009', tipo: 'CLIENTE', dados: { nome: 'Outro' } }).codigo, 'SEM_ACESSO');
 });
 
 // ------------------------------------------------------------------ O.S. aberta em campo
@@ -164,7 +165,7 @@ test('O.S. aberta em campo: chamado PRESENCIAL com a triagem feita em campo e a 
   const base = { idLocal: 'nova-os-0001', clienteId: 'c1', unidadeId: 'un1', equipamentoId: 'eq1', tipoCodigo: 'MANUTENCAO_CORRETIVA', sintoma: 'Autoclave apitando erro E04 no fim do ciclo', solicitante: 'Rui Responsável Teste', contato: '62988887777', prioridade: 'P2', parada: 'PARCIAL', em: '2026-10-19T10:02:00' };
   assert.match(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({}, base, { tipoCodigo: 'ENVIO_ORCAMENTO' })).message, /não tem visita/);
   assert.match(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({}, base, { sintoma: 'curto' })).message, /pelo menos 10 letras/);
-  assert.match(amb.app('Ast_appAbrirOS', 's_mara', base).message, /é do técnico/);
+  assert.equal(amb.app('Ast_appAbrirOS', 's_cliente.alfa', base).codigo, 'SEM_ACESSO');
   const r = ok(amb.app('Ast_appAbrirOS', 's_tiago', base));
   assert.equal(r.existente, false);
   assert.equal(r.os.numero, 'OS-2026-0001');
@@ -239,4 +240,17 @@ test('fluxo inteiro sem internet: cadastros e O.S. com ids provisórios do apare
   assert.equal(amb.tabelas.ATEC_CHAMADOS[0].SITUACAO, 'ENCERRADO');
   assert.equal(ok(amb.app('Ast_appOS', 's_tiago', { osId: 'ap-os-0001-aaaa' })).os.id, osId, 'Ast_appOS aceita o id provisório');
   assert.ok(!amb.trava.aninhamentos, 'sem trava aninhada');
+});
+
+test('03/11/2026: colaborador de outra área (não técnico) abre em campo a retirada de equipamento, a O.S. fica no nome dele e ele registra o atendimento', () => {
+  const amb = amb0();
+  const r = ok(amb.app('Ast_appAbrirOS', 's_mara', { idLocal: 'nova-os-ret-01', clienteId: 'c1', unidadeId: 'un1', equipamentoId: 'eq1', tipoCodigo: 'RETIRADA', sintoma: 'Retirada do equipamento para levar à oficina', solicitante: 'Rui Responsável Teste', contato: '62988887777', prioridade: 'P3', parada: 'NAO' }));
+  assert.equal(r.os.abertaEmCampo, true);
+  const os = amb.tabelas.ATEC_OS[0];
+  assert.equal(os.TECNICO_ID, 'u_met');
+  assert.equal(os.TIPO_CODIGO, 'RETIRADA');
+  // aparece no Meu dia dela e o servidor aceita o registro do atendimento por ela
+  const md = ok(amb.app('Ast_appMeuDia', 's_mara', {}));
+  assert.ok(md.os.some((o) => o.id === os.ID));
+  assert.doesNotThrow(() => amb.ctx.AstO_exigirCampo_(amb.ctx.Ast_eu_('s_mara'), os, 'registrar'));
 });

@@ -70,7 +70,7 @@ Pedido do cliente pelo portal ou pelo QR entra em "Solicitações dos clientes":
 
 ### Aberta em campo (pelo técnico, no aplicativo)
 
-Desde 22/10/2026 o técnico abre atendimento fora da agenda pelo SGO+ Campo (botão "Novo atendimento"): localiza ou cadastra
+Desde 22/10/2026 o técnico (e, desde 03/11/2026, qualquer colaborador da Metrolabs, de qualquer área ou vínculo) abre atendimento fora da agenda pelo SGO+ Campo (botão "Novo atendimento"): localiza ou cadastra
 o cliente, a unidade e o equipamento e abre a O.S. na hora, inclusive sem internet. No SGO+:
 
 - O chamado nasce com canal "Presencial", a **triagem feita em campo** pelo próprio técnico (sintomas confirmados no local,

@@ -162,7 +162,7 @@ function Ast_appMeuDia(sessionId, payload) {
       regras: { fotoMaxBytes: Number(regras.fotos.maxBytes) || 2000000, fotoRecomendadaBytes: 300000, localizacaoSo: ['CHEGUEI', 'CONCLUI'],
         motivosSemAssinatura: Object.keys(AST_MOTIVOS_SEM_ASSINATURA).map(function (k) { return { codigo: k, nome: AST_MOTIVOS_SEM_ASSINATURA[k] }; }) },
       // versão 2: o que o aparelho precisa para abrir uma O.S. em campo sem internet (tipos com checklist, prioridades, parada)
-      campo: { podeAbrir: !!(eu.tecnico || eu.gestao), duracaoPadraoMin: Number(regras.agenda.duracaoPadraoMin) || 90, limiteBusca: AST_APP_LIMITE_BUSCA,
+      campo: { podeAbrir: !!eu.interno, /* 03/11/2026 (pedido do dono): qualquer colaborador abre em campo (retirada, entrega, serviço) */ duracaoPadraoMin: Number(regras.agenda.duracaoPadraoMin) || 90, limiteBusca: AST_APP_LIMITE_BUSCA,
         prioridades: Object.keys(AST_PRIORIDADES).map(function (k) { return { codigo: k, nome: AST_PRIORIDADES[k] }; }),
         paradas: Object.keys(AST_PARADA).map(function (k) { return { codigo: k, nome: AST_PARADA[k] }; }) },
       tipos: AstApp_tipos_(),
@@ -417,7 +417,7 @@ function AstApp_jaCadastrado_(cnpj) {
 function Ast_appCadastrar(sessionId, payload) {
   return AstApp_resposta_(sessionId, function (eu) {
     var p = payload || {}, tipo = Ast_up_(p.tipo), def = AST_APP_CAD[tipo], idLocal = Ast_s_(p.idLocal), d = p.dados || {};
-    if (!eu.tecnico && !eu.gestao) throw new Error('Não foi possível cadastrar: o cadastro em campo é do técnico (perfil Técnico ou área Técnica). Cadastre em Cadastros > Clientes no computador');
+    if (!eu.interno) throw new Error('Não foi possível cadastrar: o cadastro em campo é da equipe da Metrolabs. Cadastre em Cadastros > Clientes no computador');
     if (!def) throw new Error('Não foi possível cadastrar: tipo desconhecido (' + tipo + '). Use CLIENTE, UNIDADE ou EQUIPAMENTO');
     if (!AST_RX_ID_LOCAL.test(idLocal)) throw new Error('Não foi possível cadastrar: o idLocal precisa ter de 8 a 80 letras, números ou _.:-');
     AstApp_garantirColunasCadastro_();
@@ -543,7 +543,7 @@ function AstApp_cadEquipamento_(eu, d) {
 function Ast_appAbrirOS(sessionId, payload) {
   return AstApp_resposta_(sessionId, function (eu) {
     var p = payload || {}, idLocal = Ast_s_(p.idLocal);
-    if (!eu.tecnico && !eu.gestao) throw new Error('Não foi possível abrir a O.S.: abrir atendimento em campo é do técnico (perfil Técnico ou área Técnica). No computador, abra o chamado em Assistência técnica > Abrir chamado');
+    if (!eu.interno) throw new Error('Não foi possível abrir a O.S.: abrir atendimento em campo é da equipe da Metrolabs. No computador, abra o chamado em Assistência técnica > Abrir chamado');
     if (!AST_RX_ID_LOCAL.test(idLocal)) throw new Error('Não foi possível abrir a O.S.: o idLocal precisa ter de 8 a 80 letras, números ou _.:-');
     var tipo = Ast_tipo_(p.tipoCodigo);
     if (!tipo || !tipo.ativo) throw new Error('Não foi possível abrir a O.S.: escolha o tipo de serviço (define o checklist, as fotos e o que o relatório exige). Atualize o Meu dia se a lista estiver vazia');
