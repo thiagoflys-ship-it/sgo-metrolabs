@@ -14,6 +14,10 @@
  * 27/10/2026, tarde (dono: "nada que funcionava pode ficar mais lento; o único problema era o consumo"): fechadura sem eventos a
  *   cada 60 s, portões numa leitura central (20 s parado, 4 s no percurso), recuperação gradual depois do bloqueio, orçamento
  *   provisório e confirmação do pacote, validação por eventos só informativa.
+ * 03/11/2026 (dono: "os portões estão funcionando bem pela ponte do celular, deixa só a fechadura pela Tuya; se tiver como,
+ *   colocar o refrigerador pela ponte também; um botão em cada dispositivo para escolher ponte ou Tuya"): canal de cada
+ *   dispositivo (selo no cartão, troca na administração com motivo, ponte fora nunca cai para a nuvem), refrigerador/freezer
+ *   só de leitura (temperaturas, histórico com gráfico, alerta de faixa opcional) e consumo da nuvem por dispositivo na Saúde.
  */
 function SGO_ajudaTelas_AutomacaoPredial_() {
   return {
@@ -83,7 +87,8 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "\"Orçamento da cota\": enquanto ninguém confirma, vale a referência provisória (pacote de cerca de 53.900 chamadas por mês, orçamento de 26.950) e nada fica mais lento. Para confirmar (diretor ou Administrador): veja o pacote no painel da Tuya (Cloud › Cloud Services › IoT Core), informe o limite, se renova todo mês ou é único (com início e fim), o orçamento (a tela sugere metade do limite) e o motivo, e toque em \"Confirmar orçamento\".",
           "Em \"Consumo da cota da Tuya\": chamadas de hoje e do mês, a porcentagem do orçamento, a previsão para o fim do mês, as chamadas por origem e as mensagens de eventos recebidas (cota à parte).",
           "Modo econômico (emergência): o SGO+ liga sozinho em 90% do orçamento confirmado (ou do limite do pacote, enquanto provisório). Comandos de pessoas, eventos e a abertura automática por evento continuam. Um diretor pode sair antes em \"Sair do modo econômico\", com o motivo.",
-          "Diretores ajustam a consulta sem eventos (horário e dias da consulta da fechadura, intervalo de 30 a 85 segundos e intervalo do portão parado), com o motivo.",
+          "Diretores ajustam a consulta sem eventos (horário e dias da consulta da fechadura, intervalo de 30 a 85 segundos, intervalo do portão parado e a leitura do refrigerador, de 5 a 60 minutos), com o motivo.",
+          "\"Consumo da nuvem por dispositivo\": as chamadas de hoje e do mês de cada dispositivo, por origem, com o canal de cada um. Dispositivo pela ponte local fica com zero. \"Chamadas gerais\" são a lista de dispositivos, o token e a conferência da sentinela.",
           "\"Histórico de incidentes\" lista a abertura de cada incidente, as ações automáticas (token renovado, rotina reinstalada, eventos reconectados), os avisos enviados e a normalização.",
           "Nada se atualiza sozinho nesta aba: toque em \"Atualizar\"."
         ] },
@@ -98,6 +103,30 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "O portão de pedestre só tem \"Abrir portão\": o pulso solta a fechadura e ele fecha à mão.",
           "O Administrador ou um diretor pode mudar em \"Administrar\" > \"Acionamento\": \"Pulso (só abrir; fecha manualmente)\" ou \"Portão com abrir e fechar\". A tela mostra a sugestão pela leitura do dispositivo.",
           "O fechar vale com a mesma homologação do abrir: portão homologado abre e fecha de verdade."
+        ] },
+        { titulo: "Ver por onde cada dispositivo trabalha (ponte local ou nuvem Tuya)", itens: [
+          "No cartão de cada dispositivo, o selo azul \"Pela ponte local\" quer dizer que comandos e leituras saem só pelo celular da ponte, na rede da empresa, sem gastar a nuvem da Tuya. O selo roxo \"Pela nuvem Tuya\" quer dizer que saem pela nuvem (contam na cota).",
+          "A linha \"Trabalha pela\" repete o canal; \"(padrão)\" quer dizer que ninguém escolheu ainda: portões cadastrados no celular da ponte ficam pela ponte; a fechadura e os demais, pela nuvem.",
+          "Selo vermelho \"Ponte local fora do ar\" e a faixa \"... trabalha pela ponte local e a ponte local está fora do ar desde hh:mm\": nada é enviado, nem pela nuvem. Use o controle ou o aplicativo Smart Life.",
+          "O SGO+ nunca troca sozinho para a nuvem. Quem decide é a Diretoria ou o Administrador (passo seguinte)."
+        ] },
+        { titulo: "Trocar entre a ponte local e a nuvem Tuya (Diretoria e Administrador)", itens: [
+          "No cartão do dispositivo, toque em \"Administrar\". No alto do formulário aparece \"Trabalhar pela:\" com o canal atual, quem escolheu, quando e o motivo.",
+          "Toque em \"Trabalhar pela Nuvem Tuya\" ou em \"Trabalhar pela ponte local (celular)\".",
+          "Na janela, escreva o motivo (mínimo de 5 caracteres) e confirme. A troca vale na hora e fica na auditoria (\"Trocou por onde o dispositivo trabalha\").",
+          "Com a ponte fora do ar, o próprio cartão mostra o botão \"Trabalhar pela Nuvem Tuya\", com o motivo já escrito: um toque para confirmar.",
+          "\"Trabalhar pela ponte local\" só aparece para dispositivo cadastrado no celular da ponte; sem isso, ele ficaria sem funcionar pelo SGO+. O responsável pelo sistema cadastra pelo LEIAME da ponte.",
+          "Quando a ponte voltar, troque de volta para \"ponte local\" para não gastar a cota da nuvem.",
+          "A porta da Diretoria (restrita) só um diretor troca."
+        ] },
+        { titulo: "Refrigerador ou freezer (só leitura)", itens: [
+          "O cartão com o floco de neve mostra a temperatura atual de cada compartimento ativo (número grande) e a ajustada, o equipamento ligado ou desligado, o modo (MAX, ECO), a trava infantil, a bateria (porcentagem e tensão), os erros do equipamento (E1 a E9) e a hora da leitura.",
+          "Nenhum comando sai do SGO+ para o refrigerador: ligar, desligar e ajustar continuam no próprio equipamento ou no aplicativo Smart Life.",
+          "Toque em \"Ler agora\" para ler na hora. Sozinho, o SGO+ lê a cada 10 minutos (a Diretoria muda de 5 a 60 minutos em Saúde da infraestrutura). Pela ponte local, a leitura não gasta a nuvem.",
+          "Toque em \"Histórico\" para ver o gráfico das temperaturas (linha cheia = atual; tracejada = ajustada) e a lista das últimas leituras. Escolha 24 h, 48 h, 7 dias ou 30 dias.",
+          "O histórico grava uma linha quando algo muda (temperatura, ajuste, modo, erro) e a cada leitura agendada.",
+          "Erro \"E1\" a \"E9\": é código de erro do próprio equipamento. Consulte o manual do refrigerador e confira no local.",
+          "Alerta de temperatura (opcional, desligado por padrão): em \"Administrar\", marque \"Avisar a gestão quando a temperatura sair da faixa\" e informe a mínima e a máxima de cada compartimento (vírgula para decimais). Duas leituras seguidas fora da faixa avisam a Diretoria e o Administrador uma vez (no sistema e por e-mail) e de novo quando a temperatura volta."
         ] },
         { titulo: "Ler o estado e ver o histórico", itens: [
           "No cartão do dispositivo, toque em \"Ler estado\" para reler o estado na nuvem agora.",
@@ -163,6 +192,10 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { nome: "Situação \"Aceito pela API, sem confirmação\" (laranja)", significado: "A nuvem recebeu o comando, mas o dispositivo não confirmou. Não considere aberto." },
         { nome: "Situação \"Recusado pela API\" ou \"Negado pelo SGO+\" (vermelho)", significado: "O comando não foi executado; o detalhe diz o porquê." },
         { nome: "Faixa vermelha \"Portões pelo SGO+ fora do ar no momento\"", significado: "A nuvem da Tuya não atende (cota, plano ou credenciais). Use o controle ou o aplicativo Smart Life; a gestão já foi avisada." },
+        { nome: "Selo azul \"Pela ponte local\" e selo roxo \"Pela nuvem Tuya\"", significado: "Por onde o dispositivo trabalha: pelo celular da ponte na rede da empresa (sem gastar a nuvem) ou pela nuvem da Tuya." },
+        { nome: "Selo vermelho \"Ponte local fora do ar\" e faixa \"... a ponte local está fora do ar desde hh:mm\"", significado: "O dispositivo trabalha pela ponte e ela não responde: nada é enviado, nem pela nuvem. Use o controle ou o aplicativo Smart Life; a gestão pode trocar para a Nuvem Tuya." },
+        { nome: "Selo azul \"Só leitura\" (refrigerador)", significado: "O SGO+ só lê o refrigerador; nenhum comando sai." },
+        { nome: "Compartimento com fundo vermelho e faixa \"Fora da faixa configurada\" (refrigerador)", significado: "Duas leituras seguidas fora da faixa do alerta: a gestão foi avisada. Confira o equipamento no local." },
         { nome: "Faixa amarela \"Economia da nuvem ligada\"", significado: "Modo econômico de emergência: sem eventos, a posição e a campainha não são relidas sozinhas. Use \"Ler estado\" e \"Verificar campainha agora\" e confira no local." },
         { nome: "Resultado \"Recusado — nuvem bloqueada (cota ou plano), nada enviado\"", significado: "A nuvem da Tuya estava bloqueada: o SGO+ não enviou nada. Use o controle ou o aplicativo Smart Life." },
         { nome: "Cartões verde, amarelo, vermelho e cinza (Saúde da infraestrutura)", significado: "Normal, atenção, falha e desligado." }
@@ -182,6 +215,10 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { situacao: "\"Portões pelo SGO+ fora do ar no momento\"", oQueFazer: "Use o controle ou o aplicativo Smart Life. A gestão foi avisada. Para a gestão: veja o cartão vermelho em Saúde da infraestrutura (o quê, por quê e o que fazer)." },
         { situacao: "Cota da Tuya esgotada (código 28841004, \"quota of Trial Edition is used up\")", oQueFazer: "O responsável pelo sistema renova em iot.tuya.com › Cloud › Cloud Services › IoT Core (estender o período de teste ou assinar um plano). O SGO+ volta sozinho quando a Tuya responder: a sentinela confere com uma chamada 15 minutos depois, depois 30, 1 hora e de hora em hora; a volta é gradual (60 minutos) e a normalização é avisada." },
         { situacao: "A posição do portão demora a mudar ou a campainha aparece atrasada", oQueFazer: "Os eventos da Tuya não estão ligados (cartão \"Eventos da Tuya\" em amarelo): a posição parada leva até 20 segundos (60 ou 120 nos dias de consumo alto) e a campainha até 60. Use \"Ler estado\" e \"Verificar campainha agora\". O responsável pelo sistema liga o serviço de mensagens no portal da Tuya (manual do módulo)." },
+        { situacao: "\"ponte local fora do ar desde hh:mm\" (portão ou refrigerador)", oQueFazer: "Nada foi enviado, nem pela nuvem. Use o controle ou o aplicativo Smart Life. Para religar a ponte: confira o celular da ponte (no carregador, no Wi-Fi da empresa, Termux aberto; reinicie se preciso). Para usar a nuvem enquanto isso, a Diretoria ou o Administrador toca em \"Trabalhar pela Nuvem Tuya\" no cartão." },
+        { situacao: "\"a ponte está no ar, mas não alcança este dispositivo na rede local\"", oQueFazer: "Confira a energia e o Wi-Fi do dispositivo. Se o roteador trocou o endereço dele, a ponte procura de novo sozinha em alguns minutos." },
+        { situacao: "\"Trabalhar pela ponte local\" não aparece no Administrar", oQueFazer: "O dispositivo não está cadastrado no celular da ponte. O responsável pelo sistema cadastra (portoes_local/LEIAME.md, \"Cadastrar um dispositivo na ponte\")." },
+        { situacao: "Refrigerador \"Ainda sem leitura\"", oQueFazer: "Toque em \"Ler agora\". Pela nuvem, confira se ele está online no aplicativo Smart Life; pela ponte, se a ponte está no ar." },
         { situacao: "\"Orçamento provisório — confirmar no painel\"", oQueFazer: "Nada está mais lento. Um diretor ou o Administrador confirma o pacote em Saúde da infraestrutura › Orçamento da cota (passo a passo na tela)." }
       ],
       quemPode: [
@@ -198,6 +235,9 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { p: "Onde ficam as senhas da fechadura?", r: "Em lugar nenhum do SGO+. O destravamento usa um bilhete temporário da nuvem, que não é gravado. As credenciais da Tuya ficam em Chaves e senhas, fora de qualquer planilha." },
         { p: "Os portões pararam: o alarme parou junto?", r: "Não. O alarme fala com a central pelo servidor do SGO+, sem a nuvem da Tuya. Cada item aparece separado em Saúde da infraestrutura." },
         { p: "Por que a posição não muda na hora com o portão parado?", r: "Com os eventos da Tuya, muda na hora. Sem eles, uma leitura central vale para todas as telas abertas: a cada 20 segundos com o portão parado (60 ou 120 nos dias de consumo alto) e a cada 4 segundos no percurso de um comando. \"Ler estado\" lê na hora." },
+        { p: "Se a ponte cair, os portões passam sozinhos para a nuvem da Tuya?", r: "Não. Dispositivo que trabalha pela ponte local só sai pela ponte: com ela fora do ar, nada é enviado e a tela diz desde quando. A troca para a nuvem é decisão da Diretoria ou do Administrador, com um toque em \"Trabalhar pela Nuvem Tuya\"." },
+        { p: "Por que a fechadura continua pela nuvem?", r: "A fechadura da Porta da Diretoria não está no celular da ponte e a abertura pela campainha usa a nuvem da Tuya. Nada mudou nela: a abertura automática continua como estava." },
+        { p: "O refrigerador pode ser desligado ou ajustado pelo SGO+?", r: "Não. É só leitura: temperaturas, modo, bateria, erros e histórico. Ligar, desligar e ajustar continuam no próprio equipamento ou no aplicativo Smart Life." },
         { p: "O que acontece se eu tocar duas vezes?", r: "Cada toque gera um identificador de operação. O mesmo identificador nunca é executado duas vezes, e o dispositivo não recebe outro comando antes de 10 s." }
       ],
       secoesManual: [
@@ -212,6 +252,11 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "A nuvem da Tuya conta cada chamada do SGO+ (pacote de teste: cortou em 53.909 chamadas no mês; referência provisória de 53.900 por mês e orçamento de 26.950 até a gestão confirmar). O SGO+ conta as chamadas por dia, por mês e por origem, inclusive as recusadas, e mostra em Saúde da infraestrutura.",
           "Com os eventos da Tuya (serviço de mensagens), a campainha e a posição chegam sem gastar chamada. Sem eles, nada para: a fechadura é consultada a cada 60 segundos no horário configurado e os portões numa leitura central para as telas visíveis.",
           "Nuvem bloqueada: nada automático sai; a sentinela confere a volta com uma chamada (15 minutos, 30, 1 hora, de hora em hora) e a volta é gradual em 60 minutos. A sentinela nunca envia comando. Em 70% do orçamento avisa; em 90% liga o modo econômico de emergência; falha que não se corrige avisa o responsável pelo sistema e a Diretoria uma vez (evento S74) e de novo quando normaliza."
+        ] },
+        { titulo: "Canal de cada dispositivo e refrigerador (03/11/2026)", paragrafos: [
+          "Cada dispositivo trabalha por um canal: \"Ponte local (celular)\" ou \"Nuvem Tuya\". Pela ponte, comandos e leituras (inclusive as automáticas e as da tela) nunca vão à nuvem; com a ponte fora do ar, nada sai e a tela diz desde quando, sem cair sozinho para a nuvem. Pela nuvem, tudo como antes.",
+          "Padrão: portões cadastrados no celular da ponte, pela ponte; fechadura e demais, pela nuvem. A Diretoria e o Administrador trocam em \"Administrar\", com motivo; a troca fica na auditoria.",
+          "Refrigerador ou freezer (categoria xbx, \"Car Refrigerator\"): só leitura. Pela nuvem, a sombra do dispositivo a cada 10 minutos (5 a 60, na Saúde), 24 horas, contando na cota e pausando no bloqueio e no modo econômico; pela ponte, sem nuvem. Histórico em AUT_LEITURAS (quando muda e a cada leitura agendada) e alerta de faixa opcional (evento S79)."
         ] }
       ]
     }

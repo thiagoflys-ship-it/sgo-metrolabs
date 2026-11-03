@@ -200,3 +200,61 @@ test('endereço: região desconhecida cai no padrão (América Oeste); endereço
   const b = ambiente({ props: { TUYA_REGIAO: 'eu', TUYA_ENDPOINT: 'http://exemplo.test' } });
   assert.equal(b.ctx.Tuya_cfg_().url, 'https://openapi.tuyaeu.com', 'http fora do próprio computador é ignorado');
 });
+
+// 03/11/2026: canal de cada dispositivo no caminho único para a nuvem (Tuya_chamar_) e refrigeração só de leitura
+test('canal no caminho único: Ponte nunca chama a nuvem (nem token) e, sem a ponte, dá erro "ponte"; Tuya ignora a ponte viva; fora do cadastro, como antes', () => {
+  const { ctx, api, props } = ambiente();
+  const c = ctx.Tuya_cfg_();
+  const canais = { 'dev-portao-1': 'PONTE', 'dev-fech-1': 'TUYA' };
+  ctx.AutPred_canalDoDevice_ = (id) => canais[id] || '';
+  const locais = [];
+  ctx.SGO_PORTOES_LOCAIS = { chamar: (acao, d) => { locais.push(acao + ':' + d.devId); return acao === 'estado' ? { ok: true, online: true, props: { switch_1: { value: false, time: 1 } } } : { aceito: true, id: 'x' }; } };
+  // ponte calada (vivoEm 0) com a última notícia guardada pelo servidor
+  props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: 0, ultimoEm: Date.now() - 300000, dispositivos: { 'dev-portao-1': { online: true }, 'dev-fech-1': { online: true } } });
+  let erro = null;
+  try { ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-portao-1/status', {}); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte); assert.match(erro.message, /ponte local está fora do ar desde \d{2}:\d{2}.*nada foi enviado à nuvem/);
+  assert.equal(erro.tuyaCodigo, 0); assert.equal(erro.tuyaRede, false, 'não é falha da nuvem nem passageira');
+  assert.equal(api.pedidos.length, 0, 'nenhuma chamada (nem token)');
+  // ponte viva: o portão sai pela ponte; a fechadura do canal Tuya vai à nuvem mesmo com a ponte atendendo
+  props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: Date.now(), ultimoEm: Date.now(), dispositivos: { 'dev-portao-1': { online: true }, 'dev-fech-1': { online: true } } });
+  assert.equal(ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-portao-1/status', {}).j.success, true);
+  assert.equal(api.pedidos.length, 0);
+  ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-fech-1/functions', {});
+  assert.deepEqual(locais, ['estado:dev-portao-1'], 'a ponte não foi usada para a fechadura');
+  assert.ok(api.pedidos.some((p) => p.caminho === '/v1.0/devices/dev-fech-1/functions'));
+  // caminho que a ponte não faz (funções) num dispositivo da Ponte: erro, nunca a nuvem
+  const n0 = api.pedidos.length;
+  erro = null;
+  try { ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-portao-1/functions', {}); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte); assert.match(erro.message, /a ponte não fornece esta informação/);
+  assert.equal(api.pedidos.length, n0);
+  // fora do cadastro (sincronização): como antes, a ponte quando atende
+  props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: Date.now(), dispositivos: { 'dev-novo-1': { online: true } } });
+  ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-novo-1/status', {});
+  assert.equal(api.pedidos.length, n0); assert.equal(locais[locais.length - 1], 'estado:dev-novo-1');
+  // identificador do dispositivo no caminho
+  assert.equal(ctx.Tuya_devDoCaminho_('/v2.0/cloud/thing/abc123/shadow/properties'), 'abc123');
+  assert.equal(ctx.Tuya_devDoCaminho_('/v1.1/devices/abc123/door-lock/open-logs'), 'abc123');
+  assert.equal(ctx.Tuya_devDoCaminho_('/v1.0/iot-01/associated-users/devices'), '');
+});
+
+test('cota por dispositivo: cada chamada que sai conta no dia e no mês por dispositivo e origem; lista e token ficam sem dispositivo', () => {
+  const { ctx, props } = ambiente();
+  const c = ctx.Tuya_cfg_();
+  ctx.Tuya_comOrigem_('MANUAL', () => ctx.Tuya_estado_(c, 'dev-portao-1'));
+  ctx.Tuya_comOrigem_('AUTOMATICA', () => ctx.Tuya_estado_(c, 'dev-portao-1'));
+  ctx.Tuya_comOrigem_('SINCRONIZAR', () => ctx.Tuya_listarDispositivos_(c));
+  const u = JSON.parse(props.TUYA_USO_V1);
+  assert.deepEqual(u.diaDisp['dev-portao-1'], { MANUAL: 1, AUTOMATICA: 1 });
+  assert.deepEqual(u.mesDisp['dev-portao-1'], { MANUAL: 1, AUTOMATICA: 1 });
+  assert.equal(Object.keys(u.diaDisp).length, 1, 'a lista e o token não têm dispositivo');
+  assert.equal(u.diaTotal, 4, 'token + 2 leituras + lista');
+});
+
+test('refrigeração (xbx, bx): só leitura, sem comando, mesmo com pontos chamados "Switch"', () => {
+  const { ctx } = ambiente();
+  const r = ctx.Tuya_compatibilidade_('xbx', [{ code: 'Switch' }, { code: 'OnOff' }], []);
+  assert.equal(r.tipo, 'REFRIGERADOR'); assert.equal(r.ok, false); assert.equal(r.comandoAbrir, null); assert.match(r.motivo, /Só leitura/);
+  assert.equal(ctx.Tuya_compatibilidade_('bx', [], []).tipo, 'REFRIGERADOR');
+});

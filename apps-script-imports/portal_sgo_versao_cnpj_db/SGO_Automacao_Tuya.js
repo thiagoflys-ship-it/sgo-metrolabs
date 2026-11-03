@@ -104,6 +104,9 @@ var TUYA_ORIGENS_PESSOA = { COMANDO: 1, MANUAL: 1, SINCRONIZAR: 1 };
 // fechaduras: só pelo fluxo de bilhete das Smart Lock Open APIs, quando o modelo aceita abertura remota.
 var TUYA_CATEGORIAS_PORTAO = { ckmkzq: 'Abridor de portão/garagem', cl: 'Motor de portão ou cortina', clkg: 'Interruptor de motor', kg: 'Interruptor', cz: 'Tomada inteligente', pc: 'Régua de tomadas', tdq: 'Disjuntor inteligente', dlq: 'Disjuntor', szjqr: 'Acionador de botão' };
 var TUYA_CATEGORIAS_FECHADURA = { ms: 'Fechadura residencial', jtmspro: 'Fechadura residencial Pro', mk: 'Controle de acesso', hotelms: 'Fechadura de hotel', gyms: 'Fechadura comercial', jtmsbh: 'Fechadura (sempre ativa)', videolock: 'Fechadura com câmera', photolock: 'Fechadura com áudio e vídeo', bxx: 'Cofre', ms_category: 'Acessório de fechadura' };
+// 03/11/2026 (dono): refrigeração só de leitura (nenhum comando). xbx = refrigerador/freezer portátil de 2 compartimentos
+// ("Car Refrigerator", usado em calibração; medido em produção: /status 2003 e /specifications 2009, a sombra v2.0 responde).
+var TUYA_CATEGORIAS_REFRIGERACAO = { xbx: 'Refrigerador/freezer portátil (2 compartimentos)', bx: 'Refrigerador' };
 
 // ------------------------------------------------------------
 // CONFIGURAÇÃO E SEGREDOS
@@ -247,11 +250,13 @@ function Tuya_usoNormalizar_(u, agoraMs) {
   var out = { dia: dia, diaTotal: 0, diaPor: {}, mes: mes, mesTotal: 0, mesPor: {}, ontemTotal: 0, porDia: {},
     ultimoOkEm: Number(u.ultimoOkEm) || 0, ultimoErro: u.ultimoErro || null, bloqueio: u.bloqueio || null,
     // 27/10/2026: recuperação depois do bloqueio, disjuntor e consumo do pacote único (período com início e fim)
-    recuperacao: u.recuperacao || null, voltouEm: Number(u.voltouEm) || 0, recuoInicialMs: Number(u.recuoInicialMs) || 0, periodo: u.periodo || null };
+    recuperacao: u.recuperacao || null, voltouEm: Number(u.voltouEm) || 0, recuoInicialMs: Number(u.recuoInicialMs) || 0, periodo: u.periodo || null,
+    // 03/11/2026: consumo por dispositivo e origem ({ <deviceId>: { <origem>: n } }), no dia e no mês (Saúde da infraestrutura)
+    diaDisp: {}, mesDisp: {} };
   Object.keys(u.porDia || {}).forEach(function (k) { if (k.slice(0, 7) === mes || k >= Tuya_diaDe_((agoraMs || Date.now()) - 35 * 86400000)) out.porDia[k] = Number(u.porDia[k]) || 0; });
-  if (u.dia === dia) { out.diaTotal = Number(u.diaTotal) || 0; out.diaPor = u.diaPor || {}; out.ontemTotal = Number(u.ontemTotal) || 0; }
+  if (u.dia === dia) { out.diaTotal = Number(u.diaTotal) || 0; out.diaPor = u.diaPor || {}; out.ontemTotal = Number(u.ontemTotal) || 0; out.diaDisp = u.diaDisp || {}; }
   else if (u.dia === Tuya_diaDe_((agoraMs || Date.now()) - 86400000)) out.ontemTotal = Number(u.diaTotal) || 0;
-  if (u.mes === mes) { out.mesTotal = Number(u.mesTotal) || 0; out.mesPor = u.mesPor || {}; }
+  if (u.mes === mes) { out.mesTotal = Number(u.mesTotal) || 0; out.mesPor = u.mesPor || {}; out.mesDisp = u.mesDisp || {}; }
   return out;
 }
 function Tuya_uso_() {
@@ -264,15 +269,19 @@ function Tuya_uso_() {
 function Tuya_usoGravar_(u) { try { PropertiesService.getScriptProperties().setProperty(TUYA_PROP_USO, JSON.stringify(u)); } catch (e) {} }
 
 /**
- * Conta uma chamada que saiu (inclusive a recusada pela Tuya: ela pode cobrá-la). r = { ok, codigo, http, rede, texto }.
+ * Conta uma chamada que saiu (inclusive a recusada pela Tuya: ela pode cobrá-la). r = { ok, codigo, http, rede, texto };
+ * deviceId = dispositivo do caminho (consumo por dispositivo; vazio na lista, no token e nas chamadas gerais).
  * 27/10/2026: o token que responde não tira o bloqueio nem conta como "nuvem respondendo" (a cota é da API de negócio).
  * Nunca lança erro.
  */
-function Tuya_usoRegistrar_(origem, r) {
+function Tuya_usoRegistrar_(origem, r, deviceId) {
   try {
     var u = Tuya_uso_(), o = String(origem || 'OUTRA');
     u.diaTotal++; u.mesTotal++;
     u.diaPor[o] = (Number(u.diaPor[o]) || 0) + 1; u.mesPor[o] = (Number(u.mesPor[o]) || 0) + 1;
+    // 03/11/2026: por dispositivo (só o identificador; nada de segredo), no máximo 60 dispositivos guardados
+    var dv = String(deviceId || '');
+    if (dv) [u.diaDisp, u.mesDisp].forEach(function (m) { if (!m[dv] && Object.keys(m).length >= 60) return; m[dv] = m[dv] || {}; m[dv][o] = (Number(m[dv][o]) || 0) + 1; });
     u.porDia[u.dia] = u.diaTotal;
     if (u.periodo && u.dia >= String(u.periodo.inicio || '') && u.dia <= String(u.periodo.fim || '')) u.periodo.total = (Number(u.periodo.total) || 0) + 1;
     var agora = Date.now();
@@ -447,11 +456,11 @@ function Tuya_chamarBruto_(c, metodo, caminho, query, corpo, o) {
   var op = { method: metodo.toLowerCase(), muteHttpExceptions: true, followRedirects: false, headers: headers };
   if (corpoTexto) { op.contentType = 'application/json'; op.payload = corpoTexto; }
   Tuya_esperarVez_();
-  var r, origemUso = o.semToken ? 'TOKEN' : (Tuya_origemAtual_ || 'OUTRA');
+  var r, origemUso = o.semToken ? 'TOKEN' : (Tuya_origemAtual_ || 'OUTRA'), devUso = o.semToken ? '' : Tuya_devDoCaminho_(caminho);
   try { r = UrlFetchApp.fetch(c.url + ass.caminhoCompleto, op); }
   catch (e) {
     var textoRede = 'sem resposta da Tuya (' + Tuya_limpar_(e && e.message, c) + ')';
-    Tuya_usoRegistrar_(origemUso, { ok: false, codigo: 0, http: 0, rede: true, texto: textoRede });
+    Tuya_usoRegistrar_(origemUso, { ok: false, codigo: 0, http: 0, rede: true, texto: textoRede }, devUso);
     throw Tuya_erro_(textoRede, 0, 0, true);
   }
   var http = r.getResponseCode(), txt = '';
@@ -460,15 +469,24 @@ function Tuya_chamarBruto_(c, metodo, caminho, query, corpo, o) {
   try { j = JSON.parse(txt); } catch (e3) {}
   var okUso = !!(j && j.success === true), codUso = j && j.code !== undefined ? Number(j.code) : 0;
   Tuya_usoRegistrar_(origemUso, { ok: okUso, codigo: codUso, http: http, rede: http === 429 || http >= 500,
-    texto: okUso ? '' : Tuya_limpar_(j && j.msg ? j.msg : String(txt || '').slice(0, 120), c) });
+    texto: okUso ? '' : Tuya_limpar_(j && j.msg ? j.msg : String(txt || '').slice(0, 120), c) }, devUso);
   return { http: http, txt: txt, j: j };
 }
 
 /** Chamada de negócio: assina com o token e, em token vencido ou inválido (1010/1011/1400), renova uma vez e repete.
- *  27/10/2026: portão atendido pela ponte local (Tuya_local_) não chega à nuvem: nem cota, nem bloqueio, nem token. */
+ *  27/10/2026: portão atendido pela ponte local (Tuya_local_) não chega à nuvem: nem cota, nem bloqueio, nem token.
+ *  03/11/2026 (dono: "um botão em cada dispositivo para escolhermos se trabalha pela ponte ou pela Tuya"): o canal do
+ *  dispositivo (AutPred_canalDoDevice_, SGO_Automacao_Predial.js) decide aqui, no único caminho para a nuvem:
+ *    PONTE  só a ponte local; sem ela, erro "ponte fora do ar" e NENHUMA chamada à nuvem (nem leitura de tela ou rotina);
+ *    TUYA   só a nuvem, mesmo com a ponte viva (a ponte não é usada);
+ *    ''     dispositivo fora do cadastro (ex.: na sincronização): como antes (ponte quando atende, senão a nuvem). */
 function Tuya_chamar_(c, metodo, caminho, query, corpo) {
-  var local = Tuya_local_(metodo, caminho, query, corpo);
-  if (local) return local;
+  var dev = Tuya_devDoCaminho_(caminho), canal = dev ? Tuya_canalDe_(dev) : '';
+  if (canal !== 'TUYA') {
+    var local = Tuya_local_(metodo, caminho, query, corpo);
+    if (local) return local;
+  }
+  if (canal === 'PONTE') throw Tuya_erroPonte_(dev);
   var r = Tuya_chamarBruto_(c, metodo, caminho, query, corpo, {});
   var cod = r.j && r.j.code !== undefined ? Number(r.j.code) : 0;
   if (r.j && r.j.success === false && (cod === 1010 || cod === 1011 || cod === 1400)) {
@@ -489,9 +507,13 @@ function Tuya_chamar_(c, metodo, caminho, query, corpo) {
 // e os pontos de cada portão em TUYA_EVT_<devId> (o mesmo formato dos eventos da nuvem, então tela, confirmação pelo sensor
 // e rotina usam o que chegou, sem chamada). Os comandos passam por SGO_PORTOES_LOCAIS (global só no servidor próprio).
 //
-// Regra: dispositivo com a ponte viva e online por ela é atendido SÓ pela ponte. Comando nunca cai para a nuvem (evita
-// pulso em dobro); sem a ponte, tudo volta a ser exatamente como antes (nuvem, cota e bloqueio). Funções da nuvem que a
-// ponte não faz (lista de dispositivos, functions, fechadura) continuam pela nuvem.
+// Regra (03/11/2026, dono: "os portões estão funcionando bem pela ponte; deixa só a fechadura pela Tuya"): cada dispositivo
+// tem o seu canal (AUT_DISPOSITIVOS.CANAL, escolhido pela Diretoria ou pelo Administrador, com motivo e auditoria):
+//   PONTE  atendido SÓ pela ponte. Ponte fora do ar = nada sai (nem comando, nem leitura de tela ou de rotina) e a tela diz
+//          "ponte fora do ar desde ..."; NUNCA cai sozinho para a nuvem. A volta para a nuvem é decisão da Diretoria (um toque).
+//   TUYA   só a nuvem, como antes da ponte (cota, bloqueio, eventos da nuvem).
+// Padrão sem escolha gravada: portão cadastrado no celular da ponte = PONTE; fechadura e demais = TUYA. Comando nunca cai
+// para a nuvem (evita pulso em dobro). A lista de dispositivos da sincronização continua pela nuvem.
 // ------------------------------------------------------------
 var TUYA_LOCAL_ESTADO = 'PORTOES_LOCAL_ESTADO';
 var TUYA_LOCAL_VIVO_MS = 90000;            // a ponte informa a cada 20 s; 90 s sem notícia = não atende
@@ -512,6 +534,58 @@ function Tuya_localAtende_(deviceId) {
 
 /** Resposta no formato de Tuya_chamarBruto_ ({ http, txt, j }). */
 function Tuya_localResposta_(j) { return { http: 200, txt: JSON.stringify(j), j: j }; }
+
+// ------------------------------------------------------------
+// CANAL DE CADA DISPOSITIVO (03/11/2026, dono: "deixa só a fechadura pela Tuya; um botão em cada dispositivo para escolhermos")
+// ------------------------------------------------------------
+/** Dispositivo de um caminho de negócio (/v1.0/devices/{id}..., /v1.1/devices/{id}..., /v2.0/cloud/thing/{id}...) ou ''. */
+function Tuya_devDoCaminho_(caminho) {
+  var m = /^\/(?:v1\.[01]\/devices|v2\.0\/cloud\/thing)\/([^\/?]+)/.exec(String(caminho || ''));
+  if (!m) return '';
+  try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+}
+/** Canal gravado do dispositivo ('PONTE' | 'TUYA'), ou '' fora do cadastro (decidido em SGO_Automacao_Predial.js). */
+function Tuya_canalDe_(deviceId) {
+  try { return typeof AutPred_canalDoDevice_ === 'function' ? String(AutPred_canalDoDevice_(deviceId) || '') : ''; } catch (e) { return ''; }
+}
+function Tuya_dataHora_(ms) {
+  try {
+    var d = new Date(Number(ms)), hoje = Utilities.formatDate(new Date(), 'America/Sao_Paulo', 'dd/MM/yyyy');
+    var dia = Utilities.formatDate(d, 'America/Sao_Paulo', 'dd/MM/yyyy');
+    return (dia === hoje ? '' : dia.slice(0, 5) + ' às ') + Utilities.formatDate(d, 'America/Sao_Paulo', 'HH:mm');
+  } catch (e) { return ''; }
+}
+/**
+ * Situação da ponte local para um dispositivo (função sem chamada; lê PORTOES_LOCAL_ESTADO e TUYA_EVT_<id>):
+ * { atende, existe, viva, naPonte, online, desdeMs, texto }. texto = '' quando a ponte atende; senão o quê, em frase.
+ * desdeMs = última notícia do celular (ultimoEm, gravado pelo servidor desde 03/11/2026; antes, vivoEm).
+ */
+function Tuya_ponteSituacao_(deviceId, agoraMs) {
+  agoraMs = agoraMs || Date.now();
+  var e = Tuya_localEstado_(), id = String(deviceId || '');
+  var disp = e && e.dispositivos ? e.dispositivos[id] : null;
+  var s = { atende: false, existe: typeof SGO_PORTOES_LOCAIS !== 'undefined', viva: !!e && agoraMs - Number(e.vivoEm || 0) <= TUYA_LOCAL_VIVO_MS,
+    naPonte: !!disp, online: !!(disp && disp.online === true), desdeMs: Number(e && (e.ultimoEm || e.vivoEm)) || 0, texto: '' };
+  if (!s.existe) s.texto = 'a ponte local só existe no servidor próprio do SGO+';
+  else if (!e) s.texto = 'a ponte local ainda não conectou (o celular da ponte nunca falou com este servidor)';
+  else if (!s.viva) s.texto = 'a ponte local está fora do ar ' + (s.desdeMs ? 'desde ' + Tuya_dataHora_(s.desdeMs) : '(sem notícia do celular da ponte há mais de 90 segundos)');
+  else if (!s.naPonte) s.texto = 'este dispositivo não está cadastrado no celular da ponte';
+  else if (!s.online) {
+    var em = 0;
+    try { var ev = JSON.parse(PropertiesService.getScriptProperties().getProperty('TUYA_EVT_' + id) || 'null'); em = Number(ev && ev.online === false && ev.onlineEm) || 0; } catch (x) {}
+    s.texto = 'a ponte está no ar, mas não alcança este dispositivo na rede local' + (em ? ' desde ' + Tuya_dataHora_(em) : '');
+  }
+  s.atende = s.existe && s.viva && s.naPonte && s.online;
+  return s;
+}
+/** Erro de dispositivo do canal Ponte que a ponte não atendeu: nada foi à nuvem. e.tuyaPonte = true (não é falha da nuvem). */
+function Tuya_erroPonte_(deviceId) {
+  var s = Tuya_ponteSituacao_(deviceId);
+  var e = Tuya_erro_('ponte local: ' + (s.texto || 'a ponte não fornece esta informação (pela ponte só saem estado, comando e leitura dos pontos)') +
+    '; este dispositivo trabalha pela ponte local e nada foi enviado à nuvem da Tuya', 0, 0, false);
+  e.tuyaPonte = true; e.ponteSituacao = s;
+  return e;
+}
 
 /**
  * Atende pela ponte local, ou null (segue para a nuvem). Caminhos atendidos:
@@ -705,7 +779,7 @@ function Tuya_fechaduraRegistros_(c, deviceId, deMs, ateMs) {
 // MATRIZ DE COMPATIBILIDADE (função pura: categoria + comandos suportados -> o que o SGO+ consegue fazer)
 // ------------------------------------------------------------
 /**
- * Devolve { tipo: 'PORTAO'|'FECHADURA'|'OUTRO', ok, motivo, comandoAbrir: {code,value}|null, estadoCodigos: [...], remotoFechadura: 'BILHETE'|'NAO'|'' }.
+ * Devolve { tipo: 'PORTAO'|'FECHADURA'|'REFRIGERADOR'|'OUTRO', ok, motivo, comandoAbrir: {code,value}|null, estadoCodigos: [...], remotoFechadura: 'BILHETE'|'NAO'|'' }.
  * Não presume que todos os dispositivos aceitam os mesmos comandos: só o que a lista de funções confirma.
  */
 function Tuya_compatibilidade_(categoria, funcoes, metodosRemotos) {
@@ -733,6 +807,11 @@ function Tuya_compatibilidade_(categoria, funcoes, metodosRemotos) {
       out.remotoFechadura = 'NAO';
       out.motivo = 'Não disponível pela API: este modelo de fechadura não oferece abertura remota pela nuvem (sem os pontos remote_no_dp_key/remote_no_dp_setkey/unlock_remote e sem método de abertura remota ligado). A abertura continua só pelo aplicativo Smart Life ou na própria porta; o SGO+ mostra o estado e os registros quando a API os fornece.';
     }
+    return out;
+  }
+  if (TUYA_CATEGORIAS_REFRIGERACAO[categoria]) {
+    out.tipo = 'REFRIGERADOR';
+    out.motivo = 'Só leitura: o SGO+ mostra a temperatura de cada compartimento, o modo, a bateria e os erros do equipamento e guarda o histórico. Nenhum comando é enviado ao refrigerador (ligar, desligar e ajustar continuam no próprio equipamento ou no aplicativo Smart Life).';
     return out;
   }
   if (TUYA_CATEGORIAS_PORTAO[categoria] || tem('switch_1') || tem('switch') || tem('control')) {

@@ -48,7 +48,7 @@ var AUT_TEXTO_SEM_RESPOSTA = 'A nuvem dos portões não respondeu agora: tente d
 var AUT_SAUDE_NOMES = {
   tuya_nuvem: 'Nuvem dos portões e da porta (Tuya)', tuya_dispositivos: 'Portões e porta conectados à internet', tuya_cota: 'Consumo da cota da Tuya',
   tuya_economico: 'Modo econômico', tuya_mensagens: 'Eventos da Tuya (serviço de mensagens)', alarme: 'Central de alarme Intelbras',
-  ponte_portoes: 'Ponte local dos portões (celular na rede da empresa)',
+  ponte_portoes: 'Ponte local (celular na rede da empresa)',
   auto_abertura: 'Abertura automática da porta (campainha)',
   agendador: 'Rotinas agendadas do servidor', rotina_minuto: 'Rotina de 1 minuto da automação', rotina_rapida: 'Abertura automática (rotina rápida)',
   servidor: 'Servidor do SGO+', sentinela: 'Sentinela',
@@ -70,6 +70,14 @@ var AUT_ORIGENS_USO = { COMANDO: 'Comandos de pessoas', MANUAL: 'Leituras pedida
 function AutPred_erroNuvem_(e, padrao, sessao) {
   if (!e) return new Error(padrao || 'Não foi possível concluir. Tente de novo.');
   if (e.autAmigavel) return e;
+  // 03/11/2026: dispositivo do canal Ponte com a ponte fora do ar: não é falha da nuvem (nada foi à nuvem), não abre incidente
+  if (e.tuyaPonte) {
+    var sp = e.ponteSituacao || {};
+    var xp = new Error('Ponte local: ' + (sp.texto || 'a ponte não atendeu este dispositivo') + '. Nada foi enviado à nuvem da Tuya: este dispositivo trabalha pela ponte local. Use o controle ou o aplicativo Smart Life.' +
+      (sessao && AutPred_administra_(sessao) ? ' Para usar a nuvem da Tuya enquanto isso: no cartão do dispositivo, toque em "Trabalhar pela Nuvem Tuya".' : ' A gestão pode trocar o dispositivo para a nuvem da Tuya.'));
+    xp.autAmigavel = true; xp.ponteFora = true;
+    return xp;
+  }
   // 27/10/2026: nuvem bloqueada (cota ou plano): o SGO+ nem enviou; a equipe vê o "fora do ar", a gestão o detalhe
   if (e.tuyaBloqueioLocal) {
     AutPred_registrarFalhaNuvem_({ codigo: e.tuyaCodigo, http: 0, incerto: false, msg: e.message });
@@ -110,19 +118,23 @@ function AutPred_registrarFalhaNuvem_(r) {
   } catch (e) { console.error('Saúde da infraestrutura, falha da nuvem: ' + ((e && e.message) || e)); return ''; }
 }
 
-/** Situação da nuvem para as telas: portões fora do ar (cota, plano, credencial) e o modo econômico. */
+/**
+ * Situação para as telas da equipe: portões fora do ar pela nuvem (cota, plano, credencial), portões fora do ar pela ponte
+ * local e o modo econômico. 03/11/2026: pelo canal de cada portão ativo: a nuvem fora só conta para os portões do canal Tuya;
+ * a ponte fora, para os do canal Ponte (que nunca caem sozinhos para a nuvem).
+ */
 function AutPred_infraTela_() {
   var u = Tuya_uso_(), ab = AutPred_saudeAbertos_().tuya_nuvem;
-  var fora = !!u.bloqueio || !!(ab && ab.id && ab.critico);
-  // 27/10/2026: com a nuvem fora, os portões seguem pelo SGO+ se TODOS os portões ativos estiverem na ponte local
-  if (fora && typeof Tuya_localAtende_ === 'function') {
-    try {
-      var portoes = AutPred_dispositivos_().filter(function (d) { return d.TIPO !== 'FECHADURA' && AutPred_s_(d.ATIVO).toUpperCase() === 'SIM'; });
-      if (portoes.length && portoes.every(function (d) { return Tuya_localAtende_(d.DEVICE_ID); })) fora = false;
-    } catch (eL) {}
-  }
+  var nuvemFora = !!u.bloqueio || !!(ab && ab.id && ab.critico), fora = nuvemFora, ponte = null;
+  try {
+    var portoes = AutPred_dispositivos_().filter(function (d) { return AutPred_s_(d.TIPO) === 'PORTAO' && AutPred_s_(d.ATIVO).toUpperCase() === 'SIM'; });
+    if (nuvemFora && portoes.length) fora = portoes.some(function (d) { return AutPred_canal_(d) !== 'PONTE'; });
+    portoes.forEach(function (d) { if (!ponte) { var s = AutPred_ponteFora_(d); if (s) ponte = s; } });
+  } catch (eL) {}
+  var alarme = 'O alarme não depende da nuvem nem da ponte dos portões e continua funcionando pelo bloco "Alarme Intelbras".';
   return { portoesForaDoAr: fora, texto: fora ? AutPred_textoForaDoAr_() : '', economico: !!Tuya_economico_(),
-    alarmeTexto: fora ? 'O alarme não depende da nuvem dos portões e continua funcionando pelo bloco "Alarme Intelbras".' : '' };
+    ponteForaDoAr: !!ponte, ponteTexto: ponte ? 'Portões pela ponte local sem resposta: ' + ponte.texto + '. Use o controle ou o aplicativo Smart Life. Nada é enviado pela nuvem da Tuya sem decisão da gestão.' : '',
+    alarmeTexto: fora || ponte ? alarme : '' };
 }
 
 function AutPred_itemNuvem_(tipo, codigo, msg) {
@@ -367,7 +379,8 @@ function AutPred_itemCota_(cfg, orc) {
  * do recuo (Tuya_portao_). Sem token guardado, o pedido do token vai antes (mais uma chamada). Nunca envia comando.
  */
 function AutPred_sondaNuvem_(c) {
-  var lista = AutPred_dispositivos_().filter(function (d) { return AutPred_s_(d.DEVICE_ID) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; });
+  // 03/11/2026: só dispositivo do canal Tuya (o da ponte não vai à nuvem)
+  var lista = AutPred_dispositivos_().filter(function (d) { return AutPred_s_(d.DEVICE_ID) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO' && AutPred_canal_(d) !== 'PONTE'; });
   lista.sort(function (a, b) { return (AutPred_s_(b.HOMOLOGADO) === 'SIM' ? 1 : 0) - (AutPred_s_(a.HOMOLOGADO) === 'SIM' ? 1 : 0); });
   if (lista.length) return Tuya_dispositivo_(c, lista[0].DEVICE_ID);
   var r = Tuya_exigirOk_(Tuya_chamar_(c, 'GET', '/v1.0/iot-01/associated-users/devices', { size: 1 }), c, 'a conferência da nuvem');
@@ -456,7 +469,8 @@ function AutPred_sentinelaTuya_(agoraMs) {
     AutPred_dispositivos_().forEach(function (d) {
       if (AutPred_s_(d.ATIVO).toUpperCase() === 'NAO' || AutPred_s_(d.HOMOLOGADO).toUpperCase() !== 'SIM') return;
       var l = porId[AutPred_s_(d.DEVICE_ID)];
-      if (l) { var on = l.online ? 'SIM' : 'NAO'; if (on !== AutPred_s_(d.ONLINE)) { try { SGO_DATA.update(AUT_ABA_DISPOSITIVOS, d.ID, { ONLINE: on, ATUALIZADO_EM: SGO_UTILS.nowIso() }); } catch (eU) {} d.ONLINE = on; } }
+      // 03/11/2026: o "online" do dispositivo da ponte vem da ponte (não da lista da nuvem)
+      if (l && AutPred_canal_(d) !== 'PONTE') { var on = l.online ? 'SIM' : 'NAO'; if (on !== AutPred_s_(d.ONLINE)) { try { SGO_DATA.update(AUT_ABA_DISPOSITIVOS, d.ID, { ONLINE: on, ATUALIZADO_EM: SGO_UTILS.nowIso() }); } catch (eU) {} d.ONLINE = on; } }
       if (AutPred_s_(d.ONLINE).toUpperCase() === 'NAO') offline.push(AutPred_s_(d.NOME || d.NOME_PROVEDOR));
     });
     itens.push(offline.length
@@ -551,6 +565,25 @@ function AutPred_saudePainel_(sessao) {
   var dias = Object.keys(u.porDia || {}).sort().slice(-14).map(function (k) { return { dia: k.slice(8, 10) + '/' + k.slice(5, 7), total: Number(u.porDia[k]) || 0 }; });
   var porOrigem = function (m) { return Object.keys(m || {}).sort(function (a, b) { return (m[b] || 0) - (m[a] || 0); }).map(function (k) { return { origem: AUT_ORIGENS_USO[k] || k, total: Number(m[k]) || 0 }; }); };
   var orc = AutPred_orcamentoAgora_(cfg, u), fase = Tuya_fase_(u);
+  // 03/11/2026: consumo da nuvem por dispositivo e origem, com o canal de cada um (restrito: sem nome para quem não é diretor)
+  var dirS = AutPred_ehDiretor_(sessao), porDisp = [], somaDia = 0, somaMes = 0, vistosD = {};
+  var soma = function (m) { return Object.keys(m || {}).reduce(function (t, k) { return t + (Number(m[k]) || 0); }, 0); };
+  var linhaDisp = function (dev, d) {
+    var dia = (u.diaDisp || {})[dev] || {}, mes = (u.mesDisp || {})[dev] || {}, canal = d ? AutPred_canal_(d) : '';
+    var nd = soma(dia), nm = soma(mes);
+    somaDia += nd; somaMes += nm;
+    return { nome: !d ? 'Dispositivo fora do cadastro (…' + String(dev).slice(-4) + ')' : (AutPred_restrito_(d) && !dirS ? 'Dispositivo restrito à Diretoria' : AutPred_s_(d.NOME || d.NOME_PROVEDOR)),
+      tipo: d ? AutPred_tipoNome_(d.TIPO) : '', canal: canal, canalNome: canal ? AUT_CANAIS[canal] : '', padrao: !!d && !AutPred_s_(d.CANAL), dia: nd, mes: nm,
+      origensDia: porOrigem(dia), ponteTexto: d && canal === 'PONTE' ? ((AutPred_ponteFora_(d) || {}).texto || '') : '' };
+  };
+  AutPred_dispositivos_().forEach(function (d) {
+    var dev = AutPred_s_(d.DEVICE_ID);
+    if (!dev || vistosD[dev] || AutPred_s_(d.ATIVO).toUpperCase() === 'NAO') return;
+    vistosD[dev] = true; porDisp.push(linhaDisp(dev, d));
+  });
+  Object.keys(u.mesDisp || {}).concat(Object.keys(u.diaDisp || {})).forEach(function (dev) { if (!vistosD[dev]) { vistosD[dev] = true; porDisp.push(linhaDisp(dev, null)); } });
+  porDisp.sort(function (a, b) { return b.mes - a.mes || b.dia - a.dia || a.nome.localeCompare(b.nome); });
+  var refrigNuvem = AutPred_dispositivos_().filter(function (d) { return AutPred_ehRefrig_(d) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO' && AutPred_canal_(d) !== 'PONTE'; }).length;
   // 27/10/2026: fechaduras (só para diretores: o Administrador não vê a porta da Diretoria)
   var fechaduras = !AutPred_ehDiretor_(sessao) ? [] : AutPred_dispositivos_().filter(function (d) { return AutPred_ehPedido_(d) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; }).map(function (d) {
     var cam = AutPred_caminhoFechadura_(d, cfg), ev = AutPred_eventoGuardado_(d.DEVICE_ID), pe = AutPred_pedidoEventoEm_(ev);
@@ -569,6 +602,8 @@ function AutPred_saudePainel_(sessao) {
     uso: { dia: u.diaTotal, ontem: u.ontemTotal, mes: u.mesTotal, orcamento: orc.valor, pct: orc.pct, provisorio: orc.provisorio,
       projecaoMes: diaMes ? Math.round(u.mesTotal / diaMes * diasNoMes) : 0, avisoPct: cfg.avisoPct, economicoPct: cfg.economicoPct,
       porOrigemDia: porOrigem(u.diaPor), porOrigemMes: porOrigem(u.mesPor), dias: dias,
+      porDispositivo: porDisp, geraisDia: Math.max(0, u.diaTotal - somaDia), geraisMes: Math.max(0, u.mesTotal - somaMes),
+      refrigNuvem: refrigNuvem, refrigEstimativaMes: refrigNuvem * Math.round(30 * 24 * 60 / cfg.refrigIntervaloMin + 30 * 24),
       mensagensDia: Number(msg.mensagensDia) || 0, mensagensMes: Number(msg.mensagensMes) || 0,
       ultimoErro: u.ultimoErro ? AutPred_horaCurta_(Number(u.ultimoErro.em)) + ' — ' + Tuya_textoErro_(u.ultimoErro.codigo, '', u.ultimoErro.http, 'a chamada') : '',
       bloqueio: u.bloqueio ? AutPred_itemNuvem_(u.bloqueio.tipo, u.bloqueio.codigo, u.bloqueio.texto).texto + ' desde ' + AutPred_horaCurta_(Number(u.bloqueio.desde)) : '' },
@@ -611,17 +646,20 @@ function AutPred_saudeSalvarCfg_(sessao, dados) {
   if (!(iv >= 30 && iv <= 85)) throw new Error('Não foi possível gravar: o intervalo da consulta da fechadura precisa ser de 30 a 85 segundos (menor que os cerca de 90 segundos do pedido da campainha, para nenhum toque passar sem ser visto).');
   var pp = AutPred_s_(dados.portaoParadoS) ? Math.round(Number(dados.portaoParadoS)) : AutPred_saudeCfg_().portaoParadoS;
   if (!(pp >= 10 && pp <= 600)) throw new Error('Não foi possível gravar: o intervalo da posição do portão parado precisa ser de 10 a 600 segundos.');
+  // 03/11/2026: leitura do refrigerador (minutos); vazio mantém o atual
+  var rm = AutPred_s_(dados.refrigIntervaloMin) ? Math.round(Number(dados.refrigIntervaloMin)) : AutPred_saudeCfg_().refrigIntervaloMin;
+  if (!(rm >= 5 && rm <= 60)) throw new Error('Não foi possível gravar: o intervalo da leitura do refrigerador precisa ser de 5 a 60 minutos.');
   var ini = AutPred_s_(dados.consultaInicio), fim = AutPred_s_(dados.consultaFim);
   if (!/^\d{2}:\d{2}$/.test(ini) || !/^\d{2}:\d{2}$/.test(fim) || ini >= fim) throw new Error('Não foi possível gravar: informe o início e o fim do horário no formato hh:mm, com o início antes do fim (24 horas: 00:00 às 23:59).');
   var diasSem = (Array.isArray(dados.consultaDias) ? dados.consultaDias : []).map(Number).filter(function (n) { return n >= 0 && n <= 6; });
   if (!diasSem.length) throw new Error('Não foi possível gravar: marque pelo menos um dia da semana para a consulta da fechadura.');
   var props = PropertiesService.getScriptProperties();
   var bruto = AutPred_propJson_(AUT_SAUDE_CFG, {}) || {};
-  Object.assign(bruto, { consultaInicio: ini, consultaFim: fim, consultaDias: diasSem, consultaIntervaloS: iv, portaoParadoS: pp });
+  Object.assign(bruto, { consultaInicio: ini, consultaFim: fim, consultaDias: diasSem, consultaIntervaloS: iv, portaoParadoS: pp, refrigIntervaloMin: rm });
   delete bruto.orcamentoMes;
   props.setProperty(AUT_SAUDE_CFG, JSON.stringify(bruto));
   var horas = AutPred_horasJanela_(ini, fim) * diasSem.length;
-  var texto = 'Consulta da fechadura sem eventos das ' + ini + ' às ' + fim + ' (' + diasSem.length + ' dia(s) da semana), a cada ' + iv + ' s (cerca de ' + AutPred_milhar_(horas * 3600 / iv * 4.3) + ' chamadas por mês); portão parado a cada ' + pp + ' s com tela visível. Motivo: ' + motivo;
+  var texto = 'Consulta da fechadura sem eventos das ' + ini + ' às ' + fim + ' (' + diasSem.length + ' dia(s) da semana), a cada ' + iv + ' s (cerca de ' + AutPred_milhar_(horas * 3600 / iv * 4.3) + ' chamadas por mês); portão parado a cada ' + pp + ' s com tela visível; refrigerador lido a cada ' + rm + ' min (pela nuvem, cerca de ' + AutPred_milhar_(30 * 24 * 60 / rm + 30 * 24) + ' chamadas por mês por refrigerador; pela ponte, nenhuma). Motivo: ' + motivo;
   AutPred_saudeLinha_({ chave: 'tuya_cota', evento: 'ACAO_MANUAL', situacao: 'ok', texto: 'Configuração alterada por ' + AutPred_nome_(sessao) + ': ' + texto, acao: 'configuração', por: AutPred_nome_(sessao) });
   AutPred_auditar_({ evento: 'SAUDE_CONFIGURADA', quem: sessao, resultado: 'OK', detalhe: texto });
   return Object.assign(AutPred_saudePainel_(sessao), { mensagem: 'Configuração gravada. ' + texto });

@@ -1,5 +1,7 @@
 # Manual do módulo Segurança e automação predial do SGO+
 
+Atualizado em 03/11/2026: canal de cada dispositivo (ponte local ou nuvem Tuya, escolhido pela Diretoria ou pelo Administrador; a ponte fora do ar nunca cai sozinha para a nuvem) e refrigerador/freezer só de leitura, com histórico e alerta de faixa (seções no fim).
+
 Versão de 27/10/2026, tarde (cota da Tuya: tudo preservado, só o consumo otimizado; eventos pelo serviço de mensagens como caminho principal, consulta da fechadura a cada 60 s sem eventos, leitura central dos portões, recuperação gradual depois do bloqueio, orçamento provisório e confirmação do pacote, validação por eventos informativa, sentinela e aba "Saúde da infraestrutura"; antes: 23/10/2026, portões de toda a equipe, abrir e fechar com posição do portão, abertura automática pela campainha). Tela: Segurança predial > Segurança e automação predial (abas Dispositivos, Permissões, Auditoria e Saúde da infraestrutura para a administração). Credenciais em Administração > Chaves e senhas > Automação predial (Tuya).
 
 ## Para que serve
@@ -71,6 +73,7 @@ A sincronização só lê. Ela identifica a categoria do produto e os comandos q
 
 - Portões e acessos (abridor de portão ou garagem, motor, interruptor, acionador): comando de abertura "switch_1: true" (pulso), "switch: true" ou "control: open". Se o dispositivo não informa nenhum deles, o cartão diz "Não disponível pela API" e o Administrador pode definir o comando à mão em "Administrar", desde que esteja na lista de comandos do dispositivo.
 - Fechaduras (residencial, residencial Pro, controle de acesso, hotel, comercial, com câmera, cofre): destravamento só pelo fluxo de bilhete temporário da nuvem (Smart Lock Open API), e só quando o modelo oferece abertura remota pela nuvem. Se não oferece, o cartão diz "Não disponível pela API" com o porquê; a abertura continua pelo aplicativo Smart Life ou na própria porta, e o SGO+ mostra o estado e os registros quando a nuvem os fornece.
+- Refrigeradores e freezers (categoria xbx, refrigerador portátil de 2 compartimentos, e bx): **só leitura** (desde 03/11/2026; veja "Refrigerador ou freezer"). Nenhum comando sai do SGO+.
 - Outras categorias: só consulta.
 
 Fechaduras entram restritas à Diretoria. Só um diretor marca ou desmarca "Restrito à Diretoria".
@@ -242,6 +245,9 @@ Nenhuma credencial aparece na tela depois de gravada, nem em log, e-mail, aviso 
 - "Orçamento provisório — confirmar no painel": nada está mais lento; confirme o pacote em Saúde da infraestrutura › Orçamento da cota.
 - Faixa "Economia da nuvem ligada": modo econômico de emergência (90% do orçamento confirmado, ou do limite do pacote enquanto provisório). Um diretor pode sair em Saúde da infraestrutura.
 - "Offline": o dispositivo está sem internet; o comando não chega. Confira energia e rede sem fio.
+- "ponte local fora do ar desde hh:mm": o dispositivo trabalha pela ponte e o celular da ponte não responde. Nada foi enviado, nem pela nuvem. A equipe usa o controle ou o aplicativo Smart Life; o responsável confere o celular da ponte (carregador, Wi-Fi da empresa, Termux aberto). A Diretoria ou o Administrador pode tocar em "Trabalhar pela Nuvem Tuya" no cartão.
+- "a ponte está no ar, mas não alcança este dispositivo na rede local": confira a energia e o Wi-Fi do dispositivo; a ponte procura o endereço novo sozinha.
+- Refrigerador "Ainda sem leitura": toque em "Ler agora"; pela nuvem, confira se ele está online no Smart Life.
 - "intervalo mínimo de 10 s", "comandos no último minuto", "ainda está sem resultado": limites de proteção; aguarde ou use "Conferir agora".
 - Fechadura "Não disponível pela API": o modelo não aceita abertura remota pela nuvem; use o aplicativo Smart Life ou a própria porta.
 
@@ -253,13 +259,54 @@ Nenhuma credencial aparece na tela depois de gravada, nem em log, e-mail, aviso 
 
 **Como funciona:** um celular Android na rede da empresa (Termux + agente `portoes_local/ponte/agente_ponte.py`) mantém conexão local com os módulos e fala com o servidor do SGO+ só por HTTPS de saída, assinado (`/ponte-portoes/estado`, `/fila`, `/resultado`; `src/servicos/portoesLocais.ts`). No legado, `Tuya_local_` (em `SGO_Automacao_Tuya.js`) atende comando, estado, detalhe e sombra dos portões da ponte, e o estado chega em `TUYA_EVT_<dispositivo>`, no mesmo formato dos eventos da nuvem.
 
-**Regras:**
-- Portão com a ponte viva (notícia nos últimos 90 s) e online por ela é atendido **só** pela ponte. O comando nunca cai para a nuvem, para evitar pulso em dobro.
-- A nuvem bloqueada (cota ou plano) não barra os portões da ponte. A faixa "fora do ar" só aparece se algum portão ativo estiver fora da ponte.
+**Regras (desde 03/11/2026 valem pelo canal de cada dispositivo; veja "Canal de cada dispositivo"):**
+- Dispositivo do canal "Ponte local" é atendido **só** pela ponte (notícia do celular nos últimos 90 s e dispositivo online por ela). Com a ponte fora do ar, nada sai, nem pela nuvem: o SGO+ **não** cai sozinho para a nuvem (antes de 03/11/2026 caía). O comando nunca vai à nuvem, para evitar pulso em dobro.
+- A nuvem bloqueada (cota ou plano) não barra os dispositivos da ponte. A faixa "fora do ar" da nuvem só aparece se algum portão ativo trabalhar pela nuvem; a faixa "Portões pela ponte local sem resposta" aparece quando a ponte não atende um portão da ponte.
 - Comando não buscado pelo celular em 6 s: nada é enviado (recusado). Entregue e sem resposta em 10 s: **INCERTO**, sem repetição.
 - A hora de cada ponto é a da última **mudança**, para a regra de "sensor que acabou de mudar" continuar valendo.
-- Lista de dispositivos, funções e a fechadura continuam pela nuvem.
+- Lista de dispositivos (sincronização) e a fechadura continuam pela nuvem. Dispositivo da ponte não é relido na nuvem nem na sincronização (só o nome e o produto).
 
-**Saúde:** item "Ponte local dos portões". Celular calado vira falha crítica, com incidente e aviso; módulo sem resposta na rede local vira atenção.
+**Saúde:** item "Ponte local (celular na rede da empresa)". Celular calado vira falha crítica, com incidente e aviso; dispositivo sem resposta na rede local vira atenção.
+
+## Canal de cada dispositivo: ponte local ou nuvem Tuya (03/11/2026)
+
+**Pedido do dono (03/11/2026):** "os portões estão funcionando bem pela ponte do celular, deixa só a fechadura pela Tuya; se tiver como, colocar o refrigerador pela ponte também. Cria um botão em cada dispositivo para escolhermos se queremos que ele trabalhe pela ponte ou pela Tuya." Contexto medido: depois de ligada a abertura automática da fechadura, o consumo da nuvem subiu de cerca de 17 chamadas por dia para 556 (02/11) e 626 (03/11).
+
+**Os dois canais:**
+- **Ponte local (celular):** comandos e leituras saem só pelo celular da ponte, na rede da empresa. Nenhuma chamada à nuvem da Tuya, inclusive as leituras automáticas (rotinas) e as da tela. Ponte fora do ar: a tela diz "ponte local fora do ar desde hh:mm" e o que fazer; nada é enviado e o SGO+ **nunca** troca sozinho para a nuvem.
+- **Nuvem Tuya:** como antes (cota, bloqueio, eventos da nuvem). A ponte não é usada para esse dispositivo, mesmo no ar.
+
+**Padrão** (sem escolha gravada): portão cadastrado no celular da ponte = Ponte local; fechadura e demais = Nuvem Tuya. Na primeira rotina, o padrão do portão vira escolha gravada ("Padrão do SGO+"), para não mudar sozinho depois. No ambiente do Google (sem a ponte), tudo é Nuvem Tuya.
+
+**Onde aparece:** selo no cartão ("Pela ponte local", azul; "Pela nuvem Tuya", roxo; "Ponte local fora do ar", vermelho), linha "Trabalha pela", e a tabela "Consumo da nuvem por dispositivo" em Saúde da infraestrutura (chamadas de hoje e do mês por dispositivo e origem, com o canal; dispositivo da ponte fica com zero).
+
+**Como trocar (Diretoria e Administrador; dispositivo restrito, só diretor):**
+1. No cartão, toque em "Administrar". O bloco "Trabalhar pela:" mostra o canal, quem escolheu, quando e o motivo.
+2. Toque em "Trabalhar pela Nuvem Tuya" ou "Trabalhar pela ponte local (celular)".
+3. Escreva o motivo (mínimo de 5 caracteres) e confirme. Vale na hora; fica na auditoria ("Trocou por onde o dispositivo trabalha", com o antes, o depois e o motivo).
+- Com a ponte fora do ar, o próprio cartão mostra "Trabalhar pela Nuvem Tuya" com o motivo já escrito (um toque para confirmar).
+- "Ponte local" só para dispositivo cadastrado no celular da ponte (senão ele ficaria sem funcionar). Para cadastrar, veja `portoes_local/LEIAME.md`, "Cadastrar um dispositivo na ponte".
+- Voltar para a nuvem com a cota esgotada: a tela avisa que, pela nuvem, nada sai até ela voltar.
+
+**Comandos recusados pela ponte fora do ar:** ficam no registro como "Recusado — ponte local fora do ar, nada enviado" e na auditoria como COMANDO_PONTE_FORA.
+
+**Técnico:** coluna CANAL (e CANAL_POR, CANAL_POR_ID, CANAL_EM, CANAL_MOTIVO) em AUT_DISPOSITIVOS. O caminho único para a nuvem (`Tuya_chamar_`, `SGO_Automacao_Tuya.js`) confere o canal em toda chamada por dispositivo. O servidor grava em PORTOES_LOCAL_ESTADO a última notícia do celular (`ultimoEm`), que dá o "desde".
+
+## Refrigerador ou freezer (03/11/2026)
+
+"Car Refrigerator" (categoria xbx, freezer usado em calibração). **Só leitura**: nenhum comando sai do SGO+ (ligar, desligar e ajustar continuam no equipamento ou no aplicativo Smart Life).
+
+**Cartão:** temperatura atual (número grande) e ajustada de cada compartimento ativo, em °C (vírgula decimal); equipamento ligado ou desligado; modo (MAX, ECO, aquecimento) e proteção da bateria; trava infantil; bateria (porcentagem e tensão); erros (E1 a E9, "código de erro do equipamento"); hora da leitura; Online. O compartimento B só aparece com a divisória dupla e o B ligados.
+
+**Leitura:**
+- Pela nuvem: a sombra do dispositivo (`/v2.0/cloud/thing/{id}/shadow/properties`; o `/status` responde 2003 e as funções 2009 neste modelo) a cada 10 minutos, 24 horas (a Diretoria muda de 5 a 60 minutos em Saúde da infraestrutura). Conta na cota (cerca de 5.000 chamadas por mês a cada 10 minutos, com a conferência do "online" de hora em hora) e para no bloqueio e no modo econômico, como toda leitura automática. A sincronização lê o modelo (`/model`) para a escala de cada ponto.
+- Pela ponte: os mesmos pontos (dp 101 a 126) lidos pelo celular da ponte, pelo protocolo local da Tuya, sem nuvem.
+- "Ler agora" lê na hora.
+
+**Histórico:** aba AUT_LEITURAS; grava uma linha quando algo muda (temperatura, ajuste, modo, erro, trava, bateria, online; a tensão oscila e fica de fora) e a cada leitura agendada. "Histórico" no cartão mostra o gráfico (linha cheia = atual; tracejada = ajustada) de 24 h, 48 h, 7 ou 30 dias e as últimas 30 leituras.
+
+**Alerta de faixa (opcional, desligado por padrão):** em "Administrar", marque "Avisar a gestão quando a temperatura sair da faixa" e informe a mínima e a máxima de cada compartimento. Duas leituras seguidas fora da faixa avisam a Diretoria e o Administrador (dispositivo não restrito) uma vez, no sistema e por e-mail (evento S79 da matriz de avisos), com o quê, por quê e o que fazer, e de novo quando a temperatura volta. Equipamento offline não é avaliado.
+
+**Mapa dos pontos (dp: código):** 101 OnOff (ligado), 102 Lock (trava infantil), 103 Mode (MAX/ECO/HEAT), 104 BatteryProtect (L/M/H), 105 TempUnit, 106 Error (bits E1..E9), 107 Switch (divisória dupla), 108 HeatBox, 109 Spdt, 110 A_BoxOnOff, 111 B_BoxOnOff, 112 A_Temp_C, 113 B_Temp_C, 114 A_TempSet_C, 115 B_TempSet_C, 116 HeatTemp_Set_C, 117 a 121 os mesmos em °F (não usados), 122 A_BatteryVoltage (x0,1 V), 123 BatteryPencent, 124 A_BatteryCharge, 125 e 126 bateria B.
 
 **Instalação e recuperação:** `portoes_local/LEIAME.md`.

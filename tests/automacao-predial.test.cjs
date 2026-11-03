@@ -22,6 +22,9 @@ const DIRV = { userId: 'uV', usuario: 'dirvinc', nome: 'DIRETOR POR VINCULO', pe
 const GESTOR = { userId: 'uG', usuario: 'gestor', nome: 'GESTOR TESTE', perfil: 'GESTOR' };
 const TEC = { userId: 'uT', usuario: 'tec', nome: 'TECNICO TESTE', perfil: 'TECNICO' };
 const CLIENTE = { userId: 'uC', usuario: 'cli', nome: 'CLIENTE', perfil: 'CLIENTE', clienteId: 'c1' };
+// 03/11/2026: pontos do "Car Refrigerator" (xbx) como a sombra v2.0 responde em produção (códigos 101 a 123)
+const FREEZER_PONTOS = { OnOff: true, Lock: false, Mode: 'ECO', BatteryProtect: 'M', TempUnit: 'C', Error: 0, Switch: true, HeatBox: false, Spdt: false,
+  A_BoxOnOff: true, B_BoxOnOff: true, A_Temp_C: -18, B_Temp_C: 4, A_TempSet_C: -20, B_TempSet_C: 5, HeatTemp_Set_C: 40, A_BatteryVoltage: 124, BatteryPencent: 85 };
 
 function ambiente(o) {
   o = o || {};
@@ -40,7 +43,8 @@ function ambiente(o) {
     { ID: 'uX', USUARIO: 'inativo', NOME: 'INATIVO', PERFIL: 'TECNICO', STATUS: 'INATIVO' }],
     CAD_UNIDADES: [{ ID: 'un1', CLIENTE_ID: 'c1', NOME_UNIDADE: 'MATRIZ GOIÂNIA', CIDADE: 'Goiânia', STATUS: 'ATIVO' }], CAD_CLIENTES: [{ ID: 'c1', NOME_FANTASIA: 'METROLABS', STATUS: 'ATIVO' }] };
   const cabecalhos = {};
-  const api = { pedidos: [], portaoAberto: false, fechaduraAbre: true, recusaComando: null, falhaRede: false, remoto: true, registrosFechadura: 1 };
+  const api = { pedidos: [], portaoAberto: false, fechaduraAbre: true, recusaComando: null, falhaRede: false, remoto: true, registrosFechadura: 1,
+    freezer: !!o.freezer, frz: Object.assign({}, FREEZER_PONTOS) };
   const notificacoes = [];
   const sessao = { atual: o.sessao || DONO };
   let seq = 0;
@@ -64,11 +68,20 @@ function ambiente(o) {
         api.pedidos.push({ metodo: String(op.method).toUpperCase(), caminho: u.pathname, corpo: op.payload ? JSON.parse(op.payload) : null });
         if (api.falhaRede) throw new Error('ECONNRESET');
         if (u.pathname === '/v1.0/token') return resposta(200, { success: true, result: { access_token: 'tok-1', refresh_token: 'ref-1', expire_time: 7200, uid: 'uid-app' } });
+        // 03/11/2026: "Car Refrigerator" real (xbx): /functions 2009, /status 2003; a sombra v2.0 e o modelo respondem
+        if (api.freezer && u.pathname.indexOf('dev-frz-1') >= 0) {
+          if (/\/shadow\/properties$/.test(u.pathname)) return resposta(200, { success: true, result: { properties: Object.keys(api.frz).map((k, i) => ({ code: k, dp_id: 101 + i, value: api.frz[k], time: Date.now() - 60000 })) } });
+          if (/\/model$/.test(u.pathname)) return resposta(200, { success: true, result: { model: JSON.stringify({ modelId: 'm1', services: [{ properties: [{ abilityId: 112, code: 'A_Temp_C', typeSpec: { type: 'value', scale: 0, unit: '℃' } }, { abilityId: 122, code: 'A_BatteryVoltage', typeSpec: { type: 'value', scale: 1, unit: 'V' } }] }] }) } });
+          if (/\/functions$/.test(u.pathname)) return resposta(200, { success: false, code: 2009, msg: 'not support this device' });
+          if (/\/status$/.test(u.pathname)) return resposta(200, { success: false, code: 2003, msg: 'function not support' });
+          if (u.pathname === '/v1.0/devices/dev-frz-1') return resposta(200, { success: true, result: { id: 'dev-frz-1', online: api.frzOnline !== false, status: [] } });
+          return resposta(200, { success: false, code: 2008, msg: 'command or value not support' });
+        }
         if (u.pathname === '/v1.0/iot-01/associated-users/devices') return resposta(200, { success: true, result: { has_more: false, devices: [
           { id: 'dev-portao-1', name: 'Portão principal', category: 'ckmkzq', product_name: 'Abridor', online: true, status: estadoGaragem() },
           { id: 'dev-portao-2', name: 'Portão secundário', category: 'ckmkzq', product_name: 'Abridor', online: true, status: [{ code: 'switch_1', value: false }] },
           { id: 'dev-fech-1', name: 'Porta da Diretoria', category: 'jtmspro', product_name: 'Fechadura', online: true, status: [{ code: 'residual_electricity', value: 80 }, { code: 'lock_motor_state', value: false }] }
-        ] } });
+        ].concat(api.freezer ? [{ id: 'dev-frz-1', name: 'Car Refrigerator', category: 'xbx', product_id: '2bjx1o77', product_name: 'Car Refrigerator', online: true, status: [] }] : []) } });
         // 22/10/2026: fechadura real em modo pedido (campainha) e garagem com door_control_1 (open/close), como lidos em produção
         if (api.pedido && /dev-fech-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ms', functions: [{ code: 'reply_unlock_request', type: 'Boolean', values: '{}' }] } });
         if (api.pedido && /door-lock\/remote-unlocks$/.test(u.pathname)) return resposta(200, { success: true, result: [] });
@@ -1441,13 +1454,16 @@ function ponteSimulada() {
       const props = {}; Object.keys(pt.props[id]).forEach((k) => { props[k] = { value: pt.props[id][k], time: pt.hora(id, k) }; });
       pt.amb.props['TUYA_EVT_' + id] = JSON.stringify({ props, online: pt.online[id], recebidoEm: agora, primeiroEm: agora });
     });
-    pt.amb.props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: pt.vivo ? agora : agora - 120000, dispositivos: disp });
+    // como o servidor (03/11/2026): vivoEm = 0 com a ponte calada; ultimoEm = última notícia do celular
+    if (pt.vivo) pt.ultimoEm = agora;
+    pt.amb.props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: pt.vivo ? agora : 0, ultimoEm: pt.ultimoEm || agora - 120000, dispositivos: disp });
   };
   pt.api = {
     chamar(acao, d) {
       const p = pt.props[d.devId];
+      pt.chamadas = (pt.chamadas || 0) + 1;
       if (acao === 'estado') {
-        if (!p) return { ok: false };
+        if (!p || !pt.vivo) return { ok: false };
         const props = {}; Object.keys(p).forEach((k) => { props[k] = { value: p[k], time: pt.hora(d.devId, k) }; });
         return { ok: true, online: pt.online[d.devId] === true, props };
       }
@@ -1495,31 +1511,63 @@ test('ponte local: com a nuvem bloqueada, portão da ponte abre e confirma pelo 
   assert.equal(amb.api.pedidos.length, n0);
 });
 
-test('ponte local: sem notícia há 90 s ou portão offline volta tudo como antes; entregue sem resposta fica INCERTO e nunca cai para a nuvem; recusa do módulo fica RECUSADO', () => {
+test('ponte local (03/11/2026): portão do canal Ponte com a ponte fora do ar NUNCA cai para a nuvem (comando, tela, rotina, estado); a tela diz desde quando; INCERTO e RECUSADO sem nuvem', () => {
   let { amb, pt } = comPonte();
   const g = amb.disp('Portão principal');
   amb.como(DONO);
-  // ponte calada: com a nuvem bloqueada, comportamento antigo (fora do ar, nada enviado, nada na ponte)
-  pt.vivo = false; pt.gravar(); bloquear(amb, { ultimaSondaPessoaEm: Date.now() });
-  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, true);
+  // padrão: portões cadastrados na ponte = Ponte; fechadura = Nuvem Tuya
+  const painel = amb.api_('painel');
+  const cartoes = Object.fromEntries(painel.unidades.flatMap((u) => u.dispositivos).map((d) => [d.nome, d]));
+  assert.equal(cartoes['Portão principal'].canal, 'PONTE'); assert.equal(cartoes['Portão secundário'].canal, 'PONTE');
+  assert.equal(cartoes['Porta da Diretoria'].canal, 'TUYA'); assert.equal(cartoes['Portão principal'].canalNome, 'Ponte local (celular)');
+  // um token preparado com a ponte no ar, para conferir a recusa também no envio
+  const tk = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-local-tokenvivo1' });
+  assert.equal(tk.ok, true, tk.message);
+  // a ponte cala há 2 minutos (nuvem normal): nada vai à nuvem, nem token
+  pt.vivo = false; pt.ultimoEm = Date.now() - 120000; pt.gravar();
+  const n0 = amb.api.pedidos.length, c0 = pt.comandos.length;
   const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-local-semponte1' });
-  assert.equal(p.ok, false); assert.match(p.message, /fora do ar/); assert.equal(pt.comandos.length, 0);
-  // ponte viva, mas o pedestre offline nela: o pedestre não é da ponte e a faixa continua (nem todos os portões atendidos)
+  assert.equal(p.ok, false); assert.match(p.message, /ponte local está fora do ar desde \d{2}:\d{2}/); assert.match(p.message, /Nada foi enviado: o SGO\+ não troca sozinho para a nuvem/);
+  assert.match(p.message, /Trabalhar pela Nuvem Tuya/, 'a gestão vê o que fazer');
+  const e = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-local-tokenvivo1', confirmacaoToken: tk.confirmacaoToken });
+  assert.equal(e.ok, false); assert.match(e.message, /ponte local/);
+  const neg = amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-local-tokenvivo1');
+  assert.equal(neg.SITUACAO, 'NEGADO'); assert.match(amb.ctx.AutPred_comandoParaTela_(neg).resultadoTexto, /ponte local fora do ar, nada enviado/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'COMANDO_PONTE_FORA'));
+  // tela, estado e rotina: nenhuma leitura na nuvem
+  const port = amb.api_('portoes');
+  assert.match(port.itens.find((x) => x.id === g.ID).erro, /fora do ar desde/);
+  const est = amb.api_('estado', { dispositivoId: g.ID });
+  assert.equal(est.ok, true, est.message); assert.match(est.mensagem, /Estado não relido: .*fora do ar desde/);
+  amb.ctx.AutPred_rotinaPedidos(); amb.ctx.AutPred_rotinaRapida();
+  const infra = amb.api_('rapido', {}).infra;
+  assert.equal(infra.ponteForaDoAr, true); assert.match(infra.ponteTexto, /ponte local sem resposta: a ponte local está fora do ar desde/);
+  assert.equal(infra.portoesForaDoAr, false, 'a nuvem não está fora');
+  // nuvem bloqueada E ponte calada: continua a mensagem da ponte (não a da nuvem) e nada sai
+  bloquear(amb, { ultimaSondaPessoaEm: 0 });
+  const p2 = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-local-semponte2' });
+  assert.equal(p2.ok, false); assert.match(p2.message, /ponte local está fora do ar/);
+  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, false, 'portões da ponte não dependem da nuvem');
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada à nuvem com a ponte fora'); assert.equal(pt.comandos.length, c0);
+  // ponte viva, mas o pedestre sem resposta na rede local: só ele fica sem SGO+, com o motivo
   pt.vivo = true; pt.online['dev-portao-2'] = false; pt.gravar();
-  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, true);
+  const ped = amb.disp('Portão secundário');
+  const p3 = amb.api_('preparar', { dispositivoId: ped.ID, operacaoId: 'op-local-pedoff01' });
+  assert.equal(p3.ok, false); assert.match(p3.message, /não alcança este dispositivo na rede local/);
+  assert.equal(amb.api.pedidos.length, n0);
   // INCERTO: entregue ao celular e o módulo não respondeu; nada pela nuvem
   ({ amb, pt } = comPonte());
   const g2 = amb.disp('Portão principal'); amb.como(DONO);
-  const n0 = amb.comandosApi().length;
+  const n1 = amb.comandosApi().length;
   pt.incerto = true;
   let r = amb.abrir(g2.ID, 'op-local-incerto01');
   assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'INCERTO');
-  assert.equal(amb.comandosApi().length, n0, 'comando nunca cai para a nuvem'); assert.equal(pt.comandos.length, 1, 'não repete sozinho');
+  assert.equal(amb.comandosApi().length, n1, 'comando nunca cai para a nuvem'); assert.equal(pt.comandos.length, 1, 'não repete sozinho');
   // recusa do módulo
   pt.incerto = false; pt.recusa = 'o módulo não respondeu na rede local'; amb.envelhecer();
   r = amb.abrir(g2.ID, 'op-local-recusa001');
   assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'RECUSADO'); assert.match(r.texto, /ponte local/);
-  assert.equal(amb.comandosApi().length, n0);
+  assert.equal(amb.comandosApi().length, n1);
 });
 
 test('ponte local: posição pela ponte sem leitura da nuvem; sem SGO_PORTOES_LOCAIS (Google) nada muda', () => {
@@ -1537,4 +1585,247 @@ test('ponte local: posição pela ponte sem leitura da nuvem; sem SGO_PORTOES_LO
   const amb2 = ambiente(); amb2.props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: Date.now(), dispositivos: { 'dev-portao-1': { online: true } } });
   assert.equal(amb2.ctx.Tuya_localAtende_('dev-portao-1'), false);
   assert.equal(amb2.ctx.Tuya_local_('POST', '/v1.0/devices/dev-portao-1/commands', {}, { commands: [] }), null);
+});
+
+// ---------------------------------------------------------------- canal por dispositivo e refrigerador (03/11/2026)
+// Pedido do dono: "os portões estão funcionando bem pela ponte do celular, deixa só a fechadura pela Tuya; se tiver como,
+// colocar o refrigerador pela ponte também. Cria um botão em cada dispositivo para escolhermos ponte ou Tuya."
+const cartaoDe = (amb, nome) => amb.api_('painel').unidades.flatMap((u) => u.dispositivos).find((d) => d.nome === nome);
+
+test('canal: só Diretoria e Administrador trocam, com motivo e auditoria; Ponte só para dispositivo da ponte; canal Tuya ignora a ponte viva e vai à nuvem; de volta à Ponte, nada vai à nuvem', () => {
+  const { amb, pt } = comPonte();
+  const g = amb.disp('Portão principal'), f = amb.disp('Porta da Diretoria');
+  amb.como(TEC);
+  assert.match(amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'teste do técnico' }).message, /Administrador e dos diretores/);
+  assert.equal(cartaoDe(amb, 'Portão principal').podeCanal, false);
+  assert.equal(cartaoDe(amb, 'Portão principal').canalMotivo, undefined, 'motivo e autor do canal só para a gestão');
+  amb.como(DONO);
+  assert.match(amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'x' }).message, /escreva o motivo/);
+  assert.match(amb.api_('canal', { id: g.ID, canal: 'OUTRO', motivo: 'motivo válido' }).message, /Ponte local \(celular\)" ou "Nuvem Tuya"/);
+  const r = amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'celular da ponte em manutenção' });
+  assert.equal(r.ok, true, r.message); assert.match(r.mensagem, /passa a trabalhar pela Nuvem Tuya/);
+  const linha = amb.disp('Portão principal');
+  assert.equal(linha.CANAL, 'TUYA'); assert.equal(linha.CANAL_POR, 'DONO TESTE'); assert.equal(linha.CANAL_MOTIVO, 'celular da ponte em manutenção');
+  const aud = amb.tabelas.AUT_AUDITORIA.filter((x) => x.EVENTO === 'CANAL_ALTERADO' && x.DISPOSITIVO_ID === g.ID).pop();
+  assert.match(aud.DETALHE, /Ponte local \(celular\) -> Nuvem Tuya\. Motivo: celular da ponte em manutenção/);
+  assert.match(amb.ctx.AutPred_eventoLegivel_(aud), /^Trocou por onde o dispositivo trabalha.*Motivo: celular da ponte/);
+  const card = cartaoDe(amb, 'Portão principal');
+  assert.equal(card.canal, 'TUYA'); assert.equal(card.canalPadrao, false); assert.equal(card.canalPor, 'DONO TESTE'); assert.equal(card.podeCanal, true); assert.equal(card.naPonte, true);
+  // canal Tuya: a ponte viva não é usada; o comando vai à nuvem
+  const c0 = pt.comandos.length, nuvem0 = amb.comandosApi().length;
+  const a1 = amb.abrir(g.ID, 'op-canal-tuya-0001');
+  assert.equal(a1.ok, true, a1.message);
+  assert.equal(pt.comandos.length, c0, 'nada pela ponte'); assert.equal(amb.comandosApi().length, nuvem0 + 1, 'o comando foi à nuvem');
+  assert.equal(amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'de novo a mesma' }).mensagem, 'Portão principal já trabalha pela Nuvem Tuya.');
+  // fechadura não está no celular da ponte: não pode ir para a Ponte (ficaria sem funcionar)
+  assert.match(amb.api_('canal', { id: f.ID, canal: 'PONTE', motivo: 'testar a ponte' }).message, /não está cadastrado no celular da ponte, e ficaria sem funcionar/);
+  assert.equal(amb.disp('Porta da Diretoria').CANAL || '', '');
+  // Administrador que não é diretor não vê nem troca a porta da Diretoria
+  amb.como(ADM2);
+  assert.match(amb.api_('canal', { id: f.ID, canal: 'TUYA', motivo: 'motivo válido' }).message, /não foi encontrado/);
+  // de volta à Ponte: comando e leitura só pela ponte
+  amb.como(DONO); amb.envelhecer();
+  assert.equal(amb.api_('canal', { id: g.ID, canal: 'PONTE', motivo: 'celular da ponte de volta' }).ok, true);
+  const n0 = amb.api.pedidos.length;
+  const a2 = amb.abrir(g.ID, 'op-canal-ponte-0001');
+  assert.equal(a2.ok, true, a2.message); assert.equal(pt.comandos.length, c0 + 1); assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada à nuvem');
+  // no ambiente do Google (sem a ponte) não há canal Ponte
+  const amb2 = ambiente(); sincronizar(amb2);
+  assert.match(amb2.api_('canal', { id: amb2.disp('Portão principal').ID, canal: 'PONTE', motivo: 'motivo válido' }).message, /só existe no servidor próprio/);
+  assert.equal(cartaoDe(amb2, 'Portão principal').canal, 'TUYA', 'sem a ponte, o padrão é a nuvem');
+});
+
+test('canal padrão: portão cadastrado na ponte fica Ponte gravado na rotina (não muda sozinho se a ponte cair); fechadura e demais Nuvem Tuya; caminho único: dispositivo da Ponte nunca chama a nuvem', () => {
+  const { amb, pt } = comPonte();
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.disp('Portão principal').CANAL, 'PONTE'); assert.equal(amb.disp('Portão principal').CANAL_POR, 'Padrão do SGO+');
+  assert.equal(amb.disp('Portão secundário').CANAL, 'PONTE'); assert.equal(amb.disp('Porta da Diretoria').CANAL || '', '');
+  assert.equal(amb.ctx.AutPred_canal_(amb.disp('Porta da Diretoria')), 'TUYA');
+  // a ponte some até da lista: o canal gravado continua Ponte (nunca cai sozinho para a nuvem)
+  pt.vivo = false; pt.online = {}; pt.gravar(); amb.ctx.AutPred_canalMemoLimpar_();
+  assert.equal(amb.ctx.AutPred_canalDoDevice_('dev-portao-1'), 'PONTE');
+  const n0 = amb.api.pedidos.length;
+  const c = amb.ctx.AutPred_cfg_();
+  let erro = null;
+  try { amb.ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-portao-1', {}); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte, 'erro da ponte'); assert.match(erro.message, /fora do ar/);
+  erro = null;
+  try { amb.ctx.Tuya_chamar_(c, 'POST', '/v1.0/devices/dev-portao-1/commands', {}, { commands: [{ code: 'switch_1', value: true }] }); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte);
+  erro = null;
+  try { amb.ctx.Tuya_chamar_(c, 'GET', '/v2.0/cloud/thing/dev-portao-1/shadow/properties', {}); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte);
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada saiu (nem token)');
+  // a fechadura (Tuya) continua pela nuvem
+  amb.ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-fech-1', {});
+  assert.ok(amb.api.pedidos.length > n0);
+  // a sentinela não sonda nem atualiza o "online" de dispositivo da ponte pela nuvem
+  const n1 = amb.api.pedidos.length;
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.ok(!amb.api.pedidos.slice(n1).some((x) => /dev-portao/.test(x.caminho)), 'nada da nuvem para os portões da ponte');
+});
+
+test('consumo por dispositivo e origem (Saúde): chamadas da nuvem contadas por dispositivo, com o canal; gerais à parte; restrito sem nome para o Administrador', () => {
+  const amb = ambiente(); amb.api.garagem = true; sincronizar(amb); amb.homologar('Portão principal');
+  amb.como(DONO);
+  amb.api_('estado', { dispositivoId: amb.disp('Portão principal').ID });
+  amb.api_('estado', { dispositivoId: amb.disp('Porta da Diretoria').ID });
+  const u = uso(amb);
+  assert.ok(u.diaDisp['dev-portao-1'].MANUAL >= 1); assert.ok(u.mesDisp['dev-fech-1'].MANUAL >= 1);
+  assert.ok(u.diaDisp['dev-portao-1'].SINCRONIZAR >= 1, 'a sincronização leu as funções do portão');
+  const s = amb.api_('saude');
+  assert.equal(s.ok, true, s.message);
+  const lin = Object.fromEntries(s.uso.porDispositivo.map((x) => [x.nome, x]));
+  assert.ok(lin['Portão principal'].dia >= 2); assert.equal(lin['Portão principal'].canalNome, 'Nuvem Tuya');
+  assert.ok(lin['Portão principal'].origensDia.some((o) => o.origem === 'Leituras pedidas na tela'));
+  assert.ok(s.uso.geraisDia >= 1, 'lista de dispositivos e token ficam como gerais');
+  assert.equal(s.uso.porDispositivo.reduce((t, x) => t + x.dia, 0) + s.uso.geraisDia, s.uso.dia);
+  amb.como(ADM2);
+  const s2 = amb.api_('saude');
+  assert.ok(s2.uso.porDispositivo.some((x) => x.nome === 'Dispositivo restrito à Diretoria'));
+  assert.ok(!s2.uso.porDispositivo.some((x) => x.nome === 'Porta da Diretoria'));
+});
+
+test('refrigerador (xbx, "Car Refrigerator"): só leitura; sincronização lê o modelo, não as funções; cartão com °C pt-BR, modo, trava, bateria, erros E1..E9; histórico só quando muda ou na leitura agendada', () => {
+  const amb = ambiente({ freezer: true }); sincronizar(amb); amb.homologar('Portão principal');
+  const fz = amb.disp('Car Refrigerator');
+  assert.equal(fz.TIPO, 'REFRIGERADOR'); assert.equal(fz.COMPAT_OK, 'NAO'); assert.equal(fz.RESTRITO_DIRETORIA, 'NAO');
+  assert.match(fz.COMPAT_MOTIVO, /Só leitura/); assert.equal(fz.CATEGORIA_NOME, 'Refrigerador/freezer portátil (2 compartimentos)');
+  assert.equal(JSON.parse(fz.MODELO_JSON).A_BatteryVoltage.scale, 1);
+  assert.ok(!amb.api.pedidos.some((x) => /dev-frz-1\/functions/.test(x.caminho)), 'funções do refrigerador não são pedidas (a nuvem responde 2009)');
+  assert.equal(amb.ctx.AutPred_canal_(fz), 'TUYA', 'demais dispositivos: Nuvem Tuya por padrão');
+  amb.como(DONO);
+  // nenhum comando
+  const p = amb.api_('preparar', { dispositivoId: fz.ID, operacaoId: 'op-frz-comando01' });
+  assert.equal(p.ok, false); assert.match(p.message, /não disponível pela API: Só leitura/);
+  // leitura pedida (sombra v2.0 + detalhe para o online)
+  const n0 = amb.api.pedidos.length;
+  const r = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(r.ok, true, r.message); assert.match(r.mensagem, /Leitura agora \(Nuvem Tuya\): Compartimento A -18 °C \(ajuste -20 °C\) · Compartimento B 4 °C \(ajuste 5 °C\) · modo ECO/);
+  assert.deepEqual(amb.api.pedidos.slice(n0).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties', '/v1.0/devices/dev-frz-1']);
+  const t = r.dispositivo.refrig;
+  assert.equal(t.a.tempTexto, '-18 °C'); assert.equal(t.a.ajusteTexto, '-20 °C'); assert.equal(t.b.tempTexto, '4 °C'); assert.equal(t.dupla, true);
+  assert.equal(t.modoTexto, 'ECO (econômico)'); assert.equal(t.ligadoTexto, 'Ligado'); assert.equal(t.travaTexto, 'desligada'); assert.equal(t.bateriaTexto, '85% · 12,4 V'); assert.equal(t.erroTexto, 'nenhum');
+  assert.ok(t.lidoEm); assert.equal(r.dispositivo.online, true); assert.equal(r.dispositivo.estadoPortao, null); assert.equal(r.dispositivo.tipoNome, 'Refrigerador ou freezer (só leitura)');
+  assert.equal((amb.tabelas.AUT_LEITURAS || []).length, 1, 'primeira leitura vira linha');
+  assert.equal(amb.tabelas.AUT_LEITURAS[0].A_TEMP_C, -18); assert.equal(amb.tabelas.AUT_LEITURAS[0].MOTIVO, 'MUDOU'); assert.equal(amb.tabelas.AUT_LEITURAS[0].CANAL, 'TUYA');
+  // mesma leitura: nenhuma linha nova; mudou: linha nova
+  amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1);
+  amb.api.frz.A_Temp_C = -17; amb.api.frz.Error = 5; amb.api.frz.B_BoxOnOff = false; amb.api.frz.A_BatteryVoltage = 121;
+  const r2 = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2);
+  assert.equal(r2.dispositivo.refrig.erroTexto, 'E1, E3 (código de erro do equipamento; consulte o manual do refrigerador)');
+  assert.equal(r2.dispositivo.refrig.dupla, false, 'compartimento B desligado não aparece'); assert.match(r2.dispositivo.refrig.texto, /^Temperatura -17 °C/);
+  assert.equal(amb.tabelas.AUT_LEITURAS[1].ERROS, 'E1,E3');
+  // a tensão oscila e não conta como mudança
+  amb.api.frz.A_BatteryVoltage = 123; amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2);
+  // funções puras
+  assert.deepEqual(Array.from(amb.ctx.AutPred_refrigErros_(256)), ['E9']); assert.deepEqual(Array.from(amb.ctx.AutPred_refrigErros_('E2,E2,E4')), ['E2', 'E4']);
+  assert.equal(amb.ctx.AutPred_numBr_(-0.04, 1), '0,0'); assert.equal(amb.ctx.AutPred_grausBr_(-18.5), '-18,5 °C');
+  // histórico para o gráfico
+  const h = amb.api_('leituras', { dispositivoId: fz.ID, horas: 24 });
+  assert.equal(h.ok, true, h.message); assert.equal(h.itens.length, 2); assert.equal(h.itens[1].aTemp, -17); assert.equal(h.itens[1].bTemp, null);
+  assert.match(amb.api_('leituras', { dispositivoId: amb.disp('Portão principal').ID }).message, /só dos refrigeradores/);
+  // o colaborador vê o cartão, mas não a faixa configurada
+  amb.como(TEC);
+  const ct = cartaoDe(amb, 'Car Refrigerator');
+  assert.equal(ct.refrig.a.tempTexto, '-17 °C'); assert.equal(ct.refrig.alerta.aMin, undefined);
+});
+
+test('refrigerador pela nuvem: leitura agendada a cada 10 min (5 a 60, na Saúde), conta na cota por dispositivo, para no modo econômico e no bloqueio', () => {
+  const amb = ambiente({ freezer: true }); sincronizar(amb);
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal((amb.tabelas.AUT_LEITURAS || []).length, 1, 'sem leitura ainda: lê na primeira rotina');
+  assert.equal(amb.tabelas.AUT_LEITURAS[0].MOTIVO, 'AGENDADA');
+  const n0 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)), 'dentro dos 10 min, nenhuma chamada do refrigerador');
+  // passados 11 min: uma leitura (a sombra; o online só de hora em hora) e uma linha, mesmo sem mudança
+  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_EM = new Date(Date.now() - 11 * 60000).toISOString();
+  const n1 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.deepEqual(amb.api.pedidos.slice(n1).filter((x) => /dev-frz-1/.test(x.caminho)).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties']);
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2); assert.equal(amb.tabelas.AUT_LEITURAS[1].MOTIVO, 'AGENDADA');
+  assert.ok(uso(amb).diaDisp['dev-frz-1'].AUTOMATICA >= 2, 'conta na cota, por dispositivo');
+  // modo econômico e bloqueio: nada sai
+  amb.props.AUT_ECONOMICO = JSON.stringify({ mes: amb.ctx.AutPred_orcamentoAgora_().chave, desde: Date.now(), por: 'teste', motivo: 'teste' });
+  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_EM = new Date(Date.now() - 11 * 60000).toISOString();
+  const n2 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.ok(!amb.api.pedidos.slice(n2).some((x) => /dev-frz-1/.test(x.caminho)), 'modo econômico: leitura automática pausada');
+  delete amb.props.AUT_ECONOMICO;
+  bloquear(amb);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.ok(!amb.api.pedidos.slice(n2).some((x) => /dev-frz-1/.test(x.caminho)), 'bloqueio: nada sai');
+  // intervalo na Saúde (diretor), com motivo
+  const base = { consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 60, consultaDias: [1, 2, 3, 4, 5], motivo: 'freezer da calibração' };
+  assert.match(amb.api_('saudeCfg', Object.assign({}, base, { refrigIntervaloMin: 3 })).message, /5 a 60 minutos/);
+  const g = amb.api_('saudeCfg', Object.assign({}, base, { refrigIntervaloMin: 15 }));
+  assert.equal(g.ok, true, g.message); assert.match(g.mensagem, /refrigerador lido a cada 15 min \(pela nuvem, cerca de 3\.600 chamadas por mês/);
+  assert.equal(g.cfg.refrigIntervaloMin, 15); assert.equal(g.uso.refrigNuvem, 1);
+  assert.equal(amb.ctx.AutPred_saudeCfg_().portaoParadoS, 20, 'o resto da configuração continua');
+  const lf = g.uso.porDispositivo.find((x) => x.nome === 'Car Refrigerator');
+  assert.equal(lf.canalNome, 'Nuvem Tuya'); assert.ok(lf.mes >= 3);
+});
+
+test('refrigerador pela ponte: leitura local sem nuvem (agente da ponte), histórico quando muda e a cada intervalo, ponte fora não cai para a nuvem; alerta de faixa avisa uma vez (S79) e na volta', () => {
+  const pt = ponteSimulada();
+  const amb = ambiente({ freezer: true, globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb; sincronizar(amb);
+  // o agente da ponte manda os pontos com os mesmos códigos da nuvem (mapa dp 101..123 do LEIAME)
+  pt.online['dev-frz-1'] = true; pt.props['dev-frz-1'] = Object.assign({}, FREEZER_PONTOS); pt.gravar();
+  const fz = amb.disp('Car Refrigerator');
+  amb.como(DONO);
+  assert.equal(cartaoDe(amb, 'Car Refrigerator').naPonte, true);
+  const t = amb.api_('canal', { id: fz.ID, canal: 'PONTE', motivo: 'freezer cadastrado no celular da ponte' });
+  assert.equal(t.ok, true, t.message); assert.match(t.mensagem, /A ponte está no ar e atende este dispositivo/);
+  const n0 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1); assert.equal(amb.tabelas.AUT_LEITURAS[0].CANAL, 'PONTE'); assert.equal(amb.tabelas.AUT_LEITURAS[0].A_TEMP_C, -18);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1, 'sem mudança e dentro do intervalo: nenhuma linha');
+  pt.mudar('dev-frz-1', 'A_Temp_C', -16); pt.gravar();
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2); assert.equal(amb.tabelas.AUT_LEITURAS[1].MOTIVO, 'MUDOU');
+  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_LINHA_EM = new Date(Date.now() - 11 * 60000).toISOString();
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 3); assert.equal(amb.tabelas.AUT_LEITURAS[2].MOTIVO, 'AGENDADA');
+  const r = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.match(r.mensagem, /Leitura agora \(Ponte local \(celular\)\): Compartimento A -16 °C/);
+  // alerta de faixa (desligado por padrão): ligado com máximo de -15 °C no compartimento A
+  const s0 = amb.notificacoes.length;
+  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true } }).message, /pelo menos uma temperatura/);
+  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-10', aMax: '-15' } }).message, /mínima precisa ser menor/);
+  const sv = amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-25', aMax: '-15' } });
+  assert.equal(sv.ok, true, sv.message); assert.match(sv.mensagem, /alerta de temperatura ligado \(A: -25 °C a -15 °C\)/);
+  pt.mudar('dev-frz-1', 'A_Temp_C', -12); pt.gravar();
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.notificacoes.length, s0, '1 leitura fora: ainda sem aviso');
+  amb.ctx.AutPred_rotinaPedidos();
+  let s79 = amb.notificacoes.filter((x) => x.evento === 'S79');
+  assert.equal(s79.length, 1); assert.match(s79[0].titulo, /Refrigerador fora da faixa: Car Refrigerator/); assert.match(s79[0].texto, /compartimento A em -12 °C \(máximo -15 °C\)/);
+  assert.deepEqual(Array.from(s79[0].canais), ['sgo', 'email']);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.notificacoes.filter((x) => x.evento === 'S79').length, 1, 'uma vez por ocorrência');
+  assert.equal(cartaoDe(amb, 'Car Refrigerator').refrig.alerta.fora, true);
+  pt.mudar('dev-frz-1', 'A_Temp_C', -19); pt.gravar();
+  amb.ctx.AutPred_rotinaPedidos();
+  s79 = amb.notificacoes.filter((x) => x.evento === 'S79');
+  assert.equal(s79.length, 2); assert.match(s79[1].titulo, /de volta à faixa/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'REFRIG_FORA_DA_FAIXA') && amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'REFRIG_NORMALIZADO'));
+  assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)), 'refrigerador da ponte: nenhuma chamada à nuvem');
+  // ponte fora: nada pela nuvem; a tela diz desde quando
+  pt.vivo = false; pt.gravar();
+  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_LINHA_EM = new Date(Date.now() - 11 * 60000).toISOString();
+  const l0 = amb.tabelas.AUT_LEITURAS.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, l0);
+  const r2 = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(r2.ok, true); assert.match(r2.mensagem, /Car Refrigerator trabalha pela ponte local .* fora do ar desde/); assert.match(r2.mensagem, /Confira o equipamento no local/);
+  assert.match(cartaoDe(amb, 'Car Refrigerator').ponteTexto, /fora do ar desde/);
+  assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)));
 });

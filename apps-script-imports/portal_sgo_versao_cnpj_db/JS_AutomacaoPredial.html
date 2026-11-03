@@ -127,6 +127,27 @@
 .aut-saude-caixa { border:1px solid var(--border,#d9e0e7); border-radius:10px; padding:10px 12px; font-size:13px; background:var(--card,#fff); min-width:0; }
 .aut-saude-caixa ul { margin:4px 0 0; padding-left:18px; }
 .aut-saude-dias { display:flex; flex-wrap:wrap; gap:4px 10px; font-size:12px; color:var(--muted,#52606d); }
+/* 03/11/2026: canal de cada dispositivo (ponte local ou nuvem Tuya) e refrigerador/freezer (só leitura) */
+.aut-canal { display:inline-flex; align-items:center; gap:5px; }
+.aut-canal.is-ponte { background:#eef3fb; border-color:#c9d7ee; color:#1f3a5f; }
+.aut-canal.is-tuya { background:#f4f1fb; border-color:#dcd2f0; color:#4a3780; }
+.aut-canal-bloco { border:1px solid var(--border,#d9e0e7); border-radius:8px; padding:8px 10px; background:var(--card,#fff); display:flex; flex-direction:column; gap:6px; font-size:13px; }
+.aut-refrig { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin:4px 0; }
+.aut-refrig-comp { border:1px solid var(--border,#d9e0e7); border-radius:8px; padding:8px 10px; background:var(--bc-surface-2,#f4f6f8); }
+.aut-refrig-comp b { display:block; font-size:11.5px; color:var(--muted,#52606d); font-weight:600; }
+.aut-refrig-temp { font-size:22px; font-weight:700; line-height:1.2; color:var(--text,#1f2933); }
+.aut-refrig-comp.is-fora { border-color:#e5b4ae; background:#fff5f5; }
+.aut-cartao { min-width:0; }
+.aut-cartao .aut-form { min-width:0; }
+.aut-rolar { overflow-x:auto; max-width:100%; }
+.aut-grafico { width:100%; height:auto; display:block; background:var(--card,#fff); border:1px solid var(--border,#e1e7ed); border-radius:8px; }
+.aut-grafico text { font-size:11px; fill:var(--muted,#52606d); }
+.aut-grafico .g-grade { stroke:#e6ebf0; stroke-width:1; }
+.aut-grafico .g-a { fill:none; stroke:#1f6b9a; stroke-width:2; }
+.aut-grafico .g-b { fill:none; stroke:#b4561e; stroke-width:2; }
+.aut-grafico .g-aj { fill:none; stroke-width:1.5; stroke-dasharray:5 4; opacity:.75; }
+.aut-legenda { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--muted,#52606d); margin:4px 0; }
+.aut-legenda i { display:inline-block; width:18px; height:0; border-top:2px solid; vertical-align:middle; margin-right:4px; }
 
 </style>
 
@@ -192,12 +213,14 @@
         '<div id="autRapido" class="aut-rapido"></div>' +
         '<section id="intelbrasPainel" class="intelbras-operacao cadx-card" aria-live="polite"></section>' +
         '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Segurança e automação predial</h2>' +
-          '<p class="content-subtitle">Portões e porta da Diretoria pela nuvem do Smart Life. Cada comando passa por: solicitado, aceito pela nuvem e execução confirmada pelo dispositivo.</p></div>' +
+          '<p class="content-subtitle">Portões, porta da Diretoria e refrigerador, cada um pela ponte local (celular na rede da empresa) ou pela nuvem do Smart Life. Cada comando passa por: solicitado, aceito e execução confirmada pelo dispositivo.</p></div>' +
           '<div class="module-header-right"><button type="button" class="cadx-btn cadx-btn-grande" id="autAtualizar" onclick="AutPred_carregar_()">Atualizar</button></div></div>' +
         CadUI_ajuda_(
           "<ul><li><b>Portões</b>: toda a equipe vê e aciona. Na garagem, use <b>Abrir / fechar portão</b>: o mesmo botão abre o fechado e fecha o aberto, como no Smart Life. A posição é consultada antes da janela; confira a ação e o nome e toque em \"Sim\". Aguarde o fim do percurso antes de tocar novamente.</li>" +
           "<li>O selo grande mostra a posição do portão (<b>Aberto</b>, <b>Fechado</b>, <b>Abrindo…</b>, <b>Fechando…</b>). Com a tela aberta e visível, ela é atualizada a cada poucos segundos durante o percurso de um comando e com menos frequência com o portão parado (economia da nuvem da Tuya). Para ler agora, use \"Ler estado\". Quando a posição muda, aparece um aviso no topo.</li>" +
           "<li>Se aparecer <b>\"Portões pelo SGO+ fora do ar no momento\"</b>, use o controle ou o aplicativo Smart Life: a gestão é avisada sozinha. O alarme não depende dessa nuvem.</li>" +
+          "<li>Cada cartão mostra <b>por onde o dispositivo trabalha</b>: \"Pela ponte local\" (celular na rede da empresa, sem gastar a nuvem) ou \"Pela nuvem Tuya\". Se aparecer <b>\"ponte local fora do ar desde ...\"</b>, nada é enviado (o SGO+ não troca sozinho para a nuvem): use o controle ou o aplicativo Smart Life. A Diretoria e o Administrador podem tocar em \"Trabalhar pela Nuvem Tuya\" no cartão (com motivo).</li>" +
+          "<li><b>Refrigerador ou freezer</b>: só leitura. O cartão mostra a temperatura atual e a ajustada de cada compartimento, o modo, a trava infantil, a bateria, os erros do equipamento e a hora da leitura. \"Ler agora\" lê na hora; \"Histórico\" mostra o gráfico das últimas horas.</li>" +
           "<li><b>Aceito</b> quer dizer que a nuvem recebeu; <b>Execução confirmada</b> quer dizer que o dispositivo informou a mudança. Até a confirmação, não considere a porta aberta.</li>" +
           "<li>A <b>porta da Diretoria</b> só aparece para os diretores. O responsável pelo sistema destrava por padrão; outro diretor só com a permissão \"Acionar\" concedida por ele. Ela abre quando tocam a campainha: toque em \"Abrir agora\" ou marque <b>\"Abrir automaticamente quando tocarem a campainha\"</b> (desmarcado, volta ao \"Abrir agora\").</li>" +
           "<li><b>Simulação</b>: enquanto a automação está desligada em Chaves e senhas ou o dispositivo não foi homologado pela Diretoria, o SGO+ registra o que teria feito e nada é enviado.</li>" +
@@ -273,10 +296,24 @@
 
   // ---------- dispositivos ----------
   function AutPred_chipSituacao_(d) {
-    if (!d.ativo) return '<span class="cadx-selo bc-selo">Desativado</span>';
+    if (!d.ativo) return '<span class="cadx-selo bc-selo">Desativado</span>' + AutPred_seloCanal_(d);
     return (d.online ? '<span class="cadx-selo bc-selo tom-ok">Online</span>' : '<span class="cadx-selo bc-selo tom-perigo">Offline</span>') +
+      AutPred_seloCanal_(d) +
       (d.restrito ? '<span class="cadx-selo bc-selo tom-perigo">Restrito à Diretoria</span>' : "") +
-      (d.modo === "REAL" ? '<span class="cadx-selo bc-selo tom-alerta">Comando real</span>' : '<span class="cadx-selo bc-selo tom-info">Simulação</span>');
+      (d.tipo === "REFRIGERADOR" ? '<span class="cadx-selo bc-selo tom-info">Só leitura</span>' : d.modo === "REAL" ? '<span class="cadx-selo bc-selo tom-alerta">Comando real</span>' : '<span class="cadx-selo bc-selo tom-info">Simulação</span>');
+  }
+  // 03/11/2026: selo do canal (por onde o dispositivo trabalha); com a ponte fora do ar, o selo fica vermelho
+  function AutPred_seloCanal_(d) {
+    if (!d || !d.canal) return "";
+    var ponte = d.canal === "PONTE", fora = ponte && d.ponteOk === false;
+    return '<span class="cadx-selo bc-selo aut-canal ' + (fora ? "tom-perigo" : ponte ? "is-ponte" : "is-tuya") + '" title="' + AutPred_esc_(ponte ? "Comandos e leituras só pela ponte local (celular na rede da empresa); nada vai à nuvem da Tuya." : "Comandos e leituras pela nuvem da Tuya (contam na cota).") + '">' +
+      '<i class="fas ' + (ponte ? "fa-mobile-screen" : "fa-cloud") + '" aria-hidden="true"></i>' + (ponte ? (fora ? "Ponte local fora do ar" : "Pela ponte local") : "Pela nuvem Tuya") + "</span>";
+  }
+  /** Faixa da ponte fora do ar no cartão: desde quando, o que fazer e, para a gestão, a troca para a nuvem em um toque. */
+  function AutPred_faixaPonte_(d) {
+    if (!d || d.canal !== "PONTE" || d.ponteOk !== false) return "";
+    return '<div class="cadx-faixa bc-faixa tom-perigo" role="alert" style="margin-top:6px">' + AutPred_esc_(d.ponteTexto) +
+      (d.podeCanal ? '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_trocarCanal_(\'' + d.id + '\', \'TUYA\')"><i class="fas fa-cloud" aria-hidden="true"></i> Trabalhar pela Nuvem Tuya</button></div>' : "") + "</div>";
   }
   function AutPred_linha_(a, b) { return b ? '<div class="aut-linha"><span>' + AutPred_esc_(a) + "</span><span>" + AutPred_esc_(b) + "</span></div>" : ""; }
 
@@ -303,24 +340,115 @@
 
   function AutPred_cartao_(d) {
     var verbo = d.tipo === "FECHADURA" ? "Destravar a porta" : "Abrir portão";
+    var refrig = d.tipo === "REFRIGERADOR";
     var aviso0 = "";
-    var botoes = '<button type="button" class="cadx-btn" onclick="AutPred_estado_(\'' + d.id + '\')">Ler estado</button>' +
-      '<button type="button" class="cadx-btn" onclick="AutPred_historico_(\'' + d.id + '\')">Histórico</button>';
+    var botoes = '<button type="button" class="cadx-btn" onclick="AutPred_estado_(\'' + d.id + '\')">' + (refrig ? "Ler agora" : "Ler estado") + "</button>" +
+      '<button type="button" class="cadx-btn" onclick="' + (refrig ? "AutPred_leiturasRefrig_" : "AutPred_historico_") + '(\'' + d.id + '\')">Histórico</button>';
     if (d.podeAcionar && d.ativo && d.compatOk && d.remotoFechadura === "PEDIDO") aviso0 = '<div class="cadx-sub" style="margin-top:6px">Abertura remota só quando tocam a campainha: durante o pedido, o botão "Abrir agora" aparece no bloco do topo.</div>';
     else if (d.podeAcionar && d.ativo && d.compatOk && d.pulsoAlternado) botoes = AutPred_btnAcao_(d.id, "modulo", "ALTERNAR", "Abrir / fechar portão", "cadx-btn cadx-btn-grande cadx-btn-primario", "") + botoes;
     else if (d.podeAcionar && d.ativo && d.compatOk) botoes = AutPred_btnAcao_(d.id, "modulo", "ABRIR", verbo, "cadx-btn cadx-btn-grande " + (d.tipo === "FECHADURA" ? "cadx-btn-risco" : "cadx-btn-primario"), "") + (d.podeFechar ? AutPred_btnAcao_(d.id, "modulo", "FECHAR", "Fechar portão", "cadx-btn cadx-btn-grande", "") : "") + (d.podeParar ? AutPred_btnAcao_(d.id, "modulo", "PARAR", "Parar", "cadx-btn cadx-btn-grande", "") : "") + botoes;
     if (AUTP.adm && (!d.restrito || AUTP.diretoria)) botoes += '<button type="button" class="cadx-btn" onclick="AutPred_editar_(\'' + d.id + '\')">Administrar</button>';
     var aviso = "";
-    if (!d.compatOk) aviso = '<div class="cadx-faixa bc-faixa tom-alerta" style="margin-top:6px">' + AutPred_esc_(d.compatMotivo) + "</div>";
+    if (refrig) aviso = "";
+    else if (!d.compatOk) aviso = '<div class="cadx-faixa bc-faixa tom-alerta" style="margin-top:6px">' + AutPred_esc_(d.compatMotivo) + "</div>";
     else if (!d.podeAcionar && d.motivoAcionar) aviso = '<div class="cadx-sub" style="margin-top:6px">Só consulta: ' + AutPred_esc_(d.motivoAcionar) + ".</div>";
-    if (d.modoMotivo) aviso += '<div class="cadx-sub" style="margin-top:6px">' + AutPred_esc_(d.modoMotivo) + "</div>";
-    return '<div class="aut-cartao' + (d.restrito ? " is-restrito" : "") + '" id="autD_' + d.id + '"><h4><i class="fas ' + (d.tipo === "FECHADURA" ? "fa-lock" : "fa-door-open") + '" aria-hidden="true"></i> ' + AutPred_esc_(d.nome) + "</h4><div>" + AutPred_chipSituacao_(d) + "</div>" +
-      (d.tipo !== "FECHADURA" ? AutPred_htmlPosicao_(d.id, d.estadoPortao) : "") +
+    if (d.modoMotivo && !refrig) aviso += '<div class="cadx-sub" style="margin-top:6px">' + AutPred_esc_(d.modoMotivo) + "</div>";
+    return '<div class="aut-cartao' + (d.restrito ? " is-restrito" : "") + '" id="autD_' + d.id + '"><h4><i class="fas ' + (d.tipo === "FECHADURA" ? "fa-lock" : refrig ? "fa-snowflake" : "fa-door-open") + '" aria-hidden="true"></i> ' + AutPred_esc_(d.nome) + "</h4><div>" + AutPred_chipSituacao_(d) + "</div>" +
+      (d.tipo !== "FECHADURA" && !refrig ? AutPred_htmlPosicao_(d.id, d.estadoPortao) : "") +
+      (refrig ? AutPred_htmlRefrig_(d) : "") +
       AutPred_linha_("Tipo", d.tipoNome + (d.categoriaNome ? " (" + d.categoriaNome + ")" : "")) + AutPred_linha_("Localização", d.localizacao) +
-      AutPred_linha_("Estado", d.estado + (d.estadoEm ? " (lido " + d.estadoEm + ")" : "")) +
-      AutPred_linha_("Último comando", d.ultComandoEm ? d.ultComandoSituacao + " em " + d.ultComandoEm : "nenhum") +
-      (AUTP.adm ? AutPred_linha_("Homologação", d.homologado ? "homologado por " + d.homologadoPor + " em " + d.homologadoEm : "aguardando a Diretoria") : "") +
-      aviso0 + aviso + '<div class="aut-acoes">' + botoes + '</div><div id="autF_' + d.id + '"></div></div>';
+      AutPred_linha_("Trabalha pela", (d.canalNome || "") + (d.canalPadrao ? " (padrão)" : "")) +
+      (refrig ? "" : AutPred_linha_("Estado", d.estado + (d.estadoEm ? " (lido " + d.estadoEm + ")" : "")) +
+        AutPred_linha_("Último comando", d.ultComandoEm ? d.ultComandoSituacao + " em " + d.ultComandoEm : "nenhum")) +
+      (AUTP.adm && !refrig ? AutPred_linha_("Homologação", d.homologado ? "homologado por " + d.homologadoPor + " em " + d.homologadoEm : "aguardando a Diretoria") : "") +
+      AutPred_faixaPonte_(d) + aviso0 + aviso + '<div class="aut-acoes">' + botoes + '</div><div id="autF_' + d.id + '"></div></div>';
+  }
+
+  // ---------- refrigerador / freezer (03/11/2026): só leitura ----------
+  /** Temperaturas de cada compartimento ativo (atual e ajustada, °C em pt-BR), modo, ligado, trava, bateria, erros e hora da leitura. */
+  function AutPred_htmlRefrig_(d) {
+    var r = d.refrig || {}, esc = AutPred_esc_, al = r.alerta || {};
+    if (!r.temPontos) return '<div class="cadx-sub">Ainda sem leitura. Toque em "Ler agora"' + (d.canal === "PONTE" ? " (pela ponte local)" : "") + '; depois, o SGO+ lê sozinho no intervalo configurado.</div>';
+    var comp = function (nome, x, lado) {
+      if (!x || !x.ativo) return "";
+      var fora = al.fora && al.ligado;
+      return '<div class="aut-refrig-comp' + (fora ? " is-fora" : "") + '"><b>' + esc(nome) + '</b><div class="aut-refrig-temp">' + esc(x.tempTexto) + "</div>" +
+        (x.ajusteTexto ? '<div class="cadx-sub">ajustada: ' + esc(x.ajusteTexto) + "</div>" : "") + "</div>";
+    };
+    return '<div class="aut-refrig" role="group" aria-label="Temperaturas">' + comp(r.dupla ? "Compartimento A" : "Temperatura atual", r.a) + comp("Compartimento B", r.b) + "</div>" +
+      AutPred_linha_("Equipamento", r.ligadoTexto + (r.aquecimento ? " · aquecimento ligado" : "")) + AutPred_linha_("Modo", r.modoTexto + (r.protecaoTexto ? " · proteção da bateria " + r.protecaoTexto : "")) +
+      AutPred_linha_("Trava infantil", r.travaTexto) + AutPred_linha_("Bateria", r.bateriaTexto) + AutPred_linha_("Erros", r.erroTexto) +
+      AutPred_linha_("Leitura", r.lidoEmHora || r.lidoEm || "—") +
+      (al.ligado ? AutPred_linha_("Alerta de temperatura", "ligado" + (al.faixaTexto ? " (" + al.faixaTexto + ")" : "")) : "") +
+      (al.ligado && al.fora ? '<div class="cadx-faixa bc-faixa tom-perigo" role="alert">Fora da faixa configurada: a gestão foi avisada. Confira o equipamento no local (porta, energia e ajuste) e o material guardado nele.</div>' : "") +
+      (r.erros && r.erros.length ? '<div class="cadx-faixa bc-faixa tom-alerta">Código de erro do equipamento: ' + esc(r.erros.join(", ")) + '. Consulte o manual do refrigerador e confira no local.</div>' : "");
+  }
+
+  /** Histórico das leituras do refrigerador: gráfico simples (SVG) das últimas horas e a lista. */
+  function AutPred_leiturasRefrig_(id, horas) {
+    var d = AutPred_dispositivo_(id);
+    horas = horas || 48;
+    AutPred_form_(id, '<div class="cadx-sub">Carregando as leituras…</div>');
+    AutPred_chamar_("leituras", { dispositivoId: id, horas: horas }, function (r) {
+      var esc = AutPred_esc_, itens = r.itens || [];
+      var botaoH = function (h, rot) { return '<button type="button" class="cadx-btn' + (h === r.horas ? " is-ativa" : "") + '" onclick="AutPred_leiturasRefrig_(\'' + id + "', " + h + ')">' + rot + "</button>"; };
+      var lista = itens.slice(-30).reverse().map(function (x) {
+        return "<tr><td>" + esc(x.quando) + "</td><td>" + esc(AutPred_grausTela_(x.aTemp)) + (x.aAjuste !== null ? ' <span class="cadx-sub">(' + esc(AutPred_grausTela_(x.aAjuste)) + ")</span>" : "") + "</td><td>" +
+          (x.bTemp !== null ? esc(AutPred_grausTela_(x.bTemp)) + (x.bAjuste !== null ? ' <span class="cadx-sub">(' + esc(AutPred_grausTela_(x.bAjuste)) + ")</span>" : "") : "—") + "</td><td>" +
+          esc((x.online === "NAO" ? "offline" : x.ligado === "NAO" ? "desligado" : "ligado") + (x.erros ? " · erro " + x.erros.replace(/,/g, ", ") : "")) + "</td><td>" + esc(x.motivo === "AGENDADA" ? "leitura agendada" : "mudança") + "</td></tr>";
+      }).join("");
+      AutPred_form_(id, '<div class="aut-form"><label>Temperaturas de ' + esc(d ? d.nome : "") + " (" + esc(r.total) + " leitura(s) nas últimas " + esc(r.horas) + " h)</label>" +
+        '<div class="aut-acoes">' + botaoH(24, "24 h") + botaoH(48, "48 h") + botaoH(168, "7 dias") + botaoH(720, "30 dias") + "</div>" +
+        (itens.length ? AutPred_graficoRefrig_(itens) + '<div class="aut-rolar"><table class="aut-tabela"><thead><tr><th>Quando</th><th>Compartimento A (ajuste)</th><th>Compartimento B (ajuste)</th><th>Situação</th><th>Por quê</th></tr></thead><tbody>' + lista + "</tbody></table></div>" +
+          (itens.length > 30 ? '<div class="cadx-sub">Mostrando as 30 leituras mais recentes; o gráfico tem o período todo.</div>' : "")
+          : '<div class="cadx-sub">Nenhuma leitura neste período. O SGO+ grava uma linha quando a temperatura muda e a cada leitura agendada.</div>') +
+        '<div class="aut-acoes"><button type="button" class="cadx-btn" onclick="AutPred_form_(\'' + id + '\', \'\')">Fechar</button></div></div>');
+    }, function (m) { AutPred_form_(id, AutPred_faixa_(m, "tom-perigo")); });
+  }
+  function AutPred_grausTela_(n) { if (n === null || n === undefined || n === "") return "—"; var v = Number(n); return (Math.round(v) === v ? String(v) : v.toFixed(1)).replace(".", ",").replace(/^-0$/, "0") + " °C"; }
+  /** Gráfico de linhas: temperatura atual (linha cheia) e ajustada (tracejada) de A e de B. */
+  function AutPred_graficoRefrig_(itens) {
+    var L = 640, A = 220, m = { e: 46, d: 10, t: 12, b: 26 }, w = L - m.e - m.d, h = A - m.t - m.b;
+    var vals = [];
+    itens.forEach(function (x) { ["aTemp", "aAjuste", "bTemp", "bAjuste"].forEach(function (k) { if (x[k] !== null && x[k] !== undefined) vals.push(Number(x[k])); }); });
+    if (!vals.length) return '<div class="cadx-sub">Sem temperatura nas leituras do período.</div>';
+    var min = Math.floor(Math.min.apply(null, vals) - 1), max = Math.ceil(Math.max.apply(null, vals) + 1);
+    var t0 = itens[0].em, t1 = itens[itens.length - 1].em, dt = Math.max(1, t1 - t0);
+    var X = function (t) { return m.e + (itens.length > 1 ? (t - t0) / dt * w : w / 2); }, Y = function (v) { return m.t + (max - v) / (max - min) * h; };
+    var linha = function (k, cls) {
+      var pts = itens.filter(function (x) { return x[k] !== null && x[k] !== undefined; }).map(function (x) { return X(x.em).toFixed(1) + "," + Y(Number(x[k])).toFixed(1); });
+      return pts.length ? '<polyline class="' + cls + '" points="' + pts.join(" ") + '"></polyline>' : "";
+    };
+    var grade = "", passo = Math.max(1, Math.ceil((max - min) / 5));
+    for (var v = Math.ceil(min / passo) * passo; v <= max; v += passo) grade += '<line class="g-grade" x1="' + m.e + '" x2="' + (L - m.d) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '"></line><text x="' + (m.e - 6) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end">' + AutPred_esc_(AutPred_grausTela_(v)) + "</text>";
+    var hora = function (t) { var d = new Date(t), p = function (n) { return (n < 10 ? "0" : "") + n; }; return p(d.getDate()) + "/" + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes()); };
+    var temB = itens.some(function (x) { return x.bTemp !== null; });
+    return '<svg class="aut-grafico" viewBox="0 0 ' + L + " " + A + '" role="img" aria-label="Gráfico das temperaturas do refrigerador no período">' + grade +
+      '<text x="' + m.e + '" y="' + (A - 6) + '">' + AutPred_esc_(hora(t0)) + '</text><text x="' + (L - m.d) + '" y="' + (A - 6) + '" text-anchor="end">' + AutPred_esc_(hora(t1)) + "</text>" +
+      linha("aAjuste", "g-aj g-a") + linha("bAjuste", "g-aj g-b") + linha("aTemp", "g-a") + linha("bTemp", "g-b") + "</svg>" +
+      '<div class="aut-legenda"><span><i style="border-color:#1f6b9a"></i>' + (temB ? "Compartimento A" : "Temperatura") + '</span><span><i style="border-color:#1f6b9a;border-top-style:dashed"></i>ajustada</span>' +
+      (temB ? '<span><i style="border-color:#b4561e"></i>Compartimento B</span><span><i style="border-color:#b4561e;border-top-style:dashed"></i>ajustada</span>' : "") + "</div>";
+  }
+
+  // ---------- canal (03/11/2026): ponte local ou nuvem Tuya, com motivo ----------
+  function AutPred_trocarCanal_(id, canal) {
+    var d = AutPred_dispositivo_(id);
+    if (!d) return;
+    var paraPonte = canal === "PONTE";
+    CadUI_confirmar_({
+      titulo: (paraPonte ? "Trabalhar pela ponte local: " : "Trabalhar pela Nuvem Tuya: ") + d.nome, risco: !paraPonte, botao: paraPonte ? "Trabalhar pela ponte" : "Trabalhar pela Nuvem Tuya",
+      texto: paraPonte
+        ? "<p>Comandos e leituras deste dispositivo passam a sair <b>só pela ponte local</b> (celular na rede da empresa): nenhuma chamada à nuvem da Tuya. Se a ponte sair do ar, o SGO+ <b>não</b> troca sozinho para a nuvem: a tela avisa desde quando e o que fazer.</p>"
+        : "<p>Comandos e leituras deste dispositivo passam a sair <b>pela nuvem da Tuya</b> (contam na cota; com a cota esgotada, nada sai). A ponte deixa de ser usada para ele até alguém trocar de volta.</p>",
+      motivo: { rotulo: "Motivo", min: 5 },
+      aoConfirmar: function (valores, fechar, reabilitar) {
+        var motivo = valores && valores.motivo !== undefined ? valores.motivo : String((document.getElementById("cadxDlgMotivo") || {}).value || "");
+        AutPred_chamar_("canal", { id: id, canal: canal, motivo: motivo }, function (r) { fechar(); AutPred_aplicarPainel_(r); if (document.getElementById("autTela")) AutPred_msg_(AutPred_faixa_(r.mensagem, "tom-ok")); }, reabilitar);
+      }
+    });
+    // ponte fora do ar: o motivo já vem escrito (um toque para confirmar; pode ser trocado)
+    var mt = document.getElementById("cadxDlgMotivo");
+    if (mt && !paraPonte && d.ponteOk === false) mt.value = "Ponte local fora do ar: " + String(d.ponteTexto || "").replace(/^.*?(fora do ar[^.;]*).*$/, "$1");
   }
 
   function AutPred_dispositivo_(id) {
@@ -333,7 +461,7 @@
 
   function AutPred_estado_(id) {
     AutPred_msg_('<div class="cadx-sub">Lendo o estado…</div>');
-    AutPred_chamar_("estado", { dispositivoId: id }, function (r) { AutPred_carregar_(r.mensagem, "tom-info"); }, function (m) { AutPred_msg_(AutPred_faixa_(m, "tom-perigo")); });
+    AutPred_chamar_("estado", { dispositivoId: id }, function (r) { AutPred_carregar_(r.mensagem, r.ponteFora ? "tom-perigo" : "tom-info"); }, function (m) { AutPred_msg_(AutPred_faixa_(m, "tom-perigo")); });
   }
 
   function AutPred_historico_(id) {
@@ -482,6 +610,8 @@
           // 23/10/2026: a situação do último comando só aparece enquanto vale "Conferir agora" (15 min); depois, só a hora
           '<span data-aut-sit="' + AutPred_esc_(d.id) + '">' + AutPred_htmlSit_(d) + "</span>" +
           (d.ultComandoEm ? '<span class="cadx-sub">último: ' + AutPred_esc_(d.ultComandoEm) + "</span>" : "") + "</div>" +
+        // 03/11/2026: ponte local fora do ar: o porquê e o que fazer, antes do botão (nada é enviado pela nuvem)
+        (d.canal === "PONTE" && d.ponteOk === false ? '<div class="cadx-faixa bc-faixa tom-perigo" role="alert">' + AutPred_esc_(d.ponteTexto) + "</div>" : "") +
         AutPred_htmlBotoesRapidos_(d, contexto) + "</div>";
     }).join("") + "</div>";
     lista.forEach(function (d) { if (d.estadoPortao && AUTP.posicoes[d.id] === undefined) AUTP.posicoes[d.id] = d.estadoPortao.codigo || ""; if (d.tipo !== "FECHADURA") AutPred_marcarLibera_(d.id, d.liberaEmS || 0); });
@@ -500,7 +630,9 @@
     if (infra) AUTP.infra = infra;
     var i = AUTP.infra || {}, h = "";
     if (i.portoesForaDoAr) h = '<div class="cadx-faixa bc-faixa tom-perigo" role="alert"><strong>' + AutPred_esc_(i.texto) + "</strong>" + (i.alarmeTexto ? " " + AutPred_esc_(i.alarmeTexto) : "") + "</div>";
-    else if (i.economico) h = '<div class="cadx-faixa bc-faixa tom-alerta">Economia da nuvem ligada: a posição dos portões e a campainha não são relidas sozinhas. Toque em "Ler estado" ou em "Verificar campainha agora" e confira no local antes de fechar.</div>';
+    // 03/11/2026: portões pela ponte local sem resposta (nunca caem sozinhos para a nuvem)
+    if (i.ponteForaDoAr) h += '<div class="cadx-faixa bc-faixa tom-perigo" role="alert"><strong>' + AutPred_esc_(i.ponteTexto) + "</strong>" + (AUTP.adm ? " Para usar a nuvem da Tuya enquanto isso: Segurança predial › cartão do portão › \"Trabalhar pela Nuvem Tuya\"." : " A gestão pode trocar os portões para a nuvem da Tuya.") + (!i.portoesForaDoAr && i.alarmeTexto ? " " + AutPred_esc_(i.alarmeTexto) : "") + "</div>";
+    else if (i.economico && !h) h = '<div class="cadx-faixa bc-faixa tom-alerta">Economia da nuvem ligada: a posição dos portões e a campainha não são relidas sozinhas. Toque em "Ler estado" ou em "Verificar campainha agora" e confira no local antes de fechar.</div>';
     document.querySelectorAll(".aut-infra").forEach(function (el) { if (el.innerHTML !== h) el.innerHTML = h; });
   }
   /** Aba de volta à frente: as consultas paradas voltam na hora. */
@@ -790,23 +922,25 @@
   function AutPred_editar_(id) {
     var d = AutPred_dispositivo_(id);
     if (!d) return;
+    var portao = d.tipo !== "FECHADURA" && d.tipo !== "REFRIGERADOR";
     var montar = function (unidades) {
       var opc = '<option value="">Outra (digite abaixo)</option>' + (unidades || []).map(function (u) { return '<option value="' + AutPred_esc_(u.id) + '"' + (u.id === d.unidadeId ? " selected" : "") + ">" + AutPred_esc_((u.cliente ? u.cliente + " — " : "") + u.nome + (u.cidade ? " (" + u.cidade + ")" : "")) + "</option>"; }).join("");
-      AutPred_form_(id, '<div class="aut-form">' +
+      AutPred_form_(id, '<div class="aut-form">' + AutPred_htmlCanalAdm_(d) +
         '<label for="autNome_' + id + '">Nome no SGO+</label><input id="autNome_' + id + '" maxlength="80" value="' + AutPred_esc_(d.nome) + '">' +
         '<label for="autUni_' + id + '">Unidade (cadastro de unidades)</label><select id="autUni_' + id + '">' + opc + "</select>" +
         '<label for="autUniNome_' + id + '">Unidade (texto, quando não está no cadastro; ex.: METROLABS — MATRIZ GOIÂNIA)</label><input id="autUniNome_' + id + '" maxlength="120" value="' + AutPred_esc_(d.unidadeId ? "" : (d.unidade === "Sem unidade definida" ? "" : d.unidade)) + '">' +
         '<label for="autLoc_' + id + '">Localização (ex.: entrada principal, estacionamento, 2º andar)</label><input id="autLoc_' + id + '" maxlength="120" value="' + AutPred_esc_(d.localizacao) + '">' +
-        (d.tipo !== "FECHADURA" ? '<label for="autCmd_' + id + '">Comando de abertura (JSON, só se o lido do Smart Life estiver errado)</label><input id="autCmd_' + id + '" class="aut-mono" value="' + AutPred_esc_(d.comandoAbrir) + '" placeholder=\'{"code":"switch_1","value":true}\'>' : "") +
-        (d.tipo !== "FECHADURA" ? '<label for="autAcion_' + id + '">Acionamento</label><select id="autAcion_' + id + '"><option value="PULSO"' + (d.acionamento !== "ABRIR_FECHAR" ? " selected" : "") + '>Pulso (só abrir; fecha manualmente)</option>' + (d.temFecharNaNuvem ? '<option value="ABRIR_FECHAR"' + (d.acionamento === "ABRIR_FECHAR" ? " selected" : "") + '>Portão com abrir e fechar</option>' : "") + "</select>" + '<div class="cadx-sub">Sugestão pela leitura do dispositivo: ' + (d.acionamentoSugerido === "ABRIR_FECHAR" ? "aceita abrir e fechar pela nuvem" : "só pulso") + (d.temSensor ? " (tem sensor de posição)" : " (sem sensor de posição)") + '. Sem escolha gravada, o portão com sensor e fechar pela nuvem já abre e fecha. Portão que fecha puxando à mão fica como "Pulso". O fechar vale com a mesma homologação do abrir.</div>' : "") +
-        (d.tipo !== "FECHADURA" ? '<label for="autPerc_' + id + '">Tempo de percurso do portão (segundos)</label><input id="autPerc_' + id + '" type="number" min="5" max="180" step="1" value="' + AutPred_esc_(d.percursoS || "") + '" data-original="' + AutPred_esc_(d.percursoS || "") + '">' +
+        (d.tipo === "REFRIGERADOR" ? AutPred_htmlFaixaAdm_(d) : "") +
+        (portao ? '<label for="autCmd_' + id + '">Comando de abertura (JSON, só se o lido do Smart Life estiver errado)</label><input id="autCmd_' + id + '" class="aut-mono" value="' + AutPred_esc_(d.comandoAbrir) + '" placeholder=\'{"code":"switch_1","value":true}\'>' : "") +
+        (portao ? '<label for="autAcion_' + id + '">Acionamento</label><select id="autAcion_' + id + '"><option value="PULSO"' + (d.acionamento !== "ABRIR_FECHAR" ? " selected" : "") + '>Pulso (só abrir; fecha manualmente)</option>' + (d.temFecharNaNuvem ? '<option value="ABRIR_FECHAR"' + (d.acionamento === "ABRIR_FECHAR" ? " selected" : "") + '>Portão com abrir e fechar</option>' : "") + "</select>" + '<div class="cadx-sub">Sugestão pela leitura do dispositivo: ' + (d.acionamentoSugerido === "ABRIR_FECHAR" ? "aceita abrir e fechar pela nuvem" : "só pulso") + (d.temSensor ? " (tem sensor de posição)" : " (sem sensor de posição)") + '. Sem escolha gravada, o portão com sensor e fechar pela nuvem já abre e fecha. Portão que fecha puxando à mão fica como "Pulso". O fechar vale com a mesma homologação do abrir.</div>' : "") +
+        (portao ? '<label for="autPerc_' + id + '">Tempo de percurso do portão (segundos)</label><input id="autPerc_' + id + '" type="number" min="5" max="180" step="1" value="' + AutPred_esc_(d.percursoS || "") + '" data-original="' + AutPred_esc_(d.percursoS || "") + '">' +
           '<div class="cadx-sub">Quanto tempo o portão leva para abrir ou fechar por completo (cronometre no local). Nesse tempo o SGO+ não manda outro pulso: um pulso no meio do caminho para o motor. ' + (d.percursoGravado ? "Gravado em Administrar." : "Padrão do SGO+ (45 s), ainda não cronometrado.") + "</div>" : "") +
         '<label class="aut-check"><input type="checkbox" id="autAtivo_' + id + '"' + (d.ativo ? " checked" : "") + "> Ativo no SGO+ (desativado não recebe comando)</label>" +
         (AUTP.diretoria ? '<label class="aut-check"><input type="checkbox" id="autRestrito_' + id + '"' + (d.restrito ? " checked" : "") + "> Restrito à Diretoria (só diretores veem e acionam)</label>" : "") +
         '<div class="cadx-sub">Identificação no Smart Life: ' + AutPred_esc_(d.nomeProvedor) + " · " + AutPred_esc_(d.categoriaNome) + (d.produto ? " · " + AutPred_esc_(d.produto) : "") + ' · <span class="aut-mono">' + AutPred_esc_(d.deviceId) + "</span>" + (d.sincronizadoEm ? " · lido em " + AutPred_esc_(d.sincronizadoEm) : "") + "</div>" +
         '<div class="cadx-sub">' + AutPred_esc_(d.compatMotivo) + "</div>" +
         '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_salvar_(\'' + id + '\')">Gravar</button>' +
-        (AUTP.diretoria ? '<button type="button" class="cadx-btn cadx-btn-grande ' + (d.homologado ? "cadx-btn-risco" : "") + '" onclick="AutPred_homologar_(\'' + id + "'," + (d.homologado ? "false" : "true") + ')">' + (d.homologado ? "Retirar a homologação" : "Homologar (depois do teste presencial)") + "</button>" : "") +
+        (AUTP.diretoria && d.tipo !== "REFRIGERADOR" ? '<button type="button" class="cadx-btn cadx-btn-grande ' + (d.homologado ? "cadx-btn-risco" : "") + '" onclick="AutPred_homologar_(\'' + id + "'," + (d.homologado ? "false" : "true") + ')">' + (d.homologado ? "Retirar a homologação" : "Homologar (depois do teste presencial)") + "</button>" : "") +
         '<button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_form_(\'' + id + '\', \'\')">Cancelar</button></div><div class="cadx-msg" id="autEdMsg_' + id + '"></div></div>');
     };
     if (AUTP.unidades) montar(AUTP.unidades);
@@ -822,9 +956,35 @@
     if (perc && perc.value !== perc.getAttribute("data-original")) dados.percursoS = perc.value;
     if (v("autCmd_") !== undefined) dados.comandoAbrir = v("autCmd_");
     if (AUTP.diretoria && ck("autRestrito_") !== undefined) dados.restrito = ck("autRestrito_");
+    // 03/11/2026: refrigerador: alerta de temperatura fora da faixa (opcional)
+    if (ck("autRfAl_") !== undefined) dados.refrig = { alerta: ck("autRfAl_"), aMin: v("autRfAMin_"), aMax: v("autRfAMax_"), bMin: v("autRfBMin_"), bMax: v("autRfBMax_") };
     var m = document.getElementById("autEdMsg_" + id);
     if (m) { m.textContent = "Gravando…"; m.className = "cadx-msg"; }
     AutPred_chamar_("dispositivoSalvar", dados, function (r) { AutPred_carregar_(r.mensagem, "tom-ok"); }, function (msg) { if (m) { m.textContent = msg; m.className = "cadx-msg is-erro"; } });
+  }
+
+  // 03/11/2026: "Trabalhar pela: Ponte local (celular) | Nuvem Tuya" (Diretoria e Administrador), com motivo e auditoria
+  function AutPred_htmlCanalAdm_(d) {
+    var esc = AutPred_esc_, ponte = d.canal === "PONTE";
+    var h = '<div class="aut-canal-bloco"><div><b>Trabalhar pela:</b> ' + AutPred_seloCanal_(d) + " " + esc(d.canalNome || "") + (d.canalPadrao ? " (padrão)" : "") + "</div>" +
+      (d.canalPor ? '<div class="cadx-sub">Escolhido por ' + esc(d.canalPor) + (d.canalEm ? " em " + esc(d.canalEm) : "") + (d.canalMotivo ? ": " + esc(d.canalMotivo) : "") + "</div>" : "") +
+      '<div class="cadx-sub">Ponte local: comandos e leituras só pelo celular na rede da empresa, sem gastar a nuvem; se a ponte cair, nada sai até ela voltar ou até alguém trocar para a nuvem. Nuvem Tuya: como antes (conta na cota).' +
+      (d.tipo === "REFRIGERADOR" ? " No refrigerador, só leituras (nenhum comando nos dois caminhos)." : "") + "</div>";
+    if (!d.podeCanal) return h + "</div>";
+    if (ponte) h += '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_trocarCanal_(\'' + d.id + '\', \'TUYA\')"><i class="fas fa-cloud" aria-hidden="true"></i> Trabalhar pela Nuvem Tuya</button></div>';
+    else if (d.ponteExiste && d.naPonte) h += '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande" onclick="AutPred_trocarCanal_(\'' + d.id + '\', \'PONTE\')"><i class="fas fa-mobile-screen" aria-hidden="true"></i> Trabalhar pela ponte local (celular)</button></div>';
+    else h += '<div class="cadx-sub">' + (d.ponteExiste ? "Para trabalhar pela ponte local, este dispositivo precisa estar cadastrado no celular da ponte (responsável pelo sistema: portoes_local/LEIAME.md, \"Cadastrar um dispositivo na ponte\"). Quando ele aparecer na ponte, o botão aparece aqui." : "A ponte local só existe no servidor próprio do SGO+.") + "</div>";
+    return h + "</div>";
+  }
+  /** Refrigerador: faixa do alerta de temperatura (desligado por padrão). Vírgula para decimais. */
+  function AutPred_htmlFaixaAdm_(d) {
+    var id = d.id, al = (d.refrig && d.refrig.alerta) || {}, esc = AutPred_esc_;
+    var n = function (x) { return x === null || x === undefined ? "" : String(x).replace(".", ","); };
+    var campo = function (p, rot, val) { return '<label for="' + p + id + '">' + rot + '</label><input id="' + p + id + '" inputmode="decimal" maxlength="6" placeholder="ex.: -18" value="' + esc(n(val)) + '">'; };
+    return '<label class="aut-check"><input type="checkbox" id="autRfAl_' + id + '"' + (al.ligado ? " checked" : "") + "> Avisar a gestão quando a temperatura sair da faixa (2 leituras seguidas)</label>" +
+      campo("autRfAMin_", "Compartimento A: mínima (°C)", al.aMin) + campo("autRfAMax_", "Compartimento A: máxima (°C)", al.aMax) +
+      campo("autRfBMin_", "Compartimento B: mínima (°C, deixe vazio sem divisória)", al.bMin) + campo("autRfBMax_", "Compartimento B: máxima (°C)", al.bMax) +
+      '<div class="cadx-sub">O aviso vai à Diretoria e ao Administrador no sistema e por e-mail, uma vez por ocorrência, e de novo quando a temperatura volta à faixa. Com o equipamento offline, nada é avaliado.</div>';
   }
 
   function AutPred_homologar_(id, sim, comando) {
@@ -969,6 +1129,16 @@
       '<div class="aut-saude-caixa"><b>Eventos da Tuya</b><div>' + esc((r.eventos || {}).texto) + '</div><div class="cadx-sub">Mensagens recebidas: ' + esc(AutPred_milhar_(u.mensagensDia)) + " hoje, " + esc(AutPred_milhar_(u.mensagensMes)) + " no mês (cota de mensagens à parte da cota de chamadas).</div></div>" +
       "</div>";
     if (u.dias && u.dias.length) h += '<div class="aut-saude-dias">Chamadas por dia: ' + u.dias.map(function (d) { return "<span>" + esc(d.dia) + ": " + esc(AutPred_milhar_(d.total)) + "</span>"; }).join("") + "</div>";
+    // 03/11/2026: consumo da nuvem por dispositivo e origem, com o canal (o da ponte não gasta a nuvem)
+    var pd = u.porDispositivo || [];
+    if (pd.length) {
+      h += '<h3 class="aut-unidade">Consumo da nuvem por dispositivo</h3><table class="aut-tabela"><thead><tr><th>Dispositivo</th><th>Trabalha pela</th><th>Hoje</th><th>No mês</th><th>Hoje, por origem</th></tr></thead><tbody>' + pd.map(function (x) {
+        return "<tr><td>" + esc(x.nome) + (x.tipo ? '<div class="cadx-sub">' + esc(x.tipo) + "</div>" : "") + "</td><td>" + AutPred_seloCanal_({ canal: x.canal, ponteOk: x.ponteTexto ? false : true }) + (x.padrao ? ' <span class="cadx-sub">(padrão)</span>' : "") +
+          (x.ponteTexto ? '<div class="cadx-sub">' + esc(x.ponteTexto) + "</div>" : "") + "</td><td>" + esc(AutPred_milhar_(x.dia)) + "</td><td>" + esc(AutPred_milhar_(x.mes)) + "</td><td>" +
+          (x.origensDia && x.origensDia.length ? x.origensDia.map(function (o) { return esc(o.origem) + ": " + esc(AutPred_milhar_(o.total)); }).join("; ") : "—") + "</td></tr>";
+      }).join("") + "<tr><td>Chamadas gerais (lista de dispositivos, token, conferência)</td><td>Nuvem Tuya</td><td>" + esc(AutPred_milhar_(u.geraisDia)) + "</td><td>" + esc(AutPred_milhar_(u.geraisMes)) + "</td><td>—</td></tr></tbody></table>" +
+        '<div class="cadx-sub">Dispositivo pela ponte local não chama a nuvem: fica com zero (o que aparece no mês é de antes da troca).' + (u.refrigNuvem ? " Refrigerador pela nuvem: cerca de " + esc(AutPred_milhar_(u.refrigEstimativaMes)) + " chamadas por mês no intervalo atual." : "") + "</div>";
+    }
     if (u.bloqueio) h += AutPred_faixa_("Bloqueio da nuvem: " + u.bloqueio, "tom-perigo");
     if (u.ultimoErro) h += '<div class="cadx-sub" style="margin-top:6px">Último erro da Tuya: ' + esc(u.ultimoErro) + "</div>";
     var e = r.economico || {};
@@ -985,6 +1155,8 @@
         '<label for="autSInt">Intervalo da consulta da fechadura (segundos, 30 a 85; menor que os ~90 s do pedido)</label><input id="autSInt" type="number" min="30" max="85" step="5" value="' + esc(c.consultaIntervaloS) + '">' +
         '<label>Dias da consulta</label><div class="aut-acoes">' + dias.map(function (d) { return '<label class="aut-check"><input type="checkbox" data-aut-sdia="' + d[0] + '"' + ((c.consultaDias || []).indexOf(Number(d[0])) >= 0 ? " checked" : "") + "> " + d[1] + "</label>"; }).join("") + "</div>" +
         '<label for="autSPar">Posição do portão parado sem eventos, com tela aberta (segundos, 10 a 600)</label><input id="autSPar" type="number" min="10" max="600" step="5" value="' + esc(c.portaoParadoS) + '">' +
+        '<label for="autSRef">Leitura do refrigerador ou freezer (minutos, 5 a 60)</label><input id="autSRef" type="number" min="5" max="60" step="1" value="' + esc(c.refrigIntervaloMin) + '">' +
+        '<div class="cadx-sub">Pela nuvem, cada leitura do refrigerador gasta 1 chamada, 24 horas por dia (mais 1 por hora para conferir se ele está online): a cada 10 min, cerca de 5.000 por mês. Pela ponte local, nenhuma; o histórico grava quando a temperatura muda e neste mesmo intervalo.</div>' +
         '<div class="cadx-sub">Cada leitura da fechadura gasta 1 chamada: a cada 60 s, 10 horas em 22 dias úteis são cerca de 13.200 por mês; 24 horas todos os dias, cerca de 43.200 (acima do orçamento provisório de 26.950). Com o serviço de mensagens da Tuya ligado, a campainha e os portões chegam por evento e não gastam chamada.</div>' +
         '<label for="autSMot">Motivo da mudança</label><input id="autSMot" maxlength="300" placeholder="Ex.: plano pago assinado em 27/10">' +
         '<div class="aut-acoes"><button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="AutPred_salvarSaudeCfg_()">Gravar</button></div><div class="cadx-msg" id="autSMsg"></div></div>';
@@ -1024,7 +1196,7 @@
     var g = function (id) { var e = document.getElementById(id); return e ? String(e.value || "").trim() : ""; };
     var m = document.getElementById("autSMsg");
     var dias = []; document.querySelectorAll("[data-aut-sdia]").forEach(function (c) { if (c.checked) dias.push(Number(c.getAttribute("data-aut-sdia"))); });
-    var dados = { consultaInicio: g("autSIni"), consultaFim: g("autSFim"), consultaIntervaloS: g("autSInt"), portaoParadoS: g("autSPar"), consultaDias: dias, motivo: g("autSMot") };
+    var dados = { consultaInicio: g("autSIni"), consultaFim: g("autSFim"), consultaIntervaloS: g("autSInt"), portaoParadoS: g("autSPar"), refrigIntervaloMin: g("autSRef"), consultaDias: dias, motivo: g("autSMot") };
     if (!dados.motivo || dados.motivo.length < 5) { if (m) { m.textContent = "Escreva o motivo (mínimo de 5 caracteres)."; m.className = "cadx-msg is-erro"; } return; }
     if (m) { m.textContent = "Gravando…"; m.className = "cadx-msg"; }
     AutPred_chamar_("saudeCfg", dados, function (r) { AUTP.saude = r; var el = document.getElementById("autAba"); if (el) AutPred_htmlSaude_(el, r, r.mensagem); }, function (msg) { if (m) { m.textContent = msg; m.className = "cadx-msg is-erro"; } });
