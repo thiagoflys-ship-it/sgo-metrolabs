@@ -172,6 +172,8 @@ var AST_ACOES_TRIAGEM = { RESOLVIDO_REMOTO: 'Resolvido remotamente', AGUARDANDO_
   ENTREGA: 'Entrega de equipamento ou material', RETIRADA: 'Retirada de equipamento', ENVIO: 'Envio por transportadora',
   LOGISTICA_REALIZADA: 'Entrega, retirada ou envio já realizado (registrar)', OUTRO: 'Outro (descreva)' };
 /** Caminhos de logística da triagem: o sentido do termo e o tipo de serviço padrão quando a pessoa não escolhe outro do grupo. */
+/** Comprovante do "já realizado" (canhoto ou termo em papel): tipos aceitos pela assinatura do arquivo e o limite. */
+var AST_COMPROVANTE_MAX_BYTES = 10 * 1048576;
 var AST_TRIAGEM_LOGISTICA = { ENTREGA: { sentido: 'ENTREGA', tipo: 'ENTREGA' }, RETIRADA: { sentido: 'RETIRADA', tipo: 'RETIRADA' }, ENVIO: { sentido: 'ENVIO', tipo: 'ENVIO_EQUIPAMENTOS' } };
 /** Checklist de triagem (reduzido do COMMAND: 9 itens viraram 6). */
 var AST_TRIAGEM_ITENS = [
@@ -218,12 +220,24 @@ var AST_CFG_ASS_COLAB_DESDE = 'ASS_COLAB_DESDE';
 function Ast_assColabDesde_(gravarSeFaltar) {
   var r = Ast_regras_().assinatura || {};
   if (Ast_ms_(r.colaboradorDesde) !== null) return Ast_agora_(Ast_ms_(r.colaboradorDesde));
-  var l = Ast_ler_(AST_ABAS.CONFIG).filter(function (x) { return Ast_s_(x.CHAVE) === AST_CFG_ASS_COLAB_DESDE; })
+  return Ast_instanteRegra_(AST_CFG_ASS_COLAB_DESDE, gravarSeFaltar, 'Início da regra das duas assinaturas (cliente e técnico), gravado na primeira rotina depois da publicação');
+}
+/**
+ * 03/11/2026: a orientação remota passa a sair no relatório do cliente e da representada; chamado resolvido a distância antes deste
+ * instante (texto escrito quando era só interno) continua sem mostrar a orientação para fora.
+ */
+var AST_CFG_ORIENTACAO_PUBLICA_DESDE = 'ORIENTACAO_PUBLICA_DESDE';
+function Ast_orientacaoPublicaDesde_(gravarSeFaltar) {
+  return Ast_instanteRegra_(AST_CFG_ORIENTACAO_PUBLICA_DESDE, gravarSeFaltar, 'Início da orientação remota no relatório do cliente e da representada, gravado na primeira rotina depois da publicação');
+}
+/** Instante de uma regra nova em ATEC_CONFIG (CHAVE): o mais antigo gravado; sem ele, grava o agora (gravarSeFaltar) e devolve. */
+function Ast_instanteRegra_(chave, gravarSeFaltar, motivo) {
+  var l = Ast_ler_(AST_ABAS.CONFIG).filter(function (x) { return Ast_s_(x.CHAVE) === chave; })
     .map(function (x) { return Ast_s_(Ast_json_(x.VALOR_JSON, '')); }).filter(function (v) { return Ast_ms_(v) !== null; }).sort();
   if (l.length) return l[0];
   var agora = Ast_agora_();
   if (gravarSeFaltar) {
-    Ast_inserir_(AST_ABAS.CONFIG, { CHAVE: AST_CFG_ASS_COLAB_DESDE, VALOR_JSON: JSON.stringify(agora), VERSAO: 1, MOTIVO: 'Início da regra das duas assinaturas (cliente e técnico), gravado na primeira rotina depois da publicação', ATUALIZADO_POR_NOME: 'Sistema', ATUALIZADO_EM: agora });
+    Ast_inserir_(AST_ABAS.CONFIG, { CHAVE: chave, VALOR_JSON: JSON.stringify(agora), VERSAO: 1, MOTIVO: motivo, ATUALIZADO_POR_NOME: 'Sistema', ATUALIZADO_EM: agora });
     delete AST_MEMO[AST_ABAS.CONFIG];
   }
   return agora;
@@ -758,7 +772,7 @@ function Ast_garantirSemente_() {
       EXIGE_QR_SERIE: t[7] ? 'SIM' : '', EXIGE_CHECKLIST: t[8] ? 'SIM' : '', MODELO_CODIGO: t[8], DOCUMENTO_TECNICO: t[9], SEM_VISITA: t[10] ? 'SIM' : '', AUVO_TIPOS: t[11],
       ORDEM: AST_TIPOS_PADRAO.indexOf(t) + 1, ATIVO: 'SIM', ATUALIZADO_EM: agora, CRIADO_EM: agora };
   });
-  try { Ast_assColabDesde_(true); } catch (eD) { /* sem a data gravada, vale o instante atual: nada trava */ }
+  try { Ast_assColabDesde_(true); Ast_orientacaoPublicaDesde_(true); } catch (eD) { /* sem a data gravada, vale o instante atual: nada trava */ }
   if (novosM.length) { SGO_DATA.insertMany(AST_ABAS.MODELOS, novosM); delete AST_MEMO[AST_ABAS.MODELOS]; }
   if (novosT.length) { SGO_DATA.insertMany(AST_ABAS.TIPOS, novosT); delete AST_MEMO[AST_ABAS.TIPOS]; }
   return { tipos: novosT.length, modelos: novosM.length };

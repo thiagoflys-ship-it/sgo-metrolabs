@@ -197,10 +197,13 @@ Um motor só (SGO_Representacao_Documentos.js) sobre a moldura A4 dos relatório
 O documento segue o caminho do atendimento, igual nas três versões (03/11/2026, caso CH-2026-0008):
 
 - **A distância** (resolvido remotamente): só a seção "Orientação a distância" (o que foi orientado, por quem, quando); sem visita,
-  sem tempo no local, sem serviço, peças nem assinaturas.
+  sem tempo no local, sem serviço, peças nem assinaturas. O texto da orientação sai também nas versões do cliente e da representada,
+  sem o enquadramento comercial; em chamado resolvido antes de 03/11/2026 (publicação) a seção diz só "Resolvido com orientação a
+  distância" fora da versão da Metrolabs.
 - **Logística** (entrega, retirada, envio): a seção da visita vira "Entrega" (ou "Retirada", "Envio") e o serviço vira o termo
   (itens, quantidade, identificação, estado, de quem ou para quem, motivo e destino), com as assinaturas "Recebido por" e "Entregue
-  por (Metrolabs)". Já realizada sem O.S.: o registro (quem recebeu, quando, comprovante).
+  por (Metrolabs)". Já realizada sem O.S.: o registro (quem recebeu, quando; o nome do arquivo do comprovante só na versão da
+  Metrolabs, fora dela "Comprovante anexado"). Na logística, "Em análise" quer dizer conferência da solicitação e programação.
 - **Conserto**: como antes (visita, serviço, peças, assinaturas do cliente e do técnico).
 - Fora de conserto o texto da abertura é "Solicitação" (não "Problema relatado") e a "Situação do equipamento" não aparece.
 - As etapas do cliente mostram só as que aconteceram, cada uma com a data ("Resolvido a distância", "Entrega agendada", "Em

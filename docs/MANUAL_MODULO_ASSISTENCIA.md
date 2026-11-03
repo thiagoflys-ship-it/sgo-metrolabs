@@ -118,7 +118,9 @@ Decisão do dono: "Alerta + fila livre".
 1. Abra o chamado e preencha os sintomas confirmados, o risco de continuar usando e o diagnóstico preliminar.
 2. Mude a prioridade se precisar (com o motivo; o prazo é recalculado).
 3. Escolha o tipo de serviço e o caminho:
-   - Resolvido remotamente: descreva a orientação. Depois, encerre com quem confirmou no cliente e o teste.
+   - Resolvido remotamente: descreva a orientação. Depois, encerre com quem confirmou no cliente e o teste. A orientação aparece
+     no relatório do atendimento do cliente e da representada (sem o enquadramento comercial): escreva como se fosse para o cliente
+     ler. Chamado resolvido antes de 03/11/2026 (publicação) continua sem a orientação nessa seção do documento externo.
    - Precisa de orçamento: descreva o que orçar. O Comercial recebe a atividade.
    - Precisa de peça: diga qual peça. O pedido abre sozinho em Compras, ligado ao cliente e ao chamado.
    - Planejar visita: o chamado vai para "Planejado" e aparece para agendar.
@@ -128,9 +130,11 @@ Decisão do dono: "Alerta + fila livre".
      entrega", "Termo de retirada (recebimento)" ou "Termo de envio". No preparo da agenda, a logística pede só o acesso ao
      cliente e a documentação em mãos (instrumentos, ferramentas, peças e risco não se aplicam).
    - Entrega, retirada ou envio já realizado (registrar): quando já aconteceu sem O.S. pelo aplicativo (por exemplo, no balcão).
-     Informe o sentido, o nome completo de quem recebeu ou entregou, o documento (opcional), a data e a hora (não pode ser no futuro)
-     e anexe o canhoto ou o termo em papel (foto ou PDF, recomendado). O chamado é encerrado com o registro, que aparece na ficha e
-     no relatório do atendimento.
+     Só a gestão registra (encerra o chamado); quem só faz a triagem vê o caminho com "peça à gestão da área Técnica". Informe o
+     sentido, o nome completo de quem recebeu ou entregou, o documento (opcional), a data e a hora (não pode ser no futuro nem antes
+     da abertura do chamado) e anexe o canhoto ou o termo em papel (opcional, recomendado): só foto JPG, PNG ou WEBP ou PDF, até
+     10 MB; o tipo é conferido pelo conteúdo do arquivo. O chamado é encerrado com o registro; o comprovante abre pela ficha do
+     chamado ("Abrir o comprovante") e o relatório do cliente diz só "Comprovante anexado".
    - Outro (descreva): quando nenhum caminho serve. Descreva (pelo menos 10 letras) e escolha o tipo de serviço; o chamado vai
      para "Planejado" com a descrição como próximo passo.
    Entrega, retirada, envio, já realizado e outro não pedem sintomas, risco nem diagnóstico (são itens de conserto).

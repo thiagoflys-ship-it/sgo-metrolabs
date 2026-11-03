@@ -517,6 +517,8 @@
         ["Triagem", c.triagemResponsavel + (c.prazoTriagem ? " · prazo " + c.prazoTriagem : "")], ["Tipo de serviço", c.tipoNome], ["Técnico", c.tecnicoNome + (c.agendadoPara ? " · " + c.agendadoPara + " (" + c.duracaoMin + " min)" : "")],
         ["Orientação remota", c.orientacaoRemota], ["Outro caminho", c.outroDescricao], ["Já realizado (registro)", c.registroLogistica ? c.registroLogistica.texto : ""], ["Orçamento", c.orcamentoDescricao], ["Peça", c.pecaDescricao + (c.requisicaoNumero ? " · pedido de compra " + c.requisicaoNumero : "") + (c.pecaDisponivelEm ? " · disponível em " + c.pecaDisponivelEm : "")], ["Reincidência", c.reincidente ? "Sim, do chamado " + c.reincidenciaDe : ""],
         ["Encerrado em", c.encerradoEm], ["Cancelado", c.canceladoMotivo]]);
+    // 03/11/2026: o comprovante do "já realizado" (canhoto ou termo em papel) abre pela ficha
+    if (c.registroLogistica && c.registroLogistica.anexoUrl) h += '<p class="at-txt"><a href="' + At_esc_(c.registroLogistica.anexoUrl) + '" target="_blank" rel="noopener">Abrir o comprovante (canhoto ou termo em papel)</a></p>';
     if (c.podeTriar) h += At_formTriagem_(c, r);
     if (c.situacao === "RESOLVIDO_REMOTO" && ini.gestao) h += '<div class="at-caixa"><h3>Encerrar (resolvido remotamente)</h3><div class="at-grade2">' + At_campo_("Quem confirmou no cliente", '<input id="atRemQuem" maxlength="120">') +
       At_campo_("Teste ou confirmação de funcionamento", '<input id="atRemTeste" maxlength="500">') + '</div><div class="at-acoes"><button type="button" class="btn-primary" id="atRemOk">Encerrar o chamado</button></div><div id="atRemMsg"></div></div>';
@@ -597,7 +599,7 @@
       '<div class="at-grade2">' + At_campo_("Prioridade", '<select id="atTrPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), c.prioridade) + '</select>') + At_campo_("Motivo da mudança de prioridade", '<input id="atTrPrioMot" maxlength="300" placeholder="Só se mudar">') + '</div>' +
       (c.equipNaoIdentificado ? At_campo_("Ligar ao equipamento do cadastro", '<select id="atTrEq"><option value="">Carregando…</option></select>', "O chamado chegou sem o equipamento do cadastro: escolha aqui.") : '') +
       At_campo_("Tipo de serviço", '<select id="atTrTipo">' + At_opcoes_(ini.tipos.map(function (t) { return { v: t.codigo, t: t.nome }; }), c.tipoCodigo, "Escolha") + '</select>', "Define o checklist, as fotos mínimas e o que o relatório exige.") +
-      '<label class="at-meta">Caminho</label><div class="at-radios" id="atTrAcoes">' + Object.keys(ini.acoesTriagem).map(function (k) { return '<label><input type="radio" name="atTrAcao" value="' + k + '"> ' + At_esc_(ini.acoesTriagem[k]) + '</label>'; }).join("") + '</div>' +
+      '<label class="at-meta">Caminho</label><div class="at-radios" id="atTrAcoes">' + Object.keys(ini.acoesTriagem).map(function (k) { var so = k === "LOGISTICA_REALIZADA" && !ini.gestao; return '<label' + (so ? ' title="Encerra o chamado: peça à gestão da área Técnica"' : '') + '><input type="radio" name="atTrAcao" value="' + k + '"' + (so ? ' disabled' : '') + '> ' + At_esc_(ini.acoesTriagem[k]) + (so ? ' <span class="at-meta">(encerra o chamado: peça à gestão da área Técnica)</span>' : '') + '</label>'; }).join("") + '</div>' +
       '<div id="atTrExtra"></div><div class="at-acoes"><button type="button" class="btn-secondary" id="atTrSalvar">Salvar a triagem</button><button type="button" class="btn-primary" id="atTrConcluir">Concluir a triagem</button></div><div id="atTrMsg"></div></div>';
   }
   function At_ligarTriagem_(c, corpo, reabrir) {
@@ -607,7 +609,7 @@
     corpo.querySelectorAll('input[name="atTrAcao"]').forEach(function (rd) {
       rd.onchange = function () {
         var a = rd.value;
-        extra.innerHTML = a === "RESOLVIDO_REMOTO" ? At_campo_("Orientação remota que resolveu", '<textarea id="atTrOri" maxlength="2000"></textarea>') :
+        extra.innerHTML = a === "RESOLVIDO_REMOTO" ? At_campo_("Orientação remota que resolveu", '<textarea id="atTrOri" maxlength="2000"></textarea>', "Este texto aparece no relatório do cliente (e da representada). Escreva como se fosse para o cliente ler.") :
           a === "AGUARDANDO_ORCAMENTO" ? At_campo_("O que precisa ser orçado", '<textarea id="atTrOrc" maxlength="1500"></textarea>', "Vira atividade para o Comercial, que faz o orçamento A4 e registra o aceite do cliente.") :
           a === "ENTREGA" || a === "RETIRADA" || a === "ENVIO" ? '<p class="at-meta">Vira uma O.S. de logística depois do agendamento: no SGO+ Campo o colaborador preenche o termo (itens, quantidade, identificação, estado, de quem ou para quem' + (a === "RETIRADA" ? ', motivo e destino' : '') + ') e colhe as duas assinaturas. O documento sai como ' + (a === "RETIRADA" ? '"Termo de retirada (recebimento)"' : a === "ENVIO" ? '"Termo de envio"' : '"Termo de entrega"') + '. O tipo de serviço é o do caminho, ou o de Logística que você escolher acima.</p>' + At_campo_("Observação para o agendamento (opcional)", '<input id="atTrObs" maxlength="500">') :
           a === "LOGISTICA_REALIZADA" ? '<p class="at-meta">Use quando a entrega, a retirada ou o envio já aconteceu sem O.S. pelo aplicativo (por exemplo, no balcão). O chamado é encerrado com o registro e o comprovante.</p>' +

@@ -169,7 +169,8 @@ function RepD_visao_(D, publico) {
   V.linha = D.eventos.filter(function (e) { return RepD_eventoVisivel_(e, publico); }).map(function (e) {
     var nome = RepD_s_(e.USUARIO_NOME), por = interno ? (nome || 'Sistema') : cliente ? 'Metrolabs' : (chave && Rep_up_(nome).indexOf(chave) >= 0 && RepD_s_(e.USUARIO_ID) ? nome : 'Metrolabs');
     var t = RepD_s_(e.TEXTO) || [AST_SITUACOES[Ast_up_(e.DE)] || RepD_s_(e.DE), AST_SITUACOES[Ast_up_(e.PARA)] || RepD_s_(e.PARA)].filter(Boolean).join(' → ');
-    return { emMs: Ast_ms_(e.EM), em: Ast_br_(e.EM), texto: (cliente ? RepD_semEnquadramento_(t) : t).slice(0, 300), por: por, interno: interno && !Ast_up_(e.PUBLICO) };
+    // 03/11/2026: a decisão da triagem (ex.: a orientação remota) sai para a representada também sem o enquadramento comercial
+    return { emMs: Ast_ms_(e.EM), em: Ast_br_(e.EM), texto: (cliente || (!interno && Ast_up_(e.TIPO) === 'DECISAO') ? RepD_semEnquadramento_(t) : t).slice(0, 300), por: por, interno: interno && !Ast_up_(e.PUBLICO) };
   });
   // marcos previsto x realizado (representada e Metrolabs; o cliente não lê prazos internos)
   // 03/11/2026: atendimento encerrado (ou a distância, ou já realizado sem O.S.) não mostra o marco que não aconteceu (ex.: "Visita · a acontecer")
@@ -191,7 +192,11 @@ function RepD_visao_(D, publico) {
   // diagnóstico e serviço
   V.servico = V.palavra || V.remoto ? [] : [['Condição encontrada', os.CONDICAO_ENCONTRADA], ['Causa ou diagnóstico', os.CAUSA], ['Serviço realizado', os.SERVICO_REALIZADO], ['Teste funcional', os.TESTE_FUNCIONAL], ['Recomendações', os.RECOMENDACOES]]
     .concat(interno ? [['Relato do técnico', os.RELATO]] : []).filter(function (x) { return RepD_s_(x[1]); }).map(function (x) { return [x[0], RepD_s_(x[1])]; });
-  V.orientacao = V.remoto && RepD_s_(c.ORIENTACAO_REMOTA) ? { texto: cliente ? RepD_semEnquadramento_(c.ORIENTACAO_REMOTA) : RepD_s_(c.ORIENTACAO_REMOTA), por: RepD_s_(c.TRIAGEM_RESPONSAVEL_NOME) || RepD_s_(c.ASSUMIDO_POR_NOME), em: Ast_br_(c.TRIAGEM_FIM_EM || c.ATENDIDO_EM) } : null;
+  // decisão do coordenador (03/11/2026): a orientação remota sai para o cliente e a representada (sem o enquadramento comercial); a de chamado
+  // resolvido antes desta publicação (escrita quando era só interna) continua só na versão da Metrolabs
+  var oriMs = Ast_ms_(c.TRIAGEM_FIM_EM || c.ATENDIDO_EM), oriDesde = typeof Ast_orientacaoPublicaDesde_ === 'function' ? Ast_ms_(Ast_orientacaoPublicaDesde_(false)) : null;
+  var oriPublica = interno || !(oriMs !== null && oriDesde !== null && oriMs < oriDesde);
+  V.orientacao = V.remoto && RepD_s_(c.ORIENTACAO_REMOTA) ? { texto: !oriPublica ? '' : interno ? RepD_s_(c.ORIENTACAO_REMOTA) : RepD_semEnquadramento_(c.ORIENTACAO_REMOTA), por: RepD_s_(c.TRIAGEM_RESPONSAVEL_NOME) || RepD_s_(c.ASSUMIDO_POR_NOME), em: Ast_br_(c.TRIAGEM_FIM_EM || c.ATENDIDO_EM) } : null;
   // termo da O.S. de logística (itens, de quem/para quem, motivo e destino) ou o registro da entrega já feita
   var lg = D.os && V.palavra && typeof AstO_logistica_ === 'function' ? AstO_logistica_(os) : null;
   V.termo = lg ? { itens: (lg.itens || []).map(function (i) { return [RepD_s_(i.descricao), i.quantidade ? Ast_fmtNum_(Number(i.quantidade) || 0, Math.round(Number(i.quantidade)) === Number(i.quantidade) ? 0 : 2) : '—', RepD_s_(i.identificacao), AST_LOG_ESTADOS[Ast_up_(i.estado)] || '—', [RepD_s_(i.avaria), RepD_s_(i.acessorios)].filter(Boolean).join(' · ')]; }),
@@ -586,7 +591,7 @@ function RepD_htmlAtendimento_(V, meta) {
       [V.marcosResumo, 'Marcos cumpridos no previsto', /^0 de/.test(V.marcosResumo) ? 'critico' : ''], [V.prazoEstado === 'SEM_PRAZO' ? '—' : REPD_NOME_PRAZO[V.prazoEstado], 'Prazo de atendimento',
         { CUMPRIDO: 'ok', NO_PRAZO: 'ok', EM_RISCO: 'aviso', VENCIDO: 'critico', FORA_DO_PRAZO: 'aviso' }[V.prazoEstado] || '']];
   var problema = V.relato[0] ? RepD_s_(V.relato[0][1]) : '', servico = achar(V.servico, 'Serviço realizado'), causa = achar(V.servico, 'Causa ou diagnóstico');
-  var feito = V.remoto ? (V.orientacao ? '<p><b>Orientação a distância.</b> ' + RelA4_esc_(V.orientacao.texto) + '</p>' : '') :
+  var feito = V.remoto ? (V.orientacao ? '<p><b>Orientação a distância.</b> ' + RelA4_esc_(V.orientacao.texto || 'Resolvido com orientação a distância.') + '</p>' : '') :
     V.registro ? '<p><b>' + RelA4_esc_(V.palavra.nome) + ' já realizada.</b> Em ' + RelA4_esc_(Ast_br_(V.registro.em)) + ', ' + RelA4_esc_(V.logistica === 'RETIRADA' ? 'entregue à Metrolabs por ' : 'recebido por ') + RelA4_esc_(V.registro.recebidoPor) + '.</p>' :
     V.palavra ? '<p><b>' + RelA4_esc_(V.palavra.nome) + '.</b> ' + RelA4_esc_(V.termo && V.termo.itens.length ? V.termo.itens.length + (V.termo.itens.length === 1 ? ' item ' : ' itens ') + V.palavra.feita + (V.termo.itens.length === 1 ? '' : 's') + (V.termo.contraparte ? '; ' + (V.logistica === 'RETIRADA' ? 'de ' : 'para ') + V.termo.contraparte : '') + '.' : V.cancelado ? 'Chamado cancelado.' : 'Ainda não registrada no termo da ordem de serviço.') + '</p>' :
     (causa ? '<p><b>Causa encontrada.</b> ' + RelA4_esc_(causa) + '</p>' : '') + (servico ? '<p><b>Serviço realizado.</b> ' + RelA4_esc_(servico) + '</p>' : '<p><b>Serviço.</b> ' + RelA4_esc_(V.cancelado ? 'Chamado cancelado antes do serviço.' : 'Ainda não registrado na ordem de serviço.') + '</p>');
@@ -601,9 +606,9 @@ function RepD_htmlAtendimento_(V, meta) {
   else corpo += RelA4_secao_('Marcos: previsto e realizado', RepD_marcosHtml_(V.marcos, V.agoraMs));
   corpo += RelA4_secao_('Linha do tempo', RepD_linhaDoTempoHtml_(V.linha));
   // 03/11/2026: o documento segue o caminho do atendimento (só as seções que aconteceram)
-  if (V.remoto) corpo += RelA4_secao_('Orientação a distância', V.orientacao ? RepD_ident_([['Orientação', V.orientacao.texto, { largo: true }], ['Por', interno ? V.orientacao.por : 'Metrolabs'], ['Em', V.orientacao.em]]) : '<p class="nota">Resolvido a distância.</p>');
+  if (V.remoto) corpo += RelA4_secao_('Orientação a distância', V.orientacao ? RepD_ident_([['Orientação', V.orientacao.texto || 'Resolvido com orientação a distância.', { largo: true }], ['Por', interno ? V.orientacao.por : 'Metrolabs'], ['Em', V.orientacao.em]]) : '<p class="nota">Resolvido a distância.</p>');
   else if (V.registro) corpo += RelA4_secao_(V.palavra.nome + ' já realizada', RepD_ident_([[V.logistica === 'RETIRADA' ? 'Entregue à Metrolabs por' : 'Recebido por', V.registro.recebidoPor], ['Documento', V.registro.documento], ['Data e hora', Ast_br_(V.registro.em)],
-    ['Comprovante', V.registro.anexo ? V.registro.anexo.nome : 'Não anexado'], ['Observação', V.registro.observacao, { largo: true }]].concat(interno ? [['Registrado por', RepD_s_(V.registro.por) + (V.registro.registradoEm ? ' em ' + Ast_br_(V.registro.registradoEm) : '')]] : [])) +
+    ['Comprovante', V.registro.anexo ? (interno ? V.registro.anexo.nome : 'Comprovante anexado') : 'Não anexado'], ['Observação', V.registro.observacao, { largo: true }]].concat(interno ? [['Registrado por', RepD_s_(V.registro.por) + (V.registro.registradoEm ? ' em ' + Ast_br_(V.registro.registradoEm) : '')]] : [])) +
     '<p class="nota">Registrada na triagem, sem ordem de serviço pelo aplicativo.</p>');
   else {
     corpo += RelA4_secao_(V.palavra ? V.palavra.nome : 'Visita e atendimento', V.visita.length ? RepD_ident_(V.visita) : '<p class="nota">' + (V.palavra ? V.palavra.nome + ' ainda não agendada.' : 'Visita ainda não agendada.') + '</p>');
@@ -619,7 +624,7 @@ function RepD_htmlAtendimento_(V, meta) {
   if (V.fotos.length || !semVisita || (V.palavra && !V.registro && !V.remoto && V.visita.length)) corpo += RelA4_secao_('Fotos', RepD_fotosHtml_(V));
   if (!cliente && V.representadaNome) corpo += RelA4_secao_('Conversa do chamado', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'Quem' }, { t: 'Mensagem' }], V.conversa.map(function (x) { return [x.em, x.autor, x.texto]; }), { vazio: 'Nenhuma mensagem na conversa do chamado.', legenda: V.conversa.length ? 'Mensagens trocadas entre a representada e a Metrolabs' : '' }));
   if (interno) corpo += RelA4_secao_('Notas internas', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'Quem' }, { t: 'Nota' }], V.notasInternas.map(function (x) { return [x.em, x.autor, x.texto]; }), { vazio: 'Nenhuma nota interna.', legenda: V.notasInternas.length ? 'Notas internas (a representada e o cliente não leem)' : '' }));
-  if (V.registro && V.registro.anexo) V.anexos.unshift(['Comprovante da ' + V.palavra.nome.toLowerCase(), V.registro.anexo.nome, RepD_s_(V.registro.por) || 'Metrolabs', Ast_br_(V.registro.registradoEm)].concat(interno ? ['Só Metrolabs'] : []));
+  if (interno && V.registro && V.registro.anexo) V.anexos.unshift(['Comprovante da ' + V.palavra.nome.toLowerCase(), V.registro.anexo.nome, RepD_s_(V.registro.por) || 'Metrolabs', Ast_br_(V.registro.registradoEm)].concat(interno ? ['Só Metrolabs'] : []));
   var docs = (V.anexos.length ? RelA4_tabela_([{ t: 'Tipo' }, { t: 'Arquivo' }, { t: 'Enviado por' }, { t: 'Quando', nw: true }].concat(interno ? [{ t: 'Quem lê' }] : []), V.anexos, { legenda: 'Arquivos do pedido e do chamado' }) : '') +
     (V.relatorioOs ? '<p class="nota">Relatório da ordem de serviço ' + RelA4_esc_(V.relatorioOs.numero) + ' emitido em ' + RelA4_esc_(V.relatorioOs.em) + (cliente ? ' (disponível em "Meus chamados").' : '.') + '</p>' : '');
   if (docs || V.conserto) corpo += RelA4_secao_('Documentos do atendimento', docs || '<p class="nota">Nenhum arquivo anexado.</p>');
@@ -637,7 +642,8 @@ function RepD_htmlAtendimento_(V, meta) {
   } else corpo += RelA4_secao_('Assinaturas e aceite', '<p class="nota">' + RelA4_esc_(V.cancelado ? 'Chamado cancelado: não há recebimento do serviço a assinar.' : 'A assinatura de quem recebeu o atendimento ainda não foi registrada na ordem de serviço. Ela entra neste documento quando o técnico encerrar a visita.') + '</p>');
   // fecho: a quem se destina, o que quer dizer cada etapa e a emissão
   var sentidoEt = { 'Entrega agendada': 'Entrega com data marcada.', 'Retirada agendada': 'Retirada com data marcada.', 'Envio agendado': 'Envio com data marcada.', 'Em entrega': 'Colaborador da Metrolabs no local fazendo a entrega.', 'Em retirada': 'Colaborador da Metrolabs no local fazendo a retirada.', 'Em envio': 'Envio em andamento.', 'Resolvido a distância': 'Resolvido com orientação a distância, sem visita.' };
-  var glossCli = cliente || !V.representadaNome ? (V.etapasCliente || []).map(function (e) { var g = REPD_GLOSSARIO_CLIENTE.filter(function (x) { return x[0] === e.nome; })[0]; return [e.nome, g ? g[1] : sentidoEt[e.nome] || '']; }) : [];
+  if (V.palavra) sentidoEt['Em análise'] = 'Conferência da solicitação e programação da ' + V.palavra.nome.toLowerCase() + '.';
+  var glossCli = cliente || !V.representadaNome ? (V.etapasCliente || []).map(function (e) { var g = REPD_GLOSSARIO_CLIENTE.filter(function (x) { return x[0] === e.nome; })[0]; return [e.nome, sentidoEt[e.nome] && (V.palavra || !g) ? sentidoEt[e.nome] : g ? g[1] : '']; }) : [];
   corpo += RelA4_secao_('Sobre este documento', RepD_glossarioHtml_(cliente || !V.representadaNome ? glossCli : REPD_GLOSSARIO_REP, cliente ? 'Etapas deste atendimento em "Meus chamados"' : V.representadaNome ? 'Etapas que a representada acompanha' : 'Etapas que o cliente acompanha em "Meus chamados"') +
     '<p class="nota">Gerado pelo SGO+ em ' + RelA4_esc_(RepD_br_(V.agoraMs)) + ' por ' + RelA4_esc_(m.por || '—') + '. Emissão ' + RelA4_esc_(String(m.versao || 1)) + ' (revisão ' + RelA4_esc_(SGO_DocA4_revisao_(m.revisao || 0)) + '); cada nova emissão gera outro arquivo e as anteriores continuam guardadas. Marca de conferência do conteúdo: ' +
     RelA4_esc_(String(m.marca || '').slice(0, 16)) + '.</p>');

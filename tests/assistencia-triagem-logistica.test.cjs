@@ -67,16 +67,16 @@ test('"já realizado (registrar)": nome completo, data e hora (não futura) e o 
   const a = amb();
   const c = abrir(a);
   const base = { id: c.id, checklist: {}, acao: 'LOGISTICA_REALIZADA' };
-  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { recebidoPor: 'Charles', em: '2026-10-19T09:30' } })).message, /nome completo/);
+  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { recebidoPor: 'Charles', em: '2026-10-19T10:02' } })).message, /nome completo/);
   assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { recebidoPor: 'Charles Teste', em: '' } })).message, /data e a hora/);
   assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { recebidoPor: 'Charles Teste', em: '2026-12-01T09:30' } })).message, /não podem ser no futuro/);
-  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { recebidoPor: 'Charles Teste', documento: '123.456.789-00', em: '2026-10-19T09:30' } })).message, /CPF/);
-  const r = ok(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { sentido: 'ENTREGA', recebidoPor: 'Charles Recebedor Teste', em: '2026-10-19T09:30', observacao: 'No balcão', anexo: { nome: 'canhoto.png', tipo: 'image/png', base64: PNG } } })));
+  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { recebidoPor: 'Charles Teste', documento: '123.456.789-00', em: '2026-10-19T10:02' } })).message, /CPF/);
+  const r = ok(a.api('s_gil', 'triagem', Object.assign({}, base, { realizada: { sentido: 'ENTREGA', recebidoPor: 'Charles Recebedor Teste', em: '2026-10-19T10:02', observacao: 'No balcão', anexo: { nome: 'canhoto.png', tipo: 'image/png', base64: PNG } } })));
   assert.match(r.message, /encerrado com o registro/);
   const x = chamado(a, c.id), reg = JSON.parse(x.LOGISTICA_REGISTRO_JSON);
-  assert.equal(x.SITUACAO, 'ENCERRADO'); assert.equal(x.ATENDIDO_EM, '2026-10-19T09:30:00'); assert.equal(x.TIPO_CODIGO, 'ENTREGA');
+  assert.equal(x.SITUACAO, 'ENCERRADO'); assert.equal(x.ATENDIDO_EM, '2026-10-19T10:02:00'); assert.equal(x.TIPO_CODIGO, 'ENTREGA');
   assert.equal(reg.recebidoPor, 'Charles Recebedor Teste'); assert.ok(a.arquivos[reg.anexo.id], 'comprovante guardado');
-  assert.ok(a.tabelas.ATEC_EVENTOS.some((e) => /Entrega já realizada em 19\/10\/2026 09:30, quem recebeu: Charles Recebedor Teste\. Comprovante anexado: canhoto\.png/.test(e.TEXTO)));
+  assert.ok(a.tabelas.ATEC_EVENTOS.some((e) => /Entrega já realizada em 19\/10\/2026 10:02, quem recebeu: Charles Recebedor Teste\. Comprovante anexado\./.test(e.TEXTO)));
 });
 
 test('relatório do atendimento do caso CH-2026-0008 (a distância): "Solicitação", só a orientação a distância, etapas só as que aconteceram, um logo, série e TAG nos campos próprios, "N/S" some', () => {
@@ -114,9 +114,9 @@ test('relatório: entrega pela triagem nova vira termo (itens, para quem, as dua
   // já realizada
   const b = amb();
   const c2 = abrir(b);
-  ok(b.api('s_gil', 'triagem', { id: c2.id, checklist: {}, acao: 'LOGISTICA_REALIZADA', realizada: { sentido: 'ENTREGA', recebidoPor: 'Charles Recebedor Teste', em: '2026-10-19T09:30', anexo: { nome: 'canhoto.png', tipo: 'image/png', base64: PNG } } }));
+  ok(b.api('s_gil', 'triagem', { id: c2.id, checklist: {}, acao: 'LOGISTICA_REALIZADA', realizada: { sentido: 'ENTREGA', recebidoPor: 'Charles Recebedor Teste', em: '2026-10-19T10:02', anexo: { nome: 'canhoto.png', tipo: 'image/png', base64: PNG } } }));
   const hd = b.html(ok(b.api('s_gil', 'relatorioAtendimento', { id: c2.id, publico: 'CLIENTE' })));
-  for (const s of ['Entrega já realizada', 'Recebido por', 'canhoto.png', 'Registrada na triagem, sem ordem de serviço']) assert.ok(hd.includes(s), 'faltou: ' + s);
+  for (const s of ['Entrega já realizada', 'Recebido por', 'Comprovante anexado', 'Registrada na triagem, sem ordem de serviço']) assert.ok(hd.includes(s), 'faltou: ' + s);
   for (const rx of [/Visita e atendimento/, /Assinaturas e aceite/, /Peças<\//, /Visita agendada/]) assert.doesNotMatch(hd, rx);
   // conserto: as seções de manutenção continuam
   const k = amb();
@@ -124,4 +124,62 @@ test('relatório: entrega pela triagem nova vira termo (itens, para quem, as dua
   ok(k.api('s_gil', 'triagem', { id: c3.id, checklist: { sintomas_confirmados: 'Alarme confirmado', risco_operar: 'Não usar', diagnostico_preliminar: 'Válvula' }, tipoCodigo: 'MANUTENCAO_CORRETIVA', acao: 'PLANEJADO' }));
   const hk = k.html(ok(k.api('s_gil', 'relatorioAtendimento', { id: c3.id, publico: 'CLIENTE' })));
   for (const s of ['Problema relatado', 'Situação do equipamento', 'Visita e atendimento', 'Serviço realizado e recomendações', 'Peças']) assert.ok(hk.includes(s), 'conserto sem: ' + s);
+});
+
+test('revisão (03/11/2026): "já realizado" só pela gestão; data antes da abertura recusada; comprovante conferido pela assinatura do arquivo (JPG, PNG, WEBP, PDF, até 10 MB); tipo conferido antes de gravar; ficha com o link', () => {
+  const a = amb();
+  const c = abrir(a);
+  const ch = () => chamado(a, c.id);
+  const d = (extra) => ({ realizada: Object.assign({ sentido: 'ENTREGA', recebidoPor: 'Charles Recebedor Teste', em: '2026-10-19T10:02' }, extra || {}) });
+  // quem não é da gestão não encerra pelo "já realizado"
+  assert.throws(() => a.ctx.AstC_logisticaRealizada_({ id: 'u_tec', nome: 'TIAGO TECNICO TESTE', gestao: false, interno: true }, ch(), d(), {}), /Peça à gestão da área Técnica/);
+  const base = { id: c.id, checklist: {}, acao: 'LOGISTICA_REALIZADA' };
+  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, d({ em: '2026-10-18T09:00' }))).message, /anteriores à abertura do chamado/);
+  const gif = Buffer.from('GIF89a' + 'x'.repeat(40)).toString('base64');
+  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, d({ anexo: { nome: 'canhoto.jpg', tipo: 'image/jpeg', base64: gif } }))).message, /precisa ser foto \(JPG, PNG ou WEBP\) ou PDF/);
+  const grande = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(10 * 1048576 + 10, 1)]).toString('base64');
+  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, d({ anexo: { nome: 'termo.pdf', tipo: 'application/pdf', base64: grande } }))).message, /limite é 10 MB/);
+  // o tipo de logística é conferido antes de gravar o arquivo: sem o tipo padrão, nada é gravado
+  const antes = Object.keys(a.arquivos).length;
+  const orig = a.ctx.AstC_tipoLogistica_;
+  a.ctx.AstC_tipoLogistica_ = () => { throw new Error('Não foi possível concluir: o tipo de serviço "ENTREGA" não existe mais'); };
+  assert.match(a.api('s_gil', 'triagem', Object.assign({}, base, d({ anexo: { nome: 'canhoto.png', tipo: 'image/png', base64: PNG } }))).message, /tipo de serviço "ENTREGA" não existe mais/);
+  assert.equal(Object.keys(a.arquivos).length, antes, 'nenhum arquivo gravado');
+  a.ctx.AstC_tipoLogistica_ = orig;
+  // PDF de verdade: aceito, com o tipo e a extensão pela assinatura (o navegador disse "image/jpeg")
+  const pdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n').toString('base64');
+  ok(a.api('s_gil', 'triagem', Object.assign({}, base, d({ anexo: { nome: 'canhoto.jpg', tipo: 'image/jpeg', base64: pdf } }))));
+  const reg = JSON.parse(ch().LOGISTICA_REGISTRO_JSON);
+  assert.equal(reg.anexo.tipo, 'application/pdf'); assert.match(reg.anexo.nome, /^Comprovante CH-\d{4}-\d{4}\.pdf$/);
+  const ficha = ok(a.api('s_gil', 'chamado', { id: c.id })).chamado;
+  assert.equal(ficha.registroLogistica.anexoUrl, '/arquivos/' + reg.anexo.id);
+  // relatório: a Metrolabs vê o nome do arquivo; o cliente só "Comprovante anexado"
+  const hc = a.html(ok(a.api('s_gil', 'relatorioAtendimento', { id: c.id, publico: 'CLIENTE' }))), hm = a.html(ok(a.api('s_gil', 'relatorioAtendimento', { id: c.id, publico: 'INTERNO' })));
+  assert.match(hc, /Comprovante anexado/); assert.doesNotMatch(hc, /Comprovante CH-/);
+  assert.match(hm, /Comprovante CH-\d{4}-\d{4}\.pdf/);
+  // glossário da logística
+  assert.match(hc, /Conferência da solicitação e programação da entrega/);
+});
+
+test('revisão (03/11/2026): orientação remota sai para o cliente e a representada (sem o enquadramento); chamado resolvido antes da publicação não mostra', () => {
+  const a = amb();
+  a.tabelas.REP_REPRESENTADAS = [{ ID: 'repB', NOME: 'REPRESENTADA BETA TESTE', SITUACAO: 'ATIVA', PRAZOS_JSON: '' }];
+  const c = abrir(a, { sintoma: 'Dúvida de uso da cama' });
+  a.ctx.SGO_DATA.update('ATEC_CHAMADOS', c.id, { REPRESENTADA_ID: 'repB', REPRESENTADA_NOME: 'REPRESENTADA BETA TESTE' });
+  ok(a.api('s_gil', 'triagem', { id: c.id, checklist: { sintomas_confirmados: 'Dúvida de uso', risco_operar: 'Nenhum', diagnostico_preliminar: 'Uso' }, acao: 'RESOLVIDO_REMOTO', orientacao: 'Usar o controle lateral para subir o encosto.\nEnquadramento pretendido: garantia' }));
+  for (const publico of ['CLIENTE', 'REPRESENTADA']) {
+    const h = a.html(ok(a.api('s_gil', 'relatorioAtendimento', { id: c.id, publico })));
+    assert.match(h, /Usar o controle lateral para subir o encosto/, publico);
+    assert.doesNotMatch(h, /Enquadramento pretendido: garantia/, publico);
+  }
+  // chamado resolvido antes da publicação (instante da regra depois da triagem): fora da Metrolabs só "Resolvido com orientação a distância"
+  const b = amb();
+  const c2 = abrir(b, { sintoma: 'Dúvida de uso da cama' });
+  ok(b.api('s_gil', 'triagem', { id: c2.id, checklist: { sintomas_confirmados: 'Dúvida', risco_operar: 'Nenhum', diagnostico_preliminar: 'Uso' }, acao: 'RESOLVIDO_REMOTO', orientacao: 'TEXTO INTERNO ANTIGO da orientação' }));
+  b.tabelas.ATEC_CONFIG.filter((x) => x.CHAVE === 'ORIENTACAO_PUBLICA_DESDE').forEach((x) => { x.VALOR_JSON = JSON.stringify('2026-12-01T00:00:00'); }); b.ctx.Ast_memoLimpar_();
+  const hc = b.html(ok(b.api('s_gil', 'relatorioAtendimento', { id: c2.id, publico: 'CLIENTE' })));
+  // a seção nova não traz o texto antigo (a linha do tempo já mostrava a decisão ao cliente antes desta mudança: evento público)
+  const secao = hc.slice(hc.indexOf('Orientação a distância</h2>'), hc.indexOf('</section>', hc.indexOf('Orientação a distância</h2>')));
+  assert.ok(secao.length > 30, 'seção da orientação'); assert.doesNotMatch(secao, /TEXTO INTERNO ANTIGO/); assert.match(secao, /Resolvido com orientação a distância/);
+  assert.match(b.html(ok(b.api('s_gil', 'relatorioAtendimento', { id: c2.id, publico: 'INTERNO' }))), /TEXTO INTERNO ANTIGO/);
 });

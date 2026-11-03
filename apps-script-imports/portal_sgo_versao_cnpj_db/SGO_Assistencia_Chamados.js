@@ -451,6 +451,22 @@ function AstC_triagem_(eu, d) {
   });
 }
 
+/**
+ * Comprovante do "já realizado": só JPG, PNG, WEBP ou PDF, até AST_COMPROVANTE_MAX_BYTES. O tipo vem da assinatura do arquivo (os primeiros
+ * bytes), nunca do que o navegador diz. Devolve { bytes, mime, ext } ou lança com a mensagem do que fazer.
+ */
+function AstC_comprovante_(a) {
+  var b64 = String(a.base64 || '').replace(/^data:[^,]+,/, '').replace(/\s/g, '');
+  if (b64.length < 16) throw new Error('Não foi possível registrar: o comprovante veio vazio. Escolha o arquivo de novo (foto JPG, PNG ou WEBP, ou PDF)');
+  var tam = Math.floor(b64.length * 3 / 4);
+  if (tam > AST_COMPROVANTE_MAX_BYTES) throw new Error('Não foi possível registrar: o comprovante tem ' + Ast_fmtNum_(tam / 1048576, 1) + ' MB e o limite é ' + Ast_fmtNum_(AST_COMPROVANTE_MAX_BYTES / 1048576, 0) + ' MB. Reduza a foto ou o PDF e envie de novo');
+  var bytes = Utilities.base64Decode(b64), u = function (i) { return (bytes[i] + 256) % 256; };
+  var tipo = u(0) === 0xFF && u(1) === 0xD8 && u(2) === 0xFF ? ['image/jpeg', 'jpg'] : u(0) === 0x89 && u(1) === 0x50 && u(2) === 0x4E && u(3) === 0x47 ? ['image/png', 'png'] :
+    u(0) === 0x52 && u(1) === 0x49 && u(2) === 0x46 && u(3) === 0x46 && u(8) === 0x57 && u(9) === 0x45 && u(10) === 0x42 && u(11) === 0x50 ? ['image/webp', 'webp'] :
+    u(0) === 0x25 && u(1) === 0x50 && u(2) === 0x44 && u(3) === 0x46 ? ['application/pdf', 'pdf'] : null;
+  if (!tipo) throw new Error('Não foi possível registrar: o comprovante precisa ser foto (JPG, PNG ou WEBP) ou PDF. O arquivo "' + Ast_texto_(a.nome, 80) + '" não é de um desses tipos');
+  return { bytes: bytes, mime: tipo[0], ext: tipo[1] };
+}
 /** Tipo de serviço de logística do caminho da triagem: o escolhido (se for do grupo Logística e do mesmo sentido) ou o padrão do caminho. */
 function AstC_tipoLogistica_(acao, codigo) {
   var cfg = AST_TRIAGEM_LOGISTICA[acao], t = Ast_s_(codigo) ? Ast_tipo_(codigo) : null;
@@ -465,6 +481,8 @@ function AstC_tipoLogistica_(acao, codigo) {
  * o chamado. Chamar dentro da trava. d.realizada: { sentido, recebidoPor, documento, em, observacao, anexo: { nome, tipo, base64 } }
  */
 function AstC_logisticaRealizada_(eu, c, d, fim) {
+  // decisão do coordenador (03/11/2026): encerra o chamado, então só a gestão (como o encerramento do resolvido remotamente)
+  if (!eu.gestao) throw new Error('Não foi possível registrar: "já realizado" encerra o chamado e é feito pela gestão. Peça à gestão da área Técnica para registrar (quem recebeu, quando e o comprovante)');
   var r = d.realizada || {}, s = AST_TRIAGEM_LOGISTICA[Ast_up_(r.sentido)] ? Ast_up_(r.sentido) : 'ENTREGA';
   var quem = Ast_texto_(r.recebidoPor, 120), doc = Ast_texto_(r.documento, 60), em = Ast_ms_(r.em), obs = Ast_texto_(r.observacao, 1000);
   var verbo = { ENTREGA: 'entregue', RETIRADA: 'retirado', ENVIO: 'enviado' }[s], quemRot = { ENTREGA: 'quem recebeu', RETIRADA: 'quem entregou à Metrolabs', ENVIO: 'quem recebeu (destinatário)' }[s];
@@ -473,18 +491,21 @@ function AstC_logisticaRealizada_(eu, c, d, fim) {
   if (erroDoc) throw new Error('Não foi possível registrar: ' + erroDoc);
   if (em === null) throw new Error('Não foi possível registrar: informe a data e a hora em que foi ' + verbo);
   if (em > Date.now() + 5 * 60000) throw new Error('Não foi possível registrar: a data e a hora não podem ser no futuro. Para o que ainda vai acontecer, use "' + AST_ACOES_TRIAGEM[s] + '"');
+  var abertoMs = Ast_ms_(c.ABERTO_EM);
+  if (abertoMs !== null && em < abertoMs - 60000) throw new Error('Não foi possível registrar: a data e a hora (' + Ast_br_(Ast_agora_(em)) + ') são anteriores à abertura do chamado (' + Ast_br_(c.ABERTO_EM) + '). Confira o dia e a hora em que foi ' + verbo);
+  // 6: o tipo de logística é conferido antes de gravar qualquer arquivo
+  var tl = AstC_tipoLogistica_(s, d.tipoCodigo);
   var anexo = null, a = r.anexo || null;
   if (a && Ast_s_(a.base64)) {
+    var arqOk = AstC_comprovante_(a);
     try {
-      var blob = Utilities.newBlob(Utilities.base64Decode(String(a.base64)), Ast_s_(a.tipo) || 'application/octet-stream', Ast_texto_(a.nome, 120).replace(/[\\\/:*?"<>|]/g, '') || 'comprovante');
-      var arq = Ast_pastaPrivadaOS_(c.NUMERO).createFile(blob); Ast_privado_(arq);
-      anexo = { id: arq.getId(), nome: arq.getName(), tipo: Ast_s_(a.tipo) };
-    } catch (eA) { throw new Error('Não foi possível guardar o anexo (' + String((eA && eA.message) || eA) + '). Tente de novo ou registre sem o anexo e mande depois pela conversa do chamado'); }
+      var arq = Ast_pastaPrivadaOS_(c.NUMERO).createFile(Utilities.newBlob(arqOk.bytes, arqOk.mime, 'Comprovante ' + c.NUMERO + '.' + arqOk.ext)); Ast_privado_(arq);
+      anexo = { id: arq.getId(), nome: arq.getName(), tipo: arqOk.mime };
+    } catch (eA) { throw new Error('Não foi possível guardar o comprovante (' + String((eA && eA.message) || eA) + '). Tente de novo ou registre sem o comprovante e mande depois pela conversa do chamado'); }
   }
-  var tl = AstC_tipoLogistica_(s, d.tipoCodigo);
   var reg = { sentido: s, recebidoPor: quem, documento: doc, em: Ast_agora_(em), observacao: obs, anexo: anexo, por: eu.nome, registradoEm: Ast_agora_() };
   var txt = (s === 'ENTREGA' ? 'Entrega já realizada' : s === 'RETIRADA' ? 'Retirada já realizada' : 'Envio já realizado') + ' em ' + Ast_br_(reg.em) + ', ' + quemRot + ': ' + quem + (doc ? ' (' + doc + ')' : '') +
-    (anexo ? '. Comprovante anexado: ' + anexo.nome : '. Sem comprovante anexado') + (obs ? '. ' + obs : '');
+    (anexo ? '. Comprovante anexado' : '. Sem comprovante anexado') + (obs ? '. ' + obs : '');
   c = AstC_mudar_(eu, c, 'ENCERRADO', Object.assign(fim, { TIPO_CODIGO: tl.codigo, LOGISTICA_REGISTRO_JSON: JSON.stringify(reg), ATENDIDO_EM: reg.em, ENCERRADO_EM: Ast_agora_(), PROXIMA_ACAO: '' }), 'DECISAO', txt);
   return c;
 }
