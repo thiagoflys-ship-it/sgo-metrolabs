@@ -79,6 +79,18 @@ var LICPAR_RESERVA_MIN = 5;
 var LICPAR_HORA_PRAZO = '18:00';
 var LICPAR_MAX_FAIXAS = 6;
 var LICPAR_FONTE = 'Pareceres e alçadas';
+/** Revisão de bf3860b: áreas cujo parecer obrigatório só vale sobre a simulação atual (as que olham o preço). */
+var LICPAR_AREAS_DO_PRECO = ['FINANCEIRA', 'LICITACOES'];
+/** Atividade de Minhas atividades ainda aberta (não concluída nem cancelada), como LicC_atividadeAberta_. Sem o módulo: null. */
+function LicPar_atividadeAberta_(id) {
+  if (typeof Atividades_abas_ !== 'function' || !Lic_s_(id)) return null;
+  try { var a = SGO_DATA.getById(Atividades_abas_().ATIVIDADES, Lic_s_(id)); return !!a && Lic_s_(a.SITUACAO) !== 'Concluída' && Lic_s_(a.SITUACAO) !== 'Cancelada'; } catch (e) { return null; }
+}
+/**
+ * Revisão de bf3860b: ids das oportunidades com pedido de parecer aberto (a sincronização com o coletor não descarta pela regra a que
+ * tem parecer pedido: a Diretoria decide). Nunca lança.
+ */
+function LicPar_opsComPedidoAberto_() { var m = {}; try { Lic_ler_(LICPAR_ABAS.PEDIDOS).forEach(function (p) { if (LicPar_aberto_(p)) m[Lic_s_(p.OPORTUNIDADE_ID)] = true; }); } catch (e) {} return m; }
 
 // ------------------------------------------------------------ abas e utilitários
 function LicPar_garantirAbas_() {
@@ -144,15 +156,36 @@ function LicPar_candidatos_(cod, cfg, ativos) {
 
 // ------------------------------------------------------------ alçadas (configuração, versão e motivo)
 function LicPar_cfgLinha_() { return Lic_ler_(LIC_ABAS.CONFIG).filter(function (c) { return Lic_s_(c.CHAVE) === 'ALCADAS'; })[0] || null; }
-function LicPar_cfg_() {
-  var l = LicPar_cfgLinha_(), v = l ? Lic_json_(l.VALOR_JSON, {}) : {}, c = JSON.parse(JSON.stringify(LICPAR_CFG_PADRAO));
-  if (LICPAR_BASES[Lic_up_(v.base)]) c.base = Lic_up_(v.base);
-  if (Array.isArray(v.faixas) && v.faixas.length) c.faixas = v.faixas.map(function (f) { return { ate: f.ate === null || f.ate === undefined || f.ate === '' ? null : Number(f.ate), aprovacoes: Math.max(1, Number(f.aprovacoes) || 1), pareceres: (Array.isArray(f.pareceres) ? f.pareceres : []).map(Lic_up_).filter(LicPar_area_) }; });
-  if (v.areas && typeof v.areas === 'object') Object.keys(v.areas).forEach(function (k) { if (LicPar_area_(k)) c.areas[Lic_up_(k)] = { pessoas: (Array.isArray(v.areas[k].pessoas) ? v.areas[k].pessoas : []).map(Lic_s_).filter(Boolean) }; });
-  c.versao = l ? Number(l.VERSAO) || 1 : 0; c.motivo = l ? Lic_s_(l.MOTIVO) : ''; c.atualizadoPor = l ? Lic_s_(l.ATUALIZADO_POR_NOME) : ''; c.atualizadoEm = l ? Lic_s_(l.ATUALIZADO_EM) : '';
-  c.padrao = !l;
+/** Base e faixas de um registro das alçadas (o gravado, ou o anterior guardado nele), no formato de LICPAR_CFG_PADRAO. */
+function LicPar_regrasDe_(v, c) {
+  if (v && LICPAR_BASES[Lic_up_(v.base)]) c.base = Lic_up_(v.base);
+  if (v && Array.isArray(v.faixas) && v.faixas.length) c.faixas = v.faixas.map(function (f) { return { ate: f.ate === null || f.ate === undefined || f.ate === '' ? null : Number(f.ate), aprovacoes: Math.max(1, Number(f.aprovacoes) || 1), pareceres: (Array.isArray(f.pareceres) ? f.pareceres : []).map(Lic_up_).filter(LicPar_area_) }; });
   return c;
 }
+/**
+ * Alçadas: a ÚLTIMA versão gravada (para editar). Revisão de bf3860b (decisão do coordenador): a versão nova vale a partir do dia
+ * seguinte, 00:00 de Brasília (valeAPartirDe); até lá, para as oportunidades sem aprovação, vale a anterior (guardada no registro).
+ */
+function LicPar_cfgUltima_() {
+  var l = LicPar_cfgLinha_(), v = l ? Lic_json_(l.VALOR_JSON, {}) : {}, c = LicPar_regrasDe_(v, JSON.parse(JSON.stringify(LICPAR_CFG_PADRAO)));
+  if (v.areas && typeof v.areas === 'object') Object.keys(v.areas).forEach(function (k) { if (LicPar_area_(k)) c.areas[Lic_up_(k)] = { pessoas: (Array.isArray(v.areas[k].pessoas) ? v.areas[k].pessoas : []).map(Lic_s_).filter(Boolean) }; });
+  c.versao = l ? Number(l.VERSAO) || 1 : 0; c.motivo = l ? Lic_s_(l.MOTIVO) : ''; c.atualizadoPor = l ? Lic_s_(l.ATUALIZADO_POR_NOME) : ''; c.atualizadoEm = l ? Lic_s_(l.ATUALIZADO_EM) : '';
+  c.valeAPartirDe = Lic_s_(v.valeAPartirDe); c.padrao = !l; c.anterior = v.anterior && typeof v.anterior === 'object' ? v.anterior : null;
+  return c;
+}
+/** As alçadas EM VIGOR agora (as áreas de quem dá parecer valem na hora; base e faixas, pela data de vigência). c.pendente = a versão que ainda vai valer. */
+function LicPar_cfg_() {
+  var u = LicPar_cfgUltima_(), agoraMs = Date.now();
+  if (!u.valeAPartirDe || !(Date.parse(u.valeAPartirDe) > agoraMs)) { u.pendente = null; return u; }
+  var c = LicPar_regrasDe_(u.anterior, JSON.parse(JSON.stringify(LICPAR_CFG_PADRAO)));
+  c.areas = u.areas; c.versao = u.anterior ? Number(u.anterior.versao) || 0 : 0; c.padrao = !c.versao; c.valeAPartirDe = u.anterior ? Lic_s_(u.anterior.valeAPartirDe) : '';
+  c.motivo = u.anterior ? Lic_s_(u.anterior.motivo) : ''; c.atualizadoPor = u.anterior ? Lic_s_(u.anterior.por) : ''; c.atualizadoEm = u.anterior ? Lic_s_(u.anterior.em) : '';
+  c.pendente = { versao: u.versao, valeAPartirDe: u.valeAPartirDe, valeTxt: Lic_brDiaHora_(u.valeAPartirDe), base: u.base, faixas: u.faixas, motivo: u.motivo, atualizadoPor: u.atualizadoPor, atualizadoEm: u.atualizadoEm };
+  c.pendente.faixasTxt = u.faixas.map(function (f, i) { return LicPar_faixaTxt_(u, i); });
+  return c;
+}
+/** 00:00 de Brasília do dia seguinte. */
+function LicPar_amanha_() { return Lic_isoLocal_(Lic_somarDia_(Lic_diaSp_(Lic_agora_()), 1), '00:00', '-03:00'); }
 /** Texto da faixa: "até R$ 100.000,00", "de R$ 100.000,01 a R$ 500.000,00", "acima de R$ 500.000,00" ou "qualquer valor". */
 function LicPar_faixaTxt_(cfg, i) {
   var f = cfg.faixas[i], ant = i > 0 ? cfg.faixas[i - 1] : null;
@@ -176,8 +209,11 @@ function LicPar_faixaDe_(cfg, valor) {
   return cfg.faixas.length - 1;
 }
 function LicPar_cfgTela_(eu) {
-  var cfg = LicPar_cfg_(), ativos = LicPar_ativos_();
+  var cfg = LicPar_cfg_(), ativos = LicPar_ativos_(), ult = LicPar_cfgUltima_();
+  // revisão de bf3860b: "em vigor" (com a data de vigência) e a versão que "vale a partir de"; o formulário parte da última gravada
   return { cfg: cfg, faixasTxt: cfg.faixas.map(function (f, i) { return LicPar_faixaTxt_(cfg, i); }), bases: LICPAR_BASES, diretoria: Lic_responsaveis_().length,
+    emVigor: { versao: cfg.versao, padrao: cfg.padrao, valeAPartirDe: cfg.valeAPartirDe, valeTxt: cfg.valeAPartirDe ? Lic_brDiaHora_(cfg.valeAPartirDe) : '' }, pendente: cfg.pendente || null,
+    editar: { base: ult.base, faixas: ult.faixas },
     areas: LICPAR_AREAS.map(function (a) { return { codigo: a.codigo, nome: a.nome, foco: a.foco, doCadastro: a.cadastro, lista: ((cfg.areas || {})[a.codigo] || {}).pessoas || [], candidatos: LicPar_candidatos_(a.codigo, cfg, ativos).map(function (u) { return { id: u.id, nome: u.nome }; }) }; }),
     pessoas: ativos.map(function (u) { return { id: u.id, nome: u.nome, area: u.area, perfil: u.perfil }; }), regras: LICPAR_REGRAS, podeMudar: LicPar_podeMudarCfg_(eu) };
 }
@@ -193,7 +229,7 @@ function LicPar_cfgSalvar_(eu, d) {
   if (!LicPar_podeMudarCfg_(eu)) throw new Error('Não foi possível mudar as alçadas: só o Administrador muda as alçadas de decisão (quem aprova não define a própria regra). Peça ao Administrador. Nada foi alterado');
   var motivo = Lic_texto_(d.motivo, 500);
   if (motivo.length < 10) throw new Error('Escreva o motivo da mudança das alçadas (pelo menos 10 letras): ele fica no histórico com o seu nome e a data. Nada foi alterado');
-  var antes = LicPar_cfg_(), novo = { base: antes.base, faixas: antes.faixas, areas: antes.areas };
+  var antes = LicPar_cfgUltima_(), vigor = LicPar_cfg_(), novo = { base: antes.base, faixas: antes.faixas, areas: antes.areas };
   var dir = Lic_responsaveis_().length, maxAp = Math.max(1, Math.min(3, dir));
   if (d.base !== undefined) { if (!LICPAR_BASES[Lic_up_(d.base)]) throw new Error('Escolha na lista o valor que decide a faixa (estimado, simulação ou o maior). Nada foi alterado'); novo.base = Lic_up_(d.base); }
   if (d.faixas !== undefined) {
@@ -231,12 +267,15 @@ function LicPar_cfgSalvar_(eu, d) {
   var semVer = function (c) { return JSON.stringify({ base: c.base, faixas: c.faixas, areas: c.areas }); };
   if (semVer(novo) === semVer(antes) && antes.versao) return { cfg: LicPar_cfgTela_(eu), semMudanca: true, texto: 'Nada mudou: as alçadas enviadas são iguais às atuais. Nenhuma versão nova foi criada.' };
   return Lic_comTrava_(function () {
-    var l = LicPar_cfgLinha_(), agora = Lic_agora_(), versao = (antes.versao || 0) + 1;
-    var reg = { CHAVE: 'ALCADAS', VALOR_JSON: semVer(novo), VERSAO: versao, MOTIVO: motivo, ATUALIZADO_POR_ID: eu.id, ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora };
+    var l = LicPar_cfgLinha_(), agora = Lic_agora_(), versao = (antes.versao || 0) + 1, vale = LicPar_amanha_();
+    // a versão em vigor agora fica guardada como "anterior": vale até a nova começar (00:00 de Brasília do dia seguinte)
+    var valor = { base: novo.base, faixas: novo.faixas, areas: novo.areas, valeAPartirDe: vale,
+      anterior: vigor.versao ? { versao: vigor.versao, base: vigor.base, faixas: vigor.faixas, valeAPartirDe: vigor.valeAPartirDe || '', motivo: vigor.motivo, por: vigor.atualizadoPor, em: vigor.atualizadoEm } : null };
+    var reg = { CHAVE: 'ALCADAS', VALOR_JSON: JSON.stringify(valor), VERSAO: versao, MOTIVO: motivo, ATUALIZADO_POR_ID: eu.id, ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: agora };
     if (l) SGO_DATA.update(LIC_ABAS.CONFIG, l.ID, reg); else SGO_DATA.insert(LIC_ABAS.CONFIG, Object.assign({ CRIADO_EM: agora }, reg));
     var desc = function (c) { return c.faixas.map(function (f, i) { return LicPar_faixaTxt_(c, i) + ': ' + f.aprovacoes + ' aprovação(ões)' + (f.pareceres.length ? ', pareceres ' + f.pareceres.map(function (x) { return LicPar_area_(x).rotulo; }).join(', ') : ', sem parecer obrigatório'); }).join('; ') + ' · valor: ' + (LICPAR_BASES[c.base] || c.base).toLowerCase(); };
-    Lic_historico_('CONFIG', 'ALCADAS', '', 'ALCADAS', eu, { de: antes.versao ? 'versão ' + antes.versao + ': ' + desc(antes) : 'padrão (um diretor basta, sem parecer obrigatório)', para: 'versão ' + versao + ': ' + desc(novo), texto: 'Motivo: ' + motivo, versao: versao, fonte: 'Tela Portais e configurações › Alçadas e pareceres' });
-    return { cfg: LicPar_cfgTela_(eu), versao: versao, texto: 'Alçadas salvas como versão ' + versao + '. Valem para as oportunidades sem aprovação em andamento; as que já têm aprovação seguem a versão da primeira aprovação.' };
+    Lic_historico_('CONFIG', 'ALCADAS', '', 'ALCADAS', eu, { de: antes.versao ? 'versão ' + antes.versao + ': ' + desc(antes) : 'padrão (um diretor basta, sem parecer obrigatório)', para: 'versão ' + versao + ': ' + desc(novo), texto: 'Vale a partir de ' + Lic_brDiaHora_(vale) + ' (horário de Brasília). Motivo: ' + motivo, versao: versao, fonte: 'Tela Portais e configurações › Alçadas e pareceres' });
+    return { cfg: LicPar_cfgTela_(eu), versao: versao, valeAPartirDe: vale, texto: 'Alçadas salvas como versão ' + versao + '. Valem a partir de ' + Lic_brDiaHora_(vale) + ' (horário de Brasília) para as oportunidades sem aprovação em andamento; até lá vale a ' + (vigor.versao ? 'versão ' + vigor.versao : 'regra padrão') + '. As que já têm aprovação seguem a versão da primeira aprovação. Quem dá o parecer de cada área muda na hora.' };
   });
 }
 
@@ -375,7 +414,8 @@ function LicPar_alcada_(l, ctx, contarEu) {
   var conta = aprov.slice();
   if (contarEu && !conta.some(function (a) { return a.id === Lic_s_(contarEu.id); })) conta.push({ id: Lic_s_(contarEu.id), nome: Lic_s_(contarEu.nome), agora: true });
   // revisão de e361160: o parecer obrigatório só conta se foi dado sobre a simulação atual
-  var sobreAtual = function (c) { var p = porArea[c] && porArea[c].atual; return !!p && (Number((Lic_json_(p.BASE_JSON, {}) || {}).simulacaoVersao) || 0) === simV; };
+  // revisão de bf3860b: a exigência vale só para Financeira e Licitações (o preço muda o parecer); Técnica e Comercial valem entre simulações
+  var sobreAtual = function (c) { var p = porArea[c] && porArea[c].atual; if (!p) return false; if (LICPAR_AREAS_DO_PRECO.indexOf(c) < 0) return true; return (Number((Lic_json_(p.BASE_JSON, {}) || {}).simulacaoVersao) || 0) === simV; };
   var faltamPar = f.pareceres.filter(function (c) { return !sobreAtual(c); });
   var antigos = faltamPar.filter(function (c) { return porArea[c] && porArea[c].atual; });
   var valorTxt = vb.valor === null ? 'sem valor informado' : LicPar_moeda_(vb.valor) + ', ' + vb.origem;
@@ -579,11 +619,11 @@ function LicPar_cancelar_(eu, d) {
     Lic_historico_('OPORTUNIDADE', x.OPORTUNIDADE_ID, x.CODIGO, 'PARECER_PEDIDO_CANCELADO', eu, { de: 'pedido aberto para ' + Lic_s_(x.USUARIO_NOME), para: 'cancelado', texto: 'Pedido de parecer ' + ar.rotulo + ' cancelado. Motivo: ' + motivo, versao: LICPAR_REGRAS, fonte: LICPAR_FONTE, hash: Lic_s_(x.HASH) });
     return x;
   });
-  var aviso = '';
-  if (Lic_s_(p.ATIVIDADE_ID) && typeof Atividades_apiMudarSituacao === 'function' && eu.sessao) {
+  var aviso = '', jaFechada = Lic_s_(p.ATIVIDADE_ID) && LicPar_atividadeAberta_(p.ATIVIDADE_ID) === false;
+  if (Lic_s_(p.ATIVIDADE_ID) && !jaFechada && typeof Atividades_apiMudarSituacao === 'function' && eu.sessao) {
     try { var r = Atividades_apiMudarSituacao(eu.sessao, { id: Lic_s_(p.ATIVIDADE_ID), situacao: 'Cancelada', motivo: Lic_texto_('Pedido de parecer cancelado pela Diretoria: ' + motivo, 1500) }); if (!r || !r.ok) aviso = Lic_s_(r && r.message); else SGO_DATA.update(LICPAR_ABAS.PEDIDOS, p.ID, { ATIVIDADE_SITUACAO: 'Cancelada' }); } catch (e) { aviso = Lic_s_(e && e.message); }
   }
-  return { texto: 'Pedido cancelado.' + (aviso ? ' A atividade em Minhas atividades não foi cancelada (' + aviso.replace(/[.\s]+$/, '') + '): cancele lá.' : Lic_s_(p.ATIVIDADE_ID) ? ' A atividade em Minhas atividades foi cancelada.' : '') };
+  return { texto: 'Pedido cancelado.' + (aviso ? ' A atividade em Minhas atividades não foi cancelada (' + aviso.replace(/[.\s]+$/, '') + '): cancele lá.' : jaFechada ? ' A atividade em Minhas atividades já estava concluída ou cancelada: não foi mexida.' : Lic_s_(p.ATIVIDADE_ID) ? ' A atividade em Minhas atividades foi cancelada.' : '') };
 }
 /** Avisos do pedido (sob a trava): os que não saíram são cancelados; os que saíram ganham a ciência de quem agiu (quem = null: só cancela). */
 function LicPar_fecharAlertas_(pedidoId, motivo, quem, agora) {
@@ -725,6 +765,8 @@ function LicPar_fecharPedidosDaOp_(eu, oid, motivo) {
   out.cancelados = fechados.length;
   fechados.forEach(function (p) {
     if (!Lic_s_(p.ATIVIDADE_ID)) return;
+    // revisão de bf3860b: atividade já concluída ou cancelada não é mexida
+    if (LicPar_atividadeAberta_(p.ATIVIDADE_ID) === false) return;
     if (typeof Atividades_apiMudarSituacao !== 'function' || !eu || !eu.sessao) { out.erros.push(Lic_s_(p.USUARIO_NOME) + ': Minhas atividades não está disponível agora'); return; }
     try {
       var r = Atividades_apiMudarSituacao(eu.sessao, { id: Lic_s_(p.ATIVIDADE_ID), situacao: 'Cancelada', motivo: Lic_texto_('Pedido de parecer encerrado pela decisão da Diretoria: ' + motivo, 1500) });

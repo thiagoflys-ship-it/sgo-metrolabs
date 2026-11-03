@@ -257,10 +257,13 @@
       (total > 1 ? '<div><button type="button" class="btn-secondary" data-lpa-tirar="' + i + '">Tirar esta faixa</button></div>' : "") + "</div>";
   }
   function LicPa_htmlCfg_(r) {
-    var c = r.cfg || {}, faixas = (LICPA.rascunho || c.faixas || []);
+    var c = r.cfg || {}, faixas = (LICPA.rascunho || (r.editar && r.editar.faixas) || c.faixas || []), ev = r.emVigor || {}, pd = r.pendente;
     var h = '<div class="cm-caixa"><h3>Alçadas de decisão</h3>' + (c.padrao ? Lic_faixa_("Em uso o padrão: um diretor basta em qualquer valor e nenhum parecer é obrigatório (o comportamento de antes). O dono ainda não definiu alçadas nem responsáveis por área.", "aviso") :
       '<p class="cm-meta">Versão ' + Lic_esc_(c.versao) + " · " + Lic_esc_(c.atualizadoPor) + " · " + Lic_esc_(Lic_dataHora_(c.atualizadoEm)) + " · motivo: " + Lic_esc_(c.motivo) + "</p>") +
-      '<div class="lpa-campo"><label for="lpaBase">Valor que decide a faixa</label><select id="lpaBase">' + Object.keys(r.bases || {}).map(function (k) { return '<option value="' + Lic_esc_(k) + '"' + (c.base === k ? " selected" : "") + ">" + Lic_esc_(r.bases[k]) + "</option>"; }).join("") + '</select><p class="cm-ajuda-campo">Sem valor nenhum (estimado sigiloso e sem simulação), vale a faixa mais alta.</p></div>' +
+      '<p class="cm-txt">' + LicPa_selo_("verde", "Em vigor") + " " + Lic_esc_(ev.padrao ? "regra padrão" : "versão " + ev.versao) + (ev.valeTxt ? " · vale desde " + Lic_esc_(ev.valeTxt) : "") + ": " + Lic_esc_((r.faixasTxt || []).join("; ")) + "</p>" +
+      (pd ? '<p class="cm-txt">' + LicPa_selo_("azul", "Vale a partir de " + pd.valeTxt) + " versão " + Lic_esc_(pd.versao) + ": " + Lic_esc_((pd.faixasTxt || []).join("; ")) + " · " + Lic_esc_(pd.atualizadoPor) + " · motivo: " + Lic_esc_(pd.motivo) + "</p>" : "") +
+      '<p class="cm-ajuda-campo">A versão nova vale a partir das 00:00 (horário de Brasília) do dia seguinte, e só para as oportunidades sem aprovação; as que já têm aprovação seguem a versão da primeira aprovação.</p>' +
+      '<div class="lpa-campo"><label for="lpaBase">Valor que decide a faixa</label><select id="lpaBase">' + Object.keys(r.bases || {}).map(function (k) { return '<option value="' + Lic_esc_(k) + '"' + (((r.editar && r.editar.base) || c.base) === k ? " selected" : "") + ">" + Lic_esc_(r.bases[k]) + "</option>"; }).join("") + '</select><p class="cm-ajuda-campo">Sem valor nenhum (estimado sigiloso e sem simulação), vale a faixa mais alta.</p></div>' +
       '<div id="lpaFaixas">' + faixas.map(function (f, i) { return LicPa_linhaFaixa_(f, i, faixas.length, r.areas || []); }).join("") + "</div>" +
       '<div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-secondary" data-lpa-mais>Acrescentar faixa</button></div>' +
       '<p class="cm-ajuda-campo">Pessoas ativas da Diretoria e do Administrador: ' + Lic_esc_(r.diretoria) + ". Uma faixa não pode pedir mais aprovações do que isso. Descartar continua com um diretor.</p></div>";
@@ -283,7 +286,7 @@
     return out;
   }
   function LicPa_ligarCfg_(corpo, r) {
-    var n = (LICPA.rascunho || r.cfg.faixas || []).length;
+    var n = (LICPA.rascunho || (r.editar && r.editar.faixas) || r.cfg.faixas || []).length;
     var redesenhar = function (fx) { LICPA.rascunho = fx; corpo.innerHTML = LicPa_htmlCfg_(r); LicPa_ligarCfg_(corpo, r); };
     var mais = corpo.querySelector("[data-lpa-mais]");
     if (mais) mais.onclick = function () { var fx = LicPa_lerFaixas_(corpo, n); if (fx.length >= 6) { LicPa_msg_("lpaMsgCfg", "No máximo 6 faixas."); return; } fx.splice(fx.length - 1, 0, { ate: "", aprovacoes: 1, pareceres: [] }); redesenhar(fx); };

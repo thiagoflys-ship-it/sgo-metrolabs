@@ -187,6 +187,8 @@ function Lic_sincronizar_(eu, o) {
       var itens = Array.isArray(pag.itens) ? pag.itens : [];
       if (!itens.length) { r.ate = desde; return false; }
       var linhas = Lic_ler_(LIC_ABAS.OPORTUNIDADES), porChave = {}, agora = Lic_agora_();
+      // revisão de bf3860b: oportunidade com pedido de parecer aberto não é descartada pela regra (a Diretoria decide)
+      var comParecer = typeof LicPar_opsComPedidoAberto_ === 'function' ? LicPar_opsComPedidoAberto_() : {};
       linhas.forEach(function (l) { if (Lic_s_(l.CHAVE_FONTE)) porChave[Lic_s_(l.CHAVE_FONTE)] = l; });
       itens.forEach(function (it) {
         r.lidas++;
@@ -222,7 +224,10 @@ function Lic_sincronizar_(eu, o) {
           Lic_historico_('OPORTUNIDADE', atual.ID, atual.CODIGO, 'TRIAGEM', sistema, { de: Lic_s_(atual.TRIAGEM), para: tri.TRIAGEM, texto: tri.TRIAGEM_MOTIVO, versao: fonte.VERSAO_FONTE, fonte: 'Regras do radar ' + tri.TRIAGEM_VERSAO, hash: fonte.VERSAO_HASH });
           var sit = Lic_s_(atual.SITUACAO), novaSit = '';
           // reaberta pela Diretoria (DESCARTE_ORIGEM = REABERTA): a regra não descarta de novo; a triagem nova fica só no histórico
-          if (sit === 'RADAR' && tri.TRIAGEM === 'DESCARTADA' && Lic_s_(atual.DESCARTE_ORIGEM) !== 'REABERTA') novaSit = 'DESCARTADA';
+          if (sit === 'RADAR' && tri.TRIAGEM === 'DESCARTADA' && Lic_s_(atual.DESCARTE_ORIGEM) !== 'REABERTA') {
+            if (comParecer[Lic_s_(atual.ID)]) Lic_historico_('OPORTUNIDADE', atual.ID, atual.CODIGO, 'DESCARTE_PELA_REGRA_SUSPENSO', sistema, { de: sit, para: sit, texto: 'A regra do radar ' + (tri.TRIAGEM_REGRA || tri.TRIAGEM_VERSAO) + ' a descartaria (' + tri.TRIAGEM_MOTIVO + '), mas há parecer pedido às áreas: fica no Radar e a Diretoria decide.', versao: fonte.VERSAO_FONTE, fonte: 'Regras do radar ' + tri.TRIAGEM_VERSAO, hash: fonte.VERSAO_HASH });
+            else novaSit = 'DESCARTADA';
+          }
           if (sit === 'DESCARTADA' && Lic_s_(atual.DESCARTE_ORIGEM) === 'REGRA' && tri.TRIAGEM !== 'DESCARTADA') novaSit = 'RADAR';
           if (novaSit) {
             mud.SITUACAO = novaSit; mud.SITUACAO_DESDE = agora; r.situacaoMudou++;

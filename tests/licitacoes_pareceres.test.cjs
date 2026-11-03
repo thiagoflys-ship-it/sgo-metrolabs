@@ -19,6 +19,8 @@ const EXTRA = [
   { ID: 'u_fab', USUARIO: 'fabio', NOME: 'FABIO FINANCEIRO TESTE', PERFIL: 'FINANCEIRO', STATUS: 'ATIVO', EMAIL: 'fabio@exemplo.test', CELULAR: '62999990025', VINCULO_TRABALHO: 'CLT', AREA: 'FINANCEIRO' },
   { ID: 'u_tec', USUARIO: 'tiago', NOME: 'TIAGO TECNICO TESTE', PERFIL: 'TECNICO', STATUS: 'ATIVO', EMAIL: 'tiago@exemplo.test', CELULAR: '62999990026', VINCULO_TRABALHO: 'CLT', AREA: 'TECNICA' }
 ];
+/** Põe em vigor já a última versão das alçadas (no SGO+ ela vale a partir das 00:00 do dia seguinte). */
+const vigorar = (tabelas) => { const l = tabelas.LIC_CONFIG.find((c) => c.CHAVE === 'ALCADAS'); const v = JSON.parse(l.VALOR_JSON); v.valeAPartirDe = '2026-01-01T03:00:00.000Z'; l.VALOR_JSON = JSON.stringify(v); };
 const CRIT = (cap) => JSON.stringify({ capacidade: { pontos: cap, peso: 20, origem: 'CODIGO', como: 'Serviços do catálogo cobrem o objeto' }, margem: { pontos: 10, peso: 15, origem: 'SIMULACAO', como: 'Sobra de 38% sobre o piso de R$ 80.000,00' } });
 
 /** op1 em análise (valor estimado R$ 98.765,43, propostas até 04/11 08:30), op2 no radar. Segunda-feira 26/10/2026 10:00 (expediente). */
@@ -38,7 +40,9 @@ function amb(o) {
   a.registrar = (sid, pedidoId, posicao, motivo, extra) => a.par(sid, 'registrar', Object.assign({ pedidoId, posicao, motivo: motivo || 'Conferi o edital, a equipe e os padrões disponíveis para o prazo' }, extra || {}));
   a.atvs = () => (a.tabelas.ATV_ATIVIDADES || []).filter((x) => /pedido de parecer/.test(x.DESCRICAO || ''));
   a.op = (id) => a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === id);
-  a.cfg = (faixas, extra) => a.ok(a.par('s_thi', 'cfgSalvar', Object.assign({ faixas, motivo: 'Decisão do dono para os testes das alçadas' }, extra || {})));
+  // revisão de bf3860b: a versão nova vale a partir do dia seguinte; vigorar() a põe em vigor já (o teste próprio da data está no fim)
+  a.cfgSemVigorar = (faixas, extra) => a.ok(a.par('s_thi', 'cfgSalvar', Object.assign({ faixas, motivo: 'Decisão do dono para os testes das alçadas' }, extra || {})));
+  a.cfg = (faixas, extra) => { const r = a.cfgSemVigorar(faixas, extra); vigorar(a.tabelas); return r; };
   return a;
 }
 
@@ -292,7 +296,7 @@ test('Central de disputas: abrir direto de Em análise com a alçada padrão con
   ok(a.abrir('s_dora'));
   assert.equal(a.tabelas.LIC_OPORTUNIDADES[0].SITUACAO, 'DISPUTA', 'padrão: um diretor abre, como antes');
   const b = prep();
-  ok(b.par('s_admin', 'cfgSalvar', { faixas: [{ ate: '10.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Acima de dez mil, duas aprovações' }));
+  ok(b.par('s_admin', 'cfgSalvar', { faixas: [{ ate: '10.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Acima de dez mil, duas aprovações' })); vigorar(b.tabelas);
   const r = b.abrir('s_dora');
   assert.equal(r.ok, false); assert.match(r.message, /falta a 2ª aprovação da Diretoria, valor acima de R\$ 10\.000,00.*Nada foi gravado/);
   assert.equal(b.tabelas.LIC_OPORTUNIDADES[0].SITUACAO, 'ANALISE'); assert.equal((b.tabelas.LIC_DISPUTAS || []).length, 0);
@@ -478,7 +482,7 @@ test('revisão ALTA 1 e MÉDIA 2: abrir a disputa e registrar o contrato manual 
   assert.equal(ap.USUARIO_ID, 'u_dir'); assert.equal(ap.ORIGEM, 'DISPUTA'); assert.equal(Number(ap.SIMULACAO_VERSAO), 1);
   // contrato manual de op2 (Em análise): com duas aprovações acima de R$ 1.000, recusa; com a aprovação do Administrador, passa e fecha o pedido
   const c = ambienteContratos();
-  ok(c.ctx.Licitacoes_api('s_admin', 'pareceres', { op: 'cfgSalvar', faixas: [{ ate: '1.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Acima de mil reais, duas aprovações' }));
+  ok(c.ctx.Licitacoes_api('s_admin', 'pareceres', { op: 'cfgSalvar', faixas: [{ ate: '1.000', aprovacoes: 1 }, { aprovacoes: 2 }], motivo: 'Acima de mil reais, duas aprovações' })); vigorar(c.tabelas);
   const pedC = ok(c.ctx.Licitacoes_api('s_dora', 'pareceres', { op: 'pedir', id: 'op2', area: 'LICITACOES', usuarioId: 'u_adm' }));
   const m = () => c.ct('s_dora', 'criar', { id: 'op2', origem: 'MANUAL', motivo: 'Resultado da disputa feito fora do SGO+, no portal do órgão', fonte: 'termo de homologação publicado no PNCP em 20/11/2026',
     campos: { numeroContrato: 'CT 45/2026', inicio: '2026-12-01', fim: '2027-05-31', itens: [{ item: '1', codigo: 'QUA-001', nome: 'Qualificação de autoclave', quantidade: '2', valorUnit: '3.200,00' }] } });
@@ -557,4 +561,90 @@ test('revisão BAIXA 5: preço por área (Técnica e Comercial nada, Licitaçõe
   a.ctx.LicPar_alcada_ = orig;
   // operação herdada do Object não vira ação
   for (const op of ['toString', 'constructor', 'hasOwnProperty', '__proto__']) { const x = a.par('s_cha', op, {}); assert.equal(x.ok, false, op); assert.match(x.message, /operação de pareceres desconhecida/, op); }
+});
+
+// ------------------------------------------------------------------ revisão de bf3860b (um teste para cada ponto)
+test('revisão bf3860b 1: a regra do radar não descarta sozinha a oportunidade com parecer pedido; fica no Radar com a anotação no histórico', () => {
+  const item = { chave: 'PNCP:op2', versao: 1, hash: 'h1', portalOrigem: 'PNCP', contratacao: { orgaoNome: 'HOSPITAL ESTADUAL TESTE', uf: 'PR', objeto: 'Manutenção com calibração' },
+    triagem: { resultado: 'DESCARTADA', motivo: 'Termo que descarta: calibragem de pneus', regra: 'NEG-12', versao: 'TRI-2026-11-03' } };
+  const coletor = (a) => { let n = 0; a.ctx.SGO_LICITACOES = { listar: () => (n++ ? { itens: [], ate: 'x2', mais: false } : { itens: [item], ate: 'x1', mais: false }), situacao: () => ({}) }; };
+  const a = amb();
+  a.pedir('TECNICA', 'u_gil', { id: 'op2' });
+  coletor(a); a.ctx.Lic_sincronizar_(null);
+  assert.equal(a.op('op2').SITUACAO, 'RADAR', 'continua no Radar');
+  assert.equal(a.op('op2').TRIAGEM, 'DESCARTADA', 'a triagem nova fica gravada');
+  const h = a.tabelas.LIC_HISTORICO.find((x) => x.TIPO === 'DESCARTE_PELA_REGRA_SUSPENSO');
+  assert.ok(h); assert.match(h.TEXTO, /A regra do radar NEG-12 a descartaria \(Termo que descarta: calibragem de pneus\), mas há parecer pedido às áreas: fica no Radar e a Diretoria decide/);
+  assert.equal(a.tabelas.LIC_PARECER_PEDIDOS[0].SITUACAO, 'ABERTO', 'o pedido continua aberto');
+  // sem pedido de parecer: a regra descarta como antes
+  const b = amb(); coletor(b); b.ctx.Lic_sincronizar_(null);
+  assert.equal(b.op('op2').SITUACAO, 'DESCARTADA'); assert.equal(b.op('op2').DESCARTE_ORIGEM, 'REGRA');
+});
+
+test('revisão bf3860b 2: só a atividade ainda aberta é cancelada (concluída ou cancelada não é mexida), na decisão e no cancelamento do pedido', () => {
+  const a = amb();
+  a.sim('op1');
+  const p1 = a.pedir('TECNICA', 'u_gil'), p2 = a.pedir('FINANCEIRA', 'u_fab');
+  a.tabelas.ATV_ATIVIDADES.find((x) => x.ID === p1.atividade.id).SITUACAO = 'Concluída';
+  const hist0 = (a.tabelas.ATV_HISTORICO || []).length;
+  const ac = a.ctx.Atividades_apiMudarSituacao; let chamadas = 0;
+  a.ctx.Atividades_apiMudarSituacao = function () { chamadas++; return ac.apply(this, arguments); };
+  const r = a.ok(a.par('s_cha', 'aprovar', { id: 'op1', motivo: 'Nota boa, piso coberto e equipe disponível' }));
+  assert.equal(r.pedidosCancelados, 2, 'os dois pedidos fecham');
+  assert.equal(chamadas, 1, 'só a atividade aberta foi cancelada');
+  assert.equal(a.tabelas.ATV_ATIVIDADES.find((x) => x.ID === p1.atividade.id).SITUACAO, 'Concluída');
+  assert.equal(a.tabelas.ATV_ATIVIDADES.find((x) => x.ID === p2.atividade.id).SITUACAO, 'Cancelada');
+  assert.doesNotMatch(r.texto, /Não foi possível cancelar/);
+  // cancelamento do pedido com a atividade já cancelada em Minhas atividades
+  const b = amb();
+  const p = b.pedir('COMERCIAL', 'u_vera');
+  b.tabelas.ATV_ATIVIDADES.find((x) => x.ID === p.atividade.id).SITUACAO = 'Cancelada';
+  let n = 0; const bc = b.ctx.Atividades_apiMudarSituacao; b.ctx.Atividades_apiMudarSituacao = function () { n++; return bc.apply(this, arguments); };
+  const x = b.ok(b.par('s_cha', 'cancelar', { pedidoId: p.pedido.id, motivo: 'Vera saiu de férias hoje cedo' }));
+  assert.equal(n, 0); assert.match(x.texto, /já estava concluída ou cancelada: não foi mexida/);
+  assert.ok(hist0 >= 0);
+});
+
+test('revisão bf3860b 4: parecer obrigatório sobre a simulação atual vale só para Financeira e Licitações; Técnica e Comercial valem entre simulações', () => {
+  const a = amb();
+  a.sim('op1');
+  a.cfg([{ ate: 50000, aprovacoes: 1 }, { aprovacoes: 1, pareceres: ['TECNICA', 'COMERCIAL', 'FINANCEIRA', 'LICITACOES'] }]);
+  a.ok(a.registrar('s_gil', a.pedir('TECNICA', 'u_gil').pedido.id, 'FAVORAVEL'));
+  a.ok(a.registrar('s_vera', a.pedir('COMERCIAL', 'u_vera').pedido.id, 'FAVORAVEL'));
+  a.ok(a.registrar('s_fab', a.pedir('FINANCEIRA', 'u_fab').pedido.id, 'FAVORAVEL'));
+  a.ok(a.registrar('s_thi', a.pedir('LICITACOES', 'u_thi').pedido.id, 'FAVORAVEL'));
+  assert.deepEqual(a.ok(a.par('s_cha', 'ficha', { id: 'op1' })).alcada.faltas, [], 'todos sobre a simulação 1');
+  a.sim('op1', { TOTAL_PROPOSTA: 96000 });
+  const faltas = a.ok(a.par('s_cha', 'ficha', { id: 'op1' })).alcada.faltas.join(' ');
+  assert.match(faltas, /faltam os pareceres de Licitações e Financeiro/);
+  assert.doesNotMatch(faltas, /Técnico|Comercial/, 'Técnica e Comercial continuam valendo');
+});
+
+test('revisão bf3860b 3: versão nova das alçadas vale a partir das 00:00 de Brasília do dia seguinte; a tela mostra "em vigor" e "vale a partir de"', () => {
+  const a = amb();
+  a.sim('op1');
+  const r = a.cfgSemVigorar([{ ate: 50000, aprovacoes: 1 }, { aprovacoes: 2 }]);
+  assert.equal(r.valeAPartirDe, '2026-10-27T03:00:00.000Z'); assert.match(r.texto, /Valem a partir de ter 27\/10\/2026 00:00 \(horário de Brasília\).*até lá vale a regra padrão/);
+  assert.ok(a.tabelas.LIC_HISTORICO.some((h) => h.TIPO === 'ALCADAS' && /Vale a partir de ter 27\/10\/2026 00:00/.test(h.TEXTO)));
+  const cfg = a.ok(a.par('s_thi', 'cfg'));
+  assert.equal(cfg.emVigor.padrao, true); assert.equal(cfg.pendente.versao, 1); assert.equal(cfg.pendente.valeAPartirDe, '2026-10-27T03:00:00.000Z');
+  assert.deepEqual(cfg.editar.faixas.map((f) => f.aprovacoes), [1, 2], 'o formulário parte da última versão gravada');
+  // hoje ainda vale o padrão (um diretor)
+  assert.equal(a.ok(a.par('s_cha', 'ficha', { id: 'op1' })).alcada.necessarias, 1);
+  // a tela
+  const t = tela();
+  const h = t.ctx.LicPa_htmlCfg_(cfg);
+  assert.match(h, /Em vigor<\/span> regra padrão/); assert.match(h, /Vale a partir de ter 27\/10\/2026 00:00<\/span> versão 1/);
+  // a partir das 00:00 do dia seguinte vale a versão 1; a segunda versão do dia guarda a 1 como "em vigor" até a meia-noite
+  a.mudar('2026-10-27T00:01:00-03:00');
+  assert.equal(a.ok(a.par('s_cha', 'ficha', { id: 'op1' })).alcada.necessarias, 2);
+  a.cfgSemVigorar([{ ate: 50000, aprovacoes: 1 }, { aprovacoes: 1, pareceres: ['FINANCEIRA'] }], { motivo: 'Uma aprovação com o parecer Financeiro' });
+  const c2 = a.ok(a.par('s_thi', 'cfg'));
+  assert.equal(c2.emVigor.versao, 1); assert.equal(c2.emVigor.valeAPartirDe, '2026-10-27T03:00:00.000Z'); assert.equal(c2.pendente.versao, 2); assert.equal(c2.pendente.valeAPartirDe, '2026-10-28T03:00:00.000Z');
+  const al = a.ok(a.par('s_cha', 'ficha', { id: 'op1' })).alcada;
+  assert.equal(al.necessarias, 2); assert.deepEqual(al.obrigatorios, []);
+  a.mudar('2026-10-28T08:00:00-03:00');
+  const al2 = a.ok(a.par('s_cha', 'ficha', { id: 'op1' })).alcada;
+  assert.equal(al2.necessarias, 1); assert.deepEqual(al2.obrigatorios, ['Financeira']);
+  assert.match(t.ctx.LicPa_htmlCfg_(a.ok(a.par('s_thi', 'cfg'))), /Em vigor<\/span> versão 2 · vale desde qua 28\/10\/2026 00:00/);
 });

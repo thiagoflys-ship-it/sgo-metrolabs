@@ -233,7 +233,8 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Padrão (o dono ainda não definiu): um diretor basta em qualquer valor e nenhum parecer é obrigatório, como antes.",
           "Faixas de valor: o teto de cada faixa (a última não tem teto), quantas aprovações distintas da Diretoria são necessárias (de 1 até o número de pessoas ativas da Diretoria e do Administrador, no máximo 3) e quais pareceres são obrigatórios antes de participar. O valor que decide a faixa é o estimado do edital, o total da simulação ou o maior dos dois; sem valor nenhum, vale a faixa mais alta.",
           "Quem dá o parecer de cada área: sem ninguém marcado, vale o cadastro de usuários (campo Área). O motivo é obrigatório; cada gravação é uma versão nova no histórico.",
-          "Só o Administrador muda as alçadas. A versão nova não vale para a oportunidade que já tem aprovação em andamento: nela continua a versão da primeira aprovação."
+          "Só o Administrador muda as alçadas. A versão nova vale a partir das 00:00 (horário de Brasília) do dia seguinte: a tela mostra a versão em vigor e a que vale a partir de. Ela não vale para a oportunidade que já tem aprovação em andamento: nela continua a versão da primeira aprovação.",
+          "Pareceres obrigatórios: Financeira e Licitações precisam ser sobre a simulação atual; Técnica e Comercial valem entre simulações. Oportunidade com parecer pedido não é descartada sozinha pela regra do radar: fica no Radar para a Diretoria decidir."
         ] },
         { titulo: "Regras do radar", itens: [
           "\"Coletor ligado\" liga ou desliga a coleta automática. Porte da matriz: EPP (decisão do dono).",
