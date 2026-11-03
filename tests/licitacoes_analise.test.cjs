@@ -817,13 +817,17 @@ function respostaAduana(extra) {
 test('calibração 03/11 (despacho aduaneiro, prova real): fora do ramo PASSA com capacidade 0 e FORA_DO_CATALOGO a confirmar, pelo objeto inteiro e pela frase do catálogo; nada zera sozinho', () => {
   const a = ambiente();
   const ctx = ctxDe(a, ADUANA);
-  const v = a.ctx.Lic_verificarAnalise_(respostaAduana(), ctx);
+  // revisão de 501f6aa: o código não cita o objeto sozinho; sem item "não atende" conferido, a resposta é recusada
+  assert.match(a.ctx.Lic_verificarAnalise_(respostaAduana(), ctx).problemas.join('\n'), /^capacidade: nenhum item conferiu com trecho da fonte/m);
+  const r = respostaAduana();
+  r.capacidade.itens.unshift({ descricao: 'Desembaraço alfandegário', grau: 'NAO_ATENDE', servico: '', fonte: { ref: 'CAMPO:objeto', trecho: 'serviços de despacho aduaneiro, bem como o desembaraço alfandegário' } });
+  const v = a.ctx.Lic_verificarAnalise_(r, ctx);
   assert.equal(v.ok, true, v.problemas.join('; '));
   assert.equal(v.parcial, true, 'o item com reticências caiu');
-  assert.match(v.problemas.join('\n'), /capacidade, item 1: .*reticências não valem em capacidade nem em trava/);
+  assert.match(v.problemas.join('\n'), /capacidade, item 2: .*reticências não valem em capacidade nem em trava/);
   const it = v.saida.capacidade.itens;
   assert.equal(it.length, 1);
-  assert.deepEqual([it[0].grau, it[0].origem, it[0].fonte.ref, it[0].fonte.trecho], ['NAO_ATENDE', 'SISTEMA', 'CAMPO:objeto', ADUANA.OBJETO], 'o código cita o objeto inteiro');
+  assert.deepEqual([it[0].grau, it[0].origem, it[0].fonte.ref, it[0].fonte.trecho], ['NAO_ATENDE', undefined, 'CAMPO:objeto', 'serviços de despacho aduaneiro, bem como o desembaraço alfandegário'], 'vale o item da IA que conferiu');
   assert.equal(v.saida.capacidade.pontos, 0);
   const t = v.saida.travas;
   assert.equal(t.length, 1);
@@ -849,7 +853,7 @@ test('calibração 03/11 (despacho aduaneiro, prova real): fora do ramo PASSA co
   assert.deepEqual(local(v2.saida.travas.map((x) => [x.codigo, x.origem])), [['FORA_DO_CATALOGO', 'SISTEMA']]);
   assert.equal(v2.saida.capacidade.itens[0].fonte.trecho, 'serviços de despacho aduaneiro, bem como o desembaraço alfandegário', 'trecho da IA que confere vale (não é trocado pelo objeto)');
   // trava repetida (uma por item, como a IA fez em 4 análises reais) conta uma vez
-  const rep = respostaAduana(); rep.travas.push(JSON.parse(JSON.stringify(rep.travas[0])));
+  const rep = JSON.parse(JSON.stringify(r)); rep.travas.push(JSON.parse(JSON.stringify(rep.travas[0])));
   assert.equal(a.ctx.Lic_verificarAnalise_(rep, ctx).saida.travas.length, 1);
 });
 

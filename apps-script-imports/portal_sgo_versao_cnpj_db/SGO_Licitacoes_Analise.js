@@ -862,8 +862,11 @@ function Lic_conferirSemFatoSolto_(onde, texto, ctx, problemas) {
  */
 var LIC_PARCIAL_MAX = 0.5;
 function Lic_motivoCurto_(p) {
-  p = Lic_s_(p);
-  if (/a IA não decide|acreditação RBC|cita fabricante|emoji|markdown/.test(p)) return 'texto recusado: frase de decisão, promessa de RBC, marca ou formatação';
+  // revisão de 501f6aa: tira da mensagem o que veio da IA (o trecho citado, o pedaço mais perto, o código) antes de classificar
+  p = Lic_s_(p).replace(/^[^:]*:\s*/, '').replace(/o trecho "[\s\S]*?" não está em/, 'o trecho não está em').replace(/; o mais perto em [\s\S]*$/, '')
+    .replace(/; ele está em [\s\S]*$/, '').replace(/curto demais para conferir \("[\s\S]*?"\)/, 'curto demais para conferir').replace(/código fora da lista \([\s\S]*\)$/, 'código fora da lista')
+    .replace(/termo que não é serviço da Metrolabs \("[^"]*"\)/, 'termo que não é serviço da Metrolabs').replace(/cita fabricante ou marca \([^)]*\)/, 'cita fabricante ou marca');
+  if (/^(a IA não decide|não afirme nem prometa acreditação RBC|cita fabricante ou marca|emoji$|formatação \(markdown\))/.test(p)) return 'texto recusado: frase de decisão, promessa de RBC, marca ou formatação';
   if (/trecho vem logo depois de|corta um/.test(p)) return 'o trecho corta uma negação da fonte';
   if (/reticências/.test(p)) return 'o trecho junta pedaços da fonte com reticências';
   if (/não está em/.test(p)) return 'o trecho citado não está na fonte';
@@ -881,10 +884,15 @@ function Lic_motivoCurto_(p) {
   if (/vazio/.test(p)) return 'texto vazio';
   return 'não conferido nas fontes';
 }
-/** Texto da IA que pode aparecer na pendência do que caiu: só o que passou na conferência de texto e não tem número nem citação solta. */
+/**
+ * Texto da IA que pode aparecer na pendência do que caiu: só o que passou na conferência de texto e não tem número nem citação
+ * solta. Revisão de 501f6aa: nem texto com negação ou exceção ("O edital não exige RBC") nem com termo impeditivo (RBC,
+ * acreditação, atestado, registro, Inmetro): o que não conferiu não pode parecer fato sobre o edital.
+ */
 function Lic_textoCaidoMostra_(t, ctx) {
   var s = Lic_s_(t), p = [];
   if (!s) return '';
+  if (Lic_impeditivo_(s) || Lic_tokens_(s.replace(/[-‐‑–—]/g, ' ')).toks.some(function (x) { return LIC_NEGACAO.test(x) || LIC_EXCECAO.test(x); })) return '';
   Lic_conferirTexto_('x', s, ctx, p, false);
   Lic_conferirSemFatoSolto_('x', s, ctx, p);
   return p.length ? '' : Lic_texto_(s, 200);
@@ -909,10 +917,10 @@ function Lic_verificarAnalise_(j, ctx) {
   if (!j || typeof j !== 'object') return { ok: false, problemas: ['a resposta não é o JSON pedido'], saida: null, caidos: [] };
   var saida = { resumo: '', capacidade: { pontos: 0, itens: [], justificativa: '' }, documentacao: { pontos: 0, exigencias: [], justificativa: '' }, riscos: [], travas: [], afirmacoes: [] };
   /** O elemento caiu: os problemas vão para a nova tentativa e para o registro; na análise, vira pendência visível. */
-  function cair(criterio, oque, pe) {
+  function cair(criterio, oque, pe, semPendencia) {
     caidos.push({ criterio: criterio, oque: oque, problemas: pe.slice(0, 6) });
     pe.forEach(function (p) { elem.push(p); });
-    rede.push({ tipo: 'PENDENCIA', criterio: criterio, origem: 'SISTEMA', caiu: true, fonte: null,
+    if (!semPendencia) rede.push({ tipo: 'PENDENCIA', criterio: criterio, origem: 'SISTEMA', caiu: true, fonte: null,
       texto: Lic_texto_('Não conferido (' + Lic_motivoCurto_(pe[0]) + '): ' + oque + '. Não conta na nota; conferir no edital.', 600) });
   }
   var resumo = Lic_conferirTexto_('resumo', j.resumo, ctx, problemas, true);
@@ -930,7 +938,7 @@ function Lic_verificarAnalise_(j, ctx) {
   saida.capacidade.justificativa = Lic_texto_(Lic_conferirTexto_('capacidade, justificativa', cap.justificativa, ctx, problemas, true), 1200);
   var itens = Array.isArray(cap.itens) ? cap.itens : [];
   if (!itens.length) problemas.push('capacidade: classifique pelo menos um item ou serviço do edital, com o grau e o trecho');
-  var capCaidos = 0, grausIA = [];
+  var capCaidos = 0, capCaidosAM = 0, grausIA = [];
   // 03/11/2026 (banco de prova): objeto que é só lista de produtos ("AGITADOR, ESTERILIZADOR, INCUBADORA...") não pede serviço;
   // trecho que só nomeia o equipamento vale como prova de serviço quando o objeto pede serviço (calibração, manutenção...)
   var fObjC = ctx.fontes['CAMPO:objeto'], objN = fObjC ? ' ' + Lic_normTrecho_(fObjC.texto) + ' ' : '';
@@ -957,22 +965,22 @@ function Lic_verificarAnalise_(j, ctx) {
     var desc = Lic_texto_(Lic_conferirTexto_(onde + ', descrição', it.descricao, ctx, pe, true), 400);
     if (pe.length || !fo) {
       capCaidos++;
+      if (grau === 'ALTA' || grau === 'MEDIA') capCaidosAM++;
       var dm = Lic_textoCaidoMostra_(it.descricao, ctx);
       cair('capacidade', (dm ? 'o item "' + dm + '"' : 'um item') + (LIC_GRAUS[grau] ? ' com grau ' + LIC_GRAUS[grau] : '') + (LIC_SERVICOS[cod] ? ' (' + cod + ')' : '') + ', que conta zero na capacidade', pe.length ? pe : [onde + ': sem fonte']);
       return;
     }
     saida.capacidade.itens.push({ descricao: desc, grau: grau, grauNome: LIC_GRAUS[grau], servico: LIC_SERVICOS[cod] ? cod : Lic_texto_(it.servico, 60), fonte: fo });
   });
-  // fora do ramo: a IA disse "não atende" em tudo e nenhum trecho conferiu → o código cita o objeto inteiro (0 de capacidade)
+  // fora do ramo (revisão de 501f6aa): só vale com item "não atende" da IA conferido com a fonte e com objeto que não seja do ramo
+  // (objeto que pede serviço e tem termo de serviço do catálogo: "Manutenção preventiva e corretiva de autoclaves hospitalares")
   var todosNaoIA = grausIA.length > 0 && grausIA.every(function (g) { return g === 'NAO_ATENDE'; });
-  if (!saida.capacidade.itens.length && todosNaoIA) {
-    var fObj = Lic_fonteObjeto_(ctx);
-    if (fObj) {
-      saida.capacidade.itens.push({ descricao: 'Objeto da contratação (o código citou o objeto inteiro: nenhum item da IA conferiu)', grau: 'NAO_ATENDE', grauNome: LIC_GRAUS.NAO_ATENDE, servico: '', fonte: fObj, origem: 'SISTEMA' });
-      var cabemObj = Lic_servicosQueCabem_(fObj.trecho);
-      if (cabemObj.length) rede.push({ tipo: 'PENDENCIA', criterio: 'capacidade', origem: 'SISTEMA', fonte: null, texto: 'A IA classificou tudo como "não atende", mas o objeto tem termos de serviços do catálogo (' + cabemObj.slice(0, 6).join(', ') + '): conferir na aba Arquivos se algum item é serviço da Metrolabs.' });
-    }
-  }
+  // só serviços específicos do catálogo e palavra inteira (ou plural): "instalação", "laudo" e "consultoria" (hora técnica
+  // genérica) não fazem o objeto ser do ramo, nem "monitoramento" vira monitor (banco de prova: 8 objetos fora do ramo recusados)
+  var cabemObj = fObjC ? Lic_servicosQueCabem_(fObjC.texto).filter(function (c) {
+    return !LIC_SERVICOS_GRAU_MAX[c] && LIC_SERVICOS[c].some(function (t) { return new RegExp(' ' + t + '(e?s)? ').test(objN); });
+  }) : [], objDoRamo = !!fObjC && LIC_SERVICO_ACAO.test(objN) && cabemObj.length > 0;
+  if (todosNaoIA && objDoRamo) problemas.push('capacidade: o objeto tem serviços do catálogo (' + cabemObj.slice(0, 8).join(', ') + '): "não atende" em tudo não vale para este objeto. Classifique cada item com o código e o grau, citando o trecho literal; se algum item for de fato fora do catálogo, diga qual e por quê numa PENDENCIA');
   if (itens.length && !saida.capacidade.itens.length) problemas.push('capacidade: nenhum item conferiu com trecho da fonte. Cite cada item pelo ITEM:n, pelo objeto (CAMPO:objeto) ou por uma frase seguida do arquivo; se o objeto não é serviço da Metrolabs, classifique como NAO_ATENDE');
   // proporção de itens: ALTA provada conta 1, MÉDIA provada conta meio, o resto zero (item caído conta zero)
   // denominador: os itens da FONTE (ITEM:n), quando houver; senão os que a IA classificou (inclusive os que caíram)
@@ -981,6 +989,7 @@ function Lic_verificarAnalise_(j, ctx) {
   var nItens = Math.max(nClass, nFonte, saida.capacidade.itens.length), conta = 0;
   saida.capacidade.itens.forEach(function (it) { if (it.fonte) conta += it.grau === 'ALTA' ? 1 : it.grau === 'MEDIA' ? 0.5 : 0; });
   conta = Math.min(conta, nItens);
+  if (capCaidosAM) problemas.push('capacidade: ' + capCaidosAM + ' item(ns) com grau ALTA ou MEDIA não conferiram com a fonte (o resumo e a justificativa não podem afirmar capacidade que não foi provada); copie o trecho literal de cada um ou classifique como BAIXA ou NAO_ATENDE com uma PENDENCIA');
   saida.capacidade.pontos = nItens ? Lic_r1_(pesos.capacidade * conta / nItens) : 0;
   saida.capacidade.como = nItens ? nItens + ' item(ns)' + (nFonte && nFonte >= nClass ? ' na fonte' : ' classificado(s)') + ': ' + saida.capacidade.itens.filter(function (x) { return x.fonte && x.grau === 'ALTA'; }).length + ' de grau alto e ' + saida.capacidade.itens.filter(function (x) { return x.fonte && x.grau === 'MEDIA'; }).length + ' médio provados por trecho (alto conta 1, médio meio, o resto zero' + (capCaidos ? '; ' + capCaidos + ' item(ns) da IA não conferido(s) contam zero' : '') + ').' : '';
   // item do catálogo provado, ou que a própria IA classificou como alto ou médio (mesmo sem conferir): FORA_DO_CATALOGO não vale
@@ -988,6 +997,7 @@ function Lic_verificarAnalise_(j, ctx) {
   if (objCompra && saida.capacidade.itens.some(function (x) { return x.grau === 'ALTA' || x.grau === 'MEDIA'; }))
     rede.push({ tipo: 'PENDENCIA', criterio: 'capacidade', origem: 'SISTEMA', fonte: null, texto: 'O objeto começa como compra ou fornecimento de produto: o serviço provado pode ser só acessório da compra (instalação, garantia, assistência do fabricante). Conferir no termo de referência se a Metrolabs pode prestar o serviço sem fornecer o equipamento.' });
   var todosNao = saida.capacidade.itens.length > 0 && saida.capacidade.itens.every(function (x) { return x.grau === 'NAO_ATENDE'; }) && todosNaoIA;
+  var objetoVale = todosNao && !objDoRamo;
   // documentação (sem cadastro de habilitação no SGO+: no máximo metade)
   var doc = j.documentacao && typeof j.documentacao === 'object' ? j.documentacao : {};
   saida.documentacao.pontos = pontos('documentação', doc.pontos, pesos.documentacao);
@@ -1019,12 +1029,20 @@ function Lic_verificarAnalise_(j, ctx) {
     saida.riscos.push({ codigo: cod, nome: LIC_RISCOS[cod], texto: txR, fonte: fo });
   });
   // travas (lista fechada; cada uma provada). Trava da IA nunca zera sozinha: fica "a confirmar" pela Diretoria
-  var travasIA = 0, travasDescartadas = 0, foraIA = null;
+  var travasIA = 0, travasDescartadas = 0, travasCaidas = 0, foraIA = null;
+  /** Revisão de 501f6aa: a trava apontada pela IA que não conferiu fica na análise, a confirmar (a classe mostra), sem fonte. */
+  function travaCaida(cod, pe) {
+    travasCaidas++;
+    cair('trava', 'a trava "' + LIC_TRAVAS[cod] + '" apontada pela IA', pe, true);
+    if (saida.travas.some(function (t) { return t.codigo === cod && t.naoConferida; })) return;
+    saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], naoConferida: true, fonte: null, fonteRegra: null, excecao: '', assinatura: '', assinaturaFonte: '', chave: Lic_chaveTrava_(cod, 'nao conferida'),
+      texto: 'Não conferida — confirme no edital: a IA apontou esta trava, mas o trecho citado não conferiu com a fonte (' + Lic_motivoCurto_(pe[0]) + ').' });
+  }
   (Array.isArray(j.travas) ? j.travas : []).slice(0, 8).forEach(function (x, k) {
     x = x && typeof x === 'object' ? x : {};
     var pe = [], onde = 'trava ' + (k + 1), cod = Lic_up_(x.codigo);
     travasIA++; nElem++;
-    if (!LIC_TRAVAS[cod]) { pe.push(onde + ': código fora da lista (' + (Lic_s_(x.codigo) || 'vazio') + ')'); cair('trava', 'uma trava com código fora da lista', pe); return; }
+    if (!LIC_TRAVAS[cod]) { pe.push(onde + ': código fora da lista (' + (Lic_s_(x.codigo) || 'vazio') + ')'); travasCaidas++; cair('trava', 'uma trava com código fora da lista', pe); return; }
     var txT = Lic_texto_(Lic_conferirTexto_(onde, x.texto, ctx, pe, true), 600);
     if (cod === 'FORA_DO_CATALOGO') {
       // "todos os itens fora": com item do catálogo provado (ALTA ou MÉDIA), não vale; a repetida (uma por item) conta uma vez
@@ -1036,8 +1054,8 @@ function Lic_verificarAnalise_(j, ctx) {
       var foRF = x.fonteRegra && typeof x.fonteRegra === 'object' ? Lic_conferirFonte_(onde + ', fonteRegra', x.fonteRegra, ctx, [], { tipo: 'TRAVA', estrito: true }) : null;
       if (!foRF || foRF.ref !== 'REGRA:catalogo') foRF = Lic_fonteForaRegra_(ctx);
       // o trecho do edital da IA não conferiu: com todos os itens "não atende", o objeto inteiro prova (é o que o edital pede)
-      if (!foF && todosNao) foF = Lic_fonteObjeto_(ctx);
-      if (pe.length || !foF || !foRF) { cair('trava', 'a trava "' + LIC_TRAVAS[cod] + '" apontada pela IA', pe.length ? pe : peF.length ? peF : [onde + ': FORA_DO_CATALOGO sem prova']); return; }
+      if (!foF && objetoVale) foF = Lic_fonteObjeto_(ctx);
+      if (pe.length || !foF || !foRF) { travaCaida(cod, pe.length ? pe : peF.length ? peF : [onde + ': FORA_DO_CATALOGO sem prova']); return; }
       peF.forEach(function (p) { elem.push(p); });
       foraIA = { codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foF, fonteRegra: foRF, chave: Lic_chaveTrava_(cod, foF.trecho), excecao: Lic_negacaoPerto_(foF), assinatura: Lic_assinaturaTrava_(foF), assinaturaFonte: Lic_assinaturaFonteTrava_(foF, ctx) };
       saida.travas.push(foraIA);
@@ -1049,16 +1067,20 @@ function Lic_verificarAnalise_(j, ctx) {
     if (foR && !foR.regra) { pe.push(onde + ', fonteRegra: use uma REGRA:... (o trecho do edital vai em fonte)'); foR = null; }
     // assunto (revisão de 02/11/2026): o trecho tem de falar do assunto da trava (DEDICACAO_EXCLUSIVA não se prova com o prazo de execução)
     if (foT && !Lic_travaNoAssunto_(cod, foT.trecho)) pe.push(onde + ': o trecho não fala do assunto da trava ' + cod + ' (precisa falar de ' + LIC_TRAVA_ASSUNTO[cod].rotulo + '); cite o trecho do edital que trata disso ou escreva uma PENDENCIA');
-    if (pe.length || !foT) { cair('trava', 'a trava "' + LIC_TRAVAS[cod] + '" apontada pela IA', pe.length ? pe : [onde + ': sem fonte']); return; }
+    if (pe.length || !foT) { travaCaida(cod, pe.length ? pe : [onde + ': sem fonte']); return; }
     // decisão do coordenador (02/11/2026): a rede de segurança só marca o alerta de exceção (negação ou exceção perto do trecho)
     saida.travas.push({ codigo: cod, nome: LIC_TRAVAS[cod], texto: txT, fonte: foT, fonteRegra: foR, chave: Lic_chaveTrava_(cod, foT.trecho), excecao: Lic_negacaoPerto_(foT), assinatura: Lic_assinaturaTrava_(foT), assinaturaFonte: Lic_assinaturaFonteTrava_(foT, ctx) });
   });
   // fora do ramo sem a trava: com todos os itens "não atende", o código põe FORA_DO_CATALOGO (a confirmar), pelo objeto e pelo catálogo
-  if (todosNao && !foraIA && !saida.travas.some(function (t) { return t.codigo === 'PRODUTO_SEM_CATALOGO'; })) {
+  if (objetoVale && !foraIA && !saida.travas.some(function (t) { return t.codigo === 'PRODUTO_SEM_CATALOGO'; })) {
     var fo2 = Lic_fonteObjeto_(ctx), fr2 = Lic_fonteForaRegra_(ctx);
     if (fo2 && fr2) saida.travas.push({ codigo: 'FORA_DO_CATALOGO', nome: LIC_TRAVAS.FORA_DO_CATALOGO, origem: 'SISTEMA', texto: 'Todos os itens foram classificados como "não atende": o objeto não é serviço do catálogo da Metrolabs (a confirmar pela Diretoria).', fonte: fo2, fonteRegra: fr2, chave: Lic_chaveTrava_('FORA_DO_CATALOGO', fo2.trecho), excecao: Lic_negacaoPerto_(fo2), assinatura: Lic_assinaturaTrava_(fo2), assinaturaFonte: Lic_assinaturaFonteTrava_(fo2, ctx) });
   }
-  if (travasIA && !saida.travas.length && !travasDescartadas) problemas.push('travas: nenhuma das ' + travasIA + ' trava(s) apontadas conferiu com trecho do edital; prove a trava com uma frase seguida do edital (sem reticências) ou escreva uma PENDENCIA com criterio "trava"');
+  // a não conferida de um código que conferiu em outra trava sai (fica a provada)
+  saida.travas = saida.travas.filter(function (t) { return !t.naoConferida || !saida.travas.some(function (u) { return !u.naoConferida && u.codigo === t.codigo; }); });
+  var travasOk = saida.travas.filter(function (t) { return !t.naoConferida; }).length;
+  // a trava descartada pelo código só libera a recusa se nenhuma outra caiu (revisão de 501f6aa: RBC caída + FORA descartada)
+  if (travasIA && !travasOk && (travasCaidas || !travasDescartadas)) problemas.push('travas: nenhuma das ' + travasIA + ' trava(s) apontadas conferiu com trecho do edital; prove a trava com uma frase seguida do edital (sem reticências) ou escreva uma PENDENCIA com criterio "trava"');
   // afirmações
   var afs = Array.isArray(j.afirmacoes) ? j.afirmacoes : [];
   if (!afs.length) problemas.push('afirmações: faltam os fatos, as inferências e as pendências');
@@ -1088,7 +1110,7 @@ function Lic_verificarAnalise_(j, ctx) {
     saida.afirmacoes.push({ tipo: tipo, criterio: crit, texto: texto, fonte: fo, origem: 'IA' });
   });
   if (afs.length && !fatosOk) problemas.push('afirmações: nenhum FATO com fonte conferida');
-  if (ctx.triagemTravada && !saida.travas.length && !pendTravaIA)
+  if (ctx.triagemTravada && !travasOk && !pendTravaIA)
     problemas.push('trava: a triagem por regras travou esta oportunidade (' + Lic_texto_(ctx.triagemMotivo, 160) + '); prove a trava com o trecho ou escreva uma PENDENCIA com criterio "trava" dizendo o que confirmar no edital');
   saida.afirmacoes = Lic_afirmacoesSemRepetir_(saida.afirmacoes.concat(rede));
   // resumo e justificativas: número ou citação entre aspas tem de estar nas fontes ou no que o sistema calculou
@@ -1103,6 +1125,11 @@ function Lic_verificarAnalise_(j, ctx) {
   // os problemas da resposta toda vêm primeiro (a nova tentativa recebe os 15 primeiros)
   if (problemas.length) return { ok: false, parcial: false, problemas: problemas.concat(elem), caidos: caidos, saida: null };
   saida.caidos = caidos.length;
+  if (caidos.length) {
+    var gc = function (g) { return saida.capacidade.itens.filter(function (x) { return x.grau === g; }).length; };
+    saida.resumo = Lic_texto_('Aviso do sistema: ' + caidos.length + (caidos.length === 1 ? ' ponto da resposta da IA não conferiu' : ' pontos da resposta da IA não conferiram') + ' com as fontes e ficou fora da nota; capacidade provada: ' +
+      gc('ALTA') + ' item(ns) de grau alto, ' + gc('MEDIA') + ' médio, ' + gc('BAIXA') + ' baixo e ' + gc('NAO_ATENDE') + ' não atende, de ' + nItens + '. ' + saida.resumo, 1700);
+  }
   return { ok: true, parcial: caidos.length > 0, problemas: elem, caidos: caidos, saida: saida };
 }
 
