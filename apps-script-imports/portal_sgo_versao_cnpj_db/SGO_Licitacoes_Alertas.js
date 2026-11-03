@@ -58,6 +58,7 @@ var LIC_ALERTAS_PADRAO = {
     PRAZO_IMPUGNACAO: [{ min: 2880, nivel: 'NORMAL' }, { min: 1440, nivel: 'IMPORTANTE' }, { min: 240, nivel: 'IMPORTANTE' }],
     PRAZO_ESCLARECIMENTO: [{ min: 2880, nivel: 'NORMAL' }, { min: 1440, nivel: 'IMPORTANTE' }, { min: 240, nivel: 'IMPORTANTE' }],
     PRAZO_RECURSO: [{ min: 2880, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'IMPORTANTE' }, { min: 240, nivel: 'CRITICO' }],
+    PRAZO_CONTRARRAZOES: [{ min: 2880, nivel: 'IMPORTANTE' }, { min: 1440, nivel: 'IMPORTANTE' }, { min: 240, nivel: 'CRITICO' }],
     ABERTURA_PROPOSTAS: []
   },
   mudancas: { RETIFICACAO: 'IMPORTANTE', REABERTURA: 'IMPORTANTE', SUSPENSAO: 'CRITICO', REVOGACAO: 'CRITICO', ANULACAO: 'CRITICO' }
@@ -428,7 +429,7 @@ function Lic_agendaAposSituacao_(id) {
 var LIC_ACOES_TIPO = {
   LIMITE_PROPOSTA: { RADAR: 'decidir se participa e, se sim, enviar a proposta no portal antes do fim', ANALISE: 'concluir a análise e enviar a proposta no portal antes do fim', OUTRA: 'conferir se a proposta foi enviada no portal' },
   SESSAO_PUBLICA: 'acompanhar a abertura da sessão no portal', PRAZO_IMPUGNACAO: 'decidir se impugna o edital até o limite interno', PRAZO_ESCLARECIMENTO: 'enviar o pedido de esclarecimento, se houver dúvida, até o limite interno',
-  PRAZO_RECURSO: 'protocolar as razões de recurso no portal até o limite interno', ABERTURA_PROPOSTAS: 'conferir o edital: o recebimento das propostas começou'
+  PRAZO_RECURSO: 'protocolar as razões de recurso no portal até o limite interno', PRAZO_CONTRARRAZOES: 'protocolar as contrarrazões no portal até o limite interno', ABERTURA_PROPOSTAS: 'conferir o edital: o recebimento das propostas começou'
 };
 function Lic_acaoAlerta_(a, l) {
   if (Lic_s_(a.TIPO) === 'MUDANCA') return Lic_s_(a.ANTECEDENCIA) === 'SUSPENSAO' ? 'acompanhar a reabertura; os alertas pendentes foram cancelados' : /REVOGACAO|ANULACAO/.test(Lic_s_(a.ANTECEDENCIA)) ? 'conferir o ato na fonte; os alertas pendentes foram cancelados' : 'conferir a mudança na fonte e os prazos novos na agenda';

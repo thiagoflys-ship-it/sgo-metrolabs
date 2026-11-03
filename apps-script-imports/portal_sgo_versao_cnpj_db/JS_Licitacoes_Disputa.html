@@ -1,0 +1,306 @@
+<!--
+  SGO+ LICITAÇÕES — CENTRAL DE DISPUTAS, MODO ASSISTIDO (02/11/2026): a tela "Central de disputas" (menu) e a aba "Disputa" da ficha.
+  Modo assistido: o SGO+ NUNCA envia lance nem acessa o portal. A Diretoria dá o lance no portal e digita aqui o nosso lance e o
+  melhor lance do concorrente; o SGO+ mostra a sobra a cada valor (a mesma conta da simulação), a distância ao piso e a sugestão do
+  próximo lance (regra fixa: melhor lance − intervalo, nunca abaixo do piso; a IA não sugere valor). Lance abaixo do piso é recusado
+  pelo servidor com o porquê. Servidor: SGO_Licitacoes_Disputa.js (Licitacoes_api ação "disputa" com { op }).
+  Usa os utilitários de JS_Licitacoes.html (Lic_esc_, Lic_chamar_, Lic_janela_, Lic_faixa_, Lic_tabelaHtml_, Lic_brl_, Lic_toast_,
+  Lic_dataHora_, Lic_carregando_, Lic_erroTela_, Lic_ligarRefazer_, Lic_irFicha_) e a janela segura do A4 de JS_Licitacoes_Proposta.html.
+  Todo texto passa por Lic_esc_. Sem atualização automática: só redesenha depois de uma ação de quem está na tela.
+-->
+<style>
+  .ldp-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+  .ldp-grade label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .ldp-grade input, .ldp-grade select, .ldp-grade textarea { width: 100%; min-height: 44px; box-sizing: border-box; max-width: 100%; }
+  .ldp-grade .ldp-largo { grid-column: 1 / -1; }
+  .ldp-cab { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+  .ldp-cab h3 { margin: 0; min-width: 0; flex: 1 1 220px; overflow-wrap: anywhere; }
+  .ldp-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px 14px; margin: 8px 0; font-size: 12.5px; }
+  .ldp-dl div { min-width: 0; }
+  .ldp-dl span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+  .ldp-dl b { font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .ldp-item { border: 1px solid var(--border); border-left: 4px solid var(--bc-line-2); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; background: var(--card); overflow-wrap: anywhere; }
+  .ldp-item.frente { border-left-color: var(--success); }
+  .ldp-item.atras { border-left-color: var(--warning, #b26a00); }
+  .ldp-item.fora { border-left-color: var(--muted); opacity: .85; }
+  .ldp-sug { border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 13px; background: var(--info-bg, #eef4fb); border: 1px solid var(--info, #1f5fa8); }
+  .ldp-sug.piso { background: var(--danger-bg, #fdecea); border-color: var(--danger, #b3261e); }
+  .ldp-sug b { font-variant-numeric: tabular-nums; }
+  .ldp-lance { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; align-items: end; margin-top: 8px; }
+  .ldp-lance label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .ldp-lance input { width: 100%; min-height: 44px; box-sizing: border-box; font-variant-numeric: tabular-nums; }
+  .ldp-lance button { min-height: 44px; }
+  .ldp-previa { font-size: 12px; margin-top: 3px; min-height: 16px; }
+  .ldp-vermelho { color: var(--danger, #b3261e); font-weight: 700; }
+  .ldp-prejuizo { border: 2px solid var(--danger, #b3261e); background: var(--danger-bg, #fdecea); color: var(--danger, #b3261e); border-radius: 8px; padding: 8px 10px; font-weight: 700; margin: 8px 0; }
+  .ldp-aceite { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 700; cursor: pointer; }
+  .ldp-aceite input { width: 20px; height: 20px; }
+  .ldp-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  .ldp-lista { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; }
+  .ldp-lista li { padding: 5px 0; border-top: 1px dashed var(--border); overflow-wrap: anywhere; }
+  @media (max-width: 900px) { .ldp-acoes .btn-primary, .ldp-acoes .btn-secondary { flex: 1 1 140px; } }
+</style>
+<script>
+  var LICDP = { aba: {}, central: null };
+  var LICDP_RES = [["GANHO", "Ganho"], ["PERDIDO", "Perdido"], ["FRACASSADO", "Fracassado"], ["DESERTO", "Deserto"], ["DESCLASSIFICADO", "Desclassificado (com motivo)"], ["HABILITACAO_PENDENTE", "Habilitação pendente"], ["RECURSO", "Em recurso"]];
+  var LICDP_COR_RES = { GANHO: "verde", PERDIDO: "vermelho", FRACASSADO: "cinza", DESERTO: "cinza", DESCLASSIFICADO: "vermelho", HABILITACAO_PENDENTE: "laranja", RECURSO: "laranja" };
+  var LICDP_POSICAO = { NA_FRENTE: ["verde", "Nosso lance é o melhor"], EMPATE: ["laranja", "Empate com o melhor lance"], ATRAS: ["laranja", "Concorrente na frente"], SEM_CONCORRENTE: ["cinza", "Sem lance do concorrente informado"] };
+
+  function LicDp_chamar_(op, dados, ok, erro, o) { Lic_chamar_("disputa", Object.assign({ op: op }, dados || {}), ok, erro, Object.assign({ ignorarVelha: true }, o || {})); }
+  function LicDp_selo_(cor, texto) { return '<span class="cm-selo ' + Lic_esc_(cor || "cinza") + '">' + Lic_esc_(texto) + "</span>"; }
+  function LicDp_valor_(id) { var e = Lic_$_(id); return e ? e.value : ""; }
+  function LicDp_curto_(h) { return '<span class="lic-hash" title="' + Lic_esc_(h) + '">' + Lic_esc_(String(h || "").slice(0, 12)) + (h ? "…" : "—") + "</span>"; }
+  /** Número digitado em pt-BR ("1.234,56", "185,4", "185.40") ou null; a mesma leitura do servidor (LicP_n_). */
+  function LicDp_num_(v) {
+    if (typeof v === "number") return isFinite(v) ? v : null;
+    var s = String(v === null || v === undefined ? "" : v).replace(/R\$|%|\s/g, "");
+    if (!s) return null;
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+    else if (/^-?\d+,\d+$/.test(s)) s = s.replace(",", ".");
+    else if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+    var n = Number(s); return isFinite(n) ? n : null;
+  }
+  function LicDp_pct_(v) { return v === null || v === undefined || !isFinite(Number(v)) ? "—" : Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%"; }
+  /** Sobra de um valor unitário: a mesma conta do servidor (LicP_sobra_), com os impostos gravados na simulação. */
+  function LicDp_sobra_(it, preco) {
+    var P = Number(preco) || 0, C = Number(it.custoUnit) || 0, pc = it.pc || {};
+    if (!(P > 0)) return null;
+    var imp = it.tipo === "PRODUTO" ? P * (pc.impP || 0) / 100 - C * (pc.cred || 0) / 100 : P * (pc.imp || 0) / 100, s = P - imp - P * (pc.comissao || 0) / 100 - C;
+    return { sobra: Math.round(s * 100) / 100, pct: Math.round(s / P * 10000) / 100 };
+  }
+
+  // ================= Central de disputas (menu) =================
+  function LicDp_renderCentral_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(2);
+    LicDp_chamar_("central", {}, function (r) { LICDP.central = r; c.innerHTML = LicDp_htmlCentral_(r); LicDp_ligarCentral_(c); },
+      function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, LicDp_renderCentral_); });
+  }
+  function LicDp_htmlCentral_(r) {
+    var k = r.contagens || {};
+    var h = Lic_faixa_(r.aviso || "", "aviso") + '<div class="cm-kpis"><div class="cm-kpi"><b>' + Lic_esc_(k.abertas || 0) + '</b><span>Disputas abertas</span></div><div class="cm-kpi"><b>' + Lic_esc_(k.prontas || 0) +
+      '</b><span>Prontas para abrir (proposta emitida)</span></div><div class="cm-kpi"><b>' + Lic_esc_(k.resultado || 0) + '</b><span>Com resultado registrado</span></div></div>' +
+      '<div class="lic-acoes-linha ldp-acoes" style="margin:8px 0"><button type="button" class="btn-secondary" data-ldp-central-atualizar>Atualizar</button></div>';
+    h += '<div class="cm-caixa"><h3>Disputas</h3>' + ((r.disputas || []).length ? Lic_tabelaHtml_(["Licitação", "Órgão", "Sessão", "Situação", "Itens", "Lances", ""], r.disputas.map(function (x) {
+      return ['<span class="lic-mono">' + Lic_esc_(x.codigo) + "</span>", Lic_esc_(x.orgao) + " · " + Lic_esc_(x.uf), Lic_esc_(x.sessaoTexto || "a informar") + (x.sessaoIso && x.sessaoPassou && x.situacao === "ABERTA" ? " " + LicDp_selo_("laranja", "já começou") : ""),
+        LicDp_selo_(x.situacao === "ABERTA" ? "azul" : "verde", x.situacaoNome) + (x.integra ? "" : " " + LicDp_selo_("vermelho", "alterada fora do SGO+")),
+        Lic_esc_(x.itens + " · " + x.comResultado + " com resultado" + (x.ganhos ? " · " + x.ganhos + " ganho(s)" : "") + (x.desistidos ? " · " + x.desistidos + " desistido(s)" : "")), Lic_esc_(x.lances),
+        '<button type="button" class="btn-secondary" data-ldp-ficha="' + Lic_esc_(x.opId) + '">Abrir o painel</button>'];
+    })) : '<p class="cm-vazio">Nenhuma disputa aberta ainda. A disputa abre na ficha da licitação, aba Disputa, depois da proposta emitida.</p>') + "</div>";
+    h += '<div class="cm-caixa"><h3>Sessões: prontas para abrir</h3><p class="cm-meta">Licitações com a proposta emitida e sem disputa. A data da sessão vem da agenda (confirme no edital).</p>' + ((r.prontas || []).length ? Lic_tabelaHtml_(["Licitação", "Órgão", "Sessão (agenda)", "Proposta", "Total", ""], r.prontas.map(function (x) {
+      return ['<span class="lic-mono">' + Lic_esc_(x.codigo) + "</span>", Lic_esc_(x.orgao) + " · " + Lic_esc_(x.uf), Lic_esc_(x.sessaoTexto || "sem data na agenda") + (x.sessaoFonte ? '<br><span class="cm-meta">' + Lic_esc_(x.sessaoFonte) + "</span>" : ""), Lic_esc_(x.proposta), Lic_esc_(Lic_brl_(x.total)),
+        '<button type="button" class="btn-secondary" data-ldp-ficha="' + Lic_esc_(x.opId) + '">Abrir a disputa</button>'];
+    })) : '<p class="cm-vazio">Nenhuma licitação com proposta emitida esperando disputa.</p>') + "</div>";
+    return h;
+  }
+  function LicDp_ligarCentral_(c) {
+    c.querySelectorAll("[data-ldp-ficha]").forEach(function (b) { b.onclick = function () { Lic_irFicha_(b.getAttribute("data-ldp-ficha"), "disputa"); }; });
+    var a = c.querySelector("[data-ldp-central-atualizar]"); if (a) a.onclick = LicDp_renderCentral_;
+  }
+
+  // ================= aba "Disputa" da ficha =================
+  function LicDp_htmlAba_(d) { return '<div id="licDisputa">' + Lic_carregando_(2) + "</div>"; }
+  function LicDp_ligarAba_(c, d, id) {
+    LicDp_chamar_("tela", { id: id }, function (r) { LICDP.aba[id] = r.disputa; LicDp_desenhar_(id); },
+      function (m) { var el = Lic_$_("licDisputa"); if (el) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, function () { LicDp_ligarAba_(c, d, id); }); } });
+  }
+  function LicDp_previaHtml_(t) {
+    var p = t.previa || {}, h = Lic_faixa_(t.aviso || "", "aviso");
+    h += '<div class="cm-caixa"><h3>Abrir a disputa</h3><p class="cm-txt">A disputa usa a proposta emitida (valor inicial de cada item) e a simulação de preço que ela usou (piso de cada item: sobra mínima da política). A Diretoria muda o piso de um item depois de abrir, sempre com o motivo.</p>';
+    if ((p.bloqueios || []).length) h += Lic_faixa_("<b>Antes de abrir:</b><ul class=\"ldp-lista\">" + p.bloqueios.map(function (b) { return "<li>" + Lic_esc_(b) + "</li>"; }).join("") + "</ul>", "erro", true) +
+      '<div class="lic-acoes-linha ldp-acoes"><button type="button" class="btn-secondary" data-ldp-ir="proposta">Ir para a aba Proposta</button><button type="button" class="btn-secondary" data-ldp-ir="preco">Ir para a aba Preço</button></div>';
+    if ((p.avisos || []).length) h += Lic_faixa_("<ul class=\"ldp-lista\">" + p.avisos.map(function (b) { return "<li>" + Lic_esc_(b) + "</li>"; }).join("") + "</ul>", "aviso", true);
+    if (p.proposta) h += '<div class="ldp-dl"><div><span>Proposta emitida</span><b>' + Lic_esc_(p.proposta.numero) + " · " + Lic_esc_(Lic_brl_(p.proposta.total)) + "</b></div><div><span>SHA-256 da proposta</span><b>" + LicDp_curto_(p.proposta.sha256) + "</b></div>" +
+      (p.simulacao ? "<div><span>Simulação de preço</span><b>versão " + Lic_esc_(p.simulacao.versao) + " · " + LicDp_curto_(p.simulacao.hash) + "</b></div>" : "") + "</div>";
+    if ((p.itens || []).length) h += Lic_tabelaHtml_(["Item", "Serviço", "Qtd.", "Valor inicial", "Sobra no valor inicial", "Piso (simulação)", "Custo + impostos"], p.itens.map(function (i) {
+      return [Lic_esc_(i.item), Lic_esc_(i.codigo + (i.nome ? " · " + i.nome : "")), Lic_esc_(String(i.quantidade).replace(".", ",")), Lic_esc_(Lic_brl_(i.valorInicial)), Lic_esc_(i.sobraInicial ? LicDp_pct_(i.sobraInicial.pct) : "—"),
+        Lic_esc_(Lic_brl_(i.pisoSimulacao)) + '<br><span class="cm-meta">sobra mínima ' + Lic_esc_(LicDp_pct_(i.margemMinPct)) + "</span>", Lic_esc_(i.pisoCusto === null ? "—" : Lic_brl_(i.pisoCusto))];
+    }));
+    if (p.podeAbrir) {
+      var s = p.sessao, dia = s && s.iso ? new Date(Date.parse(s.iso) - 3 * 3600e3).toISOString() : "", ie = p.intervaloEdital;
+      h += '<div class="ldp-grade" style="margin-top:10px"><div><label for="ldpSesDia">Data da sessão</label><input id="ldpSesDia" type="date" value="' + Lic_esc_(dia.slice(0, 10)) + '"></div>' +
+        '<div><label for="ldpSesHora">Hora (Brasília)</label><input id="ldpSesHora" type="time" value="' + Lic_esc_(dia.slice(11, 16)) + '"></div>' +
+        '<div class="ldp-largo"><label for="ldpSesFonte">De onde veio a data da sessão</label><input id="ldpSesFonte" maxlength="300" value="' + Lic_esc_(s ? s.fonte : "") + '" placeholder="Ex.: edital, preâmbulo"></div>' +
+        '<div><label for="ldpPortal">Portal da sessão</label><input id="ldpPortal" maxlength="120" placeholder="Ex.: Compras.gov.br"></div>' +
+        '<div><label for="ldpIvTipo">Intervalo mínimo entre lances</label><select id="ldpIvTipo"><option value="VALOR"' + (ie && ie.sugestao && ie.sugestao.tipo === "PERCENTUAL" ? "" : " selected") + '>Em reais</option><option value="PERCENTUAL"' + (ie && ie.sugestao && ie.sugestao.tipo === "PERCENTUAL" ? " selected" : "") + ">Em % do melhor lance</option></select></div>" +
+        '<div><label for="ldpIvValor">Valor do intervalo</label><input id="ldpIvValor" inputmode="decimal" value="' + Lic_esc_(ie && ie.sugestao ? String(ie.sugestao.valor).replace(".", ",") : "") + '" placeholder="vazio = R$ 0,01"></div>' +
+        '<div class="ldp-largo"><label for="ldpIvFonte">De onde veio o intervalo</label><input id="ldpIvFonte" maxlength="300" value="' + Lic_esc_(ie ? "Edital (leitura " + (ie.item || "") + (ie.fonte ? ", " + ie.fonte : "") + ")" : "") + '" placeholder="Ex.: edital, item 7.3"></div>' +
+        (ie ? '<div class="ldp-largo">' + Lic_faixa_("Frase do edital sobre o intervalo: «" + ie.trecho + "»" + (ie.sugestao ? "" : " (o SGO+ não achou o número: digite).") , "aviso") + "</div>" : '<div class="ldp-largo"><p class="cm-ajuda-campo">A leitura do edital não trouxe o intervalo mínimo. Confira no edital; sem intervalo, o SGO+ usa R$ 0,01.</p></div>') +
+        '<div class="ldp-largo"><label for="ldpMotivo">Motivo (obrigatório, fica no histórico)</label><textarea id="ldpMotivo" rows="2" maxlength="1000" placeholder="Ex.: proposta emitida e piso conferido; sessão confirmada no edital"></textarea></div></div><div id="ldpMsg" aria-live="assertive"></div>' +
+        '<div class="lic-acoes-linha ldp-acoes"><button type="button" class="btn-primary" data-ldp-abrir>Abrir a disputa</button></div>';
+    } else h += '<div class="lic-acoes-linha ldp-acoes"><button type="button" class="btn-primary" disabled aria-disabled="true">Abrir a disputa</button></div><p class="cm-ajuda-campo">O botão libera quando os pontos acima forem resolvidos.</p>';
+    return h + "</div>";
+  }
+  function LicDp_itemHtml_(it, disp) {
+    var aberta = disp.situacao === "ABERTA", pos = LICDP_POSICAO[it.posicao] || ["cinza", ""], sug = it.sugestao || {}, r = it.resultado, k = Lic_esc_(it.item);
+    var cls = it.desistiu || r ? " fora" : it.posicao === "NA_FRENTE" ? " frente" : it.posicao === "ATRAS" || it.posicao === "EMPATE" ? " atras" : "";
+    var h = '<article class="ldp-item' + cls + '" data-ldp-item="' + k + '"><div class="ldp-cab"><h3>Item ' + k + " · " + Lic_esc_(it.codigo) + (it.nome ? " · " + Lic_esc_(it.nome) : "") + "</h3>" +
+      (it.desistiu ? LicDp_selo_("cinza", "Desistência") : LicDp_selo_(pos[0], pos[1])) + (r ? " " + LicDp_selo_(LICDP_COR_RES[r.situacao], r.situacaoNome) : "") + "</div>" +
+      (it.descricao ? '<p class="cm-meta" style="margin:4px 0">' + Lic_esc_(it.descricao) + "</p>" : "") +
+      '<div class="ldp-dl"><div><span>Quantidade</span><b>' + Lic_esc_(String(it.quantidade).replace(".", ",")) + "</b></div><div><span>Valor inicial (proposta)</span><b>" + Lic_esc_(Lic_brl_(it.valorInicial)) + "</b></div>" +
+      "<div><span>Nosso lance atual</span><b>" + Lic_esc_(Lic_brl_(it.nossoAtual)) + (it.nossoInformado ? "" : " (proposta)") + "</b></div>" +
+      "<div><span>Melhor lance do concorrente</span><b>" + (it.melhorConcorrente === null ? "não informado" : Lic_esc_(Lic_brl_(it.melhorConcorrente)) + (it.concorrente ? " · " + Lic_esc_(it.concorrente) : "")) + "</b></div>" +
+      "<div><span>Sobra no nosso lance</span><b" + (it.sobra && it.sobra.pct < it.margemMinPct ? ' class="ldp-vermelho"' : "") + ">" + (it.sobra ? Lic_esc_(LicDp_pct_(it.sobra.pct) + " · " + Lic_brl_(it.sobra.sobra) + " por unidade") : "—") + "</b></div>" +
+      "<div><span>Piso autorizado</span><b" + (it.pisoAssumido ? ' class="ldp-vermelho"' : "") + ">" + Lic_esc_(Lic_brl_(it.piso)) + (it.sobraPiso ? " · sobra " + Lic_esc_(LicDp_pct_(it.sobraPiso.pct)) : "") + "</b></div>" +
+      "<div><span>Distância ao piso</span><b" + (it.distanciaPiso < 0 ? ' class="ldp-vermelho"' : "") + ">" + Lic_esc_(Lic_brl_(it.distanciaPiso)) + (it.distanciaPisoPct !== null ? " (" + Lic_esc_(LicDp_pct_(it.distanciaPisoPct)) + ")" : "") + "</b></div>" +
+      "<div><span>Custo + impostos (sobra zero)</span><b>" + Lic_esc_(it.pisoCusto === null ? "—" : Lic_brl_(it.pisoCusto)) + "</b></div>" +
+      "<div><span>Intervalo mínimo</span><b>" + Lic_esc_(it.intervaloTxt) + "</b></div></div>" +
+      '<p class="cm-meta" style="margin:0">Piso: ' + Lic_esc_(it.pisoOrigem) + "</p>";
+    (it.alertas || []).forEach(function (a) { h += Lic_faixa_(a.texto, a.tipo === "PREJUIZO" || a.tipo === "PROPOSTA_ABAIXO" ? "erro" : "aviso"); });
+    if (it.desistiu) h += Lic_faixa_("A Diretoria desistiu deste item: " + it.desistenciaMotivo, "aviso");
+    if (aberta && !it.desistiu) {
+      h += '<div class="ldp-sug' + (sug.tipo === "NO_PISO" ? " piso" : "") + '" role="status"><b>Sugestão do SGO+:</b> ' + Lic_esc_(sug.texto || "") + (sug.tipo === "LANCE" ? ' <button type="button" class="btn-secondary" data-ldp-usar="' + k + '" data-valor="' + Lic_esc_(String(sug.valor).replace(".", ",")) + '">Usar a sugestão</button>' : "") + "</div>" +
+        '<div class="ldp-lance"><div><label for="ldpNos_' + k + '">Nosso lance (o que você deu no portal)</label><input id="ldpNos_' + k + '" inputmode="decimal" autocomplete="off" data-ldp-nos="' + k + '" placeholder="Ex.: 185,40"><div class="ldp-previa" id="ldpPrev_' + k + '" aria-live="polite"></div></div>' +
+        '<div><button type="button" class="btn-primary" data-ldp-reg-nos="' + k + '">Registrar o nosso lance</button></div>' +
+        '<div><label for="ldpCon_' + k + '">Melhor lance do concorrente</label><input id="ldpCon_' + k + '" inputmode="decimal" autocomplete="off" placeholder="Ex.: 186,00"></div>' +
+        '<div><label for="ldpConNome_' + k + '">Concorrente (opcional)</label><input id="ldpConNome_' + k + '" maxlength="120" placeholder="Ex.: fornecedor 3"></div>' +
+        '<div><button type="button" class="btn-secondary" data-ldp-reg-con="' + k + '">Registrar o lance do concorrente</button></div></div>';
+    }
+    h += '<div class="lic-acoes-linha ldp-acoes" style="margin-top:8px">' + (aberta && !it.desistiu ? '<button type="button" class="btn-secondary" data-ldp-piso="' + k + '">Piso do item</button><button type="button" class="btn-secondary" data-ldp-intervalo="' + k + '">Intervalo do item</button><button type="button" class="btn-secondary" data-ldp-desistir="' + k + '">Desistir do item</button>' : "") +
+      '<button type="button" class="btn-secondary" data-ldp-resultado="' + k + '">' + (r ? "Atualizar o resultado" : "Registrar o resultado") + "</button></div>";
+    if (r) h += '<p class="cm-meta">Resultado (versão ' + Lic_esc_(r.versao) + "): " + Lic_esc_(r.situacaoNome) + (r.colocacao ? ", " + Lic_esc_(r.colocacao) + "º lugar" : "") + (r.vencedor ? ", " + Lic_esc_(r.vencedor) : "") + (r.valorFinal !== null ? ", valor final " + Lic_esc_(Lic_brl_(r.valorFinal)) : "") +
+      (r.motivo ? ". Motivo: " + Lic_esc_(r.motivo) : "") + (r.eventos ? ". Agenda: " + Lic_esc_(r.eventos) : "") + ". Fonte: " + Lic_esc_(r.fonte) + " · " + Lic_esc_(r.por) + " · " + Lic_esc_(Lic_dataHora_(r.em)) + (r.integra ? "" : " " + LicDp_selo_("vermelho", "alterado fora do SGO+")) + "</p>";
+    return h + "</article>";
+  }
+  function LicDp_painelHtml_(t) {
+    var d = t.disputa, h = Lic_faixa_(d.aviso || t.aviso || "", "aviso");
+    if (!d.integra) h += Lic_faixa_("Os dados desta disputa não conferem com o hash gravado (alterados fora do SGO+): o SGO+ não grava nada nela. Avise o Administrador; durante a sessão, anote os lances fora do SGO+.", "erro");
+    if (d.cadeia && !d.cadeia.integra) h += Lic_faixa_("O registro de lances foi mexido fora do SGO+ (" + d.cadeia.problema + "): o SGO+ não grava sobre ele. Avise o Administrador; durante a sessão, anote os lances fora do SGO+.", "erro");
+    h += '<div class="cm-caixa"><div class="ldp-cab"><h3>Disputa · ' + Lic_esc_(t.op.codigo) + "</h3>" + LicDp_selo_(d.situacao === "ABERTA" ? "azul" : "verde", d.situacaoNome) + (d.paradas ? " " + LicDp_selo_("laranja", "Sugestões paradas") : "") + "</div>" +
+      '<div class="ldp-dl"><div><span>Sessão</span><b>' + Lic_esc_(d.sessaoTexto || "a informar") + (d.sessaoFonte ? " · " + Lic_esc_(d.sessaoFonte) : "") + "</b></div><div><span>Portal</span><b>" + Lic_esc_(d.portal || "—") + "</b></div>" +
+      "<div><span>Proposta</span><b>" + Lic_esc_(d.proposta.numero) + " · " + LicDp_curto_(d.proposta.sha256) + "</b></div><div><span>Simulação</span><b>versão " + Lic_esc_(d.simulacao.versao) + "</b></div>" +
+      "<div><span>Intervalo (todos os itens)</span><b>" + Lic_esc_(d.intervalo.tipo === "PERCENTUAL" ? LicDp_pct_(d.intervalo.valor) + " do melhor lance" : Lic_brl_(d.intervalo.valor)) + "</b></div><div><span>Aberta</span><b>" + Lic_esc_(Lic_dataHora_(d.abertaEm)) + " · " + Lic_esc_(d.abertaPor) + "</b></div>" +
+      "<div><span>Itens com resultado</span><b>" + Lic_esc_(d.comResultado + " de " + d.itens.length) + "</b></div></div>" +
+      '<div class="lic-acoes-linha ldp-acoes">' + (d.situacao === "ABERTA" ? '<button type="button" class="btn-secondary" data-ldp-sugestoes="' + (d.paradas ? "0" : "1") + '">' + (d.paradas ? "Voltar as sugestões" : "Parar sugestões") + "</button>" +
+        (d.podeConcluir ? '<button type="button" class="btn-primary" data-ldp-concluir>Concluir o resultado</button>' : '<button type="button" class="btn-primary" disabled aria-disabled="true">Concluir o resultado</button>') : "") +
+      '<button type="button" class="btn-secondary" data-ldp-relatorio>Relatório da disputa (A4)</button><button type="button" class="btn-secondary" data-ldp-atualizar>Atualizar</button></div>' +
+      (d.situacao === "ABERTA" && !d.podeConcluir ? '<p class="cm-ajuda-campo">"Concluir o resultado" libera quando todos os itens tiverem o resultado registrado (com a fonte). Item desistido também recebe o resultado.</p>' : "") +
+      (d.contrato ? Lic_faixa_("Etapa de Contrato: " + d.contrato.aviso + (d.contrato.itens && d.contrato.itens.length ? " Itens ganhos: " + d.contrato.itens.length + ", total " + Lic_brl_(d.contrato.total) + "." : ""), d.contrato.pronto ? "ok" : "aviso") : "") + "</div>";
+    h += d.itens.map(function (it) { return LicDp_itemHtml_(it, d); }).join("");
+    h += '<div class="cm-caixa"><details class="ldp-det"' + (d.lances.length ? "" : " open") + "><summary>Registro de lances e decisões (" + d.lances.length + ')</summary><p class="cm-meta">Cada linha fica gravada para sempre, ligada à anterior pelo hash. Origem do valor: digitado por quem registrou.</p>' +
+      (d.lances.length ? Lic_tabelaHtml_(["Nº", "Quando (Brasília)", "Item", "O quê", "Valor", "Quem", "Hash"], d.lances.map(function (x) {
+        var oq = x.tipo === "LANCE" ? (x.autor === "NOS" ? "Nosso lance" : "Concorrente" + (x.concorrente ? " (" + x.concorrente + ")" : "")) + (x.sugerido ? " · igual à sugestão" : "") : x.tipoNome + (x.motivo ? ": " + x.motivo : "");
+        return [Lic_esc_(x.seq), Lic_esc_(x.quandoBr), Lic_esc_(x.item || "todos"), Lic_esc_(oq) + (x.assumo ? " " + LicDp_selo_("vermelho", "prejuízo assumido") : "") + (x.integra ? "" : " " + LicDp_selo_("vermelho", "alterado")), Lic_esc_(x.valor === null ? "—" : Lic_brl_(x.valor)), Lic_esc_(x.por), LicDp_curto_(x.hash)];
+      })) : '<p class="cm-vazio">Nenhum lance registrado ainda.</p>') + "</details></div>";
+    return h;
+  }
+  function LicDp_htmlAbaDados_(t) { return t && t.disputa ? LicDp_painelHtml_(t) : LicDp_previaHtml_(t || {}); }
+  function LicDp_item_(id, k) { var t = LICDP.aba[id] || {}; return ((t.disputa && t.disputa.itens) || []).filter(function (i) { return i.item === k; })[0] || null; }
+  function LicDp_previaLance_(id, k) {
+    var it = LicDp_item_(id, k), el = Lic_$_("ldpPrev_" + k), v = LicDp_num_(LicDp_valor_("ldpNos_" + k));
+    if (!el || !it) return;
+    if (v === null || !(v > 0)) { el.innerHTML = ""; return; }
+    var s = LicDp_sobra_(it, v);
+    if (v < it.piso - 0.004) el.innerHTML = '<span class="ldp-vermelho">Abaixo do piso autorizado (' + Lic_esc_(Lic_brl_(it.piso)) + "): o SGO+ vai recusar. Não dê esse lance no portal.</span>";
+    else el.innerHTML = "Sobra de " + Lic_esc_(s ? LicDp_pct_(s.pct) : "—") + " por unidade; " + Lic_esc_(Lic_brl_(Math.round((v - it.piso) * 100) / 100)) + " acima do piso.";
+  }
+  function LicDp_desenhar_(id) {
+    var el = Lic_$_("licDisputa"), t = LICDP.aba[id]; if (!el || !t) return;
+    el.innerHTML = LicDp_htmlAbaDados_(t);
+    el.querySelectorAll("[data-ldp-ir]").forEach(function (b) { b.onclick = function () { LIC.fichaAba = b.getAttribute("data-ldp-ir"); Lic_renderFicha_(id); }; });
+    var ab = el.querySelector("[data-ldp-abrir]"); if (ab) ab.onclick = function () { LicDp_abrir_(id, ab); };
+    var at = el.querySelector("[data-ldp-atualizar]"); if (at) at.onclick = function () { LicDp_ligarAba_(null, null, id); };
+    var rl = el.querySelector("[data-ldp-relatorio]"); if (rl) rl.onclick = function () { LicDp_relatorio_(id, rl); };
+    var sg = el.querySelector("[data-ldp-sugestoes]"); if (sg) sg.onclick = function () { LicDp_janelaMotivo_(id, "sugestoes", { parar: sg.getAttribute("data-ldp-sugestoes") === "1" }, sg); };
+    var co = el.querySelector("[data-ldp-concluir]"); if (co) co.onclick = function () { LicDp_janelaMotivo_(id, "concluir", {}, co); };
+    el.querySelectorAll("[data-ldp-nos]").forEach(function (i) { i.oninput = function () { LicDp_previaLance_(id, i.getAttribute("data-ldp-nos")); }; });
+    el.querySelectorAll("[data-ldp-usar]").forEach(function (b) { b.onclick = function () { var k = b.getAttribute("data-ldp-usar"), i = Lic_$_("ldpNos_" + k); if (i) { i.value = b.getAttribute("data-valor"); LicDp_previaLance_(id, k); try { i.focus(); } catch (e) {} } Lic_toast_("Valor sugerido no campo. Dê o lance no portal e toque em \"Registrar o nosso lance\"."); }; });
+    el.querySelectorAll("[data-ldp-reg-nos]").forEach(function (b) { b.onclick = function () { var k = b.getAttribute("data-ldp-reg-nos"); LicDp_lance_(id, k, "NOS", LicDp_valor_("ldpNos_" + k), "", b); }; });
+    el.querySelectorAll("[data-ldp-reg-con]").forEach(function (b) { b.onclick = function () { var k = b.getAttribute("data-ldp-reg-con"); LicDp_lance_(id, k, "CONCORRENTE", LicDp_valor_("ldpCon_" + k), LicDp_valor_("ldpConNome_" + k), b); }; });
+    el.querySelectorAll("[data-ldp-piso]").forEach(function (b) { b.onclick = function () { LicDp_janelaPiso_(id, b.getAttribute("data-ldp-piso"), b); }; });
+    el.querySelectorAll("[data-ldp-intervalo]").forEach(function (b) { b.onclick = function () { LicDp_janelaIntervalo_(id, b.getAttribute("data-ldp-intervalo"), b); }; });
+    el.querySelectorAll("[data-ldp-desistir]").forEach(function (b) { b.onclick = function () { LicDp_janelaMotivo_(id, "desistir", { item: b.getAttribute("data-ldp-desistir") }, b); }; });
+    el.querySelectorAll("[data-ldp-resultado]").forEach(function (b) { b.onclick = function () { LicDp_janelaResultado_(id, b.getAttribute("data-ldp-resultado"), b); }; });
+  }
+  function LicDp_abrir_(id, bt) {
+    var mot = LicDp_valor_("ldpMotivo"), msg = Lic_$_("ldpMsg");
+    if (mot.trim().length < 10) { if (msg) msg.innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi gravado.", "erro"); return; }
+    bt.disabled = true;
+    LicDp_chamar_("abrir", { id: id, motivo: mot, sessaoData: LicDp_valor_("ldpSesDia"), sessaoHora: LicDp_valor_("ldpSesHora"), sessaoFonte: LicDp_valor_("ldpSesFonte"), portal: LicDp_valor_("ldpPortal"),
+      intervaloTipo: LicDp_valor_("ldpIvTipo"), intervaloValor: LicDp_valor_("ldpIvValor"), intervaloFonte: LicDp_valor_("ldpIvFonte") },
+      function (r) { Lic_toast_(r.texto || "Disputa aberta."); LicDp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; if (msg) msg.innerHTML = Lic_faixa_(m, "erro"); });
+  }
+  function LicDp_lance_(id, k, autor, valor, conc, bt) {
+    if (LicDp_num_(valor) === null) { Lic_toast_("Escreva o valor do lance em reais (por exemplo 185,40). Nada foi gravado.", "erro"); return; }
+    bt.disabled = true;
+    LicDp_chamar_("lance", { id: id, item: k, autor: autor, valor: valor, concorrente: conc }, function (r) { Lic_toast_(r.texto || "Lance registrado.", r.avisos && r.avisos.length ? "erro" : "ok"); LicDp_ligarAba_(null, null, id); },
+      function (m) { bt.disabled = false; Lic_toast_(m, "erro"); var p = Lic_$_("ldpPrev_" + k); if (p && autor === "NOS") p.innerHTML = '<span class="ldp-vermelho">' + Lic_esc_(m) + "</span>"; });
+  }
+  function LicDp_janelaPiso_(id, k, origem) {
+    var it = LicDp_item_(id, k); if (!it) return;
+    var corpo = '<p class="cm-txt">Item ' + Lic_esc_(k) + ": piso de agora " + Lic_esc_(Lic_brl_(it.piso)) + " (piso da simulação " + Lic_esc_(Lic_brl_(it.pisoSimulacao)) + ", sobra mínima " + Lic_esc_(LicDp_pct_(it.margemMinPct)) + "). Custo mais os impostos (sobra zero): " + Lic_esc_(it.pisoCusto === null ? "—" : Lic_brl_(it.pisoCusto)) + ".</p>" +
+      '<div class="ldp-grade"><div><label for="ldpPisoValor">Piso autorizado (por unidade)</label><input id="ldpPisoValor" inputmode="decimal" value="' + Lic_esc_(String(it.piso).replace(".", ",")) + '"></div><div class="ldp-largo"><div id="ldpPisoPrev" aria-live="polite"></div></div>' +
+      '<div class="ldp-largo" id="ldpAssumoCx" style="display:none"><label class="ldp-aceite"><input type="checkbox" id="ldpAssumo"> <span>Assumo o prejuízo (decisão da Diretoria, fica registrada)</span></label></div>' +
+      '<div class="ldp-largo"><label for="ldpPisoMotivo">Motivo (obrigatório)</label><textarea id="ldpPisoMotivo" rows="2" maxlength="1000" placeholder="Ex.: contrato estratégico na região; Diretoria aceita sobra menor"></textarea></div></div><div id="ldpPisoMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_("Piso do item " + k, corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-ldp-ok>Autorizar o piso</button>', origem);
+    var prev = function () {
+      var v = LicDp_num_(LicDp_valor_("ldpPisoValor")), cx = Lic_$_("ldpAssumoCx"), pv = Lic_$_("ldpPisoPrev");
+      if (!pv) return;
+      if (v === null || !(v > 0)) { pv.innerHTML = ""; if (cx) cx.style.display = "none"; return; }
+      var s = LicDp_sobra_(it, v), prej = it.pisoCusto !== null && v < it.pisoCusto - 0.004 ? Math.round((it.pisoCusto - v) * 100) / 100 : 0;
+      pv.innerHTML = prej ? '<div class="ldp-prejuizo" role="alert">Prejuízo: ' + Lic_esc_(Lic_brl_(prej)) + " por unidade (" + Lic_esc_(Lic_brl_(Math.round(prej * it.quantidade * 100) / 100)) + " no item). Abaixo do custo mais os impostos (" + Lic_esc_(Lic_brl_(it.pisoCusto)) + ").</div>"
+        : '<p class="cm-meta">Sobra no piso: ' + Lic_esc_(s ? LicDp_pct_(s.pct) : "—") + (v < it.pisoSimulacao - 0.004 ? ' · <span class="ldp-vermelho">abaixo da sobra mínima da política</span>' : "") + "</p>";
+      if (cx) cx.style.display = prej ? "" : "none";
+    };
+    var inp = Lic_$_("ldpPisoValor"); if (inp) inp.oninput = prev; prev();
+    ov.querySelector("[data-ldp-ok]").onclick = function () {
+      var bt = this, mot = LicDp_valor_("ldpPisoMotivo");
+      if (mot.trim().length < 10) { Lic_$_("ldpPisoMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi gravado.", "erro"); return; }
+      bt.disabled = true;
+      LicDp_chamar_("piso", { id: id, item: k, valor: LicDp_valor_("ldpPisoValor"), motivo: mot, assumo: !!(Lic_$_("ldpAssumo") || {}).checked }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Piso gravado."); LicDp_ligarAba_(null, null, id); },
+        function (m) { bt.disabled = false; Lic_$_("ldpPisoMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicDp_janelaIntervalo_(id, k, origem) {
+    var it = LicDp_item_(id, k); if (!it) return;
+    var corpo = '<p class="cm-txt">Intervalo de agora: ' + Lic_esc_(it.intervaloTxt) + '.</p><div class="ldp-grade"><div><label for="ldpIvT2">Tipo</label><select id="ldpIvT2"><option value="VALOR">Em reais</option><option value="PERCENTUAL">Em % do melhor lance</option></select></div>' +
+      '<div><label for="ldpIvV2">Valor</label><input id="ldpIvV2" inputmode="decimal"></div><div class="ldp-largo"><label class="ldp-aceite"><input type="checkbox" id="ldpIvTodos"> <span>Vale para todos os itens</span></label></div>' +
+      '<div class="ldp-largo"><label for="ldpIvF2">De onde veio</label><input id="ldpIvF2" maxlength="300" placeholder="Ex.: aviso do pregoeiro no chat"></div><div class="ldp-largo"><label for="ldpIvM2">Motivo (obrigatório)</label><textarea id="ldpIvM2" rows="2" maxlength="1000"></textarea></div></div><div id="ldpIvMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_("Intervalo mínimo entre lances", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-ldp-ok>Gravar</button>', origem);
+    ov.querySelector("[data-ldp-ok]").onclick = function () {
+      var bt = this; bt.disabled = true;
+      LicDp_chamar_("intervalo", { id: id, item: (Lic_$_("ldpIvTodos") || {}).checked ? "" : k, tipo: LicDp_valor_("ldpIvT2"), valor: LicDp_valor_("ldpIvV2"), fonte: LicDp_valor_("ldpIvF2"), motivo: LicDp_valor_("ldpIvM2") },
+        function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicDp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; Lic_$_("ldpIvMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  /** Janela só com o motivo: desistir do item, parar/voltar as sugestões, concluir o resultado. */
+  function LicDp_janelaMotivo_(id, op, extra, origem) {
+    var tit = { desistir: "Desistir do item " + (extra.item || ""), sugestoes: extra.parar ? "Parar as sugestões" : "Voltar as sugestões", concluir: "Concluir o resultado" }[op];
+    var txt = { desistir: "A desistência fica no registro com o motivo; depois dela o SGO+ não registra mais lances neste item. O resultado do item é registrado depois da sessão.", sugestoes: extra.parar ? "O SGO+ deixa de mostrar o próximo lance sugerido. O piso continua valendo para todo lance registrado." : "O SGO+ volta a mostrar o próximo lance sugerido.",
+      concluir: "A licitação vai para \"Resultado\" no Kanban, com o motivo no histórico. O dado dos itens ganhos fica preparado para a etapa de Contrato. Depois disso, o resultado de um item ainda pode ser atualizado (versão nova)." }[op];
+    var ov = Lic_janela_(tit, '<p class="cm-txt">' + Lic_esc_(txt) + '</p><div class="cm-campo"><label for="ldpMotJ">Motivo (obrigatório)</label><textarea id="ldpMotJ" rows="3" maxlength="1000"></textarea></div><div id="ldpMotMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-ldp-ok>Confirmar</button>', origem);
+    ov.querySelector("[data-ldp-ok]").onclick = function () {
+      var bt = this, mot = LicDp_valor_("ldpMotJ");
+      if (mot.trim().length < 10) { Lic_$_("ldpMotMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi gravado.", "erro"); return; }
+      bt.disabled = true;
+      LicDp_chamar_(op, Object.assign({ id: id, motivo: mot }, extra), function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicDp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; Lic_$_("ldpMotMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicDp_janelaResultado_(id, k, origem) {
+    var it = LicDp_item_(id, k) || {}, r = it.resultado || {};
+    var corpo = '<div class="ldp-grade"><div class="ldp-largo"><label for="ldpResSit">Situação do item ' + Lic_esc_(k) + '</label><select id="ldpResSit">' + LICDP_RES.map(function (x) { return '<option value="' + x[0] + '"' + (r.situacao === x[0] ? " selected" : "") + ">" + Lic_esc_(x[1]) + "</option>"; }).join("") + "</select></div>" +
+      '<div><label for="ldpResCol">Colocação</label><input id="ldpResCol" inputmode="numeric" value="' + Lic_esc_(r.colocacao || "") + '"></div><div><label for="ldpResValor">Valor final unitário</label><input id="ldpResValor" inputmode="decimal" value="' + Lic_esc_(r.valorFinal === null || r.valorFinal === undefined ? "" : String(r.valorFinal).replace(".", ",")) + '"></div>' +
+      '<div><label for="ldpResVenc">Vencedor (quando não fomos nós)</label><input id="ldpResVenc" maxlength="200" value="' + Lic_esc_(r.situacao === "GANHO" ? "" : r.vencedor || "") + '"></div><div><label for="ldpResCnpj">CNPJ do vencedor</label><input id="ldpResCnpj" inputmode="numeric" maxlength="18" value="' + Lic_esc_(r.vencedorCnpj || "") + '"></div>' +
+      '<div><label for="ldpResAdj">Adjudicação</label><input id="ldpResAdj" type="date" value="' + Lic_esc_(r.adjudicacao || "") + '"></div><div><label for="ldpResHom">Homologação</label><input id="ldpResHom" type="date" value="' + Lic_esc_(r.homologacao || "") + '"></div>' +
+      '<div><label for="ldpResAta">Data da ata ou da intimação (recurso)</label><input id="ldpResAta" type="date" value="' + Lic_esc_(r.ata || "") + '"></div><div><label for="ldpResParte">Quem recorre (recurso)</label><select id="ldpResParte"><option value="">—</option><option value="NOS">Nós (razões de recurso)</option><option value="CONCORRENTE">O concorrente (nós: contrarrazões)</option><option value="AMBOS">Os dois</option></select></div>' +
+      '<div class="ldp-largo"><label for="ldpResMot">Motivo (obrigatório na desclassificação)</label><textarea id="ldpResMot" rows="2" maxlength="1000">' + Lic_esc_(r.motivo || "") + '</textarea></div>' +
+      '<div class="ldp-largo"><label for="ldpResFonte">Fonte (obrigatória)</label><input id="ldpResFonte" maxlength="300" value="' + Lic_esc_(r.fonte || "") + '" placeholder="Ex.: ata da sessão no Compras.gov.br"></div>' +
+      '<div class="ldp-largo"><label for="ldpResObs">Observações</label><input id="ldpResObs" maxlength="500"></div></div>' +
+      '<p class="cm-ajuda-campo">Recurso cria na agenda os prazos de razões e de contrarrazões como "pendente de confirmação": sem alerta até alguém conferir a data no portal ("Confirmar data", aba Prazos).</p><div id="ldpResMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_("Resultado do item " + k, corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-ldp-ok>Gravar o resultado</button>', origem);
+    ov.querySelector("[data-ldp-ok]").onclick = function () {
+      var bt = this; bt.disabled = true;
+      LicDp_chamar_("resultado", { id: id, item: k, situacao: LicDp_valor_("ldpResSit"), colocacao: LicDp_valor_("ldpResCol"), valorFinal: LicDp_valor_("ldpResValor"), vencedor: LicDp_valor_("ldpResVenc"), vencedorCnpj: LicDp_valor_("ldpResCnpj"),
+        adjudicacao: LicDp_valor_("ldpResAdj"), homologacao: LicDp_valor_("ldpResHom"), ata: LicDp_valor_("ldpResAta"), recursoParte: LicDp_valor_("ldpResParte"), motivo: LicDp_valor_("ldpResMot"), fonte: LicDp_valor_("ldpResFonte"), obs: LicDp_valor_("ldpResObs") },
+        function (x) { ov.fechar(); Lic_toast_(x.texto || "Resultado gravado."); LicDp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; Lic_$_("ldpResMsg").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicDp_relatorio_(id, bt) {
+    var abrir = typeof LicPp_abrirJanela_ === "function" ? LicPp_abrirJanela_ : function () { return null; };
+    var j = abrir("Gerando o relatório da disputa…");
+    bt.disabled = true;
+    LicDp_chamar_("relatorio", { id: id }, function (r) { bt.disabled = false; if (typeof LicPp_escreverJanela_ === "function") LicPp_escreverJanela_(j, r.html); Lic_toast_(r.texto || "Relatório gerado."); },
+      function (m) { bt.disabled = false; if (typeof LicPp_fecharJanela_ === "function") LicPp_fecharJanela_(j); Lic_toast_(m, "erro"); }, { carregando: "Gerando e guardando o relatório…" });
+  }
+</script>

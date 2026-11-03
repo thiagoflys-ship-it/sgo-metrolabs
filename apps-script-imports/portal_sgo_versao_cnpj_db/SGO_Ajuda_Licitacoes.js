@@ -139,6 +139,12 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Com a chave da IA, a apresentação e a metodologia são redigidas pela IA e cada frase é conferida nas fontes (número, trecho literal, negação, sem RBC, sem fabricante, sem superlativo). Frase que não passa é retirada e aparece na lista com o motivo. A frase que passa só entra no documento quando a Diretoria marca \"Aceitar\" nela; sem frase aceita (ou sem a IA), vale o texto do catálogo e do edital.",
           "Item do edital fora do catálogo, sem preço da proposta ou fora da simulação sai como \"não cotado\", com o motivo. A proposta sai só com a logomarca oficial: o SGO+ não tem fotos dos serviços.",
           "\"Editar este trecho\" pede o motivo e grava o de → para; texto que o verificador recusa só grava com \"Assumo este texto\" (fica marcado na aprovação), e RBC fora da forma fixa ou acreditação nunca passam. \"Aprovar\" (Diretoria, com motivo) vale para o texto daquele momento: editar depois tira a aprovação. \"Emitir\" congela o documento A4 (guardado com o SHA-256, e o PDF ao lado quando o servidor gera); ele não muda nunca. Para mudar, \"Nova versão\". Nada é enviado a portal."
+        ] },
+        { titulo: "Disputa (modo assistido)", itens: [
+          "A aba Disputa abre a disputa a partir da proposta emitida e da simulação de preço que ela usou: valor inicial de cada item (o da proposta), piso (o da simulação), custo mais os impostos e o intervalo mínimo entre lances. O SGO+ não envia lance nem acessa o portal.",
+          "Durante a sessão, digite o melhor lance do concorrente e o nosso lance (o que você deu no portal). O SGO+ mostra a sobra, a distância ao piso e a sugestão do próximo lance (melhor lance menos o intervalo, nunca abaixo do piso; a IA não sugere valor) e recusa lance abaixo do piso, com o porquê.",
+          "\"Piso do item\" muda o piso com o motivo (abaixo do custo mais os impostos, só com \"Assumo o prejuízo\"); \"Desistir do item\" e \"Parar sugestões\" ficam no registro. Cada lance e decisão fica gravado para sempre, com a hora de Brasília, quem e o hash.",
+          "Depois da sessão, registre o resultado de cada item com a fonte; recurso cria os prazos de razões e contrarrazões na agenda como pendentes de confirmação. \"Concluir o resultado\" leva a licitação para Resultado no Kanban. Mais detalhes na ajuda da Central de disputas."
         ] }
       ],
       cores: [

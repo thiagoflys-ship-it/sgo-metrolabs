@@ -18,6 +18,9 @@
  *     (descartar), Decisão (descartada) → Radar (reabrir). Sempre com motivo (10 letras ou mais) e histórico (LIC_HISTORICO,
  *     fonte "Kanban"). As demais ficam desabilitadas com o porquê (Proposta, Disputa, Resultado e Contrato chegam nas
  *     próximas etapas; "Participar" exige o preço mínimo aprovado).
+ *   - Central de disputas (02/11/2026, SGO_Licitacoes_Disputa.js): a entrada em Disputa é pela aba Disputa da ficha (exige a proposta
+ *     emitida, a simulação e o piso de cada item; o Kanban explica e abre a ficha); Disputa → Resultado ("Concluir o resultado")
+ *     funciona também no Kanban, com motivo, quando todos os itens têm o resultado registrado.
  * Gantt: os prazos de LIC_EVENTOS (etapa 3) no tempo, com a natureza (Confirmado, Calculado, Pendente de confirmação), o dia de
  *   hoje, zoom semana ou mês; o recebimento das propostas como barra (abertura → fim das propostas).
  * Painel: números reais, cada um com a fonte (aba e regra da contagem) e o destino do clique (a lista filtrada).
@@ -28,8 +31,8 @@ var LIC_KANBAN_COLUNAS = [
   { codigo: 'ANALISE', nome: 'Em análise', dica: 'Enviadas para análise: arquivos do edital e nota da IA na ficha.' },
   { codigo: 'DECISAO', nome: 'Decisão', dica: 'Participar ou descartar. Aqui ficam as descartadas pela Diretoria, com o motivo; "Participar" chega com a etapa de preços e proposta.' },
   { codigo: 'PROPOSTA', nome: 'Proposta', futura: 'Chega na etapa de preços e proposta (tabela de preços de licitação, simulador e proposta em A4 aprovada pela Diretoria).' },
-  { codigo: 'DISPUTA', nome: 'Disputa', futura: 'Chega na etapa de disputas (Central de disputas, lances acompanhados, nunca abaixo do piso autorizado).' },
-  { codigo: 'RESULTADO', nome: 'Resultado', futura: 'Chega na etapa de disputas (registro do resultado de cada item: ganhou, perdeu, fracassou).' },
+  { codigo: 'DISPUTA', nome: 'Disputa', dica: 'Disputa aberta na Central de disputas (aba Disputa da ficha): lances digitados pela Diretoria, nunca abaixo do piso autorizado. O SGO+ não envia lance.' },
+  { codigo: 'RESULTADO', nome: 'Resultado', dica: 'Resultado de cada item registrado com a fonte (ganho, perdido, fracassado, deserto, desclassificado, habilitação pendente, recurso).' },
   { codigo: 'CONTRATO', nome: 'Contrato', futura: 'Chega na etapa de contratos (licitação ganha vira contrato e oportunidade ganha no Comercial).' }
 ];
 var LIC_KANBAN_MAX_COLUNA = 120;
@@ -53,6 +56,12 @@ function Lic_kanbanRegra_(de, para) {
   if (!col) return { porque: 'Essa etapa não existe no Kanban.' };
   var deCol = de === 'DESCARTADA' ? 'DECISAO' : de;
   if (deCol === para) return { porque: 'A oportunidade já está em ' + col.nome + '.' };
+  // Central de disputas (SGO_Licitacoes_Disputa.js)
+  if (para === 'DISPUTA') return de === 'DESCARTADA' ? { porque: 'Reabra primeiro (volta para o Radar, com o motivo); depois abra a disputa na ficha, aba Disputa.' }
+    : de === 'RESULTADO' || de === 'CONTRATO' ? { porque: 'A disputa desta licitação já terminou: o resultado fica na ficha, aba Disputa.' }
+    : { porque: 'A disputa abre na ficha, aba Disputa: ela exige a proposta emitida, a simulação de preço e o piso de cada item. O Kanban não abre disputa sem esses dados.', aba: 'disputa' };
+  if (para === 'RESULTADO') return de === 'DISPUTA' ? { acao: 'resultado', nome: 'Concluir o resultado (todos os itens registrados)' } : { porque: 'Só uma licitação em Disputa vai para Resultado: registre o resultado de cada item na ficha, aba Disputa.', aba: de === 'CONTRATO' ? '' : 'disputa' };
+  if (de === 'DISPUTA') return { porque: 'A disputa está aberta: registre o resultado de cada item na ficha, aba Disputa (item que a Diretoria desistiu também recebe o resultado, por exemplo "perdido"). Depois, "Concluir o resultado" leva para Resultado.', aba: 'disputa' };
   if (col.futura) return { porque: col.futura + ' Até lá, nenhuma licitação entra em ' + col.nome + ' pelo SGO+.' };
   if (de === 'RADAR' && para === 'ANALISE') return { acao: 'enviarAnalise', nome: 'Enviar para análise' };
   if ((de === 'RADAR' || de === 'ANALISE') && para === 'DECISAO') return { acao: 'descartar', nome: 'Descartar (decisão da Diretoria)' };
@@ -180,6 +189,11 @@ function Lic_kanbanMover_(eu, d) {
   var r;
   if (regra.acao === 'enviarAnalise') r = Lic_enviarAnalise_(eu, { id: l.ID, obs: motivo, fonte: 'Kanban' });
   else if (regra.acao === 'descartar') r = Lic_descartar_(eu, { id: l.ID, motivo: motivo, fonte: 'Kanban' });
+  else if (regra.acao === 'resultado') {
+    if (typeof LicD_concluir_ !== 'function') throw new Error('Não foi possível mover: a Central de disputas não está disponível neste ambiente. Nada foi alterado');
+    try { LicD_garantirAbas_(); } catch (e) {}
+    r = LicD_concluir_(eu, { id: l.ID, motivo: motivo, fonte: 'Kanban' });
+  }
   else r = Lic_reabrir_(eu, { id: l.ID, motivo: motivo, fonte: 'Kanban' });
   var nomes = {}; LIC_KANBAN_COLUNAS.forEach(function (c) { nomes[c.codigo] = c.nome; });
   return Object.assign({}, r, { de: de, para: para, acao: regra.acao, texto: Lic_s_(l.CODIGO) + ' foi de ' + (nomes[Lic_colunaKanban_(l)] || de) + ' para ' + (nomes[para] || para) + '. Registrado no histórico com o motivo.' });

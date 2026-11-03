@@ -23,7 +23,8 @@ var LICREL_ABA = 'LIC_RELATORIOS';
 var LICREL_COLUNAS = ['ID', 'TIPO', 'CHAVE', 'OPORTUNIDADE_ID', 'CODIGO', 'PERIODO_DE', 'PERIODO_ATE', 'VERSAO', 'NUMERO', 'TITULO', 'RESUMO', 'DADOS_HASH', 'HTML_ARQUIVO_ID', 'HTML_SHA256',
   'HTML_TAMANHO', 'POR_ID', 'POR_NOME', 'EM', 'HASH'];
 var LICREL_COLUNAS_TEXTO = ['CHAVE', 'PERIODO_DE', 'PERIODO_ATE', 'NUMERO', 'DADOS_HASH', 'HTML_SHA256', 'EM', 'HASH'];
-var LICREL_TIPOS = { OPORTUNIDADE: 'Relatório da oportunidade', PERIODO: 'Relatório do período' };
+// DISPUTA (02/11/2026): relatório da disputa, gerado pela Central de disputas (SGO_Licitacoes_Disputa.js, LicD_relatorio_)
+var LICREL_TIPOS = { OPORTUNIDADE: 'Relatório da oportunidade', PERIODO: 'Relatório do período', DISPUTA: 'Relatório da disputa' };
 var LICREL_PERIODO_MAX_DIAS = 400;
 var LICREL_HIST_MAX = 120;
 var LICREL_CHECKLIST_MAX = 60;
@@ -205,7 +206,7 @@ function LicRel_htmlPeriodo_(d, o) {
     return [p.codigo, p.numero, RelA4_moeda_(p.total), LicRel_br_(LicRel_diaSp_(p.em)), p.por, p.sha256.slice(0, 24) + '…'];
   }), { legenda: 'Propostas emitidas no período', vazio: 'Nenhuma proposta emitida no período.' }) + LicRel_fonte_('LIC_PROPOSTAS com SITUACAO = EMITIDA e EMITIDO_EM no período; o total é o da simulação de preço salva usada na proposta.'));
   corpo += RelA4_secao_('Resultados', RelA4_tabela_([{ t: 'Licitação' }, { t: 'Órgão' }, { t: 'Etapa' }, { t: 'Desde' }], d.resultados.map(function (r) { return [r.codigo, r.orgao, r.situacao, LicRel_br_(LicRel_diaSp_(r.desde)) || '—']; }),
-    { legenda: 'Oportunidades em Resultado ou Contrato (hoje)', vazio: 'Nenhuma oportunidade em Resultado ou Contrato.' }) + LicRel_fonte_('LIC_OPORTUNIDADES.SITUACAO = RESULTADO ou CONTRATO, hoje. O SGO+ ainda não registra o vencedor nem o valor homologado (etapa de disputa e resultado ainda não construída).'));
+    { legenda: 'Oportunidades em Resultado ou Contrato (hoje)', vazio: 'Nenhuma oportunidade em Resultado ou Contrato.' }) + LicRel_fonte_('LIC_OPORTUNIDADES.SITUACAO = RESULTADO ou CONTRATO, hoje. O vencedor, a colocação e o valor final de cada item ficam em LIC_RESULTADOS e no relatório da disputa (Central de disputas).'));
   return RelA4_documento_({ titulo: 'Relatório do período de Licitações', subtitulo: per, tituloCurto: 'Relatório de Licitações', tituloArquivo: 'Relatorio de Licitacoes', numero: o.numero, revisao: Math.max(0, (o.versao || 1) - 1),
     identificacao: per, rotuloIdentificacao: 'Período', emitidoPor: o.por, ficha: [['Regras', LICREL_REGRAS]], corpo: corpo, capa: false, sumario: false });
 }
@@ -214,9 +215,9 @@ function LicRel_htmlPeriodo_(d, o) {
 function LicRel_gravar_(eu, tipo, chave, extra, montarHtml, dados, resumo, titulo, historico) {
   return Lic_comTrava_(function () {
     var ant = LicRel_lista_().filter(function (r) { return Lic_s_(r.CHAVE) === chave; }), versao = ant.reduce(function (m, r) { return Math.max(m, Number(r.VERSAO) || 0); }, 0) + 1;
-    var numero = (tipo === 'OPORTUNIDADE' ? 'REL-' + extra.CODIGO : 'REL-PER-' + extra.PERIODO_DE.replace(/-/g, '') + '-' + extra.PERIODO_ATE.replace(/-/g, '')) + '-V' + (versao < 10 ? '0' : '') + versao, agora = Lic_agora_();
+    var numero = (tipo === 'OPORTUNIDADE' ? 'REL-' + extra.CODIGO : tipo === 'DISPUTA' ? 'REL-DISP-' + extra.CODIGO : 'REL-PER-' + extra.PERIODO_DE.replace(/-/g, '') + '-' + extra.PERIODO_ATE.replace(/-/g, '')) + '-V' + (versao < 10 ? '0' : '') + versao, agora = Lic_agora_();
     var html = montarHtml({ numero: numero, versao: versao, por: eu.nome });
-    var g = LicDoc_salvarHtml_(tipo === 'OPORTUNIDADE' ? extra.CODIGO : 'Relatórios do período', numero, html, {});
+    var g = LicDoc_salvarHtml_(tipo !== 'PERIODO' ? extra.CODIGO : 'Relatórios do período', numero, html, {});
     var reg = Object.assign({ TIPO: tipo, CHAVE: chave, VERSAO: versao, NUMERO: numero, TITULO: Lic_texto_(titulo, 300), RESUMO: Lic_texto_(resumo, 1000), DADOS_HASH: Lic_hash_(JSON.stringify(dados)), HTML_ARQUIVO_ID: g.id, HTML_SHA256: g.sha256, HTML_TAMANHO: g.tamanho, POR_ID: eu.id, POR_NOME: eu.nome, EM: agora }, extra);
     reg.HASH = LicRel_hashReg_(reg);
     var ins = SGO_DATA.insert(LICREL_ABA, reg); reg.ID = Lic_s_(ins && ins.ID);

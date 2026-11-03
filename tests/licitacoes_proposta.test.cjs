@@ -260,7 +260,7 @@ test('relatórios: oportunidade e período com a fonte de cada número, versão 
   assert.ok((hp.match(/<b>Fonte:<\/b>/g) || []).length >= 8);
   assert.match(hp, /2 ativas; 1 com a primeira coleta entre 01\/10\/2026 a 30\/11\/2026/, 'só a op1 entrou no período');
   assert.match(hp, /LIC-2026-0001-P01/, 'a proposta emitida no período'); assert.match(hp, /LIC-2026-0002/, 'fim de proposta da op2 no período');
-  assert.match(hp, /ainda não registra o vencedor/);
+  assert.match(hp, /LIC_RESULTADOS e no relatório da disputa/);
   const tl = ok(a.rel('s_dora', 'tela'));
   assert.equal(tl.total, 3); assert.equal(tl.relatorios[0].tipo, 'PERIODO'); assert.ok(tl.relatorios.every((r) => r.sha256.length === 64));
   assert.ok(tl.oportunidades.some((o) => o.codigo === 'LIC-2026-0001'));

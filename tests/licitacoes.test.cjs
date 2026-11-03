@@ -483,7 +483,9 @@ test('integração na casca: menu só da Diretoria, rota, atalho do celular, aju
   for (const m of ['licitacoes', 'licitacoes_oportunidades', 'licitacoes_agenda', 'licitacoes_alertas', 'licitacoes_portais']) assert.match(idx, new RegExp('data-mod="' + m + '"'));
   // etapa 3 (02/11/2026): agenda e alertas; etapa 4 (02/11/2026): Painel, Kanban e Gantt (tests/licitacoes_painel.test.cjs). Disputas ficam para as próximas etapas
   for (const m of ['licitacoes_painel', 'licitacoes_kanban', 'licitacoes_gantt']) assert.match(idx, new RegExp('data-mod="' + m + '"'));
-  assert.doesNotMatch(idx, /data-mod="licitacoes_disputas"/, 'disputas ficam para as próximas etapas');
+  // Central de disputas, modo assistido (02/11/2026, tests/licitacoes_disputa.test.cjs); contratos ficam para a próxima etapa
+  assert.match(idx, /data-mod="licitacoes_disputas"/);
+  assert.doesNotMatch(idx, /data-mod="licitacoes_contratos"/, 'contratos ficam para a próxima etapa');
   assert.match(idx, /<\?!= include\('JS_Licitacoes'\); \?>/);
   assert.match(core, /if \(\(mod === "licitacoes" \|\| mod\.indexOf\("licitacoes_"\) === 0\) && typeof Licitacoes_render_ === "function"\)/);
   assert.equal((core.match(/Licitacoes_iniciar_\(\);/g) || []).length, 2);

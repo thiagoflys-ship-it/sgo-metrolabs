@@ -82,7 +82,9 @@ var LIC_ACOES = {
   habilitacao: function (eu, d) { return LicH_acao_(eu, d); },
   // proposta técnica e comercial em A4 e relatórios em A4 (02/11/2026, SGO_Licitacoes_Proposta.js e SGO_Licitacoes_Relatorios.js)
   proposta: function (eu, d) { return LicProp_acao_(eu, d); },
-  relatorios: function (eu, d) { return LicRel_acao_(eu, d); }
+  relatorios: function (eu, d) { return LicRel_acao_(eu, d); },
+  // Central de disputas, modo assistido, e resultado (02/11/2026, SGO_Licitacoes_Disputa.js): { op: central | tela | abrir | lance | ... }
+  disputa: function (eu, d) { return LicD_acao_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
@@ -333,14 +335,16 @@ function Lic_ficha_(eu, d) {
 }
 
 function Lic_mudarSituacao_(eu, d, de, para, tipo, extra, texto) {
-  return Lic_comTrava_(function () {
-    var l = Lic_acharOp_(d.id);
-    if (de.indexOf(Lic_s_(l.SITUACAO)) < 0) throw new Error('Não foi possível ' + texto + ': a oportunidade está "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '" (alguém mudou agora há pouco). Atualize a lista e confira; nada foi alterado');
-    var agora = Lic_agora_(), mud = Object.assign({ SITUACAO: para, SITUACAO_DESDE: agora, ATUALIZADO_EM: agora }, extra || {});
-    SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mud);
-    var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: d.fonte === 'Kanban' ? 'Kanban' : 'Tela Oportunidades' });
-    return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), situacao: para, hash: h.HASH };
-  });
+  return Lic_comTrava_(function () { return Lic_mudarSituacaoSemTrava_(eu, d, de, para, tipo, extra, texto); });
+}
+/** A mesma regra de passagem, para quem já segura a trava (Central de disputas: abrir a disputa e concluir o resultado). */
+function Lic_mudarSituacaoSemTrava_(eu, d, de, para, tipo, extra, texto) {
+  var l = Lic_acharOp_(d.id);
+  if (de.indexOf(Lic_s_(l.SITUACAO)) < 0) throw new Error('Não foi possível ' + texto + ': a oportunidade está "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '" (alguém mudou agora há pouco). Atualize a lista e confira; nada foi alterado');
+  var agora = Lic_agora_(), mud = Object.assign({ SITUACAO: para, SITUACAO_DESDE: agora, ATUALIZADO_EM: agora }, extra || {});
+  SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mud);
+  var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: d.fonte === 'Kanban' || d.fonte === 'Central de disputas' ? d.fonte : 'Tela Oportunidades' });
+  return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), situacao: para, hash: h.HASH };
 }
 
 function Lic_descartar_(eu, d) {

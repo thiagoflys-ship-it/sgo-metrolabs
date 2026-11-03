@@ -43,7 +43,7 @@ function SGO_ajudaTelas_LicitacoesRelatorios_() {
       perguntas: [
         { p: "Posso apagar ou refazer um relatório?", r: "Não. Cada relatório gerado é uma versão guardada com o SHA-256 e a data. Gere de novo para ter a versão seguinte; a anterior continua na lista." },
         { p: "De onde vem cada número?", r: "Embaixo de cada parte do documento há a linha \"Fonte\", com a aba do SGO+ e o filtro usado (por exemplo, LIC_ALERTAS criados no período)." },
-        { p: "O relatório mostra quem venceu a licitação?", r: "Ainda não: o SGO+ não registra o vencedor nem o valor homologado (a etapa de disputa e resultado ainda não foi construída). O relatório mostra as licitações em Resultado e Contrato." }
+        { p: "O relatório mostra quem venceu a licitação?", r: "O relatório do período lista as licitações em Resultado e Contrato. O vencedor, a colocação e o valor final de cada item ficam no relatório da disputa, gerado na ficha, aba Disputa (Central de disputas)." }
       ]
     }
   };

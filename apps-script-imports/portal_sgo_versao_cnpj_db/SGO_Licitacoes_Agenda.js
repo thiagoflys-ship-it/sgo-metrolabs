@@ -31,7 +31,9 @@ var LIC_EVENTO_TIPOS = {
   PRAZO_IMPUGNACAO: { nome: 'Limite para impugnar o edital', nivel: 'IMPORTANTE', ordem: 3 },
   LIMITE_PROPOSTA: { nome: 'Fim do envio das propostas', nivel: 'CRITICO', ordem: 4 },
   SESSAO_PUBLICA: { nome: 'Abertura da sessão pública', nivel: 'CRITICO', ordem: 5 },
-  PRAZO_RECURSO: { nome: 'Razões de recurso', nivel: 'IMPORTANTE', ordem: 6 }
+  PRAZO_RECURSO: { nome: 'Razões de recurso', nivel: 'IMPORTANTE', ordem: 6, manual: true },
+  // Central de disputas (02/11/2026, SGO_Licitacoes_Disputa.js): criado pelo resultado do item "em recurso", pendente de confirmação
+  PRAZO_CONTRARRAZOES: { nome: 'Contrarrazões de recurso', nivel: 'IMPORTANTE', ordem: 7, manual: true }
 };
 var LIC_NATUREZAS = { CONFIRMADO: 'Confirmado', CALCULADO: 'Calculado (regra legal)', PREVISTO: 'Pendente de confirmação' };
 var LIC_EVENTO_SITUACOES = { ATIVO: 'Valendo', RETIFICADO: 'Substituído por versão nova', SUSPENSO: 'Suspenso na fonte', CANCELADO: 'Cancelado' };
@@ -254,7 +256,8 @@ function Lic_eventosSincronizar_(l, existentes, agora) {
     hist('AGENDA_RETIFICADA', Lic_eventoQuandoTxt_(at), Lic_eventoQuandoTxt_(d), mot);
   });
   if (!desc) Object.keys(valendo).forEach(function (t) {
-    if (vistos[t] || t === 'PRAZO_RECURSO') return;
+    // prazos que nascem de ato de pessoa (ata, resultado da disputa) não vêm da fonte: o recálculo não os cancela
+    if (vistos[t] || (LIC_EVENTO_TIPOS[t] && LIC_EVENTO_TIPOS[t].manual)) return;
     var e = valendo[t], motC = 'A fonte deixou de informar esta data (' + retif.toLowerCase() + ').';
     SGO_DATA.update(LIC_ABAS.EVENTOS, e.ID, { SITUACAO: 'CANCELADO', MOTIVO_MUDANCA: motC, ATUALIZADO_EM: agora });
     delete valendo[t];
