@@ -24,17 +24,18 @@ function corretivaDocumentada(amb, quando) {
   return id;
 }
 
-test('nome completo obrigatório nas duas assinaturas; documento opcional, conferido quando preenchido (CPF com dígitos)', () => {
+const NOVO = 'campo-teste-v2';   // versaoApp que o aplicativo novo manda na assinatura
+test('aplicativo novo: nome completo obrigatório nas duas assinaturas; documento opcional, conferido quando preenchido (CPF com dígitos)', () => {
   const amb = ambiente({ agora: DEPOIS });
   const id = corretivaDocumentada(amb);
-  const r = ok(sync(amb, [ev('ASSINATURA', id, 10, { nome: 'Rui', imagem: ASSINATURA }), ev('ASSINATURA', id, 11, { papel: 'COLABORADOR', nome: 'Tiago', imagem: ASSINATURA }),
-    ev('ASSINATURA', id, 12, { nome: 'Rui Responsável', documento: '123.456.789-00', imagem: ASSINATURA }), ev('ASSINATURA', id, 13, { nome: 'Rui Responsável', documento: 'x', imagem: ASSINATURA })]));
+  const r = ok(sync(amb, [ev('ASSINATURA', id, 10, { nome: 'Rui', imagem: ASSINATURA, versaoApp: NOVO }), ev('ASSINATURA', id, 11, { papel: 'COLABORADOR', nome: 'Tiago', imagem: ASSINATURA, versaoApp: NOVO }),
+    ev('ASSINATURA', id, 12, { nome: 'Rui Responsável', documento: '123.456.789-00', imagem: ASSINATURA, versaoApp: NOVO }), ev('ASSINATURA', id, 13, { nome: 'Rui Responsável', documento: 'x', imagem: ASSINATURA, versaoApp: NOVO })]));
   assert.equal(r.recusados.length, 4, JSON.stringify(r.recusados));
   assert.match(r.recusados[0].motivo, /nome completo/); assert.match(r.recusados[1].motivo, /nome completo/);
   assert.match(r.recusados[2].motivo, /CPF informado não confere/); assert.match(r.recusados[3].motivo, /documento está incompleto/);
   assert.ok(r.recusados.every((x) => !x.definitivo), 'dá para corrigir e assinar de novo');
   // documento em branco é aceito, sem aviso; CPF válido e RG também
-  const r2 = ok(sync(amb, [ev('ASSINATURA', id, 20, { nome: 'Rui Responsável', documento: '', imagem: ASSINATURA }), ev('ASSINATURA', id, 21, { papel: 'COLABORADOR', nome: 'Tiago Técnico', documento: '529.982.247-25', imagem: ASSINATURA })]));
+  const r2 = ok(sync(amb, [ev('ASSINATURA', id, 20, { nome: 'Rui Responsável', documento: '', imagem: ASSINATURA, versaoApp: NOVO }), ev('ASSINATURA', id, 21, { papel: 'COLABORADOR', nome: 'Tiago Técnico', documento: '529.982.247-25', imagem: ASSINATURA, versaoApp: NOVO })]));
   assert.equal(r2.recusados.length, 0, JSON.stringify(r2.recusados));
   assert.equal(amb.ctx.Ast_documentoErro_('RG 1234567'), '');
   assert.equal(amb.ctx.Ast_documentoErro_('Matrícula 12'), '');
@@ -87,4 +88,41 @@ test('dado antigo não quebra: O.S. com chegada antes da regra fecha sem a assin
   const r = ok(sync(amb, [e('ASSINATURA', 7, { nome: 'Rui Responsável Teste', imagem: ASSINATURA }), e('CONCLUI', 8, {}, '2026-10-20T10:30:00')]));
   assert.equal(r.os[0].situacao, 'ENCERRADA', JSON.stringify(r.os[0].pendencias));
   assert.match(htmlDe(amb, /^Relatorio da OS/), /TIAGO TECNICO TESTE[\s\S]*assinatura não registrada/);
+});
+
+test('aplicativo antigo (sem versaoApp) ou assinatura colhida antes da regra: aceita como veio, com nota no histórico, nunca recusada', () => {
+  const amb = ambiente({ agora: DEPOIS, assColabDesde: '2026-11-05T09:00:00' });
+  const id = corretivaDocumentada(amb);
+  // app antigo: nome curto e documento fora do formato
+  const r = ok(sync(amb, [ev('ASSINATURA', id, 50, { nome: 'Rui', documento: '123.456.789-00', imagem: ASSINATURA })]));
+  assert.equal(r.recusados.length, 0, JSON.stringify(r.recusados));
+  assert.equal(linhaOs(amb, id).ASSINATURA_NOME, 'Rui');
+  assert.ok(amb.tabelas.ATEC_EVENTOS.some((e) => e.TIPO === 'ASSINATURA' && /aceita como veio \(aplicativo antigo\): nome sem sobrenome e documento fora do formato/.test(e.TEXTO)));
+  // app novo, mas colhida no aparelho antes do instante da regra
+  const r2 = ok(sync(amb, [ev('ASSINATURA', id, 51, { papel: 'COLABORADOR', nome: 'Tiago', imagem: ASSINATURA, versaoApp: NOVO }, '2026-11-05T08:30:00')]));
+  assert.equal(r2.recusados.length, 0, JSON.stringify(r2.recusados));
+  assert.ok(amb.tabelas.ATEC_EVENTOS.some((e) => e.TIPO === 'ASSINATURA_COLABORADOR' && /colhida antes da regra nova/.test(e.TEXTO)));
+});
+
+test('instante da regra: gravado na primeira rotina depois da publicação, comparado por hora (não só o dia); a gestão pode fixar em regras.assinatura.colaboradorDesde', () => {
+  const amb = ambiente({ agora: DEPOIS, assColabDesde: null });   // banco sem a data: a primeira rotina grava
+  ok(amb.app('Ast_appMeuDia', 's_tiago', {}));
+  const linha = amb.tabelas.ATEC_CONFIG.filter((c) => c.CHAVE === 'ASS_COLAB_DESDE');
+  assert.equal(linha.length, 1); assert.equal(JSON.parse(linha[0].VALOR_JSON), '2026-11-05T10:00:00');
+  ok(amb.app('Ast_appMeuDia', 's_tiago', {}));
+  assert.equal(amb.tabelas.ATEC_CONFIG.filter((c) => c.CHAVE === 'ASS_COLAB_DESDE').length, 1, 'grava uma vez só');
+  const ex = (cheg) => amb.ctx.AstO_exigeAssColab_({ TIPO_CODIGO: 'MANUTENCAO_CORRETIVA', CHEGOU_EM: cheg });
+  assert.equal(ex('2026-11-05T09:59:00'), false, 'chegada no mesmo dia, antes da publicação: não exige');
+  assert.equal(ex('2026-11-05T10:01:00'), true);
+  assert.equal(ex(''), true, 'sem chegada ainda: exige');
+  assert.equal(amb.ctx.AstO_exigeAssColab_({ TIPO_CODIGO: 'ENVIO_EQUIPAMENTOS', CHEGOU_EM: '2026-11-06T10:00:00' }), false, 'sem visita: não exige');
+});
+
+test('O.S. sem visita: o relatório não mostra a linha "assinatura não registrada" do técnico', () => {
+  const amb = ambiente();
+  const os = { ID: 'x1', NUMERO: 'OS-2026-9999', TIPO_CODIGO: 'ENVIO_EQUIPAMENTOS', TECNICO_NOME: 'TIAGO TECNICO TESTE', CLIENTE_NOME: 'Hospital Teste Alfa', SITUACAO: 'ENCERRADA', CHAMADO_ID: '', EQUIPAMENTO_ID: '' };
+  amb.ctx.Ast_garantirAbas_(); amb.ctx.Ast_garantirSemente_();
+  assert.equal(amb.ctx.AstR_assinaturaColab_(os, 'Despachado por (Metrolabs)'), null);
+  assert.doesNotMatch(amb.ctx.AstR_htmlOS_(os, { marca: 'm' }), /assinatura não registrada/);
+  assert.ok(amb.ctx.AstR_assinaturaColab_(Object.assign({}, os, { TIPO_CODIGO: 'MANUTENCAO_CORRETIVA' }), 'Técnico responsável'), 'com visita a linha continua');
 });

@@ -1031,7 +1031,7 @@
       corpo.querySelector("#atAssLimpar").onclick = function () { ctx.clearRect(0, 0, cv.width, cv.height); tracou = false; };
       corpo.querySelector("#atAssOk").onclick = function () {
         if (!tracou) { At_msg_("atOsMsg", "Peça ao cliente para assinar no quadro.", "aviso"); return; }
-        enviarEventos([{ tipo: "ASSINATURA", dados: { nome: At_$_("atAssNome").value, documento: At_$_("atAssDoc").value, imagem: cv.toDataURL("image/png") } }], "Guardando a assinatura…");
+        enviarEventos([{ tipo: "ASSINATURA", dados: { nome: At_$_("atAssNome").value, documento: At_$_("atAssDoc").value, imagem: cv.toDataURL("image/png"), versaoApp: "tela" } }], "Guardando a assinatura…");
       };
       corpo.querySelector("#atAssAus").onclick = function () {
         var ov = At_modal_("Responsável ausente", '<p class="at-txt">Use só quando o responsável não está para assinar. O relatório mostra quem recebeu e a justificativa.</p>' + At_campo_("Nome de quem recebeu o serviço", '<input id="atAusRec" maxlength="120">') +

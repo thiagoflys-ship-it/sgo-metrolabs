@@ -278,9 +278,11 @@ resumo da sessão).
   `LOGISTICA_JSON`; termo em O.S. que não é de logística é recusado em definitivo. Evento `ASSINATURA` com `dados.papel =
   "COLABORADOR"` grava a assinatura do técnico ou colaborador da Metrolabs à parte (`COLAB_ASSINATURA_*`), sem tocar na do
   cliente, em qualquer O.S. Decisão do dono (03/11/2026): `exige.assinaturaColaborador` (por O.S. no Meu dia; nos `tipos`, toda O.S.
-  com visita) diz se a O.S. só encerra com ela; O.S. com chegada antes de 03/11/2026 não exigem. Nas duas assinaturas, `nome`
-  com nome e sobrenome (senão recusado, não definitivo) e `documento` opcional (preenchido: CPF com dígitos conferentes ou
-  3 letras/números).
+  com visita) diz se a O.S. só encerra com ela; O.S. com chegada antes do instante da regra (ATEC_CONFIG `ASS_COLAB_DESDE`, gravado
+  na primeira rotina depois da publicação, ou `regras.assinatura.colaboradorDesde`) não exigem. Com `dados.versaoApp` (aplicativo
+  novo) e hora do aparelho depois desse instante, `nome` precisa de nome e sobrenome (senão recusado, não definitivo) e `documento`
+  opcional é conferido (CPF com dígitos ou 3 letras/números). Sem `versaoApp` (aplicativo antigo) ou colhida antes, a assinatura é
+  aceita como veio, com a nota no histórico.
   `registrado.logistica` e `registrado.assinaturaColaborador` voltam ao aparelho. Encerramento de logística: termo com pelo
   menos um item (ou, para O.S. antiga, o relato escrito), sem condição encontrada, teste funcional nem QR/série. Tudo
   acrescentado: o aplicativo anterior continua valendo pelo relato.

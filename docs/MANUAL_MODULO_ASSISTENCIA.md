@@ -171,8 +171,11 @@ O técnico registra pelo aplicativo do celular (funciona sem internet) ou em Ass
 5a. Assinatura do técnico ou colaborador que atendeu (03/11/2026, decisão da Diretoria): toda O.S. com visita tem as
    duas assinaturas. O técnico assina no SGO+ Campo, com o nome completo (documento opcional). Sem ela a O.S. fica em
    "Documentação pendente"; só a gestão, na ficha da O.S., pode "Encerrar sem a assinatura do técnico (justificar)": a
-   justificativa (pelo menos 10 letras) fica na O.S., no histórico e no relatório. O.S. com a chegada antes de 03/11/2026
-   não pedem essa assinatura e o relatório mostra a linha "assinatura não registrada".
+   justificativa (pelo menos 10 letras) fica na O.S., no histórico e no relatório. A regra vale a partir do instante da
+   publicação (gravado sozinho na primeira rotina depois dela; a gestão pode fixar outro nas regras): O.S. com a chegada
+   antes disso não pedem a assinatura do técnico e o relatório mostra a linha "assinatura não registrada" (em O.S. sem
+   visita a linha não aparece). Assinatura vinda de celular com o aplicativo antigo, ou colhida antes desse instante, é
+   aceita como veio (nome curto ou documento fora do formato) e o histórico registra a observação; nunca é recusada.
 6. Concluí: registra a conclusão.
 
 A O.S. só fecha com a documentação completa do tipo de serviço: chegada, relato, condição encontrada, teste

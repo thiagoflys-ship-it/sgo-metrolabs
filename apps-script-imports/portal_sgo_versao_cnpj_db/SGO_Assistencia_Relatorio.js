@@ -84,7 +84,7 @@ function AstR_htmlTermo_(os, o, tipo, rascunho) {
   var assCli = { papel: rot.papelCliente, nome: Ast_s_(os.ASSINATURA_NOME) || Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) || ctp.nome || ' ',
     cargo: Ast_s_(os.ASSINATURA_DOCUMENTO) || (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? 'Sem assinatura: ' + (AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || '') : ctp.documento || ''), imagemBase64: imgCli ? { mimeType: 'image/png', data: imgCli.data } : null };
   var assCol = AstR_assinaturaColab_(os, rot.papelColab);
-  var ass = s === 'RETIRADA' ? [assCli, assCol] : [assCol, assCli];
+  var ass = (s === 'RETIRADA' ? [assCli, assCol] : [assCol, assCli]).filter(Boolean);
   corpo += RelA4_secao_('Assinaturas', '<p>' + Ast_esc_(rot.declaracao) + '</p>' + (typeof SGO_DocA4_assinaturas_ === 'function' ? SGO_DocA4_assinaturas_(ass) : '') +
     (Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA) ? '<p class="nota">Justificativa da falta de assinatura: ' + Ast_esc_(os.SEM_ASSINATURA_JUSTIFICATIVA) + '</p>' : '') +
     AstR_notaAssinaturas_(os));
@@ -103,6 +103,8 @@ function AstR_htmlTermo_(os, o, tipo, rascunho) {
  * dispensada pela gestão), a linha sai com o nome do técnico da O.S. e "assinatura não registrada" (com a justificativa, se houver).
  */
 function AstR_assinaturaColab_(os, papel) {
+  var tp = Ast_tipo_(os.TIPO_CODIGO);
+  if (tp && tp.semVisita && !Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID)) return null;   // sem visita: a linha do técnico não se aplica
   var img = Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.COLAB_ASSINATURA_ARQUIVO_ID) : null, doc = Ast_s_(os.COLAB_ASSINATURA_DOCUMENTO);
   return { papel: papel, nome: Ast_s_(os.COLAB_ASSINATURA_NOME) || Ast_s_(os.TECNICO_NOME) || ' ',
     cargo: Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? (doc ? doc + ' · ' : '') + 'Metrolabs' : 'Metrolabs · assinatura não registrada' + (Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) ? ' (dispensada pela gestão)' : ''),
@@ -177,7 +179,8 @@ function AstR_htmlOS_(os, opcoes) {
   var img = Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.ASSINATURA_ARQUIVO_ID) : null;
   ass.push({ papel: 'Recebido por (cliente)', nome: Ast_s_(os.ASSINATURA_NOME) || Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) || ' ', cargo: Ast_s_(os.ASSINATURA_DOCUMENTO) || (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? 'Sem assinatura: ' + (AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || '') : ''),
     imagemBase64: img ? { mimeType: 'image/png', data: img.data } : null });
-  ass.push(AstR_assinaturaColab_(os, 'Técnico responsável'));
+  var assTec = AstR_assinaturaColab_(os, 'Técnico responsável');
+  if (assTec) ass.push(assTec);
   corpo += RelA4_secao_('Assinaturas', (typeof SGO_DocA4_assinaturas_ === 'function' ? SGO_DocA4_assinaturas_(ass) : '') +
     (Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA) ? '<p class="nota">Justificativa da falta de assinatura: ' + Ast_esc_(os.SEM_ASSINATURA_JUSTIFICATIVA) + '</p>' : '') +
     AstR_notaAssinaturas_(os));

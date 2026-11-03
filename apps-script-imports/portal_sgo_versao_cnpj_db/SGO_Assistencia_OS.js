@@ -104,8 +104,8 @@ function AstO_faltas_(os, fotos, regras) {
 function AstO_exigeAssColab_(os, tipo) {
   tipo = tipo || Ast_tipo_(os && os.TIPO_CODIGO) || { semVisita: false };
   if (tipo.semVisita) return false;
-  var cheg = Ast_dia_(os && os.CHEGOU_EM);
-  return !(cheg && cheg < ((Ast_regras_().assinatura || {}).colaboradorDesde || AST_ASS_COLAB_DESDE));
+  var cheg = Ast_ms_(os && os.CHEGOU_EM), desde = Ast_ms_(Ast_assColabDesde_(false));
+  return !(cheg !== null && desde !== null && cheg < desde);
 }
 /**
  * Gestão, pela tela do computador: encerra sem a assinatura do técnico, com justificativa (pelo menos 10 letras) gravada na O.S.
@@ -342,9 +342,18 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
       // 03/11/2026 (logística): a assinatura do colaborador da Metrolabs (quem entrega ou quem recebe) fica ao lado da do cliente
       var colab = Ast_up_(d.papel) === 'COLABORADOR';
       var nome = Ast_texto_(d.nome, 120), img = String(d.imagem || '');
-      if (!Ast_nomeCompletoOk_(nome)) return { ok: false, definitivo: false, motivo: 'falta o nome completo de quem assinou (nome e sobrenome)' + (nome ? ': veio "' + nome + '"' : ''), corrigir: 'Escreva o nome e o sobrenome de quem assinou e assine de novo.' };
-      var erroDoc = Ast_documentoErro_(d.documento);
-      if (erroDoc) return { ok: false, definitivo: false, motivo: erroDoc, corrigir: 'Corrija o documento (ou deixe em branco) e assine de novo.' };
+      // regra nova (nome completo, documento conferido) só para o que o aplicativo novo colhe (versaoApp) depois da entrada em vigor;
+      // assinatura de aplicativo antigo ou colhida antes é aceita como veio, com nota no histórico (nunca recusada)
+      var desdeAss = Ast_ms_(Ast_assColabDesde_(false)), emAp = Ast_ms_(ev.em);
+      var regraNova = !!Ast_s_(d.versaoApp) && !(emAp !== null && desdeAss !== null && emAp < desdeAss);
+      var notasAss = [], erroDoc = Ast_documentoErro_(d.documento);
+      if (nome.length < 3) notasAss.push('nome curto ou vazio');
+      else if (!Ast_nomeCompletoOk_(nome)) notasAss.push('nome sem sobrenome');
+      if (erroDoc) notasAss.push('documento fora do formato');
+      if (regraNova && !Ast_nomeCompletoOk_(nome)) return { ok: false, definitivo: false, motivo: 'falta o nome completo de quem assinou (nome e sobrenome)' + (nome ? ': veio "' + nome + '"' : ''), corrigir: 'Escreva o nome e o sobrenome de quem assinou e assine de novo.' };
+      if (regraNova && erroDoc) return { ok: false, definitivo: false, motivo: erroDoc, corrigir: 'Corrija o documento (ou deixe em branco) e assine de novo.' };
+      if (!regraNova && !nome) nome = colab ? Ast_s_(os.TECNICO_NOME) || 'Não informado' : 'Não informado';
+      var notaAss = !regraNova && notasAss.length ? 'Assinatura aceita como veio (' + (Ast_s_(d.versaoApp) ? 'colhida antes da regra nova' : 'aplicativo antigo') + '): ' + notasAss.join(' e ') + '.' : '';
       if (!/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(img) || img.length < AST_ASS_MIN) return { ok: false, definitivo: false, motivo: 'a assinatura veio vazia ou em formato errado', corrigir: 'Peça para o cliente assinar no quadro de novo (imagem PNG).' };
       if (img.length > AST_ASS_MAX) return { ok: false, definitivo: false, motivo: 'a imagem da assinatura está grande demais', corrigir: 'Limpe o quadro e peça para assinar de novo.' };
       var arq = null;
@@ -355,12 +364,12 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
       } catch (eA) { return { ok: false, definitivo: false, motivo: 'o servidor não conseguiu guardar a assinatura (' + String((eA && eA.message) || eA) + ')', corrigir: 'Tente sincronizar de novo em alguns minutos.' }; }
       if (colab) {
         gravar({ COLAB_ASSINATURA_ARQUIVO_ID: arq.getId(), COLAB_ASSINATURA_NOME: nome, COLAB_ASSINATURA_DOCUMENTO: Ast_texto_(d.documento, 60), COLAB_ASSINATURA_EM: hora });
-        Ast_evento_('OS', os.ID, 'ASSINATURA_COLABORADOR', eu, 'Assinado pelo colaborador da Metrolabs ' + nome + (Ast_s_(d.documento) ? ' (' + Ast_texto_(d.documento, 60) + ')' : ''), extraEv);
-        return { ok: true };
+        Ast_evento_('OS', os.ID, 'ASSINATURA_COLABORADOR', eu, 'Assinado pelo colaborador da Metrolabs ' + nome + (Ast_s_(d.documento) ? ' (' + Ast_texto_(d.documento, 60) + ')' : '') + (notaAss ? '. ' + notaAss : ''), extraEv);
+        return { ok: true, nota: notaAss };
       }
       gravar({ ASSINATURA_ARQUIVO_ID: arq.getId(), ASSINATURA_NOME: nome, ASSINATURA_DOCUMENTO: Ast_texto_(d.documento, 60), ASSINATURA_EM: hora });
-      Ast_evento_('OS', os.ID, 'ASSINATURA', eu, 'Assinado por ' + nome + (Ast_s_(d.documento) ? ' (' + Ast_texto_(d.documento, 60) + ')' : ''), extraEv);
-      return { ok: true };
+      Ast_evento_('OS', os.ID, 'ASSINATURA', eu, 'Assinado por ' + nome + (Ast_s_(d.documento) ? ' (' + Ast_texto_(d.documento, 60) + ')' : '') + (notaAss ? '. ' + notaAss : ''), extraEv);
+      return { ok: true, nota: notaAss };
     case 'CONCLUI':
       if (!tipoOs.semVisita && !Ast_s_(os.CHEGOU_EM)) return { ok: false, definitivo: false, motivo: 'a chegada não foi registrada', corrigir: 'Toque em "Cheguei" (envie o evento CHEGUEI antes do CONCLUI) e sincronize de novo.' };
       var co2 = AstO_coord_(d);

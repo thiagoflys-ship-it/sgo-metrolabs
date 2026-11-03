@@ -197,10 +197,29 @@ var AST_LOG_ROTULOS = {
 /**
  * 03/11/2026 (decisão do dono): toda O.S. com visita pede DUAS assinaturas, a do cliente (quem recebe ou acompanha) e a do técnico
  * ou colaborador da Metrolabs que atendeu. Nas duas, nome completo (nome e sobrenome) obrigatório; documento sempre opcional (se
- * preenchido, o formato é conferido). O.S. com a chegada registrada antes de AST_ASS_COLAB_DESDE (já em execução quando a regra
- * entrou) não exigem a do técnico; continuam abrindo e gerando o relatório, com a linha "não registrada".
+ * preenchido, o formato é conferido). A regra vale a partir do instante da publicação (Ast_assColabDesde_): O.S. com a chegada
+ * antes dele não exigem a do técnico e continuam abrindo e gerando o relatório, com a linha "não registrada". Assinatura colhida
+ * por aplicativo antigo (sem versaoApp) ou com a hora do aparelho anterior ao instante é aceita como veio, com nota no histórico.
  */
-var AST_ASS_COLAB_DESDE = '2026-11-03';
+var AST_CFG_ASS_COLAB_DESDE = 'ASS_COLAB_DESDE';
+/**
+ * Instante (aaaa-mm-ddThh:mm:ss, Brasília) em que a regra das duas assinaturas passou a valer: regras.assinatura.colaboradorDesde
+ * (se a gestão gravar), senão a linha ASS_COLAB_DESDE de ATEC_CONFIG, gravada com o instante da primeira rotina depois da
+ * publicação (Ast_garantirSemente_). Várias linhas (gravação concorrente): vale a mais antiga.
+ */
+function Ast_assColabDesde_(gravarSeFaltar) {
+  var r = Ast_regras_().assinatura || {};
+  if (Ast_ms_(r.colaboradorDesde) !== null) return Ast_agora_(Ast_ms_(r.colaboradorDesde));
+  var l = Ast_ler_(AST_ABAS.CONFIG).filter(function (x) { return Ast_s_(x.CHAVE) === AST_CFG_ASS_COLAB_DESDE; })
+    .map(function (x) { return Ast_s_(Ast_json_(x.VALOR_JSON, '')); }).filter(function (v) { return Ast_ms_(v) !== null; }).sort();
+  if (l.length) return l[0];
+  var agora = Ast_agora_();
+  if (gravarSeFaltar) {
+    Ast_inserir_(AST_ABAS.CONFIG, { CHAVE: AST_CFG_ASS_COLAB_DESDE, VALOR_JSON: JSON.stringify(agora), VERSAO: 1, MOTIVO: 'Início da regra das duas assinaturas (cliente e técnico), gravado na primeira rotina depois da publicação', ATUALIZADO_POR_NOME: 'Sistema', ATUALIZADO_EM: agora });
+    delete AST_MEMO[AST_ABAS.CONFIG];
+  }
+  return agora;
+}
 function Ast_nomeCompletoOk_(nome) {
   var partes = Ast_s_(nome).split(/\s+/).filter(function (p) { return p.replace(/[^A-Za-zÀ-ÿ]/g, '').length >= 2; });
   return partes.length >= 2;
@@ -731,6 +750,7 @@ function Ast_garantirSemente_() {
       EXIGE_QR_SERIE: t[7] ? 'SIM' : '', EXIGE_CHECKLIST: t[8] ? 'SIM' : '', MODELO_CODIGO: t[8], DOCUMENTO_TECNICO: t[9], SEM_VISITA: t[10] ? 'SIM' : '', AUVO_TIPOS: t[11],
       ORDEM: AST_TIPOS_PADRAO.indexOf(t) + 1, ATIVO: 'SIM', ATUALIZADO_EM: agora, CRIADO_EM: agora };
   });
+  try { Ast_assColabDesde_(true); } catch (eD) { /* sem a data gravada, vale o instante atual: nada trava */ }
   if (novosM.length) { SGO_DATA.insertMany(AST_ABAS.MODELOS, novosM); delete AST_MEMO[AST_ABAS.MODELOS]; }
   if (novosT.length) { SGO_DATA.insertMany(AST_ABAS.TIPOS, novosT); delete AST_MEMO[AST_ABAS.TIPOS]; }
   return { tipos: novosT.length, modelos: novosM.length };

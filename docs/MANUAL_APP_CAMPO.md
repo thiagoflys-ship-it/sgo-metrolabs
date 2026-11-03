@@ -108,7 +108,9 @@ feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
    justificativa.
 8a. **Sua assinatura (técnico que atendeu)** (03/11/2026): toda O.S. tem também a assinatura de quem atendeu pela
    Metrolabs, com o nome completo (documento opcional). Sem ela a O.S. não fecha pelo aplicativo; só a gestão, pela tela do
-   SGO+, pode encerrar sem, com justificativa. O.S. que já estava em atendimento antes de 03/11/2026 não pede.
+   SGO+, pode encerrar sem, com justificativa. O.S. com a chegada antes da entrada da regra não pede. Se a O.S. já foi
+   concluída no celular e o servidor ainda cobra a sua assinatura, a O.S. mostra "Falta a sua assinatura" com o botão
+   **Assinar agora**.
 9. **Concluí**: só libera quando não falta nada. A tela diz em palavras o que falta (por exemplo: "1 foto (mínimo 2)",
    "A assinatura do cliente ou o motivo de não haver assinatura"). Ao concluir, o app pede a localização de novo, com o
    mesmo aviso. Depois de concluída, a O.S. não muda mais no celular; correções são feitas pela gestão na tela do SGO+.

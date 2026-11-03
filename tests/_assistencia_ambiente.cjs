@@ -61,6 +61,10 @@ function ambiente(opcoes) {
     CAD_VEICULOS: [], CAD_CONDUTORES: [], CAD_TECNICOS: [],
     ATV_ATIVIDADES: [], ATV_HISTORICO: [], ATV_AVISOS: [], ATV_RESUMOS: [], NTF_ENVIOS: [], DOC_ENVIOS: [], DOC_DOCUMENTOS: []
   }, o.tabelas || {});
+  // 03/11/2026: instante em que a regra das duas assinaturas passou a valer (no servidor, gravado na primeira rotina depois da
+  // publicação). Padrão do ambiente: 03/11/2026 0h, para os testes de outubro seguirem como antes; o teste escolhe com o.assColabDesde.
+  if (o.assColabDesde !== null && !(tabelas.ATEC_CONFIG || []).some((c) => c.CHAVE === 'ASS_COLAB_DESDE'))
+    (tabelas.ATEC_CONFIG = tabelas.ATEC_CONFIG || []).push({ ID: 'cfg_ass_colab', CHAVE: 'ASS_COLAB_DESDE', VALOR_JSON: JSON.stringify(o.assColabDesde || '2026-11-03T00:00:00'), VERSAO: 1 });
   let seq = 0;
   const props = Object.assign({ GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: { TECNICA: ['u_gt'] } }) }, o.props || {});
   const cache = {}, emails = [], whats = [];
