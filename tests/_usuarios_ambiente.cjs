@@ -49,6 +49,8 @@ function ambiente(opcoes) {
     SGO_DATA: {
       _headersCache: {}, _headerMapCache: {},
       getSheet: (n) => folha(n),
+      // a conferência dos vínculos da conta (Usuários > Excluir) varre todas as abas da base
+      getDB: () => ({ getSheets: () => [...abas.keys()].map(folha), getSheetByName: folha }),
       getAll: (n) => { const a = abas.get(n); return a ? a.linhas.map((l) => paraObj(a, l)) : []; },
       getById: (n, id) => { const a = abas.get(n); const l = a && a.linhas.find((x) => String(x[0]) === String(id)); return l ? paraObj(a, l) : null; },
       update: (n, id, obj) => { const a = abas.get(n); const l = a && a.linhas.find((x) => String(x[0]) === String(id)); if (!l) return false; Object.keys(obj).forEach((k) => { let i = a.cab.indexOf(k); if (i < 0) { a.cab.push(k); i = a.cab.length - 1; } while (l.length <= i) l.push(''); l[i] = obj[k]; }); return true; },

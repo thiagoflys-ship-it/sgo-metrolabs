@@ -493,6 +493,7 @@ function verificarCodigoAcesso(desafioId, codigo, confiar, ctx) {
       }
       // código certo: uso único
       SegAcesso_apagarDesafio_(d.id);
+      if (u && u.EXCLUIDO_EM) return { success: false, etapa: 'LOGIN', excluida: true, message: MSG_CONTA_EXCLUIDA_AUTH };
       if (!u || u.STATUS !== SGO_CFG.STATUS.ATIVO) return { success: false, etapa: 'LOGIN', message: 'Usuário inativo ou bloqueado. Contate o administrador.' };
       if (u.PERFIL === 'REPRESENTADA' && typeof motivoRepresentadaAuth_ === 'function') {
         var motivoRep = motivoRepresentadaAuth_(u.REPRESENTADA_ID);
@@ -524,6 +525,7 @@ function reenviarCodigoAcesso(desafioId, opcoes, ctx) {
       if (espera > 0) return { success: false, etapa: 'CODIGO', message: 'Aguarde ' + espera + ' segundo' + (espera > 1 ? 's' : '') + ' para pedir outro código.', reenviarEmS: espera };
       if ((Number(d.reenvios) || 0) >= SEGA_MAX_REENVIOS) return { success: false, etapa: 'CODIGO', message: 'Você já pediu 3 códigos novos neste login. O que fazer: use o último código que chegou ou toque em "Voltar" e entre de novo com o e-mail e a senha.', reenviosRestantes: 0 };
       var u = SegAcesso_usuarioPorId_(d.userId);
+      if (u && u.EXCLUIDO_EM) { SegAcesso_apagarDesafio_(d.id); return { success: false, etapa: 'LOGIN', excluida: true, message: MSG_CONTA_EXCLUIDA_AUTH }; }
       if (!u || u.STATUS !== SGO_CFG.STATUS.ATIVO) { SegAcesso_apagarDesafio_(d.id); return { success: false, etapa: 'LOGIN', message: 'Usuário inativo ou bloqueado. Contate o administrador.' }; }
       var preferir = SegAcesso_txt_(opcoes.canal).toUpperCase() === 'EMAIL' ? 'EMAIL' : '';
       var envio = SegAcesso_novoCodigo_(d, u, SegAcesso_config_(), preferir);
@@ -616,6 +618,7 @@ function trocarSenhaAcesso(sessionId, dados, ctx) {
       var pendente = sess.pendente === 'TROCA_SENHA';
       SegAcesso_garantirEstrutura_();
       var u = SegAcesso_usuarioPorId_(sess.userId);
+      if (u && u.EXCLUIDO_EM) { removerSessaoAuth_(sid); return { success: false, etapa: 'LOGIN', excluida: true, message: MSG_CONTA_EXCLUIDA_AUTH }; }
       if (!u || u.STATUS !== SGO_CFG.STATUS.ATIVO) { removerSessaoAuth_(sid); return { success: false, etapa: 'LOGIN', message: 'Usuário inativo ou removido. Fale com o administrador do SGO+.' }; }
       if (!pendente || sess.pedirAtual) {
         if (!verificarSenhaAuth_(dados.senhaAtual, u.SENHA)) {
@@ -745,7 +748,7 @@ function SegAcesso_contasPorEmail_(email) {
   SGO_DATA_REP_VISIVEL = true;
   try {
     return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) {
-      return SegAcesso_txt_(r.ID) && SegAcesso_txt_(r.STATUS).toUpperCase() === SGO_CFG.STATUS.ATIVO && !SegAcesso_foraDoFluxo_(r.PERFIL) && emailLoginAuth_(r.EMAIL) === alvo;
+      return SegAcesso_txt_(r.ID) && SegAcesso_txt_(r.STATUS).toUpperCase() === SGO_CFG.STATUS.ATIVO && !SegAcesso_txt_(r.EXCLUIDO_EM) && !SegAcesso_foraDoFluxo_(r.PERFIL) && emailLoginAuth_(r.EMAIL) === alvo;
     }).map(function (r) { var u = usuarioParaSessaoAuth_(r); u.SENHA = r.SENHA; return u; });
   } finally { SGO_DATA_REP_VISIVEL = antes; }
 }
@@ -833,7 +836,7 @@ function SegAcesso_lerRed_(token) {
   var apagar = function () { try { SegAcesso_props_().deleteProperty(SegAcesso_chaveRed_(hash)); if (SegAcesso_props_().getProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)) === hash) SegAcesso_props_().deleteProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)); } catch (e) {} };
   if (!(Number(rec.exp) > Date.now())) { apagar(); return { invalido: true, vencido: true, rec: rec, u: u }; }
   var trocado = SegAcesso_props_().getProperty(SegAcesso_chaveRedPessoa_(rec.u, rec.tipo)) !== hash;
-  var semConta = !u || u.STATUS !== SGO_CFG.STATUS.ATIVO;
+  var semConta = !u || u.STATUS !== SGO_CFG.STATUS.ATIVO || !!u.EXCLUIDO_EM;
   var senhaMudou = rec.tipo !== 'MP' && u && Number(rec.v) !== SegAcesso_versao_(u);
   if (trocado || semConta || senhaMudou) { apagar(); return { invalido: true, rec: rec, u: u, semConta: semConta }; }
   return { rec: rec, u: u, hash: hash };
@@ -1136,7 +1139,8 @@ function SegAcesso_pessoas_() {
   var antes = typeof SGO_DATA_REP_VISIVEL === 'undefined' ? false : SGO_DATA_REP_VISIVEL;
   SGO_DATA_REP_VISIVEL = true;
   try {
-    return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) { return SegAcesso_txt_(r.ID) && !SegAcesso_foraDoFluxo_(r.PERFIL); }).map(function (r) {
+    // 03/11/2026: conta excluída em Usuários não aparece nas listas da gestão (consulta só em Usuários > Excluídos)
+    return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) { return SegAcesso_txt_(r.ID) && !SegAcesso_txt_(r.EXCLUIDO_EM) && !SegAcesso_foraDoFluxo_(r.PERFIL); }).map(function (r) {
       var tel = SegAcesso_celular_(r);
       return {
         // 31/10/2026: a pessoa é identificada pelo nome e pelo e-mail (o login não aparece mais)
@@ -1160,7 +1164,7 @@ function SegAcesso_relatorioEmails_() {
   SGO_DATA_REP_VISIVEL = true;
   try {
     var ativos = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (r) {
-      return SegAcesso_txt_(r.ID) && SegAcesso_txt_(r.STATUS).toUpperCase() === SGO_CFG.STATUS.ATIVO && !SegAcesso_foraDoFluxo_(r.PERFIL);
+      return SegAcesso_txt_(r.ID) && SegAcesso_txt_(r.STATUS).toUpperCase() === SGO_CFG.STATUS.ATIVO && !SegAcesso_txt_(r.EXCLUIDO_EM) && !SegAcesso_foraDoFluxo_(r.PERFIL);
     });
     var item = function (r) { return { id: SegAcesso_txt_(r.ID), nome: SegAcesso_txt_(r.NOME), perfil: SegAcesso_txt_(r.PERFIL).toUpperCase(), login: SegAcesso_txt_(r.USUARIO), email: SegAcesso_txt_(r.EMAIL) }; };
     var semEmail = ativos.filter(function (r) { return !emailValidoAuth_(r.EMAIL); }).map(item);
@@ -1360,6 +1364,9 @@ function SegAcesso_recuperarAcesso_(login, opcoes) {
     reg = achados[0];
   } finally { SGO_DATA_REP_VISIVEL = antes; }
   if (!reg) throw new Error((porEmail ? 'E-mail' : 'Login') + ' "' + alvoLogin + '" não encontrado em CAD_USUARIOS.');
+  // 03/11/2026: conta excluída em Usuários não é recuperada (nem reativada) por aqui
+  if (SegAcesso_txt_(reg.EXCLUIDO_EM)) throw new Error('A conta ' + alvoLogin + ' foi excluída em Usuários em ' + SegAcesso_dataBr_(reg.EXCLUIDO_EM) + (SegAcesso_txt_(reg.EXCLUIDO_POR) ? ' por ' + SegAcesso_txt_(reg.EXCLUIDO_POR) : '') +
+    ' e não é recuperada. O que fazer: entre com outra conta de Administrador e cadastre uma conta nova para a pessoa em Administração > Usuários (o mesmo e-mail pode ser usado). Se ninguém da gestão consegue entrar, recupere outra conta de Administrador com este script.');
   var u = usuarioParaSessaoAuth_(reg);
   var por = 'servidor (script de recuperação)';
   var motivo = SegAcesso_txt_(opcoes.motivo) || 'recuperação de acesso pelo servidor';

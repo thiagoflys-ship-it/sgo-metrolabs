@@ -93,7 +93,7 @@ test('abrir em nome: escopo da representada escolhida (busca pelo CNPJ e pela s�
   assert.match(r.message, /aberto em nome da REPRESENTADA ALFA TESTE/);
   const s = a.tabelas.ATEC_SOLICITACOES.find((x) => x.ID === r.solicitacao.id);
   assert.equal(s.ORIGEM, 'REPRESENTACAO'); assert.equal(s.SITUACAO, 'NOVA'); assert.equal(s.REPRESENTADA_ID, 'repA');
-  assert.equal(s.POR_ID, 'u_mat');
+  assert.equal(s.POR_ID, '', 'POR_ID nunca é a pessoa da Metrolabs (pedido por telefone, sem conta de quem pediu)');
   assert.equal(s.POR_NOME, 'Aberto pela Metrolabs (MATHEUS GODOI TESTE) a pedido de Fulano da Alfa (REPRESENTADA ALFA TESTE), por telefone');
   assert.equal(s.EM_NOME_CANAL, 'TELEFONE'); assert.equal(s.EM_NOME_PEDIDO_POR_CONTATO, '(62) 99999-1234'); assert.equal(s.EM_NOME_METROLABS_ID, 'u_mat');
   assert.ok(Number(s.ACEITE_MIN_UTEIS) > 0, 'prazo de aceite como o normal');
@@ -174,4 +174,66 @@ test('telas, ajuda, manual e base do assistente falam da ação nova (botão só
   assert.match(ler('SGO_Ajuda_Representacao.js'), /Abrir em nome da representada/);
   assert.match(ler('SGO_AssistenteManuais.js'), /Abrir em nome da representada/);
   assert.match(ler('SGO_AssistenteManuais.js'), /Excluir usuário/);
+});
+
+// ---------------------------------------------------------------- revisão de e2ce04e
+function espiarAvisosRep(a) {
+  const chamadas = [];
+  const orig = a.ctx.SGO_notificar_;
+  a.ctx.SGO_notificar_ = (o) => { if (o && o.categoria === 'REPRESENTACAO') chamadas.push(o.usuarios.slice()); return orig(o); };
+  return chamadas;
+}
+test('revisão: pedido aberto em nome: os avisos à representada vão para quem pediu (conta dela) e os administradores, nunca para quem abriu na Metrolabs', () => {
+  const a = amb();
+  a.marcar(['u_mat']);
+  const av = espiarAvisosRep(a);
+  ok(a.rep('s_matheusgodoi', 'emNomeBuscarCliente', { representadaId: 'repA', documento: '11222333000181' }));
+  ok(a.rep('s_matheusgodoi', 'emNomeBuscarEquipamento', { representadaId: 'repA', clienteId: 'c1', serie: 'S-100' }));
+  // quem pediu tem conta na representada (o contato é o e-mail dela)
+  a.tabelas.CAD_USUARIOS.push({ ID: 'ra_at', USUARIO: 'bia.alfa', NOME: 'BIA ALFA TESTE', PERFIL: 'REPRESENTADA', STATUS: 'ATIVO', EMAIL: 'bia@alfa.exemplo.test', REPRESENTADA_ID: 'repA', REPRESENTACAO_PAPEL: 'ATENDENTE' });
+  const r1 = ok(a.rep('s_matheusgodoi', 'abrirEmNome', Object.assign({}, PEDIDO, { pedidoPorNome: 'Bia da Alfa', pedidoPorContato: ' Bia@Alfa.exemplo.test ' })));
+  const s1 = a.tabelas.ATEC_SOLICITACOES.find((x) => x.ID === r1.solicitacao.id);
+  assert.equal(s1.POR_ID, 'ra_at'); assert.equal(s1.EM_NOME_METROLABS_ID, 'u_mat');
+  // por telefone: sem conta, POR_ID vazio (os avisos vão aos administradores da representada)
+  const r2 = ok(a.rep('s_matheusgodoi', 'abrirEmNome', PEDIDO));
+  const s2 = a.tabelas.ATEC_SOLICITACOES.find((x) => x.ID === r2.solicitacao.id);
+  assert.equal(s2.POR_ID, '');
+  ok(a.rep('s_gil', 'complemento', { solicitacaoId: s2.ID, id: s2.ID, pergunta: 'Qual o código de erro exato que aparece no visor?', texto: 'Qual o código de erro exato que aparece no visor?' }));
+  ok(a.rep('s_gil', 'enviarMensagem', { refTipo: 'SOLICITACAO', refId: s1.ID, texto: 'Recebemos o pedido, vamos ligar.' }));
+  assert.ok(av.length >= 3, 'houve avisos à representada');
+  for (const ids of av) { assert.ok(!ids.includes('u_mat'), 'nunca para a pessoa da Metrolabs: ' + ids); assert.ok(ids.includes('ra_adm')); }
+  assert.ok(av.some((ids) => ids.includes('ra_at')), 'quem pediu (conta da representada) recebe');
+  // mesmo que um POR_ID antigo aponte para alguém de fora da representada, o aviso não vai para ele
+  a.tabelas.ATEC_SOLICITACOES.find((x) => x.ID === s2.ID).POR_ID = 'u_mat';
+  ok(a.rep('s_gil', 'enviarMensagem', { refTipo: 'SOLICITACAO', refId: s2.ID, texto: 'Outra mensagem para a representada.' }));
+  assert.ok(!av[av.length - 1].includes('u_mat'));
+});
+
+test('revisão: "Ligar à representada" errado: o texto manda falar com o Administrador; só ele desliga, com motivo; pedido da representada não desliga', () => {
+  const a = amb();
+  a.marcar(['u_mat']);
+  const c = ok(a.api('s_gil', 'abrir', { clienteId: 'c1', unidadeId: 'un1', equipamentoId: 'eq1', sintoma: 'Autoclave parou no meio do ciclo, urgência', solicitante: 'Rui Responsável Teste', contato: '62988887777', prioridade: 'P1', parada: 'TOTAL', canal: 'TELEFONE' })).chamado;
+  ok(a.api('s_matheusgodoi', 'ligarRepresentada', { id: c.id, representadaId: 'repA', motivo: 'Urgência atendida antes por telefone.' }));
+  const de2 = a.api('s_matheusgodoi', 'ligarRepresentada', { id: c.id, representadaId: 'repB', motivo: 'era da outra representada' });
+  assert.equal(de2.ok, false); assert.match(de2.message, /fale com o Administrador: ele desliga/);
+  for (const sid of ['s_matheusgodoi', 's_gil', 's_dora']) assert.equal(a.api(sid, 'desligarRepresentada', { id: c.id, motivo: 'ligado à representada errada' }).ok, false, sid);
+  assert.equal(a.api('s_admin', 'desligarRepresentada', { id: c.id, motivo: 'curto' }).ok, false);
+  assert.equal(ok(a.api('s_admin', 'representacao', { id: c.id })).representacao.podeDesligar, true);
+  const r = ok(a.api('s_admin', 'desligarRepresentada', { id: c.id, motivo: 'Ligado à representada errada; é da Beta.' }));
+  assert.match(r.message, /desligado da REPRESENTADA ALFA TESTE/);
+  const ch = a.tabelas.ATEC_CHAMADOS.find((x) => x.ID === c.id);
+  assert.equal(ch.REPRESENTADA_ID, ''); assert.match(ch.REP_DESLIGADO_MOTIVO, /errada/);
+  assert.ok(a.tabelas.ATEC_EVENTOS.some((e) => e.ENTIDADE_ID === c.id && e.TIPO === 'DESLIGADO_REPRESENTADA'));
+  assert.ok(!JSON.stringify(a.rep('s_ana.alfa', 'chamados', {})).includes(c.numero), 'a Alfa deixa de ver');
+  ok(a.api('s_matheusgodoi', 'ligarRepresentada', { id: c.id, representadaId: 'repB', motivo: 'Agora sim, a Beta pediu este atendimento.' }));
+  assert.equal(a.tabelas.ATEC_CHAMADOS.find((x) => x.ID === c.id).REPRESENTADA_ID, 'repB');
+  // chamado que nasceu de pedido da representada não é desligado
+  ok(a.rep('s_matheusgodoi', 'emNomeBuscarCliente', { representadaId: 'repA', documento: '11222333000181' }));
+  ok(a.rep('s_matheusgodoi', 'emNomeBuscarEquipamento', { representadaId: 'repA', clienteId: 'c1', serie: 'S-100' }));
+  const sol = ok(a.rep('s_matheusgodoi', 'abrirEmNome', PEDIDO)).solicitacao;
+  const ac = ok(a.rep('s_gil', 'aceitar', { solicitacaoId: sol.id, prioridade: 'P3', confirmarDuplicado: true }));
+  const nao = a.api('s_admin', 'desligarRepresentada', { id: ac.chamado.id, motivo: 'tentativa de desligar pedido' });
+  assert.equal(nao.ok, false); assert.match(nao.message, /nasceu de um pedido da representada/);
+  assert.ok(!Object.prototype.hasOwnProperty.call(a.ctx.REP_ACOES_REPRESENTADA, 'desligarChamado'));
+  assert.match(ler('JS_Assistencia.html'), /"desligarRepresentada"/);
 });

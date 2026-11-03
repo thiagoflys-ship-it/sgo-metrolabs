@@ -454,6 +454,7 @@
     var stU = CADUI.telas.usuarios || {};
     var semExcluir = !(stU.extra && stU.extra.podeExcluir) ? "Excluir uma conta é só do Administrador. Para tirar o acesso, use Inativar." : "";
     var ultimo = u.ULTIMO_ADMIN ? "Único Administrador ativo: cadastre ou reative outro antes." : "";
+    var dono = u.DONO ? "Conta do responsável pelo sistema: nunca é excluída." : "";
     return [
       { texto: "Ver detalhes", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("usuarios", u.ID); } },
       // 31/10/2026 (pedido do dono): o link vai para o e-mail da pessoa; a senha provisória fica só para quem não tem e-mail
@@ -466,7 +467,7 @@
       ativo
         ? { texto: "Inativar (bloquear o acesso)", icone: "fa-ban", risco: true, desabilitado: !!(bloqueio || proprio || ultimo), nota: bloqueio || proprio || ultimo, acao: function () { Usuarios_inativar_(u); } }
         : { texto: "Reativar (liberar o acesso)", icone: "fa-rotate-left", desabilitado: !!bloqueio, nota: bloqueio, acao: function () { Usuarios_reativar_(u); } },
-      { texto: "Excluir usuário", icone: "fa-trash-can", risco: true, desabilitado: !!(bloqueio || proprio || ultimo || semExcluir), nota: bloqueio || proprio || ultimo || semExcluir, acao: function () { Usuarios_excluir_(u); } }
+      { texto: "Excluir usuário", icone: "fa-trash-can", risco: true, desabilitado: !!(bloqueio || proprio || ultimo || semExcluir || dono), nota: bloqueio || proprio || ultimo || semExcluir || dono, acao: function () { Usuarios_excluir_(u); } }
     ];
   }
 
@@ -545,6 +546,15 @@
         return "<tr><td>" + CadUI_esc_(c.rotulo) + '</td><td style="text-align:right">' + CadUI_esc_(Number(c.total || 0).toLocaleString("pt-BR")) + '</td><td class="cadx-sub">' + CadUI_esc_((c.abas || []).map(function (a) { return a.aba + ": " + Number(a.n).toLocaleString("pt-BR"); }).join("; ") || "nada") + "</td></tr>";
       }).join("");
       var remover = v.modo === "REMOVER";
+      // chamado ou O.S. em aberto com a pessoa: a exclusão espera a reatribuição (o servidor também recusa)
+      if (v.modo === "BLOQUEADA") {
+        CadUI_confirmar_({ titulo: "Excluir o usuário", botao: "Entendi",
+          texto: '<div class="cadx-faixa bc-faixa tom-alerta" role="alert">' + CadUI_esc_(v.bloqueioTexto) + "</div>" +
+            '<ul>' + (v.bloqueios || []).map(function (b) { return "<li>" + CadUI_esc_((b.tipo === "OS" ? "O.S. " : "Chamado ") + b.numero + " · " + b.papel + " · " + b.situacao) + "</li>"; }).join("") + "</ul>",
+          aoConfirmar: function (val, fechar) { fechar(); } });
+        return;
+      }
+      var papeisHtml = (v.papeis || []).length ? '<div class="cadx-faixa bc-faixa tom-info"><b>Papéis que a pessoa tem hoje</b> (ela sai destas listas ao excluir, com registro):<ul>' + v.papeis.map(function (x) { return "<li>" + CadUI_esc_(x.rotulo + " (" + x.detalhe + ")") + "</li>"; }).join("") + "</ul></div>" : "";
       CadUI_confirmar_({
         titulo: "Excluir o usuário", botao: remover ? "Excluir a conta" : "Excluir (fica guardada)", risco: true,
         texto: "<p>Excluir a conta de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b>" + (u.EMAIL ? " (" + CadUI_esc_(u.EMAIL) + ")" : "") + "? Conta excluída não volta.</p>" +
@@ -552,7 +562,7 @@
           ((v.naoConferidas || []).length ? '<div class="cadx-faixa bc-faixa tom-alerta">Não deu para conferir agora: ' + CadUI_esc_(v.naoConferidas.join(", ")) + ". Por segurança, a conta fica guardada (exclusão lógica).</div>" : "") +
           (remover ? '<div class="cadx-faixa bc-faixa tom-info"><b>Nenhum registro ligado.</b> A conta sai do cadastro.</div>'
             : '<div class="cadx-faixa bc-faixa tom-alerta"><b>Esta conta tem registros ligados</b>, então ela fica guardada: some da lista e dos seletores, a sessão aberta cai na hora, o login é recusado e o nome continua nos registros antigos. Consulte depois no botão Excluídos.</div>') +
-          "<p>Para só bloquear o acesso (e poder reativar depois), use Inativar.</p>",
+          papeisHtml + "<p>Para só bloquear o acesso (e poder reativar depois), use Inativar.</p>",
         motivo: { rotulo: "Motivo da exclusão", min: 10, dica: "Ex.: conta criada em duplicidade; pessoa saiu da empresa. Fica no registro de auditoria com o seu nome, a data e a hora." },
         aoConfirmar: function (val, fechar, reabilitar) {
           CadUI_chamar_("usuariosExcluir", [u.ID, val.motivo], function (res) { fechar(); CadUI_aviso_(res.message || "Conta excluída.", "ok"); CadUI_painelFechar_(); CadTela_recarregar_("usuarios"); }, reabilitar, "Aguarde, excluindo…");

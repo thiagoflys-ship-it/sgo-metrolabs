@@ -82,11 +82,12 @@ Cada ação pede o motivo e fica no registro de segurança com o seu nome.
 
 ## Excluir uma conta (03/11/2026)
 
-- **Só o Administrador** exclui (antes também a Diretoria). Ninguém exclui a própria conta e o último Administrador ativo não sai. A Diretoria e a gestão usam Inativar (a conta pode ser reativada).
-- Em Administração > Usuários > Mais > **Excluir usuário**, o sistema mostra antes o que está ligado à conta: logins e acessos, chamados e pedidos, ordens de serviço, mensagens (inclusive o bate-papo), atividades, documentos, avisos e histórico, com quantos registros. O motivo é obrigatório (pelo menos 10 letras).
+- **Só o Administrador** exclui (antes também a Diretoria). Ninguém exclui a própria conta, o último Administrador ativo não sai e a conta do responsável pelo sistema nunca é excluída. A Diretoria e a gestão usam Inativar (a conta pode ser reativada).
+- **Chamado ou O.S. em aberto com a pessoa** (técnico, triagem ou quem assumiu) impede a exclusão: a tela lista cada um e diz como passar para outra pessoa na Assistência técnica. Nos papéis de configuração (responsável pela triagem e pela representação, "Quem pode abrir pedido em nome da representada", piloto do WhatsApp, quem recebe os relatórios da empresa, gestores por área da Caixa de decisões) a pessoa sai da lista ao excluir, com registro.
+- Em Administração > Usuários > Mais > **Excluir usuário**, o sistema confere todas as abas da base (o ID da conta em qualquer coluna terminada em _ID, _IDS ou _JSON e o login no registro de entradas inteiro) e o bate-papo, e mostra o que está ligado: logins e acessos, chamados e pedidos, ordens de serviço, mensagens, atividades, documentos, avisos e histórico (ponto, comercial, licitações, frota, conduta e os demais), com quantos registros. Aba que não deu para ler conta como "não conferida" e a conta fica guardada. O motivo é obrigatório (pelo menos 10 letras).
 - **Sem nenhum registro ligado:** a conta sai do cadastro.
 - **Com registro ligado (ou alguma aba que não deu para conferir):** exclusão lógica. A linha fica guardada com quem excluiu, quando e o motivo; a conta some da lista e dos seletores, as sessões abertas caem na hora, o login é recusado ("esta conta foi excluída do SGO+") e o nome continua nos registros antigos. Conta excluída não volta; se a pessoa precisar de acesso, cadastre uma conta nova (o mesmo e-mail pode ser usado). Consulta no botão **Excluídos** da tela Usuários.
-- Tudo fica no registro de segurança (CONTA_EXCLUIDA) e na auditoria do sistema.
+- Tudo fica no registro de segurança (CONTA_EXCLUIDA) e na auditoria do sistema. A conta excluída também não aparece nas listas desta tela, não recebe link de nova senha nem código no celular (a mensagem diz que a conta foi excluída) e o script de recuperação do servidor não a recupera nem reativa: ele diz para cadastrar uma conta nova (ou recuperar outra conta de Administrador).
 
 ## Vínculo das contas de fora (03/11/2026)
 

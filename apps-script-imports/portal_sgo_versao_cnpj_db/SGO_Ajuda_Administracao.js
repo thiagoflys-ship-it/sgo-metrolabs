@@ -130,7 +130,8 @@ function SGO_ajudaTelas_Administracao_() {
           itens: [
             "Prefira inativar quando a pessoa pode voltar: a conta inativa pode ser reativada; a excluída não volta.",
             "Toque em \"Mais\" e depois em \"Excluir usuário\". O botão fica apagado para quem não é Administrador, na sua própria conta e no último Administrador ativo.",
-            "O sistema confere e mostra o que está ligado à conta: logins e acessos, chamados e pedidos, ordens de serviço, mensagens, atividades, documentos, avisos e histórico, com quantos registros em cada um.",
+            "O sistema confere todas as abas e mostra o que está ligado à conta: logins e acessos, chamados e pedidos, ordens de serviço, mensagens, atividades, documentos, avisos e histórico (ponto, comercial, licitações, frota, conduta e os demais), com quantos registros em cada um. Aba que não deu para ler aparece como \"não conferida\" e a conta fica guardada.",
+            "Se a pessoa tem chamado ou O.S. em aberto, a exclusão espera: passe cada um para outra pessoa na Assistência técnica e exclua de novo. Os papéis de configuração que ela tem (listas de responsáveis, piloto do WhatsApp, destinatários fixos) aparecem na confirmação e ela sai dessas listas ao excluir.",
             "Escreva o motivo (pelo menos 10 letras). Ele fica no registro de auditoria com o seu nome, a data e a hora.",
             "Sem nenhum registro ligado, a conta sai do cadastro (botão \"Excluir a conta\").",
             "Com registro ligado, a conta fica guardada (botão \"Excluir (fica guardada)\"): some da lista e dos seletores, a sessão aberta da pessoa cai na hora, o login é recusado e o nome continua nos registros antigos.",
@@ -205,7 +206,9 @@ function SGO_ajudaTelas_Administracao_() {
         { perfil: "TODOS", pode: "Ninguém inativa ou exclui a própria conta. O sistema nunca fica sem um Administrador ativo." }
       ],
       perguntas: [
-        { p: "Qual a diferença entre inativar e excluir?", r: "Inativar bloqueia o acesso e guarda a conta e o histórico; dá para reativar depois. Excluir apaga a conta e não pode ser desfeito. Prefira inativar." },
+        { p: "Qual a diferença entre inativar e excluir?", r: "Inativar bloqueia o acesso e guarda a conta e o histórico; dá para reativar depois (toda a gestão pode). Excluir é só do Administrador e não volta: conta sem nenhum registro ligado sai do cadastro; conta com registro ligado fica guardada (exclusão lógica), some da lista e dos seletores, não entra mais e aparece só em Excluídos, com o nome mantido nos registros antigos. A conta do responsável pelo sistema nunca é excluída. Prefira inativar quando a pessoa pode voltar." },
+        { p: "Por que não consigo excluir alguém que tem chamado ou O.S. em aberto?", r: "Para o atendimento não ficar sem dono. A tela lista os chamados e as O.S. em aberto com a pessoa (técnico, triagem ou quem assumiu). Na Assistência técnica, passe cada um para outra pessoa (reagende a O.S. com outro técnico ou peça à gestão da área Técnica para assumir a triagem) ou encerre, e exclua de novo." },
+        { p: "O que acontece com as listas em que a pessoa estava?", r: "Ao excluir, ela sai sozinha das listas de configuração (responsável pela triagem e pela representação, \"Quem pode abrir pedido em nome da representada\", piloto do WhatsApp, quem recebe os relatórios da empresa e gestores por área da Caixa de decisões). A tela mostra essas listas antes de confirmar, e cada saída fica no registro de auditoria." },
         { p: "Por que o celular é importante?", r: "O celular é usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Sem ele, a pessoa não recebe esses avisos." },
         { p: "Consigo ver a senha atual de alguém?", r: "Não. A senha nunca aparece. Use \"Mais\" e \"Enviar link de redefinição\" para a pessoa criar uma nova." },
         { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Quem esqueceu recebe o link (Mais > Enviar link de redefinição). A própria pessoa troca a senha dela em \"Trocar senha\", no topo da tela (no celular, em \"Conta\" > \"Trocar minha senha\")." },

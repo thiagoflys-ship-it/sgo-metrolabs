@@ -508,14 +508,24 @@ const SGO_USUARIOS = (() => {
     if (ehExcluida_(atual)) return { success: false, message: "Esta conta já foi excluída em " + Usuarios_dataBr_(atual.EXCLUIDO_EM) + ". Ela aparece só no filtro Excluídos." };
     const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "excluir");
     if (negado) return { success: false, message: negado };
+    // revisão de e2ce04e: a conta do responsável pelo sistema nunca é excluída
+    if (Usuarios_ehDonoConta_(atual)) return { success: false, message: USR_MSG_DONO };
     if (SGO_UTILS.safeUpper(atual.PERFIL) === "ADMIN" && SGO_UTILS.safeUpper(atual.STATUS) === STATUS_ATIVO && ehUltimoAdminAtivo_(usuarioId)) {
       return { success: false, message: "Não foi possível excluir: este é o único Administrador ativo. Cadastre (ou reative) outro Administrador antes." };
     }
     const m = SGO_UTILS.safe(motivo);
     if (m.length < 10) return { success: false, message: "Escreva o motivo da exclusão (pelo menos 10 letras). Ele fica no registro de auditoria com o seu nome." };
 
+    // chamado ou O.S. em aberto com a pessoa: reatribuir antes (nada é alterado)
+    const papeis = Usuarios_papeisDaConta_(atual);
+    if (papeis.bloqueios.length) return { success: false, bloqueios: papeis.bloqueios, message: Usuarios_msgBloqueios_(SGO_UTILS.safe(atual.NOME), papeis.bloqueios) };
     const vinc = Usuarios_vinculosDaConta_(atual);
+    if (papeis.naoConferidos.length) { vinc.semVinculo = false; vinc.naoConferidas = vinc.naoConferidas.concat(papeis.naoConferidos); }
     const quem = SGO_UTILS.safe(sessao.nome) || SGO_UTILS.safe(sessao.usuario);
+    const tirarPapeis = function () {
+      const t = Usuarios_tirarDosPapeis_(atual, sessao);
+      return (t.feitos.length ? " Saiu também de: " + t.feitos.join("; ") + "." : "") + (t.falhas.length ? " Não deu para tirar de: " + t.falhas.join("; ") + " (tire à mão na tela de cada lista)." : "");
+    };
     const desc = SGO_UTILS.safe(atual.NOME) + " <" + SGO_UTILS.safe(atual.EMAIL) + ">, login interno " + SGO_UTILS.safe(atual.USUARIO) + ", perfil " + SGO_UTILS.safeUpper(atual.PERFIL);
     if (vinc.semVinculo) {
       const ok = SGO_DATA.remove(SHEET_NAME, usuarioId);
@@ -524,7 +534,8 @@ const SGO_USUARIOS = (() => {
       if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("CONTA_EXCLUIDA", { ID: usuarioId, USUARIO: atual.USUARIO, PERFIL: atual.PERFIL }, null, "Conta removida (sem vínculo). Motivo: " + m.slice(0, 300), quem);
       Usuarios_marcarExcluida_(usuarioId);
       if (typeof SegAcesso_derrubarSessoes_ === "function") SegAcesso_derrubarSessoes_(usuarioId, "", "");
-      return { success: true, modo: "REMOVIDA", message: "Conta de " + SGO_UTILS.safe(atual.NOME) + " excluída. Ela não tinha nenhum registro ligado, então saiu do cadastro." };
+      const txtR = tirarPapeis();
+      return { success: true, modo: "REMOVIDA", message: "Conta de " + SGO_UTILS.safe(atual.NOME) + " excluída. Ela não tinha nenhum registro ligado, então saiu do cadastro." + txtR };
     }
 
     const agora = SGO_UTILS.nowIso();
@@ -540,10 +551,11 @@ const SGO_USUARIOS = (() => {
     SGO_DATA.log("USUARIOS_EXCLUIR", sessao.usuario, "Conta excluída (exclusão lógica, tem vínculo) ID=" + usuarioId + " (" + desc + "). Vínculos: " + (resumo || "não deu para conferir tudo") +
       (vinc.naoConferidas.length ? " (não conferido: " + vinc.naoConferidas.join(", ") + ")" : "") + ". Motivo: " + m.slice(0, 300), "USUARIOS");
     if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("CONTA_EXCLUIDA", { ID: usuarioId, USUARIO: atual.USUARIO, PERFIL: atual.PERFIL }, null, "Conta excluída (exclusão lógica). Motivo: " + m.slice(0, 300), quem);
+    const txtP = tirarPapeis();
     return {
       success: true, modo: "LOGICA",
       message: "Conta de " + SGO_UTILS.safe(atual.NOME) + " excluída. Como ela tem registros ligados (" + (resumo || "algumas abas não puderam ser conferidas") + "), a linha fica guardada: a conta some da lista e dos seletores, " +
-        (derrubadas.sessoes ? "as sessões abertas foram encerradas agora" : "qualquer sessão aberta é encerrada na próxima ação") + ", o login é recusado e o nome continua nos registros antigos. Consulte em Excluídos."
+        (derrubadas.sessoes ? "as sessões abertas foram encerradas agora" : "qualquer sessão aberta é encerrada na próxima ação") + ", o login é recusado e o nome continua nos registros antigos. Consulte em Excluídos." + txtP
     };
   }
 
@@ -723,41 +735,72 @@ function usuariosPesquisar(sessionId, termo) { SGO_DATA_REP_VISIVEL = true; try 
 function usuariosEnviarLinkRedefinicao(sessionId, id, motivo) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.enviarLinkRedefinicao(sessionId, id, motivo))); } catch(e) { return { success: false, message: String((e && e.message) || e) }; } }
 function usuariosListarClientesAtivos(sessionId) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 /* =========================
-   EXCLUIR USUÁRIO (03/11/2026, pedido do dono)
-   O que está ligado à conta, por assunto. Coluna ligada = o ID da conta em USUARIO_ID, RESPONSAVEL_ID, TECNICO_ID,
-   DESTINATARIO_ID, AUTOR_ID, POR_ID, *_POR_ID, *_USUARIO_ID ou numa lista *_IDS. Aba que não existe conta zero; aba que
-   existe e não deu para ler entra em naoConferidas e a exclusão fica lógica (nunca remove a linha sem conferir tudo).
+   EXCLUIR USUÁRIO (03/11/2026, pedido do dono; revisão de e2ce04e)
+   O que está ligado à conta: TODAS as abas da base (SGO_DATA.getDB().getSheets()) são lidas procurando o ID da conta em
+   qualquer coluna terminada em _ID ou _IDS (lista) ou em _JSON (o ID como palavra dentro do texto), e o login interno nas
+   colunas USUARIO e *_LOGIN (SYS_LOGS inteiro, sem limite). A própria linha em CAD_USUARIOS não conta. Aba que não deu para
+   ler entra em naoConferidas e a exclusão fica lógica (nunca remove a linha sem conferir tudo). O bate-papo (planilha da
+   Comunicação) é conferido à parte.
 ========================= */
 var USR_VINCULOS_CATEGORIAS = [
-  { cat: "acessos", rotulo: "Logins e acessos", abas: ["SYS_SEGURANCA_ACESSO", "GES_ACESSOS", "REP_ACESSOS"] },
-  { cat: "chamados", rotulo: "Chamados e pedidos", abas: ["ATEC_CHAMADOS", "ATEC_SOLICITACOES", "ATEC_CASOS", "ATEC_ORCAMENTOS", "ATEC_EVENTOS"] },
-  { cat: "os", rotulo: "Ordens de serviço", abas: ["ATEC_OS", "ATEC_FOTOS", "ATEC_PECAS"] },
-  { cat: "mensagens", rotulo: "Mensagens", abas: ["REP_MENSAGENS"] },
-  { cat: "atividades", rotulo: "Atividades", abas: ["ATV_ATIVIDADES", "ATV_HISTORICO"] },
-  { cat: "documentos", rotulo: "Documentos", abas: ["DOC_DOCUMENTOS", "DOC_ENVIOS", "DOC_REVISOES", "REP_DOCUMENTOS", "REP_ANEXOS"] },
-  { cat: "avisos", rotulo: "Avisos", abas: ["AVS_AVISOS", "AVS_CIENCIA", "ATV_AVISOS", "NTF_ENVIOS", "NTF_GESTAO"] },
-  { cat: "historico", rotulo: "Histórico e outros registros", abas: ["HIST_CADASTROS", "QUALIDADE_OCORRENCIAS", "GES_DECISOES", "GES_AVALIACOES", "CMP_REQUISICOES", "CMP_PEDIDOS", "REG_FROTA_MOVIMENTACAO", "REG_FROTA_RESERVA", "CAD_CONDUTORES"] }
+  { cat: "acessos", rotulo: "Logins e acessos" }, { cat: "chamados", rotulo: "Chamados e pedidos" }, { cat: "os", rotulo: "Ordens de serviço" },
+  { cat: "mensagens", rotulo: "Mensagens" }, { cat: "atividades", rotulo: "Atividades" }, { cat: "documentos", rotulo: "Documentos" },
+  { cat: "avisos", rotulo: "Avisos" }, { cat: "historico", rotulo: "Histórico e outros registros (ponto, comercial, licitações, frota, conduta...)" }
 ];
-var USR_VINCULO_COLUNA = /^(USUARIO_ID|RESPONSAVEL_ID|TECNICO_ID|DESTINATARIO_ID|AUTOR_ID|POR_ID)$|_POR_ID$|_USUARIO_ID$|_RESPONSAVEL_ID$/;
-var USR_VINCULO_LISTA = /_IDS$/;
+function Usuarios_categoriaDaAba_(aba) {
+  var a = String(aba || "").toUpperCase();
+  if (/^(SYS_SEGURANCA_ACESSO|GES_ACESSOS|REP_ACESSOS|SYS_LOGS)$/.test(a)) return "acessos";
+  if (/^ATEC_(OS|FOTOS|PECAS)\b|^AUVO_OS/.test(a)) return "os";
+  if (/^ATEC_/.test(a)) return "chamados";
+  if (/MENSAGENS$/.test(a)) return "mensagens";
+  if (/^ATV_AVISOS$|^AVS_|^NTF_/.test(a)) return "avisos";
+  if (/^ATV_/.test(a)) return "atividades";
+  if (/^DOC_|DOCUMENTOS|ANEXOS/.test(a)) return "documentos";
+  return "historico";
+}
+var USR_COL_ID = /_ID$/i, USR_COL_LISTA = /_IDS$/i, USR_COL_JSON = /_JSON$/i, USR_COL_LOGIN = /^(USUARIO|.+_LOGIN)$/i;
+function Usuarios_temPalavra_(texto, id) {
+  var t = String(texto === null || texto === undefined ? "" : texto);
+  if (!id || t.indexOf(id) < 0) return false;
+  var esc = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp("(^|[^A-Za-z0-9_-])" + esc + "([^A-Za-z0-9_-]|$)").test(t);
+}
 
-/** Quantos registros da aba citam o ID nas colunas de ligação. null = a aba existe e não deu para ler. */
-function Usuarios_contarNaAba_(aba, id) {
-  var linhas;
-  try { linhas = SGO_DATA.getAll(aba) || []; } catch (e) {
-    if (/Aba não encontrada|não encontrad/i.test(String((e && e.message) || e))) return 0;
-    return null;
-  }
-  if (!linhas.length) return 0;
-  var cols = Object.keys(linhas[0]), lig = cols.filter(function (c) { return USR_VINCULO_COLUNA.test(c); }), lst = cols.filter(function (c) { return USR_VINCULO_LISTA.test(c); });
-  if (!lig.length && !lst.length) return 0;
-  var n = 0;
-  linhas.forEach(function (r) {
-    var achou = lig.some(function (c) { return String(r[c] === null || r[c] === undefined ? "" : r[c]).trim() === id; }) ||
-      lst.some(function (c) { return String(r[c] || "").split(/[\s,;|]+/).indexOf(id) >= 0; });
-    if (achou) n++;
-  });
-  return n;
+/** Quantas linhas da aba citam a conta. null = não deu para ler. */
+function Usuarios_contarNaFolha_(sh, id, login) {
+  try {
+    var n = sh.getLastRow(), m = sh.getLastColumn();
+    if (n < 2 || m < 1) return 0;
+    var cab = sh.getRange(1, 1, 1, m).getValues()[0].map(function (h) { return String(h === null || h === undefined ? "" : h).trim(); });
+    var tipos = cab.map(function (h) {
+      if (!h || h.toUpperCase() === "ID") return "";
+      if (USR_COL_LISTA.test(h)) return "L";
+      if (USR_COL_ID.test(h)) return "I";
+      if (USR_COL_JSON.test(h)) return "J";
+      if (login && USR_COL_LOGIN.test(h)) return "U";
+      return "";
+    });
+    var ini = -1, fim = -1;
+    tipos.forEach(function (t, j) { if (t) { if (ini < 0) ini = j; fim = j; } });
+    if (ini < 0) return 0;
+    var nome = String(sh.getName() || "").toUpperCase(), cId = cab.indexOf("ID");
+    var proprias = nome === "CAD_USUARIOS" && cId >= 0 ? sh.getRange(2, cId + 1, n - 1, 1).getValues() : null;
+    var vals = sh.getRange(2, ini + 1, n - 1, fim - ini + 1).getValues(), cont = 0;
+    for (var i = 0; i < vals.length; i++) {
+      if (proprias && String(proprias[i][0]).trim() === id) continue;
+      var l = vals[i], achou = false;
+      for (var j = 0; j < l.length && !achou; j++) {
+        var t = tipos[ini + j], v = l[j];
+        if (!t || v === "" || v === null || v === undefined) continue;
+        if (t === "I") achou = String(v).trim() === id;
+        else if (t === "L") achou = String(v).split(/[\s,;|]+/).indexOf(id) >= 0;
+        else if (t === "J") achou = Usuarios_temPalavra_(v, id);
+        else if (t === "U") achou = String(v).trim().toLowerCase() === login;
+      }
+      if (achou) cont++;
+    }
+    return cont;
+  } catch (e) { return null; }
 }
 
 /** Mensagens do bate-papo (planilha da Comunicação) escritas pela pessoa. null = não deu para conferir. */
@@ -774,42 +817,119 @@ function Usuarios_contarBatePapo_(id) {
   } catch (e) { return null; }
 }
 
-/**
- * { categorias: [{ cat, rotulo, total, abas: [{ aba, n }] }], total, naoConferidas: [abas], semVinculo }.
- * "Logins e acessos" também conta o último login (SYS_LOGS, LOGIN_OK) do login interno da pessoa.
- */
+/** { categorias: [{ cat, rotulo, total, abas: [{ aba, n }] }], total, naoConferidas: [abas], semVinculo }. */
 function Usuarios_vinculosDaConta_(u) {
   var id = SGO_UTILS.safe(u && u.ID), login = SGO_UTILS.safeLower(u && u.USUARIO).trim();
-  var r = { categorias: [], total: 0, naoConferidas: [], semVinculo: false };
-  var antes = typeof SGO_DATA_REP_VISIVEL === "undefined" ? false : SGO_DATA_REP_VISIVEL;
-  SGO_DATA_REP_VISIVEL = true;
-  try {
-    USR_VINCULOS_CATEGORIAS.forEach(function (c) {
-      var item = { cat: c.cat, rotulo: c.rotulo, total: 0, abas: [] };
-      c.abas.forEach(function (aba) {
-        var n = Usuarios_contarNaAba_(aba, id);
-        if (n === null) { r.naoConferidas.push(aba); return; }
-        if (n) { item.abas.push({ aba: aba, n: n }); item.total += n; }
-      });
-      if (c.cat === "acessos" && login) {
-        var ult = "";
-        try { ult = (Usuarios_ultimosAcessos_() || {})[login] || ""; } catch (e) { ult = ""; }
-        if (ult) { item.abas.push({ aba: "SYS_LOGS (último login " + Usuarios_dataBr_(ult) + ")", n: 1 }); item.total += 1; }
-      }
-      if (c.cat === "mensagens") {
-        var nb = Usuarios_contarBatePapo_(id);
-        if (nb === null) r.naoConferidas.push("bate-papo (Comunicação)");
-        else if (nb) { item.abas.push({ aba: "bate-papo (Comunicação)", n: nb }); item.total += nb; }
-      }
-      r.categorias.push(item);
-      r.total += item.total;
-    });
-  } finally { SGO_DATA_REP_VISIVEL = antes; }
+  var r = { categorias: [], total: 0, naoConferidas: [], semVinculo: false }, por = {};
+  USR_VINCULOS_CATEGORIAS.forEach(function (c) { por[c.cat] = { cat: c.cat, rotulo: c.rotulo, total: 0, abas: [] }; r.categorias.push(por[c.cat]); });
+  var folhas = null;
+  try { folhas = SGO_DATA.getDB().getSheets(); } catch (e) { folhas = null; }
+  if (!folhas) r.naoConferidas.push("todas as abas da base (a lista de abas não abriu)");
+  (folhas || []).forEach(function (sh) {
+    var nome = "";
+    try { nome = String(sh.getName()); } catch (e) { r.naoConferidas.push("aba sem nome"); return; }
+    var n = Usuarios_contarNaFolha_(sh, id, login);
+    if (n === null) { r.naoConferidas.push(nome); return; }
+    if (n) { var c = por[Usuarios_categoriaDaAba_(nome)]; c.abas.push({ aba: nome, n: n }); c.total += n; }
+  });
+  var nb = Usuarios_contarBatePapo_(id);
+  if (nb === null) r.naoConferidas.push("bate-papo (Comunicação)");
+  else if (nb) { por.mensagens.abas.push({ aba: "bate-papo (Comunicação)", n: nb }); por.mensagens.total += nb; }
+  r.categorias.forEach(function (c) { r.total += c.total; });
   r.semVinculo = !!id && r.total === 0 && r.naoConferidas.length === 0;
   return r;
 }
 
-/** Tela Usuários > Excluir: o que está ligado à conta e o que vai acontecer (remover a linha ou exclusão lógica). Só o Administrador. */
+/* =========================
+   PAPÉIS DA PESSOA (revisão de e2ce04e). Antes de excluir, a tela lista os papéis ativos:
+   - chamado ou O.S. em aberto com a pessoa (técnico, triagem, quem assumiu): IMPEDE a exclusão até reatribuir;
+   - listas de configuração (responsável pela triagem e pela representação, "abrir em nome da representada", piloto do
+     WhatsApp, quem recebe os relatórios da empresa, gestores por área da Caixa de decisões): a pessoa sai da lista ao
+     excluir, com registro.
+========================= */
+/** Listas guardadas em propriedades: { prop, rotulo }. Todo vetor de textos dentro do JSON que tem o ID perde o ID. */
+var USR_PAPEIS_PROPS = [
+  { prop: "REP_ABRE_EM_NOME_CFG", rotulo: "Lista \"Quem pode abrir pedido em nome da representada\"" },
+  { prop: "WA_PILOTO", rotulo: "Piloto do WhatsApp (pessoas e grupos)" },
+  { prop: "GES_RELATORIOS_EMPRESA_CFG", rotulo: "Quem recebe os relatórios da empresa (avisos com destinatário fixo)" },
+  { prop: "GESTAO_DECISOES_CFG", rotulo: "Gestores por área (Caixa de decisões > Regras e responsáveis)" }
+];
+function Usuarios_caminhosCom_(j, id, base, saida) {
+  if (Array.isArray(j)) { if (j.some(function (x) { return String(x).trim() === id; })) saida.push(base || "(lista)"); return saida; }
+  if (j && typeof j === "object") Object.keys(j).forEach(function (k) { Usuarios_caminhosCom_(j[k], id, base ? base + "." + k : k, saida); });
+  return saida;
+}
+function Usuarios_tirarDe_(j, id) {
+  if (Array.isArray(j)) return j.filter(function (x) { return String(x).trim() !== id; });
+  if (j && typeof j === "object") Object.keys(j).forEach(function (k) { j[k] = Usuarios_tirarDe_(j[k], id); });
+  return j;
+}
+var USR_CH_FIM = ["ENCERRADO", "CANCELADO"], USR_OS_FIM = ["ENCERRADA", "CANCELADA"];
+function Usuarios_lerAba_(aba) { try { return SGO_DATA.getAll(aba) || []; } catch (e) { return /Aba não encontrada|não encontrad/i.test(String((e && e.message) || e)) ? [] : null; } }
+
+/** { bloqueios: [{ tipo, numero, papel, situacao }], papeis: [{ chave, rotulo, detalhe }], naoConferidos: [] } */
+function Usuarios_papeisDaConta_(u) {
+  var id = SGO_UTILS.safe(u && u.ID), r = { bloqueios: [], papeis: [], naoConferidos: [] };
+  var fimCh = typeof AST_TERMINAIS !== "undefined" ? AST_TERMINAIS : USR_CH_FIM;
+  var ch = Usuarios_lerAba_("ATEC_CHAMADOS");
+  if (ch === null) r.naoConferidos.push("chamados em aberto (ATEC_CHAMADOS)");
+  (ch || []).forEach(function (c) {
+    if (SGO_UTILS.safe(c.EXCLUIDO_EM) || fimCh.indexOf(SGO_UTILS.safeUpper(c.SITUACAO)) >= 0) return;
+    var papel = SGO_UTILS.safe(c.TECNICO_ID) === id ? "técnico" : SGO_UTILS.safe(c.TRIAGEM_RESPONSAVEL_ID) === id ? "responsável pela triagem" : SGO_UTILS.safe(c.ASSUMIDO_POR_ID) === id ? "quem assumiu" : SGO_UTILS.safe(c.RESPONSAVEL_ID) === id ? "responsável" : "";
+    if (papel) r.bloqueios.push({ tipo: "CHAMADO", numero: SGO_UTILS.safe(c.NUMERO), papel: papel, situacao: SGO_UTILS.safe(c.SITUACAO) });
+  });
+  var os = Usuarios_lerAba_("ATEC_OS");
+  if (os === null) r.naoConferidos.push("O.S. em aberto (ATEC_OS)");
+  (os || []).forEach(function (o) {
+    if (USR_OS_FIM.indexOf(SGO_UTILS.safeUpper(o.SITUACAO)) >= 0) return;
+    if (SGO_UTILS.safe(o.TECNICO_ID) === id) r.bloqueios.push({ tipo: "OS", numero: SGO_UTILS.safe(o.NUMERO), papel: "técnico", situacao: SGO_UTILS.safe(o.SITUACAO) });
+  });
+  try {
+    if (typeof Ast_regras_ === "function") {
+      var rg = Ast_regras_() || {};
+      if ((((rg.triagem || {}).responsaveis) || []).map(String).indexOf(id) >= 0) r.papeis.push({ chave: "AST_TRIAGEM", rotulo: "Responsável pela triagem (Regras da assistência)", detalhe: "sai da lista" });
+      if ((((rg.representacao || {}).responsaveis) || []).map(String).indexOf(id) >= 0) r.papeis.push({ chave: "AST_REPRESENTACAO", rotulo: "Responde pela representação (Regras da assistência > Representação)", detalhe: "sai da lista" });
+    }
+  } catch (e) { r.naoConferidos.push("Regras da assistência"); }
+  var props = null;
+  try { props = PropertiesService.getScriptProperties(); } catch (e) { props = null; }
+  USR_PAPEIS_PROPS.forEach(function (p) {
+    var j = null;
+    try { j = JSON.parse((props && props.getProperty(p.prop)) || "null"); } catch (e) { j = null; }
+    var onde = j ? Usuarios_caminhosCom_(j, id, "", []) : [];
+    if (onde.length) r.papeis.push({ chave: "PROP:" + p.prop, rotulo: p.rotulo, detalhe: "sai de: " + onde.join(", ") });
+  });
+  return r;
+}
+function Usuarios_msgBloqueios_(nome, bl) {
+  return "Não foi possível excluir: " + (nome || "a pessoa") + " ainda tem " + bl.length + (bl.length === 1 ? " atendimento em aberto" : " atendimentos em aberto") + " (" +
+    bl.slice(0, 8).map(function (b) { return (b.tipo === "OS" ? "O.S. " : "chamado ") + b.numero + ", " + b.papel; }).join("; ") + (bl.length > 8 ? "; e mais " + (bl.length - 8) : "") +
+    "). O que fazer: na Assistência técnica, abra cada um e passe para outra pessoa (reagende a O.S. com outro técnico, ou peça à gestão da área Técnica para assumir a triagem) ou encerre; depois exclua de novo. Nada foi alterado.";
+}
+/** Tira a pessoa das listas de configuração (depois de excluir). Devolve os rótulos tirados e os que falharam. Nunca lança. */
+function Usuarios_tirarDosPapeis_(u, sessao) {
+  var id = SGO_UTILS.safe(u && u.ID), feitos = [], falhas = [], quem = SGO_UTILS.safe(sessao && (sessao.nome || sessao.usuario)) || "Administrador";
+  var pap = Usuarios_papeisDaConta_(u).papeis;
+  pap.forEach(function (p) {
+    try {
+      if (p.chave.indexOf("PROP:") === 0) {
+        var prop = p.chave.slice(5), props = PropertiesService.getScriptProperties(), j = JSON.parse(props.getProperty(prop) || "null");
+        if (!j) return;
+        props.setProperty(prop, JSON.stringify(Usuarios_tirarDe_(j, id)));
+      } else if (typeof Ast_regras_ === "function" && typeof Ast_gravarRegras_ === "function") {
+        var rg = JSON.parse(JSON.stringify(Ast_regras_()));
+        if (p.chave === "AST_TRIAGEM") rg.triagem.responsaveis = (rg.triagem.responsaveis || []).filter(function (x) { return String(x) !== id; });
+        if (p.chave === "AST_REPRESENTACAO") rg.representacao.responsaveis = (rg.representacao.responsaveis || []).filter(function (x) { return String(x) !== id; });
+        Ast_gravarRegras_(rg, { id: SGO_UTILS.safe(sessao && sessao.userId), nome: quem }, "Conta de " + SGO_UTILS.safe(u.NOME) + " excluída em Usuários: tirada de " + p.rotulo + ".");
+      } else return;
+      feitos.push(p.rotulo);
+      SGO_DATA.log("USUARIOS_EXCLUIR_PAPEL", SGO_UTILS.safe(sessao && sessao.usuario), "Conta excluída ID=" + id + " (" + SGO_UTILS.safe(u.NOME) + ") tirada de " + p.rotulo + " (" + p.detalhe + ")", "USUARIOS");
+    } catch (e) { falhas.push(p.rotulo + " (" + String((e && e.message) || e).slice(0, 120) + ")"); }
+  });
+  return { feitos: feitos, falhas: falhas };
+}
+
+/** Tela Usuários > Excluir: o que está ligado à conta, os papéis e o que vai acontecer. Só o Administrador. */
 function usuariosVinculosConta(sessionId, id) {
   SGO_DATA_REP_VISIVEL = true;
   try {
@@ -818,10 +938,20 @@ function usuariosVinculosConta(sessionId, id) {
     var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, SGO_UTILS.safe(id));
     if (!u) return { success: false, message: "Usuário não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
     if (SGO_UTILS.safe(u.EXCLUIDO_EM)) return { success: false, message: "Esta conta já foi excluída em " + Usuarios_dataBr_(u.EXCLUIDO_EM) + ". Ela aparece só em Excluídos." };
-    var v = Usuarios_vinculosDaConta_(u);
-    return JSON.parse(JSON.stringify({ success: true, nome: SGO_UTILS.safe(u.NOME), email: SGO_UTILS.safe(u.EMAIL), modo: v.semVinculo ? "REMOVER" : "LOGICA",
-      categorias: v.categorias, total: v.total, naoConferidas: v.naoConferidas }));
+    if (Usuarios_ehDonoConta_(u)) return { success: false, message: USR_MSG_DONO };
+    var v = Usuarios_vinculosDaConta_(u), p = Usuarios_papeisDaConta_(u);
+    return JSON.parse(JSON.stringify({ success: true, nome: SGO_UTILS.safe(u.NOME), email: SGO_UTILS.safe(u.EMAIL), modo: p.bloqueios.length ? "BLOQUEADA" : v.semVinculo && !p.naoConferidos.length ? "REMOVER" : "LOGICA",
+      categorias: v.categorias, total: v.total, naoConferidas: v.naoConferidas.concat(p.naoConferidos), bloqueios: p.bloqueios, papeis: p.papeis,
+      bloqueioTexto: p.bloqueios.length ? Usuarios_msgBloqueios_(SGO_UTILS.safe(u.NOME), p.bloqueios) : "" }));
   } catch (e) { return { success: false, message: SGO_textoFalhaOperador_("conferir o que está ligado à conta", e) }; }
+}
+
+/** A conta do responsável pelo sistema (SGO_DONOS em SGO_Chaves.js) nunca é excluída. */
+var USR_MSG_DONO = "Não foi possível excluir: esta é a conta do responsável pelo sistema e ela nunca é excluída (é por ela que o acesso é recuperado). Se a pessoa não deve mais usar o SGO+, troque o responsável em Chaves e senhas antes ou use Inativar.";
+function Usuarios_ehDonoConta_(u) {
+  var login = SGO_UTILS.safeLower(u && u.USUARIO).trim();
+  if (!login) return false;
+  try { return typeof Chaves_ehDonoUsuario_ === "function" ? !!Chaves_ehDonoUsuario_(login) : login === "admin"; } catch (e) { return login === "admin"; }
 }
 
 /* =========================
@@ -1000,6 +1130,8 @@ function usuariosPainel(sessionId) {
       o.AREA = ar.codigo;
       o.AREA_NOME = ar.codigo ? ar.nome : "";
       o.ULTIMO_ADMIN = perfil === "ADMIN" && SGO_UTILS.safeUpper(u.STATUS) === "ATIVO" && ativosAdmin === 1;
+      // revisão de e2ce04e: a conta do responsável pelo sistema nunca é excluída (a tela apaga o botão; o servidor recusa)
+      o.DONO = Usuarios_ehDonoConta_(u);
       return o;
     });
     itens.sort(function (a, b) {

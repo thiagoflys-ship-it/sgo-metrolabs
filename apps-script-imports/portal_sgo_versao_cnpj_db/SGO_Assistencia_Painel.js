@@ -602,6 +602,7 @@ var AST_ACOES = {
   complemento: function (eu, d) { return AstC_complemento_(eu, d); },
   representacao: function (eu, d) { return typeof RepI_chamado_ === 'function' ? RepI_chamado_(eu, d) : { representacao: null }; },
   // 03/11/2026: liga à representada um chamado comum já aberto (urgência atendida antes), com motivo (SGO_Representacao.js)
+  desligarRepresentada: function (eu, d) { if (typeof RepI_desligarChamado_ !== 'function') throw new Error('Não foi possível desligar: o módulo Representação não está disponível. Atualize a página (F5).'); if (typeof Rep_memoLimpar_ === 'function') Rep_memoLimpar_(); return RepI_desligarChamado_(eu, d); },
   ligarRepresentada: function (eu, d) { if (typeof RepI_ligarChamado_ !== 'function') throw new Error('Não foi possível ligar: o módulo Representação não está disponível. Atualize a página (F5).'); if (typeof Rep_memoLimpar_ === 'function') Rep_memoLimpar_(); return RepI_ligarChamado_(eu, d); },
   casos: function (eu, d) { return AstC_casos_(eu, d); },
   salvarCaso: function (eu, d) { return AstC_salvarCaso_(eu, d); },

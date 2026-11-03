@@ -286,7 +286,10 @@ function login(usuario, senha, ctx) {
       }
       candidatos = tecnicas;
     }
-    const ativosId = candidatos.filter(function (c) { return SGO_UTILS.safeUpper(c.linha[5]) === SGO_CFG.STATUS.ATIVO; });
+    // 03/11/2026 (revisão): conta excluída (EXCLUIDO_EM) nunca conta como ativa, qualquer que seja o STATUS gravado
+    const cExclLogin = (dados[0] || []).map(function (h) { return SGO_UTILS.safe(h); }).indexOf("EXCLUIDO_EM");
+    const excluidaLinha = function (l) { return cExclLogin >= 0 && !!SGO_UTILS.safe(l[cExclLogin]); };
+    const ativosId = candidatos.filter(function (c) { return SGO_UTILS.safeUpper(c.linha[5]) === SGO_CFG.STATUS.ATIVO && !excluidaLinha(c.linha); });
     if (achado.porEmail && ativosId.length > 1) {
       // o mesmo e-mail em duas ou mais contas ativas: nenhuma entra (com a senha certa, a pessoa sabe o porquê)
       const algumaCerta = ativosId.some(function (c) { return verificarSenhaAuth_(senhaInformada, c.linha[2]); });
@@ -328,14 +331,13 @@ function login(usuario, senha, ctx) {
         }
 
         // Verifica se o usuário está bloqueado ou inativo antes de liberar acesso
+        // 03/11/2026: conta excluída em Usuários (exclusão lógica): recusa SEMPRE (mesmo com o STATUS ATIVO), com o motivo certo
+        if (excluidaLinha(linha)) {
+          registrarLogAuth_("LOGIN_NEGADO", { usuario: usuarioInformado, perfil: perfilDb, detalhe: "Tentativa de login com conta excluída." });
+          if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("LOGIN_NEGADO", { ID: id, USUARIO: usuarioDb, PERFIL: perfilDb }, ctxAcesso, "Conta excluída.");
+          return { success: false, message: MSG_CONTA_EXCLUIDA_AUTH };
+        }
         if (statusDb !== SGO_CFG.STATUS.ATIVO) {
-          // 03/11/2026: conta excluída em Usuários (exclusão lógica): recusa com o motivo certo
-          const cExcl = (dados[0] || []).map(function (h) { return SGO_UTILS.safe(h); }).indexOf("EXCLUIDO_EM");
-          if (cExcl >= 0 && SGO_UTILS.safe(linha[cExcl])) {
-            registrarLogAuth_("LOGIN_NEGADO", { usuario: usuarioInformado, perfil: perfilDb, detalhe: "Tentativa de login com conta excluída." });
-            if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("LOGIN_NEGADO", { ID: id, USUARIO: usuarioDb, PERFIL: perfilDb }, ctxAcesso, "Conta excluída.");
-            return { success: false, message: MSG_CONTA_EXCLUIDA_AUTH };
-          }
            registrarLogAuth_("LOGIN_NEGADO", {
             usuario: usuarioInformado,
             perfil: perfilDb,
@@ -415,7 +417,9 @@ function usuarioParaSessaoAuth_(r) {
     REPRESENTADA_ID: SGO_UTILS.safe(r.REPRESENTADA_ID), REPRESENTACAO_PAPEL: SGO_UTILS.safeUpper(r.REPRESENTACAO_PAPEL),
     EMAIL: SGO_UTILS.safe(r.EMAIL), CELULAR: SGO_UTILS.safe(r.CELULAR),
     PRECISA_TROCAR_SENHA: SGO_UTILS.safeUpper(r.PRECISA_TROCAR_SENHA),
-    SEGURANCA_VERSAO: Number(r.SEGURANCA_VERSAO) || 0
+    SEGURANCA_VERSAO: Number(r.SEGURANCA_VERSAO) || 0,
+    // 03/11/2026: conta excluída em Usuários (o código por WhatsApp, o link e a troca de senha recusam com a mensagem própria)
+    EXCLUIDO_EM: SGO_UTILS.safe(r.EXCLUIDO_EM)
   };
 }
 

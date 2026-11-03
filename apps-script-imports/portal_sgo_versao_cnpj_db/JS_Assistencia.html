@@ -227,7 +227,7 @@
   function At_ligarRepresentada_(c, reabrir) {
     var reps = (AT.ini.representadas || []).filter(function (x) { return x.ativa; });
     var ov = At_modal_("Ligar o chamado " + c.numero + " à representada",
-      '<p class="at-txt">Use quando a representada pediu este atendimento e ele foi aberto como chamado comum (por exemplo, urgência atendida antes). Depois de ligado, a representada vê e acompanha o chamado, com o motivo no histórico, e recebe o aviso por e-mail. Não dá para desfazer pela tela.</p>' +
+      '<p class="at-txt">Use quando a representada pediu este atendimento e ele foi aberto como chamado comum (por exemplo, urgência atendida antes). Depois de ligado, a representada vê e acompanha o chamado, com o motivo no histórico, e recebe o aviso por e-mail. Se a representada escolhida estiver errada, fale com o Administrador: só ele desliga (com o motivo) para você ligar de novo.</p>' +
       At_campo_("Representada *", '<select id="atLigRep">' + At_opcoes_(reps.map(function (x) { return { v: x.id, t: x.nome }; }), "", "Escolha a representada") + "</select>") +
       At_campo_("Protocolo da representada (se houver)", '<input id="atLigProt" maxlength="60">') +
       At_campo_("Motivo *", '<textarea id="atLigMotivo" maxlength="500"></textarea>', "Pelo menos 10 letras. Ex.: urgência atendida antes por telefone; a representada pediu depois.") + '<div id="atLigMsg"></div>',
@@ -553,7 +553,10 @@
         (rel.sintoma ? '<p class="at-txt">Código de erro: ' + At_esc_(rel.naoExibe ? "não exibe" : rel.codigoErro) + ' · risco: ' + At_esc_(rel.risco) + ' · já tentado: ' + At_esc_(rel.tentado) + '</p>' : '') +
         (rp.anexos.length ? '<p class="at-txt">' + rp.anexos.map(function (a) { return '<a href="' + At_esc_(a.url) + '" target="_blank" rel="noopener">' + At_esc_(a.tipoNome + " · " + a.nome) + '</a>'; }).join(" · ") + '</p>' : '') +
         '<p class="at-meta">' + rp.mensagens.length + ' mensagem(ns) na conversa' + (rp.mensagens.length ? '; última: ' + At_esc_(rp.mensagens[rp.mensagens.length - 1].autor + " em " + rp.mensagens[rp.mensagens.length - 1].em) : '') + '. Responda em Representação > Conversas (com nota interna, se precisar).</p>' +
-        '<div class="at-acoes"><button type="button" class="btn-secondary" onclick="abrir(\'representacao\')">Abrir o módulo Representação</button></div>';
+        '<div class="at-acoes"><button type="button" class="btn-secondary" onclick="abrir(\'representacao\')">Abrir o módulo Representação</button>' +
+        (rp.podeDesligar ? '<button type="button" class="btn-secondary" id="atDesligarRep" style="color:var(--danger)" title="Só o Administrador: a ligação à representada foi feita por engano">Desligar da representada</button>' : '') + '</div>';
+      var bd = el.querySelector("#atDesligarRep");
+      if (bd) bd.onclick = function () { At_pedirTexto_("Desligar o chamado " + c.numero + " da representada", "Use só quando o chamado foi ligado à representada errada. A representada deixa de ver o chamado e recebe o aviso com o motivo; o histórico guarda quem desligou. Depois, quem está na lista pode ligar à representada certa.", "Motivo", 10, function (t, ov) { At_chamar_("desligarRepresentada", { id: c.id, motivo: t }, function (x) { ov.remove(); reabrir(x.message); if (typeof At_carregarChamados_ === "function") At_carregarChamados_(); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Desligar"); };
     }, function () {});
     At_relatoriosFicha_(c, corpo);
     if (c.podeTriar) At_ligarTriagem_(c, corpo, reabrir);

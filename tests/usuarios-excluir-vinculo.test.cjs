@@ -81,7 +81,7 @@ test('conta com vínculo: exclusão lógica; some da lista, a sessão cai na hor
   const sTec = a.ctx.login('joao@exemplo.test', 'Joao!2026', CTX).sessionId;
   assert.equal(a.ctx.validarSessao(sTec).valid, true);
   const copiaSessao = a.props.get('SGO_SESSION_' + sTec);
-  a.aba('ATEC_OS', ['ID', 'NUMERO', 'TECNICO_ID', 'TECNICO_NOME'], [{ ID: 'os1', NUMERO: 'OS-2026-0001', TECNICO_ID: 'u-tec', TECNICO_NOME: 'JOAO TESTE' }, { ID: 'os2', NUMERO: 'OS-2026-0002', TECNICO_ID: 'outro' }]);
+  a.aba('ATEC_OS', ['ID', 'NUMERO', 'TECNICO_ID', 'TECNICO_NOME', 'SITUACAO'], [{ ID: 'os1', NUMERO: 'OS-2026-0001', TECNICO_ID: 'u-tec', TECNICO_NOME: 'JOAO TESTE', SITUACAO: 'ENCERRADA' }, { ID: 'os2', NUMERO: 'OS-2026-0002', TECNICO_ID: 'outro' }]);
   a.aba('ATV_ATIVIDADES', ['ID', 'TITULO', 'RESPONSAVEL_ID', 'PARTICIPANTES_IDS'], [{ ID: 'a1', TITULO: 'Calibrar', RESPONSAVEL_ID: 'u-ges', PARTICIPANTES_IDS: 'u-ges,u-tec' }]);
   a.aba('REP_MENSAGENS', ['ID', 'AUTOR_ID', 'TEXTO'], [{ ID: 'm1', AUTOR_ID: 'u-tec', TEXTO: 'oi' }]);
   const v = a.ctx.usuariosVinculosConta(a.sAdm, 'u-tec');
@@ -127,8 +127,9 @@ test('conta com vínculo: exclusão lógica; some da lista, a sessão cai na hor
 
 test('aba que não deu para ler: nunca remove a linha (exclusão lógica por segurança) e a tela diz qual ficou sem conferir', () => {
   const a = amb();
-  const orig = a.ctx.SGO_DATA.getAll;
-  a.ctx.SGO_DATA.getAll = (n) => { if (n === 'NTF_ENVIOS') throw new Error('Tempo esgotado ao ler a planilha'); return orig(n); };
+  a.aba('NTF_ENVIOS', ['ID', 'USUARIO_ID'], [{ ID: 'n1', USUARIO_ID: 'outro' }]);
+  const orig = a.ctx.SGO_DATA.getDB;
+  a.ctx.SGO_DATA.getDB = () => { const fs0 = orig().getSheets(); return { getSheets: () => fs0.map((f) => (f.getName() === 'NTF_ENVIOS' ? Object.assign({}, f, { getRange: () => { throw new Error('Tempo esgotado ao ler a planilha'); } }) : f)) }; };
   const v = a.ctx.usuariosVinculosConta(a.sAdm, 'u-novo');
   assert.equal(v.modo, 'LOGICA'); assert.deepEqual(j(v.naoConferidas), ['NTF_ENVIOS']);
   assert.equal(a.ctx.usuariosExcluir(a.sAdm, 'u-novo', 'conta de teste que não será usada').modo, 'LOGICA');
@@ -239,4 +240,110 @@ test('Cliente e Representante continuam fora do ponto e dos avisos internos (nad
   assert.match(pto.PONTO_FORA_TEXTO.EXTERNO, /não recebe nada do ponto/);
   // a matriz e o ponto só liberam pelo valor exato (CLT ou a lista configurada), nunca por "tem vínculo"
   assert.ok(!/VINCULO_TRABALHO\)?\s*\?\s*['"]?(SIM|true)/.test(ler('SGO_Avisos_Matriz.js')));
+});
+
+// ---------------------------------------------------------------- revisão de e2ce04e
+test('revisão: login recusa a conta excluída SEMPRE (mesmo com o STATUS ATIVO); a conta nova com o mesmo e-mail entra', () => {
+  const a = amb();
+  a.ctx.SGO_DATA.update('CAD_USUARIOS', 'u-tec', { EXCLUIDO_EM: '2026-11-03T10:00:00', EXCLUIDO_POR: 'X' });
+  assert.equal(a.cad('u-tec').STATUS, 'ATIVO');
+  const r = a.ctx.login('joao@exemplo.test', 'Joao!2026', CTX);
+  assert.equal(r.success, false); assert.match(r.message, /conta foi excluída/);
+  a.add({ ID: 'u-tec2', USUARIO: 'joao2', SENHA: 'Nova2026x', NOME: 'JOAO NOVO', PERFIL: 'TECNICO', STATUS: 'ATIVO', EMAIL: 'joao@exemplo.test' });
+  const n = a.ctx.login('joao@exemplo.test', 'Nova2026x', CTX);
+  assert.equal(n.success, true, 'a excluída não conta como e-mail repetido: ' + n.message);
+  assert.equal(n.user.usuario, 'joao2');
+});
+
+test('revisão: o script de recuperação recusa a conta excluída e diz o que fazer; código no celular e link também recusam', () => {
+  const a = amb();
+  a.add({ ID: 'u-cel', USUARIO: 'cel', SENHA: 'Cel2026xy', NOME: 'CELIA TESTE', PERFIL: 'TECNICO', STATUS: 'ATIVO', EMAIL: 'celia@exemplo.test', CELULAR: '5562988880009' });
+  a.config('WHATSAPP');
+  const l = a.ctx.login('celia@exemplo.test', 'Cel2026xy', CTX);
+  assert.equal(l.etapa, 'CODIGO');
+  const codigo = a.codigoMeta();
+  assert.equal(a.ctx.usuariosExcluir(a.sAdm, 'u-cel', 'saiu da empresa antes do código').success, true);
+  const v = a.ctx.verificarCodigoAcesso(l.desafio, codigo, true, CTX);
+  assert.equal(v.success, false); assert.equal(v.excluida, true); assert.match(v.message, /conta foi excluída/);
+  assert.throws(() => a.ctx.SegAcesso_recuperarAcesso_('celia@exemplo.test', { reativar: true, motivo: 'teste' }), /foi excluída em Usuários[\s\S]*cadastre uma conta nova/);
+  assert.equal(a.cad('u-cel').STATUS, 'INATIVO', 'não foi reativada');
+  // as listas da gestão (segurança do acesso) não mostram a conta excluída
+  assert.ok(!a.ctx.SegAcesso_pessoas_().some((p) => p.id === 'u-cel'));
+});
+
+test('revisão: a conta do responsável pelo sistema nunca é excluída (nem por outro Administrador)', () => {
+  const a = amb();
+  const sAdm2 = a.ctx.login('adm2@exemplo.test', 'Adm2026xy', CTX).sessionId;
+  const r = a.ctx.usuariosExcluir(sAdm2, 'u-admin', 'tentativa de excluir o responsável');
+  assert.equal(r.success, false); assert.match(r.message, /responsável pelo sistema/);
+  assert.equal(a.ctx.usuariosVinculosConta(sAdm2, 'u-admin').success, false);
+  assert.equal(a.ctx.usuariosPainel(sAdm2).items.find((u) => u.ID === 'u-admin').DONO, true);
+  assert.equal(a.cad('u-admin').STATUS, 'ATIVO');
+});
+
+test('revisão: a conferência varre TODAS as abas (qualquer _ID, _IDS, _JSON e o login), inclusive ponto, comercial, licitações e qual_ocorrencia', () => {
+  const casos = [
+    ['PTO_MARCACOES', { ID: 'p1', PESSOA_ID: 'u-novo' }], ['COM_OPORTUNIDADES', { ID: 'o1', DONO_ID: 'u-novo' }], ['LIC_PROCESSOS', { ID: 'l1', GESTOR_ID: 'u-novo' }],
+    ['qual_ocorrencia', { ID: 'q1', fiscal_id: 'u-novo' }], ['REG_FROTA_MOVIMENTACAO', { ID: 'f1', CONDUTOR_ID: 'u-novo' }], ['ATEC_SOLICITACOES', { ID: 's1', SOLICITANTE_ID: 'u-novo' }],
+    ['CND_OCORRENCIAS', { ID: 'c1', COLABORADOR_ID: 'u-novo' }], ['GES_DECISOES', { ID: 'g1', ENVOLVIDOS_IDS: 'u-ges, u-novo' }], ['CMP_PEDIDOS', { ID: 'x1', ITENS_JSON: '[{"porId":"u-novo"}]' }],
+    ['SYS_LOGS', { ID: 'lg1', DATA: '2025-01-01', USUARIO: 'nunca', ACAO: 'QUALQUER' }]
+  ];
+  for (const [aba, linha] of casos) {
+    const a = amb();
+    a.aba(aba, Object.keys(linha).concat(['OUTRO_ID']), [Object.assign({ OUTRO_ID: 'zzz' }, linha)]);
+    const v = a.ctx.usuariosVinculosConta(a.sAdm, 'u-novo');
+    assert.equal(v.modo, 'LOGICA', aba + ' devia contar como vínculo');
+    assert.ok(v.categorias.some((c) => c.abas.some((x) => x.aba === aba && x.n === 1)), aba);
+  }
+  // ID parecido não conta (palavra inteira no JSON; valor exato no _ID)
+  const b = amb();
+  b.aba('CMP_PEDIDOS', ['ID', 'DADOS_JSON', 'X_ID'], [{ ID: 'x1', DADOS_JSON: '{"a":"u-novo2"}', X_ID: 'u-novo-velho' }]);
+  assert.equal(b.ctx.usuariosVinculosConta(b.sAdm, 'u-novo').modo, 'REMOVER');
+  // aba que não abre: não conferida, nunca apaga
+  const c = amb();
+  c.aba('LIC_PROCESSOS', ['ID', 'GESTOR_ID'], [{ ID: 'l1', GESTOR_ID: 'x' }]);
+  const orig = c.ctx.SGO_DATA.getDB;
+  c.ctx.SGO_DATA.getDB = () => { const db = orig(); const fs0 = db.getSheets(); return { getSheets: () => fs0.map((f) => (f.getName() === 'LIC_PROCESSOS' ? Object.assign({}, f, { getRange: () => { throw new Error('tempo esgotado'); } }) : f)) }; };
+  const vc = c.ctx.usuariosVinculosConta(c.sAdm, 'u-novo');
+  assert.equal(vc.modo, 'LOGICA'); assert.ok(vc.naoConferidas.includes('LIC_PROCESSOS'));
+  assert.equal(c.ctx.usuariosExcluir(c.sAdm, 'u-novo', 'conta criada em duplicidade').modo, 'LOGICA');
+  assert.ok(c.cad('u-novo'));
+  // sem a lista de abas: nada é removido
+  const d = amb();
+  d.ctx.SGO_DATA.getDB = () => { throw new Error('sem base'); };
+  assert.equal(d.ctx.usuariosVinculosConta(d.sAdm, 'u-novo').modo, 'LOGICA');
+});
+
+test('revisão: chamado ou O.S. em aberto impede a exclusão (diz como reatribuir); nas listas de configuração a pessoa sai, com registro', () => {
+  const a = amb();
+  a.aba('ATEC_CHAMADOS', ['ID', 'NUMERO', 'SITUACAO', 'TECNICO_ID', 'TRIAGEM_RESPONSAVEL_ID'], [
+    { ID: 'ch1', NUMERO: 'CH-2026-0001', SITUACAO: 'AGENDADO', TECNICO_ID: 'u-tec' }, { ID: 'ch2', NUMERO: 'CH-2026-0002', SITUACAO: 'ENCERRADO', TECNICO_ID: 'u-tec' }]);
+  a.aba('ATEC_OS', ['ID', 'NUMERO', 'SITUACAO', 'TECNICO_ID'], [{ ID: 'os1', NUMERO: 'OS-2026-0009', SITUACAO: 'EM_EXECUCAO', TECNICO_ID: 'u-tec' }]);
+  const v = a.ctx.usuariosVinculosConta(a.sAdm, 'u-tec');
+  assert.equal(v.modo, 'BLOQUEADA');
+  assert.deepEqual(j(v.bloqueios.map((b) => b.numero)).sort(), ['CH-2026-0001', 'OS-2026-0009']);
+  const r = a.ctx.usuariosExcluir(a.sAdm, 'u-tec', 'saiu da empresa em outubro');
+  assert.equal(r.success, false); assert.match(r.message, /atendimentos em aberto[\s\S]*passe para outra pessoa/);
+  assert.equal(a.cad('u-tec').STATUS, 'ATIVO', 'nada foi alterado');
+  // reatribuído: sai das listas de configuração ao excluir
+  a.ctx.SGO_DATA.update('ATEC_CHAMADOS', 'ch1', { TECNICO_ID: 'outro' });
+  a.ctx.SGO_DATA.update('ATEC_OS', 'os1', { TECNICO_ID: 'outro' });
+  a.props.set('REP_ABRE_EM_NOME_CFG', JSON.stringify({ ids: ['u-tec', 'u-ges'] }));
+  a.props.set('WA_PILOTO', JSON.stringify({ v: 1, ligado: true, usuarios: ['u-tec'], grupos: { PONTO: ['u-tec', 'u-ges'] } }));
+  a.props.set('GESTAO_DECISOES_CFG', JSON.stringify({ gestoresPorArea: { TECNICA: ['u-tec'], RH: ['u-ges'] } }));
+  a.props.set('GES_RELATORIOS_EMPRESA_CFG', JSON.stringify({ ligado: true, destinatarios: ['u-tec'] }));
+  const v2 = a.ctx.usuariosVinculosConta(a.sAdm, 'u-tec');
+  assert.equal(v2.modo, 'LOGICA');
+  assert.equal(v2.papeis.length, 4);
+  const ok = a.ctx.usuariosExcluir(a.sAdm, 'u-tec', 'saiu da empresa em outubro');
+  assert.equal(ok.success, true, ok.message); assert.match(ok.message, /Saiu também de:/);
+  assert.deepEqual(JSON.parse(a.props.get('REP_ABRE_EM_NOME_CFG')).ids, ['u-ges']);
+  const wa = JSON.parse(a.props.get('WA_PILOTO'));
+  assert.deepEqual(wa.usuarios, []); assert.deepEqual(wa.grupos.PONTO, ['u-ges']); assert.equal(wa.ligado, true);
+  assert.deepEqual(JSON.parse(a.props.get('GESTAO_DECISOES_CFG')).gestoresPorArea, { TECNICA: [], RH: ['u-ges'] });
+  assert.deepEqual(JSON.parse(a.props.get('GES_RELATORIOS_EMPRESA_CFG')).destinatarios, []);
+  // a tela mostra os papéis e o bloqueio
+  const t = ler('JS_Admin.html');
+  assert.match(t, /v\.modo === "BLOQUEADA"/); assert.match(t, /Papéis que a pessoa tem hoje/); assert.match(t, /u\.DONO \?/);
+  assert.match(ler('SGO_Ajuda_Administracao.js'), /Excluir é só do Administrador e não volta/);
 });
