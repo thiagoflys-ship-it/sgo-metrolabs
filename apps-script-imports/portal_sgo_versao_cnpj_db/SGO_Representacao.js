@@ -267,7 +267,12 @@ function Rep_textoRelato_(r) {
   return [r.sintoma, 'Começou: ' + r.inicio, 'Código de erro no visor: ' + (r.naoExibe ? 'não exibe' : r.codigoErro), 'Equipamento: ' + (REP_PARADA[r.parada] || r.parada),
     'Risco de uso: ' + r.risco, 'Já tentado: ' + r.tentado, 'Enquadramento pretendido: ' + (REP_ENQUADRAMENTO[r.enquadramento] || r.enquadramento)].join('\n');
 }
-function RepA_abrir_(eu, d) {
+/**
+ * emNome (03/11/2026): pedido aberto pela Metrolabs em nome da representada (RepI_abrirEmNome_): { canal, pedidoPorNome,
+ * pedidoPorContato, texto, metrolabs }. Mesma validação e mesmo escopo; as fotos ficam opcionais (o pedido veio por telefone,
+ * e-mail ou WhatsApp) e a origem fica gravada no pedido e no histórico, visível para a representada.
+ */
+function RepA_abrir_(eu, d, emNome) {
   Rep_exigirPerm_(eu, 'abrir', 'abrir o pedido de atendimento');
   d = d || {};
   var esc = Rep_escopo_(eu), faltam = [], cli = null, eq = null, un = null;
@@ -294,21 +299,24 @@ function RepA_abrir_(eu, d) {
   var fotos = (Array.isArray(d.fotos) ? d.fotos : []).slice(0, 10).map(function (f, i) { return Rep_conferirArquivo_(f, 'FOTO_EQUIPAMENTO', 'a foto ' + (i + 1)); }).filter(Boolean);
   var etq = (Array.isArray(d.fotosEtiqueta) ? d.fotosEtiqueta : []).slice(0, 3).map(function (f) { return Rep_conferirArquivo_(f, 'FOTO_ETIQUETA', 'a foto da etiqueta'); }).filter(Boolean);
   var video = Rep_conferirArquivo_(d.video, 'VIDEO', 'o vídeo');
-  if (!fotos.length) Rep_campoFalta_(faltam, 'fotos', 'envie pelo menos 1 foto do equipamento');
-  if (!etq.length) Rep_campoFalta_(faltam, 'fotosEtiqueta', 'envie pelo menos 1 foto da etiqueta de série');
+  if (!fotos.length && !emNome) Rep_campoFalta_(faltam, 'fotos', 'envie pelo menos 1 foto do equipamento');
+  if (!etq.length && !emNome) Rep_campoFalta_(faltam, 'fotosEtiqueta', 'envie pelo menos 1 foto da etiqueta de série');
   Rep_falhou_(faltam, 'enviar o pedido');
   var desc = Rep_textoRelato_(r), prazos = eu.prazos;
   var s = Ast_comTrava_(function () {
     return Ast_inserir_(AST_ABAS.SOLICITACOES, { NUMERO: Ast_proximoNumero_('SOL', AST_ABAS.SOLICITACOES), ORIGEM: 'REPRESENTACAO', CLIENTE_ID: cli.ID, CLIENTE_NOME: Ast_clienteNome_(cli),
       UNIDADE_ID: un.ID, EQUIPAMENTO_ID: eq.ID, EQUIPAMENTO_TEXTO: Ast_equipTexto_(eq), SOLICITANTE: cNome, CONTATO: [cTel, cEmail].join(' · '), DESCRICAO: desc, PARADA: r.parada,
-      SITUACAO: 'NOVA', POR_ID: eu.id, POR_NOME: Rep_quem_(eu), REPRESENTADA_ID: eu.repId, REPRESENTADA_NOME: eu.repNome, PROTOCOLO_REPRESENTADA: Rep_txt_(d.protocolo, 60),
+      SITUACAO: 'NOVA', POR_ID: eu.id, POR_NOME: emNome ? emNome.texto : Rep_quem_(eu), REPRESENTADA_ID: eu.repId, REPRESENTADA_NOME: eu.repNome, PROTOCOLO_REPRESENTADA: Rep_txt_(d.protocolo, 60),
       RELATO_JSON: JSON.stringify(r), ENQUADRAMENTO_PRETENDIDO: r.enquadramento, SETOR: setor, CONTATO_NOME: cNome, CONTATO_TELEFONE: cTel, CONTATO_EMAIL: cEmail,
-      ACEITE_MIN_UTEIS: prazos.aceiteMin, PAUSA_MIN: 0, ATUALIZADO_EM: Ast_agora_() });
+      ACEITE_MIN_UTEIS: prazos.aceiteMin, PAUSA_MIN: 0, ATUALIZADO_EM: Ast_agora_(),
+      EM_NOME_TEXTO: emNome ? emNome.texto : '', EM_NOME_CANAL: emNome ? emNome.canal : '', EM_NOME_PEDIDO_POR_NOME: emNome ? emNome.pedidoPorNome : '',
+      EM_NOME_PEDIDO_POR_CONTATO: emNome ? emNome.pedidoPorContato : '', EM_NOME_METROLABS_ID: emNome ? Rep_s_(emNome.metrolabs.id) : '', EM_NOME_METROLABS_NOME: emNome ? Rep_s_(emNome.metrolabs.nome) : '' });
   });
   fotos.forEach(function (f) { Rep_salvarAnexo_(eu, eu.repId, 'SOLICITACAO', s.ID, 'FOTO_EQUIPAMENTO', f); });
   etq.forEach(function (f) { Rep_salvarAnexo_(eu, eu.repId, 'SOLICITACAO', s.ID, 'FOTO_ETIQUETA', f); });
   if (video) Rep_salvarAnexo_(eu, eu.repId, 'SOLICITACAO', s.ID, 'VIDEO', video);
-  Ast_evento_('SOLICITACAO', s.ID, 'ABERTURA', Rep_comoAst_(eu), 'Pedido enviado pela ' + eu.repNome + ': ' + r.sintoma.slice(0, 300), { numero: s.NUMERO, publico: 'REPRESENTADA', para: 'Enviado' });
+  if (emNome) Ast_evento_('SOLICITACAO', s.ID, 'ABERTURA_EM_NOME', emNome.metrolabs, emNome.texto + ' (contato ' + emNome.pedidoPorContato + '): ' + r.sintoma.slice(0, 300), { numero: s.NUMERO, publico: 'REPRESENTADA', para: 'Enviado' });
+  else Ast_evento_('SOLICITACAO', s.ID, 'ABERTURA', Rep_comoAst_(eu), 'Pedido enviado pela ' + eu.repNome + ': ' + r.sintoma.slice(0, 300), { numero: s.NUMERO, publico: 'REPRESENTADA', para: 'Enviado' });
   var pz = Rep_prazoAceite_(s, Date.now(), prazos), resp = Rep_responsaveis_();
   // 03/11/2026: o WhatsApp e o e-mail de quem responde pela representação saem pela fila dos avisos da gestão (link que abre o
   // pedido; o que ainda estiver na fila não sai se o pedido for tratado antes); aviso com ciência na central de Avisos; aviso na tela
@@ -317,6 +325,12 @@ function RepA_abrir_(eu, d) {
   Ast_avisar_(resp.ids, 'REP_PEDIDO', tituloAv, textoAv, s.ID, { evento: r.parada === 'TOTAL' ? 'RP02' : 'RP01', tela: { tipo: 'representacao', mod: 'representacao', id: Rep_s_(s.ID) }, resolvePor: 'REPSOL:' + Rep_s_(s.ID) });
   if (typeof Rep_avisoCiencia_ === 'function') Rep_avisoCiencia_(s, 'NOVO', tituloAv, textoAv + '\nO prazo de aceite é de ' + Ast_duracaoTxt_(prazos.aceiteMin) + ' úteis. Toque em "Li e estou ciente" e trate o pedido em Representação > Pedidos.');
   if (typeof RepAl_invalidar_ === 'function') RepAl_invalidar_();
+  if (emNome) {
+    Rep_acesso_('PEDIDO_EM_NOME', eu, d.ctx, s.NUMERO + ': ' + emNome.texto);
+    // a representada fica sabendo por e-mail (administradores dela), com a origem
+    Rep_avisarRepresentada_(eu.repId, '', 'Pedido ' + s.NUMERO + ' aberto pela Metrolabs em nome da sua empresa', emNome.texto + '.\nCliente: ' + Ast_clienteNome_(cli) + ' · ' + Ast_equipTexto_(eq) + '\n' + r.sintoma.slice(0, 500), s.ID, 'RP06');
+    return { solicitacao: { id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO) }, message: 'Pedido ' + s.NUMERO + ' aberto em nome da ' + eu.repNome + ' (' + emNome.texto.replace(/^Aberto pela Metrolabs \([^)]*\) /, '') + '). Ele está na fila de Pedidos como os demais (aceite até ' + Rep_br_(pz.ate) + '); a ' + eu.repNome + ' vê o pedido, com a origem, e acompanha.' };
+  }
   Rep_acesso_('PEDIDO', eu, d.ctx, s.NUMERO);
   return { solicitacao: { id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO) }, message: 'Pedido ' + s.NUMERO + ' enviado. A Metrolabs responde (aceita, pede complemento ou recusa com o motivo) até ' + Rep_br_(pz.ate) + '; você acompanha em Chamados.' };
 }
@@ -366,6 +380,8 @@ function Rep_itemSol_(s) {
   return { tipo: 'SOLICITACAO', id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO), etapa: et.n, etapaNome: et.nome, clienteNome: Rep_s_(s.CLIENTE_NOME), unidade: Rep_s_(un.NOME_UNIDADE),
     cidade: [Rep_s_(un.CIDADE), Rep_s_(un.UF)].filter(Boolean).join('/'), equipamento: [Rep_s_(eq.MODELO), Rep_s_(eq.SERIE) ? 'série ' + Rep_s_(eq.SERIE) : ''].filter(Boolean).join(' · '),
     protocolo: Rep_s_(s.PROTOCOLO_REPRESENTADA), abertoEm: Rep_br_(s.CRIADO_EM), chamadoNumero: Rep_s_(s.CHAMADO_NUMERO), complemento: Rep_s_(s.COMPLEMENTO_PERGUNTA),
+    // 03/11/2026: pedido aberto pela Metrolabs em nome da representada (telefone, e-mail ou WhatsApp): a origem aparece para ela
+    origemTexto: Rep_s_(s.EM_NOME_TEXTO),
     recusaMotivo: Rep_up_(s.SITUACAO) === 'DESCARTADA' ? Rep_s_(s.DESCARTE_MOTIVO) : '', canceladoMotivo: Rep_s_(s.CANCELADA_MOTIVO),
     podeCancelar: ['NOVA', 'COMPLEMENTO'].indexOf(Rep_up_(s.SITUACAO)) >= 0, podeResponder: Rep_up_(s.SITUACAO) === 'COMPLEMENTO' };
 }
@@ -375,7 +391,9 @@ function Rep_itemChamado_(c) {
   return { tipo: 'CHAMADO', id: Rep_s_(c.ID), numero: Rep_s_(c.NUMERO), etapa: et.n, etapaNome: et.nome, clienteNome: Rep_s_(c.CLIENTE_NOME), unidade: Rep_s_(c.UNIDADE_NOME),
     cidade: [Rep_s_(un.CIDADE), Rep_s_(un.UF)].filter(Boolean).join('/'), equipamento: [Rep_s_(eq.MODELO), Rep_s_(eq.SERIE) ? 'série ' + Rep_s_(eq.SERIE) : ''].filter(Boolean).join(' · '),
     protocolo: Rep_s_(c.PROTOCOLO_REPRESENTADA), abertoEm: Rep_br_(c.ABERTO_EM), agendadoPara: visita ? Rep_br_(c.AGENDADO_PARA) : '', tecnico: visita ? Rep_s_(c.TECNICO_NOME) : '',
-    encerradoEm: Rep_br_(c.ENCERRADO_EM), canceladoMotivo: sit === 'CANCELADO' ? Rep_s_(c.CANCELADO_MOTIVO) : '', podeCancelar: REP_CANCELA_CHAMADO.indexOf(sit) >= 0 };
+    encerradoEm: Rep_br_(c.ENCERRADO_EM), canceladoMotivo: sit === 'CANCELADO' ? Rep_s_(c.CANCELADO_MOTIVO) : '', podeCancelar: REP_CANCELA_CHAMADO.indexOf(sit) >= 0,
+    // 03/11/2026: chamado comum ligado à representada depois (urgência atendida antes): quem ligou e o motivo
+    origemTexto: Rep_s_(c.REP_LIGADO_EM) ? 'Ligado à sua empresa pela Metrolabs (' + Rep_s_(c.REP_LIGADO_POR_NOME) + ') em ' + Rep_br_(c.REP_LIGADO_EM) + '. Motivo: ' + Rep_s_(c.REP_LIGADO_MOTIVO) : '' };
 }
 function RepA_chamados_(eu, d) {
   var esc = Rep_escopo_(eu), et = Number(d && d.etapa) || 0;
@@ -487,7 +505,9 @@ function RepI_representadas_() { return Rep_ler_(REP_ABAS.REPRESENTADAS).map(Rep
 function RepI_iniciar_(eu) {
   var resp = Rep_responsaveis_();
   return { podeAdministrar: RepI_podeAdministrar_(eu), representadas: RepI_representadas_(), responsaveis: resp, papeis: Object.keys(REP_PAPEIS).map(function (k) { return { codigo: k, nome: REP_PAPEIS[k].nome }; }),
-    prazosPadrao: REP_PRAZOS_PADRAO, etapas: REP_ETAPAS.map(function (e) { return { n: e.n, nome: e.nome }; }), eu: { id: eu.id, nome: eu.nome } };
+    prazosPadrao: REP_PRAZOS_PADRAO, etapas: REP_ETAPAS.map(function (e) { return { n: e.n, nome: e.nome }; }), eu: { id: eu.id, nome: eu.nome },
+    // 03/11/2026: abrir pedido em nome da representada (lista restrita; o Administrador define quem)
+    podeAbrirEmNome: Rep_podeAbrirEmNome_(eu), souAdmin: eu.perfil === 'ADMIN', canaisEmNome: REP_CANAIS_EMNOME, paradas: REP_PARADA, enquadramentos: REP_ENQUADRAMENTO, limites: REP_LIMITES };
 }
 function RepI_salvarRepresentada_(eu, d) {
   RepI_exigirAdm_(eu, 'salvar a representada');
@@ -607,7 +627,8 @@ function RepI_chamado_(eu, d) {
   var msgs = Rep_ler_(REP_ABAS.MENSAGENS).filter(function (m) { return refs.some(function (r) { return Rep_up_(m.REF_TIPO) === r[0] && Rep_s_(m.REF_ID) === Rep_s_(r[1]); }); }).map(Rep_msgPublica_).sort(function (a, b) { return a.emIso.localeCompare(b.emIso); });
   var et = Rep_etapaChamado_(c);
   return { representacao: { representadaId: Rep_s_(c.REPRESENTADA_ID), representadaNome: Rep_s_(c.REPRESENTADA_NOME), protocolo: Rep_s_(c.PROTOCOLO_REPRESENTADA), enquadramento: REP_ENQUADRAMENTO[Rep_up_(c.ENQUADRAMENTO_PRETENDIDO)] || '',
-    etapaRepresentada: et.nome, solicitacao: sol ? { id: Rep_s_(sol.ID), numero: Rep_s_(sol.NUMERO), relato: Rep_json_(sol.RELATO_JSON, {}), setor: Rep_s_(sol.SETOR), contatoNome: Rep_s_(sol.CONTATO_NOME),
+    etapaRepresentada: et.nome, ligadoTexto: Rep_s_(c.REP_LIGADO_EM) ? 'Ligado à representada por ' + Rep_s_(c.REP_LIGADO_POR_NOME) + ' em ' + Rep_br_(c.REP_LIGADO_EM) + '. Motivo: ' + Rep_s_(c.REP_LIGADO_MOTIVO) : '',
+    emNomeTexto: sol ? Rep_s_(sol.EM_NOME_TEXTO) : '', solicitacao: sol ? { id: Rep_s_(sol.ID), numero: Rep_s_(sol.NUMERO), relato: Rep_json_(sol.RELATO_JSON, {}), setor: Rep_s_(sol.SETOR), contatoNome: Rep_s_(sol.CONTATO_NOME),
       contatoTelefone: Rep_s_(sol.CONTATO_TELEFONE), contatoEmail: Rep_s_(sol.CONTATO_EMAIL), por: Rep_s_(sol.POR_NOME) } : null, anexos: anexos, mensagens: msgs } };
 }
 function RepI_acessos_(eu, d) {
@@ -624,6 +645,122 @@ function RepI_usuarios_(eu, d) {
     message: 'Os acessos da representada são criados e inativados em Administração > Usuários (perfil "Representada", com a representada e o papel). A pessoa entra com o e-mail; quem esquecer a senha usa "Esqueci minha senha" na tela de entrada, ou a Metrolabs envia o link de redefinição em Usuários.' };
 }
 
+// ------------------------------------------------------------
+// ABRIR EM NOME DA REPRESENTADA E LIGAR CHAMADO À REPRESENTADA (03/11/2026, pedido do dono)
+// Para quando a representada pede por telefone, e-mail ou WhatsApp: a Metrolabs abre o pedido (SOL-...) em nome dela, com a
+// mesma validação e o mesmo escopo do pedido da própria representada (RepA_abrir_ com a identidade "em nome"), e o pedido
+// nasce igual (fila, prazo de aceite, avisos; a representada vê e acompanha), com a origem gravada e visível para ela.
+// Também liga à representada um chamado comum já aberto na Assistência (urgência resolvida antes), com motivo.
+// PERMISSÃO RESTRITA: só quem está na lista "Quem pode abrir pedido em nome da representada" (propriedade
+// REP_ABRE_EM_NOME_CFG, ids de usuário). A lista começa vazia e só o Administrador muda. Quem não está nela nem vê o botão;
+// o servidor recusa. Sugestão (nunca gravada sozinha): a conta ativa com o e-mail REP_EMNOME_SUGESTAO_EMAIL.
+// ------------------------------------------------------------
+var REP_EMNOME_PROP = 'REP_ABRE_EM_NOME_CFG';
+var REP_EMNOME_SUGESTAO_EMAIL = 'matheus.godoi@metrolabs.com.br';
+var REP_CANAIS_EMNOME = { TELEFONE: 'telefone', EMAIL: 'e-mail', WHATSAPP: 'WhatsApp' };
+
+/** { ids: [ids de usuário], salvoEm, salvoPor, nuncaSalvo }. Sem nada gravado: lista vazia. */
+function Rep_emNomeCfg_() {
+  var g = null;
+  try { g = Rep_json_(PropertiesService.getScriptProperties().getProperty(REP_EMNOME_PROP), null); } catch (e) { g = null; }
+  if (!g || !Array.isArray(g.ids)) return { ids: [], salvoEm: '', salvoPor: '', nuncaSalvo: !g };
+  return { ids: g.ids.map(Rep_s_).filter(Boolean), salvoEm: Rep_s_(g.salvoEm), salvoPor: Rep_s_(g.salvoPor), nuncaSalvo: false };
+}
+/** Conta da equipe interna, ativa (fora: cliente, representada, conta técnica, excluída). */
+function Rep_emNomeContaInterna_(u) { return !!u && u.ativo && !u.cliente; }
+/** A pessoa (equipe da Metrolabs) está na lista e a conta dela está ativa. */
+function Rep_podeAbrirEmNome_(eu) {
+  if (!eu || eu.externo || !Rep_s_(eu.id)) return false;
+  if (Rep_emNomeCfg_().ids.indexOf(Rep_s_(eu.id)) < 0) return false;
+  var u = Ast_usuarios_()[Rep_s_(eu.id)];
+  return Rep_emNomeContaInterna_(u);
+}
+function Rep_exigirEmNome_(eu, acao) {
+  if (Rep_podeAbrirEmNome_(eu)) return;
+  throw Rep_erro_('PERMISSAO', 'Não foi possível ' + acao + ': abrir pedido em nome da representada (e ligar chamado a ela) é só de quem está na lista "Quem pode abrir pedido em nome da representada". O Administrador marca as pessoas em Representação > Representadas. Se a representada pediu um atendimento, peça a uma dessas pessoas ou registre o pedido na conversa com ela.');
+}
+/** Identidade usada nas validações da representada (Rep_escopo_, buscas e RepA_abrir_): o escopo é o da representada escolhida. */
+function Rep_euEmNome_(eu, repId) {
+  var rep = Rep_representada_(repId);
+  if (!rep) { var e = Rep_erro_('INCOMPLETO', 'Não foi possível continuar: escolha a representada que fez o pedido. Nada foi gravado.'); e.faltam = [{ campo: 'representadaId', texto: 'Escolha a representada.' }]; throw e; }
+  if (!Rep_ativa_(rep)) throw Rep_erro_('REP_INATIVA', 'Não foi possível continuar: a representada ' + Rep_s_(rep.NOME) + ' está inativa (Representação > Representadas). Reative o cadastro dela antes de abrir pedido em nome dela.');
+  return { externo: false, emNome: true, id: Rep_s_(eu.id), nome: Rep_s_(eu.nome) + ' (Metrolabs)', email: Rep_s_(eu.email), repId: Rep_s_(rep.ID), repNome: Rep_s_(rep.NOME), rep: rep,
+    papel: 'ATENDENTE', perm: REP_PAPEIS.ATENDENTE, prazos: Rep_prazos_(rep), sessionId: Rep_s_(eu.sessionId) + '|EMNOME|' + Rep_s_(rep.ID), perfil: eu.perfil, metrolabs: eu };
+}
+function RepI_emNomeBuscarCliente_(eu, d) {
+  Rep_exigirEmNome_(eu, 'buscar o cliente');
+  return RepA_buscarCliente_(Rep_euEmNome_(eu, d && d.representadaId), d);
+}
+function RepI_emNomeBuscarEquipamento_(eu, d) {
+  Rep_exigirEmNome_(eu, 'buscar o equipamento');
+  return RepA_buscarEquipamento_(Rep_euEmNome_(eu, d && d.representadaId), d);
+}
+/** Abre o pedido em nome da representada. Campos do pedido normal + canal, nome e contato de quem pediu na representada. */
+function RepI_abrirEmNome_(eu, d) {
+  Rep_exigirEmNome_(eu, 'abrir o pedido em nome da representada');
+  d = d || {};
+  var en = Rep_euEmNome_(eu, d.representadaId), faltam = [];
+  var canal = Rep_up_(d.canal), pNome = Rep_txt_(d.pedidoPorNome, 120), pContato = Rep_txt_(d.pedidoPorContato, 160);
+  if (!REP_CANAIS_EMNOME[canal]) Rep_campoFalta_(faltam, 'canal', 'escolha por onde a representada pediu (telefone, e-mail ou WhatsApp)');
+  if (pNome.length < 3) Rep_campoFalta_(faltam, 'pedidoPorNome', 'informe o nome de quem pediu na representada');
+  if (pContato.length < 5) Rep_campoFalta_(faltam, 'pedidoPorContato', 'informe o contato de quem pediu (telefone com DDD ou e-mail)');
+  Rep_falhou_(faltam, 'abrir o pedido em nome da ' + en.repNome);
+  var texto = 'Aberto pela Metrolabs (' + Rep_s_(eu.nome) + ') a pedido de ' + pNome + ' (' + en.repNome + '), por ' + REP_CANAIS_EMNOME[canal];
+  var r = RepA_abrir_(en, d, { canal: canal, pedidoPorNome: pNome, pedidoPorContato: pContato, texto: texto, metrolabs: eu });
+  try { SGO_DATA.log('REP_PEDIDO_EM_NOME', Rep_s_(eu.login) || Rep_s_(eu.nome), texto + ' (contato ' + pContato + '): ' + r.solicitacao.numero, 'REPRESENTACAO'); } catch (eLog) {}
+  return r;
+}
+/** Liga à representada um chamado comum já aberto na Assistência, com motivo. A representada passa a ver e acompanhar. */
+function RepI_ligarChamado_(eu, d) {
+  Rep_exigirEmNome_(eu, 'ligar o chamado à representada');
+  d = d || {};
+  try { Rep_garantirAbas_(); } catch (eG) {} // a ação também chega pela Assistência técnica (colunas REP_LIGADO_*)
+  var c = Ast_porId_(AST_ABAS.CHAMADOS, d.chamadoId || d.id);
+  if (!c || Rep_s_(c.EXCLUIDO_EM)) throw Rep_erro_('NAO_ENCONTRADO', 'Não foi possível ligar: o chamado não foi encontrado (ou foi excluído como teste). Atualize a lista.');
+  if (typeof AstC_podeVer_ === 'function' && !AstC_podeVer_(eu, c)) throw Rep_erro_('NAO_ENCONTRADO', 'Não foi possível ligar: o chamado ' + Rep_s_(c.NUMERO) + ' não está entre os que você acompanha.');
+  if (Rep_s_(c.REPRESENTADA_ID)) throw Rep_erro_('JA_LIGADO', 'Não foi possível ligar: o chamado ' + Rep_s_(c.NUMERO) + ' já está ligado à representada ' + (Rep_s_(c.REPRESENTADA_NOME) || Rep_s_((Rep_representada_(c.REPRESENTADA_ID) || {}).NOME)) + '. Nada foi alterado.');
+  var en = Rep_euEmNome_(eu, d.representadaId), motivo = Rep_txt_(d.motivo, 500);
+  if (motivo.length < 10) { var e = Rep_erro_('INCOMPLETO', 'Não foi possível ligar: escreva o motivo (pelo menos 10 letras). Ex.: urgência atendida antes por telefone; a representada pediu depois. Ele fica no histórico e a representada vê.'); e.faltam = [{ campo: 'motivo', texto: 'Obrigatório.' }]; throw e; }
+  var agora = Ast_agora_();
+  Ast_comTrava_(function () {
+    var atual = Ast_porId_(AST_ABAS.CHAMADOS, c.ID);
+    if (atual && Rep_s_(atual.REPRESENTADA_ID)) throw Rep_erro_('JA_LIGADO', 'Não foi possível ligar: o chamado ' + Rep_s_(c.NUMERO) + ' acabou de ser ligado a outra representada. Atualize a ficha.');
+    Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, { REPRESENTADA_ID: en.repId, REPRESENTADA_NOME: en.repNome, REP_LIGADO_EM: agora, REP_LIGADO_POR_ID: Rep_s_(eu.id), REP_LIGADO_POR_NOME: Rep_s_(eu.nome),
+      REP_LIGADO_MOTIVO: motivo, PROTOCOLO_REPRESENTADA: Rep_txt_(d.protocolo, 60) || Rep_s_(c.PROTOCOLO_REPRESENTADA) });
+  });
+  var texto = 'Chamado ligado à ' + en.repNome + ' pela Metrolabs (' + Rep_s_(eu.nome) + '). Motivo: ' + motivo;
+  Ast_evento_('CHAMADO', c.ID, 'LIGADO_REPRESENTADA', eu, texto, { numero: c.NUMERO, publico: 'REPRESENTADA' });
+  Rep_acesso_('CHAMADO_LIGADO', en, d.ctx, Rep_s_(c.NUMERO) + ': ' + motivo);
+  try { SGO_DATA.log('REP_CHAMADO_LIGADO', Rep_s_(eu.login) || Rep_s_(eu.nome), texto + ' (' + Rep_s_(c.NUMERO) + ')', 'REPRESENTACAO'); } catch (eLog) {}
+  Rep_avisarRepresentada_(en.repId, '', 'Chamado ' + Rep_s_(c.NUMERO) + ' ligado à sua empresa pela Metrolabs', texto + '\nCliente: ' + Rep_s_(c.CLIENTE_NOME) + '. Você acompanha em Chamados.', c.ID, 'RP06');
+  if (typeof RepAl_invalidar_ === 'function') RepAl_invalidar_();
+  return { message: 'Chamado ' + Rep_s_(c.NUMERO) + ' ligado à ' + en.repNome + '. A representada passa a ver e acompanhar o chamado (com o motivo no histórico) e recebe o aviso por e-mail.' };
+}
+/** Lista "Quem pode abrir pedido em nome da representada" (só o Administrador lê e muda). */
+function RepI_emNomeConfig_(eu) {
+  if (eu.perfil !== 'ADMIN') throw Rep_erro_('PERFIL', 'Não foi possível abrir a lista: quem pode abrir pedido em nome da representada é definido só pelo Administrador.');
+  var cfg = Rep_emNomeCfg_(), us = Ast_usuarios_();
+  var pessoas = Object.keys(us).map(function (k) { return us[k]; }).filter(Rep_emNomeContaInterna_).filter(function (u) { return !Ast_ehContaSistema_(u) || cfg.ids.indexOf(u.id) >= 0; })
+    .map(function (u) { return { id: u.id, nome: u.nome, email: u.email, perfil: u.perfil, marcado: cfg.ids.indexOf(u.id) >= 0 }; })
+    .sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+  var sug = pessoas.filter(function (p) { return p.email === REP_EMNOME_SUGESTAO_EMAIL && !p.marcado; })[0] || null;
+  var fora = cfg.ids.filter(function (id) { return !Rep_emNomeContaInterna_(us[id]); }).map(function (id) { return { id: id, nome: (us[id] || {}).nome || '(conta não encontrada)' }; });
+  return { ids: cfg.ids, pessoas: pessoas, sugestao: sug, inativos: fora, salvoEm: cfg.salvoEm ? Rep_br_(cfg.salvoEm) : '', salvoPor: cfg.salvoPor,
+    explica: 'Quem estiver marcado vê "Abrir em nome da representada" (Representação > Pedidos) e "Ligar à representada" (ficha do chamado na Assistência). A lista começa vazia; conta inativa ou excluída deixa de valer sozinha.' };
+}
+function RepI_emNomeSalvar_(eu, d) {
+  if (eu.perfil !== 'ADMIN') throw Rep_erro_('PERFIL', 'Não foi possível salvar: quem pode abrir pedido em nome da representada é definido só pelo Administrador. Nada foi alterado.');
+  var us = Ast_usuarios_(), ids = (Array.isArray(d && d.ids) ? d.ids : []).map(Rep_s_).filter(function (x, i, l) { return x && l.indexOf(x) === i; });
+  var ruins = ids.filter(function (id) { return !Rep_emNomeContaInterna_(us[id]); });
+  if (ruins.length) throw Rep_erro_('INCOMPLETO', 'Não foi possível salvar: só entram contas ativas da equipe da Metrolabs (cliente e representada não). Desmarque ' + ruins.map(function (id) { return (us[id] || {}).nome || id; }).join(', ') + ' e salve de novo. Nada foi alterado.');
+  var antes = Rep_emNomeCfg_().ids;
+  PropertiesService.getScriptProperties().setProperty(REP_EMNOME_PROP, JSON.stringify({ ids: ids, salvoEm: Rep_agora_(), salvoPor: Rep_s_(eu.nome) }));
+  var nomes = function (l) { return l.map(function (id) { return (us[id] || {}).nome || id; }).join(', ') || 'ninguém'; };
+  var entrou = ids.filter(function (id) { return antes.indexOf(id) < 0; }), saiu = antes.filter(function (id) { return ids.indexOf(id) < 0; });
+  try { SGO_DATA.log('REP_EMNOME_LISTA', Rep_s_(eu.login) || Rep_s_(eu.nome), 'Quem pode abrir pedido em nome da representada: ' + nomes(ids) + ' (entrou: ' + nomes(entrou) + '; saiu: ' + nomes(saiu) + ')', 'REPRESENTACAO'); } catch (eLog) {}
+  return Object.assign(RepI_emNomeConfig_(eu), { message: ids.length ? 'Lista salva: ' + nomes(ids) + '.' : 'Lista salva vazia: ninguém abre pedido em nome da representada.' });
+}
+
 var REP_ACOES_INTERNAS = {
   iniciar: RepI_iniciar_, salvarRepresentada: RepI_salvarRepresentada_, representadas: function () { return { representadas: RepI_representadas_() }; },
   // 03/11/2026: catálogo com quem cadastrou (e de que lado), uso em equipamentos e histórico (SGO_Representacao_Modelos.js)
@@ -633,6 +770,9 @@ var REP_ACOES_INTERNAS = {
   complemento: function (eu, d) { return AstC_complemento_(eu, d); }, recusar: function (eu, d) { return AstC_descartar_(eu, d); },
   conversas: RepI_conversas_, mensagens: RepI_mensagens_, enviarMensagem: RepI_enviarMensagem_, chamado: RepI_chamado_, acessos: RepI_acessos_, usuarios: RepI_usuarios_,
   painel: function (eu, d) { return RepI_painel_(eu, d); },
+  // 03/11/2026: abrir pedido em nome da representada e ligar chamado comum a ela (lista restrita; a lista é do Administrador)
+  emNomeBuscarCliente: RepI_emNomeBuscarCliente_, emNomeBuscarEquipamento: RepI_emNomeBuscarEquipamento_, abrirEmNome: RepI_abrirEmNome_, ligarChamado: RepI_ligarChamado_,
+  emNomeConfig: RepI_emNomeConfig_, emNomeSalvar: RepI_emNomeSalvar_,
   // 03/11/2026: aviso na tela (pop-up e som) dos pedidos da representada, em qualquer tela do SGO+ (SGO_Representacao_Alertas.js)
   alertasPedidos: function (eu, d) { return RepI_alertasPedidos_(eu, d); }, dispensarAlertaPedido: function (eu, d) { return RepI_dispensarAlertaPedido_(eu, d); },
   // 29/10/2026: documentos A4 (as três versões), fotos do chamado e liberação para os documentos externos

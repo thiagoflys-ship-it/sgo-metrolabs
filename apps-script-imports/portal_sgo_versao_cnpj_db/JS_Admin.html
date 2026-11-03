@@ -8,7 +8,7 @@
   // Regras que não mudam (conferidas no servidor): só um Administrador mexe em conta de
   // Administrador e o sistema nunca fica sem Administrador ativo (SGO_Usuarios.js);
   // usuário inativado perde a sessão em até 5 minutos (SGO_Auth.js › validarSessao);
-  // edição nunca apaga campo ausente; cliente só vê a própria empresa; excluir é da gestão.
+  // edição nunca apaga campo ausente; cliente só vê a própria empresa; excluir conta é só do Administrador (03/11/2026).
   // =====================================================================
 
   function SGO_rotuloPerfil_(p) {
@@ -17,14 +17,18 @@
   }
   function Usuarios_rotuloPapelRep_(k) { return ({ ADMIN: "Administrador da representada", ATENDENTE: "Atendente", FINANCEIRO: "Financeiro de garantia", LEITURA: "Leitura" })[String(k || "").toUpperCase()] || "Papel não informado"; }
   // Vínculo de trabalho (19/10/2026): CAD_USUARIOS.VINCULO_TRABALHO = "CLT", "PJ", "DIRETORIA" (22/10/2026) ou vazio.
-  var USUARIOS_VINCULOS = [["CLT", "CLT"], ["PJ", "PJ"], ["DIRETORIA", "Diretoria"]];
+  // 03/11/2026: "CLIENTE" (perfil Cliente) e "REPRESENTANTE" (perfil Representada), as contas de fora da Metrolabs.
+  var USUARIOS_VINCULOS = [["CLT", "CLT"], ["PJ", "PJ"], ["DIRETORIA", "Diretoria"], ["CLIENTE", "Cliente"], ["REPRESENTANTE", "Representante"]];
+  /** Vínculo de fora -> perfil que ele exige, e o contrário (o servidor confere; a tela só alinha). */
+  var USUARIOS_VINCULO_PERFIL = { CLIENTE: "CLIENTE", REPRESENTANTE: "REPRESENTADA" }, USUARIOS_PERFIL_VINCULO = { CLIENTE: "CLIENTE", REPRESENTADA: "REPRESENTANTE" };
   function Usuarios_rotuloVinculo_(v) { var k = String(v || "").replace(/\s+/g, "").toUpperCase(); var o = USUARIOS_VINCULOS.filter(function (x) { return x[0] === k; })[0]; return o ? o[1] : "Não informado"; }
   function Usuarios_seloVinculo_(u) {
     var k = String(u.VINCULO_TRABALHO || "").replace(/\s+/g, "").toUpperCase();
     if (USUARIOS_VINCULOS.some(function (x) { return x[0] === k; })) return '<span class="cadx-chip tom-info">' + CadUI_esc_(Usuarios_rotuloVinculo_(k)) + "</span>";
     // 22/10/2026: conta da Diretoria sem vínculo: o sistema sugere (e preenche sozinho na rotina).
-    if (u.VINCULO_SUGERIDO) return '<span class="cadx-chip tom-alerta" title="Conta da Diretoria sem vínculo de trabalho: o sistema sugere Diretoria. Confirme em Editar ou aguarde a rotina preencher.">' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + "?</span>";
-    return String(u.PERFIL).toUpperCase() === "CLIENTE" ? '<span class="cadx-sub">Não se aplica</span>' : '<span class="cadx-sub">Não informado</span>';
+    // 03/11/2026: conta de cliente ou da representada sem vínculo: o sistema sugere Cliente ou Representante.
+    if (u.VINCULO_SUGERIDO) return '<span class="cadx-chip tom-alerta" title="Conta sem vínculo de trabalho: pelo perfil, o sistema sugere ' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + '. Confirme em Editar ou aguarde a rotina preencher.">' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + "?</span>";
+    return '<span class="cadx-sub">Não informado</span>';
   }
   // Celular (WhatsApp): mostra "(11) 98765-4321"; grava só dígitos com 55 na frente.
   function usuariosMascaraCelular_(v) {
@@ -371,10 +375,12 @@
         "<li><b>Quem cria e altera contas</b>: Administrador, Diretoria, Gestor, RH e Financeiro (perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente). Os perfis Administrador e Diretoria só são dados por quem já é Administrador ou Diretoria. Ninguém muda o próprio perfil.</li>" +
         "<li><b>RH</b> faz a rotina da empresa como o Gestor (usuários, áreas, cadastros, frota, avisos, atividades, ponto). Não abre documentos técnicos, o Comercial, Configurações nem Chaves e senhas.</li>" +
         "<li><b>Área</b> (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez aqui e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. O botão <i>Áreas</i> mostra quem está sem área e permite criar ou corrigir áreas.</li>" +
-        "<li><b>Vínculo de trabalho</b> (CLT, PJ, Diretoria ou Não informado): mensagens do ponto só vão para quem é CLT. PJ, Diretoria e Não informado não recebem; os outros avisos chegam para todos. Conta com perfil Diretoria e sem vínculo recebe a sugestão <i>Diretoria?</i> e é preenchida pela rotina do sistema.</li>" +
+        "<li><b>Vínculo de trabalho</b> (CLT, PJ, Diretoria, Cliente, Representante ou Não informado): mensagens do ponto só vão para quem é CLT. PJ, Diretoria e Não informado não recebem; os outros avisos chegam para todos. Conta com perfil Diretoria e sem vínculo recebe a sugestão <i>Diretoria?</i> e é preenchida pela rotina do sistema.</li>" +
+        "<li><b>Cliente e Representante</b> são as contas de fora da Metrolabs. Escolher <i>Cliente</i> pede a empresa (cliente) e põe o perfil Cliente; escolher <i>Representante</i> pede a representada e o papel nela e põe o perfil Representada. Combinação que não fecha (ex.: vínculo Representante com perfil Técnico) não é salva: a mensagem diz o que corrigir. Conta de cliente ou da representada sem vínculo recebe a sugestão <i>Cliente?</i> ou <i>Representante?</i> e é preenchida pela rotina. Essas contas nunca recebem as mensagens do ponto nem os avisos internos da equipe.</li>" +
         "<li><b>Conta de Administrador</b> só é criada, alterada, inativada ou excluída por outro Administrador, e o sistema não deixa ficar sem nenhum Administrador ativo.</li>" +
         "<li><b>Celular (WhatsApp)</b>: usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. O número <i>Sem celular</i> mostra quem ainda precisa informar.</li>" +
-        "<li><b>Inativar</b> bloqueia o acesso: a sessão aberta da pessoa é encerrada em até 5 minutos. O histórico fica guardado. Excluir de vez é só do Administrador e da Diretoria.</li>" +
+        "<li><b>Inativar</b> bloqueia o acesso: a sessão aberta da pessoa é encerrada em até 5 minutos. O histórico fica guardado; dá para reativar.</li>" +
+        "<li><b>Excluir usuário</b> (só o Administrador; ninguém exclui a própria conta nem o último Administrador ativo): antes de confirmar, a tela mostra o que está ligado à conta (logins, chamados, O.S., mensagens, atividades, documentos, avisos e histórico) e pede o motivo. Conta sem nenhum registro ligado sai do cadastro. Conta com registro ligado fica guardada (exclusão lógica): some da lista e dos seletores, a sessão aberta cai na hora, o login é recusado e o nome continua nos registros antigos. Conta excluída não volta; o botão <i>Excluídos</i> mostra quem excluiu, quando e o motivo. Tudo fica no registro de auditoria.</li>" +
         "<li><b>Esqueceu a senha?</b> A própria pessoa usa \"Esqueci minha senha\" na tela de entrada. A gestão também pode usar <i>Mais › Enviar link de redefinição</i> (com motivo): o link vai para o e-mail da pessoa, vale 30 minutos e uma vez. A <i>senha provisória</i> fica só para quem não tem e-mail.</li></ul>",
       resumo: [
         { id: "todos", rotulo: "Total" },
@@ -385,8 +391,8 @@
         { id: "inativos", rotulo: "Inativos", filtro: function (u) { return u.STATUS !== "ATIVO"; } },
         { id: "semcel", rotulo: "Sem celular (ativos)", tom: "tom-alerta", dica: "Ativos sem celular: não recebem WhatsApp nem usam o Assistente do ponto do COMMAND.", filtro: function (u) { return u.STATUS === "ATIVO" && u.SEM_CELULAR && String(u.PERFIL).toUpperCase() !== "CLIENTE"; } },
         { id: "gestao", rotulo: "Administração e gestão", filtro: function (u) { return ["ADMIN", "GESTOR", "DIRETORIA"].indexOf(String(u.PERFIL).toUpperCase()) >= 0; } },
-        { id: "semvinculo", rotulo: "Sem vínculo (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem CLT, PJ ou Diretoria informado: não recebe as mensagens do ponto. Conta da Diretoria sem vínculo não entra aqui: o sistema preenche Diretoria sozinho.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.VINCULO_TRABALHO && !u.VINCULO_SUGERIDO; } },
-        { id: "semarea", rotulo: "Sem área (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem área: aparece como Sem área definida no Programa de conduta e nos indicadores. Use o botão Áreas.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && !u.AREA && !u.IGNORAR_AREA; } },
+        { id: "semvinculo", rotulo: "Sem vínculo (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem CLT, PJ ou Diretoria informado: não recebe as mensagens do ponto. Conta da Diretoria, de cliente ou da representada sem vínculo não entra aqui: o sistema preenche sozinho.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && String(u.PERFIL).toUpperCase() !== "REPRESENTADA" && !u.VINCULO_TRABALHO && !u.VINCULO_SUGERIDO; } },
+        { id: "semarea", rotulo: "Sem área (ativos)", tom: "tom-alerta", dica: "Equipe ativa sem área: aparece como Sem área definida no Programa de conduta e nos indicadores. Use o botão Áreas.", filtro: function (u) { return u.STATUS === "ATIVO" && String(u.PERFIL).toUpperCase() !== "CLIENTE" && String(u.PERFIL).toUpperCase() !== "REPRESENTADA" && !u.AREA && !u.IGNORAR_AREA; } },
         { id: "nunca", rotulo: "Nunca entraram", filtro: function (u) { return u.STATUS === "ATIVO" && !u.ULTIMO_ACESSO; } }
       ],
       filtros: [
@@ -421,7 +427,7 @@
       editar: function (u) { Usuarios_formulario_(u.ID); },
       mais: soConsulta ? null : function (u) { return Usuarios_menu_(u); },
       abrir: function (u) { Usuarios_detalhe_(u); },
-      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [], podeDarDiretoria: !!res.podeDarDiretoria, podeExcluir: !!res.podeExcluir, areas: res.areas || [], podeGerirAreas: !!res.podeGerirAreas, representadas: res.representadas || [], papeisRepresentacao: res.papeisRepresentacao || [] }); setTimeout(function () { Usuarios_faixaEntrada_(res.items || []); }, 0); }, erro); }
+      carregar: function (ok, erro) { CadUI_chamar_("usuariosPainel", [], function (res) { ok(res.items || [], { souAdmin: !!res.souAdmin, perfis: res.perfis || [], podeDarDiretoria: !!res.podeDarDiretoria, podeExcluir: !!res.podeExcluir, areas: res.areas || [], podeGerirAreas: !!res.podeGerirAreas, representadas: res.representadas || [], papeisRepresentacao: res.papeisRepresentacao || [], excluidos: res.excluidos || [] }); setTimeout(function () { Usuarios_faixaEntrada_(res.items || []); Usuarios_botaoExcluidos_(); }, 0); }, erro); }
     });
     // Áreas (19/10/2026): a gestão, o RH e o Financeiro abrem a tela das áreas a partir daqui.
     var dirUsr = document.querySelector("#cadxTela_usuarios .module-header-right");
@@ -437,7 +443,7 @@
 
   // Área (19/10/2026): CAD_USUARIOS.AREA, fonte única lida pelo Programa de conduta (SGO_Areas.js).
   function Usuarios_seloArea_(u) {
-    if (String(u.PERFIL).toUpperCase() === "CLIENTE") return '<span class="cadx-sub">Não se aplica</span>';
+    if (String(u.PERFIL).toUpperCase() === "CLIENTE" || String(u.PERFIL).toUpperCase() === "REPRESENTADA") return '<span class="cadx-sub">Não se aplica</span>';
     return u.AREA ? CadUI_esc_(u.AREA_NOME || u.AREA) : '<span class="cadx-chip tom-alerta">Sem área</span>';
   }
 
@@ -446,7 +452,7 @@
     var bloqueio = !u.PODE_ALTERAR ? "Conta de Administrador: só outro Administrador altera." : "";
     var proprio = u.EU ? "Você não pode inativar nem excluir a sua própria conta." : "";
     var stU = CADUI.telas.usuarios || {};
-    var semExcluir = !(stU.extra && stU.extra.podeExcluir) ? "Excluir de vez é só do Administrador e da Diretoria. Para tirar o acesso, use Inativar." : "";
+    var semExcluir = !(stU.extra && stU.extra.podeExcluir) ? "Excluir uma conta é só do Administrador. Para tirar o acesso, use Inativar." : "";
     var ultimo = u.ULTIMO_ADMIN ? "Único Administrador ativo: cadastre ou reative outro antes." : "";
     return [
       { texto: "Ver detalhes", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("usuarios", u.ID); } },
@@ -474,10 +480,10 @@
           (semCel && u.STATUS === "ATIVO" ? '<div class="cadx-faixa bc-faixa tom-alerta"><b>Sem celular.</b> Esta pessoa não recebe avisos por WhatsApp e não consegue usar o Assistente do ponto do COMMAND. Clique em Editar e informe o celular com DDD.</div>' : "") +
           (!u.PODE_ALTERAR ? '<div class="cadx-faixa bc-faixa tom-info">Conta de Administrador: só outro Administrador pode alterar, redefinir a senha, inativar ou excluir.</div>' : "") +
           (u.STATUS !== "ATIVO" ? '<div class="cadx-faixa bc-faixa">Acesso bloqueado (inativo). Para liberar, use Mais › Reativar.</div>' : "") +
-          (u.VINCULO_SUGERIDO ? '<div class="cadx-faixa bc-faixa tom-info"><b>Vínculo: ' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + '?</b> Esta conta é da Diretoria e está sem vínculo de trabalho. O sistema preenche Diretoria sozinho na rotina diária; para fazer agora, clique em Editar e confirme o Vínculo de trabalho.</div>' : "") +
+          (u.VINCULO_SUGERIDO ? '<div class="cadx-faixa bc-faixa tom-info"><b>Vínculo: ' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + '?</b> Esta conta está sem vínculo de trabalho e, pelo perfil, o vínculo é ' + CadUI_esc_(Usuarios_rotuloVinculo_(u.VINCULO_SUGERIDO)) + '. O sistema preenche sozinho na rotina diária; para fazer agora, clique em Editar e confirme o Vínculo de trabalho.</div>' : "") +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["Nome completo", u.NOME], ["E-mail (entrada no SGO+)", u.SEM_EMAIL ? "Sem e-mail: não entra" : u.EMAIL]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Contato</h4>' + CadUI_dados_([["Celular (WhatsApp)", u.SEM_CELULAR ? "" : usuariosMascaraCelular_(u.CELULAR)]]) + "</section>" +
-          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Trabalho</h4>' + CadUI_dados_([["Área", String(u.PERFIL).toUpperCase() === "CLIENTE" ? "Não se aplica (cliente)" : (u.AREA_NOME || "Sem área definida")], ["Vínculo de trabalho", String(u.PERFIL).toUpperCase() === "CLIENTE" && !u.VINCULO_TRABALHO ? "Não se aplica (cliente)" : Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO)]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Trabalho</h4>' + CadUI_dados_([["Área", String(u.PERFIL).toUpperCase() === "CLIENTE" || String(u.PERFIL).toUpperCase() === "REPRESENTADA" ? "Não se aplica (conta de fora da Metrolabs)" : (u.AREA_NOME || "Sem área definida")], ["Vínculo de trabalho", Usuarios_rotuloVinculo_(u.VINCULO_TRABALHO)]]) + "</section>" +
           '<section class="cadx-sec"><h4 class="cadx-sec-tit">Acesso</h4>' + CadUI_dados_([["Perfil", SGO_rotuloPerfil_(u.PERFIL)], u.CLIENTE_NOME ? ["Empresa (cliente)", u.CLIENTE_NOME] : null, u.REPRESENTADA_NOME ? ["Representada", u.REPRESENTADA_NOME + " · " + Usuarios_rotuloPapelRep_(u.REPRESENTACAO_PAPEL)] : null, ["Último acesso", u.ULTIMO_ACESSO ? CadUI_dataHora_(u.ULTIMO_ACESSO) : "Nunca entrou"], ["Cadastrado em", CadUI_dataHora_(u.CRIADO_EM)]]) + "</section>";
       },
       depois: function (p) {
@@ -532,10 +538,46 @@
       texto: "<p>Liberar o acesso de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b> com o perfil " + CadUI_esc_(SGO_rotuloPerfil_(u.PERFIL)) + "?</p>",
       aoConcluir: function () { CadTela_recarregar_("usuarios", u.ID); } });
   }
+  // 03/11/2026 (pedido do dono): antes de confirmar, o que está ligado à conta (o servidor confere de novo ao excluir) e o motivo.
   function Usuarios_excluir_(u) {
-    CadTela_acaoRisco_({ titulo: "Excluir o usuário", botao: "Excluir definitivamente", fn: "usuariosExcluir", id: u.ID,
-      texto: "<p>Excluir a conta de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b>" + (u.EMAIL ? " (" + CadUI_esc_(u.EMAIL) + ")" : "") + "? Não pode ser desfeito.</p><p>Para só bloquear o acesso e manter o histórico ligado ao nome da pessoa, prefira Inativar.</p>",
-      aoConcluir: function () { CadUI_painelFechar_(); CadTela_recarregar_("usuarios"); } });
+    CadUI_chamar_("usuariosVinculosConta", [u.ID], function (v) {
+      var linhas = (v.categorias || []).map(function (c) {
+        return "<tr><td>" + CadUI_esc_(c.rotulo) + '</td><td style="text-align:right">' + CadUI_esc_(Number(c.total || 0).toLocaleString("pt-BR")) + '</td><td class="cadx-sub">' + CadUI_esc_((c.abas || []).map(function (a) { return a.aba + ": " + Number(a.n).toLocaleString("pt-BR"); }).join("; ") || "nada") + "</td></tr>";
+      }).join("");
+      var remover = v.modo === "REMOVER";
+      CadUI_confirmar_({
+        titulo: "Excluir o usuário", botao: remover ? "Excluir a conta" : "Excluir (fica guardada)", risco: true,
+        texto: "<p>Excluir a conta de <b>" + CadUI_esc_(Usuarios_nome_(u)) + "</b>" + (u.EMAIL ? " (" + CadUI_esc_(u.EMAIL) + ")" : "") + "? Conta excluída não volta.</p>" +
+          '<div style="overflow-x:auto"><table class="cadx-tabela bc-tabela"><thead><tr><th>O que está ligado à conta</th><th style="text-align:right">Registros</th><th>Onde</th></tr></thead><tbody>' + linhas + "</tbody></table></div>" +
+          ((v.naoConferidas || []).length ? '<div class="cadx-faixa bc-faixa tom-alerta">Não deu para conferir agora: ' + CadUI_esc_(v.naoConferidas.join(", ")) + ". Por segurança, a conta fica guardada (exclusão lógica).</div>" : "") +
+          (remover ? '<div class="cadx-faixa bc-faixa tom-info"><b>Nenhum registro ligado.</b> A conta sai do cadastro.</div>'
+            : '<div class="cadx-faixa bc-faixa tom-alerta"><b>Esta conta tem registros ligados</b>, então ela fica guardada: some da lista e dos seletores, a sessão aberta cai na hora, o login é recusado e o nome continua nos registros antigos. Consulte depois no botão Excluídos.</div>') +
+          "<p>Para só bloquear o acesso (e poder reativar depois), use Inativar.</p>",
+        motivo: { rotulo: "Motivo da exclusão", min: 10, dica: "Ex.: conta criada em duplicidade; pessoa saiu da empresa. Fica no registro de auditoria com o seu nome, a data e a hora." },
+        aoConfirmar: function (val, fechar, reabilitar) {
+          CadUI_chamar_("usuariosExcluir", [u.ID, val.motivo], function (res) { fechar(); CadUI_aviso_(res.message || "Conta excluída.", "ok"); CadUI_painelFechar_(); CadTela_recarregar_("usuarios"); }, reabilitar, "Aguarde, excluindo…");
+        }
+      });
+    }, function (msg) { CadUI_aviso_(msg, "erro"); }, "Conferindo o que está ligado à conta…");
+  }
+  /** Botão "Excluídos (N)" no cabeçalho da tela: consulta das contas excluídas (quem excluiu, quando e o motivo). */
+  function Usuarios_botaoExcluidos_() {
+    var st = CADUI.telas.usuarios || {}, lista = (st.extra && st.extra.excluidos) || [];
+    var dir = document.querySelector("#cadxTela_usuarios .module-header-right");
+    if (!dir) return;
+    var b = document.getElementById("usrBtnExcluidos");
+    if (!b) { b = document.createElement("button"); b.type = "button"; b.className = "btn-secondary"; b.id = "usrBtnExcluidos"; b.title = "Contas excluídas (só consulta)"; b.onclick = function () { Usuarios_excluidosAbrir_(); }; dir.appendChild(b); }
+    b.innerHTML = '<i class="fas fa-user-slash" aria-hidden="true"></i>&nbsp;Excluídos (' + lista.length + ")";
+  }
+  function Usuarios_excluidosAbrir_() {
+    var st = CADUI.telas.usuarios || {}, lista = (st.extra && st.extra.excluidos) || [];
+    CadUI_painelAbrir_({ chave: "usuarios", id: "__excluidos", titulo: "Excluídos", sub: "Contas excluídas: só consulta. O nome continua nos registros antigos.",
+      corpo: function () {
+        if (!lista.length) return '<div class="cadx-faixa bc-faixa tom-info">Nenhuma conta excluída.</div>';
+        return '<p class="cadx-dica">Conta excluída não volta. Se a pessoa precisa de acesso de novo, cadastre uma conta nova (o mesmo e-mail pode ser usado).</p><div style="overflow-x:auto"><table class="cadx-tabela bc-tabela"><thead><tr><th>Pessoa</th><th>Excluída em</th><th>Por</th><th>Motivo</th></tr></thead><tbody>' +
+          lista.map(function (x) { return '<tr><td><div class="cadx-tit">' + CadUI_esc_(x.NOME) + '</div><div class="cadx-sub">' + CadUI_esc_([x.EMAIL, SGO_rotuloPerfil_(x.PERFIL), x.CLIENTE_NOME || x.REPRESENTADA_NOME].filter(Boolean).join(" · ")) + "</div></td><td>" + CadUI_esc_(x.EXCLUIDO_EM_BR) + "</td><td>" + CadUI_esc_(x.EXCLUIDO_POR || "não registrado") + "</td><td>" + CadUI_esc_(x.EXCLUIDO_MOTIVO || "") + "</td></tr>"; }).join("") + "</tbody></table></div>";
+      },
+      rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="CadUI_painelFechar_()">Fechar</button>' });
   }
 
   function Usuarios_formulario_(id) {
@@ -566,7 +608,7 @@
               .concat(u.AREA && !((st.extra && st.extra.areas) || []).some(function (a) { return a.CODIGO === String(u.AREA).toUpperCase(); }) ? [[String(u.AREA).toUpperCase(), (u.AREA_NOME || u.AREA) + " (inativa)"]] : []),
             dica: "Preencha uma vez: o Programa de conduta e os indicadores de qualidade leem daqui. Para criar uma área, use o botão Áreas da lista." }),
           CadUI_campo_({ id: "usr_vinculo", rotulo: "Vínculo de trabalho", tipo: "select", valor: String(u.VINCULO_TRABALHO || u.VINCULO_SUGERIDO || "").replace(/\s+/g, "").toUpperCase(), opcoes: [["", "Não informado"]].concat(USUARIOS_VINCULOS),
-            dica: u.VINCULO_SUGERIDO ? "Sugerido pelo perfil Diretoria (a conta estava sem vínculo): confira e salve." : "Mensagens do ponto só vão para quem é CLT. PJ, Diretoria e Não informado não recebem; os outros avisos chegam para todos. Ao escolher o perfil Diretoria com o vínculo vazio, Diretoria é sugerida." })
+            dica: u.VINCULO_SUGERIDO ? "Sugerido pelo perfil (a conta estava sem vínculo): confira e salve." : "Mensagens do ponto só vão para quem é CLT. PJ, Diretoria e Não informado não recebem; os outros avisos chegam para todos. Cliente e Representante são as contas de fora: escolher um deles põe o perfil Cliente (com a empresa) ou Representada (com a representada e o papel)." })
         ]) +
         CadUI_secao_("Acesso", [
           CadUI_campo_({ id: "usr_perfil", rotulo: "Perfil de acesso", obrigatorio: true, tipo: "select", valor: String(u.PERFIL || "").toUpperCase(), opcoes: [["", "Escolha o perfil"]].concat(perfis.map(function (p) { return [String(p).toUpperCase(), SGO_rotuloPerfil_(p)]; })),
@@ -604,6 +646,21 @@
         perfilSel.addEventListener("change", function () { var a = p.querySelector("#usr_area"); if (a && !a.value && areaPorPerfil[perfilSel.value] && a.querySelector('option[value="' + areaPorPerfil[perfilSel.value] + '"]')) a.value = areaPorPerfil[perfilSel.value]; });
         // Vínculo (22/10/2026): perfil Diretoria com o vínculo vazio sugere "Diretoria" (quem salva confere; nunca troca um vínculo já escolhido).
         perfilSel.addEventListener("change", function () { var v = p.querySelector("#usr_vinculo"); if (v && !v.value && perfilSel.value === "DIRETORIA") { v.value = "DIRETORIA"; CadUI_erroCampo_("usr_vinculo", ""); } });
+        // 03/11/2026: vínculo Cliente/Representante alinha o perfil (e mostra a empresa ou a representada); perfil Cliente/Representada
+        // alinha o vínculo; sair do perfil de fora limpa o vínculo de fora (o servidor recusa a combinação que não fecha).
+        var vincSel = p.querySelector("#usr_vinculo");
+        if (vincSel) vincSel.addEventListener("change", function () {
+          var alvo = USUARIOS_VINCULO_PERFIL[vincSel.value];
+          if (!alvo || perfilSel.value === alvo || perfilSel.disabled) return;
+          if (!perfilSel.querySelector('option[value="' + alvo + '"]')) { CadUI_erroCampo_("usr_vinculo", "O vínculo " + CadUI_esc_(Usuarios_rotuloVinculo_(vincSel.value)) + " pede o perfil " + CadUI_esc_(SGO_rotuloPerfil_(alvo)) + ", que não está na sua lista de perfis. Peça ao Administrador."); return; }
+          perfilSel.value = alvo; perfilSel.dispatchEvent(new Event("change")); CadUI_erroCampo_("usr_vinculo", "");
+        });
+        perfilSel.addEventListener("change", function () {
+          if (!vincSel) return;
+          var dele = USUARIOS_PERFIL_VINCULO[perfilSel.value];
+          if (dele && (!vincSel.value || USUARIOS_VINCULO_PERFIL[vincSel.value])) vincSel.value = dele;
+          else if (!dele && USUARIOS_VINCULO_PERFIL[vincSel.value]) vincSel.value = "";
+        });
         p.querySelector("#usr_celular").addEventListener("input", function (e) { e.target.value = usuariosMascaraCelular_(e.target.value); });
         p.querySelector("#usr_email").addEventListener("input", function (e) { var v = e.target.value.toLowerCase().replace(/\s+/g, ""); if (v !== e.target.value) e.target.value = v; });
         CadUI_chamar_("usuariosListarClientesAtivos", [], function (res) {

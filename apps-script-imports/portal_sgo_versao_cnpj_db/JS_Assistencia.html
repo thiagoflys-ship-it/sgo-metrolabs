@@ -223,6 +223,23 @@
       ok(t, ov);
     };
   }
+  /** 03/11/2026: liga o chamado à representada (com o motivo); a representada passa a ver e acompanhar. O servidor confere a lista restrita. */
+  function At_ligarRepresentada_(c, reabrir) {
+    var reps = (AT.ini.representadas || []).filter(function (x) { return x.ativa; });
+    var ov = At_modal_("Ligar o chamado " + c.numero + " à representada",
+      '<p class="at-txt">Use quando a representada pediu este atendimento e ele foi aberto como chamado comum (por exemplo, urgência atendida antes). Depois de ligado, a representada vê e acompanha o chamado, com o motivo no histórico, e recebe o aviso por e-mail. Não dá para desfazer pela tela.</p>' +
+      At_campo_("Representada *", '<select id="atLigRep">' + At_opcoes_(reps.map(function (x) { return { v: x.id, t: x.nome }; }), "", "Escolha a representada") + "</select>") +
+      At_campo_("Protocolo da representada (se houver)", '<input id="atLigProt" maxlength="60">') +
+      At_campo_("Motivo *", '<textarea id="atLigMotivo" maxlength="500"></textarea>', "Pelo menos 10 letras. Ex.: urgência atendida antes por telefone; a representada pediu depois.") + '<div id="atLigMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Ligar à representada</button>');
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    ov.querySelector("[data-ok]").onclick = function () {
+      var rep = At_$_("atLigRep").value, mot = At_$_("atLigMotivo").value.trim();
+      if (!rep) return At_msg_("atLigMsg", "Escolha a representada.", "aviso");
+      if (mot.length < 10) return At_msg_("atLigMsg", "Escreva o motivo com pelo menos 10 letras.", "aviso");
+      At_chamar_("ligarRepresentada", { id: c.id, representadaId: rep, motivo: mot, protocolo: At_$_("atLigProt").value.trim() }, function (x) { ov.remove(); reabrir(x.message); if (typeof At_carregarChamados_ === "function") At_carregarChamados_(); }, function (m) { At_msg_("atLigMsg", m); });
+    };
+  }
   /** Lê arquivos: fotos reduzidas no navegador (até 1600 px, JPEG ~300 KB); outros como estão. */
   function At_lerArquivos_(input, cb, soImagem) {
     var fs = Array.prototype.slice.call((input && input.files) || []);
@@ -520,6 +537,8 @@
       (c.representadaId ? '<button type="button" class="btn-secondary" data-at-rel="REPRESENTADA">Gerar a versão da representada</button>' : '') + '</div><div id="atRelLista"><p class="at-meta">Carregando…</p></div><div id="atRelFotos"></div></div>';
     // 29/10/2026 (módulo Representação): parte "Representação" da ficha (relato, contato, arquivos e conversa com a representada)
     if (c.representadaId) h += '<div class="at-sec">Representação: ' + At_esc_(c.representadaNome) + '</div><div id="atRepFicha" class="at-caixa"><p class="at-meta">Carregando…</p></div>';
+    // 03/11/2026: chamado comum ligado depois à representada (urgência atendida antes). Só quem está na lista do Administrador.
+    else if (ini.podeLigarRepresentada && (ini.representadas || []).some(function (x) { return x.ativa; })) h += '<div class="at-acoes"><button type="button" class="btn-secondary" id="atLigarRep" title="A representada pediu este atendimento e ele foi aberto como chamado comum">Ligar à representada</button></div>';
     h += '<div class="at-sec">Histórico do chamado</div><div class="at-hist">' + (r.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto || ((e.de || "") + " → " + (e.para || ""))) + '</div>'; }).join("") + '</div>';
     h += '<div class="at-acoes"><button type="button" class="btn-secondary" id="atAnotar">Registrar contato ou observação</button><button type="button" class="btn-secondary" id="atReclamar">Registrar reclamação</button>' +
       (c.podeCancelar ? '<button type="button" class="btn-secondary" id="atCancelar" style="color:var(--danger)">Cancelar o chamado</button>' : '') +
@@ -529,7 +548,7 @@
     if (c.representadaId && corpo.querySelector("#atRepFicha")) At_chamar_("representacao", { id: c.id }, function (x) {
       var el = corpo.querySelector("#atRepFicha"), rp = x.representacao; if (!el || !rp) return;
       var s = rp.solicitacao || {}, rel = s.relato || {};
-      el.innerHTML = '<p class="at-txt"><b>' + At_esc_(rp.representadaNome) + '</b>' + (rp.protocolo ? ' · protocolo ' + At_esc_(rp.protocolo) : '') + (rp.enquadramento ? ' · enquadramento pretendido: ' + At_esc_(rp.enquadramento) : '') + ' · a representada vê a etapa "' + At_esc_(rp.etapaRepresentada) + '"</p>' +
+      el.innerHTML = (rp.ligadoTexto || rp.emNomeTexto ? '<div class="at-faixa">' + At_esc_(rp.ligadoTexto || rp.emNomeTexto) + '.</div>' : '') + '<p class="at-txt"><b>' + At_esc_(rp.representadaNome) + '</b>' + (rp.protocolo ? ' · protocolo ' + At_esc_(rp.protocolo) : '') + (rp.enquadramento ? ' · enquadramento pretendido: ' + At_esc_(rp.enquadramento) : '') + ' · a representada vê a etapa "' + At_esc_(rp.etapaRepresentada) + '"</p>' +
         (s.numero ? '<p class="at-meta">Pedido ' + At_esc_(s.numero) + ' por ' + At_esc_(s.por) + ' · setor ' + At_esc_(s.setor) + ' · contato no local ' + At_esc_([s.contatoNome, s.contatoTelefone, s.contatoEmail].filter(Boolean).join(" · ")) + '</p>' : '') +
         (rel.sintoma ? '<p class="at-txt">Código de erro: ' + At_esc_(rel.naoExibe ? "não exibe" : rel.codigoErro) + ' · risco: ' + At_esc_(rel.risco) + ' · já tentado: ' + At_esc_(rel.tentado) + '</p>' : '') +
         (rp.anexos.length ? '<p class="at-txt">' + rp.anexos.map(function (a) { return '<a href="' + At_esc_(a.url) + '" target="_blank" rel="noopener">' + At_esc_(a.tipoNome + " · " + a.nome) + '</a>'; }).join(" · ") + '</p>' : '') +
@@ -540,6 +559,7 @@
     if (c.podeTriar) At_ligarTriagem_(c, corpo, reabrir);
     if (c.podeAgendar) At_ligarAgendar_(c, corpo, reabrir, r);
     var b;
+    if ((b = corpo.querySelector("#atLigarRep"))) b.onclick = function () { At_ligarRepresentada_(c, reabrir); };
     if ((b = corpo.querySelector("#atRemOk"))) b.onclick = function () { At_chamar_("encerrarRemoto", { id: c.id, confirmadoPor: At_$_("atRemQuem").value, testeFuncional: At_$_("atRemTeste").value }, function (x) { reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atRemMsg", m); }); };
     if ((b = corpo.querySelector("#atRetomar"))) b.onclick = function () { At_pedirTexto_("Liberar para agendar", "O chamado volta para \"Planejado\" e a gestão agenda o atendimento. Ao agendar, o cliente recebe a data por e-mail.", "O que aconteceu (peça chegou, orçamento aprovado...)", 5, function (t, ov) { At_chamar_("retomar", { id: c.id, texto: t }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }); };
     if ((b = corpo.querySelector("#atVoltarTriagem"))) b.onclick = function () { At_pedirTexto_("Voltar o chamado à triagem", "Use quando o técnico descobriu em campo que precisa de orçamento ou de outro diagnóstico. A O.S. fica pausada (a visita foi interrompida) e volta para a agenda quando a triagem decidir \"planejar visita\". O técnico é avisado.", "Motivo", 10, function (t, ov) { At_chamar_("voltarTriagem", { id: c.id, motivo: t }, function (x) { ov.remove(); reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Voltar à triagem"); };

@@ -9,12 +9,13 @@ function SGO_ajudaTelas_Administracao_() {
   return {
     "usuarios": {
       titulo: "Usuários",
-      paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT, PJ ou Diretoria), a situação, o e-mail (com ele a pessoa entra no SGO+), o celular (WhatsApp) e o último acesso da pessoa.",
+      paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT, PJ, Diretoria, Cliente ou Representante), a situação, o e-mail (com ele a pessoa entra no SGO+), o celular (WhatsApp) e o último acesso da pessoa.",
       antesDeComecar: [
         "Esta tela é usada pela gestão: Administrador, Diretoria, Gestor, RH e Financeiro. Os demais perfis não veem o item \"Usuários\" no menu.",
         "Área (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez no cadastro e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. Quem está sem área aparece como \"Sem área definida\" nesses lugares.",
         "Vínculo de trabalho: CLT, PJ ou Diretoria (22/10/2026: a empresa tem os três). Pela matriz de avisos (21/10/2026), o WhatsApp é só para quem é CLT, inclusive as mensagens do ponto. Quem é PJ, Diretoria ou está como \"Não informado\" recebe os avisos pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe > Avisos e horários.",
         "Conta com perfil Diretoria sem vínculo de trabalho: a lista mostra \"Diretoria?\" e a rotina diária do sistema preenche Diretoria sozinha (fica registrado como feito pelo sistema). Um vínculo já informado nunca é trocado pelo sistema.",
+        "Cliente e Representante (03/11/2026) são os vínculos das contas de fora da Metrolabs. Escolher \"Cliente\" pede a empresa (cliente) e põe o perfil Cliente; escolher \"Representante\" pede a representada e o papel nela e põe o perfil Representada. Combinação que não fecha (por exemplo, vínculo Representante com perfil Técnico) não é salva: a mensagem diz o que corrigir. Conta de cliente ou da representada sem vínculo mostra \"Cliente?\" ou \"Representante?\" e a rotina preenche sozinha. Essas contas nunca recebem as mensagens do ponto nem os avisos internos da equipe.",
         "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
         "Entrada pelo e-mail (31/10/2026): cada pessoa entra no SGO+ com o e-mail cadastrado aqui e a senha. O e-mail é obrigatório e não pode estar em duas contas. Conta ativa sem e-mail, ou com o mesmo e-mail de outra conta ativa, não entra: aparece em vermelho na lista, na faixa do topo e nos números \"Sem e-mail (não entram)\" e \"E-mail repetido\".",
         "Escolha o perfil certo antes de cadastrar. O perfil define o que a pessoa vê e faz no sistema.",
@@ -65,7 +66,7 @@ function SGO_ajudaTelas_Administracao_() {
             "Preencha \"E-mail (entrada no SGO+)\". É obrigatório: com ele a pessoa entra no SGO+, recebe o link de nova senha e os avisos. Ele não pode estar em outra conta.",
             "Preencha \"Celular (WhatsApp)\" com DDD. O sistema coloca a máscara sozinho.",
             "Em \"Trabalho\", escolha a \"Área\" da pessoa. Ao escolher um perfil que diz a área (Comercial, Financeiro, RH, Diretoria, Metrologia, Técnico), ela já vem marcada se o campo estiver vazio; confira.",
-            "Em \"Trabalho\", escolha o \"Vínculo de trabalho\": CLT, PJ, Diretoria ou Não informado. Ao escolher o perfil Diretoria com o vínculo vazio, \"Diretoria\" já vem marcada; confira. Para Cliente, deixe \"Não informado\".",
+            "Em \"Trabalho\", escolha o \"Vínculo de trabalho\": CLT, PJ, Diretoria, Cliente, Representante ou Não informado. Ao escolher o perfil Diretoria com o vínculo vazio, \"Diretoria\" já vem marcada; confira. Para a conta de um cliente, escolha \"Cliente\" (o perfil muda para Cliente e aparece o campo da empresa); para a pessoa da representada, escolha \"Representante\" (o perfil muda para Representada e aparecem a representada e o papel).",
             "Escolha o \"Perfil de acesso\". Para quem cuida do RH, escolha \"RH\". Para a direção da empresa, escolha \"Diretoria\" (só aparece para Administrador e Diretoria).",
             "Se escolheu o perfil Cliente, escolha a \"Empresa (cliente)\".",
             "Preencha a \"Senha inicial\" com pelo menos 6 caracteres. Ela é provisória: no primeiro acesso a pessoa cria a dela.",
@@ -125,11 +126,15 @@ function SGO_ajudaTelas_Administracao_() {
           ]
         },
         {
-          titulo: "Excluir uma conta",
+          titulo: "Excluir uma conta (só o Administrador)",
           itens: [
-            "Prefira inativar. A exclusão não pode ser desfeita.",
-            "Toque em \"Mais\" e depois em \"Excluir usuário\".",
-            "Leia a confirmação e toque em \"Excluir definitivamente\"."
+            "Prefira inativar quando a pessoa pode voltar: a conta inativa pode ser reativada; a excluída não volta.",
+            "Toque em \"Mais\" e depois em \"Excluir usuário\". O botão fica apagado para quem não é Administrador, na sua própria conta e no último Administrador ativo.",
+            "O sistema confere e mostra o que está ligado à conta: logins e acessos, chamados e pedidos, ordens de serviço, mensagens, atividades, documentos, avisos e histórico, com quantos registros em cada um.",
+            "Escreva o motivo (pelo menos 10 letras). Ele fica no registro de auditoria com o seu nome, a data e a hora.",
+            "Sem nenhum registro ligado, a conta sai do cadastro (botão \"Excluir a conta\").",
+            "Com registro ligado, a conta fica guardada (botão \"Excluir (fica guardada)\"): some da lista e dos seletores, a sessão aberta da pessoa cai na hora, o login é recusado e o nome continua nos registros antigos.",
+            "Para consultar as contas excluídas (quem excluiu, quando e o motivo), toque em \"Excluídos\", no alto da tela."
           ]
         }
       ],
@@ -161,6 +166,10 @@ function SGO_ajudaTelas_Administracao_() {
       problemas: [
         { situacao: "Aparece \"Este e-mail já é da conta de ...\"", oQueFazer: "Cada e-mail só pode estar em uma conta (maiúsculas e espaços não contam). Se a outra conta é da mesma pessoa e está inativa, reative-a (Mais > Reativar) em vez de criar outra; se é de outra pessoa, use outro e-mail." },
         { situacao: "Aparece \"Não foi possível reativar: o e-mail desta conta ... já é da conta ativa de ...\"", oQueFazer: "Duas contas ativas com o mesmo e-mail não entram. Troque o e-mail de uma delas (Editar) e reative de novo." },
+        { situacao: "Aparece \"Vínculo de trabalho incoerente: ...\"", oQueFazer: "O vínculo não combina com o perfil. Cliente é só da conta com perfil Cliente (com a empresa); Representante é só da conta com perfil Representada (com a representada e o papel). Faça o que a mensagem diz: troque o perfil ou escolha outro vínculo (CLT, PJ, Diretoria ou Não informado) e salve de novo." },
+        { situacao: "Aparece \"Não foi possível excluir: excluir uma conta é só do Administrador.\"", oQueFazer: "Para tirar o acesso agora, use Mais > Inativar (a conta pode ser reativada depois). Se a conta precisa sumir de vez, peça ao Administrador, com o motivo." },
+        { situacao: "Aparece \"... a conta de ... foi excluída em ...\" ao reativar ou editar", oQueFazer: "Conta excluída fica só para consulta (botão Excluídos) e não volta. Se a pessoa precisa de acesso de novo, toque em \"Novo usuário\": o mesmo e-mail pode ser usado." },
+        { situacao: "A pessoa diz que aparece \"Não foi possível entrar: esta conta foi excluída do SGO+\"", oQueFazer: "A conta dela foi excluída pelo Administrador (veja em Excluídos o motivo). Se ela ainda precisa de acesso, cadastre uma conta nova." },
         { situacao: "Aparece \"Esta pessoa tem e-mail cadastrado: use Enviar link de redefinição\"", oQueFazer: "Quem tem e-mail recebe o link de nova senha (Mais > Enviar link de redefinição). A senha provisória fica só para quem não tem e-mail." },
         { situacao: "Aparece \"Esta conta não tem e-mail válido cadastrado\" ao enviar o link", oQueFazer: "Cadastre o e-mail da pessoa (Editar) e envie de novo; enquanto isso, use \"Senha provisória (sem e-mail)\"." },
         { situacao: "A pessoa diz que o link não chegou", oQueFazer: "Confira o e-mail cadastrado (sem erro de digitação) e peça para olhar o lixo eletrônico; o e-mail sai de sistema@metrolabs.com.br. O link vale 30 minutos: envie outro se venceu (o novo cancela o anterior)." },
@@ -186,9 +195,9 @@ function SGO_ajudaTelas_Administracao_() {
         { situacao: "A pessoa inativada ainda está usando o sistema", oQueFazer: "Aguarde até 5 minutos. A sessão aberta dela é encerrada nesse prazo." }
       ],
       quemPode: [
-        { perfil: "ADMIN", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir qualquer conta, inclusive de Administrador. Dar o perfil Administrador." },
-        { perfil: "DIRETORIA", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir contas que não sejam de Administrador. Dá e tira o perfil Diretoria. Não dá o perfil Administrador." },
-        { perfil: "GESTOR,RH,FINANCEIRO", pode: "Criar, editar (área, vínculo CLT, PJ ou Diretoria, celular), redefinir a senha, inativar e reativar contas dos perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente, e organizar as áreas. Não dão nem alteram os perfis Administrador e Diretoria e não excluem conta (use Inativar)." },
+        { perfil: "ADMIN", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir qualquer conta, inclusive de Administrador (menos a própria e o último Administrador ativo). Dar o perfil Administrador. Só o Administrador exclui conta." },
+        { perfil: "DIRETORIA", pode: "Criar, editar, redefinir a senha, inativar e reativar contas que não sejam de Administrador. Dá e tira o perfil Diretoria. Não dá o perfil Administrador e não exclui conta (use Inativar ou peça ao Administrador)." },
+        { perfil: "GESTOR,RH,FINANCEIRO", pode: "Criar, editar (área, vínculo CLT, PJ, Diretoria, Cliente ou Representante, celular), redefinir a senha, inativar e reativar contas dos perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente, e organizar as áreas. Não dão nem alteram os perfis Administrador e Diretoria e não excluem conta (use Inativar)." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Não usam esta tela. Para criar conta, trocar perfil ou redefinir senha, peçam à gestão (Gestor, RH ou Financeiro)." },
         { perfil: "TODOS", pode: "Ninguém muda o próprio perfil: o campo fica travado na própria conta." },
         { perfil: "CLIENTE", pode: "Não usa esta tela. Para acesso de mais alguém da sua empresa, peça à Metrolabs." },

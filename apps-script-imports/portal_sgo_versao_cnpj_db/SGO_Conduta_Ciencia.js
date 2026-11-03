@@ -341,6 +341,10 @@ function Conduta_rotinaDiaria_() {
   if (typeof Usuarios_saneamentoVinculoDiretoria_ === 'function') {
     try { r.vinculoDiretoria = Usuarios_saneamentoVinculoDiretoria_().logins; } catch (eVin) { r.vinculoDiretoria = { falha: String((eVin && eVin.message) || eVin) }; }
   }
+  // 03/11/2026: vínculo "Cliente" e "Representante" preenchido uma vez para as contas de fora sem vínculo (SGO_Usuarios.js).
+  if (typeof Usuarios_saneamentoVinculoExternos_ === 'function') {
+    try { r.vinculoExternos = Usuarios_saneamentoVinculoExternos_().logins; } catch (eVx) { r.vinculoExternos = { falha: String((eVx && eVx.message) || eVx) }; }
+  }
   // 19/10/2026: sugestões de ocorrência vindas dos outros módulos (só sugere; a gestão decide).
   if (typeof Conduta_coletarSugestoes_ === 'function') {
     try { var col = Conduta_coletarSugestoes_('sistema'); r.sugestoes = { novas: col.novas, superadas: col.superadas }; }

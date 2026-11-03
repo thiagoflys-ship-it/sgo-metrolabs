@@ -329,6 +329,13 @@ function login(usuario, senha, ctx) {
 
         // Verifica se o usuário está bloqueado ou inativo antes de liberar acesso
         if (statusDb !== SGO_CFG.STATUS.ATIVO) {
+          // 03/11/2026: conta excluída em Usuários (exclusão lógica): recusa com o motivo certo
+          const cExcl = (dados[0] || []).map(function (h) { return SGO_UTILS.safe(h); }).indexOf("EXCLUIDO_EM");
+          if (cExcl >= 0 && SGO_UTILS.safe(linha[cExcl])) {
+            registrarLogAuth_("LOGIN_NEGADO", { usuario: usuarioInformado, perfil: perfilDb, detalhe: "Tentativa de login com conta excluída." });
+            if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("LOGIN_NEGADO", { ID: id, USUARIO: usuarioDb, PERFIL: perfilDb }, ctxAcesso, "Conta excluída.");
+            return { success: false, message: MSG_CONTA_EXCLUIDA_AUTH };
+          }
            registrarLogAuth_("LOGIN_NEGADO", {
             usuario: usuarioInformado,
             perfil: perfilDb,
@@ -498,12 +505,24 @@ function validarSessao(sessionId) {
       return { valid: false, message: "Sessão expirada ou inexistente." };
     }
 
+    // 03/11/2026: conta excluída em Usuários (SGO_Usuarios.js, excluir) cai na hora, sem esperar a reconferência de 5 minutos.
+    if (data.userId && typeof Usuarios_contaExcluidaAgora_ === "function" && Usuarios_contaExcluidaAgora_(data.userId)) {
+      removerSessaoAuth_(sessionKey);
+      registrarLogAuth_("SESSAO_ENCERRADA", { usuario: data.usuario, perfil: data.perfil, detalhe: "Sessão encerrada: conta excluída em Usuários." });
+      return { valid: false, message: MSG_CONTA_EXCLUIDA_AUTH };
+    }
+
     // Reconfere o cadastro a cada 5 minutos: usuário inativado, excluído ou
     // com perfil trocado não continua entrando com a sessão antiga (antes
     // valia até 6 h depois de inativado).
     const conferidoEm = Date.parse(data.conferidoEm || "") || 0;
     if (data.userId && Date.now() - conferidoEm > 300000) {
       const cadastro = lerUsuarioSessaoAuth_(data.userId);
+      if (cadastro && SGO_UTILS.safe(cadastro.EXCLUIDO_EM)) {
+        removerSessaoAuth_(sessionKey);
+        registrarLogAuth_("SESSAO_ENCERRADA", { usuario: data.usuario, perfil: data.perfil, detalhe: "Sessão encerrada: conta excluída em Usuários." });
+        return { valid: false, message: MSG_CONTA_EXCLUIDA_AUTH };
+      }
       if (cadastro === null || (cadastro && SGO_UTILS.safeUpper(cadastro.STATUS) !== SGO_CFG.STATUS.ATIVO)) {
         removerSessaoAuth_(sessionKey);
         registrarLogAuth_("SESSAO_ENCERRADA", { usuario: data.usuario, perfil: data.perfil, detalhe: "Sessão encerrada: usuário inativo ou removido do cadastro." });
@@ -651,7 +670,8 @@ function exigirSessao(sessionId) {
   return validacao.data;
 }
 
-var MSG_REPRESENTADA_AUTH = "Acesso negado: o seu usuário é de representada e usa só o módulo Representação. Abra o menu Representação.";
+var MSG_CONTA_EXCLUIDA_AUTH = "Não foi possível entrar: esta conta foi excluída do SGO+ pelo Administrador. O que fazer: se você ainda precisa de acesso, fale com a gestão da Metrolabs para receber uma conta nova.";
+var MSG_REPRESENTADA_AUTH ="Acesso negado: o seu usuário é de representada e usa só o módulo Representação. Abra o menu Representação.";
 
 /** Motivo para recusar a entrada da conta REPRESENTADA ("" = pode entrar). */
 function motivoRepresentadaAuth_(representadaId) {

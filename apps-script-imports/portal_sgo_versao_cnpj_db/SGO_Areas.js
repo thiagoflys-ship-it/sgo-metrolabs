@@ -144,7 +144,8 @@ function Areas_contaDoSistema_(u) {
 
 function Areas_pessoasDaEquipe_() {
   return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).filter(function (u) {
-    return SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE' && SGO_UTILS.safeUpper(u.PERFIL) !== 'AUVO_SYNC';
+    // 03/11/2026: conta excluída (exclusão lógica, CAD_USUARIOS.EXCLUIDO_EM) não entra na lista das áreas
+    return SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE' && SGO_UTILS.safeUpper(u.PERFIL) !== 'AUVO_SYNC' && !SGO_UTILS.safe(u.EXCLUIDO_EM);
   });
 }
 

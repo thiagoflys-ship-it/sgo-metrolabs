@@ -587,12 +587,15 @@ function Notificar_enviarMeta_(cred, telefone, nomeModelo, parametros, botao, ca
 var NTF_MOTIVO_PONTO_PJ = 'PJ: mensagens do ponto não são enviadas';
 var NTF_MOTIVO_PONTO_DIRETORIA = 'Diretoria: mensagens do ponto não são enviadas';
 var NTF_MOTIVO_PONTO_SEM_VINCULO = 'vínculo de trabalho não informado';
+// 03/11/2026: contas de fora da Metrolabs (vínculo Cliente ou Representante) nunca recebem nada do ponto
+var NTF_MOTIVO_PONTO_EXTERNO = 'conta de fora da Metrolabs (cliente ou representante): mensagens do ponto não são enviadas';
 function Notificar_motivoCategoria_(categoria, contato) {
   if (String(categoria || '').trim().toUpperCase() !== 'PONTO') return '';
   var v = contato && !contato.externo ? String(contato.vinculo || '').toUpperCase() : '';
   if (v === 'CLT') return '';
   if (v === 'PJ') return NTF_MOTIVO_PONTO_PJ;
   if (v === 'DIRETORIA') return NTF_MOTIVO_PONTO_DIRETORIA;
+  if (v === 'CLIENTE' || v === 'REPRESENTANTE') return NTF_MOTIVO_PONTO_EXTERNO;
   return NTF_MOTIVO_PONTO_SEM_VINCULO;
 }
 

@@ -48,12 +48,16 @@ var REP_COLUNAS_TEXTO = {
 /** Colunas acrescentadas em tabelas que já existem (nada é apagado nem renomeado). */
 var REP_COLUNAS_EXTRAS = {
   CAD_USUARIOS: ['REPRESENTADA_ID', 'REPRESENTACAO_PAPEL'],
-  ATEC_CHAMADOS: ['REPRESENTADA_ID', 'REPRESENTADA_NOME', 'PROTOCOLO_REPRESENTADA', 'ENQUADRAMENTO_PRETENDIDO', 'REP_SEM_REGISTRO_ALERTA_EM'],
+  ATEC_CHAMADOS: ['REPRESENTADA_ID', 'REPRESENTADA_NOME', 'PROTOCOLO_REPRESENTADA', 'ENQUADRAMENTO_PRETENDIDO', 'REP_SEM_REGISTRO_ALERTA_EM',
+    // 03/11/2026: chamado comum ligado à representada depois (quem ligou, quando e o motivo)
+    'REP_LIGADO_EM', 'REP_LIGADO_POR_ID', 'REP_LIGADO_POR_NOME', 'REP_LIGADO_MOTIVO'],
   ATEC_SOLICITACOES: ['REPRESENTADA_ID', 'REPRESENTADA_NOME', 'PROTOCOLO_REPRESENTADA', 'RELATO_JSON', 'ENQUADRAMENTO_PRETENDIDO', 'SETOR', 'CONTATO_NOME',
     'CONTATO_TELEFONE', 'CONTATO_EMAIL', 'COMPLEMENTO_PERGUNTA', 'COMPLEMENTO_EM', 'COMPLEMENTO_POR_NOME', 'COMPLEMENTO_RESPOSTA', 'COMPLEMENTO_RESPONDIDO_EM',
     'ACEITE_MIN_UTEIS', 'PAUSA_DESDE', 'PAUSA_MIN', 'ALERTA_RISCO_EM', 'ALERTA_VENCIDO_EM', 'CANCELADA_EM', 'CANCELADA_MOTIVO', 'CANCELADA_POR_NOME', 'ATUALIZADO_EM',
     // 03/11/2026: avisos com ciência na central de Avisos (pedido novo e prazo em risco), para não repetir e para arquivar quando o pedido é tratado
-    'AVISO_CIENCIA_ID', 'AVISO_RISCO_ID'],
+    'AVISO_CIENCIA_ID', 'AVISO_RISCO_ID',
+    // 03/11/2026: pedido aberto pela Metrolabs em nome da representada (origem, canal, quem pediu e quem abriu)
+    'EM_NOME_TEXTO', 'EM_NOME_CANAL', 'EM_NOME_PEDIDO_POR_NOME', 'EM_NOME_PEDIDO_POR_CONTATO', 'EM_NOME_METROLABS_ID', 'EM_NOME_METROLABS_NOME'],
   CAD_EQUIPAMENTOS: ['DATA_INSTALACAO', 'NF_VENDA_NUMERO', 'NF_VENDA_DATA', 'NF_VENDA_ARQUIVO_ID', 'GARANTIA_MESES', 'GARANTIA_ATE', 'REVENDA', 'MODELO_CODIGO',
     'ORIGEM_REPRESENTADA_ID', 'FOTO_ETIQUETA_ARQUIVO_ID', 'CRIADO_POR_NOME', 'CRIADO_PELA_REPRESENTADA_EM'],
   CAD_CLIENTES: ['ORIGEM', 'ORIGEM_REPRESENTADA_ID'],
@@ -63,7 +67,7 @@ var REP_COLUNAS_EXTRAS = {
 };
 var REP_COLUNAS_EXTRAS_TEXTO = {
   ATEC_SOLICITACOES: ['COMPLEMENTO_EM', 'COMPLEMENTO_RESPONDIDO_EM', 'PAUSA_DESDE', 'ALERTA_RISCO_EM', 'ALERTA_VENCIDO_EM', 'CANCELADA_EM', 'ATUALIZADO_EM', 'CONTATO_TELEFONE'],
-  ATEC_CHAMADOS: ['REP_SEM_REGISTRO_ALERTA_EM'], ATEC_FOTOS: ['LIBERADA_EM'],
+  ATEC_CHAMADOS: ['REP_SEM_REGISTRO_ALERTA_EM', 'REP_LIGADO_EM'], ATEC_FOTOS: ['LIBERADA_EM'],
   CAD_EQUIPAMENTOS: ['DATA_INSTALACAO', 'NF_VENDA_DATA', 'GARANTIA_ATE', 'NF_VENDA_NUMERO', 'CRIADO_PELA_REPRESENTADA_EM']
 };
 
@@ -130,7 +134,7 @@ var REP_MEMO = {};
 function Rep_memoLimpar_() { REP_MEMO = {}; }
 function Rep_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V3')) return; } catch (e) { cache = null; }
+  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V4')) return; } catch (e) { cache = null; }
   Object.keys(REP_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, REP_COLUNAS[aba]);
     REP_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
@@ -140,7 +144,7 @@ function Rep_garantirAbas_() {
     REP_COLUNAS_EXTRAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (REP_COLUNAS_EXTRAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('REP_ABAS_OK_V3', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('REP_ABAS_OK_V4', '1', 21600); } catch (e) {}
 }
 function Rep_ler_(aba) {
   if (REP_MEMO[aba]) return REP_MEMO[aba];

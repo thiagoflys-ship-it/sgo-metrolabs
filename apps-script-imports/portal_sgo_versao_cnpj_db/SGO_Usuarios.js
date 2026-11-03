@@ -2,8 +2,54 @@
    para telas e relatórios (22/10/2026). Fica antes do módulo porque ele lê a
    lista ao carregar. "Diretoria" entrou a pedido do dono: a empresa tem CLT, PJ
    e Diretoria, e o sistema precisa reconhecer os diretores. */
-var SGO_VINCULOS_TRABALHO = ["CLT", "PJ", "DIRETORIA"];
-var SGO_VINCULO_ROTULOS = { CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" };
+// 03/11/2026 (pedido do dono): "Cliente" e "Representante" para as contas de fora da Metrolabs (perfil Cliente e perfil
+// Representada). Valem só para identificar a conta: nada que hoje vai só para CLT (ponto, WhatsApp de atividades e da
+// gestão, resumo da matriz) passa a incluir esses dois vínculos (SGO_Notificar.js, SGO_Ponto_Config.js, ATV_VINCULOS_OPCOES).
+var SGO_VINCULOS_TRABALHO = ["CLT", "PJ", "DIRETORIA", "CLIENTE", "REPRESENTANTE"];
+var SGO_VINCULO_ROTULOS = { CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria", CLIENTE: "Cliente", REPRESENTANTE: "Representante" };
+/** Vínculos das contas de fora da Metrolabs e o perfil que cada um exige. */
+var SGO_VINCULOS_EXTERNOS = { CLIENTE: "CLIENTE", REPRESENTANTE: "REPRESENTADA" };
+/** Perfil de fora da Metrolabs e o vínculo que ele tem (sugerido e preenchido quando a conta está sem vínculo). */
+var SGO_PERFIL_VINCULO_EXTERNO = { CLIENTE: "CLIENTE", REPRESENTADA: "REPRESENTANTE" };
+/** Colunas da exclusão lógica de conta (03/11/2026), acrescentadas no fim de CAD_USUARIOS. */
+var USR_COLUNAS_EXCLUSAO = ["EXCLUIDO_EM", "EXCLUIDO_POR", "EXCLUIDO_POR_ID", "EXCLUIDO_MOTIVO", "SITUACAO_ANTES_EXCLUSAO"];
+
+/**
+ * Combinação perfil x vínculo de trabalho que não faz sentido ("" = coerente). Vínculo vazio é sempre aceito (contas
+ * antigas; a tela sugere e a rotina preenche). A mensagem diz o que corrigir.
+ */
+function Usuarios_vinculoIncoerente_(perfil, vinculo) {
+  var p = String(perfil || "").trim().toUpperCase(), v = String(vinculo || "").replace(/\s+/g, "").toUpperCase();
+  if (!v || !p) return "";
+  var rotP = { CLIENTE: "Cliente", REPRESENTADA: "Representada" };
+  if (SGO_VINCULOS_EXTERNOS[v] && SGO_VINCULOS_EXTERNOS[v] !== p) {
+    return v === "CLIENTE"
+      ? "Vínculo de trabalho incoerente: o vínculo Cliente é só da conta de cliente (perfil Cliente, ligada à empresa). O que corrigir: escolha o perfil Cliente e a empresa, ou troque o vínculo para CLT, PJ, Diretoria ou Não informado."
+      : "Vínculo de trabalho incoerente: o vínculo Representante é só da conta da representada (perfil Representada, com a representada e o papel nela). O que corrigir: escolha o perfil Representada, a representada e o papel, ou troque o vínculo para CLT, PJ, Diretoria ou Não informado.";
+  }
+  if (SGO_PERFIL_VINCULO_EXTERNO[p] && SGO_PERFIL_VINCULO_EXTERNO[p] !== v) {
+    return "Vínculo de trabalho incoerente: a conta com perfil " + rotP[p] + " é de fora da Metrolabs e tem o vínculo " + SGO_rotuloVinculo_(SGO_PERFIL_VINCULO_EXTERNO[p]) + " (não " + SGO_rotuloVinculo_(v) +
+      "). O que corrigir: escolha o vínculo " + SGO_rotuloVinculo_(SGO_PERFIL_VINCULO_EXTERNO[p]) + " (ou Não informado), ou troque o perfil se a pessoa é da equipe.";
+  }
+  return "";
+}
+
+/** "2026-11-03T14:05:00..." -> "03/11/2026 às 14:05" (horário de Brasília quando der). */
+function Usuarios_dataBr_(v) {
+  var t = String(v || "");
+  if (!t) return "data não registrada";
+  try { var d = new Date(t); if (!isNaN(d.getTime()) && typeof Utilities !== "undefined" && Utilities.formatDate) return Utilities.formatDate(d, "America/Sao_Paulo", "dd/MM/yyyy 'às' HH:mm"); } catch (e) {}
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(t);
+  return m ? m[3] + "/" + m[2] + "/" + m[1] + (m[4] ? " às " + m[4] + ":" + m[5] : "") : t;
+}
+
+/** Marca de curta duração lida por validarSessao a cada chamada: a sessão da conta excluída cai na hora, sem esperar 5 minutos. */
+function Usuarios_marcarExcluida_(usuarioId) {
+  try { CacheService.getScriptCache().put("SGO_CONTA_EXCLUIDA_" + String(usuarioId || "").trim(), "1", 21600); } catch (e) {}
+}
+function Usuarios_contaExcluidaAgora_(usuarioId) {
+  try { return !!String(usuarioId || "").trim() && CacheService.getScriptCache().get("SGO_CONTA_EXCLUIDA_" + String(usuarioId || "").trim()) === "1"; } catch (e) { return false; }
+}
 /** "CLT" -> "CLT", "DIRETORIA" -> "Diretoria", vazio ou desconhecido -> "Não informado". */
 function SGO_rotuloVinculo_(v) {
   var k = String(v === null || v === undefined ? "" : v).replace(/\s+/g, "").toUpperCase();
@@ -40,12 +86,17 @@ const SGO_USUARIOS = (() => {
     }
   }
 
-  // Excluir de vez (some da lista, sem volta): Administrador e Diretoria.
-  // Para tirar o acesso, todos da gestão usam Inativar (o histórico fica).
+  // Excluir a conta (some da lista e dos seletores, sem volta): só o Administrador (03/11/2026, pedido do dono; antes
+  // também a Diretoria). Para tirar o acesso, todos da gestão usam Inativar (o histórico fica).
   function exigirExcluir_(sessao) {
     const perfil = SGO_UTILS.safeUpper(sessao.perfil);
-    if (perfil === "ADMIN" || perfil === "DIRETORIA") return "";
-    return "Não foi possível excluir: excluir uma conta de vez é do Administrador e da Diretoria. Para tirar o acesso desta pessoa, use Mais > Inativar (o histórico fica guardado).";
+    if (perfil === "ADMIN") return "";
+    return "Não foi possível excluir: excluir uma conta é só do Administrador. Para tirar o acesso desta pessoa, use Mais > Inativar (o histórico fica guardado) ou peça ao Administrador.";
+  }
+  function ehExcluida_(u) { return !!(u && SGO_UTILS.safe(u.EXCLUIDO_EM)); }
+  function msgExcluida_(u, acao) {
+    return "Não foi possível " + acao + ": a conta de " + (SGO_UTILS.safe(u.NOME) || "esta pessoa") + " foi excluída em " + Usuarios_dataBr_(u.EXCLUIDO_EM) + (SGO_UTILS.safe(u.EXCLUIDO_POR) ? " por " + SGO_UTILS.safe(u.EXCLUIDO_POR) : "") +
+      ". Conta excluída fica só para consulta (filtro Excluídos) e não volta. O que fazer: se a pessoa precisa de acesso de novo, cadastre uma conta nova (o mesmo e-mail pode ser usado).";
   }
 
   // Ninguém muda o próprio perfil (nem se promove): só outro Administrador.
@@ -61,6 +112,8 @@ const SGO_USUARIOS = (() => {
   // (cmdSgoUsuarios_ em Sgo.js): não mudar o nome. As mensagens da categoria
   // PONTO (SGO_notificar_) só vão para quem é CLT; Diretoria segue a regra do PJ
   // (não bate ponto, não é cobrada pelo WhatsApp; recebe resumo e relatórios).
+  // 03/11/2026: "CLIENTE" (exige o perfil Cliente e a empresa) e "REPRESENTANTE" (exige o perfil Representada, a
+  // representada e o papel): combinação incoerente é recusada em validarPayload_ com o que corrigir.
   const VINCULOS_TRABALHO = SGO_VINCULOS_TRABALHO;
   function normalizarVinculo_(v) {
     const t = SGO_UTILS.safeUpper(v).replace(/\s+/g, "");
@@ -74,7 +127,7 @@ const SGO_USUARIOS = (() => {
   function garantirColunaCelular_() {
     try {
       const cache = CacheService.getScriptCache();
-      if (cache.get("USR_CELULAR_OK_V4")) return;
+      if (cache.get("USR_CELULAR_OK_V5")) return;
       // EMAIL também: o cadastro exige e-mail, mas a coluna só nascia quando a
       // integração Auvo rodava — sem ela o e-mail era descartado em silêncio e
       // toda edição seguinte falhava com "E-mail é obrigatório".
@@ -89,8 +142,11 @@ const SGO_USUARIOS = (() => {
       // Área (19/10/2026): fonte única da área da pessoa (SGO_Areas.js), lida pelo
       // Programa de conduta e pelos indicadores. Coluna no fim, sem apagar nada.
       CertCal_garantirColuna_(SHEET_NAME, "AREA");
+      // 03/11/2026: exclusão de conta com vínculo (exclusão lógica): quando, quem e o motivo; a linha fica (o nome segue nos registros)
+      USR_COLUNAS_EXCLUSAO.forEach(function (c) { CertCal_garantirColuna_(SHEET_NAME, c); });
       SGO_DATA._headersCache = {}; SGO_DATA._headerMapCache = {};
-      cache.put("USR_CELULAR_OK_V3", "1", 21600);
+      // (antes conferia V4 e gravava V3: a garantia rodava em toda chamada)
+      cache.put("USR_CELULAR_OK_V5", "1", 21600);
     } catch (e) {
       console.warn("Não foi possível garantir a coluna CELULAR: " + e.message);
     }
@@ -216,6 +272,8 @@ const SGO_USUARIOS = (() => {
     garantirColunaCelular_();
 
     const dados = normalizarPayload_(payload);
+    // 03/11/2026: perfil Cliente ou Representada com o vínculo vazio já nasce com o vínculo da conta de fora (Cliente/Representante)
+    if (!dados.VINCULO_TRABALHO && dados.VINCULO_TRABALHO !== null && SGO_PERFIL_VINCULO_EXTERNO[dados.PERFIL]) dados.VINCULO_TRABALHO = SGO_PERFIL_VINCULO_EXTERNO[dados.PERFIL];
     const erros = validarPayload_(dados, false);
 
     if (erros.length) {
@@ -297,6 +355,15 @@ const SGO_USUARIOS = (() => {
     dados.CELULAR = normal.CELULAR;
     dados.VINCULO_TRABALHO = normal.VINCULO_TRABALHO;
     dados.AREA = normal.AREA;
+    if (ehExcluida_(atual)) return { success: false, message: msgExcluida_(atual, "salvar") };
+    // 03/11/2026: coerência perfil x vínculo (Cliente/Representante) conferida quando o pedido mexe no perfil ou no vínculo;
+    // perfil de fora com o vínculo vazio é alinhado (Cliente -> Cliente, Representada -> Representante)
+    if (dados.VINCULO_TRABALHO !== null) {
+      const mexeu = Object.prototype.hasOwnProperty.call(payload, "PERFIL") || Object.prototype.hasOwnProperty.call(payload, "VINCULO_TRABALHO");
+      let efetivo = dados.VINCULO_TRABALHO === undefined ? SGO_UTILS.safeUpper(atual.VINCULO_TRABALHO).replace(/\s+/g, "") : dados.VINCULO_TRABALHO;
+      if (!efetivo && SGO_PERFIL_VINCULO_EXTERNO[dados.PERFIL]) { efetivo = SGO_PERFIL_VINCULO_EXTERNO[dados.PERFIL]; if (mexeu) dados.VINCULO_TRABALHO = efetivo; }
+      dados.VINCULO_EFETIVO = mexeu ? efetivo : "";
+    }
     const erros = validarPayload_(dados, true);
 
     if (erros.length) {
@@ -376,6 +443,7 @@ const SGO_USUARIOS = (() => {
 
     const atual = SGO_DATA.getById(SHEET_NAME, usuarioId);
     if (!atual) return { success: false, message: "Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista." };
+    if (ehExcluida_(atual)) return { success: false, message: msgExcluida_(atual, "inativar") };
     const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "inativar");
     if (negado) return { success: false, message: negado };
     if (SGO_UTILS.safeUpper(atual.PERFIL) === "ADMIN" && ehUltimoAdminAtivo_(usuarioId)) {
@@ -396,6 +464,8 @@ const SGO_USUARIOS = (() => {
     const usuarioId = SGO_UTILS.safe(id);
     const atual = SGO_DATA.getById(SHEET_NAME, usuarioId);
     if (!atual) return { success: false, message: "Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista." };
+    // 03/11/2026: conta excluída não volta (só consulta); a pessoa ganha uma conta nova se precisar
+    if (ehExcluida_(atual)) return { success: false, message: msgExcluida_(atual, "reativar") };
     const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "reativar");
     if (negado) return { success: false, message: negado };
     // 31/10/2026 (login pelo e-mail): duas contas ativas com o mesmo e-mail não entram; não reativa por cima de outra
@@ -411,28 +481,70 @@ const SGO_USUARIOS = (() => {
     return { success: true, message: "Usuário reativado com sucesso." };
   }
 
-  function excluir(sessionId, id) {
+  /**
+   * 03/11/2026 (pedido do dono): excluir a conta, só o Administrador. Antes de confirmar, a tela mostra o que está ligado à
+   * conta (Usuarios_vinculosDaConta_) e pede o motivo.
+   *  - Conta sem nenhum vínculo (e com todas as abas conferidas): a linha sai de CAD_USUARIOS.
+   *  - Conta com vínculo (ou alguma aba que não deu para conferir): exclusão lógica. STATUS INATIVO + EXCLUIDO_EM/POR/MOTIVO;
+   *    some da lista e dos seletores, a sessão cai na hora (validarSessao recusa), o login é recusado e o nome continua nos
+   *    registros antigos. Não volta (reativar recusa); consulta pelo filtro Excluídos.
+   * Registro em SYS_LOGS (USUARIOS_EXCLUIR) e no registro de segurança (CONTA_EXCLUIDA).
+   */
+  function excluir(sessionId, id, motivo) {
     const sessao = exigirSessao(sessionId);
     verificarPermissaoAdmin_(sessao);
 
     const usuarioId = SGO_UTILS.safe(id);
+    if (!usuarioId) return { success: false, message: "Não foi possível excluir: a conta não foi informada. Atualize a lista e tente de novo." };
     if (usuarioId === SGO_UTILS.safe(sessao.userId)) { // Corrigido: era sessao.usuarioId, agora é userId
-      return { success: false, message: "Você não pode excluir sua própria conta." };
+      return { success: false, message: "Você não pode excluir a sua própria conta. Se ela não deve mais existir, peça a outro Administrador." };
     }
 
+    const negadoPerfil = exigirExcluir_(sessao);
+    if (negadoPerfil) return { success: false, message: negadoPerfil };
+    garantirColunaCelular_();
     const atual = SGO_DATA.getById(SHEET_NAME, usuarioId);
     if (!atual) return { success: false, message: "Usuário não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
-    const negado = exigirExcluir_(sessao) || exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "excluir");
+    if (ehExcluida_(atual)) return { success: false, message: "Esta conta já foi excluída em " + Usuarios_dataBr_(atual.EXCLUIDO_EM) + ". Ela aparece só no filtro Excluídos." };
+    const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "excluir");
     if (negado) return { success: false, message: negado };
-    if (SGO_UTILS.safeUpper(atual.PERFIL) === "ADMIN" && ehUltimoAdminAtivo_(usuarioId)) {
-      return { success: false, message: "Não foi possível excluir: este é o único Administrador ativo. Cadastre outro Administrador antes." };
+    if (SGO_UTILS.safeUpper(atual.PERFIL) === "ADMIN" && SGO_UTILS.safeUpper(atual.STATUS) === STATUS_ATIVO && ehUltimoAdminAtivo_(usuarioId)) {
+      return { success: false, message: "Não foi possível excluir: este é o único Administrador ativo. Cadastre (ou reative) outro Administrador antes." };
+    }
+    const m = SGO_UTILS.safe(motivo);
+    if (m.length < 10) return { success: false, message: "Escreva o motivo da exclusão (pelo menos 10 letras). Ele fica no registro de auditoria com o seu nome." };
+
+    const vinc = Usuarios_vinculosDaConta_(atual);
+    const quem = SGO_UTILS.safe(sessao.nome) || SGO_UTILS.safe(sessao.usuario);
+    const desc = SGO_UTILS.safe(atual.NOME) + " <" + SGO_UTILS.safe(atual.EMAIL) + ">, login interno " + SGO_UTILS.safe(atual.USUARIO) + ", perfil " + SGO_UTILS.safeUpper(atual.PERFIL);
+    if (vinc.semVinculo) {
+      const ok = SGO_DATA.remove(SHEET_NAME, usuarioId);
+      if (!ok) return { success: false, message: "Não foi possível excluir agora: a linha da conta não foi encontrada para remover. Atualize a lista e tente de novo; nada foi alterado." };
+      SGO_DATA.log("USUARIOS_EXCLUIR", sessao.usuario, "Conta removida (sem nenhum vínculo) ID=" + usuarioId + " (" + desc + "). Motivo: " + m.slice(0, 300), "USUARIOS");
+      if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("CONTA_EXCLUIDA", { ID: usuarioId, USUARIO: atual.USUARIO, PERFIL: atual.PERFIL }, null, "Conta removida (sem vínculo). Motivo: " + m.slice(0, 300), quem);
+      Usuarios_marcarExcluida_(usuarioId);
+      if (typeof SegAcesso_derrubarSessoes_ === "function") SegAcesso_derrubarSessoes_(usuarioId, "", "");
+      return { success: true, modo: "REMOVIDA", message: "Conta de " + SGO_UTILS.safe(atual.NOME) + " excluída. Ela não tinha nenhum registro ligado, então saiu do cadastro." };
     }
 
-    const ok = SGO_DATA.remove(SHEET_NAME, usuarioId);
-    if (!ok) return { success: false, message: "Não foi possível excluir." };
-
-    SGO_DATA.log("USUARIOS_EXCLUIR", sessao.usuario, "Usuário excluído ID=" + usuarioId + " (" + SGO_UTILS.safe(atual.NOME) + ", login interno " + SGO_UTILS.safe(atual.USUARIO) + ", perfil " + SGO_UTILS.safeUpper(atual.PERFIL) + ")", "USUARIOS");
-    return { success: true, message: "Usuário excluído com sucesso." };
+    const agora = SGO_UTILS.nowIso();
+    const ok = SGO_DATA.update(SHEET_NAME, usuarioId, {
+      STATUS: STATUS_INATIVO, EXCLUIDO_EM: agora, EXCLUIDO_POR: quem, EXCLUIDO_POR_ID: SGO_UTILS.safe(sessao.userId), EXCLUIDO_MOTIVO: m.slice(0, 500),
+      SITUACAO_ANTES_EXCLUSAO: SGO_UTILS.safeUpper(atual.STATUS) || STATUS_ATIVO, SEGURANCA_VERSAO: String((Number(atual.SEGURANCA_VERSAO) || 0) + 1)
+    });
+    if (!ok) return { success: false, message: "Não foi possível excluir agora: a conta não foi gravada. Atualize a lista e tente de novo; nada foi alterado." };
+    Usuarios_marcarExcluida_(usuarioId);
+    let derrubadas = { sessoes: 0 };
+    if (typeof SegAcesso_derrubarSessoes_ === "function") derrubadas = SegAcesso_derrubarSessoes_(usuarioId, "", "") || derrubadas;
+    const resumo = vinc.categorias.filter(function (c) { return c.total > 0; }).map(function (c) { return c.rotulo + ": " + c.total; }).join("; ");
+    SGO_DATA.log("USUARIOS_EXCLUIR", sessao.usuario, "Conta excluída (exclusão lógica, tem vínculo) ID=" + usuarioId + " (" + desc + "). Vínculos: " + (resumo || "não deu para conferir tudo") +
+      (vinc.naoConferidas.length ? " (não conferido: " + vinc.naoConferidas.join(", ") + ")" : "") + ". Motivo: " + m.slice(0, 300), "USUARIOS");
+    if (typeof SegAcesso_registrar_ === "function") SegAcesso_registrar_("CONTA_EXCLUIDA", { ID: usuarioId, USUARIO: atual.USUARIO, PERFIL: atual.PERFIL }, null, "Conta excluída (exclusão lógica). Motivo: " + m.slice(0, 300), quem);
+    return {
+      success: true, modo: "LOGICA",
+      message: "Conta de " + SGO_UTILS.safe(atual.NOME) + " excluída. Como ela tem registros ligados (" + (resumo || "algumas abas não puderam ser conferidas") + "), a linha fica guardada: a conta some da lista e dos seletores, " +
+        (derrubadas.sessoes ? "as sessões abertas foram encerradas agora" : "qualquer sessão aberta é encerrada na próxima ação") + ", o login é recusado e o nome continua nos registros antigos. Consulte em Excluídos."
+    };
   }
 
   /**
@@ -446,6 +558,7 @@ const SGO_USUARIOS = (() => {
     const usuarioId = SGO_UTILS.safe(id);
     const atual = SGO_DATA.getById(SHEET_NAME, usuarioId);
     if (!atual) return { success: false, message: "Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista." };
+    if (ehExcluida_(atual)) return { success: false, message: msgExcluida_(atual, "enviar o link") };
     const negado = exigirAdminParaContaAdmin_(sessao, atual.PERFIL, "enviar o link");
     if (negado) return { success: false, message: negado };
     const m = SGO_UTILS.safe(motivo);
@@ -542,7 +655,10 @@ const SGO_USUARIOS = (() => {
       erros.push("Área inválida: escolha uma das áreas da lista (Administração > Usuários > Áreas) ou deixe Sem área.");
     }
     if (dados.VINCULO_TRABALHO === null) {
-      erros.push("Vínculo de trabalho inválido: escolha CLT, PJ, Diretoria ou Não informado.");
+      erros.push("Vínculo de trabalho inválido: escolha CLT, PJ, Diretoria, Cliente, Representante ou Não informado.");
+    } else {
+      const incoerente = Usuarios_vinculoIncoerente_(dados.PERFIL, dados.VINCULO_EFETIVO !== undefined ? dados.VINCULO_EFETIVO : dados.VINCULO_TRABALHO);
+      if (incoerente) erros.push(incoerente);
     }
     if (dados.CELULAR === null) {
       erros.push("Não foi possível aceitar o celular: informe DDD + número, no formato (11) 98765-4321, ou deixe o campo vazio.");
@@ -566,7 +682,8 @@ const SGO_USUARIOS = (() => {
   function contaComEmail_(email, idIgnorado) {
     const alvo = emailNormal_(email);
     if (!alvo) return null;
-    return SGO_DATA.getAll(SHEET_NAME).filter(function (r) { return emailNormal_(r.EMAIL) === alvo && SGO_UTILS.safe(r.ID) !== SGO_UTILS.safe(idIgnorado); })[0] || null;
+    // 03/11/2026: conta excluída não segura o e-mail (a pessoa pode ganhar uma conta nova com ele)
+    return SGO_DATA.getAll(SHEET_NAME).filter(function (r) { return emailNormal_(r.EMAIL) === alvo && SGO_UTILS.safe(r.ID) !== SGO_UTILS.safe(idIgnorado) && !ehExcluida_(r); })[0] || null;
   }
   function mensagemEmailRepetido_(outra) {
     const ativa = SGO_UTILS.safeUpper(outra.STATUS) === STATUS_ATIVO;
@@ -597,14 +714,115 @@ function usuariosCriar(sessionId, payload) { SGO_DATA_REP_VISIVEL = true; try { 
 function usuariosAtualizar(sessionId, id, payload) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.atualizar(sessionId, id, payload))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosInativar(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.inativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosReativar(sessionId, id) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.reativar(sessionId, id))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
-function usuariosExcluir(sessionId, id) { SGO_DATA_REP_VISIVEL = true;
-  try { var antesG = typeof SGO_avisoGestaoAntes_ === 'function' ? SGO_avisoGestaoAntes_(SGO_CFG.SHEETS.CAD_USUARIOS, id) : null; var rG = JSON.parse(JSON.stringify(SGO_USUARIOS.excluir(sessionId, id)));
+function usuariosExcluir(sessionId, id, motivo) { SGO_DATA_REP_VISIVEL = true;
+  try { var antesG = typeof SGO_avisoGestaoAntes_ === 'function' ? SGO_avisoGestaoAntes_(SGO_CFG.SHEETS.CAD_USUARIOS, id) : null; var rG = JSON.parse(JSON.stringify(SGO_USUARIOS.excluir(sessionId, id, motivo)));
     // 01/11/2026: exclusão de cadastro é ato irreversível: avisa na hora a Diretoria (SGO_Avisos_Gestao.js, GI07)
     if (antesG && rG && rG.success !== false && typeof SGO_avisoGestaoExclusao_ === 'function') SGO_avisoGestaoExclusao_(sessionId, 'usuário', antesG);
     return rG; } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosPesquisar(sessionId, termo) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.pesquisar(sessionId, termo))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
 function usuariosEnviarLinkRedefinicao(sessionId, id, motivo) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.enviarLinkRedefinicao(sessionId, id, motivo))); } catch(e) { return { success: false, message: String((e && e.message) || e) }; } }
 function usuariosListarClientesAtivos(sessionId) { SGO_DATA_REP_VISIVEL = true; try { return JSON.parse(JSON.stringify(SGO_USUARIOS.listarClientesAtivos(sessionId))); } catch(e) { return { success: false, message: SGO_textoFalhaOperador_("concluir a operação com o usuário", e) }; } }
+/* =========================
+   EXCLUIR USUÁRIO (03/11/2026, pedido do dono)
+   O que está ligado à conta, por assunto. Coluna ligada = o ID da conta em USUARIO_ID, RESPONSAVEL_ID, TECNICO_ID,
+   DESTINATARIO_ID, AUTOR_ID, POR_ID, *_POR_ID, *_USUARIO_ID ou numa lista *_IDS. Aba que não existe conta zero; aba que
+   existe e não deu para ler entra em naoConferidas e a exclusão fica lógica (nunca remove a linha sem conferir tudo).
+========================= */
+var USR_VINCULOS_CATEGORIAS = [
+  { cat: "acessos", rotulo: "Logins e acessos", abas: ["SYS_SEGURANCA_ACESSO", "GES_ACESSOS", "REP_ACESSOS"] },
+  { cat: "chamados", rotulo: "Chamados e pedidos", abas: ["ATEC_CHAMADOS", "ATEC_SOLICITACOES", "ATEC_CASOS", "ATEC_ORCAMENTOS", "ATEC_EVENTOS"] },
+  { cat: "os", rotulo: "Ordens de serviço", abas: ["ATEC_OS", "ATEC_FOTOS", "ATEC_PECAS"] },
+  { cat: "mensagens", rotulo: "Mensagens", abas: ["REP_MENSAGENS"] },
+  { cat: "atividades", rotulo: "Atividades", abas: ["ATV_ATIVIDADES", "ATV_HISTORICO"] },
+  { cat: "documentos", rotulo: "Documentos", abas: ["DOC_DOCUMENTOS", "DOC_ENVIOS", "DOC_REVISOES", "REP_DOCUMENTOS", "REP_ANEXOS"] },
+  { cat: "avisos", rotulo: "Avisos", abas: ["AVS_AVISOS", "AVS_CIENCIA", "ATV_AVISOS", "NTF_ENVIOS", "NTF_GESTAO"] },
+  { cat: "historico", rotulo: "Histórico e outros registros", abas: ["HIST_CADASTROS", "QUALIDADE_OCORRENCIAS", "GES_DECISOES", "GES_AVALIACOES", "CMP_REQUISICOES", "CMP_PEDIDOS", "REG_FROTA_MOVIMENTACAO", "REG_FROTA_RESERVA", "CAD_CONDUTORES"] }
+];
+var USR_VINCULO_COLUNA = /^(USUARIO_ID|RESPONSAVEL_ID|TECNICO_ID|DESTINATARIO_ID|AUTOR_ID|POR_ID)$|_POR_ID$|_USUARIO_ID$|_RESPONSAVEL_ID$/;
+var USR_VINCULO_LISTA = /_IDS$/;
+
+/** Quantos registros da aba citam o ID nas colunas de ligação. null = a aba existe e não deu para ler. */
+function Usuarios_contarNaAba_(aba, id) {
+  var linhas;
+  try { linhas = SGO_DATA.getAll(aba) || []; } catch (e) {
+    if (/Aba não encontrada|não encontrad/i.test(String((e && e.message) || e))) return 0;
+    return null;
+  }
+  if (!linhas.length) return 0;
+  var cols = Object.keys(linhas[0]), lig = cols.filter(function (c) { return USR_VINCULO_COLUNA.test(c); }), lst = cols.filter(function (c) { return USR_VINCULO_LISTA.test(c); });
+  if (!lig.length && !lst.length) return 0;
+  var n = 0;
+  linhas.forEach(function (r) {
+    var achou = lig.some(function (c) { return String(r[c] === null || r[c] === undefined ? "" : r[c]).trim() === id; }) ||
+      lst.some(function (c) { return String(r[c] || "").split(/[\s,;|]+/).indexOf(id) >= 0; });
+    if (achou) n++;
+  });
+  return n;
+}
+
+/** Mensagens do bate-papo (planilha da Comunicação) escritas pela pessoa. null = não deu para conferir. */
+function Usuarios_contarBatePapo_(id) {
+  if (typeof comBanco_ !== "function" || typeof comPessoas_ !== "function") return 0;
+  try {
+    var ss = comBanco_(false);
+    if (!ss) return 0;
+    var ps = comPessoas_(ss), ids = {};
+    ps.forEach(function (p) { if (String(p.sgo_id || "").trim() === id) (typeof comIdsDe_ === "function" ? comIdsDe_(ps, p.pessoa_id) : [p.pessoa_id]).forEach(function (x) { ids[x] = true; }); });
+    if (!Object.keys(ids).length) return 0;
+    var msgs = comLerLinhas_(ss, "COM_MENSAGENS", 2, comUltima_(ss, "COM_MENSAGENS"));
+    return msgs.filter(function (m) { return ids[String(m.de_pessoa || "")]; }).length;
+  } catch (e) { return null; }
+}
+
+/**
+ * { categorias: [{ cat, rotulo, total, abas: [{ aba, n }] }], total, naoConferidas: [abas], semVinculo }.
+ * "Logins e acessos" também conta o último login (SYS_LOGS, LOGIN_OK) do login interno da pessoa.
+ */
+function Usuarios_vinculosDaConta_(u) {
+  var id = SGO_UTILS.safe(u && u.ID), login = SGO_UTILS.safeLower(u && u.USUARIO).trim();
+  var r = { categorias: [], total: 0, naoConferidas: [], semVinculo: false };
+  var antes = typeof SGO_DATA_REP_VISIVEL === "undefined" ? false : SGO_DATA_REP_VISIVEL;
+  SGO_DATA_REP_VISIVEL = true;
+  try {
+    USR_VINCULOS_CATEGORIAS.forEach(function (c) {
+      var item = { cat: c.cat, rotulo: c.rotulo, total: 0, abas: [] };
+      c.abas.forEach(function (aba) {
+        var n = Usuarios_contarNaAba_(aba, id);
+        if (n === null) { r.naoConferidas.push(aba); return; }
+        if (n) { item.abas.push({ aba: aba, n: n }); item.total += n; }
+      });
+      if (c.cat === "acessos" && login) {
+        var ult = "";
+        try { ult = (Usuarios_ultimosAcessos_() || {})[login] || ""; } catch (e) { ult = ""; }
+        if (ult) { item.abas.push({ aba: "SYS_LOGS (último login " + Usuarios_dataBr_(ult) + ")", n: 1 }); item.total += 1; }
+      }
+      if (c.cat === "mensagens") {
+        var nb = Usuarios_contarBatePapo_(id);
+        if (nb === null) r.naoConferidas.push("bate-papo (Comunicação)");
+        else if (nb) { item.abas.push({ aba: "bate-papo (Comunicação)", n: nb }); item.total += nb; }
+      }
+      r.categorias.push(item);
+      r.total += item.total;
+    });
+  } finally { SGO_DATA_REP_VISIVEL = antes; }
+  r.semVinculo = !!id && r.total === 0 && r.naoConferidas.length === 0;
+  return r;
+}
+
+/** Tela Usuários > Excluir: o que está ligado à conta e o que vai acontecer (remover a linha ou exclusão lógica). Só o Administrador. */
+function usuariosVinculosConta(sessionId, id) {
+  SGO_DATA_REP_VISIVEL = true;
+  try {
+    var sessao = exigirSessao(sessionId);
+    if (SGO_UTILS.safeUpper(sessao.perfil) !== "ADMIN") return { success: false, message: "Não foi possível conferir: excluir uma conta é só do Administrador. Para tirar o acesso desta pessoa, use Mais > Inativar." };
+    var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, SGO_UTILS.safe(id));
+    if (!u) return { success: false, message: "Usuário não encontrado: pode ter sido excluído por outra pessoa. Atualize a lista." };
+    if (SGO_UTILS.safe(u.EXCLUIDO_EM)) return { success: false, message: "Esta conta já foi excluída em " + Usuarios_dataBr_(u.EXCLUIDO_EM) + ". Ela aparece só em Excluídos." };
+    var v = Usuarios_vinculosDaConta_(u);
+    return JSON.parse(JSON.stringify({ success: true, nome: SGO_UTILS.safe(u.NOME), email: SGO_UTILS.safe(u.EMAIL), modo: v.semVinculo ? "REMOVER" : "LOGICA",
+      categorias: v.categorias, total: v.total, naoConferidas: v.naoConferidas }));
+  } catch (e) { return { success: false, message: SGO_textoFalhaOperador_("conferir o que está ligado à conta", e) }; }
+}
 
 /* =========================
    CADASTROS E ADMINISTRAÇÃO 17/10 — tela Usuários
@@ -647,12 +865,16 @@ function Usuarios_ultimosAcessos_() {
 ========================= */
 var USR_SANEAMENTO_VINCULO_DIRETORIA = "USR_VINCULO_DIRETORIA_20261022";
 
-/** "DIRETORIA" quando o vínculo está vazio e a conta é da Diretoria (perfil) ou do responsável pelo sistema; senão "". */
+/**
+ * Vínculo sugerido para a conta sem vínculo ("" = nenhum): "DIRETORIA" para o perfil Diretoria ou o responsável pelo
+ * sistema; 03/11/2026: "CLIENTE" para o perfil Cliente e "REPRESENTANTE" para o perfil Representada (contas de fora).
+ */
 function Usuarios_vinculoSugerido_(u) {
   if (!u) return "";
   var perfil = SGO_UTILS.safeUpper(u.PERFIL);
-  if (perfil === "CLIENTE" || perfil === "AUVO_SYNC") return "";
   if (SGO_UTILS.safeUpper(u.VINCULO_TRABALHO).replace(/\s+/g, "")) return "";
+  if (SGO_PERFIL_VINCULO_EXTERNO[perfil]) return SGO_PERFIL_VINCULO_EXTERNO[perfil];
+  if (perfil === "AUVO_SYNC") return "";
   var login = SGO_UTILS.safeLower(u.USUARIO).trim();
   var dono = false;
   try { dono = typeof Chaves_ehDonoUsuario_ === "function" ? Chaves_ehDonoUsuario_(login) : login === "admin"; } catch (e) { dono = false; }
@@ -684,6 +906,36 @@ function Usuarios_saneamentoVinculoDiretoria_() {
   return r;
 }
 
+/* =========================
+   VÍNCULO DAS CONTAS DE FORA (03/11/2026, pedido do dono)
+   Conta com perfil Cliente ou Representada e sem vínculo recebe "Cliente" ou "Representante", do mesmo jeito que a
+   Diretoria: a tela sugere e a rotina preenche uma vez (USR_VINCULO_EXTERNOS_20261103), com registro no SYS_LOGS.
+   Vínculo já informado nunca é trocado. Essas contas continuam fora do ponto e dos avisos internos (só CLT recebe o ponto).
+========================= */
+var USR_SANEAMENTO_VINCULO_EXTERNOS = "USR_VINCULO_EXTERNOS_20261103";
+function Usuarios_saneamentoVinculoExternos_() {
+  var r = { aplicado: false, logins: [] };
+  var props = null;
+  try { props = PropertiesService.getScriptProperties(); if (props.getProperty(USR_SANEAMENTO_VINCULO_EXTERNOS) === "1") return r; } catch (e) { props = null; }
+  var antes = typeof SGO_DATA_REP_VISIVEL === "undefined" ? false : SGO_DATA_REP_VISIVEL;
+  SGO_DATA_REP_VISIVEL = true;
+  try {
+    var aba = SGO_CFG.SHEETS.CAD_USUARIOS || "CAD_USUARIOS";
+    SGO_DATA.getAll(aba).forEach(function (u) {
+      var sug = Usuarios_vinculoSugerido_(u);
+      if (sug !== "CLIENTE" && sug !== "REPRESENTANTE") return;
+      var login = SGO_UTILS.safeLower(u.USUARIO).trim();
+      if (!SGO_DATA.update(aba, SGO_UTILS.safe(u.ID), { VINCULO_TRABALHO: sug })) return;
+      r.logins.push(login);
+      SGO_DATA.log("USUARIOS_VINCULO_AUTO", "sistema", "Vínculo de trabalho preenchido com " + SGO_rotuloVinculo_(sug) + ": " + login + " (estava Não informado; motivo: perfil " + (sug === "CLIENTE" ? "Cliente" : "Representada") + ")", "USUARIOS");
+    });
+    r.aplicado = true;
+    if (props) props.setProperty(USR_SANEAMENTO_VINCULO_EXTERNOS, "1");
+    SGO_DATA.log("USUARIOS_VINCULO_AUTO", "sistema", r.logins.length ? "Cliente/Representante preenchido em: " + r.logins.join(", ") : "contas de fora: nada a preencher", "USUARIOS");
+  } catch (e) { console.warn("Vínculo das contas de fora (saneamento): " + ((e && e.message) || e)); } finally { SGO_DATA_REP_VISIVEL = antes; }
+  return r;
+}
+
 function usuariosPainel(sessionId) {
   // 29/10/2026: a tela Usuários lista também as contas REPRESENTADA (SGO_DATA.getAll as esconde no resto do SGO+)
   SGO_DATA_REP_VISIVEL = true;
@@ -693,13 +945,18 @@ function usuariosPainel(sessionId) {
     if (!base || !base.success) return base || { success: false, message: "Não foi possível carregar os usuários." };
     // 22/10/2026: a primeira abertura da tela depois da publicação preenche o vínculo Diretoria de quem está sem (uma vez).
     try { if (Usuarios_saneamentoVinculoDiretoria_().logins.length) base = SGO_USUARIOS.pesquisar(sessionId, ""); } catch (eSan) {}
+    try { if (Usuarios_saneamentoVinculoExternos_().logins.length) base = SGO_USUARIOS.pesquisar(sessionId, ""); } catch (eSanX) {}
+    // 03/11/2026: conta excluída sai da lista; fica só em "Excluídos" (consulta: quem excluiu, quando e o motivo)
+    var excluidas = (base.items || []).filter(function (u) { return SGO_UTILS.safe(u.EXCLUIDO_EM); });
+    base = Object.assign({}, base, { items: (base.items || []).filter(function (u) { return !SGO_UTILS.safe(u.EXCLUIDO_EM); }) });
     var souAdmin = SGO_UTILS.safeUpper(sessao.perfil) === "ADMIN";
     // 19/10/2026: o perfil Diretoria é dado só por Administrador ou Diretoria (exigirAdminParaContaAdmin_).
     var podeDarDiretoria = souAdmin || SGO_UTILS.safeUpper(sessao.perfil) === "DIRETORIA";
     // 21/10/2026: a gestão, o RH e o Financeiro criam e alteram contas (rotina da empresa); excluir de vez, só
     // Administrador e Diretoria; o próprio perfil ninguém muda (a tela trava o campo).
     var podeGerir = typeof SGO_ehGestaoRotina_ === "function" ? SGO_ehGestaoRotina_(sessao.perfil) : isAdminPerfilAuth_(sessao.perfil);
-    var podeExcluir = souAdmin || SGO_UTILS.safeUpper(sessao.perfil) === "DIRETORIA";
+    // 03/11/2026 (pedido do dono): excluir conta é só do Administrador (antes também a Diretoria)
+    var podeExcluir = souAdmin;
     var acessos = Usuarios_ultimosAcessos_();
     // Áreas (19/10/2026): lista para o formulário e nomes para a coluna da lista.
     var areasAtivas = [], nomesAreas = {};
@@ -749,7 +1006,11 @@ function usuariosPainel(sessionId) {
       var sa = SGO_UTILS.safeUpper(a.STATUS) === "ATIVO" ? 0 : 1, sb = SGO_UTILS.safeUpper(b.STATUS) === "ATIVO" ? 0 : 1;
       return sa - sb || SGO_UTILS.safe(a.NOME).localeCompare(SGO_UTILS.safe(b.NOME), "pt-BR");
     });
-    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, souAdmin: souAdmin, podeDarDiretoria: podeDarDiretoria, podeGerir: podeGerir, podeExcluir: podeExcluir,
+    var excluidos = excluidas.map(function (u) {
+      return { ID: SGO_UTILS.safe(u.ID), NOME: SGO_UTILS.safe(u.NOME), EMAIL: eN(u.EMAIL), PERFIL: SGO_UTILS.safeUpper(u.PERFIL), EXCLUIDO_EM: SGO_UTILS.safe(u.EXCLUIDO_EM), EXCLUIDO_EM_BR: Usuarios_dataBr_(u.EXCLUIDO_EM),
+        EXCLUIDO_POR: SGO_UTILS.safe(u.EXCLUIDO_POR), EXCLUIDO_MOTIVO: SGO_UTILS.safe(u.EXCLUIDO_MOTIVO), CLIENTE_NOME: clientes[SGO_UTILS.safe(u.CLIENTE_ID)] || "", REPRESENTADA_NOME: representadas[SGO_UTILS.safe(u.REPRESENTADA_ID)] || "" };
+    }).sort(function (a, b) { return String(b.EXCLUIDO_EM).localeCompare(String(a.EXCLUIDO_EM)); });
+    return JSON.parse(JSON.stringify({ success: true, items: itens, total: itens.length, excluidos: excluidos, souAdmin: souAdmin, podeDarDiretoria: podeDarDiretoria, podeGerir: podeGerir, podeExcluir: podeExcluir,
       areas: areasAtivas, podeGerirAreas: SGO_podeConsultarPessoas_(sessao.perfil),
       representadas: listaRepresentadas, papeisRepresentacao: [["ADMIN", "Administrador da representada"], ["ATENDENTE", "Atendente"], ["FINANCEIRO", "Financeiro de garantia"], ["LEITURA", "Leitura"]],
       perfis: (SGO_CFG.PROFILES || []).filter(function (p) { var k = SGO_UTILS.safeUpper(p); return (souAdmin || k !== "ADMIN") && (podeDarDiretoria || k !== "DIRETORIA"); }) }));

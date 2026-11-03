@@ -48,6 +48,7 @@ O Painel é a primeira tela da sua área.
 - Na ficha: a linha do tempo, os arquivos, a conversa e, quando a visita é agendada, a data e o técnico.
 - Complemento pedido: responda na própria ficha, com fotos se precisar. O pedido volta para a Metrolabs.
 - Antes da visita, o pedido ou o chamado pode ser cancelado com o motivo.
+- Pediu por telefone, e-mail ou WhatsApp? A Metrolabs pode abrir o pedido em nome da sua empresa. Ele aparece em "Chamados" com a faixa "Aberto pela Metrolabs (nome) a pedido de (quem pediu), por (canal)" e segue igual aos seus. Um chamado aberto antes (por exemplo, numa urgência) também pode ser ligado à sua empresa: aparece com quem ligou e o motivo. Você recebe e-mail nos dois casos.
 - Você recebe e-mail quando o pedido é aceito, quando a Metrolabs pede complemento ou recusa, e quando ela escreve na conversa.
 
 ## 6. Relatórios do atendimento e do período

@@ -331,13 +331,16 @@ var PONTO_FORA_TEXTO = {
   INATIVO: 'usuário inativo', SISTEMA: 'conta do sistema', PJ: 'PJ: não recebe nada do ponto', DIRETORIA: 'Diretoria: não recebe nada do ponto',
   SEM_VINCULO: 'vínculo de trabalho não informado (cadastre CLT, PJ ou Diretoria em Administração > Usuários > Vínculo)',
   NAO_PARTICIPA: 'tirado do assistente pelo RH (Pessoas e jornadas)', FORA_PILOTO: 'fora da lista do piloto do WhatsApp (Administração > Piloto do WhatsApp)',
-  SEM_CONTATO: 'sem celular e sem e-mail no cadastro (Administração > Usuários)'
+  SEM_CONTATO: 'sem celular e sem e-mail no cadastro (Administração > Usuários)',
+  // 03/11/2026: vínculo Cliente ou Representante (contas de fora da Metrolabs)
+  EXTERNO: 'conta de fora da Metrolabs (cliente ou representante): não recebe nada do ponto'
 };
 function Ponto_motivoFora_(u, pessoa, pilotoCfg, cfg) {
   if (!u || !u.ativo) return 'INATIVO';
   if (u.sistema) return 'SISTEMA';
   if (u.vinculo === 'PJ') return 'PJ';
   if (u.vinculo === 'DIRETORIA') return 'DIRETORIA';   // 22/10/2026: Diretoria não bate ponto, como PJ
+  if (u.vinculo === 'CLIENTE' || u.vinculo === 'REPRESENTANTE') return 'EXTERNO';   // 03/11/2026: contas de fora
   if (u.vinculo !== 'CLT') return 'SEM_VINCULO';
   if (pessoa && Pto_s_(pessoa.PARTICIPA) && !Pto_verdade_(pessoa.PARTICIPA)) return 'NAO_PARTICIPA';
   if (pilotoCfg && pilotoCfg.ligado && typeof SGO_waPilotoMotivo_ === 'function' && SGO_waPilotoMotivo_({ id: u.id, perfil: u.perfil, telefone: u.celular }, pilotoCfg, { categoria: 'PONTO', origem: 'PONTO' })) return 'FORA_PILOTO'; // 26/10/2026: e com o grupo "Ponto" marcado

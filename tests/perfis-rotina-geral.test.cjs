@@ -105,15 +105,16 @@ test('ninguém aumenta (nem muda) o próprio perfil; os outros dados da própria
   assert.equal(proprio.success, true, proprio.message);
 });
 
-test('excluir conta de vez: só Administrador e Diretoria; os demais da gestão usam Inativar', () => {
+// 03/11/2026 (pedido do dono): excluir conta passou a ser só do Administrador (antes também a Diretoria), com motivo
+test('excluir conta: só o Administrador; a Diretoria e os demais da gestão usam Inativar', () => {
   const { s, tabelas } = usuarios();
-  for (const login of ['rh', 'fin', 'ges']) {
-    const r = s.SGO_USUARIOS.excluir(login, 'u_tec');
+  for (const login of ['rh', 'fin', 'ges', 'dir']) {
+    const r = s.SGO_USUARIOS.excluir(login, 'u_tec', 'conta criada por engano no teste');
     assert.equal(r.success, false, login);
-    assert.match(r.message, /Administrador e da Diretoria[\s\S]*Inativar/);
+    assert.match(r.message, /só do Administrador[\s\S]*Inativar/);
   }
   assert.ok(tabelas.CAD_USUARIOS.some((u) => u.ID === 'u_tec'), 'nada foi apagado');
-  assert.equal(s.SGO_USUARIOS.excluir('dir', 'u_tec').success, true);
+  assert.equal(s.SGO_USUARIOS.excluir('adm', 'u_tec', 'conta criada por engano no teste').success, true);
 });
 
 // ---------------------------------------------------------------- Matriz, Caixa de decisões, avaliação, atividades

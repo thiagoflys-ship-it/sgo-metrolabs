@@ -69,6 +69,20 @@ function SGO_ajudaTelas_Representacao_() {
           "Relatório do período: no Painel, escolha a representada e o período e toque em \"Relatório do período\" (versão interna, ou a da representada escolhida). Traz na capa o quadro \"Situação em\" (abertos agora, com prazo vencido e em risco, aceite e atendimento no prazo com \"x de y\", tempo médio até a conclusão e os pontos de atenção pelo número do chamado), o resumo com os destaques (prazo vencido, em risco, próximas visitas, reincidência), os índices do painel com as mesmas fórmulas, os gráficos (por etapa, prazo cumprido, tempos médios, por cliente e UF, garantia, reincidência por modelo), o Gantt em folha deitada com a etapa e a situação do prazo escritas na barra (lê-se também impresso em preto e branco), a lista, \"Como ler este relatório\" com as definições e, na interna, a carga por técnico, a fila e a comparação entre representadas (a lista da interna também sai em folha deitada).",
           "Todo documento fica salvo em HTML e PDF e registrado com o público que pode abrir. A versão do cliente de um chamado também entra no Arquivo de documentos do equipamento. Cada emissão é uma versão nova; nenhuma é apagada. A aba \"Relatórios gerados\" do Painel e a ficha do chamado listam os documentos para abrir de novo. No Painel da Representação entram só os documentos de chamados de representada e os relatórios do período do próprio módulo; os relatórios de outros clientes ficam na Assistência técnica."
         ] },
+        { titulo: "Abrir em nome da representada (pedido por telefone, e-mail ou WhatsApp)", itens: [
+          "Só para quem está na lista \"Quem pode abrir pedido em nome da representada\". A lista começa vazia e só o Administrador muda, na aba \"Representadas\" (caixa no fim da tela). Quem não está na lista não vê o botão, e o sistema recusa.",
+          "Em \"Pedidos\", toque em \"Abrir em nome da representada\".",
+          "Escolha a representada, por onde ela pediu (telefone, e-mail ou WhatsApp), o nome e o contato (telefone com DDD ou e-mail) de quem pediu. Toque em \"Continuar: cliente e equipamento\".",
+          "Busque o cliente pelo CNPJ ou CPF completo e o equipamento pela série exata, como a representada faz. Não achou: cadastre em Cadastros (Clientes, Unidades ou Equipamentos) e busque de novo.",
+          "Preencha o mesmo relato do pedido normal (setor, contato no local, sintoma, quando começou, código de erro, parada, risco, o que já foi tentado e o enquadramento). As fotos são opcionais: anexe as que a representada mandou.",
+          "Toque em \"Abrir o pedido em nome da ...\". O pedido entra na fila de Pedidos como os demais (mesmo prazo de aceite e os mesmos avisos). A representada recebe o aviso por e-mail e vê o pedido com a origem: \"Aberto pela Metrolabs (seu nome) a pedido de Fulano (representada), por telefone\". Tudo fica no registro de ações e na auditoria."
+        ] },
+        { titulo: "Ligar à representada um chamado já aberto", itens: [
+          "Use quando a representada pediu o atendimento e ele foi aberto como chamado comum (por exemplo, urgência atendida antes). Mesma lista restrita do item acima.",
+          "Na Assistência técnica, abra a ficha do chamado e toque em \"Ligar à representada\".",
+          "Escolha a representada, informe o protocolo dela (se houver) e escreva o motivo (pelo menos 10 letras). Toque em \"Ligar à representada\".",
+          "O chamado ganha a marca da representada; ela passa a ver e acompanhar o chamado, com quem ligou e o motivo, e recebe o aviso por e-mail. Chamado que já é de uma representada não muda de representada."
+        ] },
         { titulo: "Acompanhar na Assistência técnica", itens: [
           "Em Assistência técnica > Chamados, o filtro \"Representação\" mostra só os chamados de representadas ou de uma delas, e cada chamado leva o selo roxo com o nome da representada.",
           "Na ficha do chamado, a parte \"Representação\" mostra o protocolo da representada, o enquadramento pretendido (garantia, fora de garantia, não sei), o relato, o contato no local e os arquivos.",
@@ -94,13 +108,17 @@ function SGO_ajudaTelas_Representacao_() {
         { situacao: "Não aparece o aviso de pedido novo no canto da tela", oQueFazer: "O aviso vai para a gestão da Assistência técnica, para quem faz a triagem e para quem responde pela representação. Confira em Regras da assistência (Triagem e Representação). Atualize a página (F5) depois de mudar." },
         { situacao: "O aviso aparece, mas sem som", oQueFazer: "Clique em \"Clique para ativar o som\" (o navegador só toca som depois de um clique na página) e confira se o botão diz \"Som: ligado\" e se o som do computador está ligado." },
         { situacao: "O WhatsApp do pedido não chegou", oQueFazer: "Fora do expediente ou em dia não útil, ele sai na abertura do próximo expediente. Confira o celular em Administração > Usuários. Em Administração > Matriz de avisos > Avisos da gestão aparece cada aviso com o motivo (aguardando modelo, sem celular, teto do dia)." },
+        { situacao: "Aparece \"abrir pedido em nome da representada (e ligar chamado a ela) é só de quem está na lista\"", oQueFazer: "Peça a quem está na lista, ou peça ao Administrador para incluir você (Representação > Representadas > Quem pode abrir pedido em nome da representada). Depois de incluído, atualize a tela (F5)." },
+        { situacao: "Ao abrir em nome da representada, o cliente ou o equipamento não aparece", oQueFazer: "A busca é a mesma da representada: CNPJ ou CPF completo e a série exata. Se não há cadastro, cadastre em Cadastros > Clientes, Unidades ou Equipamentos e busque de novo. A busca feita para uma representada não vale para outra." },
+        { situacao: "Aparece \"o chamado ... já está ligado à representada ...\"", oQueFazer: "O chamado já é de uma representada e não muda. Se a ligação foi errada, registre no histórico do chamado e fale com a gestão." },
         { situacao: "Ao aceitar, aparece que o equipamento já tem chamado em aberto", oQueFazer: "Confira se é o mesmo problema. Se for outro, aceite mesmo assim; se for o mesmo, recuse com o motivo e indique o chamado aberto." },
         { situacao: "A foto não aparece no relatório do cliente ou da representada", oQueFazer: "Libere a foto na ficha do chamado (Relatórios do atendimento > Quem vê nos relatórios) e gere o relatório de novo. Foto grande que ficou de fora: libere de novo para a tela gerar a cópia reduzida." },
         { situacao: "Ao gerar a versão da representada do período, aparece \"escolha a representada\"", oQueFazer: "Escolha a representada no filtro \"Representada\" do Painel: a versão dela só traz a carteira dela." },
         { situacao: "A pessoa da representada não consegue entrar", oQueFazer: "Confira em Administração > Usuários se a conta está ativa, com o perfil Representada, a representada e o papel; e se a representada está ativa na aba Representadas." }
       ],
       quemPode: [
-        { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Tudo: pedidos, conversas, cadastro da representada e do catálogo, registro de ações." },
+        { perfil: "ADMIN,DIRETORIA,GESTOR", pode: "Tudo: pedidos, conversas, cadastro da representada e do catálogo, registro de ações. Abrir em nome da representada e ligar chamado a ela só para quem está na lista." },
+        { perfil: "ADMIN", pode: "Define a lista \"Quem pode abrir pedido em nome da representada\" (começa vazia; o sistema só sugere, nunca marca sozinho)." },
         { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH", pode: "Tratar pedidos (aceitar, pedir complemento, recusar) e conversar. O cadastro da representada e do catálogo é dos responsáveis pela representação e da gestão." },
         { perfil: "CLIENTE", pode: "Não usa este módulo." },
         { perfil: "REPRESENTADA", pode: "Usa a visão da representada (aba \"Como usar\" dentro do módulo)." }
@@ -108,6 +126,7 @@ function SGO_ajudaTelas_Representacao_() {
       perguntas: [
         { p: "A representada vê os outros clientes da Metrolabs?", r: "Não. Ela busca cliente só pelo CNPJ ou CPF completo e equipamento só pela série exata, sem lista e sem busca por nome. Ela vê só os pedidos e chamados da empresa dela." },
         { p: "A representada vê valores?", r: "Não nesta etapa. Custos e fechamento entram em etapas seguintes do projeto." },
+        { p: "A representada sabe que o pedido foi aberto pela Metrolabs?", r: "Sim. O pedido mostra \"Aberto pela Metrolabs (nome) a pedido de Fulano (representada), por telefone\" (ou e-mail, WhatsApp) e a linha do tempo também. No chamado ligado depois aparecem quem ligou, quando e o motivo." },
         { p: "Onde fica o que a representada faz?", r: "Na aba \"Registro de ações\": buscas, cadastros (também de modelos), pedidos e cancelamentos, com nome, data e hora." },
         { p: "A representada pode apagar um modelo?", r: "Só se nenhum equipamento usa o modelo. Se algum equipamento já usa, o modelo fica inativo: some da lista de escolha, mas o histórico e a garantia dos equipamentos continuam guardados." },
         { p: "Por que o aviso de pedido novo não volta depois de dispensado?", r: "Dispensar vale para você e para aquele aviso. O pedido continua na fila (aba Pedidos) e o aviso de 75% do prazo do mesmo pedido ainda aparece." },
@@ -147,7 +166,8 @@ function SGO_ajudaTelas_Representacao_() {
           "Em \"Chamados\" estão os seus pedidos e chamados com a etapa: Enviado, Complemento pedido, Recusado, Aceito em análise, Aguardando aprovação de orçamento, Aguardando peça, Visita a agendar ou agendada, Em atendimento, Concluído, Encerrado ou Cancelado.",
           "Toque no chamado para ver a linha do tempo, os arquivos e a conversa. Quando a visita é agendada, aparecem a data e o técnico.",
           "Complemento pedido: responda na própria ficha (pode mandar fotos). O pedido volta para a Metrolabs.",
-          "Antes da visita, o pedido ou o chamado pode ser cancelado com o motivo (se o contrato permitir)."
+          "Antes da visita, o pedido ou o chamado pode ser cancelado com o motivo (se o contrato permitir).",
+          "Pedido feito por telefone, e-mail ou WhatsApp: a Metrolabs pode abrir em nome da sua empresa. Ele aparece em \"Chamados\" com a faixa \"Aberto pela Metrolabs (nome) a pedido de (quem pediu), por (canal)\" e segue igual aos seus. Um chamado aberto antes (urgência) também pode ser ligado à sua empresa: aparece com quem ligou e o motivo."
         ] },
         { titulo: "Relatórios do atendimento e do período", itens: [
           "Na ficha do chamado, parte \"Relatórios do atendimento\", toque em \"Gerar relatório\". O documento A4 abre numa aba nova e fica salvo em HTML e PDF. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.",

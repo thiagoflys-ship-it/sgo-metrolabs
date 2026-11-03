@@ -80,6 +80,18 @@ O código é pedido pela própria pessoa naquela hora, então sai a qualquer hor
 
 Cada ação pede o motivo e fica no registro de segurança com o seu nome.
 
+## Excluir uma conta (03/11/2026)
+
+- **Só o Administrador** exclui (antes também a Diretoria). Ninguém exclui a própria conta e o último Administrador ativo não sai. A Diretoria e a gestão usam Inativar (a conta pode ser reativada).
+- Em Administração > Usuários > Mais > **Excluir usuário**, o sistema mostra antes o que está ligado à conta: logins e acessos, chamados e pedidos, ordens de serviço, mensagens (inclusive o bate-papo), atividades, documentos, avisos e histórico, com quantos registros. O motivo é obrigatório (pelo menos 10 letras).
+- **Sem nenhum registro ligado:** a conta sai do cadastro.
+- **Com registro ligado (ou alguma aba que não deu para conferir):** exclusão lógica. A linha fica guardada com quem excluiu, quando e o motivo; a conta some da lista e dos seletores, as sessões abertas caem na hora, o login é recusado ("esta conta foi excluída do SGO+") e o nome continua nos registros antigos. Conta excluída não volta; se a pessoa precisar de acesso, cadastre uma conta nova (o mesmo e-mail pode ser usado). Consulta no botão **Excluídos** da tela Usuários.
+- Tudo fica no registro de segurança (CONTA_EXCLUIDA) e na auditoria do sistema.
+
+## Vínculo das contas de fora (03/11/2026)
+
+O vínculo de trabalho ganhou **Cliente** (perfil Cliente, com a empresa) e **Representante** (perfil Representada, com a representada e o papel). O sistema recusa a combinação que não fecha e diz o que corrigir. Conta de cliente ou da representada sem vínculo é sugerida e preenchida uma vez pela rotina. Essas contas continuam fora das mensagens do ponto e dos avisos internos da equipe.
+
 **Desde 01/11/2026 (Etapa 6 do Programa de melhoria):** o botão "Zerar segundo fator" passou a se chamar **Desconectar aparelhos** (mesma ação, mesmo motivo obrigatório, mesmo registro, agora com o rótulo "Aparelhos desconectados (24 h sem código)"). O bloco do modelo do WhatsApp se chama "Modelo da mensagem do código no WhatsApp (Meta)". O registro sem eventos diz como ver mais (período maior, sem nome, Evento em "Todos").
 
 ## Se ninguém da gestão consegue entrar

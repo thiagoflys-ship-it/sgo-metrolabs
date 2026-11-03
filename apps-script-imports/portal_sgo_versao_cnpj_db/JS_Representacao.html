@@ -71,7 +71,7 @@
     Rp_irAba_(abas[0][0]);
   }
   function Rp_irAba_(a) {
-    RP.aba = a; Rp_msg_("rpMsg", "");
+    RP.aba = a; RP.emNome = null; Rp_msg_("rpMsg", "");
     document.querySelectorAll("#rpAbas .at-tab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-a") === a); });
     var c = Rp_$_("rpCorpo"); c.innerHTML = '<div class="at-vazio">Carregando…</div>';
     var mapa = { painel: RP.externo ? Rp_painel_ : RpI_painel_, inicio: Rp_painel_, novo: Rp_novo_, chamados: Rp_chamados_, equipamentos: Rp_equipamentos_, catalogo: Rp_catalogo_, geral: function (el) { el.innerHTML = '<div class="at-caixa" id="rpConvGeral"></div>'; Rp_conversa_(Rp_$_("rpConvGeral"), "GERAL", "", "Canal geral com a Metrolabs"); }, equipe: Rp_equipe_, ajuda: Rp_ajuda_,
@@ -252,14 +252,19 @@
   }
   function Rp_avisoCadastro_() { return '<div class="at-faixa aviso"><b>Atenção.</b> ' + Rp_esc_(RP.ini.avisoCadastro) + "</div>"; }
   function Rp_ciente_(id) { return '<label class="at-check"><input type="checkbox" id="rp_' + id + '"> <span><b>' + Rp_esc_(RP.ini.ciente) + "</b> (obrigatório; fica registrado com o seu nome, a data e a hora)</span></label>"; }
+  // 03/11/2026: o mesmo fluxo do pedido serve para a Metrolabs abrir em nome da representada (RP.emNome = { repId, repNome, canal,
+  // pedidoPorNome, pedidoPorContato }): as buscas e o envio usam as ações internas, com a representada escolhida.
+  function Rp_acaoNovo_(acao) { return RP.emNome ? ({ buscarCliente: "emNomeBuscarCliente", buscarEquipamento: "emNomeBuscarEquipamento", abrir: "abrirEmNome" })[acao] || acao : acao; }
+  function Rp_dadosNovo_(d) { return RP.emNome ? Object.assign({ representadaId: RP.emNome.repId }, d, RP.emNome.envio || {}) : d; }
   function Rp_novo_(c) {
     RP.cliente = null; RP.unidadeId = ""; RP.equip = null;
     c.innerHTML = '<div class="at-caixa"><h3>1. Cliente final</h3><p class="at-meta">Digite o CNPJ (ou o CPF, para profissional autônomo) completo. Não há busca por nome.</p>' +
       '<div class="at-grade3">' + Rp_campo_("CNPJ ou CPF do cliente *", Rp_input_("documento", "Só números ou com pontuação", "text", ' inputmode="numeric"')) + '</div><div class="at-acoes">' + Rp_btn_("rpBuscarCli", "Buscar", true) + '</div><div id="rpCliRes"></div></div>' +
       '<div class="at-caixa" id="rpPasso2" hidden><h3>2. Equipamento</h3><div id="rpEqCorpo"></div></div><div class="at-caixa" id="rpPasso3" hidden><h3>3. Relato e contato no local</h3><div id="rpRelato"></div></div>';
     Rp_$_("rpBuscarCli").onclick = function () {
-      Rp_chamar_("buscarCliente", { documento: Rp_val_("documento") }, function (r) {
+      Rp_chamar_(Rp_acaoNovo_("buscarCliente"), Rp_dadosNovo_({ documento: Rp_val_("documento") }), function (r) {
         if (r.encontrado) return Rp_clienteEscolhido_(r.cliente);
+        if (RP.emNome) return Rp_msg_("rpCliRes", r.message.replace(/ Cadastre com os dados informados pelo cliente\.?$/, "") + " Cadastre o cliente em Cadastros > Clientes (com o CNPJ ou CPF completo) e busque de novo aqui.", "aviso");
         Rp_formCliente_(r.documento, r.message);
       }, function (m) { Rp_msg_("rpCliRes", m); }, "Buscando…");
     };
@@ -269,7 +274,8 @@
     var res = Rp_$_("rpCliRes");
     res.innerHTML = '<div class="at-faixa ok"><b>' + Rp_esc_(cli.razaoSocial) + "</b> · " + Rp_esc_([cli.cidade, cli.uf].filter(Boolean).join("/")) + "</div>" +
       '<div class="at-grade2">' + Rp_campo_("Unidade onde está o equipamento *", Rp_select_("unidade", cli.unidades.map(function (u) { return [u.id, u.nome + " · " + [u.cidade, u.uf].filter(Boolean).join("/")]; }), "Escolha a unidade")) + "</div>" +
-      (RP.ini.eu.perm.cadastrar ? '<div class="at-acoes">' + Rp_btn_("rpNovaUn", "A unidade não está na lista") + '</div><div id="rpUnForm"></div>' : "");
+      (!RP.emNome && RP.ini.eu.perm && RP.ini.eu.perm.cadastrar ? '<div class="at-acoes">' + Rp_btn_("rpNovaUn", "A unidade não está na lista") + '</div><div id="rpUnForm"></div>' :
+        RP.emNome ? '<p class="at-meta">A unidade não está na lista? Cadastre em Cadastros > Unidades e busque o cliente de novo.</p>' : "");
     Rp_$_("rp_unidade").onchange = function () { RP.unidadeId = Rp_val_("unidade"); if (RP.unidadeId) Rp_passoEquip_(); };
     var b = Rp_$_("rpNovaUn");
     if (b) b.onclick = function () {
@@ -305,9 +311,10 @@
     var c = Rp_$_("rpEqCorpo");
     c.innerHTML = '<p class="at-meta">Digite o número de série exatamente como está na etiqueta.</p><div class="at-grade3">' + Rp_campo_("Número de série *", Rp_input_("serie")) + '</div><div class="at-acoes">' + Rp_btn_("rpBuscarEq", "Buscar", true) + '</div><div id="rpEqRes"></div>';
     Rp_$_("rpBuscarEq").onclick = function () {
-      Rp_chamar_("buscarEquipamento", { clienteId: RP.cliente.id, serie: Rp_val_("serie") }, function (r) {
+      Rp_chamar_(Rp_acaoNovo_("buscarEquipamento"), Rp_dadosNovo_({ clienteId: RP.cliente.id, serie: Rp_val_("serie") }), function (r) {
         if (r.encontrado) return Rp_equipEscolhido_(r.equipamento);
-        if (r.outroCliente) return Rp_msg_("rpEqRes", r.message, "aviso");
+        if (r.outroCliente) return Rp_msg_("rpEqRes", RP.emNome ? "Esta série está cadastrada em outro cliente. Confira com a representada (equipamento vendido, transferido ou série digitada errada) e corrija o cadastro em Cadastros > Equipamentos antes de abrir." : r.message, "aviso");
+        if (RP.emNome) return Rp_msg_("rpEqRes", "Não há equipamento com esta série neste cliente. Cadastre o equipamento em Cadastros > Equipamentos (no cliente e na unidade certos) e busque de novo aqui.", "aviso");
         Rp_formEquip_(r.message);
       }, function (m) { Rp_msg_("rpEqRes", m); }, "Buscando…");
     };
@@ -368,16 +375,17 @@
       Rp_campo_("Equipamento parado? *", Rp_select_("parada", Object.keys(par).map(function (k) { return [k, par[k]]; }), "Escolha")) +
       Rp_campo_("Enquadramento pretendido *", Rp_select_("enquadramento", Object.keys(enq).map(function (k) { return [k, enq[k]]; }), "Escolha")) + "</div>" +
       Rp_campo_("Risco de continuar usando *", '<textarea id="rp_risco" maxlength="500"></textarea>') + Rp_campo_("O que já foi tentado *", '<textarea id="rp_tentado" maxlength="1000" placeholder="Ou escreva: nada"></textarea>') +
-      '<div class="at-grade3">' + Rp_campo_("Fotos do equipamento * (pelo menos 1)", '<input id="rp_fotos" type="file" accept="image/*" multiple>', "Reduzidas no seu aparelho para até 2 MB cada.") +
-      Rp_campo_("Foto da etiqueta de série *", '<input id="rp_fotosEtiqueta" type="file" accept="image/*">') + Rp_campo_("Vídeo (opcional, até 50 MB)", '<input id="rp_video" type="file" accept="video/*">', "Fotos e vídeos não podem mostrar pacientes, prontuários ou documentos pessoais.") + "</div>" +
-      '<div id="rpAbrirMsg"></div><div class="at-acoes">' + Rp_btn_("rpEnviar", "Enviar o pedido à Metrolabs", true) + "</div>";
+      '<div class="at-grade3">' + Rp_campo_(RP.emNome ? "Fotos do equipamento (se a representada mandou)" : "Fotos do equipamento * (pelo menos 1)", '<input id="rp_fotos" type="file" accept="image/*" multiple>', "Reduzidas no seu aparelho para até 2 MB cada.") +
+      Rp_campo_(RP.emNome ? "Foto da etiqueta de série (se houver)" : "Foto da etiqueta de série *", '<input id="rp_fotosEtiqueta" type="file" accept="image/*">') + Rp_campo_("Vídeo (opcional, até 50 MB)", '<input id="rp_video" type="file" accept="video/*">', "Fotos e vídeos não podem mostrar pacientes, prontuários ou documentos pessoais.") + "</div>" +
+      '<div id="rpAbrirMsg"></div><div class="at-acoes">' + Rp_btn_("rpEnviar", RP.emNome ? "Abrir o pedido em nome da " + Rp_esc_(RP.emNome.repNome) : "Enviar o pedido à Metrolabs", true) + "</div>";
     Rp_$_("rpEnviar").onclick = function () {
       Rp_lerArquivos_(Rp_$_("rp_fotos"), function (fotos) {
         Rp_lerArquivos_(Rp_$_("rp_fotosEtiqueta"), function (etq) {
           Rp_lerArquivos_(Rp_$_("rp_video"), function (vid) {
             var d = { clienteId: RP.cliente.id, unidadeId: RP.unidadeId, equipamentoId: RP.equip.id, fotos: fotos, fotosEtiqueta: etq, video: vid[0] || null };
             ["setor", "contatoNome", "contatoTelefone", "contatoEmail", "protocolo", "sintoma", "inicio", "codigoErro", "naoExibe", "parada", "enquadramento", "risco", "tentado"].forEach(function (k) { d[k] = Rp_val_(k); });
-            Rp_chamar_("abrir", d, function (r) { Rp_irAba_("chamados"); Rp_msg_("rpMsg", r.message, "ok"); }, function (m, r) { Rp_msg_("rpAbrirMsg", m); Rp_erroCampos_(r); }, "Enviando o pedido…");
+            var emNome = !!RP.emNome;
+            Rp_chamar_(Rp_acaoNovo_("abrir"), Rp_dadosNovo_(d), function (r) { RP.emNome = null; Rp_irAba_(emNome ? "pedidos" : "chamados"); Rp_msg_("rpMsg", r.message, "ok"); }, function (m, r) { Rp_msg_("rpAbrirMsg", m); Rp_erroCampos_(r); }, emNome ? "Abrindo o pedido em nome da representada…" : "Enviando o pedido…");
           }, false);
         }, true);
       }, true);
@@ -415,6 +423,7 @@
         '<div class="at-caixa"><h3>' + Rp_esc_(x.numero) + " " + Rp_selo_(x.etapa, x.etapaNome) + "</h3>" + Rp_etapasHtml_(r.etapas, x.etapa) +
         dl([["Cliente", x.clienteNome], ["Unidade", [x.unidade, x.cidade].filter(Boolean).join(" · ")], ["Equipamento", x.equipamento], ["Garantia", r.equipamento ? r.equipamento.garantia.texto : ""], ["Seu protocolo", x.protocolo],
           ["Aberto em", x.abertoEm], ["Visita", x.agendadoPara ? x.agendadoPara + (x.tecnico ? " · técnico " + x.tecnico : "") : ""], ["Encerrado em", x.encerradoEm]]) +
+        (x.origemTexto ? '<div class="at-faixa">' + Rp_esc_(x.origemTexto) + ".</div>" : "") +
         (x.chamadoNumero ? '<div class="at-faixa ok">Aceito: virou o chamado ' + Rp_esc_(x.chamadoNumero) + ".</div>" : "") + (x.recusaMotivo ? '<div class="at-faixa erro">Recusado pela Metrolabs: ' + Rp_esc_(x.recusaMotivo) + "</div>" : "") +
         (x.canceladoMotivo ? '<div class="at-faixa">Cancelado: ' + Rp_esc_(x.canceladoMotivo) + "</div>" : "") +
         (r.complementoPergunta ? '<div class="at-faixa aviso"><b>A Metrolabs pediu complemento:</b> ' + Rp_esc_(r.complementoPergunta) + (r.complementoResposta ? "<br><b>Sua resposta:</b> " + Rp_esc_(r.complementoResposta) : "") + "</div>" : "") +
@@ -572,14 +581,41 @@
   function RpI_pedidos_(c) {
     Rp_chamar_("solicitacoes", { situacao: RP.sitPedidos || "ABERTAS" }, function (r) {
       RP.pedidosAux = r;
-      c.innerHTML = '<div class="at-filtros"><div><label for="rp_sitPedidos">Situação</label>' + Rp_select_("sitPedidos", [["ABERTAS", "Na fila (novos e com complemento)"], ["CONVERTIDA", "Aceitos"], ["DESCARTADA", "Recusados"], ["CANCELADA", "Cancelados pela representada"], ["TODAS", "Todos"]]) + "</div></div>" +
+      c.innerHTML = (RP.ini.podeAbrirEmNome ? '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpEmNome", '<i class="fas fa-phone" aria-hidden="true"></i>&nbsp;Abrir em nome da representada', true) + '<span class="at-meta" style="align-self:center">Pedido que chegou por telefone, e-mail ou WhatsApp.</span></div>' : "") +
+        '<div class="at-filtros"><div><label for="rp_sitPedidos">Situação</label>' + Rp_select_("sitPedidos", [["ABERTAS", "Na fila (novos e com complemento)"], ["CONVERTIDA", "Aceitos"], ["DESCARTADA", "Recusados"], ["CANCELADA", "Cancelados pela representada"], ["TODAS", "Todos"]]) + "</div></div>" +
         (r.solicitacoes.length ? '<div class="at-lista">' + r.solicitacoes.map(function (s, i) {
           return '<div class="at-card clicavel' + (s.parada === "TOTAL" ? " p2" : "") + '" tabindex="0" data-i="' + i + '"><p class="at-card-tit">' + Rp_esc_(s.numero + " · " + s.representadaNome + " · " + s.clienteNome) + '</p><p class="at-meta">' + Rp_selo_(s.etapa, s.etapaNome) + " " + RpI_seloPrazo_(s.prazo) + '</p><p class="at-txt">' + Rp_esc_([s.cidade, s.equipamento].filter(Boolean).join(" · ")) + '</p><p class="at-meta">Por ' + Rp_esc_(s.por + " em " + s.abertoEm) + "</p></div>";
         }).join("") + "</div>" : '<div class="at-vazio">Nenhum pedido nesta situação.</div>');
       Rp_$_("rp_sitPedidos").value = RP.sitPedidos || "ABERTAS";
       Rp_$_("rp_sitPedidos").onchange = function () { RP.sitPedidos = Rp_val_("sitPedidos"); RpI_pedidos_(c); };
+      if (Rp_$_("rpEmNome")) Rp_$_("rpEmNome").onclick = function () { RpI_emNome_(c); };
       c.querySelectorAll("[data-i]").forEach(function (x) { x.onclick = function () { RpI_pedido_(c, r.solicitacoes[Number(x.getAttribute("data-i"))]); }; });
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
+  }
+  // 03/11/2026: abrir o pedido em nome da representada (quem pediu, por onde) e seguir o mesmo fluxo do pedido dela
+  function RpI_emNome_(c) {
+    var reps = RP.ini.representadas.filter(function (r) { return r.situacao === "ATIVA"; }), can = RP.ini.canaisEmNome || {};
+    c.innerHTML = '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpVoltar", "Voltar aos pedidos") + "</div>" +
+      '<div class="at-caixa"><h3>Abrir em nome da representada</h3><p class="at-meta">Use quando a representada pede o atendimento por telefone, e-mail ou WhatsApp. O pedido nasce igual ao dela (fila, prazo de aceite e avisos) e a representada vê que foi aberto pela Metrolabs, a pedido de quem e por onde. Só quem está na lista do Administrador vê este botão.</p>' +
+      '<div class="at-grade3">' + Rp_campo_("Representada *", Rp_select_("representadaId", reps.map(function (r) { return [r.id, r.nome]; }), reps.length ? "Escolha a representada" : "Nenhuma representada ativa")) +
+      Rp_campo_("Por onde pediu *", Rp_select_("canal", Object.keys(can).map(function (k) { return [k, can[k].charAt(0).toUpperCase() + can[k].slice(1)]; }), "Escolha")) +
+      Rp_campo_("Quem pediu na representada *", Rp_input_("pedidoPorNome", "Nome")) + Rp_campo_("Contato de quem pediu *", Rp_input_("pedidoPorContato", "Telefone com DDD ou e-mail")) + "</div>" +
+      '<div id="rpEmNomeMsg"></div><div class="at-acoes">' + Rp_btn_("rpEmNomeSeguir", "Continuar: cliente e equipamento", true) + "</div></div><div id=\"rpEmNomeFluxo\"></div>";
+    Rp_$_("rpVoltar").onclick = function () { RP.emNome = null; RpI_pedidos_(c); };
+    Rp_$_("rpEmNomeSeguir").onclick = function () {
+      var faltam = [];
+      if (!Rp_val_("representadaId")) faltam.push({ campo: "representadaId", texto: "Escolha a representada." });
+      if (!Rp_val_("canal")) faltam.push({ campo: "canal", texto: "Escolha por onde a representada pediu." });
+      if (Rp_val_("pedidoPorNome").length < 3) faltam.push({ campo: "pedidoPorNome", texto: "Informe o nome de quem pediu." });
+      if (Rp_val_("pedidoPorContato").length < 5) faltam.push({ campo: "pedidoPorContato", texto: "Informe o telefone com DDD ou o e-mail de quem pediu." });
+      Rp_erroCampos_({ faltam: faltam });
+      if (faltam.length) return Rp_msg_("rpEmNomeMsg", "Preencha os campos marcados para continuar.");
+      var rep = reps.filter(function (r) { return r.id === Rp_val_("representadaId"); })[0];
+      RP.emNome = { repId: rep.id, repNome: rep.nome, envio: { canal: Rp_val_("canal"), pedidoPorNome: Rp_val_("pedidoPorNome"), pedidoPorContato: Rp_val_("pedidoPorContato") } };
+      ["representadaId", "canal", "pedidoPorNome", "pedidoPorContato"].forEach(function (k) { var el = Rp_$_("rp_" + k); if (el) el.disabled = true; });
+      Rp_$_("rpEmNomeSeguir").hidden = true; Rp_msg_("rpEmNomeMsg", "");
+      Rp_novo_(Rp_$_("rpEmNomeFluxo"));
+    };
   }
   function RpI_pedido_(c, s) {
     var aux = RP.pedidosAux, aberto = s.situacao === "NOVA" || s.situacao === "COMPLEMENTO";
@@ -615,11 +651,27 @@
       c.querySelectorAll("[data-i]").forEach(function (x) { x.onclick = function () { var g = r.conversas[Number(x.getAttribute("data-i"))]; c.innerHTML = '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpVoltar", "Voltar às conversas") + '</div><div class="at-caixa" id="rpConv"></div>'; Rp_$_("rpVoltar").onclick = function () { RpI_conversas_(c); }; Rp_conversa_(Rp_$_("rpConv"), g.refTipo, g.refId, g.representadaNome + " · " + g.numero); }; });
     }, function (m) { c.innerHTML = ""; Rp_msg_("rpMsg", m); });
   }
+  function RpI_emNomeLista_() {
+    var cx = Rp_$_("rpEmNomeLista"); if (!cx) return;
+    Rp_chamar_("emNomeConfig", {}, function (r) { RpI_emNomeDesenhar_(cx, r); }, function (m) { cx.innerHTML = ""; Rp_msg_(cx, m); });
+  }
+  function RpI_emNomeDesenhar_(cx, r) {
+    cx.innerHTML = '<h3>Quem pode abrir pedido em nome da representada</h3><p class="at-meta">' + Rp_esc_(r.explica) + (r.salvoEm ? " Última alteração: " + Rp_esc_(r.salvoEm + " por " + r.salvoPor) + "." : " A lista ainda não foi salva (ninguém pode).") + "</p>" +
+      (r.sugestao ? '<div class="at-faixa aviso">Sugestão: <b>' + Rp_esc_(r.sugestao.nome) + "</b> (" + Rp_esc_(r.sugestao.email) + "). Marque abaixo e salve para valer; nada é marcado sozinho.</div>" : "") +
+      ((r.inativos || []).length ? '<div class="at-faixa">Na lista, mas sem valer (conta inativa, excluída ou de fora): ' + Rp_esc_(r.inativos.map(function (x) { return x.nome; }).join(", ")) + ". Salve a lista para tirar.</div>" : "") +
+      '<div class="at-lista">' + r.pessoas.map(function (p) { return '<label class="at-check"><input type="checkbox" data-emnome="' + Rp_esc_(p.id) + '"' + (p.marcado ? " checked" : "") + "> <span>" + Rp_esc_(p.nome) + ' <span class="at-meta">' + Rp_esc_([p.email, p.perfil].filter(Boolean).join(" · ")) + "</span></span></label>"; }).join("") + "</div>" +
+      '<div id="rpEmNomeListaMsg"></div><div class="at-acoes">' + Rp_btn_("rpEmNomeSalvar", "Salvar a lista", true) + "</div>";
+    Rp_$_("rpEmNomeSalvar").onclick = function () {
+      var ids = Array.prototype.map.call(cx.querySelectorAll("[data-emnome]:checked"), function (x) { return x.getAttribute("data-emnome"); });
+      Rp_chamar_("emNomeSalvar", { ids: ids }, function (x) { RpI_emNomeDesenhar_(cx, x); Rp_msg_("rpEmNomeListaMsg", x.message + " Quem foi marcado vê o botão depois de atualizar a tela (F5).", "ok"); }, function (m) { Rp_msg_("rpEmNomeListaMsg", m); }, "Salvando…");
+    };
+  }
   function RpI_representadas_(c) {
     var l = RP.ini.representadas;
     c.innerHTML = (RP.ini.podeAdministrar ? '<div class="at-acoes" style="margin:0 0 10px">' + Rp_btn_("rpNovaRep", '<i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Nova representada', true) + "</div>" : '<div class="at-faixa">Consulta. O cadastro é do Administrador, da Diretoria, dos gestores e dos responsáveis pela representação.</div>') +
       (l.length ? '<div class="at-lista">' + l.map(function (r, i) { return '<div class="at-card' + (RP.ini.podeAdministrar ? " clicavel" : "") + (r.situacao === "ATIVA" ? "" : " fim") + '" data-i="' + i + '"><p class="at-card-tit">' + Rp_esc_(r.nome) + " " + Rp_selo_(r.situacao === "ATIVA" ? 10 : 12, r.situacao === "ATIVA" ? "Ativa" : "Inativa") + '</p><p class="at-meta">Aceite em ' + PnA_num_(r.prazos.aceiteMin / 60, 1) + " h úteis · contrato " + Rp_esc_(r.contrato || "não informado") + "</p></div>"; }).join("") + "</div>" : '<div class="at-vazio">Nenhuma representada cadastrada.</div>') +
-      '<div id="rpRepForm"></div>';
+      '<div id="rpRepForm"></div>' + (RP.ini.souAdmin ? '<div class="at-caixa" id="rpEmNomeLista" style="margin-top:12px"><p class="at-meta">Carregando…</p></div>' : "");
+    if (RP.ini.souAdmin) RpI_emNomeLista_();
     var abrirForm = function (r) {
       r = r || { prazos: RP.ini.prazosPadrao, situacao: "ATIVA" };
       var p = r.prazos;

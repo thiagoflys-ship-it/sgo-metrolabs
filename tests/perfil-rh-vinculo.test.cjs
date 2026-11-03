@@ -192,9 +192,9 @@ test('DIRETORIA: aceito na normalização (qualquer caixa), rótulo "Diretoria",
   assert.equal(tabelas.CAD_USUARIOS.find((x) => x.USUARIO === 'novo.dir').VINCULO_TRABALHO, 'DIRETORIA');
   const ruim = s.SGO_USUARIOS.atualizar('A', 'u3', { VINCULO_TRABALHO: 'DIRETOR' });
   assert.equal(ruim.success, false);
-  assert.match(ruim.message, /escolha CLT, PJ, Diretoria ou Não informado/);
+  assert.match(ruim.message, /escolha CLT, PJ, Diretoria, Cliente, Representante ou Não informado/);
   assert.equal(u('u3').VINCULO_TRABALHO, 'DIRETORIA');
-  assert.deepEqual(j(s.SGO_VINCULOS_TRABALHO), ['CLT', 'PJ', 'DIRETORIA']);
+  assert.deepEqual(j(s.SGO_VINCULOS_TRABALHO), ['CLT', 'PJ', 'DIRETORIA', 'CLIENTE', 'REPRESENTANTE']);
   assert.equal(s.SGO_rotuloVinculo_('DIRETORIA'), 'Diretoria');
   assert.equal(s.SGO_rotuloVinculo_(' diretoria '), 'Diretoria');
   assert.equal(s.SGO_rotuloVinculo_('PJ'), 'PJ');
@@ -261,7 +261,7 @@ test('DIRETORIA: saneamento preenche só o vínculo vazio de quem tem perfil Dir
   assert.equal(s.Usuarios_vinculoSugerido_(u('a1')), 'DIRETORIA');   // login admin = responsável pelo sistema (SGO_DONOS)
   assert.equal(s.Usuarios_vinculoSugerido_(u('d2')), '');            // já informado (CLT): nunca sobrescreve
   assert.equal(s.Usuarios_vinculoSugerido_(u('u3')), '');            // técnico sem vínculo: não é da Diretoria
-  assert.equal(s.Usuarios_vinculoSugerido_(u('c1')), '');            // cliente: não se aplica
+  assert.equal(s.Usuarios_vinculoSugerido_(u('c1')), 'CLIENTE');     // 03/11/2026: cliente sem vínculo recebe a sugestão Cliente (outro saneamento)
   const r = s.Usuarios_saneamentoVinculoDiretoria_();
   assert.equal(r.aplicado, true);
   assert.deepEqual(j(r.logins).sort(), ['admin', 'charles']);
@@ -312,7 +312,8 @@ test('DIRETORIA na tela (JS_Admin.html): select com Diretoria, filtro de víncul
   vm.runInContext(html.match(/var USUARIOS_VINCULOS = [^\n]*\n/)[0], ctx);
   vm.runInContext(html.match(/function Usuarios_rotuloVinculo_\(v\) \{[^\n]*\n/)[0], ctx);
   vm.runInContext(html.match(/function Usuarios_seloVinculo_\(u\) \{[\s\S]*?\n  \}\n/)[0], ctx);
-  assert.deepEqual(j(ctx.USUARIOS_VINCULOS), [['CLT', 'CLT'], ['PJ', 'PJ'], ['DIRETORIA', 'Diretoria']]);
+  // 03/11/2026: Cliente e Representante (contas de fora da Metrolabs) entraram na lista
+  assert.deepEqual(j(ctx.USUARIOS_VINCULOS), [['CLT', 'CLT'], ['PJ', 'PJ'], ['DIRETORIA', 'Diretoria'], ['CLIENTE', 'Cliente'], ['REPRESENTANTE', 'Representante']]);
   assert.equal(ctx.Usuarios_rotuloVinculo_('DIRETORIA'), 'Diretoria');
   assert.equal(ctx.Usuarios_rotuloVinculo_(''), 'Não informado');
   assert.match(ctx.Usuarios_seloVinculo_({ VINCULO_TRABALHO: 'DIRETORIA', PERFIL: 'DIRETORIA' }), />Diretoria</);
@@ -324,7 +325,7 @@ test('DIRETORIA na tela (JS_Admin.html): select com Diretoria, filtro de víncul
   assert.equal(filtro({ STATUS: 'ATIVO', PERFIL: 'TECNICO', VINCULO_TRABALHO: '', VINCULO_SUGERIDO: '' }), true);
   assert.equal(filtro({ STATUS: 'ATIVO', PERFIL: 'CLIENTE', VINCULO_TRABALHO: '' }), false);
   const opcoes = vm.runInContext('(' + html.match(/id: "vinculo", rotulo: "Todos os vínculos", opcoes: (function \(\) \{[^\n]*?\}), aplicar/)[1] + ')()', ctx);
-  assert.deepEqual(j(opcoes).map((o) => o[0]), ['CLT', 'PJ', 'DIRETORIA', 'NI']);
+  assert.deepEqual(j(opcoes).map((o) => o[0]), ['CLT', 'PJ', 'DIRETORIA', 'CLIENTE', 'REPRESENTANTE', 'NI']);
   assert.match(html, /\[\["", "Não informado"\]\]\.concat\(USUARIOS_VINCULOS\)/);   // select do formulário
   assert.match(html, /perfilSel\.value === "DIRETORIA"\) \{ v\.value = "DIRETORIA"/);   // sugestão ao escolher o perfil
 });

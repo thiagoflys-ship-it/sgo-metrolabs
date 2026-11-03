@@ -100,6 +100,14 @@ O Painel é a primeira aba do módulo, para a Metrolabs e para a representada, e
 - Recusar com motivo: a representada vê o motivo e recebe e-mail.
 - Os mesmos botões aparecem em Assistência técnica > Solicitações dos clientes, com o selo roxo da representada.
 
+### 5.1 Abrir em nome da representada (03/11/2026)
+
+Para quando a representada pede o atendimento por telefone, e-mail ou WhatsApp.
+
+- **Quem pode:** só quem está na lista "Quem pode abrir pedido em nome da representada". A lista começa vazia e só o Administrador muda, em Representação > Representadas (caixa no fim da aba). O sistema mostra como sugestão a conta de matheus.godoi@metrolabs.com.br, mas nunca marca sozinho. Conta inativa ou excluída deixa de valer sozinha. Quem não está na lista não vê o botão e o servidor recusa. Cada mudança da lista fica na auditoria (quem entrou e quem saiu).
+- **Como:** Pedidos > "Abrir em nome da representada". Escolha a representada, por onde ela pediu (telefone, e-mail ou WhatsApp), o nome e o contato de quem pediu (obrigatórios). Depois, o mesmo caminho da representada: cliente pelo CNPJ ou CPF completo, equipamento pela série exata (no escopo da representada escolhida; a busca feita para uma não vale para outra) e o mesmo relato. Não achou o cliente, a unidade ou o equipamento: cadastre em Cadastros e busque de novo. As fotos são opcionais.
+- **Como nasce:** igual ao pedido da representada: fila de Pedidos, prazo de aceite, avisos de pedido novo e de prazo. Fica gravado "Aberto pela Metrolabs (nome) a pedido de Fulano (representada), por telefone" no pedido, na linha do tempo (visível para a representada) e no registro de ações. A representada (administradores dela) recebe e-mail.
+
 ## 6. Alertas de prazo
 
 | Marco | Quem recebe | Onde |
@@ -147,6 +155,7 @@ O tempo com complemento pedido não conta. Os avisos seguem a Matriz de avisos (
 - Filtro "Representação" na lista de chamados e selo roxo com o nome da representada.
 - Parte "Representação" na ficha do chamado: protocolo, enquadramento pretendido, relato completo (código de erro, risco, o que já foi tentado), contato no local, arquivos e número de mensagens.
 - Linha do tempo com três públicos: interno (sem marca), representada e cliente final. O que é registrado para o cliente final aparece também para a representada.
+- **Ligar à representada (03/11/2026):** chamado comum que a representada pediu (por exemplo, urgência atendida antes) é ligado a ela na ficha do chamado, botão "Ligar à representada" (mesma lista restrita do item 5.1). Pede a representada, o protocolo dela (se houver) e o motivo (pelo menos 10 letras). Depois de ligado, a representada vê e acompanha o chamado, com quem ligou, quando e o motivo, e recebe e-mail. Chamado que já é de uma representada não muda de representada.
 
 ## 9. O que a representada vê e o que nunca vê
 
