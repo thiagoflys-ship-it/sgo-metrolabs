@@ -890,7 +890,7 @@ function RepD_listar_(filtro, f) {
 }
 function RepDA_documentos_(eu, d) {
   if (d && d.chamadoId) Rep_escopo_(eu).chamado(d.chamadoId);
-  return RepD_listar_(function (r) { return RepD_s_(r.REPRESENTADA_ID) === eu.repId && Rep_up_(r.PUBLICO) === 'REPRESENTADA'; }, d);
+  return RepD_listar_(function (r) { return RepD_s_(r.REPRESENTADA_ID) === eu.repId && Rep_up_(r.PUBLICO) === 'REPRESENTADA' && !RepD_s_(r.DESLIGADO_EM); }, d);
 }
 /** Metrolabs: qualquer versão de um chamado que a pessoa pode ver. */
 function RepDI_relatorioAtendimento_(eu, d) {
@@ -972,7 +972,7 @@ function RepD_liberarFoto_(eu, d) {
 /** Rota /arquivos (servidor próprio): a representada abre o documento gerado se for da versão dela, da representada dela. */
 function RepD_arquivoDaRepresentada_(repId, arquivoId) {
   var id = RepD_s_(arquivoId);
-  return !!id && RepD_registros_().some(function (r) { return RepD_s_(r.REPRESENTADA_ID) === RepD_s_(repId) && Rep_up_(r.PUBLICO) === 'REPRESENTADA' && (RepD_s_(r.HTML_ID) === id || RepD_s_(r.PDF_ID) === id); });
+  return !!id && RepD_registros_().some(function (r) { return RepD_s_(r.REPRESENTADA_ID) === RepD_s_(repId) && Rep_up_(r.PUBLICO) === 'REPRESENTADA' && !RepD_s_(r.DESLIGADO_EM) && (RepD_s_(r.HTML_ID) === id || RepD_s_(r.PDF_ID) === id); });
 }
 /** Rota /arquivos (servidor próprio, 30/10/2026): o login de cliente só abre documento da Representação se for a versão do cliente
     dele. Arquivo que não é documento da Representação segue a regra de sempre (login válido). */

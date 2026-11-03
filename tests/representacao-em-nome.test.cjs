@@ -10,7 +10,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { ambiente, ok, FOTO } = require('./_assistencia_ambiente.cjs');
 
-const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js'];
+const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js', 'SGO_Representacao_Documentos.js'];
 const BASE = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
 const ler = (f) => fs.readFileSync(path.join(BASE, f), 'utf8').replace(/\r\n/g, '\n');
 const NOVAS = ['emNomeBuscarCliente', 'emNomeBuscarEquipamento', 'abrirEmNome', 'ligarChamado', 'emNomeConfig', 'emNomeSalvar'];
@@ -236,4 +236,57 @@ test('revisão: "Ligar à representada" errado: o texto manda falar com o Admini
   assert.equal(nao.ok, false); assert.match(nao.message, /nasceu de um pedido da representada/);
   assert.ok(!Object.prototype.hasOwnProperty.call(a.ctx.REP_ACOES_REPRESENTADA, 'desligarChamado'));
   assert.match(ler('JS_Assistencia.html'), /"desligarRepresentada"/);
+});
+
+// ---------------------------------------------------------------- segunda revisão
+test('revisão 2: ao desligar, a representada errada perde TUDO do chamado (documentos, anexos, mensagens, fotos liberadas)', () => {
+  const a = amb();
+  a.marcar(['u_mat']);
+  const c = ok(a.api('s_gil', 'abrir', { clienteId: 'c1', unidadeId: 'un1', equipamentoId: 'eq1', sintoma: 'Autoclave parou no meio do ciclo, urgência', solicitante: 'Rui Responsável Teste', contato: '62988887777', prioridade: 'P1', parada: 'TOTAL', canal: 'TELEFONE' })).chamado;
+  ok(a.api('s_matheusgodoi', 'ligarRepresentada', { id: c.id, representadaId: 'repA', motivo: 'Urgência atendida antes por telefone.' }));
+  // o que a Alfa passou a ver deste chamado
+  (a.tabelas.REP_DOCUMENTOS = a.tabelas.REP_DOCUMENTOS || []).push({ ID: 'doc1', TIPO: 'ATENDIMENTO', PUBLICO: 'REPRESENTADA', REPRESENTADA_ID: 'repA', CHAMADO_ID: c.id, CHAMADO_NUMERO: c.numero, HTML_ID: 'arq-doc-html', PDF_ID: 'arq-doc-pdf', VERSAO: 1, EM: '2026-10-19T10:00:00' });
+  (a.tabelas.REP_ANEXOS = a.tabelas.REP_ANEXOS || []).push({ ID: 'an1', REPRESENTADA_ID: 'repA', REF_TIPO: 'CHAMADO', REF_ID: c.id, TIPO: 'DOCUMENTO', NOME: 'laudo.pdf', MIME: 'application/pdf', ARQUIVO_ID: 'arq-anexo', PUBLICO: 'REPRESENTADA', POR_LADO: 'METROLABS', EM: '2026-10-19T10:00:00' });
+  ok(a.rep('s_gil', 'enviarMensagem', { refTipo: 'CHAMADO', refId: c.id, texto: 'MENSAGEM DO CHAMADO LIGADO' }));
+  (a.tabelas.ATEC_OS = a.tabelas.ATEC_OS || []).push({ ID: 'osX', NUMERO: 'OS-X', CHAMADO_ID: c.id, SITUACAO: 'ENCERRADA' });
+  (a.tabelas.ATEC_FOTOS = a.tabelas.ATEC_FOTOS || []).push({ ID: 'f1', OS_ID: 'osX', PUBLICO: 'REPRESENTADA', ARQUIVO_ID: 'arq-foto' }, { ID: 'f2', OS_ID: 'osX', PUBLICO: 'SIM', ARQUIVO_ID: 'arq-foto2' });
+  a.ctx.Rep_memoLimpar_(); a.ctx.Ast_memoLimpar_();
+  assert.equal(a.ctx.Representacao_arquivoPermitido_('s_ana.alfa', 'arq-doc-pdf'), true);
+  assert.equal(a.ctx.Representacao_arquivoPermitido_('s_ana.alfa', 'arq-anexo'), true);
+  assert.ok(JSON.stringify(ok(a.rep('s_ana.alfa', 'chamado', { tipo: 'CHAMADO', id: c.id }))).includes('MENSAGEM DO CHAMADO LIGADO'));
+  const r = ok(a.api('s_admin', 'desligarRepresentada', { id: c.id, motivo: 'Ligado à representada errada; é da Beta.' }));
+  assert.deepEqual(JSON.parse(JSON.stringify(r.ocultos)), { documentos: 1, anexos: 1, mensagens: 1, fotos: 1, registros: 2 });
+  // isolamento depois do desligamento: nada mais abre nem aparece para a Alfa
+  for (const arq of ['arq-doc-pdf', 'arq-doc-html', 'arq-anexo', 'arq-foto', 'arq-foto2']) assert.equal(a.ctx.Representacao_arquivoPermitido_('s_ana.alfa', arq), false, arq);
+  const sent = ['MENSAGEM DO CHAMADO LIGADO', c.numero, 'laudo.pdf', 'arq-doc', 'arq-anexo'];
+  for (const [acao, d] of [['chamados', {}], ['documentos', {}], ['chamado', { tipo: 'CHAMADO', id: c.id }], ['mensagens', { refTipo: 'CHAMADO', refId: c.id }], ['painel', {}], ['inicio', {}]]) {
+    const txt = JSON.stringify(a.rep('s_ana.alfa', acao, d));
+    for (const s of sent) assert.ok(!txt.includes(s), acao + ' devolveu ' + s);
+  }
+  assert.equal(a.tabelas.ATEC_FOTOS.find((f) => f.ID === 'f1').PUBLICO, '', 'foto liberada só para ela volta a ser interna');
+  assert.equal(a.tabelas.ATEC_FOTOS.find((f) => f.ID === 'f2').PUBLICO, 'SIM', 'a do cliente fica');
+  // ligada à certa, a Beta não herda o que era da Alfa
+  ok(a.api('s_matheusgodoi', 'ligarRepresentada', { id: c.id, representadaId: 'repB', motivo: 'Agora sim, a Beta pediu este atendimento.' }));
+  assert.ok(!JSON.stringify(a.rep('s_beto.beta', 'chamado', { tipo: 'CHAMADO', id: c.id })).includes('MENSAGEM DO CHAMADO LIGADO'));
+  assert.equal(a.ctx.Representacao_arquivoPermitido_('s_beto.beta', 'arq-anexo'), false);
+});
+
+test('revisão 2: pedido em nome sem administrador: vão os atendentes; sem ninguém, a resposta diz que nenhum e-mail saiu e quem cadastrar', () => {
+  const a = amb();
+  a.marcar(['u_mat']);
+  a.tabelas.REP_REPRESENTADAS.push({ ID: 'repC', NOME: 'REPRESENTADA GAMA TESTE', SITUACAO: 'ATIVA', PRAZOS_JSON: '' });
+  const av = espiarAvisosRep(a);
+  const abrirC = () => {
+    ok(a.rep('s_matheusgodoi', 'emNomeBuscarCliente', { representadaId: 'repC', documento: '11222333000181' }));
+    ok(a.rep('s_matheusgodoi', 'emNomeBuscarEquipamento', { representadaId: 'repC', clienteId: 'c1', serie: 'S-100' }));
+    return ok(a.rep('s_matheusgodoi', 'abrirEmNome', Object.assign({}, PEDIDO, { representadaId: 'repC' })));
+  };
+  const r0 = abrirC();
+  assert.equal(r0.semAviso, true);
+  assert.match(r0.message, /nenhum e-mail saiu para a REPRESENTADA GAMA TESTE[\s\S]*cadastre a conta em Administração > Usuários \(perfil Representada, papel Administrador da representada ou Atendente\)/);
+  assert.equal(av.length, 0);
+  a.tabelas.CAD_USUARIOS.push({ ID: 'rc_at', USUARIO: 'gil.gama', NOME: 'GILDA GAMA TESTE', PERFIL: 'REPRESENTADA', STATUS: 'ATIVO', EMAIL: 'gilda@gama.exemplo.test', REPRESENTADA_ID: 'repC', REPRESENTACAO_PAPEL: 'ATENDENTE' });
+  const r1 = abrirC();
+  assert.ok(!r1.semAviso); assert.match(r1.message, /O aviso por e-mail foi para 1 pessoa/);
+  assert.deepEqual(av[av.length - 1], ['rc_at']);
 });

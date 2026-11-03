@@ -330,8 +330,10 @@ function RepA_abrir_(eu, d, emNome) {
   if (emNome) {
     Rep_acesso_('PEDIDO_EM_NOME', eu, d.ctx, s.NUMERO + ': ' + emNome.texto);
     // a representada fica sabendo por e-mail (administradores dela), com a origem
-    Rep_avisarRepresentada_(eu.repId, Rep_s_(emNome.porIdRepresentada), 'Pedido ' + s.NUMERO + ' aberto pela Metrolabs em nome da sua empresa', emNome.texto + '.\nCliente: ' + Ast_clienteNome_(cli) + ' · ' + Ast_equipTexto_(eq) + '\n' + r.sintoma.slice(0, 500), s.ID, 'RP06');
-    return { solicitacao: { id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO) }, message: 'Pedido ' + s.NUMERO + ' aberto em nome da ' + eu.repNome + ' (' + emNome.texto.replace(/^Aberto pela Metrolabs \([^)]*\) /, '') + '). Ele está na fila de Pedidos como os demais (aceite até ' + Rep_br_(pz.ate) + '); a ' + eu.repNome + ' vê o pedido, com a origem, e acompanha.' };
+    var nAvisados = Rep_avisarRepresentada_(eu.repId, Rep_s_(emNome.porIdRepresentada), 'Pedido ' + s.NUMERO + ' aberto pela Metrolabs em nome da sua empresa', emNome.texto + '.\nCliente: ' + Ast_clienteNome_(cli) + ' · ' + Ast_equipTexto_(eq) + '\n' + r.sintoma.slice(0, 500), s.ID, 'RP06');
+    return { solicitacao: { id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO) }, message: 'Pedido ' + s.NUMERO + ' aberto em nome da ' + eu.repNome + ' (' + emNome.texto.replace(/^Aberto pela Metrolabs \([^)]*\) /, '') + '). Ele está na fila de Pedidos como os demais (aceite até ' + Rep_br_(pz.ate) + '); a ' + eu.repNome + ' vê o pedido, com a origem, e acompanha.' +
+      (nAvisados ? ' O aviso por e-mail foi para ' + nAvisados + (nAvisados === 1 ? ' pessoa' : ' pessoas') + ' da ' + eu.repNome + '.' :
+        ' Atenção: nenhum e-mail saiu para a ' + eu.repNome + ', porque ela não tem nenhuma conta ativa de administrador nem de atendente no SGO+. Avise quem pediu por ' + REP_CANAIS_EMNOME[emNome.canal] + ' e cadastre a conta em Administração > Usuários (perfil Representada, papel Administrador da representada ou Atendente).'), semAviso: !nAvisados };
   }
   Rep_acesso_('PEDIDO', eu, d.ctx, s.NUMERO);
   return { solicitacao: { id: Rep_s_(s.ID), numero: Rep_s_(s.NUMERO) }, message: 'Pedido ' + s.NUMERO + ' enviado. A Metrolabs responde (aceita, pede complemento ou recusa com o motivo) até ' + Rep_br_(pz.ate) + '; você acompanha em Chamados.' };
@@ -607,6 +609,8 @@ function Rep_avisarRepresentada_(repId, porId, titulo, texto, refId, evento) {
     // porId só vale se for conta ativa DESTA representada (nunca a pessoa da Metrolabs que abriu ou ligou)
     var daRep = Rep_usuariosDa_(repId);
     var ids = Rep_usuariosDa_(repId, ['ADMIN']).concat(porId && daRep.indexOf(Rep_s_(porId)) >= 0 ? [Rep_s_(porId)] : []).filter(function (x, i, l) { return x && l.indexOf(x) === i; });
+    // revisão: sem administrador ativo nem quem pediu, vão os atendentes ativos da representada
+    if (!ids.length) ids = Rep_usuariosDa_(repId, ['ATENDENTE']);
     if (!ids.length || typeof SGO_notificar_ !== 'function') return 0;
     if (typeof Representacao_registrarTipos_ === 'function') Representacao_registrarTipos_();
     Ast_depois_(function () { Rep_comContasRep_(function () { SGO_notificar_({ usuarios: ids, canais: ['email'], titulo: titulo, texto: texto + '\n\nAbra o SGO+ > Representação para ver o andamento.', origem: 'REPRESENTACAO', categoria: 'REPRESENTACAO', evento: evento, refId: Rep_s_(refId) }); }); });
@@ -760,12 +764,32 @@ function RepI_desligarChamado_(eu, d) {
   if (motivo.length < 10) { var e = Rep_erro_('INCOMPLETO', 'Não foi possível desligar: escreva o motivo (pelo menos 10 letras). Ele fica no histórico do chamado.'); e.faltam = [{ campo: 'motivo', texto: 'Obrigatório.' }]; throw e; }
   var repId = Rep_s_(c.REPRESENTADA_ID), repNome = Rep_s_(c.REPRESENTADA_NOME) || Rep_s_((Rep_representada_(repId) || {}).NOME), agora = Ast_agora_();
   Ast_comTrava_(function () { Ast_atualizar_(AST_ABAS.CHAMADOS, c.ID, { REPRESENTADA_ID: '', REPRESENTADA_NOME: '', REP_DESLIGADO_EM: agora, REP_DESLIGADO_POR_NOME: Rep_s_(eu.nome), REP_DESLIGADO_MOTIVO: motivo }); });
+  // a representada errada perde o acesso a TUDO deste chamado: documentos da versão dela, anexos e mensagens ficam marcados
+  // como desligados (o escopo e a rota /arquivos recusam) e as fotos liberadas só para ela voltam a ser internas
+  var ocultos = Rep_ocultarDoChamado_(c, repId, agora);
   var texto = 'Chamado desligado da ' + repNome + ' pelo Administrador (' + Rep_s_(eu.nome) + '). Motivo: ' + motivo;
   Ast_evento_('CHAMADO', c.ID, 'DESLIGADO_REPRESENTADA', eu, texto, { numero: c.NUMERO });
   try { SGO_DATA.log('REP_CHAMADO_DESLIGADO', Rep_s_(eu.login) || Rep_s_(eu.nome), texto + ' (' + Rep_s_(c.NUMERO) + ')', 'REPRESENTACAO'); } catch (eLog) {}
   Rep_avisarRepresentada_(repId, '', 'Chamado ' + Rep_s_(c.NUMERO) + ' desligado da sua empresa', 'A Metrolabs desligou o chamado ' + Rep_s_(c.NUMERO) + ' da sua empresa (ligação feita por engano). Motivo: ' + motivo, c.ID, 'RP06');
   if (typeof RepAl_invalidar_ === 'function') RepAl_invalidar_();
-  return { message: 'Chamado ' + Rep_s_(c.NUMERO) + ' desligado da ' + repNome + '. A representada deixa de ver o chamado e recebe o aviso. Se ele é de outra representada, use "Ligar à representada" de novo.' };
+  return { ocultos: ocultos, message: 'Chamado ' + Rep_s_(c.NUMERO) + ' desligado da ' + repNome + '. A representada deixa de ver o chamado, os documentos (' + ocultos.documentos + '), os arquivos (' + ocultos.anexos + '), as mensagens (' + ocultos.mensagens + ') e as fotos liberadas para ela (' + ocultos.fotos + '), e recebe o aviso. Se ele é de outra representada, use "Ligar à representada" de novo.' };
+}
+/** Marca como desligado (DESLIGADO_EM) o que a representada via deste chamado. Devolve as contagens. */
+function Rep_ocultarDoChamado_(c, repId, agora) {
+  var n = { documentos: 0, anexos: 0, mensagens: 0, fotos: 0, registros: 0 }, cid = Rep_s_(c.ID);
+  // registros da linha do tempo feitos só para a representada errada voltam a ser internos (a próxima representada não herda)
+  Rep_lerAst_(AST_ABAS.EVENTOS).forEach(function (e) { if (Rep_up_(e.ENTIDADE) === 'CHAMADO' && Rep_s_(e.ENTIDADE_ID) === cid && Rep_up_(e.PUBLICO) === 'REPRESENTADA') { Ast_atualizar_(AST_ABAS.EVENTOS, e.ID, { PUBLICO: '' }); n.registros++; } });
+  if (typeof Ast_memoTirar_ === 'function') Ast_memoTirar_(AST_ABAS.EVENTOS);
+  Rep_ler_(REP_ABAS.DOCUMENTOS).forEach(function (d) { if (Rep_s_(d.CHAMADO_ID) === cid && Rep_s_(d.REPRESENTADA_ID) === repId && !Rep_s_(d.DESLIGADO_EM)) { Rep_atualizar_(REP_ABAS.DOCUMENTOS, d.ID, { DESLIGADO_EM: agora }); n.documentos++; } });
+  Rep_ler_(REP_ABAS.ANEXOS).forEach(function (a) { if (Rep_up_(a.REF_TIPO) === 'CHAMADO' && Rep_s_(a.REF_ID) === cid && Rep_s_(a.REPRESENTADA_ID) === repId && !Rep_s_(a.DESLIGADO_EM)) { Rep_atualizar_(REP_ABAS.ANEXOS, a.ID, { DESLIGADO_EM: agora }); n.anexos++; } });
+  Rep_ler_(REP_ABAS.MENSAGENS).forEach(function (m) { if (Rep_up_(m.REF_TIPO) === 'CHAMADO' && Rep_s_(m.REF_ID) === cid && Rep_s_(m.REPRESENTADA_ID) === repId && !Rep_s_(m.DESLIGADO_EM)) { Rep_atualizar_(REP_ABAS.MENSAGENS, m.ID, { DESLIGADO_EM: agora }); n.mensagens++; } });
+  var oss = {};
+  Rep_lerAst_(AST_ABAS.OS).forEach(function (o) { if (Rep_s_(o.CHAMADO_ID) === cid) oss[Rep_s_(o.ID)] = true; });
+  var fotos = [];
+  try { fotos = Rep_lerAst_(AST_ABAS.FOTOS); } catch (e) { fotos = []; }
+  fotos.forEach(function (f) { if (oss[Rep_s_(f.OS_ID)] && Rep_up_(f.PUBLICO) === 'REPRESENTADA') { Ast_atualizar_(AST_ABAS.FOTOS, f.ID, { PUBLICO: '', LIBERADA_POR_NOME: '', LIBERADA_EM: '' }); n.fotos++; } });
+  if (typeof Ast_memoTirar_ === 'function') Ast_memoTirar_(AST_ABAS.FOTOS);
+  return n;
 }
 /** Lista "Quem pode abrir pedido em nome da representada" (só o Administrador lê e muda). */
 function RepI_emNomeConfig_(eu) {

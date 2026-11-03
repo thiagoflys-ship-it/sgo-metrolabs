@@ -82,7 +82,7 @@ function SGO_ajudaTelas_Representacao_() {
           "Na Assistência técnica, abra a ficha do chamado e toque em \"Ligar à representada\".",
           "Escolha a representada, informe o protocolo dela (se houver) e escreva o motivo (pelo menos 10 letras). Toque em \"Ligar à representada\".",
           "O chamado ganha a marca da representada; ela passa a ver e acompanhar o chamado, com quem ligou e o motivo, e recebe o aviso por e-mail. Chamado que já é de uma representada não muda de representada.",
-          "Escolheu a representada errada? Fale com o Administrador: só ele desliga (botão \"Desligar da representada\" na ficha, com o motivo). Depois, ligue à representada certa."
+          "Escolheu a representada errada? Fale com o Administrador: só ele desliga (botão \"Desligar da representada\" na ficha, com o motivo). A representada errada deixa de ver o chamado, os documentos, os arquivos, as mensagens e as fotos liberadas para ela. Depois, ligue à representada certa."
         ] },
         { titulo: "Acompanhar na Assistência técnica", itens: [
           "Em Assistência técnica > Chamados, o filtro \"Representação\" mostra só os chamados de representadas ou de uma delas, e cada chamado leva o selo roxo com o nome da representada.",

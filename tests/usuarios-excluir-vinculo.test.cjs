@@ -323,7 +323,7 @@ test('revisão: chamado ou O.S. em aberto impede a exclusão (diz como reatribui
   assert.equal(v.modo, 'BLOQUEADA');
   assert.deepEqual(j(v.bloqueios.map((b) => b.numero)).sort(), ['CH-2026-0001', 'OS-2026-0009']);
   const r = a.ctx.usuariosExcluir(a.sAdm, 'u-tec', 'saiu da empresa em outubro');
-  assert.equal(r.success, false); assert.match(r.message, /atendimentos em aberto[\s\S]*passe para outra pessoa/);
+  assert.equal(r.success, false); assert.match(r.message, /atendimentos em aberto[\s\S]*reagende cada visita com outro técnico[\s\S]*Mais > Inativar/);
   assert.equal(a.cad('u-tec').STATUS, 'ATIVO', 'nada foi alterado');
   // reatribuído: sai das listas de configuração ao excluir
   a.ctx.SGO_DATA.update('ATEC_CHAMADOS', 'ch1', { TECNICO_ID: 'outro' });
@@ -346,4 +346,43 @@ test('revisão: chamado ou O.S. em aberto impede a exclusão (diz como reatribui
   const t = ler('JS_Admin.html');
   assert.match(t, /v\.modo === "BLOQUEADA"/); assert.match(t, /Papéis que a pessoa tem hoje/); assert.match(t, /u\.DONO \?/);
   assert.match(ler('SGO_Ajuda_Administracao.js'), /Excluir é só do Administrador e não volta/);
+});
+
+// ---------------------------------------------------------------- segunda revisão
+test('revisão 2: bloqueia só o técnico em aberto e quem está EM triagem; quem abriu, quem assumiu ou triagem já feita não bloqueiam; sempre oferece Inativar', () => {
+  const a = amb();
+  a.aba('ATEC_CHAMADOS', ['ID', 'NUMERO', 'SITUACAO', 'TECNICO_ID', 'TRIAGEM_RESPONSAVEL_ID', 'ASSUMIDO_POR_ID', 'ABERTO_POR_ID', 'RESPONSAVEL_ID'], [
+    { ID: 'c1', NUMERO: 'CH-1', SITUACAO: 'AGENDADO', TRIAGEM_RESPONSAVEL_ID: 'u-tec', ASSUMIDO_POR_ID: 'u-tec', ABERTO_POR_ID: 'u-tec', RESPONSAVEL_ID: 'u-tec', TECNICO_ID: 'outro' },
+    { ID: 'c2', NUMERO: 'CH-2', SITUACAO: 'ABERTO', ABERTO_POR_ID: 'u-tec' }]);
+  const v = a.ctx.usuariosVinculosConta(a.sAdm, 'u-tec');
+  assert.equal(v.modo, 'LOGICA', 'o histórico guarda o nome; não bloqueia');
+  a.ctx.SGO_DATA.update('ATEC_CHAMADOS', 'c1', { SITUACAO: 'EM_TRIAGEM' });
+  const v2 = a.ctx.usuariosVinculosConta(a.sAdm, 'u-tec');
+  assert.equal(v2.modo, 'BLOQUEADA'); assert.equal(v2.bloqueios[0].papel, 'fazendo a triagem');
+  assert.match(v2.bloqueioTexto, /gestão da área Técnica para assumir a triagem[\s\S]*Mais > Inativar/);
+  assert.ok(!/reagende/.test(v2.bloqueioTexto), 'só o que é possível fazer');
+  assert.equal(a.ctx.USR_MSG_DONO.split('Para tirar o acesso')[1], ', use Mais > Inativar.');
+});
+
+test('revisão 2: desempenho com base grande (50 abas × 5 mil linhas): limite de tempo e corte na abertura; ao confirmar para no primeiro vínculo', () => {
+  const a = amb();
+  const linhas = (k) => Array.from({ length: 5000 }, (_, i) => ({ ID: 'r' + k + '_' + i, USUARIO_ID: 'x' + i, CRIADO_POR_ID: 'y' + i, DADOS_JSON: '{"q":"z' + i + '"}', OBS: 'texto ' + i }));
+  for (let k = 0; k < 50; k++) a.aba('ABA_GRANDE_' + String(k).padStart(2, '0'), ['ID', 'USUARIO_ID', 'CRIADO_POR_ID', 'DADOS_JSON', 'OBS'], linhas(k));
+  const u = a.cad('u-novo');
+  let t = Date.now();
+  const cheio = a.ctx.Usuarios_vinculosDaConta_(u);
+  const msAbrir = Date.now() - t;
+  assert.equal(cheio.semVinculo, true, 'conferiu tudo, nada ligado');
+  // vínculo na 3ª aba: ao confirmar, para no primeiro (não lê as outras)
+  a.ctx.SGO_DATA.update('ABA_GRANDE_02', 'r2_10', { CRIADO_POR_ID: 'u-novo' });
+  t = Date.now();
+  const primeiro = a.ctx.Usuarios_vinculosDaConta_(u, { parar: true });
+  const msConfirmar = Date.now() - t;
+  assert.equal(primeiro.parouNoPrimeiro, true); assert.equal(primeiro.total, 1);
+  // limite de tempo: o que sobra fica não conferido (exclusão lógica)
+  const corte = a.ctx.Usuarios_vinculosDaConta_(a.cad('u-tec'), { limiteMs: 1 });
+  assert.equal(corte.semVinculo, false);
+  assert.ok(corte.naoConferidas.some((x) => /tempo da conferência esgotado/.test(x)), JSON.stringify(corte.naoConferidas));
+  console.log('# desempenho (50 abas x 5000 linhas): abrir (varredura completa) ' + msAbrir + ' ms; confirmar (para no 1º vínculo, 3ª aba) ' + msConfirmar + ' ms');
+  assert.ok(msConfirmar < msAbrir, 'parar no primeiro é mais rápido');
 });

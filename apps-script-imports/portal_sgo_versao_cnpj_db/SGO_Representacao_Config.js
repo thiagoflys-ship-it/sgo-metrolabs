@@ -34,11 +34,13 @@ var REP_COLUNAS = {
     'CRIADO_POR_LADO', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'ATUALIZADO_POR_LADO', 'ATUALIZADO_POR_ID', 'INATIVADO_EM', 'INATIVADO_POR_NOME'],
   // 03/11/2026: histórico de cada modelo (uma linha por mudança: quem, de que lado, quando, antes e depois, motivo); só inclusão
   REP_MODELOS_HIST: ['ID', 'REPRESENTADA_ID', 'MODELO_ID', 'CODIGO', 'ACAO', 'LADO', 'POR_ID', 'POR_NOME', 'ANTES_JSON', 'DEPOIS_JSON', 'MOTIVO', 'EM', 'CRIADO_EM'],
-  REP_MENSAGENS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'REF_NUMERO', 'AUTOR_LADO', 'AUTOR_ID', 'AUTOR_NOME', 'TEXTO', 'INTERNA', 'RESPONDE_A', 'ANEXO_ID', 'EM', 'CRIADO_EM'],
-  REP_ANEXOS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'TIPO', 'NOME', 'MIME', 'TAMANHO', 'SHA256', 'ARQUIVO_ID', 'PUBLICO', 'POR_LADO', 'POR_ID', 'POR_NOME', 'EM', 'CRIADO_EM'],
+  REP_MENSAGENS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'REF_NUMERO', 'AUTOR_LADO', 'AUTOR_ID', 'AUTOR_NOME', 'TEXTO', 'INTERNA', 'RESPONDE_A', 'ANEXO_ID', 'EM', 'CRIADO_EM', 'DESLIGADO_EM'],
+  REP_ANEXOS: ['ID', 'REPRESENTADA_ID', 'REF_TIPO', 'REF_ID', 'TIPO', 'NOME', 'MIME', 'TAMANHO', 'SHA256', 'ARQUIVO_ID', 'PUBLICO', 'POR_LADO', 'POR_ID', 'POR_NOME', 'EM', 'CRIADO_EM', 'DESLIGADO_EM'],
   // 29/10/2026: documentos A4 gerados (relatório do atendimento e do período), com o público que pode abrir (SGO_Representacao_Documentos.js)
   REP_DOCUMENTOS: ['ID', 'TIPO', 'PUBLICO', 'REPRESENTADA_ID', 'CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'NUMERO', 'VERSAO', 'TITULO',
-    'PERIODO_DIAS', 'PERIODO_DE', 'PERIODO_ATE', 'HTML_ID', 'PDF_ID', 'PASTA_URL', 'MARCA', 'PAGINAS', 'FOTOS', 'DOC_REGISTRADO', 'GERADO_POR_ID', 'GERADO_POR_NOME', 'GERADO_POR_LADO', 'EM', 'CRIADO_EM']
+    'PERIODO_DIAS', 'PERIODO_DE', 'PERIODO_ATE', 'HTML_ID', 'PDF_ID', 'PASTA_URL', 'MARCA', 'PAGINAS', 'FOTOS', 'DOC_REGISTRADO', 'GERADO_POR_ID', 'GERADO_POR_NOME', 'GERADO_POR_LADO', 'EM', 'CRIADO_EM',
+    // revisão de e2ce04e: chamado desligado da representada (ligado por engano): documento, anexo e mensagem dela deixam de abrir
+    'DESLIGADO_EM']
 };
 var REP_COLUNAS_TEXTO = {
   REP_REPRESENTADAS: ['CNPJ', 'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'ATUALIZADO_EM'],
@@ -134,7 +136,7 @@ var REP_MEMO = {};
 function Rep_memoLimpar_() { REP_MEMO = {}; }
 function Rep_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V5')) return; } catch (e) { cache = null; }
+  try { cache = CacheService.getScriptCache(); if (cache.get('REP_ABAS_OK_V6')) return; } catch (e) { cache = null; }
   Object.keys(REP_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, REP_COLUNAS[aba]);
     REP_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
@@ -144,7 +146,7 @@ function Rep_garantirAbas_() {
     REP_COLUNAS_EXTRAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (REP_COLUNAS_EXTRAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('REP_ABAS_OK_V5', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('REP_ABAS_OK_V6', '1', 21600); } catch (e) {}
 }
 function Rep_ler_(aba) {
   if (REP_MEMO[aba]) return REP_MEMO[aba];
@@ -270,14 +272,14 @@ function Rep_escopo_(s) {
       throw Rep_erro_('NAO_ENCONTRADO', REP_MSG_NAO_ENCONTRADO);
     },
     mensagens: function (tipo, id) {
-      return Rep_ler_(REP_ABAS.MENSAGENS).filter(function (m) { return Rep_s_(m.REPRESENTADA_ID) === rid && Rep_up_(m.INTERNA) !== 'SIM' && Rep_up_(m.REF_TIPO) === tipo && Rep_s_(m.REF_ID) === Rep_s_(id); });
+      return Rep_ler_(REP_ABAS.MENSAGENS).filter(function (m) { return Rep_s_(m.REPRESENTADA_ID) === rid && Rep_up_(m.INTERNA) !== 'SIM' && !Rep_s_(m.DESLIGADO_EM) && Rep_up_(m.REF_TIPO) === tipo && Rep_s_(m.REF_ID) === Rep_s_(id); });
     },
     anexos: function (tipo, id) {
-      return Rep_ler_(REP_ABAS.ANEXOS).filter(function (a) { return Rep_s_(a.REPRESENTADA_ID) === rid && Rep_up_(a.PUBLICO) === 'REPRESENTADA' && (!tipo || (Rep_up_(a.REF_TIPO) === tipo && Rep_s_(a.REF_ID) === Rep_s_(id))); });
+      return Rep_ler_(REP_ABAS.ANEXOS).filter(function (a) { return Rep_s_(a.REPRESENTADA_ID) === rid && Rep_up_(a.PUBLICO) === 'REPRESENTADA' && !Rep_s_(a.DESLIGADO_EM) && (!tipo || (Rep_up_(a.REF_TIPO) === tipo && Rep_s_(a.REF_ID) === Rep_s_(id))); });
     },
     anexo: function (id) {
       var a = Rep_porId_(REP_ABAS.ANEXOS, id);
-      if (!a || Rep_s_(a.REPRESENTADA_ID) !== rid || Rep_up_(a.PUBLICO) !== 'REPRESENTADA') throw Rep_erro_('NAO_ENCONTRADO', REP_MSG_NAO_ENCONTRADO);
+      if (!a || Rep_s_(a.REPRESENTADA_ID) !== rid || Rep_up_(a.PUBLICO) !== 'REPRESENTADA' || Rep_s_(a.DESLIGADO_EM)) throw Rep_erro_('NAO_ENCONTRADO', REP_MSG_NAO_ENCONTRADO);
       return a;
     }
   };
