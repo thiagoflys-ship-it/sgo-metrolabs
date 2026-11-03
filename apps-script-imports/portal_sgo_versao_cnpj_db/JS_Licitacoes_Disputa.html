@@ -212,7 +212,7 @@
     var at = el.querySelector("[data-ldp-atualizar]"); if (at) at.onclick = function () { LicDp_ligarAba_(null, null, id); };
     var rl = el.querySelector("[data-ldp-relatorio]"); if (rl) rl.onclick = function () { LicDp_relatorio_(id, rl); };
     var sg = el.querySelector("[data-ldp-sugestoes]"); if (sg) sg.onclick = function () { LicDp_janelaMotivo_(id, "sugestoes", { parar: sg.getAttribute("data-ldp-sugestoes") === "1" }, sg); };
-    var rq = el.querySelector("[data-ldp-reconhecer]"); if (rq) rq.onclick = function () { LicDp_janelaMotivo_(id, "reconhecerQuebra", {}, rq); };
+    var rq = el.querySelector("[data-ldp-reconhecer]"); if (rq) rq.onclick = function () { LicDp_janelaReconhecer_(id, rq); };
     var co = el.querySelector("[data-ldp-concluir]"); if (co) co.onclick = function () { LicDp_janelaMotivo_(id, "concluir", {}, co); };
     el.querySelectorAll("[data-ldp-nos]").forEach(function (i) { i.oninput = function () { LicDp_previaLance_(id, i.getAttribute("data-ldp-nos")); }; });
     el.querySelectorAll("[data-ldp-usar]").forEach(function (b) { b.onclick = function () { var k = b.getAttribute("data-ldp-usar"), i = Lic_$_("ldpNos_" + k); if (i) { i.value = b.getAttribute("data-valor"); LicDp_previaLance_(id, k); try { i.focus(); } catch (e) {} } Lic_toast_("Valor sugerido no campo. Dê o lance no portal e toque em \"Registrar o nosso lance\"."); }; });
@@ -277,9 +277,8 @@
   }
   /** Janela só com o motivo: desistir do item, parar/voltar as sugestões, concluir o resultado. */
   function LicDp_janelaMotivo_(id, op, extra, origem) {
-    var tit = { desistir: "Desistir do item " + (extra.item || ""), sugestoes: extra.parar ? "Parar as sugestões" : "Voltar as sugestões", concluir: "Concluir o resultado", reconhecerQuebra: "Reconhecer a quebra do registro" }[op];
+    var tit = { desistir: "Desistir do item " + (extra.item || ""), sugestoes: extra.parar ? "Parar as sugestões" : "Voltar as sugestões", concluir: "Concluir o resultado" }[op];
     var txt = { desistir: "A desistência fica no registro com o motivo; depois dela o SGO+ não registra mais lances neste item. O resultado do item é registrado depois da sessão.", sugestoes: extra.parar ? "O SGO+ deixa de mostrar o próximo lance sugerido. O piso continua valendo para todo lance registrado." : "O SGO+ volta a mostrar o próximo lance sugerido.",
-      reconhecerQuebra: "Só depois de conferir a planilha. O SGO+ grava uma âncora com o seu motivo e o que estava quebrado; o registro recomeça dela e o que veio antes fica marcado no relatório. Motivo com pelo menos 20 letras.",
       concluir: "A licitação vai para \"Resultado\" no Kanban, com o motivo no histórico. O dado dos itens ganhos fica preparado para a etapa de Contrato. Depois disso, o resultado de um item ainda pode ser atualizado (versão nova)." }[op];
     var ov = Lic_janela_(tit, '<p class="cm-txt">' + Lic_esc_(txt) + '</p><div class="cm-campo"><label for="ldpMotJ">Motivo (obrigatório)</label><textarea id="ldpMotJ" rows="3" maxlength="1000"></textarea></div><div id="ldpMotMsg" aria-live="assertive"></div>',
       '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-ldp-ok>Confirmar</button>', origem);
@@ -289,6 +288,26 @@
       bt.disabled = true;
       LicDp_chamar_(op, Object.assign({ id: id, motivo: mot }, extra), function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicDp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; Lic_$_("ldpMotMsg").innerHTML = Lic_faixa_(m, "erro"); });
     };
+  }
+  /** Revisão de e88cca0 (B): o Administrador vê o que está quebrado e a FOTO que a âncora vai gravar (só registros válidos) antes de confirmar. */
+  function LicDp_htmlPreviaQuebra_(p) {
+    return '<p class="cm-txt">Quebra: ' + Lic_esc_(p.problema) + ". " + Lic_esc_(p.registros) + " registro(s) até aqui" + ((p.invalidos || []).length ? "; registro(s) inválido(s), fora da foto: " + Lic_esc_(p.invalidos.join(", ")) : "") + ".</p>" +
+      Lic_faixa_("A partir da âncora, o estado de cada item é esta foto, calculada só com os registros válidos (sem nenhum válido, vale o piso da simulação). Mexer em registro de antes da âncora continua sendo detectado.", "aviso") +
+      Lic_tabelaHtml_(["Item", "Piso na foto", "Piso que a planilha mostra", "Intervalo", "Nosso lance", "Desistido"], (p.itens || []).map(function (i) {
+        return [Lic_esc_(i.item), (i.mudou ? '<span class="ldp-vermelho">' : "<span>") + Lic_esc_(Lic_brl_(i.piso)) + "</span>", Lic_esc_(Lic_brl_(i.pisoAntes)), Lic_esc_(i.intervaloTxt), Lic_esc_(Lic_brl_(i.nossoAtual)), i.desistiu ? "sim" : "não"];
+      }));
+  }
+  function LicDp_janelaReconhecer_(id, origem) {
+    LicDp_chamar_("quebraPrevia", { id: id }, function (p) {
+      var ov = Lic_janela_("Reconhecer a quebra do registro", LicDp_htmlPreviaQuebra_(p) + '<div class="cm-campo"><label for="ldpMotQ">Motivo: o que você conferiu na planilha (pelo menos 20 letras)</label><textarea id="ldpMotQ" rows="3" maxlength="1000"></textarea></div><div id="ldpMotQMsg" aria-live="assertive"></div>',
+        '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-ldp-ok>Gravar a âncora com esta foto</button>', origem);
+      ov.querySelector("[data-ldp-ok]").onclick = function () {
+        var bt = this, mot = LicDp_valor_("ldpMotQ");
+        if (mot.trim().length < 20) { Lic_$_("ldpMotQMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 20 letras. Nada foi gravado.", "erro"); return; }
+        bt.disabled = true;
+        LicDp_chamar_("reconhecerQuebra", { id: id, motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Quebra reconhecida."); LicDp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; Lic_$_("ldpMotQMsg").innerHTML = Lic_faixa_(m, "erro"); });
+      };
+    }, function (m) { Lic_toast_(m, "erro"); });
   }
   function LicDp_janelaResultado_(id, k, origem) {
     var it = LicDp_item_(id, k) || {}, r = it.resultado || {};

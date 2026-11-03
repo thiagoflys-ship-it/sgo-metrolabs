@@ -44,17 +44,17 @@ var LICD_ABAS = { DISPUTAS: 'LIC_DISPUTAS', LANCES: 'LIC_DISPUTA_LANCES', RESULT
 var LICD_COLUNAS = {
   LIC_DISPUTAS: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'SITUACAO', 'MODO', 'PROPOSTA_ID', 'PROPOSTA_NUMERO', 'PROPOSTA_VERSAO', 'PROPOSTA_SHA256', 'SIMULACAO_VERSAO', 'SIMULACAO_HASH',
     'SESSAO_ISO', 'SESSAO_FONTE', 'PORTAL_NOME', 'INTERVALO_TIPO', 'INTERVALO_VALOR', 'INTERVALO_FONTE', 'BASE_JSON', 'BASE_HASH', 'MOTIVO', 'ABERTA_POR_ID', 'ABERTA_POR_NOME', 'ABERTA_EM',
-    'ULTIMO_SEQ', 'ULTIMO_HASH', 'RESULTADO_EM', 'RESULTADO_POR_ID', 'RESULTADO_POR_NOME', 'RESULTADO_MOTIVO', 'CONTRATO_JSON', 'HASH', 'ATUALIZADO_EM'],
+    'ULTIMO_SEQ', 'ULTIMO_HASH', 'PENDENTE_HASH', 'RESULTADO_EM', 'RESULTADO_POR_ID', 'RESULTADO_POR_NOME', 'RESULTADO_MOTIVO', 'CONTRATO_JSON', 'HASH', 'ATUALIZADO_EM'],
   // UMA LINHA POR LANCE OU DECISÃO; nunca muda depois de gravada (hash encadeado)
   LIC_DISPUTA_LANCES: ['ID', 'DISPUTA_ID', 'OPORTUNIDADE_ID', 'CODIGO', 'SEQ', 'ITEM', 'TIPO', 'AUTOR', 'CONCORRENTE', 'VALOR', 'VALOR_ANTERIOR', 'ORIGEM', 'SUGERIDO', 'SUGESTAO',
-    'PISO', 'SOBRA', 'SOBRA_PCT', 'ASSUMO', 'MOTIVO', 'TEXTO', 'QUANDO', 'POR_ID', 'POR_NOME', 'HASH_ANTERIOR', 'HASH'],
+    'PISO', 'SOBRA', 'SOBRA_PCT', 'ASSUMO', 'MOTIVO', 'TEXTO', 'QUANDO', 'POR_ID', 'POR_NOME', 'HASH_ANTERIOR', 'FOTO_JSON', 'LISTA_HASH', 'HASH'],
   // UMA LINHA POR VERSÃO DO RESULTADO DE CADA ITEM; vale a versão mais alta; nada é alterado
   LIC_RESULTADOS: ['ID', 'DISPUTA_ID', 'OPORTUNIDADE_ID', 'CODIGO', 'ITEM', 'VERSAO', 'SITUACAO', 'COLOCACAO', 'VENCEDOR', 'VENCEDOR_CNPJ', 'VALOR_FINAL', 'VALOR_TOTAL', 'MOTIVO',
     'ADJUDICACAO_EM', 'HOMOLOGACAO_EM', 'ATA_EM', 'RECURSO_PARTE', 'FONTE', 'OBS', 'EVENTOS', 'POR_ID', 'POR_NOME', 'EM', 'HASH']
 };
 var LICD_COLUNAS_TEXTO = {
-  LIC_DISPUTAS: ['PROPOSTA_NUMERO', 'PROPOSTA_SHA256', 'SIMULACAO_HASH', 'SESSAO_ISO', 'BASE_HASH', 'ABERTA_EM', 'ULTIMO_HASH', 'RESULTADO_EM', 'HASH', 'ATUALIZADO_EM'],
-  LIC_DISPUTA_LANCES: ['ITEM', 'CONCORRENTE', 'MOTIVO', 'TEXTO', 'POR_ID', 'QUANDO', 'HASH_ANTERIOR', 'HASH'],
+  LIC_DISPUTAS: ['PROPOSTA_NUMERO', 'PROPOSTA_SHA256', 'SIMULACAO_HASH', 'SESSAO_ISO', 'BASE_HASH', 'ABERTA_EM', 'ULTIMO_HASH', 'PENDENTE_HASH', 'RESULTADO_EM', 'HASH', 'ATUALIZADO_EM'],
+  LIC_DISPUTA_LANCES: ['ITEM', 'CONCORRENTE', 'MOTIVO', 'TEXTO', 'POR_ID', 'QUANDO', 'HASH_ANTERIOR', 'FOTO_JSON', 'LISTA_HASH', 'HASH'],
   LIC_RESULTADOS: ['ITEM', 'VENCEDOR_CNPJ', 'ADJUDICACAO_EM', 'HOMOLOGACAO_EM', 'ATA_EM', 'EM', 'HASH']
 };
 var LICD_SITUACOES = { ABERTA: 'Disputa aberta (modo assistido)', RESULTADO: 'Resultado registrado' };
@@ -67,13 +67,13 @@ var LICD_AVISO_ASSISTIDO = 'Modo assistido: o SGO+ não envia lance nem acessa o
 // ------------------------------------------------------------ utilitários
 function LicD_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('LICD_ABAS_OK_V1')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('LICD_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(LICD_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LICD_COLUNAS[aba]);
     LICD_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LICD_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('LICD_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LICD_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 function LicD_n_(v) { return LicP_n_(v); }
 function LicD_r2_(v) { return LicP_r2_(v); }
@@ -168,9 +168,9 @@ function LicD_intervaloTxt_(iv) { return iv ? (iv.tipo === 'PERCENTUAL' ? LicP_p
 function LicD_disputasDe_(oid) { return Lic_ler_(LICD_ABAS.DISPUTAS).filter(function (x) { return Lic_s_(x.OPORTUNIDADE_ID) === Lic_s_(oid); }).sort(function (a, b) { return Lic_s_(b.ABERTA_EM) < Lic_s_(a.ABERTA_EM) ? -1 : 1; }); }
 /** Revisão de bddf933: o hash cobre também o último registro (ULTIMO_SEQ e ULTIMO_HASH). u: { seq, hash } no lugar dos gravados. */
 function LicD_hashDisputa_(r, u) {
-  var seq = u ? u.seq : r.ULTIMO_SEQ, h = u ? u.hash : r.ULTIMO_HASH;
+  var seq = u ? u.seq : r.ULTIMO_SEQ, h = u ? u.hash : r.ULTIMO_HASH, pend = u && u.pend !== undefined ? u.pend : r.PENDENTE_HASH;
   return Lic_hash_([Lic_s_(r.OPORTUNIDADE_ID), Lic_s_(r.PROPOSTA_ID), Lic_s_(r.PROPOSTA_SHA256), Lic_s_(r.SIMULACAO_HASH), Lic_s_(r.BASE_HASH), Lic_s_(r.SESSAO_ISO), Lic_s_(r.INTERVALO_TIPO),
-    LicD_h_(r.INTERVALO_VALOR), Lic_s_(r.MOTIVO), Lic_s_(r.ABERTA_POR_ID), Lic_s_(r.ABERTA_EM), Lic_s_(r.MODO), String(Number(seq) || 0), Lic_s_(h)].join('|'));
+    LicD_h_(r.INTERVALO_VALOR), Lic_s_(r.MOTIVO), Lic_s_(r.ABERTA_POR_ID), Lic_s_(r.ABERTA_EM), Lic_s_(r.MODO), String(Number(seq) || 0), Lic_s_(h), Lic_s_(pend)].join('|'));
 }
 function LicD_integra_(r) { return LicD_hashDisputa_(r) === Lic_s_(r.HASH) && Lic_hash_(Lic_s_(r.BASE_JSON)) === Lic_s_(r.BASE_HASH); }
 /**
@@ -180,7 +180,11 @@ function LicD_integra_(r) { return LicD_hashDisputa_(r) === Lic_s_(r.HASH) && Li
 function LicD_assinado_(r, lista) {
   if (Lic_hash_(Lic_s_(r.BASE_JSON)) !== Lic_s_(r.BASE_HASH)) return null;
   var cands = [{ seq: Number(r.ULTIMO_SEQ) || 0, hash: Lic_s_(r.ULTIMO_HASH) }, { seq: 0, hash: '' }].concat((lista || []).map(function (x) { return { seq: Number(x.SEQ) || 0, hash: Lic_s_(x.HASH) }; }));
-  for (var i = 0; i < cands.length; i++) if (LicD_hashDisputa_(r, cands[i]) === Lic_s_(r.HASH)) return cands[i];
+  var pends = [Lic_s_(r.PENDENTE_HASH), ''];
+  for (var p = 0; p < pends.length; p++) for (var i = 0; i < cands.length; i++) {
+    var c = { seq: cands[i].seq, hash: cands[i].hash, pend: pends[p] };
+    if (LicD_hashDisputa_(r, c) === Lic_s_(r.HASH)) return c;
+  }
   return null;
 }
 
@@ -254,21 +258,27 @@ function LicD_sessaoAgenda_(l) {
 function LicD_hashLance_(x) {
   return Lic_hash_([Lic_s_(x.DISPUTA_ID), String(Number(x.SEQ) || 0), Lic_s_(x.ITEM), Lic_up_(x.TIPO), Lic_up_(x.AUTOR), Lic_s_(x.CONCORRENTE), LicD_h_(x.VALOR), LicD_h_(x.VALOR_ANTERIOR), Lic_up_(x.ORIGEM),
     Lic_up_(x.SUGERIDO), LicD_h_(x.SUGESTAO), LicD_h_(x.PISO), Lic_up_(x.ASSUMO), Lic_s_(x.MOTIVO), Lic_s_(x.TEXTO), Lic_s_(x.QUANDO), Lic_s_(x.POR_ID), Lic_s_(x.HASH_ANTERIOR),
-    LicD_h_(x.SOBRA), LicD_h_(x.SOBRA_PCT), Lic_s_(x.POR_NOME)].join('|'));
+    LicD_h_(x.SOBRA), LicD_h_(x.SOBRA_PCT), Lic_s_(x.POR_NOME), Lic_s_(x.FOTO_JSON), Lic_s_(x.LISTA_HASH)].join('|'));
 }
 function LicD_lancesDe_(did) { return Lic_ler_(LICD_ABAS.LANCES).filter(function (x) { return Lic_s_(x.DISPUTA_ID) === Lic_s_(did); }).sort(function (a, b) { return (Number(a.SEQ) || 0) - (Number(b.SEQ) || 0); }); }
+/** A última âncora válida (hash próprio confere): índice na lista ordenada, ou -1. */
+function LicD_ancoraIdx_(lista) {
+  for (var j = lista.length - 1; j >= 0; j--) if (Lic_up_(lista[j].TIPO) === 'ANCORA' && LicD_hashLance_(lista[j]) === Lic_s_(lista[j].HASH)) return j;
+  return -1;
+}
+/** Marca de tudo o que veio antes de uma âncora: o conteúdo recalculado de cada linha e o hash gravado (mexer em qualquer célula muda). */
+function LicD_hashLista_(linhas) { return Lic_hash_(linhas.map(function (x) { return String(Number(x.SEQ) || 0) + ':' + LicD_hashLance_(x) + ':' + Lic_s_(x.HASH); }).join('|')); }
 /**
- * Confere a cadeia contra o último registro ASSINADO pela disputa (ass: LicD_assinado_). Conta a partir da última âncora válida
- * (quebra reconhecida pelo Administrador). { integra, problema, ajustar, ancora }:
- *   - ajustar: registros a mais, válidos e encadeados a partir do assinado (a gravação da linha deu certo e a da disputa não):
- *     a cadeia confere e ULTIMO_* avança sozinho na próxima gravação (revisão de bddf933, ALTA 1, a);
- *   - ancora: a quebra anterior reconhecida (quem, quando, motivo, o que estava quebrado).
+ * Confere a cadeia contra o último registro ASSINADO pela disputa (ass: LicD_assinado_, com o pendente). Conta a partir da última
+ * âncora válida; a âncora guarda o hash da lista anterior (mexer em linha de antes dela é quebra). { integra, problema, ajustar, ancora }:
+ *   - ajustar: revisão de e88cca0 (A): só a UMA linha a mais cujo hash é o PENDENTE assinado na disputa antes da gravação (a linha
+ *     gravou e a atualização da disputa não). Qualquer outra linha a mais, mesmo com hash certo pela fórmula, é quebra.
  */
 function LicD_cadeia_(d, lista, ass) {
-  ass = ass || { seq: Number(d.ULTIMO_SEQ) || 0, hash: Lic_s_(d.ULTIMO_HASH) };
-  var k = -1;
-  for (var j = lista.length - 1; j >= 0; j--) if (Lic_up_(lista[j].TIPO) === 'ANCORA' && LicD_hashLance_(lista[j]) === Lic_s_(lista[j].HASH)) { k = j; break; }
-  var seq0 = k >= 0 ? Number(lista[k].SEQ) || 0 : 0, ant = k >= 0 ? Lic_s_(lista[k].HASH) : '', problema = '', vistos = {};
+  ass = ass || { seq: Number(d.ULTIMO_SEQ) || 0, hash: Lic_s_(d.ULTIMO_HASH), pend: Lic_s_(d.PENDENTE_HASH) };
+  var k = LicD_ancoraIdx_(lista), problema = '';
+  if (k >= 0 && Lic_s_(lista[k].LISTA_HASH) !== LicD_hashLista_(lista.slice(0, k))) problema = 'um registro de antes da âncora ' + lista[k].SEQ + ' foi mexido, apagado ou inserido depois do reconhecimento';
+  var seq0 = k >= 0 ? Number(lista[k].SEQ) || 0 : 0, ant = k >= 0 ? Lic_s_(lista[k].HASH) : '', vistos = {};
   vistos[seq0] = ant;
   for (var i = k + 1; i < lista.length && !problema; i++) {
     var x = lista[i], esp = seq0 + (i - k);
@@ -280,7 +290,8 @@ function LicD_cadeia_(d, lista, ass) {
   var ultSeq = lista.length ? (k >= 0 ? seq0 + (lista.length - 1 - k) : lista.length) : 0, ajustar = null;
   if (!problema) {
     if (ass.seq === ultSeq && ass.hash === ant) { /* confere */ }
-    else if (ass.seq < ultSeq && vistos[ass.seq] !== undefined && vistos[ass.seq] === ass.hash) ajustar = { de: ass.seq, seq: ultSeq, hash: ant };
+    else if (ultSeq === ass.seq + 1 && vistos[ass.seq] !== undefined && vistos[ass.seq] === ass.hash && ass.pend && ant === ass.pend) ajustar = { de: ass.seq, seq: ultSeq, hash: ant };
+    else if (ultSeq > ass.seq && vistos[ass.seq] === ass.hash) problema = 'há registro(s) depois do ' + ass.seq + ' que a disputa não assinou (linha incluída fora do SGO+)';
     else if (ass.seq > ultSeq) problema = 'a disputa registra ' + ass.seq + ' registro(s) e há ' + ultSeq + ' (registro apagado)';
     else problema = 'o último registro não é o que a disputa guardou';
   }
@@ -289,10 +300,17 @@ function LicD_cadeia_(d, lista, ass) {
 }
 /** Grava ULTIMO_* (e o HASH da disputa, que os cobre) e espelha em d. */
 function LicD_gravarUltimo_(d, seq, hash, agora) {
-  var mud = { ULTIMO_SEQ: seq, ULTIMO_HASH: hash, ATUALIZADO_EM: agora || Lic_agora_() };
-  mud.HASH = LicD_hashDisputa_(d, { seq: seq, hash: hash });
+  var mud = { ULTIMO_SEQ: seq, ULTIMO_HASH: hash, PENDENTE_HASH: '', ATUALIZADO_EM: agora || Lic_agora_() };
+  mud.HASH = LicD_hashDisputa_(d, { seq: seq, hash: hash, pend: '' });
   SGO_DATA.update(LICD_ABAS.DISPUTAS, d.ID, mud);
-  d.ULTIMO_SEQ = seq; d.ULTIMO_HASH = hash; d.HASH = mud.HASH;
+  d.ULTIMO_SEQ = seq; d.ULTIMO_HASH = hash; d.PENDENTE_HASH = ''; d.HASH = mud.HASH;
+}
+/** Revisão de e88cca0 (A): antes de gravar a linha, a disputa assina o hash dela como PENDENTE (só essa linha pode ser retomada). */
+function LicD_gravarPendente_(d, hashLinha, agora) {
+  var mud = { PENDENTE_HASH: hashLinha, ATUALIZADO_EM: agora };
+  mud.HASH = LicD_hashDisputa_(d, { seq: d.ULTIMO_SEQ, hash: d.ULTIMO_HASH, pend: hashLinha });
+  SGO_DATA.update(LICD_ABAS.DISPUTAS, d.ID, mud);
+  d.PENDENTE_HASH = hashLinha; d.HASH = mud.HASH;
 }
 /** Grava uma linha no registro (quem chama segura a trava e já conferiu a cadeia). Atualiza ULTIMO_SEQ/ULTIMO_HASH. */
 function LicD_registrar_(eu, d, campos) {
@@ -301,6 +319,7 @@ function LicD_registrar_(eu, d, campos) {
     ORIGEM: 'DIGITADO', SUGERIDO: 'NAO', SUGESTAO: '', PISO: '', SOBRA: '', SOBRA_PCT: '', ASSUMO: 'NAO', MOTIVO: '', TEXTO: '', QUANDO: agora, POR_ID: Lic_s_(eu.id), POR_NOME: Lic_s_(eu.nome), HASH_ANTERIOR: Lic_s_(d.ULTIMO_HASH) }, campos);
   x.SEQ = seq; x.QUANDO = agora; x.HASH_ANTERIOR = seq === 1 ? '' : Lic_s_(d.ULTIMO_HASH);
   x.HASH = LicD_hashLance_(x);
+  LicD_gravarPendente_(d, x.HASH, agora);
   var ins = SGO_DATA.insert(LICD_ABAS.LANCES, x); x.ID = Lic_s_(ins && ins.ID);
   // se esta segunda escrita falhar, a linha acima continua válida e encadeada: a próxima gravação avança ULTIMO_* (LicD_cadeia_)
   LicD_gravarUltimo_(d, seq, x.HASH, agora);
@@ -339,6 +358,14 @@ function LicD_estado_(d, lancesOrd, resultados) {
       intervalo: ivDisp, nossoAtual: b.valorInicial, nossoInformado: false, melhorConcorrente: null, concorrente: '', desistiu: false, desistenciaMotivo: '', lances: 0 });
     itens[b.item] = it; ordem.push(b.item);
   });
+  // revisão de e88cca0 (B): depois da última âncora válida, o estado parte da FOTO dela e ignora o que veio antes
+  var k = LicD_ancoraIdx_(lancesOrd);
+  if (k >= 0) {
+    var foto = Lic_json_(lancesOrd[k].FOTO_JSON, null) || {};
+    Object.keys(foto.itens || {}).forEach(function (c) { if (itens[c]) Object.assign(itens[c], foto.itens[c]); });
+    paradas = !!foto.paradas; paradasTexto = Lic_s_(foto.paradasTexto);
+    lancesOrd = lancesOrd.slice(k + 1);
+  }
   lancesOrd.forEach(function (x) {
     var tipo = Lic_up_(x.TIPO), it = itens[Lic_s_(x.ITEM)];
     if (tipo === 'SUGESTOES') { paradas = Lic_up_(x.TEXTO).indexOf('PARADAS') === 0; paradasTexto = Lic_s_(x.MOTIVO); return; }
@@ -440,7 +467,7 @@ function LicD_paraGravar_(l, o) {
   var lances = LicD_lancesDe_(d.ID), ass = LicD_assinado_(d, lances);
   if (!ass) throw new Error('Não foi possível: os dados da abertura da disputa (proposta, simulação, itens e pisos) não conferem com o hash gravado (alterados fora do SGO+). Nada foi gravado. Avise o Administrador do sistema: a disputa precisa ser conferida na planilha; durante a sessão, anote os lances fora do SGO+');
   // o último registro assinado vale (ULTIMO_* mexido na planilha não muda nada)
-  d.ULTIMO_SEQ = ass.seq; d.ULTIMO_HASH = ass.hash;
+  d.ULTIMO_SEQ = ass.seq; d.ULTIMO_HASH = ass.hash; d.PENDENTE_HASH = ass.pend;
   var cad = LicD_cadeia_(d, lances, ass), aviso = '';
   if (cad.integra && cad.ajustar) {
     // revisão de bddf933 (ALTA 1, a): linha gravada e disputa não atualizada (falha no meio da gravação): a cadeia confere, retoma sozinha
@@ -780,23 +807,52 @@ function LicD_relatorio_(eu, d) {
  * ÂNCORA com o motivo e o que estava quebrado; a cadeia recomeça dela (o que veio antes fica marcado no painel e no relatório).
  * Os dados da abertura (proposta, simulação, pisos) precisam conferir: âncora não "limpa" abertura alterada. d = { id, motivo }.
  */
-function LicD_reconhecerQuebra_(eu, d) {
+var LICD_FOTO_CAMPOS = ['piso', 'pisoOrigem', 'pisoAssumido', 'intervalo', 'desistiu', 'desistenciaMotivo', 'nossoAtual', 'nossoInformado', 'melhorConcorrente', 'concorrente', 'lances'];
+/**
+ * Revisão de e88cca0 (B): FOTO do estado de cada item calculada SÓ com os registros válidos (o hash da própria linha confere); registro
+ * mexido ou não assinado pela disputa fica de fora (sem nenhum válido, vale o piso da simulação). { foto, invalidos: [seq], itens: [{ item, piso, pisoAntes, ... }] }
+ */
+function LicD_fotoValida_(x, lances, ass) {
+  // válido = o hash da própria linha confere E a disputa assinou a linha (até o último assinado, ou a pendente); linha incluída depois, mesmo com hash pela fórmula, fica fora
+  var validos = lances.filter(function (y) { var q = Number(y.SEQ) || 0; return LicD_hashLance_(y) === Lic_s_(y.HASH) && (!ass || q <= ass.seq || (q === ass.seq + 1 && !!ass.pend && Lic_s_(y.HASH) === ass.pend)); });
+  var est = LicD_estado_(x, validos, []), atual = LicD_estado_(x, lances, []), foto = { itens: {}, paradas: est.paradas, paradasTexto: est.paradasTexto };
+  est.ordem.forEach(function (k) { var o = {}; LICD_FOTO_CAMPOS.forEach(function (c) { o[c] = est.itens[k][c]; }); foto.itens[k] = o; });
+  return { foto: foto, invalidos: lances.filter(function (y) { return validos.indexOf(y) < 0; }).map(function (y) { return Number(y.SEQ) || 0; }),
+    itens: est.ordem.map(function (k) { var v = est.itens[k], a = atual.itens[k]; return { item: k, piso: v.piso, pisoAntes: a.piso, pisoSimulacao: v.pisoSimulacao, pisoOrigem: v.pisoOrigem, intervaloTxt: LicD_intervaloTxt_(v.intervalo), desistiu: v.desistiu, nossoAtual: v.nossoAtual, melhorConcorrente: v.melhorConcorrente, mudou: Math.abs((v.piso || 0) - (a.piso || 0)) > 0.004 || v.desistiu !== a.desistiu }; }) };
+}
+function LicD_quebraConferir_(eu, l) {
   if (Lic_up_(eu.perfil) !== 'ADMIN') throw new Error('Não foi possível: só o Administrador reconhece a quebra do registro de lances (ele confere a planilha antes). Peça ao Administrador. Nada foi gravado');
+  var x = LicD_disputasDe_(l.ID)[0];
+  if (!x) throw new Error('Não foi possível: esta licitação não tem disputa. Nada foi gravado');
+  var lances = LicD_lancesDe_(x.ID), ass = LicD_assinado_(x, lances);
+  if (!ass) throw new Error('Não foi possível: os dados da abertura da disputa foram alterados fora do SGO+; a âncora não vale para eles. A disputa precisa ser conferida na planilha pelo Administrador do sistema. Nada foi gravado');
+  var cad = LicD_cadeia_(x, lances, ass);
+  if (cad.integra) throw new Error('Não há quebra: o registro de lances confere' + (cad.ajustar ? ' (a retomada automática acontece na próxima gravação)' : '') + '. Nada foi gravado');
+  return { x: x, lances: lances, cad: cad, f: LicD_fotoValida_(x, lances, ass) };
+}
+/** Prévia para o Administrador: o que está quebrado e a FOTO que a âncora vai gravar (piso por item, só com registros válidos). */
+function LicD_quebraPrevia_(eu, d) {
+  var c = LicD_quebraConferir_(eu, Lic_acharOp_(d.id));
+  return { problema: c.cad.problema, invalidos: c.f.invalidos, itens: c.f.itens, paradas: c.f.foto.paradas, registros: c.lances.length };
+}
+/**
+ * Revisão de bddf933 (ALTA 1, b) e de e88cca0 (B): só o Administrador, depois de ver a prévia. Grava uma ÂNCORA com o motivo, o que
+ * estava quebrado, a FOTO do estado (só registros válidos) e o hash da lista anterior; o estado passa a partir da foto e mexer em linha
+ * de antes da âncora é detectado. Os dados da abertura precisam conferir. d = { id, motivo }.
+ */
+function LicD_reconhecerQuebra_(eu, d) {
   var motivo = LicD_txt_(d.motivo, 1000);
-  if (motivo.length < 20) throw new Error('Escreva o motivo da quebra com o que você conferiu na planilha (pelo menos 20 letras): fica na âncora do registro e no histórico. Nada foi gravado');
+  if (Lic_up_(eu.perfil) === 'ADMIN' && motivo.length < 20) throw new Error('Escreva o motivo da quebra com o que você conferiu na planilha (pelo menos 20 letras): fica na âncora do registro e no histórico. Nada foi gravado');
   return Lic_comTrava_(function () {
-    var l = Lic_acharOp_(d.id), x = LicD_disputasDe_(l.ID)[0];
-    if (!x) throw new Error('Não foi possível: esta licitação não tem disputa. Nada foi gravado');
-    var lances = LicD_lancesDe_(x.ID), ass = LicD_assinado_(x, lances);
-    if (!ass) throw new Error('Não foi possível: os dados da abertura da disputa foram alterados fora do SGO+; a âncora não vale para eles. A disputa precisa ser conferida na planilha pelo Administrador do sistema. Nada foi gravado');
-    var cad = LicD_cadeia_(x, lances, ass);
-    if (cad.integra) throw new Error('Não há quebra: o registro de lances confere' + (cad.ajustar ? ' (a retomada automática acontece na próxima gravação)' : '') + '. Nada foi gravado');
+    var l = Lic_acharOp_(d.id), c = LicD_quebraConferir_(eu, l), x = c.x, lances = c.lances;
     var ult = lances[lances.length - 1], maxSeq = lances.reduce(function (m, y) { return Math.max(m, Number(y.SEQ) || 0); }, 0);
     x.ULTIMO_SEQ = maxSeq; x.ULTIMO_HASH = ult ? Lic_s_(ult.HASH) : '';
-    var texto = 'Quebra reconhecida pelo Administrador: ' + cad.problema + '. ' + lances.length + ' registro(s) antes desta âncora ficam como estão, marcados no painel e no relatório.';
-    var reg = LicD_registrar_(eu, x, { TIPO: 'ANCORA', AUTOR: 'ADMINISTRADOR', MOTIVO: motivo, TEXTO: texto });
-    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'DISPUTA_QUEBRA_RECONHECIDA', eu, { de: 'registro quebrado', para: 'âncora ' + reg.SEQ, texto: texto + ' Motivo: ' + motivo, versao: 'disputa · registro ' + reg.SEQ, fonte: 'Central de disputas', hash: reg.HASH });
-    return { texto: 'Quebra reconhecida (âncora ' + reg.SEQ + '). O registro de lances recomeça a partir dela; o que veio antes fica marcado no relatório.' };
+    var mudou = c.f.itens.filter(function (i) { return i.mudou; }).map(function (i) { return 'item ' + i.item + ' piso ' + LicD_moeda_(i.pisoAntes) + ' → ' + LicD_moeda_(i.piso); });
+    var texto = 'Quebra reconhecida pelo Administrador: ' + c.cad.problema + '. ' + lances.length + ' registro(s) antes desta âncora' + (c.f.invalidos.length ? '; registro(s) inválido(s) fora da foto: ' + c.f.invalidos.join(', ') : '') +
+      '. Foto do estado (só registros válidos): ' + c.f.itens.map(function (i) { return 'item ' + i.item + ' piso ' + LicD_moeda_(i.piso) + (i.desistiu ? ' (desistido)' : ''); }).join('; ') + (mudou.length ? '. Mudou em relação ao que a planilha mostrava: ' + mudou.join('; ') : '') + '.';
+    var reg = LicD_registrar_(eu, x, { TIPO: 'ANCORA', AUTOR: 'ADMINISTRADOR', MOTIVO: motivo, TEXTO: Lic_texto_(texto, 3000), FOTO_JSON: JSON.stringify(c.f.foto), LISTA_HASH: LicD_hashLista_(lances) });
+    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'DISPUTA_QUEBRA_RECONHECIDA', eu, { de: 'registro quebrado', para: 'âncora ' + reg.SEQ, texto: Lic_texto_(texto, 3000) + ' Motivo: ' + motivo, versao: 'disputa · registro ' + reg.SEQ, fonte: 'Central de disputas', hash: reg.HASH });
+    return { texto: 'Quebra reconhecida (âncora ' + reg.SEQ + '). O estado de cada item parte da foto gravada (só registros válidos); mexer em registro de antes da âncora será detectado.', itens: c.f.itens };
   });
 }
 
@@ -813,7 +869,8 @@ var LICD_OPS = {
   resultado: function (eu, d) { return LicD_resultado_(eu, d); },
   concluir: function (eu, d) { return LicD_concluir_(eu, d); },
   relatorio: function (eu, d) { return LicD_relatorio_(eu, d); },
-  reconhecerQuebra: function (eu, d) { return LicD_reconhecerQuebra_(eu, d); }
+  reconhecerQuebra: function (eu, d) { return LicD_reconhecerQuebra_(eu, d); },
+  quebraPrevia: function (eu, d) { return LicD_quebraPrevia_(eu, d); }
 };
 /** Licitacoes_api já conferiu a sessão e a permissão (Diretoria e Administrador). */
 function LicD_acao_(eu, d) {

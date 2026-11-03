@@ -579,3 +579,82 @@ test('revisão BAIXA 8 e 9: colunas de texto livre forçadas como texto; ação 
   }
   for (const sid of ['s_gaspar', 's_vera']) assert.equal(a.dsp(sid, 'reconhecerQuebra', { id: 'op1', motivo: 'tentativa sem permissão nenhuma' }).semAcesso, true);
 });
+
+// ---------------------------------------------------------------- reconferência de e88cca0 (um teste para cada ataque)
+/** Linha forjada na planilha com o hash pela fórmula pública, ligada ao último registro. */
+function forjarPiso(a, valor) {
+  const L = a.tabelas.LIC_DISPUTA_LANCES, last = L[L.length - 1], D = a.tabelas.LIC_DISPUTAS[0];
+  const f = { DISPUTA_ID: D.ID, OPORTUNIDADE_ID: 'op1', CODIGO: D.CODIGO, SEQ: Number(last.SEQ) + 1, ITEM: '1', TIPO: 'PISO', AUTOR: 'DIRETORIA', CONCORRENTE: '', VALOR: valor, VALOR_ANTERIOR: '', ORIGEM: 'DIGITADO', SUGERIDO: 'NAO', SUGESTAO: '', PISO: valor,
+    SOBRA: '', SOBRA_PCT: '', ASSUMO: 'NAO', MOTIVO: 'forjado na planilha', TEXTO: 'x', QUANDO: last.QUANDO, POR_ID: 'u_dir', POR_NOME: 'DORA DIRETORA TESTE', HASH_ANTERIOR: last.HASH, FOTO_JSON: '', LISTA_HASH: '' };
+  f.HASH = a.ctx.LicD_hashLance_(f); L.push(f); return f;
+}
+
+test('reconferência A: a retomada só aceita a linha PENDENTE assinada pela disputa; linha forjada com o hash pela fórmula pública é quebra e não entra na foto', () => {
+  const a = base(); a.abrir();
+  ok(a.d('lance', { item: '1', autor: 'CONCORRENTE', valor: '190,00' }));
+  assert.equal(a.tabelas.LIC_DISPUTAS[0].PENDENTE_HASH, '', 'gravação completa limpa o pendente');
+  forjarPiso(a, 1);
+  const t = a.tela().disputa;
+  assert.equal(t.cadeia.integra, false); assert.equal(t.cadeia.ajustar, null); assert.match(t.cadeia.problema, /que a disputa não assinou/);
+  assert.equal(a.d('lance', { item: '1', autor: 'NOS', valor: '2,00' }).ok, false);
+  assert.equal(a.hist('DISPUTA_REGISTRO_RETOMADO').length, 0);
+  // a foto do Administrador deixa a linha forjada de fora
+  const p = ok(a.dsp('s_admin', 'quebraPrevia', { id: 'op1' }));
+  assert.deepEqual(J(p.invalidos), [2]); assert.equal(p.itens[0].piso, a.item('1').pisoSimulacao); assert.equal(p.itens[0].pisoAntes, 1); assert.equal(p.itens[0].mudou, true);
+  // a falha real (linha gravou, disputa não) retoma: o hash da linha foi assinado como pendente antes da gravação
+  const b = base(); b.abrir();
+  const orig = b.ctx.SGO_DATA.update; let falhar = true;
+  b.ctx.SGO_DATA.update = function (aba, id, mud) { if (falhar && aba === 'LIC_DISPUTAS' && mud.ULTIMO_SEQ !== undefined) { falhar = false; throw new Error('serviço de dados fora do ar'); } return orig.apply(this, arguments); };
+  assert.equal(b.d('lance', { item: '1', autor: 'NOS', valor: '194,00' }).ok, false);
+  b.ctx.SGO_DATA.update = orig;
+  assert.equal(b.tabelas.LIC_DISPUTAS[0].PENDENTE_HASH, b.reg()[0].HASH, 'o pendente assinado é o da linha gravada');
+  ok(b.d('lance', { item: '1', autor: 'CONCORRENTE', valor: '193,00' }));
+  assert.equal(b.hist('DISPUTA_REGISTRO_RETOMADO').length, 1); assert.equal(b.tabelas.LIC_DISPUTAS[0].PENDENTE_HASH, '');
+  // falha antes de gravar a linha (a assinatura do pendente falhou): nada foi gravado e o lance seguinte funciona
+  const c = base(); c.abrir();
+  const o2 = c.ctx.SGO_DATA.update; let f2 = true;
+  c.ctx.SGO_DATA.update = function (aba, id, mud) { if (f2 && aba === 'LIC_DISPUTAS' && mud.PENDENTE_HASH) { f2 = false; throw new Error('fora do ar'); } return o2.apply(this, arguments); };
+  assert.equal(c.d('lance', { item: '1', autor: 'NOS', valor: '194,00' }).ok, false);
+  c.ctx.SGO_DATA.update = o2;
+  assert.equal(c.reg().length, 0); ok(c.d('lance', { item: '1', autor: 'NOS', valor: '194,00' })); assert.equal(c.tela().disputa.cadeia.integra, true);
+  // pendente assinado e linha nunca gravada: a cadeia confere
+  const e = base(); e.abrir(); ok(e.d('lance', { item: '1', autor: 'NOS', valor: '195,00' }));
+  e.ctx.LicD_gravarPendente_(e.tabelas.LIC_DISPUTAS[0], 'f'.repeat(64), '2026-10-19T13:00:00.000Z');
+  assert.equal(e.tela().disputa.cadeia.integra, true); ok(e.d('lance', { item: '1', autor: 'NOS', valor: '194,00' }));
+});
+
+test('reconferência B: a âncora grava a FOTO só com registros válidos (piso mexido volta ao último válido ou ao da simulação), mostrada antes ao Administrador; depois dela o estado parte da foto e mexer antes da âncora é detectado', () => {
+  const a = base(); a.abrir();
+  const p0 = a.item('1').piso;
+  ok(a.d('piso', { item: '1', valor: '180,00', motivo: 'Diretoria sobe o piso por cautela' }));
+  ok(a.d('lance', { item: '1', autor: 'NOS', valor: '195,00' }));
+  const pr = a.reg().find((x) => x.TIPO === 'PISO'); pr.VALOR = 1; pr.PISO = 1;
+  assert.equal(a.d('lance', { item: '1', autor: 'NOS', valor: '2,00' }).ok, false);
+  assert.match(a.d('quebraPrevia').message, /só o Administrador/);
+  const p = ok(a.dsp('s_admin', 'quebraPrevia', { id: 'op1' }));
+  assert.match(p.problema, /o registro 1 foi alterado/); assert.deepEqual(J(p.invalidos), [1]);
+  assert.equal(p.itens[0].piso, p0, 'sem PISO válido, vale o piso da simulação'); assert.equal(p.itens[0].pisoAntes, 1); assert.equal(p.itens[0].nossoAtual, 195, 'o lance válido continua');
+  ok(a.dsp('s_admin', 'reconhecerQuebra', { id: 'op1', motivo: 'Conferi a planilha: o piso do registro 1 foi mudado à mão' }));
+  const anc = a.reg().slice(-1)[0];
+  assert.equal(anc.TIPO, 'ANCORA'); assert.equal(JSON.parse(anc.FOTO_JSON).itens['1'].piso, p0); assert.equal(anc.LISTA_HASH, a.ctx.LicD_hashLista_(a.reg().slice(0, 2)));
+  assert.match(anc.TEXTO, /Foto do estado \(só registros válidos\): item 1 piso R\$\s[\d.,]+.*Mudou em relação ao que a planilha mostrava: item 1 piso R\$\s1,00/);
+  const it = a.item('1');
+  assert.equal(it.piso, p0, 'depois da âncora, o estado parte da foto'); assert.equal(it.nossoAtual, 195); assert.equal(a.tela().disputa.cadeia.integra, true);
+  const r = a.d('lance', { item: '1', autor: 'NOS', valor: '2,00' }); assert.equal(r.ok, false); assert.match(r.message, /abaixo do piso autorizado/);
+  ok(a.d('lance', { item: '1', autor: 'NOS', valor: String(p0 + 1).replace('.', ',') }));
+  // mexer em registro de antes da âncora (inserir, alterar, apagar) é detectado
+  const b = base(); b.abrir(); ok(b.d('lance', { item: '1', autor: 'CONCORRENTE', valor: '190,00' })); b.reg()[0].MOTIVO = 'mexido';
+  ok(b.dsp('s_admin', 'reconhecerQuebra', { id: 'op1', motivo: 'Conferi a planilha e a linha 1 está diferente' }));
+  assert.equal(b.tela().disputa.cadeia.integra, true);
+  b.tabelas.LIC_DISPUTA_LANCES.splice(1, 0, { DISPUTA_ID: b.tabelas.LIC_DISPUTAS[0].ID, SEQ: 1, ITEM: '1', TIPO: 'PISO', VALOR: 1, ASSUMO: 'NAO', HASH: 'zz' });
+  let t = b.tela().disputa;
+  assert.equal(t.cadeia.integra, false); assert.match(t.cadeia.problema, /de antes da âncora 2 foi mexido/); assert.equal(b.item('1').piso, b.item('1').pisoSimulacao, 'a linha inserida não muda o estado');
+  assert.equal(b.d('lance', { item: '1', autor: 'NOS', valor: '2,00' }).ok, false);
+  b.tabelas.LIC_DISPUTA_LANCES.splice(1, 1); assert.equal(b.tela().disputa.cadeia.integra, true);
+  b.reg()[0].VALOR = 100; assert.equal(b.tela().disputa.cadeia.integra, false, 'alterar linha de antes da âncora');
+  // a tela mostra a foto ao Administrador antes de confirmar
+  const tc = telaCliente();
+  const h = tc.ctx.LicDp_htmlPreviaQuebra_(J(p));
+  assert.match(h, /Piso na foto/); assert.match(h, /Piso que a planilha mostra/); assert.match(h, /ldp-vermelho/); assert.match(h, /fora da foto: 1/);
+  assert.match(tc.html['JS_Licitacoes_Disputa.html'], /LicDp_chamar_\("quebraPrevia"/);
+});

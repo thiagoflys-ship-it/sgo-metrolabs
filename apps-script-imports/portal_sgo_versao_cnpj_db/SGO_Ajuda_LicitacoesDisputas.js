@@ -42,7 +42,7 @@ function SGO_ajudaTelas_LicitacoesDisputas_() {
       ],
       problemas: [
         { situacao: "Aparece \"lance recusado: ... abaixo do piso autorizado\"", oQueFazer: "Não dê esse lance no portal. Se a Diretoria decidir baixar o piso, use \"Piso do item\", com o motivo. Nada foi gravado." },
-        { situacao: "Aparece \"o registro de lances desta disputa foi mexido fora do SGO+\"", oQueFazer: "Alguém mudou ou apagou uma linha direto na planilha. O Administrador confere a planilha e toca em \"Reconhecer a quebra\" (com o motivo): o registro recomeça de uma âncora. Até lá, anote os lances fora do SGO+; o resultado e a conclusão continuam." },
+        { situacao: "Aparece \"o registro de lances desta disputa foi mexido fora do SGO+\"", oQueFazer: "Alguém mudou ou apagou uma linha direto na planilha. O Administrador confere a planilha e toca em \"Reconhecer a quebra\": vê a foto do piso de cada item calculada só com os registros válidos e, com o motivo, grava a âncora; o registro recomeça dela. Até lá, anote os lances fora do SGO+; o resultado e a conclusão continuam." },
         { situacao: "Aparece \"use vírgula para os centavos\" ou \"no máximo 2 casas decimais\"", oQueFazer: "Escreva o valor como 185,40 (ponto só para o milhar: 1.234,56), sem \"%\" nos campos em reais. Nada foi gravado." },
         { situacao: "\"Abrir a disputa\" está travado", oQueFazer: "A lista \"Antes de abrir\" diz o que falta (proposta emitida, simulação conferida, piso de cada item). Os botões levam para a aba Proposta ou Preço." },
         { situacao: "\"Concluir o resultado\" está travado", oQueFazer: "Falta o resultado de algum item. Item desistido também recebe o resultado (por exemplo, perdido)." }
