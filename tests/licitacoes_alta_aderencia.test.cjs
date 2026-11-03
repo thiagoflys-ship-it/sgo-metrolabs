@@ -387,3 +387,23 @@ test('só Radar ou Em análise; critério marcado como pendência não é ponto 
   assert.equal(a.op('op_trv').ALTA_ADERENCIA_ESPERA, '');
   assert.match(a.hist('ALERTA_ALTA_ADERENCIA').find((h) => /a triagem do radar deixou de travar/.test(h.TEXTO)).TEXTO, /nota 80/);
 });
+
+test('revisão de d22d75b (caso op_a110 do alta1): nota cai de 80 para 69 com o alerta ainda guardado; o envio cancela e a volta a 72 alerta (nunca "já saiu" sem ter saído)', () => {
+  const a = amb({ ops: [NOTA_ALTA('op_a110')], agora: '2026-11-03T03:00:00-03:00' });
+  a.rodada();
+  const l = a.op('op_a110');
+  assert.equal(avaliar(a, 'op_a110').criados, 1, 'importante guardado para as 08:00');
+  l.NOTA = 69; l.ANALISE_VERSAO = 2;
+  assert.equal(a.ctx.Lic_altaAvaliar_('op_a110', null, { versao: 2 }).caiu, undefined, '69 está na histerese: não é queda');
+  a.rodada('2026-11-03T08:00:30-03:00');
+  const c = a.alta({ OPORTUNIDADE_ID: 'op_a110' })[0];
+  assert.equal(c.SITUACAO, 'CANCELADO'); assert.match(c.CANCELADO_MOTIVO, /nota 69 abaixo do limite de 70/);
+  const z0 = a.zap().length;
+  l.NOTA = 72; l.ANALISE_VERSAO = 3;
+  const r = a.ctx.Lic_altaAvaliar_('op_a110', null, { versao: 3 });
+  assert.equal(r.criados, 1, JSON.stringify(r)); assert.equal(r.voltou, false, 'o primeiro nunca saiu: é a nova oportunidade, não "voltou"');
+  a.rodada('2026-11-03T08:05:30-03:00');
+  assert.equal(a.zap().slice(z0).filter((w) => JSON.stringify(w.corpo).includes('Oportunidade com nota 72 (alta aderência)')).length, 1);
+  l.NOTA = 75; l.ANALISE_VERSAO = 4;
+  assert.equal(a.ctx.Lic_altaAvaliar_('op_a110', null, { versao: 4 }).repetida, true, 'agora saiu: não repete');
+});

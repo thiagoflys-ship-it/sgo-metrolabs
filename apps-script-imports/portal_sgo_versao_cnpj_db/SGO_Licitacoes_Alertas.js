@@ -609,16 +609,21 @@ function Lic_altaAvaliar_(opId, quando, o) {
       }
       return { criados: 0, motivo: x.motivo };
     }
-    if (est === 'ALTA') return { criados: 0, repetida: true, motivo: 'o alerta desta subida da nota já saiu em ' + Lic_brDiaHora_(l.ALTA_ADERENCIA_EM) + ' (nota ' + Lic_altaNumTxt_(l.ALTA_ADERENCIA_NOTA) + '); reanálise com a nota ainda alta não repete' };
-    var voltou = est === 'CAIU', nc = ciclo + 1, ev = Lic_altaEvento_(l), alvo = (ev && Lic_s_(ev.QUANDO_ISO)) || Lic_s_(l.ENCERRAMENTO_ISO), alvoMs = Date.parse(alvo);
+    // revisão de d22d75b: alerta cancelado antes de sair (a nota caiu abaixo do limite antes do envio) não conta como enviado:
+    // a próxima subida alerta (com o mesmo "novo" ou "voltou" do cancelado). nuncaSaiu = linha do original sem envio nem ciência
+    var todasA = Lic_ler_(LIC_ABAS.ALERTAS), nuncaSaiu = function (a) { return ['CANCELADO', 'PULADO'].indexOf(Lic_up_(a.SITUACAO)) >= 0 && !Lic_s_(a.ENVIADO_EM) && !Lic_s_(a.EMAIL_EM) && !Lic_s_(a.WA_EM) && !Lic_s_(a.CIENTE_EM); };
+    var doCiclo = todasA.filter(function (a) { return Lic_s_(a.GRUPO) === 'H|' + Lic_s_(l.ID) + '|' + ciclo && (Lic_s_(a.PAPEL) === 'TITULAR' || Lic_s_(a.PAPEL) === 'TODOS'); });
+    var cicloCancelado = est === 'ALTA' && doCiclo.length > 0 && doCiclo.every(nuncaSaiu);
+    if (est === 'ALTA' && !cicloCancelado) return { criados: 0, repetida: true, motivo: 'o alerta desta subida da nota já saiu em ' + Lic_brDiaHora_(l.ALTA_ADERENCIA_EM) + ' (nota ' + Lic_altaNumTxt_(l.ALTA_ADERENCIA_NOTA) + '); reanálise com a nota ainda alta não repete' };
+    var voltou = cicloCancelado ? Lic_s_(doCiclo[0].ANTECEDENCIA) === 'VOLTOU' : est === 'CAIU', nc = ciclo + 1, ev = Lic_altaEvento_(l), alvo = (ev && Lic_s_(ev.QUANDO_ISO)) || Lic_s_(l.ENCERRAMENTO_ISO), alvoMs = Date.parse(alvo);
     if (Lic_s_(l.ALTA_ADERENCIA_ESPERA)) SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { ALTA_ADERENCIA_ESPERA: '' });
     if (!isFinite(alvoMs) || alvoMs <= agoraMs) return { criados: 0, motivo: 'o prazo de propostas encerrou' };
     var nivel = alvoMs - agoraMs <= LIC_ALTA_CRITICO_MS ? 'CRITICO' : 'IMPORTANTE', para = nivel === 'CRITICO' ? integ : Lic_titulares_(l, cfg, integ);
     if (!para.length) return { criados: 0, motivo: 'ninguém da Diretoria de Licitações recebe alertas agora (regras dos alertas)' };
-    var todasA = Lic_ler_(LIC_ABAS.ALERTAS), existe = {}; todasA.forEach(function (a) { existe[Lic_s_(a.CHAVE)] = true; });
+    var existe = {}; todasA.forEach(function (a) { existe[Lic_s_(a.CHAVE)] = true; });
     // revisão de 7401585: no máximo um "voltou a ficar alta" por oportunidade em 7 dias (a nota que oscila não vira série de alertas)
     if (voltou) {
-      var desde = new Date(agoraMs - LIC_ALTA_VOLTOU_MS).toISOString(), ult = todasA.filter(function (a) { return Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' && Lic_s_(a.OPORTUNIDADE_ID) === Lic_s_(l.ID) && Lic_s_(a.ANTECEDENCIA) === 'VOLTOU' && (Lic_s_(a.PAPEL) === 'TITULAR' || Lic_s_(a.PAPEL) === 'TODOS') && Lic_s_(a.CRIADO_EM) >= desde; })[0];
+      var desde = new Date(agoraMs - LIC_ALTA_VOLTOU_MS).toISOString(), ult = todasA.filter(function (a) { return Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' && Lic_s_(a.OPORTUNIDADE_ID) === Lic_s_(l.ID) && Lic_s_(a.ANTECEDENCIA) === 'VOLTOU' && (Lic_s_(a.PAPEL) === 'TITULAR' || Lic_s_(a.PAPEL) === 'TODOS') && Lic_s_(a.CRIADO_EM) >= desde && !nuncaSaiu(a); })[0];
       if (ult) return { criados: 0, semana: true, motivo: 'já houve um alerta "a nota voltou a ficar alta" desta oportunidade em ' + Lic_brDiaHora_(ult.CRIADO_EM) + ' (no máximo um por semana)' };
     }
     // o importante sai só no expediente de alta aderência (08:00 às 18:00, dia útil); fora dele, fica para a primeira rodada do expediente
