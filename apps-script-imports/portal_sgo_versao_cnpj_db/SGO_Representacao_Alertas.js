@@ -161,7 +161,7 @@ function Rep_aoTratarSolicitacao_(s, situacaoTexto) {
 // GANCHOS DOS AVISOS DA GESTÃO (SGO_Avisos_Gestao.js)
 // ------------------------------------------------------------
 /** Quem responde pela representação (para o WhatsApp dos eventos RP01, RP02 e RP07, mesmo sem ser da gestão). */
-function Rep_responsaveisWhatsapp_() { try { Ast_memoLimpar_(); return Rep_responsaveis_().ids.slice(); } catch (e) { return []; } }
+function Rep_responsaveisWhatsapp_() { try { return Rep_responsaveis_().ids.slice(); } catch (e) { return []; } }
 /** O pedido já saiu da fila? Devolve o texto da resolução ('' = continua na fila). */
 function Rep_solicitacaoTratada_(id) {
   try {

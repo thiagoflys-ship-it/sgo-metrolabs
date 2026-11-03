@@ -383,3 +383,55 @@ test('linha do pedido que ficou na fila (envio na hora não saiu) não sai à no
   assert.equal(whatsPara(a, FONE.dora).length, 1);
   assert.equal(a.tabelas.NTF_GESTAO.find((l) => l.ID === 'lg1').SITUACAO, 'ENVIADO');
 });
+
+// ============================================================ REVISÃO (03/11/2026)
+test('revisão: o código único é conferido e gravado dentro da trava; o "Excluiu" só entra no histórico depois de sair da tabela', () => {
+  const a = amb();
+  a.trava.presa = true; // outra gravação em andamento: sem a trava, o cadastro passaria por cima
+  const r = a.rep('s_beto.beta', 'salvarModelo', NOVO_MODELO);
+  const x = a.rep('s_beto.beta', 'excluirModelo', { id: 'mB' });
+  a.trava.presa = false;
+  assert.equal(r.ok, false); assert.equal(x.ok, false);
+  assert.ok(a.trava.aninhamentos >= 2, 'cadastro e exclusão pedem a trava');
+  assert.equal(a.tabelas.REP_MODELOS.length, 2);
+  // a remoção falhou: nada no histórico e o modelo continua
+  const remover = a.ctx.SGO_DATA.remove;
+  a.ctx.SGO_DATA.remove = () => false;
+  const f = a.rep('s_beto.beta', 'excluirModelo', { id: 'mB' });
+  a.ctx.SGO_DATA.remove = remover;
+  assert.equal(f.ok, false); assert.match(f.message, /Nada mudou no catálogo/);
+  assert.equal((a.tabelas.REP_MODELOS_HIST || []).filter((h) => h.ACAO === 'EXCLUIR').length, 0);
+  assert.ok(a.tabelas.REP_MODELOS.some((m) => m.ID === 'mB'));
+  // excluído de verdade: aparece em "Excluídos do catálogo" dos dois lados, só para a própria representada
+  ok(a.rep('s_beto.beta', 'excluirModelo', { id: 'mB' }));
+  const cat = ok(a.rep('s_beto.beta', 'catalogo'));
+  assert.equal(cat.excluidos.length, 1); assert.equal(cat.excluidos[0].codigo, 'LV10'); assert.match(cat.excluidos[0].por, /BETO BETA TESTE/);
+  assert.equal(cat.excluidos[0].historico[0].acao, 'EXCLUIR');
+  assert.equal(ok(a.rep('s_gil', 'modelos', { representadaId: 'repB' })).excluidos.length, 1);
+  assert.equal(ok(a.rep('s_ana.alfa', 'catalogo')).excluidos.length, 0);
+});
+
+test('revisão: o envio dos avisos não limpa a memória da Assistência', () => {
+  const a = amb();
+  a.responsaveis(['u_tec2']);
+  let n = 0; const orig = a.ctx.Ast_memoLimpar_;
+  a.ctx.Ast_memoLimpar_ = function () { n++; return orig.apply(this, arguments); };
+  assert.equal(JSON.stringify(a.ctx.Rep_responsaveisWhatsapp_()), '["u_tec2"]');
+  a.ctx.Ast_memoLimpar_ = orig;
+  assert.equal(n, 0);
+});
+
+test('revisão (tela): o aviso recua e volta sozinho (nunca para de vez) e tem caixa própria, separada da do Auvo, com limite no celular', () => {
+  const js = fs.readFileSync(path.join(LEGADO, 'JS_Representacao.html'), 'utf8');
+  const bloco = js.slice(js.indexOf('var REPAL ='), js.indexOf('function Representacao_irPara_'));
+  assert.match(bloco, /REPAL_RECUO_MS = \[120000, 300000\]/); assert.match(bloco, /REPAL_SEM_ACESSO_MS = 300000/);
+  const verificar = bloco.slice(bloco.indexOf('function RepAl_verificar_'), bloco.indexOf('function RepAl_celular_'));
+  assert.ok(!/RepAlertas_parar_/.test(verificar), 'falha e "ligado: false" não param o aviso');
+  assert.match(verificar, /r\.ligado === false\) \{[^}]*RepAl_agendar_\(REPAL_SEM_ACESSO_MS\)/);
+  assert.match(bloco, /addEventListener\("visibilitychange", voltou\)/); assert.match(bloco, /addEventListener\("focus", voltou\)/);
+  const caixa = bloco.slice(bloco.indexOf('function RepAl_caixa_'), bloco.indexOf('function RepAl_limitar_'));
+  assert.ok(!/auvo-toast-container|auvoToastContainer/.test(caixa), 'não usa a caixa do Auvo');
+  assert.match(caixa, /top:72px;right:16px/); assert.match(caixa, /width:min\(360px, calc\(100vw - 32px\)\)/); assert.match(caixa, /max-height:[^;]+;overflow-y:auto/);
+  assert.match(bloco, /RepAl_celular_\(\) && !REPAL\.aberto \? 2/); assert.match(bloco, /"mais " \+ escondidos/);
+  assert.match(js, /Excluídos do catálogo/);
+});

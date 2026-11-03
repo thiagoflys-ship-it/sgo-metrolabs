@@ -63,7 +63,7 @@ O Painel é a primeira tela da sua área.
 - Aba "Catálogo de modelos": os modelos da sua empresa, com código, nome, tipo, família, garantia, padrão da série, situação, quem cadastrou e quantos equipamentos usam cada um. Só aparecem os modelos da sua empresa.
 - "Cadastrar modelo novo": o código é único na sua empresa (contando os inativos).
 - "Alterar": mudar a garantia vale para os equipamentos cadastrados daqui em diante; os já cadastrados mantêm a garantia gravada no cadastro deles. O código não muda depois que algum equipamento usa o modelo.
-- "Excluir": se nenhum equipamento usa o modelo, ele sai do catálogo. Se algum já usa, o botão diz "Inativar": o modelo some da lista de escolha do pedido, mas o histórico e a garantia dos equipamentos continuam guardados. "Reativar" volta o modelo para a lista.
+- "Excluir": se nenhum equipamento usa o modelo, ele sai do catálogo. Se algum já usa, o botão diz "Inativar": o modelo some da lista de escolha do pedido, mas o histórico e a garantia dos equipamentos continuam guardados. "Reativar" volta o modelo para a lista. Os excluídos ficam listados em "Excluídos do catálogo", no fim da tela.
 - "Histórico": quem cadastrou, alterou, inativou ou reativou, quando, o que mudou (antes e depois) e o motivo. Alterações feitas pela Metrolabs aparecem com "(Metrolabs)".
 - Cadastram e alteram modelos o Administrador da representada e o Atendente. Os demais papéis consultam.
 

@@ -39,6 +39,7 @@ function SGO_ajudaTelas_Representacao_() {
         { titulo: "Aviso de pedido novo (na tela, em Avisos e no WhatsApp)", itens: [
           "Quem trata a fila (a gestão da Assistência técnica, quem faz a triagem e quem responde pela representação) vê um aviso no canto da tela, em qualquer tela do SGO+, quando entra pedido novo da representada, quando ela responde um complemento e quando o pedido chega a 75% do prazo de aceite sem aceite. O SGO+ confere a cada 45 segundos, sem recarregar a tela e sem mexer no que você está digitando.",
           "O aviso mostra o número do pedido, a representada, o cliente, o equipamento e quanto falta (em horas úteis) para o prazo de aceite. \"Abrir pedido\" abre o pedido aqui na aba Pedidos; \"Dispensar\" tira o aviso só para você (ele não volta, mas o aviso de 75% do mesmo pedido ainda aparece). O pedido continua na fila até ser tratado.",
+          "O aviso fica no alto, à direita (no celular, no máximo 2 de cada vez e o botão \"mais N\"). Sem conexão ou com a sessão vencida, o SGO+ tenta de novo em 2 e depois 5 minutos e volta sozinho quando a aba fica visível. Quem passou a responder pela representação começa a receber em até 5 minutos, sem recarregar a página.",
           "O aviso toca um som curto. Se o navegador bloquear o som, aparece \"Clique para ativar o som\": clique uma vez na página. O botão \"Som\" liga ou desliga o som neste navegador.",
           "Quem responde pela representação (Regras da assistência > Representação; sem ninguém, quem faz a triagem) recebe também um aviso em \"Avisos\", que fica até tocar em \"Li e estou ciente\", e o WhatsApp do sistema com o link do pedido, mais o e-mail. Um segundo aviso sai a 75% do prazo de aceite, se o pedido ainda não foi aceito.",
           "O WhatsApp sai só no expediente e em dia útil; o pedido que chega fora dele é avisado na abertura do próximo expediente. Cada pessoa recebe no máximo 10 WhatsApp de pedidos por dia; passou disso, o aviso vai por e-mail e fica no sistema.",
@@ -160,6 +161,7 @@ function SGO_ajudaTelas_Representacao_() {
           "\"Alterar\": mude o que precisar e salve. Mudar a garantia vale para os equipamentos cadastrados daqui em diante; os já cadastrados mantêm a garantia gravada no cadastro deles. O código não muda depois que algum equipamento usa o modelo.",
           "\"Excluir\": se nenhum equipamento usa o modelo, ele sai do catálogo. Se algum equipamento já usa, o botão diz \"Inativar\": o modelo some da lista de escolha do pedido, mas o histórico e a garantia dos equipamentos continuam guardados. \"Reativar\" volta o modelo para a lista.",
           "\"Histórico\": quem cadastrou, alterou, inativou ou reativou, quando, o que mudou (antes e depois) e o motivo. Alterações feitas pela Metrolabs aparecem com \"(Metrolabs)\".",
+          "No fim da tela, \"Excluídos do catálogo\" lista os modelos excluídos, com quem excluiu, quando e o histórico.",
           "Cadastram e alteram modelos o Administrador da representada e o Atendente. Os demais papéis consultam."
         ] },
         { titulo: "Conversar com a Metrolabs", itens: [

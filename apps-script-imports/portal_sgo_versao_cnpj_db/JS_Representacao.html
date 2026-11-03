@@ -516,6 +516,14 @@
       return '<div><span class="q">' + Rp_esc_(x.em + " · " + x.por + " · " + x.acaoNome) + "</span>" + (x.mudancas.length ? "<br>" + x.mudancas.map(function (c) { return Rp_esc_(c.campo + ": " + c.de + " → " + c.para); }).join("<br>") : "") + (x.motivo ? "<br>Motivo: " + Rp_esc_(x.motivo) : "") + "</div>";
     }).join("") + "</div>" : '<p class="at-meta">Sem histórico registrado (modelo cadastrado antes de 03/11/2026).</p>';
   }
+  /** Modelos excluídos do catálogo (03/11/2026): o que era, quem excluiu, quando e o histórico até a exclusão. */
+  function Rp_excluidosHtml_(l, pfx) {
+    if (!l || !l.length) return "";
+    return '<div class="at-caixa" style="margin-top:12px"><h3>Excluídos do catálogo (' + l.length + ')</h3><p class="at-meta">Modelos que saíram do catálogo porque nenhum equipamento os usava. O registro fica guardado.</p>' +
+      l.map(function (x, i) { return '<div class="at-card fim"><p class="at-card-tit">' + Rp_esc_(x.nome + " · " + x.codigo) + '</p><p class="at-meta">Excluído por ' + Rp_esc_(x.por) + " em " + Rp_esc_(x.em) + (x.motivo ? " · motivo: " + Rp_esc_(x.motivo) : "") + "</p>" +
+        '<div class="at-acoes"><button type="button" class="btn-secondary" data-exh="' + pfx + i + '">Histórico</button></div><div id="rpExHist' + pfx + i + '" hidden>' + Rp_histModeloHtml_(x.historico) + "</div></div>"; }).join("") + "</div>";
+  }
+  function Rp_ligarExcluidos_(raiz) { raiz.querySelectorAll("[data-exh]").forEach(function (b) { b.onclick = function () { var h = Rp_$_("rpExHist" + b.getAttribute("data-exh")); if (h) h.hidden = !h.hidden; }; }); }
   function Rp_catalogo_(c) {
     Rp_chamar_("catalogo", {}, function (r) {
       var ex = r.explica || {};
@@ -527,7 +535,8 @@
             '<p class="at-meta">Cadastrado por ' + Rp_esc_(m.criadoPor) + (m.criadoEm ? " em " + Rp_esc_(m.criadoEm) : "") + " · " + (m.usos ? m.usos + " equipamento(s) usam este modelo" : "nenhum equipamento usa este modelo") + (m.ativo ? "" : " · inativado em " + Rp_esc_(m.inativadoEm || "-")) + "</p>" +
             '<div class="at-acoes">' + (r.podeEditar ? Rp_btn_("rpCatEd" + i, "Alterar") + (m.ativo ? Rp_btnPerigo_("rpCatEx" + i, m.usos ? "Inativar" : "Excluir") : Rp_btn_("rpCatRe" + i, "Reativar")) : "") + Rp_btn_("rpCatHi" + i, "Histórico") + "</div>" +
             '<div id="rpCatHist' + i + '" hidden>' + Rp_histModeloHtml_(m.historico) + "</div></div>";
-        }).join("") + "</div>" : '<div class="at-vazio">Nenhum modelo no catálogo da sua empresa ainda.' + (r.podeEditar ? ' Toque em "Cadastrar modelo novo".' : "") + "</div>");
+        }).join("") + "</div>" : '<div class="at-vazio">Nenhum modelo no catálogo da sua empresa ainda.' + (r.podeEditar ? ' Toque em "Cadastrar modelo novo".' : "") + "</div>") + Rp_excluidosHtml_(r.excluidos, "r");
+      Rp_ligarExcluidos_(c);
       var recarregar = function (msg) { Rp_msg_("rpMsg", msg, "ok"); Rp_chamar_("inicio", {}, function (x) { RP.ini.modelos = x.modelos; }, function () {}); Rp_catalogo_(c); };
       var bn = Rp_$_("rpCatNovo");
       if (bn) bn.onclick = function () { Rp_formModelo_(Rp_$_("rpCatForm"), null, function (x) { recarregar(x.message); }); Rp_$_("rpCatForm").scrollIntoView({ behavior: "smooth", block: "start" }); };
@@ -538,7 +547,7 @@
         if ((b = Rp_$_("rpCatRe" + i))) b.onclick = function () { Rp_chamar_("reativarModelo", { id: m.id }, function (x) { recarregar(x.message); }, function (msg) { Rp_msg_("rpMsg", msg); }, "Reativando…"); };
         if ((b = Rp_$_("rpCatEx" + i))) b.onclick = function () {
           var txt = m.usos ? "O modelo " + m.nome + " já está em " + m.usos + " equipamento(s), por isso não sai do catálogo: ele fica INATIVO (some da lista de escolha do pedido; o histórico e a garantia dos equipamentos continuam guardados). Inativar?"
-            : "Nenhum equipamento usa o modelo " + m.nome + ": ele sai do catálogo (o registro da exclusão fica no histórico). Excluir?";
+            : "Nenhum equipamento usa o modelo " + m.nome + ": ele sai do catálogo (o registro da exclusão fica em \"Excluídos do catálogo\", no fim desta tela). Excluir?";
           if (!confirm(txt)) return;
           Rp_chamar_("excluirModelo", { id: m.id }, function (x) { recarregar(x.message); }, function (msg) { Rp_msg_("rpMsg", msg); }, m.usos ? "Inativando…" : "Excluindo…");
         };
@@ -647,11 +656,12 @@
             '</td><td data-r="Cadastrado por">' + Rp_esc_(m.criadoPor) + (m.criadoEm ? "<br><span class=\"at-meta\">" + Rp_esc_(m.criadoEm) + "</span>" : "") + '</td><td class="n" data-r="Equipamentos">' + m.usos + '</td><td data-r="Situação">' + (m.ativo ? Rp_selo_(10, "Ativo") : Rp_selo_(12, "Inativo")) +
             '</td><td data-r=""><button type="button" class="btn-secondary" data-ed="' + i + '">' + (RP.ini.podeAdministrar ? "Alterar" : "Ver") + '</button> <button type="button" class="btn-secondary" data-hi="' + i + '">Histórico</button></td></tr>' +
             '<tr id="rpModHist' + i + '" hidden><td colspan="9">' + Rp_histModeloHtml_(m.historico) + "</td></tr>";
-        }).join("") + "</tbody></table>" : '<div class="at-vazio">Catálogo vazio.</div>') +
+        }).join("") + "</tbody></table>" : '<div class="at-vazio">Catálogo vazio.</div>') + Rp_excluidosHtml_(r.excluidos, "i") +
           (RP.ini.podeAdministrar ? '<div class="at-caixa" style="margin-top:12px" id="rpModForm"><h3>Incluir ou alterar modelo (mesmo código altera)</h3><div class="at-grade3">' + Rp_campo_("Código *", Rp_input_("mcod")) + Rp_campo_("Nome *", Rp_input_("mnome")) + Rp_campo_("Tipo de equipamento *", Rp_input_("mtipo", "Ex.: Autoclave")) +
             Rp_campo_("Família", Rp_input_("mfam")) + Rp_campo_("Garantia (meses) *", Rp_input_("mgar", "", "number")) + Rp_campo_("Padrão da série (opcional)", Rp_input_("mpad", "Ex.: BM[0-9]{6}"), "Deixe em branco se não souber.") +
             Rp_campo_("Situação", Rp_select_("mativo", [["SIM", "Ativo"], ["NAO", "Inativo"]])) + Rp_campo_("Motivo da alteração", '<textarea id="rp_motivo" rows="2"></textarea>', "Obrigatório para alterar um modelo que já existe (fica no histórico e a representada vê). Para incluir modelo novo, pode ficar em branco.") +
             '</div><div id="rpModMsg"></div><div class="at-acoes">' + Rp_btn_("rpModSalvar", "Salvar modelo", true) + "</div></div>" : "");
+        Rp_ligarExcluidos_(Rp_$_("rpModLista"));
         Rp_$_("rpModLista").querySelectorAll("[data-hi]").forEach(function (b) { b.onclick = function () { var h = Rp_$_("rpModHist" + b.getAttribute("data-hi")); h.hidden = !h.hidden; }; });
         Rp_$_("rpModLista").querySelectorAll("[data-ed]").forEach(function (b) { b.onclick = function () {
           var m = r.modelos[Number(b.getAttribute("data-ed"))];
@@ -689,49 +699,81 @@
   // Som curto pelo WebAudio (sem arquivo). Navegador que bloqueia o som: o aviso aparece com "Clique para ativar o som".
   // Ligar ou desligar o som fica guardado neste navegador. Nunca mexe no conteúdo da tela aberta (só no canto).
   // =====================================================================
-  var REPAL = { timer: null, falhas: 0, emCurso: false, ultimo: 0, cartoes: {}, tocados: {}, ctx: null, bloqueado: false, dispensadosAqui: {}, ouvindo: false };
+  var REPAL = { timer: null, ativo: false, falhas: 0, emCurso: false, ultimo: 0, espera: 0, cartoes: {}, tocados: {}, ctx: null, bloqueado: false, dispensadosAqui: {}, ouvindo: false, aberto: false };
   var REPAL_INTERVALO_MS = 45000;
+  // revisão 03/11/2026: em vez de parar de vez, recua: falha (sessão vencida, servidor fora) espera 2 e depois 5 minutos; quem não
+  // recebe (ligado: false) volta a perguntar a cada 5 minutos (quem passou a responder pela representação recebe sem F5)
+  var REPAL_RECUO_MS = [120000, 300000];
+  var REPAL_SEM_ACESSO_MS = 300000;
   var REPAL_CHAVE_SOM = "sgo_rep_alerta_som";
   function RepAl_somLigado_() { try { return window.localStorage.getItem(REPAL_CHAVE_SOM) !== "desligado"; } catch (e) { return true; } }
   function RepAl_gravarSom_(ligado) { try { window.localStorage.setItem(REPAL_CHAVE_SOM, ligado ? "ligado" : "desligado"); } catch (e) {} }
   function RepAlertas_iniciar_() {
-    if (REPAL.timer || !SESSION) return;
+    if (REPAL.ativo || !SESSION) return;
     if (typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_()) return;
     var perfil = String((USER_CONTEXT && USER_CONTEXT.perfil) || "").toUpperCase();
     if (!perfil || perfil === "CLIENTE" || perfil === "AUVO_SYNC") return;
-    REPAL.falhas = 0;
-    REPAL.timer = setInterval(function () { if (document.visibilityState === "visible") RepAl_verificar_(); }, REPAL_INTERVALO_MS);
+    REPAL.ativo = true; REPAL.falhas = 0;
     if (!REPAL.ouvindo) {
       REPAL.ouvindo = true;
-      document.addEventListener("visibilitychange", function () { if (REPAL.timer && document.visibilityState === "visible" && Date.now() - REPAL.ultimo > 20000) RepAl_verificar_(); });
+      var voltou = function () { if (REPAL.ativo && document.visibilityState === "visible" && Date.now() - REPAL.ultimo > 20000) RepAl_verificar_(); };
+      document.addEventListener("visibilitychange", voltou);
+      window.addEventListener("focus", voltou);
+      window.addEventListener("resize", function () { RepAl_limitar_(); });
     }
-    setTimeout(RepAl_verificar_, 4000);
+    RepAl_agendar_(4000);
   }
-  function RepAlertas_parar_() { if (REPAL.timer) { clearInterval(REPAL.timer); REPAL.timer = null; } }
+  function RepAlertas_parar_() { REPAL.ativo = false; if (REPAL.timer) { clearTimeout(REPAL.timer); REPAL.timer = null; } }
+  /** Próxima pergunta daqui a ms (uma só agendada por vez). Aba escondida: pergunta quando voltar a ficar visível. */
+  function RepAl_agendar_(ms) {
+    if (REPAL.timer) clearTimeout(REPAL.timer);
+    REPAL.espera = ms;
+    REPAL.timer = setTimeout(function () { REPAL.timer = null; if (document.visibilityState === "visible") RepAl_verificar_(); else RepAl_agendar_(REPAL_INTERVALO_MS); }, ms);
+  }
+  function RepAl_recuar_() { REPAL.falhas++; RepAl_agendar_(REPAL_RECUO_MS[Math.min(REPAL.falhas, REPAL_RECUO_MS.length) - 1]); }
   function RepAl_verificar_() {
-    if (REPAL.emCurso || !SESSION || !REPAL.timer) return;
+    if (!REPAL.ativo || REPAL.emCurso) return;
+    if (!SESSION) { RepAl_agendar_(REPAL_SEM_ACESSO_MS); return; }
     REPAL.emCurso = true; REPAL.ultimo = Date.now();
+    if (REPAL.timer) { clearTimeout(REPAL.timer); REPAL.timer = null; }
     google.script.run.withSuccessHandler(function (r) {
       REPAL.emCurso = false;
-      if (!r || !r.ok) { if (++REPAL.falhas >= 3) RepAlertas_parar_(); return; }
+      if (!r || !r.ok) { RepAl_recuar_(); return; }
       REPAL.falhas = 0;
-      if (r.ligado === false) { RepAlertas_parar_(); return; }
+      if (r.ligado === false) { RepAl_mostrar_([]); RepAl_agendar_(REPAL_SEM_ACESSO_MS); return; }
       RepAl_mostrar_(r.itens || []);
-    }).withFailureHandler(function () {
-      REPAL.emCurso = false;
-      // sessão vencida ou servidor fora: três falhas seguidas param o aviso (como o acompanhamento do Auvo e da Frota)
-      if (++REPAL.falhas >= 3) RepAlertas_parar_();
-    }).Representacao_api(SESSION, "alertasPedidos", {});
+      RepAl_agendar_(REPAL_INTERVALO_MS);
+    }).withFailureHandler(function () { REPAL.emCurso = false; RepAl_recuar_(); })
+      .Representacao_api(SESSION, "alertasPedidos", {});
   }
+  function RepAl_celular_() { try { return (typeof ehMobileModo_ === "function" && ehMobileModo_()) || window.matchMedia("(max-width: 640px)").matches; } catch (e) { return false; } }
+  /** Caixa própria (no alto, à direita), separada da caixa do Auvo e da Frota (embaixo, à direita): as duas nunca se sobrepõem. */
   function RepAl_caixa_() {
     var el = document.getElementById("repAlertasCaixa");
     if (!el) {
       el = document.createElement("div");
-      el.id = "repAlertasCaixa"; el.className = "auvo-toast-container"; el.setAttribute("aria-live", "assertive"); el.setAttribute("role", "region"); el.setAttribute("aria-label", "Avisos de pedidos da representada");
-      el.style.maxWidth = "360px";
+      el.id = "repAlertasCaixa"; el.setAttribute("aria-live", "assertive"); el.setAttribute("role", "region"); el.setAttribute("aria-label", "Avisos de pedidos da representada");
+      el.style.cssText = "position:fixed;top:72px;right:16px;z-index:99990;display:flex;flex-direction:column;gap:10px;width:min(360px, calc(100vw - 32px));max-height:calc(100vh - 180px);overflow-y:auto;pointer-events:none";
+      var mais = document.createElement("button");
+      mais.type = "button"; mais.id = "repAlertasMais"; mais.className = "btn-secondary"; mais.hidden = true; mais.style.pointerEvents = "auto";
+      mais.onclick = function () { REPAL.aberto = !REPAL.aberto; RepAl_limitar_(); };
+      el.appendChild(mais);
       document.body.appendChild(el);
     }
     return el;
+  }
+  /** No celular, no máximo 2 avisos visíveis e o botão "mais N" (toque para ver todos; toque de novo para recolher). */
+  function RepAl_limitar_() {
+    var el = document.getElementById("repAlertasCaixa"); if (!el) return;
+    var cards = Array.prototype.slice.call(el.querySelectorAll(".rep-aviso")), lim = RepAl_celular_() && !REPAL.aberto ? 2 : cards.length;
+    cards.forEach(function (c, i) { c.style.display = i < lim ? "" : "none"; });
+    var mais = document.getElementById("repAlertasMais");
+    if (mais) {
+      var escondidos = cards.length - Math.min(lim, cards.length);
+      mais.hidden = !(RepAl_celular_() && cards.length > 2);
+      mais.textContent = escondidos > 0 ? "mais " + escondidos + (escondidos > 1 ? " avisos" : " aviso") : "recolher os avisos";
+      el.appendChild(mais);
+    }
   }
   function RepAl_textoCartao_(x) {
     return '<div class="auvo-toast-titulo">' + Rp_esc_(x.titulo) + "</div>" +
@@ -751,7 +793,7 @@
         return;
       }
       card = document.createElement("div");
-      card.className = "auvo-toast"; card.style.cursor = "default"; card.style.flexDirection = "column"; card.style.borderLeftColor = x.marco === "RISCO" ? "var(--danger)" : "var(--warning)";
+      card.className = "auvo-toast rep-aviso"; card.style.cursor = "default"; card.style.flexDirection = "column"; card.style.borderLeftColor = x.marco === "RISCO" ? "var(--danger)" : "var(--warning)";
       card.setAttribute("role", "alert");
       card.innerHTML = '<div style="display:flex;gap:10px;align-items:flex-start"><span class="auvo-toast-icone"><i class="fas ' + (x.marco === "RISCO" ? "fa-hourglass-half" : "fa-briefcase") + '" aria-hidden="true"></i></span><div class="auvo-toast-corpo">' + RepAl_textoCartao_(x) + "</div></div>" +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn-primary" data-repal="abrir">Abrir pedido</button><button type="button" class="btn-secondary" data-repal="dispensar">Dispensar</button>' +
@@ -767,12 +809,14 @@
     });
     // pedido aceito, recusado ou cancelado (ou que mudou de marco): o aviso antigo sai do canto
     Object.keys(REPAL.cartoes).forEach(function (k) { if (!agora[k]) { var c = REPAL.cartoes[k]; if (c && c.parentNode) c.parentNode.removeChild(c); delete REPAL.cartoes[k]; } });
+    RepAl_limitar_();
     if (novo) RepAl_tocar_(false);
   }
   function RepAl_dispensar_(x, card) {
     REPAL.dispensadosAqui[x.chave] = true;
     if (card && card.parentNode) card.parentNode.removeChild(card);
     delete REPAL.cartoes[x.chave];
+    RepAl_limitar_();
     google.script.run.withSuccessHandler(function () {}).withFailureHandler(function () {}).Representacao_api(SESSION, "dispensarAlertaPedido", { chave: x.chave });
   }
   function RepAl_marcarBloqueio_() {

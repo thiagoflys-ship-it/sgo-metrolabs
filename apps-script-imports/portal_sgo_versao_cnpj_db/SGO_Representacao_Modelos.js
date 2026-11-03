@@ -81,6 +81,14 @@ function RepM_publico_(m) {
     criadoEm: Rep_br_(m.CRIADO_EM), atualizadoPor: RepM_porNome_(m.ATUALIZADO_POR_LADO || 'METROLABS', m.ATUALIZADO_POR_NOME), atualizadoEm: Rep_br_(m.ATUALIZADO_EM),
     inativadoEm: Rep_br_(m.INATIVADO_EM), inativadoPor: Rep_s_(m.INATIVADO_POR_NOME), historico: hist };
 }
+/** Modelos excluídos da representada (a linha "Excluiu" do histórico guarda os dados de antes), mais recentes primeiro. */
+function RepM_excluidos_(repId) {
+  return Rep_ler_(REP_ABAS.MODELOS_HIST).filter(function (h) { return Rep_s_(h.REPRESENTADA_ID) === Rep_s_(repId) && Rep_s_(repId) && Rep_up_(h.ACAO) === 'EXCLUIR'; })
+    .map(function (h) { var a = Rep_json_(h.ANTES_JSON, {}) || {}, p = RepM_histPublico_(h);
+      return { codigo: Rep_up_(a.CODIGO || h.CODIGO), nome: Rep_s_(a.NOME), tipo: Rep_s_(a.TIPO_EQUIPAMENTO), garantiaMeses: Number(a.GARANTIA_MESES) || 0, por: p.por, lado: p.lado, em: p.em, emIso: p.emIso, motivo: p.motivo,
+        historico: RepM_historico_(h.MODELO_ID) }; })
+    .sort(function (a, b) { return b.emIso.localeCompare(a.emIso); });
+}
 /** Catálogo completo da representada (ativos primeiro, depois inativos), com uso e histórico. */
 function RepM_lista_(repId) {
   return RepM_linhas_(repId).map(RepM_publico_).sort(function (a, b) { return (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'); });
@@ -108,6 +116,10 @@ function RepM_salvar_(eu, repId, d, opcoes) {
   d = d || {}; opcoes = opcoes || {};
   var faltam = [], quem = RepM_quem_(eu), interno = !eu.externo;
   var campos = RepM_validar_(d, faltam);
+  // revisão 03/11/2026: a conferência do código único e a gravação ficam dentro da trava da Assistência (dois cadastros ao
+  // mesmo tempo não gravam o mesmo código); a tabela é lida de novo dentro da trava
+  return Ast_comTrava_(function () {
+  delete REP_MEMO[REP_ABAS.MODELOS];
   var linhas = RepM_linhas_(repId), atual = null;
   if (Rep_s_(d.id)) atual = RepM_doEscopo_(repId, d.id);
   else if (opcoes.porCodigo && campos.CODIGO) atual = linhas.filter(function (m) { return Rep_up_(m.CODIGO) === campos.CODIGO; })[0] || null;
@@ -141,6 +153,7 @@ function RepM_salvar_(eu, repId, d, opcoes) {
   var acao = antes.ATIVO !== depois.ATIVO && REP_MODELO_CAMPOS.every(function (c) { return c[0] === 'ATIVO' || String(antes[c[0]]) === String(depois[c[0]]); }) ? (depois.ATIVO === 'NAO' ? 'INATIVAR' : 'REATIVAR') : 'ALTERAR';
   RepM_hist_(atual, acao, quem, antes, depois, motivo);
   return { modelo: Object.assign({}, atual, campos, extra), novo: false, mudou: true, usos: usos, garantiaMudou: antes.GARANTIA_MESES !== depois.GARANTIA_MESES };
+  });
 }
 function RepM_msgSalvo_(r) {
   var m = r.modelo, nome = Rep_s_(m.NOME);
@@ -151,20 +164,24 @@ function RepM_msgSalvo_(r) {
 
 /** Exclui (sem uso) ou inativa (com uso). Devolve { excluido, inativado, message }. */
 function RepM_excluir_(eu, repId, d) {
+  return Ast_comTrava_(function () {
+  delete REP_MEMO[REP_ABAS.MODELOS];
   var m = RepM_doEscopo_(repId, d && d.id), quem = RepM_quem_(eu), usos = RepM_usos_(repId, m.CODIGO), nome = Rep_s_(m.NOME);
   if (!usos) {
-    RepM_hist_(m, 'EXCLUIR', quem, RepM_campos_(m), null, Rep_txt_(d && d.motivo, 500));
+    // revisão 03/11/2026: o "Excluiu" vai para o histórico só depois que o modelo saiu da tabela
     var saiu = false;
     try { saiu = SGO_DATA.remove(REP_ABAS.MODELOS, m.ID) !== false; } catch (e) { saiu = false; }
     delete REP_MEMO[REP_ABAS.MODELOS];
-    if (!saiu) throw Rep_erro_('FALHOU', 'Não foi possível excluir o modelo ' + nome + ' agora (o registro não foi encontrado na tabela). Atualize a tela e tente de novo.');
-    return { excluido: true, message: 'Modelo ' + nome + ' excluído do catálogo: nenhum equipamento usava este modelo.' };
+    if (!saiu) throw Rep_erro_('FALHOU', 'Não foi possível excluir o modelo ' + nome + ' agora (o registro não foi encontrado na tabela). Nada mudou no catálogo. Atualize a tela e tente de novo.');
+    RepM_hist_(m, 'EXCLUIR', quem, RepM_campos_(m), null, Rep_txt_(d && d.motivo, 500));
+    return { excluido: true, message: 'Modelo ' + nome + ' excluído do catálogo: nenhum equipamento usava este modelo. O registro da exclusão fica em "Excluídos do catálogo".' };
   }
   if (Rep_up_(m.ATIVO || 'SIM') === 'NAO') return { inativado: true, message: 'O modelo ' + nome + ' já estava inativo (' + usos + ' equipamento' + (usos > 1 ? 's usam' : ' usa') + ' este modelo, por isso ele não sai do catálogo).' };
   var agora = Rep_agora_();
   Rep_atualizar_(REP_ABAS.MODELOS, m.ID, { ATIVO: 'NAO', INATIVADO_EM: agora, INATIVADO_POR_NOME: quem.nome, ATUALIZADO_POR_LADO: quem.lado, ATUALIZADO_POR_ID: quem.id, ATUALIZADO_POR_NOME: quem.nome, ATUALIZADO_EM: agora });
   RepM_hist_(m, 'INATIVAR', quem, RepM_campos_(m), RepM_campos_(Object.assign({}, m, { ATIVO: 'NAO' })), Rep_txt_(d && d.motivo, 500));
   return { inativado: true, message: 'O modelo ' + nome + ' ficou INATIVO: ' + usos + ' equipamento' + (usos > 1 ? 's já usam' : ' já usa') + ' este modelo, então ele não pode sair do catálogo. Ele some da lista de escolha do pedido; o histórico e a garantia dos equipamentos continuam guardados. Para voltar a usar, toque em "Reativar".' };
+  });
 }
 function RepM_reativar_(eu, repId, d) {
   var m = RepM_doEscopo_(repId, d && d.id), quem = RepM_quem_(eu);
@@ -179,7 +196,7 @@ function RepM_reativar_(eu, repId, d) {
 // AÇÕES DA REPRESENTADA (entram em REP_ACOES_REPRESENTADA, SGO_Representacao.js)
 // ------------------------------------------------------------
 function RepA_catalogo_(eu) {
-  return { modelos: RepM_lista_(eu.repId), podeEditar: !!(eu.perm && eu.perm.abrir), explica: REP_MODELO_EXPLICA,
+  return { modelos: RepM_lista_(eu.repId), excluidos: RepM_excluidos_(eu.repId), podeEditar: !!(eu.perm && eu.perm.abrir), explica: REP_MODELO_EXPLICA,
     message: eu.perm && eu.perm.abrir ? '' : 'Consulta: o seu papel (' + eu.perm.nome + ') não cadastra modelos. Quem cadastra é o Administrador da sua empresa no sistema ou o Atendente.' };
 }
 function RepA_salvarModelo_(eu, d) {

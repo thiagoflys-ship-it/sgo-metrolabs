@@ -627,7 +627,7 @@ function RepI_usuarios_(eu, d) {
 var REP_ACOES_INTERNAS = {
   iniciar: RepI_iniciar_, salvarRepresentada: RepI_salvarRepresentada_, representadas: function () { return { representadas: RepI_representadas_() }; },
   // 03/11/2026: catálogo com quem cadastrou (e de que lado), uso em equipamentos e histórico (SGO_Representacao_Modelos.js)
-  modelos: function (eu, d) { return { modelos: RepM_lista_(Rep_s_(d && d.representadaId)), explica: REP_MODELO_EXPLICA }; }, salvarModelo: RepI_salvarModelo_,
+  modelos: function (eu, d) { return { modelos: RepM_lista_(Rep_s_(d && d.representadaId)), excluidos: RepM_excluidos_(Rep_s_(d && d.representadaId)), explica: REP_MODELO_EXPLICA }; }, salvarModelo: RepI_salvarModelo_,
   reativarModelo: function (eu, d) { RepI_exigirAdm_(eu, 'reativar o modelo'); var m = Rep_porId_(REP_ABAS.MODELOS, d && d.id); if (!m) throw Rep_erro_('NAO_ENCONTRADO', 'Modelo não encontrado. Atualize a lista.'); var r = RepM_reativar_(eu, m.REPRESENTADA_ID, d); return { modelos: RepM_lista_(m.REPRESENTADA_ID), message: r.message }; },
   solicitacoes: RepI_solicitacoes_, aceitar: RepI_aceitar_,
   complemento: function (eu, d) { return AstC_complemento_(eu, d); }, recusar: function (eu, d) { return AstC_descartar_(eu, d); },
