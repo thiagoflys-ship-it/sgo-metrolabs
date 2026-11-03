@@ -5,8 +5,11 @@
   retiradas listadas com o motivo), revisão de trechos com motivo e de → para, aprovação da Diretoria e emissão (A4 congelado com
   SHA-256; nova versão para mudar). Servidor: SGO_Licitacoes_Proposta.js (Licitacoes_api ação "proposta" com { op }).
   Usa os utilitários de JS_Licitacoes.html (Lic_esc_, Lic_chamar_, Lic_janela_, Lic_faixa_, Lic_tabelaHtml_, Lic_brl_, Lic_toast_,
-  Lic_dataHora_, Lic_carregando_, Lic_erroTela_, Lic_ligarRefazer_). Todo texto passa por Lic_esc_. O A4 abre em aba nova no
-  computador (no celular, o visualizador de tela cheia do SGO+). Sem atualização automática: nada redesenha formulário aberto.
+  Lic_dataHora_, Lic_carregando_, Lic_erroTela_, Lic_ligarRefazer_). Todo texto passa por Lic_esc_. O A4 abre por window.open(""):
+  no computador, aba nova; no celular, o visualizador de tela cheia do SGO+ (JS_Navegacao.html). Nos dois, o documento fica num iframe
+  sandbox SEM allow-same-origin (LicPp_paginaSegura_): o script do documento não alcança o SGO+. Documento que não confere com o hash
+  não é aberto. Cada frase da IA tem a caixa "Aceitar": só a frase aceita pela Diretoria entra no documento (revisão de 9dc456f).
+  Sem atualização automática: nada redesenha formulário aberto.
 -->
 <style>
   .lpp-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
@@ -26,6 +29,8 @@
   .lpp-lista { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; }
   .lpp-lista li { padding: 5px 0; border-top: 1px dashed var(--border); overflow-wrap: anywhere; }
   .lpp-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  .lpp-aceite { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 700; cursor: pointer; }
+  .lpp-aceite input { width: 20px; height: 20px; }
   .lpp-nao td { background: var(--warning-bg, #fdf5e6); }
   @media (max-width: 900px) { .lpp-acoes .btn-primary, .lpp-acoes .btn-secondary { flex: 1 1 140px; } }
 </style>
@@ -44,10 +49,18 @@
   function LicPp_abrirJanela_(titulo) {
     try { var j = window.open("", "_blank"); if (j && j.document) j.document.title = titulo || "Abrindo o documento…"; return j; } catch (e) { return null; }
   }
+  /** Página que mostra o A4 num iframe sandbox sem allow-same-origin (o botão Imprimir do documento continua funcionando). */
+  function LicPp_paginaSegura_(html) {
+    var tit = (/<title>([^<]*)<\/title>/i.exec(String(html || "")) || ["", "Documento"])[1];
+    return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + tit + '</title>' +
+      '<style>html,body{margin:0;height:100%;background:#e4e8ed}iframe{display:block;border:0;width:100%;height:100%}</style></head><body>' +
+      '<iframe sandbox="allow-scripts allow-modals allow-popups" title="' + tit + '" srcdoc="' + Lic_esc_(html) + '"></iframe></body></html>';
+  }
   function LicPp_escreverJanela_(j, html) {
     if (!j) { Lic_toast_("O navegador bloqueou a janela do documento: libere as janelas do SGO+ e toque de novo.", "erro"); return; }
-    try { j.document.open(); j.document.write(html); j.document.close(); }
-    catch (e) { try { j.location.href = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" })); } catch (x) { Lic_toast_("Não foi possível mostrar o documento: " + (e && e.message ? e.message : e), "erro"); } }
+    var pag = LicPp_paginaSegura_(html);
+    try { j.document.open(); j.document.write(pag); j.document.close(); }
+    catch (e) { try { j.location.href = URL.createObjectURL(new Blob([pag], { type: "text/html;charset=utf-8" })); } catch (x) { Lic_toast_("Não foi possível mostrar o documento: " + (e && e.message ? e.message : e), "erro"); } }
   }
   function LicPp_fecharJanela_(j) { if (j) { try { j.close(); } catch (e) {} } }
 
@@ -77,10 +90,12 @@
   function LicPp_trechoHtml_(t, editavel) {
     var cls = t.origem === "IA" ? " ia" : t.origem === "DIRETORIA" ? " dir" : "";
     var h = '<article class="lpp-trecho' + cls + '"><div class="lpp-cab"><b>' + Lic_esc_(t.nome) + "</b>" + LicPp_selo_(t.origem === "IA" ? "azul" : t.origem === "DIRETORIA" ? "verde" : "cinza", LICPP_ORIGEM[t.origem] || t.origem) + "</div>" +
-      (t.texto ? "<p>" + Lic_esc_(t.texto) + "</p>" : '<p class="cm-meta">' + (t.chave === "observacoes" ? "Sem observações (opcional)." : "Sem texto: a proposta mostra só a descrição técnica do catálogo neste ponto.") + "</p>");
-    if ((t.frases || []).length) h += '<details class="lpp-det"><summary>Fontes de cada frase (' + t.frases.length + ")</summary><ul class=\"lpp-lista\">" + t.frases.map(function (f) {
-      return "<li>" + Lic_esc_(f.texto) + '<br><span class="cm-meta">Fontes: ' + Lic_esc_((f.fontes || []).join(", ")) + (f.trecho ? ' · trecho de ' + Lic_esc_(f.trechoRef || "") + ': "' + Lic_esc_(f.trecho) + '"' : "") + "</span></li>";
-    }).join("") + "</ul></details>";
+      '<p class="cm-meta" style="margin-bottom:0">No documento:</p>' + (t.noDocumento ? "<p>" + Lic_esc_(t.noDocumento) + "</p>" : '<p class="cm-meta">' + (t.chave === "observacoes" ? "Sem observações (opcional)." : "Sem texto: a proposta mostra só a descrição técnica do catálogo neste ponto.") + "</p>");
+    if (t.assumido) h += Lic_faixa_("Texto assumido pela Diretoria fora das regras do verificador (" + (t.assumido.por || "") + "): " + (t.assumido.problemas || []).join("; "), "aviso");
+    if (t.origem === "IA" && (t.frases || []).length) h += '<p class="cm-meta"><b>Frases da IA conferidas nas fontes (' + Lic_esc_(t.aceitas) + " de " + Lic_esc_(t.frases.length) + ' aceitas).</b> Só a frase marcada "Aceitar" entra no documento; sem nenhuma, vale o texto do catálogo e do edital.</p><ul class="lpp-lista">' + t.frases.map(function (f, i) {
+      return '<li><label class="lpp-aceite"><input type="checkbox" data-lpp-frase="' + Lic_esc_(t.chave + "|" + i) + '"' + (f.aceita ? " checked" : "") + (editavel ? "" : " disabled") + "> <span>Aceitar</span></label> " + Lic_esc_(f.texto) +
+        '<br><span class="cm-meta">Fontes: ' + Lic_esc_((f.fontes || []).join(", ")) + (f.trecho ? ' · trecho de ' + Lic_esc_(f.trechoRef || "") + ': "' + Lic_esc_(f.trecho) + '"' : "") + (f.decididaPor ? " · " + (f.aceita ? "aceita" : "tirada") + " por " + Lic_esc_(f.decididaPor) : "") + "</span></li>";
+    }).join("") + "</ul>";
     if (t.editadoPor) h += '<p class="cm-meta">Editado por ' + Lic_esc_(t.editadoPor) + " em " + Lic_esc_(Lic_dataHora_(t.editadoEm)) + ".</p>";
     if (editavel) h += '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpp-editar="' + Lic_esc_(t.chave) + '">Editar este trecho</button></div>';
     return h + "</article>";
@@ -134,11 +149,18 @@
     el.querySelectorAll("[data-lpp-relatorio]").forEach(function (b) { b.onclick = function () { if (typeof LicRl_gerarOportunidade_ === "function") LicRl_gerarOportunidade_(id, b); else Lic_toast_("A tela de relatórios não carregou: atualize a página (F5).", "erro"); }; });
     var ap = el.querySelector("[data-lpp-aprovar]"); if (ap) ap.onclick = function () { LicPp_janelaAprovar_(id, ap); };
     var em = el.querySelector("[data-lpp-emitir]"); if (em) em.onclick = function () { LicPp_janelaEmitir_(id, em); };
+    el.querySelectorAll("[data-lpp-frase]").forEach(function (b) { b.onchange = function () { LicPp_aceitarFrase_(id, b); }; });
     var pd = el.querySelector("[data-lpp-pdf]"); if (pd) pd.onclick = function () { LicPp_baixarPdf_(id, pd.getAttribute("data-lpp-pdf")); };
+  }
+  function LicPp_aceitarFrase_(id, caixa) {
+    var p = LICPP.aba[id] || {}, a = p.atual || {}, partes = String(caixa.getAttribute("data-lpp-frase") || "").split("|"), aceitar = !!caixa.checked;
+    caixa.disabled = true;
+    LicPp_chamar_("fraseAceitar", { id: id, propostaId: a.id, trecho: partes[0], indice: Number(partes[1]), aceitar: aceitar }, function (r) { Lic_toast_(r.texto || "Gravado."); LicPp_ligarAba_(null, null, id); },
+      function (m) { caixa.disabled = false; caixa.checked = !aceitar; Lic_toast_(m, "erro"); });
   }
   function LicPp_ver_(id, pid) {
     var j = LicPp_abrirJanela_("Abrindo a proposta…");
-    LicPp_chamar_("ver", { id: id, propostaId: pid }, function (r) { LicPp_escreverJanela_(j, r.html); if (!r.integra) Lic_toast_("Atenção: o registro desta proposta não confere com o hash gravado (pode ter sido alterado fora do SGO+).", "erro"); },
+    LicPp_chamar_("ver", { id: id, propostaId: pid }, function (r) { if (!r.integra) { LicPp_fecharJanela_(j); Lic_toast_(r.aviso || "Este documento não confere com o hash gravado e não foi aberto.", "erro"); return; } LicPp_escreverJanela_(j, r.html); },
       function (m) { LicPp_fecharJanela_(j); Lic_toast_(m, "erro"); }, { carregando: "Montando o documento…" });
   }
   function LicPp_janelaMontar_(id, origem) {
@@ -162,13 +184,14 @@
     if (!t) return;
     var corpo = '<div class="cm-campo"><label for="lppTexto">' + Lic_esc_(t.nome) + '</label><textarea id="lppTexto" rows="6" maxlength="4000">' + Lic_esc_(t.texto) + "</textarea>" +
       '<p class="cm-ajuda-campo">Texto corrido, sem lista nem marcação. O verificador recusa superlativo de marketing, acreditação RBC, Inmetro fora de balança e esfigmomanômetro, fabricante e número que não esteja no edital, no catálogo ou na simulação.</p></div>' +
+      '<div class="cm-campo"><label class="lpp-aceite"><input type="checkbox" id="lppAssumo"> <span>Assumo este texto (só quando o verificador recusar e o texto estiver certo: fica registrado e aparece na aprovação)</span></label></div>' +
       '<div class="cm-campo"><label for="lppMotivoEd">Motivo (obrigatório)</label><textarea id="lppMotivoEd" rows="2" maxlength="1000" placeholder="Ex.: o órgão pede a descrição do método no item 5.2"></textarea><p class="cm-ajuda-campo">Fica no histórico do trecho (de → para), com o seu nome e a data.' + (a.situacao === "APROVADA" ? " A proposta já está aprovada: editar tira a aprovação, e ela precisa ser aprovada de novo." : "") + "</p></div><div id=\"lppMsgEd\" aria-live=\"assertive\"></div>";
     var ov = Lic_janela_("Editar trecho", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lpp-ok>Gravar</button>', origem);
     ov.querySelector("[data-lpp-ok]").onclick = function () {
       var bt = this, mot = LicPp_valor_("lppMotivoEd");
       if (mot.trim().length < 10) { Lic_$_("lppMsgEd").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
       bt.disabled = true;
-      LicPp_chamar_("trechoEditar", { id: id, propostaId: a.id, trecho: chave, texto: LicPp_valor_("lppTexto"), motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicPp_ligarAba_(null, null, id); },
+      LicPp_chamar_("trechoEditar", { id: id, propostaId: a.id, trecho: chave, texto: LicPp_valor_("lppTexto"), motivo: mot, assumo: !!(Lic_$_("lppAssumo") || {}).checked }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicPp_ligarAba_(null, null, id); },
         function (m) { bt.disabled = false; Lic_$_("lppMsgEd").innerHTML = Lic_faixa_(m, "erro"); });
     };
   }

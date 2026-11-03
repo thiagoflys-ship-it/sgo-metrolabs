@@ -136,9 +136,9 @@ function SGO_ajudaTelas_Licitacoes_() {
         ] },
         { titulo: "Proposta (A4)", itens: [
           "A aba Proposta monta o rascunho da proposta técnica e comercial: itens do edital, serviços do catálogo com a descrição técnica, os pontos ou condições, as normas citadas no catálogo e os entregáveis, os prazos e o pagamento com a frase do edital (leitura) e a planilha de preços, que é sempre a simulação salva da aba Preço, com a versão e o hash. Sem simulação salva não há proposta comercial.",
-          "Com a chave da IA, a apresentação e a metodologia são redigidas pela IA e cada frase é conferida nas fontes (número, trecho literal, negação, sem RBC, sem fabricante, sem superlativo). Frase que não passa é retirada e aparece na lista com o motivo; sem a IA, vale o texto do catálogo e do edital.",
+          "Com a chave da IA, a apresentação e a metodologia são redigidas pela IA e cada frase é conferida nas fontes (número, trecho literal, negação, sem RBC, sem fabricante, sem superlativo). Frase que não passa é retirada e aparece na lista com o motivo. A frase que passa só entra no documento quando a Diretoria marca \"Aceitar\" nela; sem frase aceita (ou sem a IA), vale o texto do catálogo e do edital.",
           "Item do edital fora do catálogo, sem preço da proposta ou fora da simulação sai como \"não cotado\", com o motivo. A proposta sai só com a logomarca oficial: o SGO+ não tem fotos dos serviços.",
-          "\"Editar este trecho\" pede o motivo e grava o de → para. \"Aprovar\" (Diretoria, com motivo) vale para o texto daquele momento: editar depois tira a aprovação. \"Emitir\" congela o documento A4 (guardado com o SHA-256, e o PDF ao lado quando o servidor gera); ele não muda nunca. Para mudar, \"Nova versão\". Nada é enviado a portal."
+          "\"Editar este trecho\" pede o motivo e grava o de → para; texto que o verificador recusa só grava com \"Assumo este texto\" (fica marcado na aprovação), e RBC fora da forma fixa ou acreditação nunca passam. \"Aprovar\" (Diretoria, com motivo) vale para o texto daquele momento: editar depois tira a aprovação. \"Emitir\" congela o documento A4 (guardado com o SHA-256, e o PDF ao lado quando o servidor gera); ele não muda nunca. Para mudar, \"Nova versão\". Nada é enviado a portal."
         ] }
       ],
       cores: [

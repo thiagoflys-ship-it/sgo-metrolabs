@@ -41,7 +41,9 @@ function LicRel_diaSp_(iso) { var t = Date.parse(Lic_s_(iso)); return isFinite(t
 function LicRel_br_(dia) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(Lic_s_(dia)); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
 function LicRel_num_(v, casas) { return typeof RelA4_num_ === 'function' ? RelA4_num_(v, casas) : String(v); }
 function LicRel_fonte_(t) { return '<p class="nota"><b>Fonte:</b> ' + RelA4_esc_(t) + '</p>'; }
-function LicRel_hashReg_(r) { return Lic_hash_([Lic_s_(r.TIPO), Lic_s_(r.CHAVE), Number(r.VERSAO) || 0, Lic_s_(r.NUMERO), Lic_s_(r.DADOS_HASH), Lic_s_(r.HTML_SHA256), Lic_s_(r.POR_ID), Lic_s_(r.EM)].join('|')); }
+/** Revisão de 9dc456f: o hash cobre também o arquivo guardado, a oportunidade, o período e o tamanho. */
+function LicRel_hashReg_(r) { return Lic_hash_([Lic_s_(r.TIPO), Lic_s_(r.CHAVE), Number(r.VERSAO) || 0, Lic_s_(r.NUMERO), Lic_s_(r.DADOS_HASH), Lic_s_(r.HTML_SHA256), Lic_s_(r.POR_ID), Lic_s_(r.EM),
+  Lic_s_(r.HTML_ARQUIVO_ID), Lic_s_(r.OPORTUNIDADE_ID), Lic_s_(r.PERIODO_DE), Lic_s_(r.PERIODO_ATE), String(Number(r.HTML_TAMANHO) || 0)].join('|')); }
 function LicRel_lista_() { return Lic_ler_(LICREL_ABA).filter(function (r) { return Lic_s_(r.TIPO); }); }
 function LicRel_resumoReg_(r) {
   return { id: Lic_s_(r.ID), tipo: Lic_s_(r.TIPO), tipoNome: LICREL_TIPOS[Lic_s_(r.TIPO)] || Lic_s_(r.TIPO), codigo: Lic_s_(r.CODIGO), oportunidadeId: Lic_s_(r.OPORTUNIDADE_ID), de: Lic_s_(r.PERIODO_DE), ate: Lic_s_(r.PERIODO_ATE),
@@ -159,21 +161,27 @@ function LicRel_dadosPeriodo_(de, ate) {
   var d = { de: de, ate: ate, novas: novas.length, total: todas.length };
   d.porSituacao = LicRel_contar_(novas, function (l) { return Lic_s_(l.SITUACAO) || 'RADAR'; });
   d.porUf = LicRel_contar_(novas, function (l) { return Lic_up_(l.UF) || 'sem UF'; });
-  var comNota = novas.filter(function (l) { return l.NOTA !== '' && l.NOTA !== null && l.NOTA !== undefined && isFinite(Number(l.NOTA)); });
+  // revisão de 9dc456f: as MESMAS definições do Painel (SGO_Licitacoes_Painel.js): médias sem descartadas e sem travadas
+  var contaNota = function (l) { return Lic_s_(l.SITUACAO) !== 'DESCARTADA' && !(Lic_s_(l.SITUACAO) === 'RADAR' && Lic_s_(l.TRIAGEM) === 'TRAVADA'); };
+  var comNota = novas.filter(function (l) { return contaNota(l) && l.NOTA !== '' && l.NOTA !== null && l.NOTA !== undefined && isFinite(Number(l.NOTA)); });
   d.notas = { qtd: comNota.length, media: comNota.length ? Math.round(comNota.reduce(function (s, l) { return s + Number(l.NOTA); }, 0) / comNota.length * 10) / 10 : null, porClasse: LicRel_contar_(comNota, function (l) { return Lic_s_(l.NOTA_CLASSE) || 'sem classe'; }) };
   d.prazos = todas.filter(function (l) { return dentro(l.ENCERRAMENTO_ISO); }).sort(function (a, b) { return Lic_s_(a.ENCERRAMENTO_ISO) < Lic_s_(b.ENCERRAMENTO_ISO) ? -1 : 1; })
     .map(function (l) { return { codigo: Lic_s_(l.CODIGO), orgao: Lic_texto_(l.ORGAO_NOME, 90), uf: Lic_s_(l.UF), quando: Lic_s_(l.ENCERRAMENTO_ISO), situacao: LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || Lic_s_(l.SITUACAO), nota: l.NOTA === '' || l.NOTA === undefined || l.NOTA === null ? null : Number(l.NOTA) }; });
   var al = Lic_ler_(LIC_ABAS.ALERTAS).filter(function (a) { return dentro(a.CRIADO_EM); });
   d.alertas = { total: al.length, porSituacao: LicRel_contar_(al, function (a) { return Lic_up_(a.SITUACAO) || 'SEM_SITUACAO'; }), porNivel: LicRel_contar_(al, function (a) { return Lic_up_(a.NIVEL) || 'NORMAL'; }),
-    semCiencia: al.filter(function (a) { return !Lic_s_(a.CIENTE_EM) && ['ENVIADO', 'FALHOU', 'ESCALONADO', 'NO_RESUMO'].indexOf(Lic_up_(a.SITUACAO)) >= 0; }).length };
+    // sem ciência: a regra da Central de alertas e do Painel (Lic_alertasSemCiencia_: enviado, sem ciência e com o prazo por vir), dos criados no período
+    semCiencia: (typeof Lic_alertasSemCiencia_ === 'function' ? Lic_alertasSemCiencia_(null) : []).filter(function (a) { return dentro(a.CRIADO_EM); }).length };
   var an = Lic_ler_(LIC_ABAS.ANALISES).filter(function (a) { return dentro(a.CRIADO_EM); });
   d.analises = { total: an.length, porSituacao: LicRel_contar_(an, function (a) { return Lic_up_(a.SITUACAO) || 'SEM_SITUACAO'; }) };
   var props = Lic_ler_(typeof LICPROP_ABAS !== 'undefined' ? LICPROP_ABAS.PROPOSTAS : 'LIC_PROPOSTAS').filter(function (p) { return Lic_up_(p.SITUACAO) === 'EMITIDA' && dentro(p.EMITIDO_EM); });
   d.propostas = props.map(function (p) { return { codigo: Lic_s_(p.CODIGO), numero: Lic_s_(p.NUMERO), total: Number(p.TOTAL) || 0, em: Lic_s_(p.EMITIDO_EM), por: Lic_s_(p.EMITIDO_POR_NOME), sha256: Lic_s_(p.HTML_SHA256) }; });
   d.resultados = todas.filter(function (l) { return ['RESULTADO', 'CONTRATO'].indexOf(Lic_s_(l.SITUACAO)) >= 0; }).map(function (l) { return { codigo: Lic_s_(l.CODIGO), orgao: Lic_texto_(l.ORGAO_NOME, 90), situacao: LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)], desde: Lic_s_(l.SITUACAO_DESDE) }; });
   var hist = Lic_ler_(LIC_ABAS.HISTORICO).filter(function (h) { return dentro(h.DATA); });
-  d.descartes = hist.filter(function (h) { return Lic_s_(h.TIPO) === 'DESCARTADA_PELA_DIRETORIA'; }).length;
-  d.mudancasEtapa = hist.filter(function (h) { return /^(ENVIADA_PARA_ANALISE|ETAPA_|KANBAN|MOVIDA)/.test(Lic_s_(h.TIPO)); }).length;
+  // mudanças de etapa: os tipos que a lista e o Kanban gravam de fato (Lic_mudarSituacao_)
+  d.etapas = { ENVIADA_PARA_ANALISE: 0, DESCARTADA_PELA_DIRETORIA: 0, REABERTA: 0 };
+  hist.forEach(function (h) { if (d.etapas[Lic_s_(h.TIPO)] !== undefined) d.etapas[Lic_s_(h.TIPO)]++; });
+  d.descartes = d.etapas.DESCARTADA_PELA_DIRETORIA;
+  d.mudancasEtapa = d.etapas.ENVIADA_PARA_ANALISE + d.etapas.DESCARTADA_PELA_DIRETORIA + d.etapas.REABERTA;
   return d;
 }
 function LicRel_tabelaContagem_(m, nomes, legenda, rotulo) {
@@ -185,14 +193,14 @@ function LicRel_htmlPeriodo_(d, o) {
   corpo += RelA4_secao_('Resumo do período', RelA4_kpis_([[String(d.novas), 'Oportunidades novas (primeira coleta)', ''], [d.notas.media === null ? '—' : LicRel_num_(d.notas.media, 1), 'Nota média (' + d.notas.qtd + ' com nota)', ''],
     [String(d.prazos.length), 'Fins de proposta no período', ''], [String(d.alertas.total), 'Alertas criados', d.alertas.semCiencia ? 'aviso' : ''], [String(d.propostas.length), 'Propostas emitidas', d.propostas.length ? 'ok' : ''], [String(d.resultados.length), 'Em resultado ou contrato (hoje)', '']]) +
     LicRel_fonte_('LIC_OPORTUNIDADES (' + d.total + ' ativas; ' + d.novas + ' com a primeira coleta entre ' + per + ', dia de Brasília), LIC_ALERTAS, LIC_PROPOSTAS e LIC_HISTORICO no mesmo período.'));
-  corpo += RelA4_secao_('Oportunidades por etapa', LicRel_tabelaContagem_(d.porSituacao, LIC_SITUACAO_NOMES, 'Oportunidades novas no período, pela etapa de hoje', 'Etapa') + LicRel_fonte_('LIC_OPORTUNIDADES.SITUACAO das ' + d.novas + ' oportunidades com PRIMEIRA_COLETA_EM no período (a etapa é a de hoje, não a do fim do período). ' + d.descartes + ' descarte(s) pela Diretoria e ' + d.mudancasEtapa + ' envio(s) para análise ou mudança de etapa registrados no LIC_HISTORICO no período.'));
+  corpo += RelA4_secao_('Oportunidades por etapa', LicRel_tabelaContagem_(d.porSituacao, LIC_SITUACAO_NOMES, 'Oportunidades novas no período, pela etapa de hoje', 'Etapa') + LicRel_fonte_('LIC_OPORTUNIDADES.SITUACAO das ' + d.novas + ' oportunidades com PRIMEIRA_COLETA_EM no período (a etapa é a de hoje, não a do fim do período). Mudanças de etapa no LIC_HISTORICO no período (lista e Kanban): ' + d.etapas.ENVIADA_PARA_ANALISE + ' envio(s) para análise, ' + d.etapas.DESCARTADA_PELA_DIRETORIA + ' descarte(s) pela Diretoria e ' + d.etapas.REABERTA + ' reabertura(s).'));
   corpo += RelA4_secao_('Oportunidades por UF', LicRel_tabelaContagem_(d.porUf, null, 'Oportunidades novas no período por UF', 'UF') + LicRel_fonte_('LIC_OPORTUNIDADES.UF (campo do PNCP) das oportunidades novas no período.'));
-  corpo += RelA4_secao_('Notas', LicRel_tabelaContagem_(d.notas.porClasse, typeof LIC_CLASSES !== 'undefined' ? LIC_CLASSES : null, 'Oportunidades novas com nota, por classe', 'Classe') + LicRel_fonte_('LIC_OPORTUNIDADES.NOTA e NOTA_CLASSE (última análise concluída, com as decisões das travas) das ' + d.notas.qtd + ' oportunidades novas que têm nota. ' + d.analises.total + ' análise(s) gravada(s) no período em LIC_ANALISES (' + Object.keys(d.analises.porSituacao).map(function (k) { return k.toLowerCase() + ' ' + d.analises.porSituacao[k]; }).join(', ') + ').'));
+  corpo += RelA4_secao_('Notas', LicRel_tabelaContagem_(d.notas.porClasse, typeof LIC_CLASSES !== 'undefined' ? LIC_CLASSES : null, 'Oportunidades novas com nota, por classe', 'Classe') + LicRel_fonte_('LIC_OPORTUNIDADES.NOTA e NOTA_CLASSE (última análise concluída, com as decisões das travas) das ' + d.notas.qtd + ' oportunidades novas que têm nota, sem as descartadas e as travadas (a mesma regra do Painel). ' + d.analises.total + ' análise(s) gravada(s) no período em LIC_ANALISES (' + Object.keys(d.analises.porSituacao).map(function (k) { return k.toLowerCase() + ' ' + d.analises.porSituacao[k]; }).join(', ') + ').'));
   corpo += RelA4_secao_('Prazos de proposta no período', RelA4_tabela_([{ t: 'Licitação' }, { t: 'Órgão' }, { t: 'UF', cen: true }, { t: 'Fim das propostas' }, { t: 'Etapa' }, { t: 'Nota', num: true }], d.prazos.slice(0, 80).map(function (p) {
     return [p.codigo, p.orgao, p.uf, LicRel_br_(LicRel_diaSp_(p.quando)) + ' ' + new Date(Date.parse(p.quando) - 3 * 3600e3).toISOString().slice(11, 16), p.situacao, p.nota === null ? '—' : LicRel_num_(p.nota, 1)];
   }), { legenda: 'Fim do recebimento das propostas entre ' + per, vazio: 'Nenhum fim de proposta no período.', compacta: true }) + LicRel_fonte_('LIC_OPORTUNIDADES.ENCERRAMENTO_ISO (fim das propostas no PNCP, horário de Brasília) de todas as oportunidades ativas.'));
   corpo += RelA4_secao_('Alertas', LicRel_tabelaContagem_(d.alertas.porSituacao, null, 'Alertas criados no período por situação', 'Situação') + LicRel_tabelaContagem_(d.alertas.porNivel, null, 'Alertas criados no período por nível', 'Nível') +
-    '<p>' + RelA4_esc_(d.alertas.semCiencia + ' alerta(s) enviado(s) sem ciência.') + '</p>' + LicRel_fonte_('LIC_ALERTAS com CRIADO_EM no período (' + d.alertas.total + ' linhas: uma por prazo, antecedência e pessoa, mais escalonamentos e reenvios). Sem ciência = enviado, falhou, escalonado ou no resumo, sem CIENTE_EM.'));
+    '<p>' + RelA4_esc_(d.alertas.semCiencia + ' alerta(s) enviado(s) sem ciência.') + '</p>' + LicRel_fonte_('LIC_ALERTAS com CRIADO_EM no período (' + d.alertas.total + ' linhas: uma por prazo, antecedência e pessoa, mais escalonamentos e reenvios). Sem ciência = a regra da Central de alertas e do Painel: enviado, sem ciência e com o prazo ainda por vir.'));
   corpo += RelA4_secao_('Propostas emitidas', RelA4_tabela_([{ t: 'Licitação' }, { t: 'Número' }, { t: 'Total', num: true }, { t: 'Emitida em' }, { t: 'Por' }, { t: 'SHA-256 do documento' }], d.propostas.map(function (p) {
     return [p.codigo, p.numero, RelA4_moeda_(p.total), LicRel_br_(LicRel_diaSp_(p.em)), p.por, p.sha256.slice(0, 24) + '…'];
   }), { legenda: 'Propostas emitidas no período', vazio: 'Nenhuma proposta emitida no período.' }) + LicRel_fonte_('LIC_PROPOSTAS com SITUACAO = EMITIDA e EMITIDO_EM no período; o total é o da simulação de preço salva usada na proposta.'));
@@ -232,8 +240,10 @@ function LicRel_gerarPeriodo_(eu, d) {
 function LicRel_ver_(eu, d) {
   var r = SGO_DATA.getById(LICREL_ABA, Lic_s_(d.relatorioId));
   if (!r || !Lic_s_(r.TIPO)) throw new Error('Não foi possível abrir: o relatório não foi encontrado (a lista pode estar desatualizada). Toque em "Atualizar" e tente de novo');
-  var lido = LicDoc_lerHtml_(r.HTML_ARQUIVO_ID, r.HTML_SHA256);
-  return { html: lido.html, integra: lido.integra && LicRel_hashReg_(r) === Lic_s_(r.HASH), relatorio: LicRel_resumoReg_(r) };
+  var lido = LicDoc_lerHtml_(r.HTML_ARQUIVO_ID, r.HTML_SHA256), integra = lido.integra && LicRel_hashReg_(r) === Lic_s_(r.HASH);
+  // revisão de 9dc456f: relatório que não confere com o hash não é entregue
+  if (!integra) return { html: '', integra: false, aviso: 'Este relatório não confere com o hash gravado (pode ter sido alterado fora do SGO+) e não foi aberto. Avise o Administrador; gere uma versão nova.', relatorio: LicRel_resumoReg_(r) };
+  return { html: lido.html, integra: true, relatorio: LicRel_resumoReg_(r) };
 }
 function LicRel_tela_(eu, d) {
   // mais novo primeiro (no mesmo instante, o gravado depois)

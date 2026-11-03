@@ -70,7 +70,7 @@ test('preço = a simulação salva: total, versão e hash na planilha; simulaç�
   assert.equal(at.total, Number(s.TOTAL_PROPOSTA)); assert.equal(at.simulacaoVersao, 1); assert.equal(at.simulacaoHash, s.HASH);
   const prev = ok(a.prop('s_dora', 'ver', { id: 'op1', propostaId: at.id }));
   assert.match(prev.html, /RASCUNHO PARA REVISÃO INTERNA/); assert.match(prev.html, /R\$\s199,00/); assert.match(prev.html, /R\$\s19\.900,00/);
-  assert.match(prev.html, new RegExp('simulação de preço versão 1, registro ' + s.HASH.slice(0, 16)));
+  assert.doesNotMatch(prev.html, /Referência interna|registro [0-9a-f]{16}/, 'a referência interna da simulação fica só na aba');
   assert.match(prev.html, /Itens não cotados/); assert.match(prev.html, /Locação de veículo utilitário/);
   // simulação nova depois do rascunho: aprovar recusa e diz o que fazer
   a.simular('op1', ITENS.map((i) => Object.assign({}, i, i.numero === '1' ? { precoProposta: '210,00' } : {})), 'Preço revisto pela Diretoria');
@@ -113,21 +113,24 @@ test('verificador da IA: frase conferida passa; afirmação técnica inventada, 
   assert.equal(ia.situacao, 'PARCIAL'); assert.equal(ia.tentativas, 2, 'com recusa, a IA recebe os problemas e tenta de novo');
   assert.match(a.prompts[1], /A resposta anterior foi recusada nestes pontos/);
   assert.match(a.prompts[0], /<<<FONTE-[0-9a-f]+ INICIO DADOS>>>/); assert.match(a.prompts[0], /CAT:CAL-001 \(Catálogo CAL-001\)/); assert.match(a.prompts[0], /NÃO é acreditada RBC/);
-  assert.equal(c.trechos.apresentacao.origem, 'IA'); assert.equal(c.trechos.apresentacao.texto, BOA_AP.texto);
-  assert.equal(c.trechos['metodologia:CAL-001'].texto, BOA_MET.texto); assert.equal(c.trechos['metodologia:CAL-001'].frases[0].trechoRef, 'CAT:CAL-001');
+  assert.equal(c.trechos.apresentacao.origem, 'IA'); assert.equal(c.trechos.apresentacao.frases[0].texto, BOA_AP.texto); assert.equal(c.trechos.apresentacao.frases[0].aceita, false);
+  assert.equal(c.trechos['metodologia:CAL-001'].frases[0].texto, BOA_MET.texto); assert.equal(c.trechos['metodologia:CAL-001'].frases[0].trechoRef, 'CAT:CAL-001');
   const mot = (re) => ia.retiradas.find((r) => re.test(r.texto));
   assert.match(mot(/líder/).motivo, /superlativo/);
   assert.match(mot(/acreditada/).motivo, /acreditação/);
-  assert.match(mot(/ajuste eletrônico/).motivo, /afirmação técnica fora das fontes citadas.*ajuste/);
+  assert.match(mot(/ajuste eletrônico/).motivo, /afirmação fora das fontes citadas.*ajuste/);
   assert.match(mot(/5 pontos/).motivo, /o número 5 não está/);
   assert.match(mot(/Termoprecisa/).motivo, /fabricante/);
   assert.match(mot(/contempla os pontos contratados e emissão/).motivo, /não está, literalmente, em nenhuma das fontes citadas/);
   assert.match(mot(/Inmetro/).motivo, /Inmetro.*balanças e esfigmomanômetros/);
   assert.match(mot(/contempla os pontos contratados\.$/).motivo, /fonte que não existe/);
   assert.equal(ia.retiradas.length, 8);
-  // o que foi retirado não chega ao documento
-  const html = ok(a.prop('s_dora', 'ver', { id: 'op1', propostaId: at.id })).html;
-  assert.doesNotMatch(html, /líder|acreditada|Termoprecisa|ajuste eletrônico/i); assert.match(html, /Metodologia:<\/b> A calibração da indicação de temperatura contempla/);
+  // o que foi retirado não chega ao documento; a frase conferida só chega depois do aceite da Diretoria
+  let html = ok(a.prop('s_dora', 'ver', { id: 'op1', propostaId: at.id })).html;
+  assert.doesNotMatch(html, /líder|acreditada|Termoprecisa|ajuste eletrônico/i); assert.doesNotMatch(html, /Metodologia:<\/b>/, 'sem aceite, a frase da IA fica fora');
+  ok(a.prop('s_dora', 'fraseAceitar', { id: 'op1', propostaId: at.id, trecho: 'metodologia:CAL-001', indice: 0, aceitar: true }));
+  html = ok(a.prop('s_dora', 'ver', { id: 'op1', propostaId: at.id })).html;
+  assert.match(html, /Metodologia:<\/b> A calibração da indicação de temperatura contempla/);
   // tudo retirado: vale o texto do sistema
   const b = base({ ia: () => JSON.stringify({ apresentacao: ruins, metodologia: [] }) });
   montar(b);
@@ -148,7 +151,7 @@ test('revisão: trecho editado com motivo e de → para; o verificador recusa su
   let at = tela(a).atual;
   const ed = (d) => a.prop('s_dora', 'trechoEditar', Object.assign({ id: 'op1', propostaId: at.id }, d));
   assert.match(ed({ trecho: 'apresentacao', texto: 'Texto novo da apresentação.', motivo: 'curto' }).message, /motivo/);
-  assert.match(ed({ trecho: 'apresentacao', texto: 'A Metrolabs oferece a melhor calibração do Brasil.', motivo: 'Ajuste da Diretoria' }).message, /superlativo.*nada foi alterado/);
+  assert.match(ed({ trecho: 'apresentacao', texto: 'A Metrolabs oferece a melhor calibração do Brasil.', motivo: 'Ajuste da Diretoria' }).message, /superlativo.*Nada foi alterado/);
   assert.match(ed({ trecho: 'apresentacao', texto: 'A Metrolabs é acreditada RBC.', motivo: 'Ajuste da Diretoria' }).message, /acreditação/);
   assert.match(ed({ trecho: 'metodologia:CAL-001', texto: 'A calibração é feita em 7 pontos por equipamento.', motivo: 'Ajuste da Diretoria' }).message, /7 ponto não está no edital, no catálogo nem na simulação/);
   assert.match(ed({ trecho: 'inventado', texto: 'x', motivo: 'Ajuste da Diretoria' }).message, /não existe nesta versão/);
@@ -161,8 +164,9 @@ test('revisão: trecho editado com motivo e de → para; o verificador recusa su
   const tr = at.trechos.find((t) => t.chave === 'apresentacao');
   assert.equal(tr.texto, novo); assert.equal(tr.origem, 'DIRETORIA'); assert.equal(tr.editadoPor, 'DORA DIRETORA TESTE');
   const e1 = a.tabelas.LIC_PROPOSTA_EDICOES[0];
-  assert.equal(e1.DE, BOA_AP.texto); assert.equal(e1.PARA, novo); assert.equal(e1.MOTIVO, 'Texto mais direto para o órgão'); assert.ok(at.edicoes[0].integra);
-  assert.ok(a.tabelas.LIC_HISTORICO.some((h) => h.TIPO === 'PROPOSTA_TRECHO_EDITADO' && h.DE === BOA_AP.texto.slice(0, 480)));
+  // o "de" é o que estava no documento: a frase da IA não aceita não estava, valia o texto do sistema
+  assert.match(e1.DE, /apresenta proposta técnica e comercial ao órgão/); assert.equal(e1.PARA, novo); assert.equal(e1.MOTIVO, 'Texto mais direto para o órgão'); assert.ok(at.edicoes[0].integra);
+  assert.ok(a.tabelas.LIC_HISTORICO.some((h) => h.TIPO === 'PROPOSTA_TRECHO_EDITADO' && h.DE === e1.DE.slice(0, 480) && h.PARA === novo));
   assert.equal(ok(ed({ trecho: 'apresentacao', texto: novo, motivo: 'Mesmo texto de novo' })).semMudanca, true);
   // aprovar e editar: a aprovação deixa de valer
   ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Conferida pela Diretoria' }));
@@ -370,4 +374,218 @@ test('integração na casca: menu, rota, inclusão dos arquivos novos, navegaç�
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'sem emoji');
   for (const f of ['SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js', 'SGO_Ajuda_LicitacoesRelatorios.js']) assert.match(ler(f), /\r\n/, f + ' em CRLF');
+});
+
+// ---------------------------------------------------------------- revisão independente de 9dc456f (um teste para cada ataque)
+const OBJ = 'calibração de termômetros digitais com emissão de certificado';
+const fAp = (texto) => frase(texto, ['EMPRESA', 'CAMPO:objeto'], OBJ);
+
+test('revisão ALTA 1: afirmação inventada é recusada (palavra fora das fontes, lista de bloqueio, número por extenso); só o que a Diretoria aceita entra no documento emitido', () => {
+  const ataques = [
+    ['A Metrolabs presta serviço ótimo e ágil na ' + OBJ + '.', /"ótimo".*|"ágil"/],
+    ['A Metrolabs é credenciada no órgão para a ' + OBJ + '.', /"credenciada"/],
+    ['A Metrolabs é a única no estado com este serviço de ' + OBJ + '.', /"única"/],
+    ['A ' + OBJ + ' segue a norma ANVISA.', /"ANVISA"/],
+    ['A ' + OBJ + ' tem garantia de um ano.', /"garantia"/],
+    ['A ' + OBJ + ' usa padrões RBC rastreáveis.', /RBC só na forma fixa/],
+    ['A ' + OBJ + ' é homologada pela Cgcre.', /"homologada"/],
+    ['A ' + OBJ + ' é exclusiva da Metrolabs, a líder e a melhor do setor.', /"exclusiva"/],
+    ['A ' + OBJ + ' segue a ISO aplicável.', /ISO sem o número completo/],
+    ['A ' + OBJ + ' é o mais completo.', /"o mais"/],
+    ['A ' + OBJ + ' é rápida.', /a palavra rapida não está/],
+    ['A ' + OBJ + ' ocorre em dois dias.', /dois dia/]];
+  for (let k = 0; k < ataques.length; k += 5) {
+    const lote = ataques.slice(k, k + 5);
+    const x = base({ ia: () => JSON.stringify({ apresentacao: [BOA_AP].concat(lote.map((y) => fAp(y[0]))), metodologia: [{ codigo: 'CAL-001', frases: [BOA_MET] }] }) });
+    montar(x);
+    const cx = tela(x).atual.conteudo;
+    for (const [t, re] of lote) { const r = cx.ia.retiradas.find((y) => y.texto === t); assert.ok(r, 'passou: ' + t); assert.match(r.motivo, re, t); }
+    assert.equal(cx.trechos.apresentacao.frases.length, 1, 'só a frase boa fica'); assert.equal(cx.trechos.apresentacao.frases[0].texto, BOA_AP.texto);
+  }
+  const a = base({ ia: () => JSON.stringify({ apresentacao: [BOA_AP], metodologia: [{ codigo: 'CAL-001', frases: [BOA_MET] }] }) });
+  montar(a);
+  // número por extenso: "um/uma" só antes de unidade; algarismo na fonte vale
+  const X = (t, f) => J(a.ctx.LicProp_extensosFora_(t, [f]));
+  assert.deepEqual(X('garantia de um ano', 'texto sem número'), ['um ano']); assert.deepEqual(X('uma calibração por equipamento', 'texto'), []);
+  assert.deepEqual(X('em trinta dias corridos', 'prazo de 30 dias'), []); assert.deepEqual(X('em quinze dias', 'prazo de 30 dias'), ['quinze dias']);
+  // entregável do catálogo não é "certificada"; ISO com número não cai na regra do ISO
+  const R = (t) => { const p = []; a.ctx.LicProp_conferirRegras_('x', t, p, {}); return p; };
+  assert.deepEqual(R('A calibração tem emissão de certificado de calibração por equipamento.'), []);
+  assert.match(R('A Metrolabs é certificada.').join(), /"certificada"/);
+  assert.ok(!R('Conforme a ISO 9001.').some((p) => /ISO sem/.test(p)));
+  // decisão do coordenador: a frase conferida espera o aceite; emitida sem aceite = texto do sistema
+  const at = tela(a).atual;
+  ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Aprovada sem aceitar a IA' }));
+  const em = ok(a.prop('s_dora', 'emitir', { id: 'op1', propostaId: at.id }));
+  assert.doesNotMatch(em.html, /apresenta proposta para a calibração de termômetros digitais/); assert.match(em.html, /apresenta proposta técnica e comercial ao órgão/);
+  assert.doesNotMatch(em.html, /Metodologia:<\/b>/);
+  // aceite e retirada, com histórico; aceitar depois de aprovar tira a aprovação
+  const b = base({ ia: () => JSON.stringify({ apresentacao: [BOA_AP], metodologia: [{ codigo: 'CAL-001', frases: [BOA_MET] }] }) });
+  montar(b); let bt = tela(b).atual;
+  ok(b.prop('s_dora', 'aprovar', { id: 'op1', propostaId: bt.id, motivo: 'Primeira aprovação' }));
+  const ac = ok(b.prop('s_dora', 'fraseAceitar', { id: 'op1', propostaId: bt.id, trecho: 'apresentacao', indice: 0, aceitar: true }));
+  assert.equal(ac.aprovacaoPerdida, true);
+  assert.equal(ok(b.prop('s_dora', 'fraseAceitar', { id: 'op1', propostaId: bt.id, trecho: 'apresentacao', indice: 0, aceitar: true })).semMudanca, true);
+  assert.match(b.prop('s_dora', 'fraseAceitar', { id: 'op1', propostaId: bt.id, trecho: 'apresentacao', indice: 7, aceitar: true }).message, /Escolha uma frase da IA/);
+  bt = tela(b).atual;
+  const tAp = bt.trechos.find((x) => x.chave === 'apresentacao');
+  assert.equal(tAp.aceitas, 1); assert.equal(tAp.noDocumento, BOA_AP.texto); assert.equal(bt.situacao, 'REVISAO');
+  const e = b.tabelas.LIC_PROPOSTA_EDICOES.find((x) => x.TRECHO === 'apresentacao#0');
+  assert.match(e.PARA, /^aceita: A Metrolab/); assert.equal(e.POR_NOME, 'DORA DIRETORA TESTE'); assert.match(e.TRECHO_NOME, /Apresentação, frase 1/);
+  ok(b.prop('s_dora', 'aprovar', { id: 'op1', propostaId: bt.id, motivo: 'Aprovada com a frase aceita' }));
+  const em2 = ok(b.prop('s_dora', 'emitir', { id: 'op1', propostaId: bt.id }));
+  assert.match(em2.html, /apresenta proposta para a calibração de termômetros digitais com emissão de certificado/); assert.doesNotMatch(em2.html, /Metodologia:<\/b>/, 'a metodologia não aceita ficou fora');
+  assert.match(b.prop('s_dora', 'fraseAceitar', { id: 'op1', propostaId: bt.id, trecho: 'apresentacao', indice: 0, aceitar: false }).message, /não muda nunca/);
+});
+
+test('revisão ALTA 2: RBC só na forma fixa do sistema (frase da IA e da Diretoria); "As calibrações são rastreáveis" deixou de ser fonte; a calibração traz a frase pronta', () => {
+  const fixa = frase('A calibração da indicação de temperatura usa padrões com rastreabilidade a laboratórios da RBC.', ['CAT:CAL-001'], 'Padrões com rastreabilidade a laboratórios da RBC');
+  const outra = frase('A calibração da indicação de temperatura é rastreável à RBC.', ['CAT:CAL-001'], 'Padrões com rastreabilidade a laboratórios da RBC');
+  const a = base({ ia: () => JSON.stringify({ apresentacao: [BOA_AP], metodologia: [{ codigo: 'CAL-001', frases: [fixa, outra] }] }) });
+  montar(a);
+  const at = tela(a).atual, c = at.conteudo;
+  assert.equal(c.trechos['metodologia:CAL-001'].frases.length, 1); assert.equal(c.trechos['metodologia:CAL-001'].frases[0].texto, fixa.texto);
+  assert.match(c.ia.retiradas.find((r) => r.texto === outra.texto).motivo, /RBC só na forma fixa/);
+  assert.equal(c.tecnicos['CAL-001'].rastreabilidade, 'Padrões com rastreabilidade a laboratórios da RBC.');
+  const ctx = a.ctx.LicProp_ctx_(c);
+  assert.doesNotMatch(ctx.fontesCons.EMPRESA.texto, /rastreáve/i, 'a fonte genérica que liberava RBC saiu');
+  const html = ok(a.prop('s_dora', 'ver', { id: 'op1', propostaId: at.id })).html;
+  assert.match(html, /Rastreabilidade<\/th><td colspan="3">Padrões com rastreabilidade a laboratórios da RBC\./);
+  // Diretoria: RBC fora da forma fixa e acreditação recusados, mesmo com "assumo este texto"
+  const ed = (texto, assumo) => a.prop('s_dora', 'trechoEditar', { id: 'op1', propostaId: at.id, trecho: 'observacoes', texto, motivo: 'Texto da Diretoria aqui', assumo });
+  assert.match(ed('As calibrações são rastreáveis à RBC.', true).message, /RBC só na forma fixa.*não pode ser assumido/);
+  assert.match(ed('A Metrolabs é acreditada.', true).message, /não pode ser assumido/);
+  ok(ed('A calibração usa padrões com rastreabilidade a laboratórios da RBC.', false));
+});
+
+test('revisão MÉDIA 3: a edição da Diretoria passa pela lista de bloqueio; texto que fura só com "assumo este texto" e motivo, registrado no histórico e na aprovação', () => {
+  const a = base(); montar(a);
+  let at = tela(a).atual;
+  const ed = (texto, assumo) => a.prop('s_dora', 'trechoEditar', { id: 'op1', propostaId: at.id, trecho: 'observacoes', texto, motivo: 'O edital pede esta declaração', assumo });
+  for (const t of ['A Metrolabs é credenciada no órgão.', 'O serviço tem garantia de um ano.', 'A Metrolabs é a única no estado.', 'Segue a norma ANVISA.'])
+    assert.match(ed(t, false).message, /palavra bloqueada|número por extenso.*Assumo este texto/, t);
+  assert.equal(a.tabelas.LIC_PROPOSTA_EDICOES.length, 0);
+  const r = ok(ed('O serviço tem garantia de um ano.', true));
+  assert.equal(r.assumido, true);
+  at = tela(a).atual;
+  const t = at.trechos.find((x) => x.chave === 'observacoes');
+  assert.ok(t.assumido && t.assumido.problemas.some((p) => /garantia/.test(p))); assert.ok(at.avisos.some((x) => /assumido pela Diretoria fora das regras/.test(x)));
+  assert.ok(a.tabelas.LIC_HISTORICO.some((h) => h.TIPO === 'PROPOSTA_TRECHO_EDITADO' && /ASSUMIDO pela Diretoria fora das regras/.test(h.TEXTO)));
+  ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Aprovada com o texto assumido' }));
+  assert.match(a.tabelas.LIC_HISTORICO.find((h) => h.TIPO === 'PROPOSTA_APROVADA').TEXTO, /1 trecho\(s\) assumido\(s\) pela Diretoria fora das regras do verificador: Observações da Diretoria/);
+});
+
+test('revisão MÉDIA 4: o documento do órgão não leva as observações internas do catálogo nem a referência interna da simulação (ficam na aba)', () => {
+  const a = ambienteProposta();
+  a.simular('op1', [{ numero: '1', codigo: 'CAL-001', quantidade: 10, precoProposta: '199,00' }, { numero: '2', codigo: 'QUA-001', quantidade: 1, precoProposta: '6.900,00' }]);
+  montar(a, { usarIA: false });
+  const at = tela(a).atual;
+  assert.ok(at.conteudo.tecnicos['QUA-001'].avisos.some((x) => /NR-13 não está incluída/.test(x)), 'o aviso continua no conteúdo da aba');
+  assert.ok(at.simulacaoHash);
+  ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Conferida pela Diretoria' }));
+  const html = ok(a.prop('s_dora', 'emitir', { id: 'op1', propostaId: at.id })).html;
+  assert.doesNotMatch(html, /Observações técnicas|NR-13 não está incluída|protocolo define as repetições/);
+  assert.doesNotMatch(html, /Referência interna|simulação de preço versão/); assert.doesNotMatch(html, new RegExp(at.simulacaoHash.slice(0, 16)));
+});
+
+test('revisão MÉDIA 5: versão nova da fonte ou leitura mais nova depois do rascunho bloqueia aprovar e emitir ("o edital mudou")', () => {
+  const a = base(); montar(a);
+  let at = tela(a).atual;
+  ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Conferida pela Diretoria' }));
+  a.tabelas.LIC_OPORTUNIDADES[0].VERSAO_HASH = 'h2'; a.tabelas.LIC_OPORTUNIDADES[0].VERSAO_FONTE = 2;
+  assert.match(a.prop('s_dora', 'emitir', { id: 'op1', propostaId: at.id }).message, /O edital mudou: há versão nova da fonte.*Monte de novo/);
+  montar(a, { motivo: 'Edital retificado na fonte' });
+  at = tela(a).atual; assert.deepEqual(at.bloqueios, []);
+  // leitura nova (versão 2)
+  a.tabelas.LIC_LEITURAS.push(Object.assign({}, a.tabelas.LIC_LEITURAS[0], { ID: 'le2', VERSAO: 2 }));
+  at = tela(a).atual;
+  assert.ok(at.bloqueios.some((b) => /leitura do edital mais nova \(versão 2\).*Monte de novo/.test(b)));
+  assert.match(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Tentar com leitura velha' }).message, /O edital mudou/);
+});
+
+test('revisão MÉDIA 6: o HTML e o PDF só ficam guardados se o acesso conferido for RESTRITO (PRIVATE só no Google); senão lixeira e nada é emitido', () => {
+  const prep = () => { const a = base(); montar(a); const at = tela(a).atual; ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Conferida pela Diretoria' })); return { a, at }; };
+  const x = prep();
+  ok(x.a.prop('s_dora', 'emitir', { id: 'op1', propostaId: x.at.id }));
+  const l = x.a.tabelas.LIC_PROPOSTAS[0];
+  assert.equal(x.a.arquivos[l.HTML_ARQUIVO_ID].acesso, 'RESTRITO'); assert.equal(x.a.arquivos[l.PDF_ARQUIVO_ID].acesso, 'RESTRITO');
+  // o serviço aceitou o pedido mas não restringiu: lixeira e erro
+  const y = prep(); y.a.compartilhamentoIgnorado = true;
+  assert.match(y.a.prop('s_dora', 'emitir', { id: 'op1', propostaId: y.at.id }).message, /não ficou restrito.*lixeira.*nada foi gravado/);
+  assert.ok(Object.values(y.a.arquivos).length >= 1 && Object.values(y.a.arquivos).every((f) => f.lixeira)); assert.equal(y.a.tabelas.LIC_PROPOSTAS[0].SITUACAO, 'APROVADA');
+  assert.match(y.a.rel('s_dora', 'gerarOportunidade', { id: 'op1' }).message, /não ficou restrito/);
+  // Google Drive (sem RESTRITO): PRIVATE conferido vale
+  const z = prep(); z.a.semRestrito = true;
+  ok(z.a.prop('s_dora', 'emitir', { id: 'op1', propostaId: z.at.id }));
+  assert.equal(z.a.arquivos[z.a.tabelas.LIC_PROPOSTAS[0].HTML_ARQUIVO_ID].acesso, 'PRIVATE');
+});
+
+test('revisão MÉDIA 7: documento que não confere não é entregue nem aberto; o A4 abre num iframe sandbox sem allow-same-origin', () => {
+  const a = base(); montar(a); const at = tela(a).atual;
+  ok(a.prop('s_dora', 'aprovar', { id: 'op1', propostaId: at.id, motivo: 'Conferida pela Diretoria' }));
+  const em = ok(a.prop('s_dora', 'emitir', { id: 'op1', propostaId: at.id }));
+  const l = a.tabelas.LIC_PROPOSTAS[0];
+  a.arquivos[l.HTML_ARQUIVO_ID].bytes = Buffer.from(em.html.replace('199,00', '1,00'));
+  const v = ok(a.prop('s_dora', 'ver', { id: 'op1', propostaId: l.ID }));
+  assert.equal(v.integra, false); assert.equal(v.html, ''); assert.match(v.aviso, /não foi aberto/);
+  const r = ok(a.rel('s_dora', 'gerarOportunidade', { id: 'op1' })), rr = a.tabelas.LIC_RELATORIOS[0];
+  a.arquivos[rr.HTML_ARQUIVO_ID].bytes = Buffer.from(r.html + ' ');
+  const vr = ok(a.rel('s_dora', 'ver', { relatorioId: rr.ID }));
+  assert.equal(vr.integra, false); assert.equal(vr.html, '');
+  // rascunho com o registro mexido também não abre
+  const b = base(); montar(b); const bt = tela(b).atual;
+  b.tabelas.LIC_PROPOSTAS[0].TOTAL = 1;
+  assert.equal(ok(b.prop('s_dora', 'ver', { id: 'op1', propostaId: bt.id })).html, '');
+  // cliente: página segura e nada aberto quando não confere
+  const t = telaCliente();
+  const pag = t.ctx.LicPp_paginaSegura_('<!DOCTYPE html><title>Doc "x"</title><script>alert(1)</script>');
+  assert.match(pag, /<iframe sandbox="allow-scripts allow-modals allow-popups"/); assert.doesNotMatch(pag, /allow-same-origin/);
+  assert.match(pag, /srcdoc="&lt;!DOCTYPE html&gt;&lt;title&gt;Doc &quot;x&quot;/); assert.doesNotMatch(pag, /<script>alert/);
+  const src = t.html['JS_Licitacoes_Proposta.html'], srcR = t.html['JS_Licitacoes_Relatorios.html'];
+  assert.match(src, /if \(!r\.integra\) \{ LicPp_fecharJanela_\(j\); Lic_toast_\(r\.aviso/); assert.match(srcR, /if \(!r\.integra\) \{ LicRl_fechar_\(j\); Lic_toast_\(r\.aviso/);
+  assert.doesNotMatch(srcR, /j\.document\.write\(html\)/, 'o caminho de reserva também usa a página segura');
+});
+
+test('revisão BAIXA 8: o hash da proposta cobre total, itens, validade, arquivos e substituição; o do relatório, o arquivo, a oportunidade e o período', () => {
+  const a = base(); montar(a);
+  const campos = { TOTAL: 1, ITENS_COTADOS: 9, ITENS_NAO_COTADOS: 0, VALIDADE_DIAS: 365, HTML_ARQUIVO_ID: 'outro', PDF_ARQUIVO_ID: 'outro', SUBSTITUIDA_POR_ID: 'outra' };
+  for (const k of Object.keys(campos)) {
+    const r = Object.assign({}, a.tabelas.LIC_PROPOSTAS[0]);
+    assert.equal(a.ctx.LicProp_integra_(r), true);
+    r[k] = campos[k]; assert.equal(a.ctx.LicProp_integra_(r), false, k);
+  }
+  const r0 = Object.assign({}, a.tabelas.LIC_PROPOSTAS[0], { TOTAL: String(a.tabelas.LIC_PROPOSTAS[0].TOTAL) });
+  assert.equal(a.ctx.LicProp_integra_(r0), true, 'número lido da planilha como texto continua íntegro');
+  ok(a.rel('s_dora', 'gerarPeriodo', { de: '2026-10-01', ate: '2026-11-30' }));
+  for (const k of ['HTML_ARQUIVO_ID', 'OPORTUNIDADE_ID', 'PERIODO_DE', 'PERIODO_ATE', 'HTML_TAMANHO']) {
+    const rr = Object.assign({}, a.tabelas.LIC_RELATORIOS[0]); rr[k] = k === 'HTML_TAMANHO' ? 1 : 'x';
+    assert.notEqual(a.ctx.LicRel_hashReg_(rr), rr.HASH, k);
+  }
+});
+
+test('revisão BAIXA 9: relatório do período com as definições do Painel (sem ciência, médias sem descartadas e travadas, mudanças de etapa reais com REABERTA)', () => {
+  const a = base();
+  a.tabelas.LIC_OPORTUNIDADES.push({ ID: 'op3', CODIGO: 'LIC-2026-0003', SITUACAO: 'RADAR', TRIAGEM: 'TRAVADA', NOTA: 0, NOTA_CLASSE: 'DESCARTE', UF: 'GO', PRIMEIRA_COLETA_EM: '2026-10-21T13:00:00.000Z', VERSAO_FONTE: 1, VERSAO_HASH: 'h1' },
+    { ID: 'op4', CODIGO: 'LIC-2026-0004', SITUACAO: 'DESCARTADA', NOTA: 10, NOTA_CLASSE: 'DESCARTE', UF: 'GO', PRIMEIRA_COLETA_EM: '2026-10-22T13:00:00.000Z', VERSAO_FONTE: 1, VERSAO_HASH: 'h1' });
+  a.tabelas.LIC_ALERTAS = [{ ID: 'al1', SITUACAO: 'ENVIADO', CRIADO_EM: '2026-10-25T12:00:00.000Z', ALVO_ISO: '2026-12-30T12:00:00.000Z', NIVEL: 'NORMAL' },
+    { ID: 'al2', SITUACAO: 'ENVIADO', CRIADO_EM: '2026-10-25T12:00:00.000Z', ALVO_ISO: '2026-10-01T12:00:00.000Z', NIVEL: 'NORMAL' },
+    { ID: 'al3', SITUACAO: 'ENVIADO', CRIADO_EM: '2026-10-25T12:00:00.000Z', ALVO_ISO: '2026-12-30T12:00:00.000Z', CIENTE_EM: '2026-10-25T13:00:00.000Z', NIVEL: 'NORMAL' }];
+  for (const [tipo, data] of [['ENVIADA_PARA_ANALISE', '2026-10-20'], ['DESCARTADA_PELA_DIRETORIA', '2026-10-21'], ['REABERTA', '2026-10-22'], ['REABERTA', '2026-09-01']])
+    a.tabelas.LIC_HISTORICO.push({ ID: 'h' + tipo + data, ENTIDADE: 'OPORTUNIDADE', ENTIDADE_ID: 'op1', TIPO: tipo, DATA: data + 'T13:00:00.000Z' });
+  const d = J(a.ctx.LicRel_dadosPeriodo_('2026-10-01', '2026-11-30'));
+  assert.equal(d.novas, 3); assert.equal(d.notas.qtd, 1, 'travada e descartada fora das notas'); assert.equal(d.notas.media, 72);
+  assert.equal(d.alertas.total, 3); assert.equal(d.alertas.semCiencia, 1, 'a regra da Central: enviado, sem ciência e com o prazo por vir');
+  assert.deepEqual(d.etapas, { ENVIADA_PARA_ANALISE: 1, DESCARTADA_PELA_DIRETORIA: 1, REABERTA: 1 }); assert.equal(d.mudancasEtapa, 3);
+  const h = ok(a.rel('s_dora', 'gerarPeriodo', { de: '2026-10-01', ate: '2026-11-30' })).html;
+  assert.match(h, /1 envio\(s\) para análise, 1 descarte\(s\) pela Diretoria e 1 reabertura\(s\)/); assert.match(h, /sem as descartadas e as travadas \(a mesma regra do Painel\)/);
+});
+
+test('revisão BAIXA 10: número negativo no começo do texto fica; mais frases da IA do que o limite viram aviso', () => {
+  const a = base({ ia: () => JSON.stringify({ apresentacao: Array.from({ length: 8 }, () => BOA_AP), metodologia: [{ codigo: 'CAL-001', frases: Array.from({ length: 10 }, () => BOA_MET) }] }) });
+  assert.equal(a.ctx.LicProp_txt_('-10 °C é o primeiro ponto'), '-10 °C é o primeiro ponto');
+  assert.equal(a.ctx.LicProp_txt_('=SOMA(A1)'), 'SOMA(A1)'); assert.equal(a.ctx.LicProp_txt_('- item de lista'), 'item de lista'); assert.equal(a.ctx.LicProp_txt_('@x'), 'x');
+  montar(a);
+  const av = tela(a).atual.avisos;
+  assert.ok(av.some((x) => /A IA mandou 8 frases na apresentação; só as 6 primeiras foram conferidas/.test(x)));
+  assert.ok(av.some((x) => /A IA mandou 10 frases na metodologia de CAL-001; só as 8 primeiras/.test(x)));
 });

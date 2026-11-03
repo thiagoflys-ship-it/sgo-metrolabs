@@ -24,9 +24,20 @@ function comLeitura(a, oid, itens) {
 function ambienteProposta(o) {
   o = o || {};
   const a = ambientePrecos({ oportunidades: o.oportunidades || OPS });
-  for (const f of ['SGO_Licitacoes_Leitura.js', 'SGO_Licitacoes_Habilitacao.js', 'SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js']) vm.runInContext(a.ler(f), a.ctx, { filename: f });
+  for (const f of ['SGO_Licitacoes_Agenda.js', 'SGO_Licitacoes_Alertas.js', 'SGO_Licitacoes_Leitura.js', 'SGO_Licitacoes_Habilitacao.js', 'SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js']) vm.runInContext(a.ler(f), a.ctx, { filename: f });
   const ok = (r) => { if (!r.ok) throw new Error(r.message); return r; };
   const pv = ok(a.lic('s_dora', 'importarPrevia')); ok(a.lic('s_dora', 'importar', { marca: pv.marca, motivo: 'Ponto de partida da tabela' }));
+  // serviço de arquivos em memória com o acesso de cada arquivo (RESTRITO, PRIVATE, lixeira), como o do servidor do SGO+
+  const arquivos = {}; let n = 0;
+  const objArq = (id) => ({ getId: () => id, getUrl: () => '/arquivos/' + id,
+    setSharing: (x) => { if (a.semRestrito && x === 'RESTRITO') throw new Error('RESTRITO não existe no Google Drive'); if (a.compartilhamentoIgnorado) return; arquivos[id].acesso = String(x); },
+    getSharingAccess: () => arquivos[id].acesso, setTrashed: (v) => { arquivos[id].lixeira = !!v; },
+    getBlob: () => ({ getDataAsString: () => arquivos[id].bytes.toString('utf8'), getBytes: () => Array.from(arquivos[id].bytes), getContentType: () => arquivos[id].tipo }) });
+  const pastaFalsa = { getId: () => 'pasta', getFoldersByName: () => ({ hasNext: () => true, next: () => pastaFalsa }), createFolder: () => pastaFalsa,
+    createFile: (blob) => { const id = 'arq' + (++n); arquivos[id] = { bytes: Buffer.from(blob._bytes || blob.getBytes()), tipo: blob.getContentType(), nome: blob.getName(), acesso: 'PADRAO', lixeira: false }; return objArq(id); } };
+  a.ctx.SGO_DocSalvar_pastaPersistente_ = () => pastaFalsa;
+  a.ctx.DriveApp = { Access: { PRIVATE: 'PRIVATE' }, Permission: { NONE: 'NONE' }, getFileById: (id) => { if (!arquivos[id]) throw new Error('arquivo inexistente'); return objArq(id); } };
+  a.arquivos = arquivos;
   a.prompts = [];
   a.iaTexto = o.ia || null;
   a.ligarIA = (fn) => {

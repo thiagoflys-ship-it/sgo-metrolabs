@@ -67,8 +67,6 @@ var LICPROP_PASTA = 'Licitações - Propostas e relatórios (restrito)';
 var LICPROP_AVISO_IMAGENS = 'O SGO+ não tem fotos nem ícones cadastrados dos serviços: a proposta sai só com a logomarca oficial da Metrolabs (nenhuma imagem é gerada por IA nem vem de fora).';
 // superlativo e promessa de marketing (texto sem acento, em minúsculas)
 var LICPROP_SUPERLATIVO = /(^| )(melhor|melhores|excelente|excelentes|excelencia|lider|lideres|lideranca|inigualavel|incomparavel|de ponta|premium|altissim\w*|maxima qualidade|alta qualidade|qualidade superior|garantimos|garantia total|robust\w*|inovador\w*|revolucion\w*|incrivel|perfeit\w*|impecavel|sem igual|referencia no mercado|unic[oa] no mercado|o mais|a mais|os mais|as mais|extremamente|altamente qualificad\w*|renomad\w*|reconhecid[oa] no mercado|100 por cento)( |$)/;
-var LICPROP_ACREDITACAO = /(^| )(acredita\w*|17025)( |$)/;
-var LICPROP_RBC = /(^| )rbc( |$)/;
 var LICPROP_INMETRO = /(^| )inmetro( |$)/;
 // palavras de proposta que não são afirmação técnica (radical de 6 letras, sem acento)
 var LICPROP_PALAVRAS_LIVRES = ('metrolabs metrolab propos servic execut confor contra edital itens objeto orgao empres presta realiz inclui contem aprese atende descri previs requis condic ' +
@@ -96,8 +94,8 @@ function LicProp_dia_(iso) { var t = Date.parse(Lic_s_(iso)); if (!isFinite(t)) 
 function LicProp_diaHora_(iso) { var t = Date.parse(Lic_s_(iso)); if (!isFinite(t)) return ''; var d = new Date(t - 3 * 3600e3).toISOString(); return d.slice(8, 10) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4) + ' ' + d.slice(11, 16); }
 function LicProp_esc_(s) { return typeof RelA4_esc_ === 'function' ? RelA4_esc_(s) : Lic_s_(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function LicProp_juntar_(l) { return l.length <= 1 ? l.join('') : l.slice(0, -1).join(', ') + ' e ' + l[l.length - 1]; }
-/** Texto livre gravado: sem = + - @ no começo (célula nunca vira fórmula). */
-function LicProp_txt_(v, max) { return Lic_texto_(Lic_s_(v).replace(/\r\n/g, '\n').replace(/^[=+\-@\s]+/, ''), max || LICPROP_TRECHO_MAX); }
+/** Texto livre gravado: sem = + @ no começo nem "-" que não seja de número negativo (célula nunca vira fórmula; "-10 °C" fica). */
+function LicProp_txt_(v, max) { return Lic_texto_(Lic_s_(v).replace(/\r\n/g, '\n').replace(/^(?:[=+@\s]|-(?!\d))+/, ''), max || LICPROP_TRECHO_MAX); }
 
 /** JSON do conteúdo em até 4 células de 45 mil caracteres; a parte seguinte nunca começa com = + - @ '. Lança se não couber. */
 function LicProp_partes_(json) {
@@ -113,9 +111,12 @@ function LicProp_partes_(json) {
 }
 function LicProp_conteudoJson_(r) { var j = ''; for (var i = 0; i < LICPROP_PARTES; i++) j += Lic_s_(r[i ? 'CONTEUDO_JSON_' + (i + 1) : 'CONTEUDO_JSON']); return j; }
 function LicProp_conteudo_(r) { return Lic_json_(LicProp_conteudoJson_(r), null); }
+function LicProp_n_(v) { var n = Number(v); return isFinite(n) ? String(Math.round(n * 100) / 100) : '0'; }
+/** Revisão de 9dc456f: o hash cobre também total, itens, validade, os arquivos guardados e a substituição (número normalizado). */
 function LicProp_hashLinha_(r) {
   return Lic_hash_([Lic_s_(r.OPORTUNIDADE_ID), Number(r.VERSAO) || 0, Lic_s_(r.NUMERO), Lic_up_(r.SITUACAO), Lic_s_(r.SIMULACAO_HASH), Lic_s_(r.CONTEUDO_HASH), Lic_s_(r.APROVADO_POR_ID), Lic_s_(r.APROVADO_EM),
-    Lic_s_(r.APROVADO_CONTEUDO_HASH), Lic_s_(r.EMITIDO_POR_ID), Lic_s_(r.EMITIDO_EM), Lic_s_(r.HTML_SHA256), Lic_s_(r.PDF_SHA256), Lic_s_(r.MONTADO_POR_ID), Lic_s_(r.MONTADO_EM)].join('|'));
+    Lic_s_(r.APROVADO_CONTEUDO_HASH), Lic_s_(r.EMITIDO_POR_ID), Lic_s_(r.EMITIDO_EM), Lic_s_(r.HTML_SHA256), Lic_s_(r.PDF_SHA256), Lic_s_(r.MONTADO_POR_ID), Lic_s_(r.MONTADO_EM),
+    LicProp_n_(r.TOTAL), LicProp_n_(r.ITENS_COTADOS), LicProp_n_(r.ITENS_NAO_COTADOS), LicProp_n_(r.VALIDADE_DIAS), Lic_s_(r.HTML_ARQUIVO_ID), Lic_s_(r.PDF_ARQUIVO_ID), Lic_s_(r.SUBSTITUIDA_POR_ID)].join('|'));
 }
 function LicProp_hashEdicao_(e) { return Lic_hash_([Lic_s_(e.PROPOSTA_ID), Lic_s_(e.TRECHO), Lic_s_(e.DE), Lic_s_(e.PARA), Lic_s_(e.MOTIVO), Lic_s_(e.POR_ID), Lic_s_(e.EM)].join('|')); }
 function LicProp_integra_(r) { return LicProp_hashLinha_(r) === Lic_s_(r.HASH) && Lic_hash_(LicProp_conteudoJson_(r)) === Lic_s_(r.CONTEUDO_HASH); }
@@ -125,7 +126,19 @@ function LicProp_propostasDe_(oid) {
 function LicProp_numero_(l, versao) { return Lic_s_(l.CODIGO) + '-P' + (versao < 10 ? '0' : '') + versao; }
 
 // ------------------------------------------------------------ guarda do HTML congelado (proposta emitida e relatórios)
-function LicDoc_restrito_(f) { try { f.setSharing('RESTRITO', 'SISTEMA'); } catch (e) { try { if (DriveApp.Access && DriveApp.Access.PRIVATE) f.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE); } catch (x) {} } }
+/**
+ * Revisão de 9dc456f: grava RESTRITO e CONFERE (getSharingAccess). PRIVATE só quando o RESTRITO não existe (Google Drive). Não ficou
+ * restrito: o arquivo vai para a lixeira e a gravação para, com o motivo (documento com preço nunca fica aberto por link).
+ */
+function LicDoc_restrito_(f) {
+  var semRestrito = false, acesso = '';
+  try { f.setSharing('RESTRITO', 'SISTEMA'); } catch (e) { semRestrito = true; }
+  if (semRestrito) { try { if (DriveApp.Access && DriveApp.Access.PRIVATE) f.setSharing(DriveApp.Access.PRIVATE, DriveApp.Permission.NONE); } catch (x) {} }
+  try { acesso = String(f.getSharingAccess()); } catch (e) { acesso = ''; }
+  if (acesso === 'RESTRITO' || (semRestrito && DriveApp.Access && DriveApp.Access.PRIVATE && acesso === String(DriveApp.Access.PRIVATE))) return;
+  try { f.setTrashed(true); } catch (e) {}
+  throw new Error('o arquivo não ficou restrito no serviço de arquivos (acesso "' + (acesso || 'desconhecido') + '"); ele foi para a lixeira');
+}
 function LicDoc_pasta_(sub) {
   var pasta = SGO_DocSalvar_pastaPersistente_('LIC_DOC_PASTA_ID', LICPROP_PASTA, '');
   return sub && typeof RelA4_subpasta_ === 'function' ? RelA4_subpasta_(pasta, sub) : pasta;
@@ -176,6 +189,8 @@ function LicProp_tecnicoDo_(p) {
   } catch (e) { def = null; r = null; }
   var t = { codigo: Lic_up_(p.CODIGO), nome: Lic_s_(p.NOME), categoria: Lic_s_(p.CATEGORIA), descricao: Lic_texto_(descr, 1200), regra: def && typeof COM_CAT_REGRAS !== 'undefined' ? Lic_s_(COM_CAT_REGRAS[def.regra]) : '',
     pontos: [], condicoes: [], parametros: [], avisos: [], normas: [], entregaveis: [], versaoTabela: Lic_s_(p.CATALOGO_VERSAO), oficial: !!Lic_s_(p.CATALOGO_OFICIAL), inmetro: /balan|esfigmo/i.test(Lic_s_(p.NOME) + ' ' + Lic_s_(p.CODIGO)) };
+  // revisão de 9dc456f: RBC só na forma fixa do sistema, e só nas calibrações (a Metrolabs é rastreável, não acreditada)
+  t.rastreabilidade = /calibra/i.test(Lic_s_(p.CATEGORIA) + ' ' + Lic_s_(p.NOME)) ? LICPROP_FRASE_RBC.charAt(0).toUpperCase() + LICPROP_FRASE_RBC.slice(1) + '.' : '';
   if (r) {
     t.pontos = (r.pontos || []).map(function (x) { return Lic_s_(x.texto); });
     (r.grandezas || []).forEach(function (g) { t.pontos.push(g.nome + ': ' + ((g.pontos || []).map(function (x) { return x.texto; }).join(', ') || 'a definir')); });
@@ -332,7 +347,7 @@ function LicProp_fontes_(c) {
   Object.keys(c.tecnicos).forEach(function (cod) {
     var t = c.tecnicos[cod];
     por('CAT:' + cod, 'Catálogo ' + cod, [cod + ' ' + t.nome + '.', t.descricao, t.regra ? 'Regra de preço: ' + t.regra + '.' : '', t.pontos.length ? 'Pontos padrão: ' + t.pontos.join(', ') + '.' : '', t.condicoes.length ? 'Condições ou processos: ' + t.condicoes.join('; ') + '.' : '',
-      t.parametros.length ? t.parametros.join('. ') + '.' : '', t.avisos.join(' '), t.normas.length ? 'Normas citadas: ' + t.normas.join(', ') + '.' : '', t.entregaveis.length ? 'Entregáveis: ' + t.entregaveis.join(', ') + '.' : ''].filter(Boolean).join(' '), true);
+      t.parametros.length ? t.parametros.join('. ') + '.' : '', t.rastreabilidade || '', t.avisos.join(' '), t.normas.length ? 'Normas citadas: ' + t.normas.join(', ') + '.' : '', t.entregaveis.length ? 'Entregáveis: ' + t.entregaveis.join(', ') + '.' : ''].filter(Boolean).join(' '), true);
   });
   c.itens.forEach(function (i) { por('EDITAL:' + i.numero, 'Item ' + i.numero + ' do edital', i.descricao + (i.quantidade ? ' · quantidade ' + i.quantidade + ' ' + i.unidade : ''), true); });
   ['prazos', 'pagamento', 'garantia', 'validade', 'outros'].forEach(function (k) { (c.edital[k] || []).forEach(function (x) { por(x.id, x.temaNome + ' (leitura do edital)', x.trecho, true); }); });
@@ -340,7 +355,7 @@ function LicProp_fontes_(c) {
   por('CAMPO:objeto', 'Objeto (PNCP)', o.objeto); por('CAMPO:orgao', 'Órgão (PNCP)', [o.orgao, o.unidade].filter(Boolean).join(' · ')); por('CAMPO:local', 'Local (PNCP)', [o.municipio, o.uf].filter(Boolean).join('/'));
   por('CAMPO:modalidade', 'Modalidade (PNCP)', [o.modalidade, o.amparo].filter(Boolean).join(' · '));
   var e = c.empresa;
-  por('EMPRESA', 'Dados da licitante', e.nome + (e.cnpj ? ', CNPJ ' + e.cnpj : '') + ', ' + e.unidade + ', ' + e.porteNome + '. As calibrações são rastreáveis.');
+  por('EMPRESA', 'Dados da licitante', e.nome + (e.cnpj ? ', CNPJ ' + e.cnpj : '') + ', ' + e.unidade + ', ' + e.porteNome + '.');
   return f;
 }
 function LicProp_ctx_(c) {
@@ -358,42 +373,82 @@ function LicProp_refNorm_(r) {
 }
 
 // ------------------------------------------------------------ verificador
-/** Palavras técnicas da frase que não estão nas fontes citadas (radical de 6 letras, sem acento); as de proposta ficam de fora. */
+// Revisão independente de 9dc456f (02/11/2026): palavra de 4 letras ou mais fora das fontes citadas recusa a frase (as palavras
+// comuns de proposta ficam liberadas), lista de bloqueio, número por extenso conta como número e RBC só na forma fixa do sistema.
+var LICPROP_PALAVRAS_COMUNS = ('para pela pelo pelos pelas como entre sobre cada todo toda todos todas seus suas sua seu este esta estes estas isso esse essa esses essas ' +
+  'sera serao sendo seja sejam estao feito feita feitos feitas onde quando qual quais mesmo mesma mesmos mesmas assim tambem ainda apenas desde aos das dos nas nos numa ' +
+  'pois porque conforme mediante durante atraves junto tendo possui possuem forma modo meio base nesta neste nessa nesse deste desta dessa desse cujo cuja cujos cujas ' +
+  'objeto item itens licitante proposta propostas servico servicos edital orgao contratante contratada empresa matriz unidade execucao executado executada executados ' +
+  'executadas realizado realizada realizados realizadas descrito descrita descritos descritas previsto prevista previstos previstas atende atendem apresenta apresentam ' +
+  'contempla contemplam inclui incluem relacionados relacionadas documento seguintes seguinte etapas etapa').split(/\s+/);
+var LICPROP_EXTENSO = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15,
+  dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90, cem: 100, cento: 100, duzentos: 200, trezentos: 300, mil: 1000 };
+var LICPROP_UNIDADE_CONTA = /^(ano|anos|mes|meses|dia|dias|hora|horas|semana|semanas|minuto|minutos|ponto|pontos|vez|vezes|ciclo|ciclos|equipamento|equipamentos|visita|visitas)$/;
+/** Lista de bloqueio (texto sem acento, com espaço nas pontas). Cada item: [regra, o que aparece na recusa]. */
+var LICPROP_BLOQUEIO = [[/ credenciad\w* /, 'credenciada'], [/ homologad\w* /, 'homologada'], [/ certificad\w* /, 'certificada'], [/ acredita\w* | 17025 /, 'acreditação'],
+  [/ unic[oa]s? /, 'única'], [/ exclusiv\w* /, 'exclusiva'], [/ lider\w* /, 'líder'], [/ melhor\w* /, 'melhor'], [/ otim[oa]s? /, 'ótimo'], [/ ageis | agil /, 'ágil'],
+  [/ anvisa /, 'ANVISA'], [/ cgcre /, 'Cgcre'], [/ iso(?! (iec )?\d{4,5} )/, 'ISO sem o número completo da norma'], [/ garanti\w* /, 'garantia'], [/ o mais | a mais | os mais | as mais /, 'o mais']];
+/** "certificado de calibração" e "emissão de certificado" são entregáveis do catálogo, não qualidade da empresa. */
+function LicProp_semEntregavel_(n) {
+  return n.replace(/ certificados? de calibracao /g, ' ').replace(/ certificados? (por|de cada) equipamento /g, ' ').replace(/ (emissao de|com|do|o|os|de) certificados? /g, ' $1 ');
+}
+/** RBC: só a forma fixa do sistema (LICPROP_FRASE_RBC); acreditação nunca (lista de bloqueio). */
+var LICPROP_FRASE_RBC = 'padrões com rastreabilidade a laboratórios da RBC';
+function LicProp_regraRbc_(onde, n, problemas) {
+  var fixa = ' ' + LicProp_norm_(LICPROP_FRASE_RBC) + ' ', resto = n.split(fixa).join(' ');
+  if (/ rbc /.test(resto)) problemas.push(onde + ': RBC só na forma fixa "' + LICPROP_FRASE_RBC + '" (a Metrolabs é rastreável, não acreditada RBC); qualquer outra menção é recusada');
+}
+/** Palavras da frase (4 letras ou mais) que não estão nas fontes citadas; as comuns de proposta ficam de fora. */
 function LicProp_palavrasFora_(texto, textosFonte) {
-  var radicais = {}, livres = {};
+  var palavras = {}, radicais = {}, livres = {}, comuns = {};
   LICPROP_PALAVRAS_LIVRES.forEach(function (p) { livres[p.slice(0, 6)] = 1; });
-  LicProp_norm_(textosFonte.join(' ')).split(' ').forEach(function (w) { if (w.length >= 4) radicais[w.slice(0, 6)] = 1; });
+  LICPROP_PALAVRAS_COMUNS.forEach(function (p) { comuns[p] = 1; });
+  LicProp_norm_(textosFonte.join(' ')).split(' ').forEach(function (w) { palavras[w] = 1; if (w.length >= 6) radicais[w.slice(0, 6)] = 1; });
   var fora = [];
   LicProp_norm_(texto).split(' ').forEach(function (w) {
-    if (w.length < 6 || /\d/.test(w)) return;
-    var r = w.slice(0, 6);
-    if (radicais[r] || livres[r] || fora.indexOf(w) >= 0) return;
+    if (w.length < 4 || /\d/.test(w) || LICPROP_EXTENSO[w] !== undefined || fora.indexOf(w) >= 0) return;
+    if (palavras[w] || comuns[w]) return;
+    if (w.length >= 6 && (radicais[w.slice(0, 6)] || livres[w.slice(0, 6)])) return;
     fora.push(w);
   });
   return fora;
 }
+/** Números por extenso da frase que não estão nas fontes (nem por extenso, nem em algarismos). "um"/"uma" só antes de unidade. */
+function LicProp_extensosFora_(texto, textosFonte) {
+  var fn = ' ' + LicProp_norm_(textosFonte.join(' ')) + ' ', w = LicProp_norm_(texto).split(' '), fora = [];
+  w.forEach(function (x, i) {
+    var v = LICPROP_EXTENSO[x];
+    if (v === undefined) return;
+    if ((x === 'um' || x === 'uma') && !LICPROP_UNIDADE_CONTA.test(w[i + 1] || '')) return;
+    if (fn.indexOf(' ' + x + ' ') >= 0 || fn.indexOf(' ' + v + ' ') >= 0) return;
+    var t = x + (w[i + 1] && LICPROP_UNIDADE_CONTA.test(w[i + 1]) ? ' ' + w[i + 1] : '');
+    if (fora.indexOf(t) < 0) fora.push(t);
+  });
+  return fora;
+}
 /**
- * Regras que valem para a IA e para a Diretoria: superlativo, acreditação, RBC sem ser rastreabilidade, Inmetro fora de balança
- * e esfigmomanômetro. o.inmetroOk: a frase é de um serviço de balança ou esfigmomanômetro.
+ * Regras que valem para a IA e para a Diretoria: superlativo, lista de bloqueio, RBC só na forma fixa, Inmetro fora de balança e
+ * esfigmomanômetro, referência escrita no texto. o.inmetroOk: a frase é de um serviço de balança ou esfigmomanômetro.
  */
 function LicProp_conferirRegras_(onde, texto, problemas, o) {
   o = o || {};
-  var n = ' ' + LicProp_norm_(texto) + ' ';
+  var n = ' ' + LicProp_norm_(texto) + ' ', nb = LicProp_semEntregavel_(n);
   var s = LICPROP_SUPERLATIVO.exec(n); if (s) problemas.push(onde + ': superlativo ou promessa de marketing ("' + s[2] + '"); escreva o fato técnico, sem adjetivo');
-  if (LICPROP_ACREDITACAO.test(n)) problemas.push(onde + ': não fale de acreditação na proposta (a Metrolabs é rastreável, não acreditada RBC)');
-  else if (LICPROP_RBC.test(n) && !/rastreav|rastreab/.test(n)) problemas.push(onde + ': RBC só como rastreabilidade dos padrões; a Metrolabs não é acreditada RBC');
+  LICPROP_BLOQUEIO.forEach(function (b) { if (b[0].test(nb)) problemas.push(onde + ': palavra bloqueada na proposta ("' + b[1] + '"): ' + (b[1] === 'acreditação' ? 'a Metrolabs é rastreável, não acreditada RBC' : 'é afirmação que o SGO+ não comprova; escreva só o que o catálogo e o edital dizem')); });
+  LicProp_regraRbc_(onde, n, problemas);
   if (LICPROP_INMETRO.test(n) && !o.inmetroOk) problemas.push(onde + ': o registro do Inmetro da Metrolabs é só para balanças e esfigmomanômetros (escopo a confirmar); não cite Inmetro neste serviço');
   if (/\b(CAT|EDITAL|CAMPO):|\bI\d{1,3}\b/.test(Lic_s_(texto))) problemas.push(onde + ': referência de fonte escrita no texto; as referências vão só em "fontes"');
 }
 /**
- * Uma frase da IA: { texto, fontes:[...], trecho }. Devolve { texto, fontes, trecho } ou null (problemas em "problemas").
- * o: { exigeRef: 'CAT:...' (a metodologia cita o próprio serviço), inmetroOk }.
+ * Uma frase da IA: { texto, fontes:[...], trecho }. Devolve { texto, fontes, trecho, aceita: false } ou null (problemas em "problemas").
+ * o: { exigeRef: 'CAT:...' (a metodologia cita o próprio serviço), inmetroOk }. A frase conferida só entra no documento depois de a
+ * Diretoria aceitá-la (LicProp_fraseAceitar_).
  */
 function LicProp_conferirFraseIA_(onde, x, ctx, problemas, o) {
   o = o || {};
   x = x && typeof x === 'object' ? x : {};
   var fontes = (Array.isArray(x.fontes) ? x.fontes : []).map(LicProp_refNorm_).filter(Boolean).slice(0, 12), p = [];
-  var y = { texto: Lic_s_(x.texto).replace(/\s+/g, ' ').trim(), fontes: fontes };
+  var y = { texto: Lic_s_(x.texto).replace(/\s+/g, ' ').trim(), fontes: fontes, aceita: false };
   var c = typeof LicLeit_conferirFrase_ === 'function' ? LicLeit_conferirFrase_(onde, y, ctx, p, true) : null;
   if (typeof LicLeit_conferirFrase_ !== 'function') p.push(onde + ': o verificador da leitura do edital não está disponível neste ambiente');
   if (c && c.retirada) p.push(onde + ': ' + c.retirada);
@@ -405,51 +460,71 @@ function LicProp_conferirFraseIA_(onde, x, ctx, problemas, o) {
     var achou = null, motivo = '';
     fontes.some(function (r) { var f = ctx.fontesCons[r]; if (!f || typeof Lic_trechoNaFonte_ !== 'function') return false; var a = Lic_trechoNaFonte_(tr, f, { estrito: true }); if (a.ok) { achou = { ref: r, trecho: a.trecho }; return true; } if (a.motivo) motivo = a.motivo; return false; });
     if (!achou) p.push(onde + ': o trecho "' + tr.slice(0, 80) + '" não está, literalmente, em nenhuma das fontes citadas' + (motivo ? ' (' + motivo + ')' : ''));
-    else y.trecho = Lic_texto_(achou.trecho, 600), y.trechoRef = achou.ref;
+    else { y.trecho = Lic_texto_(achou.trecho, 600); y.trechoRef = achou.ref; }
   }
   if (!p.length) {
-    var fora = LicProp_palavrasFora_(y.texto, fontes.map(function (r) { return ctx.fontesCons[r] ? ctx.fontesCons[r].texto : ''; }));
-    if (fora.length >= 2) p.push(onde + ': afirmação técnica fora das fontes citadas (as palavras ' + fora.slice(0, 6).join(', ') + ' não estão no catálogo nem no edital citados); escreva só o que as fontes dizem');
+    var textos = fontes.map(function (r) { return ctx.fontesCons[r] ? ctx.fontesCons[r].texto : ''; });
+    var fora = LicProp_palavrasFora_(y.texto, textos), ext = LicProp_extensosFora_(y.texto, textos);
+    if (ext.length) p.push(onde + ': o número por extenso "' + ext.join('", "') + '" não está em nenhuma das fontes citadas');
+    if (fora.length) p.push(onde + ': afirmação fora das fontes citadas (' + (fora.length === 1 ? 'a palavra ' : 'as palavras ') + fora.slice(0, 6).join(', ') + ' não ' + (fora.length === 1 ? 'está' : 'estão') + ' no catálogo nem no edital citados); escreva só o que as fontes dizem');
   }
   if (p.length) { p.forEach(function (z) { problemas.push(z); }); return null; }
   return y;
 }
+var LICPROP_MAX_APRESENTACAO = 6;
+var LICPROP_MAX_METODOLOGIA = 8;
 /**
  * Resposta da IA: { apresentacao: [frase], metodologia: [{ codigo, frases: [frase] }] }. Cada frase conferida sozinha: a que falha
- * é retirada (com o motivo); as outras valem. Devolve { problemas, saida: { apresentacao: [..], metodologia: { cod: [..] } }, retiradas }.
+ * é retirada (com o motivo); as outras ficam esperando o aceite da Diretoria. { problemas, saida, retiradas, avisos, publicadas }.
  */
 function LicProp_verificarIA_(j, c, ctx) {
-  var problemas = [], saida = { apresentacao: [], metodologia: {} }, retiradas = [];
+  var problemas = [], saida = { apresentacao: [], metodologia: {} }, retiradas = [], avisos = [];
   ctx._dicas = 0;
-  if (!j || typeof j !== 'object') return { problemas: ['a resposta não é o JSON pedido'], saida: saida, retiradas: retiradas, publicadas: 0 };
+  if (!j || typeof j !== 'object') return { problemas: ['a resposta não é o JSON pedido'], saida: saida, retiradas: retiradas, avisos: avisos, publicadas: 0 };
   var uma = function (lista, secao, onde, x, o) {
     var p = [], ok = LicProp_conferirFraseIA_(onde, x, ctx, p, o);
     if (ok) lista.push(ok);
     else { problemas = problemas.concat(p); retiradas.push({ secao: secao, texto: Lic_texto_(Lic_s_(x && x.texto), 700), motivo: Lic_texto_(p.join('; ').replace(/^[^:]*: /, ''), 600) }); }
   };
-  (Array.isArray(j.apresentacao) ? j.apresentacao : []).slice(0, 6).forEach(function (x, k) { uma(saida.apresentacao, 'Apresentação', 'apresentação, frase ' + (k + 1), x, {}); });
+  var ap = Array.isArray(j.apresentacao) ? j.apresentacao : [];
+  if (ap.length > LICPROP_MAX_APRESENTACAO) avisos.push('A IA mandou ' + ap.length + ' frases na apresentação; só as ' + LICPROP_MAX_APRESENTACAO + ' primeiras foram conferidas (as outras ficaram fora).');
+  ap.slice(0, LICPROP_MAX_APRESENTACAO).forEach(function (x, k) { uma(saida.apresentacao, 'Apresentação', 'apresentação, frase ' + (k + 1), x, {}); });
   (Array.isArray(j.metodologia) ? j.metodologia : []).slice(0, 40).forEach(function (m) {
     var cod = Lic_up_(m && m.codigo);
     if (!c.tecnicos[cod]) { problemas.push('metodologia: o serviço "' + Lic_texto_(cod, 30) + '" não está entre os cotados'); return; }
     saida.metodologia[cod] = saida.metodologia[cod] || [];
-    (Array.isArray(m.frases) ? m.frases : []).slice(0, 8).forEach(function (x, k) { uma(saida.metodologia[cod], 'Metodologia de ' + cod, 'metodologia de ' + cod + ', frase ' + (k + 1), x, { exigeRef: 'CAT:' + cod, inmetroOk: c.tecnicos[cod].inmetro }); });
+    var fr = Array.isArray(m.frases) ? m.frases : [];
+    if (fr.length > LICPROP_MAX_METODOLOGIA) avisos.push('A IA mandou ' + fr.length + ' frases na metodologia de ' + cod + '; só as ' + LICPROP_MAX_METODOLOGIA + ' primeiras foram conferidas (as outras ficaram fora).');
+    fr.slice(0, LICPROP_MAX_METODOLOGIA).forEach(function (x, k) { uma(saida.metodologia[cod], 'Metodologia de ' + cod, 'metodologia de ' + cod + ', frase ' + (k + 1), x, { exigeRef: 'CAT:' + cod, inmetroOk: c.tecnicos[cod].inmetro }); });
   });
   var vv = {}; problemas = problemas.filter(function (p) { if (vv[p]) return false; vv[p] = 1; return true; });
   var publicadas = saida.apresentacao.length + Object.keys(saida.metodologia).reduce(function (n, k) { return n + saida.metodologia[k].length; }, 0);
-  return { problemas: problemas, saida: saida, retiradas: retiradas, publicadas: publicadas };
+  return { problemas: problemas, saida: saida, retiradas: retiradas, avisos: avisos, publicadas: publicadas };
 }
-/** Texto da Diretoria num trecho: as regras de redação e cada número dentro de alguma fonte da proposta. Lança com o que corrigir. */
-function LicProp_conferirEdicao_(k, texto, c) {
+/**
+ * Texto da Diretoria num trecho: as regras de redação, a lista de bloqueio, o RBC na forma fixa e cada número (também por extenso)
+ * dentro de alguma fonte da proposta. Devolve a lista de problemas (vazia = passa).
+ */
+function LicProp_problemasEdicao_(k, texto, c) {
   var ctx = LicProp_ctx_(c), p = [], onde = LicProp_nomeTrecho_(k, c);
   if (typeof Lic_conferirTexto_ === 'function') Lic_conferirTexto_(onde, texto, ctx, p, false);
   var m = /^metodologia:(.+)$/.exec(k);
   LicProp_conferirRegras_(onde, texto, p, { inmetroOk: !!(m && c.tecnicos[m[1]] && c.tecnicos[m[1]].inmetro) });
+  var todas = Object.keys(ctx.fontesCons).map(function (r) { return ctx.fontesCons[r].texto; }).concat([c.validadeDias + ' dias', LicProp_moeda_(c.total)]);
   if (typeof LicLeit_numerosForaDaFonte_ === 'function') {
-    var todas = Object.keys(ctx.fontesCons).map(function (r) { return ctx.fontesCons[r].texto; }).concat([c.validadeDias + ' dias', LicProp_moeda_(c.total)]).join(' \n ');
-    var fora = LicLeit_numerosForaDaFonte_(texto, todas);
+    var fora = LicLeit_numerosForaDaFonte_(texto, todas.join(' \n '));
     if (fora.length) p.push(onde + ': ' + fora.slice(0, 5).join(', ') + ' não está no edital, no catálogo nem na simulação desta proposta (confira o número na fonte)');
   }
-  if (p.length) throw new Error('Não foi possível gravar o trecho: ' + p.join('; ') + '. Corrija o texto e grave de novo; nada foi alterado');
+  var ext = LicProp_extensosFora_(texto, todas);
+  if (ext.length) p.push(onde + ': o número por extenso "' + ext.join('", "') + '" não está no edital, no catálogo nem na simulação desta proposta');
+  return p;
+}
+/** Texto que vai para o documento: trecho da IA = só as frases que a Diretoria aceitou; sem nenhuma, o texto do sistema. */
+function LicProp_textoTrecho_(t) {
+  if (!t) return '';
+  if (t.origem !== 'IA') return Lic_s_(t.texto);
+  var ac = (t.frases || []).filter(function (f) { return f.aceita === true; });
+  return ac.length ? ac.map(function (f) { return f.texto; }).join(' ') : Lic_s_(t.sistema);
 }
 
 // ------------------------------------------------------------ IA (apresentação e metodologia)
@@ -496,9 +571,11 @@ function LicProp_redigirIA_(c) {
   ia.problemas = melhor.problemas.slice(0, 40); ia.retiradas = melhor.retiradas.slice(0, 40);
   if (!melhor.publicadas) { ia.situacao = 'RECUSADA'; ia.aviso = 'O verificador retirou todas as frases da IA (' + melhor.retiradas.length + '): a proposta usa o texto do sistema. As frases retiradas e o motivo estão abaixo.'; return ia; }
   ia.situacao = melhor.problemas.length ? 'PARCIAL' : 'CONFERIDA';
-  if (melhor.saida.apresentacao.length) c.trechos.apresentacao = { texto: melhor.saida.apresentacao.map(function (x) { return x.texto; }).join(' '), origem: 'IA', frases: melhor.saida.apresentacao };
-  Object.keys(melhor.saida.metodologia).forEach(function (cod) { var l = melhor.saida.metodologia[cod]; if (l.length) c.trechos['metodologia:' + cod] = { texto: l.map(function (x) { return x.texto; }).join(' '), origem: 'IA', frases: l }; });
+  if (melhor.saida.apresentacao.length) c.trechos.apresentacao = { texto: c.trechos.apresentacao.texto, sistema: c.trechos.apresentacao.texto, origem: 'IA', frases: melhor.saida.apresentacao };
+  Object.keys(melhor.saida.metodologia).forEach(function (cod) { var l = melhor.saida.metodologia[cod]; if (l.length) c.trechos['metodologia:' + cod] = { texto: '', sistema: '', origem: 'IA', frases: l }; });
   if (melhor.retiradas.length) ia.aviso = melhor.retiradas.length + ' frase(s) da IA retirada(s) pelo verificador (lista abaixo); o restante foi conferido nas fontes.';
+  ia.avisos = melhor.avisos || [];
+  ia.aviso = (ia.aviso ? ia.aviso + ' ' : '') + 'Cada frase da IA só entra no documento depois de a Diretoria aceitá-la na aba (caixa por frase); sem frase aceita, sai o texto do catálogo e do edital.';
   return ia;
 }
 
@@ -515,6 +592,11 @@ function LicProp_bloqueios_(l, row, c) {
     else if (Number(s.VERSAO) !== Number(c.simulacao.versao) || Lic_s_(s.HASH) !== Lic_s_(c.simulacao.hash)) b.push('Há simulação de preço mais nova (versão ' + Number(s.VERSAO) + ') do que a usada neste rascunho (versão ' + c.simulacao.versao + '): toque em "Montar de novo" para a planilha de preços ser a da simulação atual.');
     else if (LicP_hashSim_(s) !== Lic_s_(s.HASH)) b.push('A simulação de preço versão ' + Number(s.VERSAO) + ' não confere com o hash gravado (alterada fora do SGO+): salve uma versão nova na aba Preço.');
   }
+  // revisão de 9dc456f: o edital mudou depois do rascunho (versão nova da fonte ou leitura mais nova)
+  var op = c.oportunidade || {};
+  if (Lic_s_(op.versaoHash) !== Lic_s_(l.VERSAO_HASH)) b.push('O edital mudou: há versão nova da fonte (PNCP, versão ' + (Number(l.VERSAO_FONTE) || 1) + ') depois deste rascunho. Monte de novo.');
+  var ckAgora = LicProp_checklist_(l).leitura, vLeit = c.leitura ? Number(c.leitura.versao) || 0 : 0;
+  if (ckAgora && Number(ckAgora.versao) > vLeit) b.push('O edital mudou: há leitura do edital mais nova (versão ' + ckAgora.versao + ') do que a usada neste rascunho (' + (vLeit ? 'versão ' + vLeit : 'sem leitura') + '). Monte de novo.');
   var vv = {}; return b.filter(function (x) { if (vv[x]) return false; vv[x] = 1; return true; });
 }
 function LicProp_resumoLinha_(r) {
@@ -536,9 +618,13 @@ function LicProp_tela_(eu, d) {
     atual: null, versoes: lista.slice(0, 30).map(LicProp_resumoLinha_), regras: LICPROP_REGRAS, avisoImagens: LICPROP_AVISO_IMAGENS };
   if (atual) {
     var b = LicProp_bloqueios_(l, atual, c), sit = Lic_up_(atual.SITUACAO);
-    r.atual = Object.assign(LicProp_resumoLinha_(atual), { conteudo: c, bloqueios: sit === 'EMITIDA' ? [] : b, avisos: c ? c.avisos || [] : [], edicoes: LicProp_edicoesDe_(atual.ID), editavel: LICPROP_EDITAVEIS.indexOf(sit) >= 0,
+    var avT = (c ? c.avisos || [] : []).slice();
+    if (c) Object.keys(c.trechos || {}).forEach(function (k) { var x = c.trechos[k]; if (x.assumido) avT.unshift(LicProp_nomeTrecho_(k, c) + ': texto assumido pela Diretoria fora das regras do verificador (' + Lic_texto_((x.assumido.problemas || []).join('; '), 400) + ').');
+      var pend = x.origem === 'IA' ? (x.frases || []).filter(function (f) { return f.aceita !== true; }).length : 0; if (pend && sit !== 'EMITIDA') avT.unshift(LicProp_nomeTrecho_(k, c) + ': ' + pend + ' frase(s) da IA esperando o aceite da Diretoria (fora do documento até aceitar).'); });
+    r.atual = Object.assign(LicProp_resumoLinha_(atual), { conteudo: c, bloqueios: sit === 'EMITIDA' ? [] : b, avisos: avT, edicoes: LicProp_edicoesDe_(atual.ID), editavel: LICPROP_EDITAVEIS.indexOf(sit) >= 0,
       podeAprovar: (sit === 'RASCUNHO' || sit === 'REVISAO') && !b.length, podeEmitir: sit === 'APROVADA' && !b.length && Lic_s_(atual.APROVADO_CONTEUDO_HASH) === Lic_s_(atual.CONTEUDO_HASH),
-      trechos: c ? Object.keys(c.trechos || {}).map(function (k) { return { chave: k, nome: LicProp_nomeTrecho_(k, c), texto: c.trechos[k].texto, origem: c.trechos[k].origem, frases: c.trechos[k].frases || [], editadoPor: c.trechos[k].editadoPor || '', editadoEm: c.trechos[k].editadoEm || '' }; }) : [] });
+      trechos: c ? Object.keys(c.trechos || {}).map(function (k) { var x = c.trechos[k]; return { chave: k, nome: LicProp_nomeTrecho_(k, c), texto: Lic_s_(x.texto), noDocumento: LicProp_textoTrecho_(x), sistema: Lic_s_(x.sistema), origem: x.origem, frases: x.frases || [],
+        aceitas: (x.frases || []).filter(function (f) { return f.aceita === true; }).length, editadoPor: x.editadoPor || '', editadoEm: x.editadoEm || '', assumido: x.assumido || null }; }) : [] });
   }
   return { proposta: r };
 }
@@ -557,6 +643,7 @@ function LicProp_montar_(eu, d) {
   var ia = d.usarIA === false ? { situacao: 'NAO_PEDIDA', modelo: '', tentativas: 0, problemas: [], retiradas: [], aviso: 'A Diretoria montou sem a IA: a proposta usa o texto do catálogo e do edital como estão.' } : LicProp_redigirIA_(c);
   c.ia = ia;
   if (ia.aviso) c.avisos.push(ia.aviso);
+  (ia.avisos || []).forEach(function (a) { c.avisos.push(a); });
   c.avisos.push(LICPROP_AVISO_IMAGENS);
   var json = JSON.stringify(c), partes = LicProp_partes_(json);
   return Lic_comTrava_(function () {
@@ -585,35 +672,76 @@ function LicProp_acharLinha_(l, pid) {
   if (!r || Lic_s_(r.OPORTUNIDADE_ID) !== Lic_s_(l.ID)) throw new Error('Não foi possível: esta proposta não é desta licitação (a aba pode estar desatualizada). Toque em "Atualizar" e tente de novo');
   return r;
 }
-/** Editar um trecho. d: { id, propostaId, trecho, texto, motivo }. Só em rascunho, revisão ou aprovada (a aprovação deixa de valer). */
+/**
+ * Grava uma mudança no conteúdo da proposta (dentro da trava): versão do conteúdo, situação EM REVISÃO, aprovação perdida quando
+ * havia, a linha de LIC_PROPOSTA_EDICOES (de → para) e o LIC_HISTORICO. Devolve { perdeu, hash }.
+ */
+function LicProp_gravarMudanca_(eu, l, r, c, k, de, para, motivo, textoHist, agora) {
+  var sit = Lic_up_(r.SITUACAO), json = JSON.stringify(c), partes = LicProp_partes_(json);
+  var mud = Object.assign({ SITUACAO: 'REVISAO', CONTEUDO_HASH: Lic_hash_(json), ATUALIZADO_EM: agora }, partes);
+  var perdeu = sit === 'APROVADA';
+  if (perdeu) Object.assign(mud, { APROVADO_POR_ID: '', APROVADO_POR_NOME: '', APROVADO_EM: '', APROVADO_MOTIVO: '', APROVADO_CONTEUDO_HASH: '' });
+  var x = Object.assign({}, r, mud); mud.HASH = LicProp_hashLinha_(x);
+  var ed = { PROPOSTA_ID: Lic_s_(r.ID), OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), PROPOSTA_VERSAO: Number(r.VERSAO) || 0, TRECHO: k, TRECHO_NOME: LicProp_nomeTrecho_(k.replace(/#\d+$/, ''), c) + (/#\d+$/.test(k) ? ', frase ' + (Number(k.split('#')[1]) + 1) : ''),
+    DE: LicProp_txt_(de, LICPROP_TRECHO_MAX), PARA: LicProp_txt_(para, LICPROP_TRECHO_MAX), MOTIVO: motivo, POR_ID: eu.id, POR_NOME: eu.nome, EM: agora };
+  ed.HASH = LicProp_hashEdicao_(ed);
+  SGO_DATA.insert(LICPROP_ABAS.EDICOES, ed);
+  SGO_DATA.update(LICPROP_ABAS.PROPOSTAS, r.ID, mud);
+  Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'PROPOSTA_TRECHO_EDITADO', eu, { de: Lic_texto_(de, 480), para: Lic_texto_(para, 480), texto: 'Proposta ' + r.NUMERO + ', ' + ed.TRECHO_NOME + ': ' + textoHist + ' Motivo: ' + motivo +
+    (perdeu ? '. A aprovação de ' + Lic_s_(r.APROVADO_POR_NOME) + ' deixou de valer: o texto mudou depois dela; aprove de novo.' : '.'), versao: 'proposta ' + r.VERSAO, fonte: 'Aba Proposta', hash: ed.HASH });
+  return { perdeu: perdeu, hash: mud.HASH };
+}
+function LicProp_linhaEditavel_(l, pid, acao) {
+  var r = LicProp_acharLinha_(l, pid), sit = Lic_up_(r.SITUACAO);
+  if (LICPROP_EDITAVEIS.indexOf(sit) < 0) throw new Error('Não foi possível ' + acao + ': a proposta versão ' + r.VERSAO + ' está "' + (LICPROP_SITUACOES[sit] || sit) + '"' + (sit === 'EMITIDA' ? ' e não muda nunca. Para mudar, toque em "Nova versão"' : '. Abra a versão atual') + '; nada foi alterado');
+  if (!LicProp_integra_(r)) throw new Error('Não foi possível ' + acao + ': o registro desta proposta não confere com o hash gravado (alterado fora do SGO+). Monte o rascunho de novo; nada foi alterado');
+  return r;
+}
+/**
+ * Editar um trecho. d: { id, propostaId, trecho, texto, motivo, assumo }. Só em rascunho, revisão ou aprovada (a aprovação deixa de
+ * valer). O texto passa pelas regras da IA (lista de bloqueio, RBC na forma fixa, números nas fontes); o que fura as regras só grava
+ * com "assumo este texto" (d.assumo) e o motivo, marcado no trecho, no histórico e na aprovação.
+ */
 function LicProp_trechoEditar_(eu, d) {
-  var motivo = Lic_texto_(d.motivo, 1000), texto = LicProp_txt_(d.texto, LICPROP_TRECHO_MAX), k = Lic_s_(d.trecho);
+  var motivo = Lic_texto_(d.motivo, 1000), texto = LicProp_txt_(d.texto, LICPROP_TRECHO_MAX), k = Lic_s_(d.trecho), assumo = d.assumo === true || d.assumo === 'SIM';
   if (motivo.length < 10) throw new Error('Escreva o motivo da mudança (pelo menos 10 letras): ele fica no histórico do trecho com o seu nome e a data. Nada foi alterado');
   var l = Lic_acharOp_(d.id);
   return Lic_comTrava_(function () {
-    var r = LicProp_acharLinha_(l, d.propostaId), sit = Lic_up_(r.SITUACAO);
-    if (LICPROP_EDITAVEIS.indexOf(sit) < 0) throw new Error('Não foi possível editar: a proposta versão ' + r.VERSAO + ' está "' + (LICPROP_SITUACOES[sit] || sit) + '"' + (sit === 'EMITIDA' ? ' e não muda nunca. Para mudar, toque em "Nova versão"' : '. Abra a versão atual') + '; nada foi alterado');
-    if (!LicProp_integra_(r)) throw new Error('Não foi possível editar: o registro desta proposta não confere com o hash gravado (alterado fora do SGO+). Monte o rascunho de novo; nada foi alterado');
+    var r = LicProp_linhaEditavel_(l, d.propostaId, 'editar');
     var c = LicProp_conteudo_(r);
     if (!c || !c.trechos || !c.trechos[k]) throw new Error('Escolha um trecho da proposta (o trecho "' + Lic_texto_(k, 40) + '" não existe nesta versão). Nada foi alterado');
     if (k === 'apresentacao' && !texto) throw new Error('A apresentação não pode ficar vazia. Nada foi alterado');
-    var de = Lic_s_(c.trechos[k].texto);
-    if (de === texto) return { semMudanca: true, texto: 'O texto é o mesmo de antes: nada foi gravado.' };
-    if (texto) LicProp_conferirEdicao_(k, texto, c);
+    var de = LicProp_textoTrecho_(c.trechos[k]);
+    if (de === texto && c.trechos[k].origem === 'DIRETORIA') return { semMudanca: true, texto: 'O texto é o mesmo de antes: nada foi gravado.' };
+    var probs = texto ? LicProp_problemasEdicao_(k, texto, c) : [];
+    // RBC fora da forma fixa e acreditação nunca passam, nem com "assumo este texto" (a Metrolabs é rastreável, não acreditada)
+    var duros = probs.filter(function (p) { return /RBC só na forma fixa|\("acreditação"\)|nem prometa acreditação/.test(p); });
+    if (duros.length) throw new Error('Não foi possível gravar o trecho: ' + duros.join('; ') + '. Este ponto não pode ser assumido: a proposta só fala de RBC como "' + LICPROP_FRASE_RBC + '" e nunca de acreditação. Nada foi alterado');
+    if (probs.length && !assumo) throw new Error('Não foi possível gravar o trecho: ' + probs.join('; ') + '. Corrija o texto e grave de novo; se o texto está certo, marque "Assumo este texto" e explique no motivo (fica registrado e aparece na aprovação). Nada foi alterado');
     var agora = Lic_agora_();
-    c.trechos[k] = { texto: texto, origem: 'DIRETORIA', frases: [], editadoPor: eu.nome, editadoEm: agora, antes: c.trechos[k].origem };
-    var json = JSON.stringify(c), partes = LicProp_partes_(json);
-    var mud = Object.assign({ SITUACAO: 'REVISAO', CONTEUDO_HASH: Lic_hash_(json), ATUALIZADO_EM: agora }, partes);
-    var perdeu = sit === 'APROVADA';
-    if (perdeu) Object.assign(mud, { APROVADO_POR_ID: '', APROVADO_POR_NOME: '', APROVADO_EM: '', APROVADO_MOTIVO: '', APROVADO_CONTEUDO_HASH: '' });
-    var x = Object.assign({}, r, mud); mud.HASH = LicProp_hashLinha_(x);
-    var ed = { PROPOSTA_ID: Lic_s_(r.ID), OPORTUNIDADE_ID: Lic_s_(l.ID), CODIGO: Lic_s_(l.CODIGO), PROPOSTA_VERSAO: Number(r.VERSAO) || 0, TRECHO: k, TRECHO_NOME: LicProp_nomeTrecho_(k, c), DE: LicProp_txt_(de, LICPROP_TRECHO_MAX), PARA: texto, MOTIVO: motivo, POR_ID: eu.id, POR_NOME: eu.nome, EM: agora };
-    ed.HASH = LicProp_hashEdicao_(ed);
-    SGO_DATA.insert(LICPROP_ABAS.EDICOES, ed);
-    SGO_DATA.update(LICPROP_ABAS.PROPOSTAS, r.ID, mud);
-    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'PROPOSTA_TRECHO_EDITADO', eu, { de: Lic_texto_(de, 480), para: Lic_texto_(texto, 480), texto: 'Proposta ' + r.NUMERO + ', trecho "' + ed.TRECHO_NOME + '" editado pela Diretoria. Motivo: ' + motivo + (perdeu ? '. A aprovação de ' + Lic_s_(r.APROVADO_POR_NOME) + ' deixou de valer: o texto mudou depois dela; aprove de novo.' : '.'),
-      versao: 'proposta ' + r.VERSAO, fonte: 'Aba Proposta', hash: ed.HASH });
-    return { texto: 'Trecho gravado (o anterior fica no histórico).' + (perdeu ? ' A aprovação deixou de valer: aprove de novo antes de emitir.' : ''), aprovacaoPerdida: perdeu };
+    c.trechos[k] = { texto: texto, origem: 'DIRETORIA', frases: [], editadoPor: eu.nome, editadoEm: agora, antes: c.trechos[k].origem,
+      assumido: probs.length ? { por: eu.nome, em: agora, motivo: motivo, problemas: probs.slice(0, 10) } : null };
+    var g = LicProp_gravarMudanca_(eu, l, r, c, k, de, texto, motivo, probs.length ? 'texto ASSUMIDO pela Diretoria fora das regras do verificador (' + Lic_texto_(probs.join('; '), 1500) + ').' : 'trecho editado pela Diretoria.', agora);
+    return { texto: 'Trecho gravado (o anterior fica no histórico).' + (probs.length ? ' O texto foi assumido pela Diretoria fora das regras: fica marcado na aprovação.' : '') + (g.perdeu ? ' A aprovação deixou de valer: aprove de novo antes de emitir.' : ''), aprovacaoPerdida: g.perdeu, assumido: !!probs.length };
+  });
+}
+/**
+ * Decisão do coordenador (revisão de 9dc456f): nenhuma frase da IA entra no documento sem a Diretoria aceitá-la, uma a uma.
+ * d: { id, propostaId, trecho, indice, aceitar (true|false) }. Cada decisão vai para LIC_PROPOSTA_EDICOES e LIC_HISTORICO.
+ */
+function LicProp_fraseAceitar_(eu, d) {
+  var k = Lic_s_(d.trecho), i = Number(d.indice), aceitar = d.aceitar === true || d.aceitar === 'SIM';
+  var l = Lic_acharOp_(d.id);
+  return Lic_comTrava_(function () {
+    var r = LicProp_linhaEditavel_(l, d.propostaId, 'aceitar a frase'), c = LicProp_conteudo_(r), t = c && c.trechos ? c.trechos[k] : null;
+    if (!t || t.origem !== 'IA' || !(t.frases || [])[i] || Math.round(i) !== i) throw new Error('Escolha uma frase da IA deste trecho (a aba pode estar desatualizada: toque em "Atualizar"). Nada foi alterado');
+    var f = t.frases[i];
+    if ((f.aceita === true) === aceitar) return { semMudanca: true, texto: 'A frase já estava ' + (aceitar ? 'aceita' : 'fora do documento') + ': nada foi gravado.' };
+    var antes = LicProp_textoTrecho_(t), agora = Lic_agora_();
+    f.aceita = aceitar; f.decididaPor = eu.nome; f.decididaEm = agora;
+    var g = LicProp_gravarMudanca_(eu, l, r, c, k + '#' + i, (aceitar ? 'não aceita: ' : 'aceita: ') + f.texto, (aceitar ? 'aceita: ' : 'não aceita: ') + f.texto,
+      aceitar ? 'Frase da IA aceita pela Diretoria (entra no documento)' : 'Frase da IA tirada do documento pela Diretoria', (aceitar ? 'frase da IA aceita' : 'frase da IA tirada do documento') + '. No documento, o trecho passa de "' + Lic_texto_(antes, 300) + '" para "' + Lic_texto_(LicProp_textoTrecho_(t), 300) + '".', agora);
+    return { texto: (aceitar ? 'Frase aceita: entra no documento.' : 'Frase tirada do documento.') + (g.perdeu ? ' A aprovação deixou de valer: aprove de novo antes de emitir.' : ''), aprovacaoPerdida: g.perdeu };
   });
 }
 function LicProp_aprovar_(eu, d) {
@@ -629,6 +757,11 @@ function LicProp_aprovar_(eu, d) {
     var x = Object.assign({}, r, mud); mud.HASH = LicProp_hashLinha_(x);
     SGO_DATA.update(LICPROP_ABAS.PROPOSTAS, r.ID, mud);
     var av = (c.avisos || []).filter(function (a) { return a !== LICPROP_AVISO_IMAGENS; });
+    // revisão de 9dc456f: trecho assumido pela Diretoria fora das regras fica marcado na aprovação; frase da IA não aceita fica fora
+    var assumidos = Object.keys(c.trechos || {}).filter(function (k) { return c.trechos[k].assumido; }).map(function (k) { return LicProp_nomeTrecho_(k, c); });
+    var pendIA = Object.keys(c.trechos || {}).reduce(function (n, k) { return n + (c.trechos[k].origem === 'IA' ? (c.trechos[k].frases || []).filter(function (f) { return f.aceita !== true; }).length : 0); }, 0);
+    if (assumidos.length) av.unshift(assumidos.length + ' trecho(s) assumido(s) pela Diretoria fora das regras do verificador: ' + assumidos.join(', ') + '.');
+    if (pendIA) av.push(pendIA + ' frase(s) da IA não aceita(s): ficam fora do documento.');
     Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, 'PROPOSTA_APROVADA', eu, { de: LICPROP_SITUACOES[sit], para: 'Aprovada', texto: 'Proposta ' + r.NUMERO + ' aprovada pela Diretoria (total ' + LicProp_moeda_(c.total) + ', simulação versão ' + (c.simulacao ? c.simulacao.versao : '—') + '). Motivo: ' + motivo +
       (av.length ? '. Aprovada com ' + av.length + ' aviso(s): ' + av.slice(0, 4).join(' ') : ''), versao: 'proposta ' + r.VERSAO, fonte: 'Aba Proposta', hash: mud.HASH });
     return { texto: 'Proposta ' + r.NUMERO + ' aprovada. Toque em "Emitir" para gerar o documento A4 congelado.' };
@@ -657,10 +790,13 @@ function LicProp_emitir_(eu, d) {
 /** Ver: emitida = a cópia guardada (SHA-256 conferido); as outras = prévia do conteúdo, com a marca de rascunho. */
 function LicProp_ver_(eu, d) {
   var l = Lic_acharOp_(d.id), r = LicProp_acharLinha_(l, d.propostaId), sit = Lic_up_(r.SITUACAO);
-  if (sit === 'EMITIDA') { var lido = LicDoc_lerHtml_(r.HTML_ARQUIVO_ID, r.HTML_SHA256); return { html: lido.html, integra: lido.integra && LicProp_integra_(r), emitida: true }; }
+  // revisão de 9dc456f: registro ou documento que não confere com o hash NÃO é entregue (a tela diz o porquê e não abre)
+  var naoConfere = { html: '', integra: false, aviso: 'Este documento não confere com o hash gravado (pode ter sido alterado fora do SGO+) e não foi aberto. Avise o Administrador; para seguir, monte uma versão nova da proposta.' };
+  if (sit === 'EMITIDA') { var lido = LicDoc_lerHtml_(r.HTML_ARQUIVO_ID, r.HTML_SHA256); if (!lido.integra || !LicProp_integra_(r)) return Object.assign({ emitida: true }, naoConfere); return { html: lido.html, integra: true, emitida: true }; }
+  if (!LicProp_integra_(r)) return Object.assign({ emitida: false }, naoConfere);
   var c = LicProp_conteudo_(r);
   if (!c) throw new Error('Não foi possível abrir: o conteúdo desta versão não pôde ser lido (registro incompleto). Monte o rascunho de novo');
-  return { html: LicProp_html_(c, { numero: r.NUMERO, versao: Number(r.VERSAO) || 1, rascunho: true, situacao: LICPROP_SITUACOES[sit] || sit, conteudoHash: Lic_s_(r.CONTEUDO_HASH) }), integra: LicProp_integra_(r), emitida: false };
+  return { html: LicProp_html_(c, { numero: r.NUMERO, versao: Number(r.VERSAO) || 1, rascunho: true, situacao: LICPROP_SITUACOES[sit] || sit, conteudoHash: Lic_s_(r.CONTEUDO_HASH) }), integra: true, emitida: false };
 }
 function LicProp_pdf_(eu, d) {
   var l = Lic_acharOp_(d.id), r = LicProp_acharLinha_(l, d.propostaId);
@@ -690,7 +826,7 @@ function LicProp_html_(c, o) {
     ['Endereço', e.endereco || '—', { largo: true }], ['Site', e.site || '—'], ['Telefone', e.telefone || '—']]));
   corpo += RelA4_secao_('Objeto', RelA4_identificacao_([['Órgão', [op.orgao, op.unidade].filter(Boolean).join(' · ') || '—', { largo: true }], ['Processo', op.numeroControle || '—'], ['Modalidade', op.modalidade || '—'],
     ['Local', [op.municipio, op.uf].filter(Boolean).join('/') || '—'], ['Amparo legal', op.amparo || '—']]) + '<p>' + esc(op.objeto) + '</p>');
-  var ap = c.trechos.apresentacao ? c.trechos.apresentacao.texto : '';
+  var ap = c.trechos.apresentacao ? LicProp_textoTrecho_(c.trechos.apresentacao) : '';
   if (Lic_s_(ap)) corpo += RelA4_secao_('Apresentação', RelA4_paragrafos_(ap));
   // ---- proposta técnica: um bloco por serviço cotado
   var porCod = {};
@@ -700,17 +836,18 @@ function LicProp_html_(c, o) {
     var h = '<p><b>Itens do edital atendidos:</b> ' + esc(its.map(function (i) { return 'item ' + i.numero + (i.descricao ? ' (' + Lic_texto_(i.descricao, 160) + ')' : ''); }).join('; ')) + '.</p>';
     if (!t) return RelA4_subsecao_(cod, h + '<p class="nota">Serviço sem descritivo no catálogo do Comercial.</p>');
     h += '<p><b>Descrição técnica do serviço:</b> ' + esc(t.descricao || t.nome) + '</p>';
-    if (m && Lic_s_(m.texto)) h += '<p><b>Metodologia:</b> ' + esc(m.texto) + '</p>';
+    if (m && LicProp_textoTrecho_(m)) h += '<p><b>Metodologia:</b> ' + esc(LicProp_textoTrecho_(m)) + '</p>';
     var pares = [];
     if (t.pontos.length) pares.push(['Pontos de calibração (padrão do catálogo)', LicProp_juntar_(t.pontos)]);
     if (t.condicoes.length) pares.push(['Condições ou processos', t.condicoes.join('; ')]);
     t.parametros.forEach(function (p) { var k = p.indexOf(': '); if (k > 0) pares.push([p.slice(0, k), p.slice(k + 2)]); });
+    if (t.rastreabilidade) pares.push(['Rastreabilidade', t.rastreabilidade]);
     if (t.normas.length) pares.push(['Normas citadas no catálogo', t.normas.join(', ')]);
     if (t.entregaveis.length) pares.push(['Entregáveis', t.entregaveis.join('; ')]);
     if (pares.length) h += RelA4_identificacao_(pares.map(function (p) { return [p[0], p[1], { largo: true }]; }));
     var ptsSim = its.filter(function (i) { return i.pontos; }).map(function (i) { return 'item ' + i.numero + ': ' + i.pontos + ' ponto(s) por equipamento'; });
     if (ptsSim.length) h += '<p class="nota">Pontos considerados no preço: ' + esc(ptsSim.join('; ')) + '. Os pontos exatos são definidos com o contratante.</p>';
-    if (t.avisos.length) h += '<p class="nota">Observações técnicas: ' + esc(t.avisos.join(' ')) + '</p>';
+    // revisão de 9dc456f: as observações internas do catálogo (avisos) ficam só na aba, não no documento do órgão
     return RelA4_subsecao_(cod + ' — ' + t.nome, h);
   }).join('');
   corpo += RelA4_secao_('Proposta técnica', tec || '<p>Nenhum item cotado.</p>');
@@ -719,7 +856,7 @@ function LicProp_html_(c, o) {
   var com = RelA4_tabela_([{ t: 'Item', cen: true, w: '11mm' }, { t: 'Descrição' }, { t: 'Qtd.', num: true }, { t: 'Un.', cen: true }, { t: 'Preço unitário', num: true }, { t: 'Total', num: true }], linhas,
     { legenda: 'Planilha de preços', vazio: 'Nenhum item cotado.', total: ['', 'Valor total da proposta', '', '', '', LicProp_moeda_(c.total)] });
   if (c.simulacao && c.simulacao.diluido) com += '<p>Os preços unitários incluem as despesas de deslocamento e estadia da equipe e os tributos incidentes.</p>';
-  if (c.simulacao) com += '<p class="nota">Referência interna: simulação de preço versão ' + esc(c.simulacao.versao) + ', registro ' + esc(Lic_s_(c.simulacao.hash).slice(0, 16)) + '.</p>';
+  // revisão de 9dc456f: a referência interna da simulação (versão e hash) fica na aba e no histórico, não no documento do órgão
   corpo += RelA4_secao_('Proposta comercial', com);
   if (nao.length) corpo += RelA4_secao_('Itens não cotados', RelA4_tabela_([{ t: 'Item', cen: true, w: '11mm' }, { t: 'Descrição do edital' }, { t: 'Situação' }],
     nao.map(function (i) { return [i.numero, Lic_texto_(i.descricao, 300) || '—', i.motivoDoc || 'Item não cotado nesta proposta.']; }), { legenda: 'Itens do edital sem cotação' }));
@@ -745,6 +882,7 @@ var LICPROP_OPS = {
   tela: function (eu, d) { return LicProp_tela_(eu, d); },
   montar: function (eu, d) { return LicProp_montar_(eu, d); },
   trechoEditar: function (eu, d) { return LicProp_trechoEditar_(eu, d); },
+  fraseAceitar: function (eu, d) { return LicProp_fraseAceitar_(eu, d); },
   aprovar: function (eu, d) { return LicProp_aprovar_(eu, d); },
   emitir: function (eu, d) { return LicProp_emitir_(eu, d); },
   ver: function (eu, d) { return LicProp_ver_(eu, d); },
