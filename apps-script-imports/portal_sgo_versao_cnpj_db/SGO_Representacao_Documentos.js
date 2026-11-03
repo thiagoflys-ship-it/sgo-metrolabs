@@ -49,6 +49,10 @@ function RepD_tempo_(min) {
   return RelA4_num_(min / dia, 1) + ' dias úteis';
 }
 function RepD_pct_(v) { return v === null || v === undefined ? '—' : RelA4_num_(v, 1) + '%'; }
+/** 03/11/2026: valor de cadastro que não informa nada ("N/S", "S/N", "N/A", traço) conta como vazio e some do documento. */
+function RepD_vazio_(v) { var s = RepD_s_(v); return !s || /^(n\/?s|s\/?n|n\/?a|na|ns|sn|-+|—+|nao informad[oa]|não informad[oa])$/i.test(s); }
+/** Texto do equipamento sem a TAG e a série (cada uma tem o campo próprio): "CAMA · FL28C · TAG N/S · série R35594" vira "CAMA · FL28C". */
+function RepD_eqSemIdent_(t) { return RepD_s_(t).split(' · ').filter(function (p) { return !/^(tag|s[ée]rie|n[ºo°]?\s*de\s*s[ée]rie)\b/i.test(p.trim()); }).join(' · '); }
 function RepD_ehImagem_(mime) { return /^image\/(png|jpe?g|webp|gif)$/i.test(RepD_s_(mime)); }
 
 /** Tabela de registro dos documentos gerados (criada por Rep_garantirAbas_, REP_COLUNAS). */
@@ -114,10 +118,19 @@ function RepD_visao_(D, publico) {
     representadaNome: cliente ? '' : repNome, protocolo: cliente ? '' : RepD_s_(c.PROTOCOLO_REPRESENTADA), encerrado: sit === 'ENCERRADO' || sit === 'RESOLVIDO_REMOTO', cancelado: sit === 'CANCELADO',
     etapaNome: cliente ? pc.etapaNome : interno ? (AST_SITUACOES[sit] || sit) + (rep ? ' (a representada vê: ' + etRep.nome + ')' : '') : etRep.nome,
     abertoEm: Ast_br_(c.ABERTO_EM), enviadoEm: RepD_br_(D.ciclo.enviadoMs), concluidoEm: RepD_br_(concluidoMs), agoraMs: D.agoraMs };
-  // tipo e modelo sem repetir a palavra ("LAVADORA · LAVADORA ULTRASSÔNICA 10 L" vira "LAVADORA ULTRASSÔNICA 10 L")
+  // 03/11/2026: o caminho do atendimento muda o documento (logística vira termo; a distância só a orientação; registro de entrega já feita)
+  var tipoAt = Ast_tipo_(RepD_s_(os.TIPO_CODIGO) || RepD_s_(c.TIPO_CODIGO)), regLog = Ast_json_(c.LOGISTICA_REGISTRO_JSON, null);
+  V.registro = regLog && RepD_s_(regLog.recebidoPor) ? regLog : null;
+  V.logistica = V.registro ? RepD_s_(V.registro.sentido) || 'ENTREGA' : tipoAt && tipoAt.logistica ? tipoAt.logistica.sentido : '';
+  V.remoto = !D.os && !V.registro && (sit === 'RESOLVIDO_REMOTO' || Ast_up_(c.ACAO_DECIDIDA) === 'RESOLVIDO_REMOTO');
+  V.conserto = !V.logistica && (!tipoAt || tipoAt.grupo === 'TECNICO');
+  V.rotSolicitacao = V.conserto ? 'Problema relatado' : 'Solicitação';
+  V.palavra = { ENTREGA: { nome: 'Entrega', agendada: 'Entrega agendada', em: 'Em entrega', feita: 'entregue' }, RETIRADA: { nome: 'Retirada', agendada: 'Retirada agendada', em: 'Em retirada', feita: 'retirado' },
+    ENVIO: { nome: 'Envio', agendada: 'Envio agendado', em: 'Em envio', feita: 'enviado' } }[V.logistica] || null;
+  // tipo e modelo sem repetir a palavra ("LAVADORA · LAVADORA ULTRASSÔNICA 10 L" vira "LAVADORA ULTRASSÔNICA 10 L"); série e TAG só nos campos próprios
   var eqTipo = RepD_s_(eq.TIPO), eqModelo = RepD_s_(eq.MODELO);
-  V.equipamentoTexto = (eqTipo && eqModelo && eqModelo.toUpperCase().indexOf(eqTipo.toUpperCase()) === 0 ? eqModelo : [eqTipo, eqModelo].filter(Boolean).join(' · ')) || RepD_s_(c.EQUIPAMENTO_TEXTO);
-  V.serie = RepD_s_(eq.SERIE);
+  V.equipamentoTexto = (eqTipo && eqModelo && eqModelo.toUpperCase().indexOf(eqTipo.toUpperCase()) === 0 ? eqModelo : [eqTipo, eqModelo].filter(Boolean).join(' · ')) || RepD_eqSemIdent_(c.EQUIPAMENTO_TEXTO);
+  V.serie = RepD_vazio_(eq.SERIE) ? '' : RepD_s_(eq.SERIE);
   // cliente e equipamento
   V.identCliente = [['Cliente', V.clienteNome, { largo: true }], ['CNPJ', RepD_s_(cli.CNPJ)], ['Unidade', RepD_s_(c.UNIDADE_NOME) || RepD_s_(un.NOME_UNIDADE)],
     ['Cidade/UF', [RepD_s_(un.CIDADE), RepD_s_(un.UF)].filter(Boolean).join('/')], ['Setor', RepD_s_(eq.SETOR) || (sol ? RepD_s_(sol.SETOR) : '')]];
@@ -132,7 +145,7 @@ function RepD_visao_(D, publico) {
   }
   // relato da abertura
   var rel = sol ? Rep_json_(sol.RELATO_JSON, {}) || {} : {};
-  V.relato = [['Problema relatado', cliente ? RepD_semEnquadramento_(c.SINTOMA || rel.sintoma) : RepD_s_(c.SINTOMA) || RepD_s_(rel.sintoma), { largo: true }], ['Situação do equipamento', REP_PARADA[Ast_up_(c.PARADA)] || AST_PARADA[Ast_up_(c.PARADA)] || '']];
+  V.relato = [[V.rotSolicitacao, cliente ? RepD_semEnquadramento_(c.SINTOMA || rel.sintoma) : RepD_s_(c.SINTOMA) || RepD_s_(rel.sintoma), { largo: true }]].concat(V.conserto ? [['Situação do equipamento', REP_PARADA[Ast_up_(c.PARADA)] || AST_PARADA[Ast_up_(c.PARADA)] || '']] : []);
   if (!cliente) {
     if (rel.inicio) V.relato.push(['Desde quando', RepD_s_(rel.inicio)]);
     V.relato.push(['Código de erro', rel.naoExibe ? 'O equipamento não exibe código' : RepD_s_(rel.codigoErro)]);
@@ -143,11 +156,13 @@ function RepD_visao_(D, publico) {
       ['Pedido', RepD_s_(sol.NUMERO) + ' · enviado em ' + Ast_br_(sol.CRIADO_EM) + (RepD_s_(sol.POR_NOME) ? ' por ' + RepD_s_(sol.POR_NOME) : ''), { largo: true }]);
     if (sol && RepD_s_(sol.COMPLEMENTO_PERGUNTA)) V.relato.push(['Complemento pedido pela Metrolabs', RepD_s_(sol.COMPLEMENTO_PERGUNTA), { largo: true }], ['Resposta da representada', RepD_s_(sol.COMPLEMENTO_RESPOSTA) || '—', { largo: true }]);
   } else V.relato.push(['Aberto em', V.abertoEm]);
-  // as 5 etapas do portal do cliente (com o que já aconteceu)
-  if (cliente) {
-    var quando = { 1: Ast_ms_(c.ABERTO_EM), 2: Ast_ms_(c.TRIAGEM_INICIO_EM), 3: Ast_ms_(c.AGENDADO_PARA), 4: Ast_ms_(os.CHEGOU_EM), 5: concluidoMs };
-    V.etapasCliente = AST_ETAPAS_CLIENTE.map(function (e) { return { n: e.etapa, nome: e.nome, feita: pc.etapa >= e.etapa, quando: pc.etapa >= e.etapa || e.etapa === 3 ? RepD_br_(quando[e.etapa]) : '' }; });
-    V.etapaClienteAtual = pc.etapa;
+  // as etapas do portal do cliente que aconteceram (todas as versões usam no glossário; só o cliente vê o desenho)
+  {
+    var quando = { 1: Ast_ms_(c.ABERTO_EM), 2: Ast_ms_(c.TRIAGEM_INICIO_EM), 3: V.remoto || V.registro ? null : Ast_ms_(c.AGENDADO_PARA), 4: Ast_ms_(os.CHEGOU_EM), 5: concluidoMs };
+    var nomeEt = function (e) { return V.palavra && e.etapa === 3 ? V.palavra.agendada : V.palavra && e.etapa === 4 ? V.palavra.em : V.remoto && e.etapa === 5 ? 'Resolvido a distância' : e.nome; };
+    V.etapasCliente = AST_ETAPAS_CLIENTE.filter(function (e) { return pc.etapa >= e.etapa && quando[e.etapa] !== null && quando[e.etapa] !== undefined; })
+      .map(function (e, i) { return { n: i + 1, nome: nomeEt(e), feita: true, quando: RepD_br_(quando[e.etapa]) }; });
+    V.etapaClienteAtual = V.etapasCliente.length;
   }
   // linha do tempo (só o que o público pode ler)
   var chave = repNome ? '(' + Rep_up_(repNome) + ')' : '';
@@ -157,14 +172,15 @@ function RepD_visao_(D, publico) {
     return { emMs: Ast_ms_(e.EM), em: Ast_br_(e.EM), texto: (cliente ? RepD_semEnquadramento_(t) : t).slice(0, 300), por: por, interno: interno && !Ast_up_(e.PUBLICO) };
   });
   // marcos previsto x realizado (representada e Metrolabs; o cliente não lê prazos internos)
-  V.marcos = cliente ? [] : D.marcos;
+  // 03/11/2026: atendimento encerrado (ou a distância, ou já realizado sem O.S.) não mostra o marco que não aconteceu (ex.: "Visita · a acontecer")
+  V.marcos = cliente ? [] : D.marcos.filter(function (m) { return !(V.encerrado || V.remoto) || m.realizadoMs; });
   // visita e atendimento
   V.visita = [];
   if (D.os) {
     var dur = Ast_ms_(os.CHEGOU_EM) !== null && Ast_ms_(os.CONCLUIU_EM) !== null ? Ast_duracaoTxt_((Ast_ms_(os.CONCLUIU_EM) - Ast_ms_(os.CHEGOU_EM)) / 60000) : '';
-    V.visita = [['Ordem de serviço', RepD_s_(os.NUMERO)], ['Tipo de serviço', RepD_s_(os.TIPO_NOME)], ['Técnico', RepD_s_(os.TECNICO_NOME)], ['Agendado para', Ast_br_(os.AGENDADO_PARA)],
-      ['Chegada', Ast_br_(os.CHEGOU_EM)], ['Conclusão', Ast_br_(os.CONCLUIU_EM)], ['Tempo no local', dur]];
-    if (interno) {
+    V.visita = [['Ordem de serviço', RepD_s_(os.NUMERO)], ['Tipo de serviço', RepD_s_(os.TIPO_NOME)], [V.palavra ? 'Colaborador' : 'Técnico', RepD_s_(os.TECNICO_NOME)], ['Agendado para', Ast_br_(os.AGENDADO_PARA)],
+      ['Chegada', Ast_br_(os.CHEGOU_EM)], ['Conclusão', Ast_br_(os.CONCLUIU_EM)]].concat(V.palavra ? [] : [['Tempo no local', dur]]);
+    if (interno && !V.palavra) {
       var saiu = Ast_ms_(os.SAIU_EM), chegou = Ast_ms_(os.CHEGOU_EM);
       V.visita.push(['Saída para o local', Ast_br_(os.SAIU_EM)], ['Deslocamento', saiu !== null && chegou !== null ? Ast_duracaoTxt_((chegou - saiu) / 60000) : '—'],
         ['Equipamento conferido por', { QR: 'leitura do QR', SERIE: 'número de série', TAG: 'TAG' }[Ast_up_(os.IDENTIFICADO_POR)] || '—'], ['Observação da localização', RepD_s_(os.OBS_LOCALIZACAO) || '—', { largo: true }]);
@@ -173,8 +189,13 @@ function RepD_visao_(D, publico) {
     V.visita.push(['Situação da O.S.', AST_OS_SITUACOES[Ast_up_(os.SITUACAO)] || RepD_s_(os.SITUACAO)]);
   } else if (Ast_ms_(c.AGENDADO_PARA) !== null) V.visita = [['Visita agendada para', Ast_br_(c.AGENDADO_PARA)], ['Técnico', RepD_s_(c.TECNICO_NOME)]];
   // diagnóstico e serviço
-  V.servico = [['Condição encontrada', os.CONDICAO_ENCONTRADA], ['Causa ou diagnóstico', os.CAUSA], ['Serviço realizado', os.SERVICO_REALIZADO], ['Teste funcional', os.TESTE_FUNCIONAL], ['Recomendações', os.RECOMENDACOES]]
-    .concat(interno ? [['Relato do técnico', os.RELATO], ['Orientação remota', c.ORIENTACAO_REMOTA]] : []).filter(function (x) { return RepD_s_(x[1]); }).map(function (x) { return [x[0], RepD_s_(x[1])]; });
+  V.servico = V.palavra || V.remoto ? [] : [['Condição encontrada', os.CONDICAO_ENCONTRADA], ['Causa ou diagnóstico', os.CAUSA], ['Serviço realizado', os.SERVICO_REALIZADO], ['Teste funcional', os.TESTE_FUNCIONAL], ['Recomendações', os.RECOMENDACOES]]
+    .concat(interno ? [['Relato do técnico', os.RELATO]] : []).filter(function (x) { return RepD_s_(x[1]); }).map(function (x) { return [x[0], RepD_s_(x[1])]; });
+  V.orientacao = V.remoto && RepD_s_(c.ORIENTACAO_REMOTA) ? { texto: cliente ? RepD_semEnquadramento_(c.ORIENTACAO_REMOTA) : RepD_s_(c.ORIENTACAO_REMOTA), por: RepD_s_(c.TRIAGEM_RESPONSAVEL_NOME) || RepD_s_(c.ASSUMIDO_POR_NOME), em: Ast_br_(c.TRIAGEM_FIM_EM || c.ATENDIDO_EM) } : null;
+  // termo da O.S. de logística (itens, de quem/para quem, motivo e destino) ou o registro da entrega já feita
+  var lg = D.os && V.palavra && typeof AstO_logistica_ === 'function' ? AstO_logistica_(os) : null;
+  V.termo = lg ? { itens: (lg.itens || []).map(function (i) { return [RepD_s_(i.descricao), i.quantidade ? Ast_fmtNum_(Number(i.quantidade) || 0, Math.round(Number(i.quantidade)) === Number(i.quantidade) ? 0 : 2) : '—', RepD_s_(i.identificacao), AST_LOG_ESTADOS[Ast_up_(i.estado)] || '—', [RepD_s_(i.avaria), RepD_s_(i.acessorios)].filter(Boolean).join(' · ')]; }),
+    contraparte: [RepD_s_((lg.contraparte || {}).nome), RepD_s_((lg.contraparte || {}).documento), RepD_s_((lg.contraparte || {}).setor)].filter(Boolean).join(' · '), motivo: RepD_s_(lg.motivo), destino: AST_LOG_DESTINOS[Ast_up_(lg.destino)] || '', observacoes: RepD_s_(lg.observacoes) } : null;
   // peças (sem valor em nenhuma versão)
   V.pecas = D.pecas.map(function (p) {
     var q = Number(p.QUANTIDADE) || 0;
@@ -214,7 +235,8 @@ function RepD_visao_(D, publico) {
   // assinatura e aceite
   V.assinatura = D.os && (RepD_s_(os.ASSINATURA_NOME) || RepD_s_(os.SEM_ASSINATURA_MOTIVO) || RepD_s_(os.ASSINATURA_ARQUIVO_ID)) ? { nome: RepD_s_(os.ASSINATURA_NOME) || RepD_s_(os.SEM_ASSINATURA_RECEBIDO_POR),
     documento: RepD_s_(os.ASSINATURA_DOCUMENTO), em: Ast_br_(os.ASSINATURA_EM), arquivoId: RepD_s_(os.ASSINATURA_ARQUIVO_ID), sem: RepD_s_(os.SEM_ASSINATURA_MOTIVO) ? (AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || RepD_s_(os.SEM_ASSINATURA_MOTIVO)) : '',
-    tecnico: RepD_s_(os.TECNICO_NOME) } : null;
+    tecnico: RepD_s_(os.TECNICO_NOME), papelCliente: V.logistica === 'RETIRADA' ? 'Entregue por (cliente)' : 'Recebido por (cliente)', papelTec: V.logistica === 'RETIRADA' ? 'Recebido por (Metrolabs)' : V.logistica ? 'Entregue por (Metrolabs)' : 'Técnico responsável' } : null;
+  if (V.assinatura && typeof AstR_assinaturaColab_ === 'function') V.assinatura.tec = AstR_assinaturaColab_(os, V.assinatura.papelTec);
   // só a Metrolabs: prazos e SLA, primeiro contato, histórico do equipamento
   if (interno) {
     var x = D.ciclo;
@@ -233,10 +255,15 @@ function RepD_visao_(D, publico) {
   }
   // quadro-resumo da capa: situação, visita, conclusão, próximo passo e (fora a versão do cliente) prazo, aceite e com quem está
   var cy = D.ciclo;
-  V.visitaTexto = Ast_ms_(os.CHEGOU_EM) !== null ? 'Técnico no local em ' + Ast_br_(os.CHEGOU_EM) : Ast_ms_(c.AGENDADO_PARA) !== null && !V.encerrado && !V.cancelado ? 'Agendada para ' + Ast_br_(c.AGENDADO_PARA) : 'Sem visita registrada';
   var chegou = Ast_ms_(os.CHEGOU_EM) !== null, agendou = Ast_ms_(c.AGENDADO_PARA) !== null && !V.cancelado;
-  V.visitaDia = chegou ? Ast_brDia_(os.CHEGOU_EM) : agendou ? Ast_brDia_(c.AGENDADO_PARA) : '';
-  V.visitaRotulo = chegou ? 'Visita do técnico' : agendou ? 'Visita agendada' : 'Sem visita registrada';
+  if (V.registro) { V.visitaTexto = V.palavra.nome + ' já realizada em ' + Ast_br_(V.registro.em) + ' (registrada sem O.S.)'; V.visitaDia = Ast_brDia_(V.registro.em); V.visitaRotulo = V.palavra.nome + ' realizada'; }
+  else if (V.remoto) { V.visitaTexto = 'Orientação a distância' + (V.orientacao && V.orientacao.em ? ' em ' + V.orientacao.em : ''); V.visitaDia = V.orientacao ? V.orientacao.em.slice(0, 10) : ''; V.visitaRotulo = 'Orientação a distância'; }
+  else {
+    var nomeV = V.palavra ? V.palavra.nome : 'Visita';
+    V.visitaTexto = chegou ? (V.palavra ? 'Colaborador no local em ' : 'Técnico no local em ') + Ast_br_(os.CHEGOU_EM) : agendou && !V.encerrado ? (V.palavra ? V.palavra.agendada : 'Agendada') + ' para ' + Ast_br_(c.AGENDADO_PARA) : 'Sem ' + nomeV.toLowerCase() + ' registrada';
+    V.visitaDia = chegou ? Ast_brDia_(os.CHEGOU_EM) : agendou ? Ast_brDia_(c.AGENDADO_PARA) : '';
+    V.visitaRotulo = chegou ? (V.palavra ? nomeV + ' no local' : 'Visita do técnico') : agendou ? (V.palavra ? V.palavra.agendada : 'Visita agendada') : 'Sem ' + nomeV.toLowerCase() + ' registrada';
+  }
   V.proximo = RepD_proximoPasso_(c, V);
   if (!cliente) {
     var pz = cy.prazo || {};
@@ -258,11 +285,11 @@ function RepD_proximoPasso_(c, V) {
   var temRec = V.servico.some(function (x) { return x[0] === 'Recomendações'; });
   var faltam = V.pecas.filter(function (p) { return /^Em falta/.test(p[3]); }).map(function (p) { return p[0]; });
   switch (s) {
-    case 'ENCERRADO': return 'Nenhuma ação pendente da Metrolabs.' + (temRec ? ' Seguir as recomendações registradas pelo técnico (seção "' + secServico + '").' : '');
+    case 'ENCERRADO': return V.registro ? 'Nenhuma ação pendente: ' + V.palavra.nome.toLowerCase() + ' já realizada e registrada.' : 'Nenhuma ação pendente da Metrolabs.' + (temRec ? ' Seguir as recomendações registradas pelo técnico (seção "' + secServico + '").' : '');
     case 'RESOLVIDO_REMOTO': return 'Nenhuma ação pendente: resolvido com orientação a distância.';
     case 'DOC_PENDENTE': return 'Serviço concluído. A Metrolabs fecha o relatório da ordem de serviço.';
     case 'CANCELADO': return 'Chamado cancelado. Nenhuma ação pendente.';
-    case 'PLANEJADO': case 'AGENDADO': return ag ? 'Visita técnica agendada para ' + ag + (tec ? ', técnico ' + tec : '') + '.' : 'A Metrolabs agenda a visita técnica.';
+    case 'PLANEJADO': case 'AGENDADO': return V.palavra ? (ag ? V.palavra.agendada + ' para ' + ag + (tec ? ', com ' + tec : '') + '.' : 'A Metrolabs agenda a ' + V.palavra.nome.toLowerCase() + '.') : ag ? 'Visita técnica agendada para ' + ag + (tec ? ', técnico ' + tec : '') + '.' : 'A Metrolabs agenda a visita técnica.';
     case 'EM_DESLOCAMENTO': return 'Técnico a caminho do local.';
     case 'NO_LOCAL': case 'EM_EXECUCAO': return 'Serviço em execução no local.';
     case 'PAUSADO': return 'Serviço pausado no local.';
@@ -393,7 +420,7 @@ function RepD_marcosHtml_(marcos, agoraMs) {
 
 /** As 5 etapas do portal do cliente: círculos ligados, cheios até a etapa atual, com a data de cada uma. */
 function RepD_etapasClienteHtml_(etapas, atual) {
-  var W = 680, H = 92, x0 = 50, passo = (W - 100) / (etapas.length - 1), s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">'];
+  var W = 680, H = 92, x0 = 50, passo = etapas.length > 1 ? (W - 100) / (etapas.length - 1) : 0, s = ['<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" role="img">'];
   s.push('<line x1="' + x0 + '" y1="26" x2="' + (x0 + passo * (etapas.length - 1)) + '" y2="26" stroke="#bcc5cf" stroke-width="3"/>');
   if (atual > 1) s.push('<line x1="' + x0 + '" y1="26" x2="' + (x0 + passo * (Math.min(atual, etapas.length) - 1)) + '" y2="26" stroke="#1d6b3f" stroke-width="3"/>');
   etapas.forEach(function (e, i) {
@@ -534,7 +561,10 @@ function RepD_quadro_(titulo, linhas) {
 }
 /** Tabela de identificação que não se divide entre folhas; vazio vira o texto pedido (padrão "—"). */
 function RepD_ident_(pares, vazio) {
-  return '<div class="manter">' + RelA4_identificacao_(pares.map(function (p) { return [p[0], RepD_s_(p[1]) === '' ? (vazio || '—') : p[1], p[2]]; })) + '</div>';
+  // 03/11/2026 (pedido do dono): campo vazio ou que não informa nada ("N/S", traço) some; vazio só quando não sobra nenhum campo
+  var l = pares.filter(function (p) { return p && !(typeof p[1] !== 'object' && RepD_vazio_(p[1])); });
+  if (!l.length) return '<p class="nota">' + RelA4_esc_(vazio || 'Sem informação registrada.') + '</p>';
+  return '<div class="manter">' + RelA4_identificacao_(l.map(function (p) { return [p[0], p[1], p[2]]; })) + '</div>';
 }
 function RepD_glossarioHtml_(itens, legenda) {
   return RelA4_tabela_([{ t: 'Etapa' }, { t: 'O que quer dizer' }], itens, { legenda: legenda, compacta: true }).replace('<table class="t', '<table class="t rd-glossario');
@@ -549,14 +579,18 @@ function RepD_htmlAtendimento_(V, meta) {
   var secServico = cliente ? 'Serviço realizado e recomendações' : 'Diagnóstico e serviço';
   var achar = function (l, rot) { var x = l.filter(function (p) { return p[0] === rot; })[0]; return x ? RepD_s_(x[1]) : ''; };
   // 1. resumo: números do atendimento e o texto curto do problema e do serviço
-  var kpis = cliente ? [[V.abertoEm.slice(0, 10) || '—', 'Aberto em'], [V.visitaDia || '—', V.visitaRotulo], [V.concluidoEm ? V.concluidoEm.slice(0, 10) : '—', V.concluidoEm ? 'Concluído em' : 'Ainda não concluído', V.concluidoEm ? 'ok' : 'aviso'],
-    [achar(V.visita, 'Tempo no local') || '—', 'Tempo do técnico no local']] :
-    [[RepD_tempo_(V.visitaMin), 'Do envio do pedido à visita'], [RepD_tempo_(V.conclusaoMin), 'Do envio do pedido à conclusão', V.concluidoEm ? '' : 'aviso'],
+  var semVisita = V.remoto || !!V.registro || !!V.palavra;   // 03/11/2026: sem visita técnica não há "tempo no local"
+  var kpis = cliente ? [[V.abertoEm.slice(0, 10) || '—', 'Aberto em'], [V.visitaDia || '—', V.visitaRotulo], [V.concluidoEm ? V.concluidoEm.slice(0, 10) : '—', V.concluidoEm ? 'Concluído em' : 'Ainda não concluído', V.concluidoEm ? 'ok' : 'aviso']]
+      .concat(semVisita ? [] : [[achar(V.visita, 'Tempo no local') || '—', 'Tempo do técnico no local']]) :
+    [[RepD_tempo_(V.visitaMin), semVisita ? 'Do envio do pedido ao atendimento' : 'Do envio do pedido à visita'], [RepD_tempo_(V.conclusaoMin), 'Do envio do pedido à conclusão', V.concluidoEm ? '' : 'aviso'],
       [V.marcosResumo, 'Marcos cumpridos no previsto', /^0 de/.test(V.marcosResumo) ? 'critico' : ''], [V.prazoEstado === 'SEM_PRAZO' ? '—' : REPD_NOME_PRAZO[V.prazoEstado], 'Prazo de atendimento',
         { CUMPRIDO: 'ok', NO_PRAZO: 'ok', EM_RISCO: 'aviso', VENCIDO: 'critico', FORA_DO_PRAZO: 'aviso' }[V.prazoEstado] || '']];
   var problema = V.relato[0] ? RepD_s_(V.relato[0][1]) : '', servico = achar(V.servico, 'Serviço realizado'), causa = achar(V.servico, 'Causa ou diagnóstico');
-  var txt = '<div class="rd-texto">' + (problema ? '<p><b>Problema relatado.</b> ' + RelA4_esc_(problema) + '</p>' : '') + (causa ? '<p><b>Causa encontrada.</b> ' + RelA4_esc_(causa) + '</p>' : '') +
-    (servico ? '<p><b>Serviço realizado.</b> ' + RelA4_esc_(servico) + '</p>' : '<p><b>Serviço.</b> ' + RelA4_esc_(V.cancelado ? 'Chamado cancelado antes do serviço.' : 'Ainda não registrado na ordem de serviço.') + '</p>') +
+  var feito = V.remoto ? (V.orientacao ? '<p><b>Orientação a distância.</b> ' + RelA4_esc_(V.orientacao.texto) + '</p>' : '') :
+    V.registro ? '<p><b>' + RelA4_esc_(V.palavra.nome) + ' já realizada.</b> Em ' + RelA4_esc_(Ast_br_(V.registro.em)) + ', ' + RelA4_esc_(V.logistica === 'RETIRADA' ? 'entregue à Metrolabs por ' : 'recebido por ') + RelA4_esc_(V.registro.recebidoPor) + '.</p>' :
+    V.palavra ? '<p><b>' + RelA4_esc_(V.palavra.nome) + '.</b> ' + RelA4_esc_(V.termo && V.termo.itens.length ? V.termo.itens.length + (V.termo.itens.length === 1 ? ' item ' : ' itens ') + V.palavra.feita + (V.termo.itens.length === 1 ? '' : 's') + (V.termo.contraparte ? '; ' + (V.logistica === 'RETIRADA' ? 'de ' : 'para ') + V.termo.contraparte : '') + '.' : V.cancelado ? 'Chamado cancelado.' : 'Ainda não registrada no termo da ordem de serviço.') + '</p>' :
+    (causa ? '<p><b>Causa encontrada.</b> ' + RelA4_esc_(causa) + '</p>' : '') + (servico ? '<p><b>Serviço realizado.</b> ' + RelA4_esc_(servico) + '</p>' : '<p><b>Serviço.</b> ' + RelA4_esc_(V.cancelado ? 'Chamado cancelado antes do serviço.' : 'Ainda não registrado na ordem de serviço.') + '</p>');
+  var txt = '<div class="rd-texto">' + (problema ? '<p><b>' + RelA4_esc_(V.rotSolicitacao) + '.</b> ' + RelA4_esc_(problema) + '</p>' : '') + feito +
     '<p><b>Próximo passo.</b> ' + RelA4_esc_(V.proximo) + '</p>' +
     (!V.concluidoEm && !V.cancelado ? '<p class="nota">Atendimento em andamento: este documento é o retrato de ' + RelA4_esc_(RepD_br_(V.agoraMs)) + '.</p>' : '') + '</div>';
   corpo += RelA4_secao_('Resumo do atendimento', RelA4_kpis_(kpis) + txt + (cliente ? '' : '<p class="nota">Tempos em horas úteis do expediente da Metrolabs, descontada a espera do complemento da representada.</p>'));
@@ -566,36 +600,54 @@ function RepD_htmlAtendimento_(V, meta) {
   if (cliente) corpo += RelA4_secao_('Etapas do atendimento', RepD_etapasClienteHtml_(V.etapasCliente, V.etapaClienteAtual));
   else corpo += RelA4_secao_('Marcos: previsto e realizado', RepD_marcosHtml_(V.marcos, V.agoraMs));
   corpo += RelA4_secao_('Linha do tempo', RepD_linhaDoTempoHtml_(V.linha));
-  corpo += RelA4_secao_('Visita e atendimento', V.visita.length ? RepD_ident_(V.visita) : '<p class="nota">Visita ainda não agendada.</p>');
-  corpo += RelA4_secao_(secServico, V.servico.length ? RelA4_identificacao_(V.servico.map(function (s) { return [s[0], s[1], { largo: true }]; })) : '<p class="nota">O serviço ainda não foi registrado na ordem de serviço.</p>');
-  corpo += RelA4_secao_('Peças', RelA4_tabela_([{ t: 'Peça' }, { t: 'Código' }, { t: 'Qtd.', num: true }, { t: 'Situação' }], V.pecas, { vazio: 'Nenhuma peça registrada.', legenda: V.pecas.length ? 'Peças do atendimento' : '' }));
-  corpo += RelA4_secao_('Fotos', RepD_fotosHtml_(V));
-  if (!cliente) corpo += RelA4_secao_('Conversa do chamado', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'Quem' }, { t: 'Mensagem' }], V.conversa.map(function (x) { return [x.em, x.autor, x.texto]; }), { vazio: 'Nenhuma mensagem na conversa do chamado.', legenda: V.conversa.length ? 'Mensagens trocadas entre a representada e a Metrolabs' : '' }));
+  // 03/11/2026: o documento segue o caminho do atendimento (só as seções que aconteceram)
+  if (V.remoto) corpo += RelA4_secao_('Orientação a distância', V.orientacao ? RepD_ident_([['Orientação', V.orientacao.texto, { largo: true }], ['Por', interno ? V.orientacao.por : 'Metrolabs'], ['Em', V.orientacao.em]]) : '<p class="nota">Resolvido a distância.</p>');
+  else if (V.registro) corpo += RelA4_secao_(V.palavra.nome + ' já realizada', RepD_ident_([[V.logistica === 'RETIRADA' ? 'Entregue à Metrolabs por' : 'Recebido por', V.registro.recebidoPor], ['Documento', V.registro.documento], ['Data e hora', Ast_br_(V.registro.em)],
+    ['Comprovante', V.registro.anexo ? V.registro.anexo.nome : 'Não anexado'], ['Observação', V.registro.observacao, { largo: true }]].concat(interno ? [['Registrado por', RepD_s_(V.registro.por) + (V.registro.registradoEm ? ' em ' + Ast_br_(V.registro.registradoEm) : '')]] : [])) +
+    '<p class="nota">Registrada na triagem, sem ordem de serviço pelo aplicativo.</p>');
+  else {
+    corpo += RelA4_secao_(V.palavra ? V.palavra.nome : 'Visita e atendimento', V.visita.length ? RepD_ident_(V.visita) : '<p class="nota">' + (V.palavra ? V.palavra.nome + ' ainda não agendada.' : 'Visita ainda não agendada.') + '</p>');
+    if (V.palavra) {
+      var tt = V.termo, tituloTermo = { ENTREGA: 'Termo de entrega', RETIRADA: 'Termo de retirada (recebimento)', ENVIO: 'Termo de envio' }[V.logistica];
+      corpo += RelA4_secao_(tituloTermo, tt ? RelA4_tabela_([{ t: 'Item' }, { t: 'Qtd.', num: true }, { t: 'Identificação' }, { t: 'Estado aparente' }, { t: 'Avaria e acessórios' }], tt.itens, { vazio: 'Nenhum item registrado.', legenda: 'Itens ' + V.palavra.feita + 's' }) +
+        RepD_ident_([[V.logistica === 'RETIRADA' ? 'De quem' : 'Para quem', tt.contraparte], ['Motivo', tt.motivo, { largo: true }], ['Destino', tt.destino], ['Observações', tt.observacoes, { largo: true }]], ' ') : '<p class="nota">O termo ainda não foi preenchido na ordem de serviço.</p>');
+    } else {
+      corpo += RelA4_secao_(secServico, V.servico.length ? RelA4_identificacao_(V.servico.map(function (s) { return [s[0], s[1], { largo: true }]; })) : '<p class="nota">O serviço ainda não foi registrado na ordem de serviço.</p>');
+      corpo += RelA4_secao_('Peças', RelA4_tabela_([{ t: 'Peça' }, { t: 'Código' }, { t: 'Qtd.', num: true }, { t: 'Situação' }], V.pecas, { vazio: 'Nenhuma peça registrada.', legenda: V.pecas.length ? 'Peças do atendimento' : '' }));
+    }
+  }
+  if (V.fotos.length || !semVisita || (V.palavra && !V.registro && !V.remoto && V.visita.length)) corpo += RelA4_secao_('Fotos', RepD_fotosHtml_(V));
+  if (!cliente && V.representadaNome) corpo += RelA4_secao_('Conversa do chamado', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'Quem' }, { t: 'Mensagem' }], V.conversa.map(function (x) { return [x.em, x.autor, x.texto]; }), { vazio: 'Nenhuma mensagem na conversa do chamado.', legenda: V.conversa.length ? 'Mensagens trocadas entre a representada e a Metrolabs' : '' }));
   if (interno) corpo += RelA4_secao_('Notas internas', RelA4_tabela_([{ t: 'Quando', nw: true }, { t: 'Quem' }, { t: 'Nota' }], V.notasInternas.map(function (x) { return [x.em, x.autor, x.texto]; }), { vazio: 'Nenhuma nota interna.', legenda: V.notasInternas.length ? 'Notas internas (a representada e o cliente não leem)' : '' }));
+  if (V.registro && V.registro.anexo) V.anexos.unshift(['Comprovante da ' + V.palavra.nome.toLowerCase(), V.registro.anexo.nome, RepD_s_(V.registro.por) || 'Metrolabs', Ast_br_(V.registro.registradoEm)].concat(interno ? ['Só Metrolabs'] : []));
   var docs = (V.anexos.length ? RelA4_tabela_([{ t: 'Tipo' }, { t: 'Arquivo' }, { t: 'Enviado por' }, { t: 'Quando', nw: true }].concat(interno ? [{ t: 'Quem lê' }] : []), V.anexos, { legenda: 'Arquivos do pedido e do chamado' }) : '') +
     (V.relatorioOs ? '<p class="nota">Relatório da ordem de serviço ' + RelA4_esc_(V.relatorioOs.numero) + ' emitido em ' + RelA4_esc_(V.relatorioOs.em) + (cliente ? ' (disponível em "Meus chamados").' : '.') + '</p>' : '');
-  corpo += RelA4_secao_('Documentos do atendimento', docs || '<p class="nota">Nenhum arquivo anexado.</p>');
+  if (docs || V.conserto) corpo += RelA4_secao_('Documentos do atendimento', docs || '<p class="nota">Nenhum arquivo anexado.</p>');
   if (interno) {
     corpo += RelA4_secao_('Prazos e SLA', RepD_ident_(V.prazos) + '<p class="nota">Tempos em horas úteis do expediente da Metrolabs. O aceite e o primeiro contato seguem os prazos da representada; o prazo de atendimento, a prioridade e o contrato.</p>');
     corpo += RelA4_secao_('Histórico do equipamento', (V.reincidente ? RelA4_caixa_('Reincidência: há outro chamado deste equipamento em até ' + REPP_REINCIDENCIA_DIAS + ' dias.', 'critico') : '') +
       RelA4_tabela_([{ t: 'Chamado', nw: true }, { t: 'Aberto em', nw: true }, { t: 'Situação' }, { t: 'Problema' }, { t: 'Reincidência' }], V.historico, { vazio: 'Nenhum outro chamado deste equipamento nos últimos 12 meses.', legenda: V.historico.length ? 'Outros chamados do equipamento (12 meses)' : '' }));
   }
-  if (V.assinatura) {
+  if (V.remoto) { /* a distância: não há recebimento de serviço a assinar */ }
+  else if (V.registro) corpo += RelA4_secao_('Recebimento', '<p>' + RelA4_esc_((V.logistica === 'RETIRADA' ? 'Entregue à Metrolabs por ' : 'Recebido por ') + V.registro.recebidoPor + (V.registro.documento ? ' (' + V.registro.documento + ')' : '') + ' em ' + Ast_br_(V.registro.em) + '.') + '</p><p class="nota">' + RelA4_esc_(V.registro.anexo ? 'A assinatura está no comprovante em papel anexado ao chamado.' : 'Sem comprovante anexado.') + '</p>');
+  else if (V.assinatura) {
     var img = V.assinatura.arquivoId ? AstR_b64Arquivo_(V.assinatura.arquivoId) : null;
-    corpo += RelA4_secao_('Assinaturas e aceite', '<div class="manter">' + SGO_DocA4_assinaturas_([{ papel: 'Recebido por (cliente)', nome: V.assinatura.nome || ' ', cargo: V.assinatura.documento || (V.assinatura.sem ? 'Sem assinatura: ' + V.assinatura.sem : ''), imagemBase64: img ? { mimeType: 'image/png', data: img.data } : null },
-      { papel: 'Técnico responsável', nome: V.assinatura.tecnico, cargo: 'Metrolabs' }]) + (V.assinatura.em ? '<p class="nota" style="margin-top:2mm">Recebimento do serviço assinado na tela do aparelho do técnico em ' + RelA4_esc_(V.assinatura.em) + '.</p>' : '') + '</div>');
+    corpo += RelA4_secao_('Assinaturas e aceite', '<div class="manter">' + SGO_DocA4_assinaturas_([{ papel: V.assinatura.papelCliente, nome: V.assinatura.nome || ' ', cargo: V.assinatura.documento || (V.assinatura.sem ? 'Sem assinatura: ' + V.assinatura.sem : ''), imagemBase64: img ? { mimeType: 'image/png', data: img.data } : null }]
+      .concat(V.assinatura.tec ? [V.assinatura.tec] : [])) + (V.assinatura.em ? '<p class="nota" style="margin-top:2mm">Recebimento do serviço assinado na tela do aparelho do técnico em ' + RelA4_esc_(V.assinatura.em) + '.</p>' : '') + '</div>');
   } else corpo += RelA4_secao_('Assinaturas e aceite', '<p class="nota">' + RelA4_esc_(V.cancelado ? 'Chamado cancelado: não há recebimento do serviço a assinar.' : 'A assinatura de quem recebeu o atendimento ainda não foi registrada na ordem de serviço. Ela entra neste documento quando o técnico encerrar a visita.') + '</p>');
   // fecho: a quem se destina, o que quer dizer cada etapa e a emissão
-  corpo += RelA4_secao_('Sobre este documento', RepD_glossarioHtml_(cliente ? REPD_GLOSSARIO_CLIENTE : REPD_GLOSSARIO_REP, cliente ? 'Etapas de "Meus chamados"' : 'Etapas que a representada acompanha') +
+  var sentidoEt = { 'Entrega agendada': 'Entrega com data marcada.', 'Retirada agendada': 'Retirada com data marcada.', 'Envio agendado': 'Envio com data marcada.', 'Em entrega': 'Colaborador da Metrolabs no local fazendo a entrega.', 'Em retirada': 'Colaborador da Metrolabs no local fazendo a retirada.', 'Em envio': 'Envio em andamento.', 'Resolvido a distância': 'Resolvido com orientação a distância, sem visita.' };
+  var glossCli = cliente || !V.representadaNome ? (V.etapasCliente || []).map(function (e) { var g = REPD_GLOSSARIO_CLIENTE.filter(function (x) { return x[0] === e.nome; })[0]; return [e.nome, g ? g[1] : sentidoEt[e.nome] || '']; }) : [];
+  corpo += RelA4_secao_('Sobre este documento', RepD_glossarioHtml_(cliente || !V.representadaNome ? glossCli : REPD_GLOSSARIO_REP, cliente ? 'Etapas deste atendimento em "Meus chamados"' : V.representadaNome ? 'Etapas que a representada acompanha' : 'Etapas que o cliente acompanha em "Meus chamados"') +
     '<p class="nota">Gerado pelo SGO+ em ' + RelA4_esc_(RepD_br_(V.agoraMs)) + ' por ' + RelA4_esc_(m.por || '—') + '. Emissão ' + RelA4_esc_(String(m.versao || 1)) + ' (revisão ' + RelA4_esc_(SGO_DocA4_revisao_(m.revisao || 0)) + '); cada nova emissão gera outro arquivo e as anteriores continuam guardadas. Marca de conferência do conteúdo: ' +
     RelA4_esc_(String(m.marca || '').slice(0, 16)) + '.</p>');
-  var ficha = [['Chamado', V.numero], ['Cliente', V.clienteNome], ['Equipamento', V.equipamentoTexto + (V.serie ? ' · série ' + V.serie : '')]];
+  var ficha = [['Chamado', V.numero], ['Cliente', V.clienteNome], ['Equipamento', V.equipamentoTexto]].concat(V.serie ? [['Nº de série', V.serie]] : []);
   if (!cliente && V.representadaNome) ficha.splice(1, 0, ['Representada', V.representadaNome], ['Protocolo da representada', V.protocolo || 'Não informado']);
   var html = RelA4_documento_({ titulo: 'Relatório do atendimento', subtitulo: V.clienteNome + ' · ' + V.equipamentoTexto, tituloCurto: 'Relatório do atendimento ' + V.numero + ' · ' + versao, tituloArquivo: 'Relatorio do atendimento',
     numero: m.numero, revisao: m.revisao || 0, emitidoPor: m.por, ficha: ficha, tipoCapa: 'Relatório do atendimento · ' + versao, corpo: corpo, capa: true, sumario: true });
   var reg = RelA4_registro_(html); if (reg) reg.semSumario = null; // o dono pediu índice sempre
   var quadro = RepD_quadro_('Situação em ' + RepD_br_(V.agoraMs), [['Situação', V.etapaNome, 'sit']].concat(cliente ? [] : [['Prazo de atendimento', V.prazoTexto], ['Aceite do pedido', V.aceiteTexto]],
-    [['Visita', V.visitaTexto], ['Conclusão', V.concluidoEm || (V.cancelado ? 'Chamado cancelado' : 'Ainda não concluído')]], !cliente && !V.encerrado && !V.cancelado ? [['Com quem está', V.comQuem]] : [], [['Próximo passo', V.proximo]]));
+    [[V.remoto ? 'Atendimento' : V.palavra ? V.palavra.nome : 'Visita', V.visitaTexto], ['Conclusão', V.concluidoEm || (V.cancelado ? 'Chamado cancelado' : 'Ainda não concluído')]], !cliente && !V.encerrado && !V.cancelado ? [['Com quem está', V.comQuem]] : [], [['Próximo passo', V.proximo]]));
   return RepD_acabamento_(html, quadro, REPD_AVISO_PUBLICO[V.publico], interno);
 }
 

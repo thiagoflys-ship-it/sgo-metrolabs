@@ -194,6 +194,19 @@ Um motor só (SGO_Representacao_Documentos.js) sobre a moldura A4 dos relatório
 
 ### 12.1 Relatório do atendimento (um chamado)
 
+O documento segue o caminho do atendimento, igual nas três versões (03/11/2026, caso CH-2026-0008):
+
+- **A distância** (resolvido remotamente): só a seção "Orientação a distância" (o que foi orientado, por quem, quando); sem visita,
+  sem tempo no local, sem serviço, peças nem assinaturas.
+- **Logística** (entrega, retirada, envio): a seção da visita vira "Entrega" (ou "Retirada", "Envio") e o serviço vira o termo
+  (itens, quantidade, identificação, estado, de quem ou para quem, motivo e destino), com as assinaturas "Recebido por" e "Entregue
+  por (Metrolabs)". Já realizada sem O.S.: o registro (quem recebeu, quando, comprovante).
+- **Conserto**: como antes (visita, serviço, peças, assinaturas do cliente e do técnico).
+- Fora de conserto o texto da abertura é "Solicitação" (não "Problema relatado") e a "Situação do equipamento" não aparece.
+- As etapas do cliente mostram só as que aconteceram, cada uma com a data ("Resolvido a distância", "Entrega agendada", "Em
+  entrega" quando for o caso); o glossário traz só essas etapas. Marco que não aconteceu num atendimento encerrado não aparece.
+- Um logo só (o da capa). Série e TAG só nos campos próprios; campo vazio ou "N/S" some.
+
 | Parte | Representada | Cliente final | Metrolabs (interno) |
 |---|---|---|---|
 | Capa com o quadro "Situação em" (o essencial na primeira folha) | Situação, prazo de atendimento, aceite do pedido, visita, conclusão, com quem está, próximo passo | Situação, visita, conclusão, próximo passo | Como a representada, com a situação interna entre parênteses |
@@ -212,7 +225,7 @@ Um motor só (SGO_Representacao_Documentos.js) sobre a moldura A4 dos relatório
 | Arquivos, relatório da O.S., assinatura e aceite (sem assinatura registrada, a seção diz o que falta) | Sim | Relatório da O.S. e assinatura | Sim, com quem lê cada arquivo |
 | Sobre este documento: o que quer dizer cada etapa, emissão, revisão e marca de conferência | Etapas que a representada acompanha | Etapas de "Meus chamados" | Etapas que a representada acompanha |
 
-Cadastro vazio (CNPJ, TAG, protocolo) aparece como "Não informado". O cabeçalho de cada folha traz o chamado e a versão ("Relatório do atendimento CH-... · versão da representada"), o nº e a revisão; o rodapé, "Página X de Y". Tabelas de identificação não se dividem entre folhas.
+Cadastro vazio (CNPJ, TAG, protocolo) ou que não informa nada ("N/S", traço) não aparece (03/11/2026; antes saía "Não informado"). O cabeçalho de cada folha traz o chamado e a versão ("Relatório do atendimento CH-... · versão da representada"), o nº e a revisão; o rodapé, "Página X de Y". Tabelas de identificação não se dividem entre folhas.
 
 Nunca, em nenhuma versão: valores. Nunca nas externas: nota interna, foto não liberada, registro interno, outra representada.
 

@@ -214,7 +214,7 @@ test('capa com quadro-resumo, próximo passo, linha do tempo vertical, glossári
   // cliente: sem prazo interno, sem aceite do pedido, sem "com quem está" e sem o glossário da representada
   for (const s of ['Prazo de atendimento', 'Aceite do pedido', 'Com quem está', 'Etapas que a representada acompanha', 'Abertura do pedido', 'Marcos cumpridos', 'complemento da representada'])
     assert.ok(!hc.includes(s), 'cliente viu: ' + s);
-  assert.ok(hc.includes('Etapas de &quot;Meus chamados&quot;') || hc.includes('Etapas de "Meus chamados"'));
+  assert.ok(hc.includes('Etapas deste atendimento em &quot;Meus chamados&quot;') || hc.includes('Etapas deste atendimento em "Meus chamados"'));
   // a marca "interno" da linha do tempo só na versão da Metrolabs
   assert.ok(hm.includes('>interno</span>')); assert.ok(!hr.includes('>interno</span>')); assert.ok(!hc.includes('>interno</span>'));
   // período: pontos de atenção e definições por público

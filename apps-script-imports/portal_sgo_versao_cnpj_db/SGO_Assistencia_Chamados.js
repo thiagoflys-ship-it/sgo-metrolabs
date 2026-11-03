@@ -196,7 +196,9 @@ function AstC_publico_(c, eu, agoraMs, regras) {
     prioridade: Ast_up_(c.PRIORIDADE), prioridadeNome: AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || '', tipoCodigo: Ast_up_(c.TIPO_CODIGO), tipoNome: (Ast_tipo_(c.TIPO_CODIGO) || {}).nome || '',
     abertoEm: Ast_br_(c.ABERTO_EM), abertoPor: Ast_s_(c.ABERTO_POR_NOME), sla: sla, slaFonte: Ast_up_(c.SLA_FONTE) === 'CONTRATO' ? 'Contrato do cliente' : 'Prazo padrão',
     prazoTriagem: Ast_br_(c.PRAZO_TRIAGEM_EM), triagemResponsavel: Ast_s_(c.TRIAGEM_RESPONSAVEL_NOME), triagem: Ast_json_(c.TRIAGEM_JSON, {}), acaoDecidida: Ast_up_(c.ACAO_DECIDIDA),
-    orientacaoRemota: Ast_s_(c.ORIENTACAO_REMOTA), orcamentoDescricao: Ast_s_(c.ORCAMENTO_DESCRICAO), pecaDescricao: Ast_s_(c.PECA_DESCRICAO),
+    orientacaoRemota: Ast_s_(c.ORIENTACAO_REMOTA), outroDescricao: Ast_s_(c.OUTRO_DESCRICAO),
+    // 03/11/2026: entrega, retirada ou envio já realizados, registrados na triagem
+    registroLogistica: (function () { var r = Ast_json_(c.LOGISTICA_REGISTRO_JSON, null); return r && r.recebidoPor ? { texto: ({ ENTREGA: 'Entrega', RETIRADA: 'Retirada', ENVIO: 'Envio' }[r.sentido] || 'Entrega') + ' em ' + Ast_br_(r.em) + ': ' + r.recebidoPor + (r.documento ? ' (' + r.documento + ')' : '') + (r.anexo ? ' · comprovante ' + r.anexo.nome : ' · sem comprovante') + (r.observacao ? ' · ' + r.observacao : ''), anexoUrl: r.anexo ? '/arquivos/' + r.anexo.id : '' } : null; })(), orcamentoDescricao: Ast_s_(c.ORCAMENTO_DESCRICAO), pecaDescricao: Ast_s_(c.PECA_DESCRICAO),
     requisicaoNumero: Ast_s_(c.REQUISICAO_NUMERO), aguardandoMotivo: Ast_s_(c.AGUARDANDO_MOTIVO), retornoPrevisto: Ast_brDia_(c.RETORNO_PREVISTO),
     tecnicoId: Ast_s_(c.TECNICO_ID), tecnicoNome: Ast_s_(c.TECNICO_NOME), agendadoPara: Ast_br_(c.AGENDADO_PARA), agendadoIso: Ast_iso_(c.AGENDADO_PARA), duracaoMin: Number(c.DURACAO_MIN) || 0,
     osId: Ast_s_(c.OS_ID), osNumero: Ast_s_(c.OS_NUMERO), atendidoEm: Ast_br_(c.ATENDIDO_EM), encerradoEm: Ast_br_(c.ENCERRADO_EM), canceladoMotivo: Ast_s_(c.CANCELADO_MOTIVO),
@@ -412,8 +414,10 @@ function AstC_triagem_(eu, d) {
     if (mudou) Ast_evento_('CHAMADO', c.ID, 'TRIAGEM_CHECKLIST', eu, 'Checklist da triagem atualizado', { numero: c.NUMERO });
     var acao = Ast_up_(d.acao);
     if (!acao) return { chamado: AstC_publico_(c, eu, Date.now()), message: 'Triagem salva. Quando terminar, escolha o caminho e toque em "Concluir a triagem".' };
-    if (!AST_ACOES_TRIAGEM[acao]) throw new Error('Não foi possível concluir a triagem: escolha um dos caminhos (remoto, orçamento, peça ou visita)');
-    var falta = AST_TRIAGEM_ITENS.filter(function (it) { return it.obrig && Ast_s_(ck[it.k]).length < 3; }).map(function (it) { return it.t.toLowerCase(); });
+    if (!AST_ACOES_TRIAGEM[acao]) throw new Error('Não foi possível concluir a triagem: escolha um dos caminhos (remoto, orçamento, peça, visita, entrega, retirada, envio, já realizada ou outro)');
+    // 03/11/2026: sintomas, risco e diagnóstico são de conserto; entrega, retirada, envio e "outro" não pedem esses itens
+    var semDiagnostico = !!AST_TRIAGEM_LOGISTICA[acao] || acao === 'LOGISTICA_REALIZADA' || acao === 'OUTRO';
+    var falta = semDiagnostico ? [] : AST_TRIAGEM_ITENS.filter(function (it) { return it.obrig && Ast_s_(ck[it.k]).length < 3; }).map(function (it) { return it.t.toLowerCase(); });
     if (falta.length) throw new Error('Não foi possível concluir a triagem: falta preencher ' + falta.join(', ') + '. Esses itens ficam no relatório e ajudam o técnico; preencha e conclua de novo');
     var fim = { TRIAGEM_FIM_EM: Ast_agora_(), ACAO_DECIDIDA: acao };
     if (acao === 'RESOLVIDO_REMOTO') {
@@ -427,14 +431,63 @@ function AstC_triagem_(eu, d) {
       if (typeof AstR_pedirOrcamento_ === 'function') AstR_pedirOrcamento_(eu, c, oq);
     } else if (acao === 'AGUARDANDO_PECA') {
       c = AstC_aguardarPeca_(eu, c, d, fim);
+    } else if (AST_TRIAGEM_LOGISTICA[acao]) {
+      // entrega, retirada ou envio: O.S. de logística (termo e as duas assinaturas no SGO+ Campo) depois do agendamento
+      var tl = AstC_tipoLogistica_(acao, d.tipoCodigo);
+      c = AstC_mudar_(eu, c, 'PLANEJADO', Object.assign(fim, { TIPO_CODIGO: tl.codigo, PROXIMA_ACAO: 'Agendar ' + { ENTREGA: 'a entrega', RETIRADA: 'a retirada', ENVIO: 'o envio' }[acao] + ' (colaborador, data e duração)' }),
+        'DECISAO', AST_ACOES_TRIAGEM[acao] + ' (' + tl.nome + ')' + (Ast_s_(d.observacao) ? ': ' + Ast_texto_(d.observacao, 500) : ''));
+    } else if (acao === 'LOGISTICA_REALIZADA') {
+      c = AstC_logisticaRealizada_(eu, c, d, fim);
+    } else if (acao === 'OUTRO') {
+      var desc = Ast_texto_(d.outroDescricao, 1500);
+      if (desc.replace(/[^A-Za-zÀ-ÿ]/g, '').length < 10) throw new Error('Não foi possível concluir: descreva o outro caminho (pelo menos 10 letras), o que vai ser feito e por quê');
+      if (!Ast_s_(c.TIPO_CODIGO)) throw new Error('Não foi possível concluir: escolha o tipo de serviço (define o que o campo registra e o documento que sai)');
+      c = AstC_mudar_(eu, c, 'PLANEJADO', Object.assign(fim, { OUTRO_DESCRICAO: desc, PROXIMA_ACAO: 'Agendar: ' + desc.slice(0, 160) }), 'DECISAO', 'Outro caminho: ' + desc);
     } else {
       if (!Ast_s_(c.TIPO_CODIGO)) throw new Error('Não foi possível concluir: escolha o tipo de serviço da visita (define o checklist, as fotos e o que o relatório exige)');
       c = AstC_mudar_(eu, c, 'PLANEJADO', Object.assign(fim, { PROXIMA_ACAO: 'Agendar o atendimento (técnico, data e duração)' }), 'DECISAO', 'Visita necessária' + (Ast_s_(d.observacao) ? ': ' + Ast_texto_(d.observacao, 500) : ''));
     }
-    return { chamado: AstC_publico_(c, eu, Date.now()), message: 'Triagem concluída: ' + AST_ACOES_TRIAGEM[acao].toLowerCase() + '. ' + Ast_s_(c.PROXIMA_ACAO) + '.' };
+    return { chamado: AstC_publico_(c, eu, Date.now()), message: 'Triagem concluída: ' + AST_ACOES_TRIAGEM[acao].toLowerCase() + '.' + (Ast_s_(c.PROXIMA_ACAO) ? ' ' + Ast_s_(c.PROXIMA_ACAO) + '.' : acao === 'LOGISTICA_REALIZADA' ? ' Chamado ' + c.NUMERO + ' encerrado com o registro.' : '') };
   });
 }
 
+/** Tipo de serviço de logística do caminho da triagem: o escolhido (se for do grupo Logística e do mesmo sentido) ou o padrão do caminho. */
+function AstC_tipoLogistica_(acao, codigo) {
+  var cfg = AST_TRIAGEM_LOGISTICA[acao], t = Ast_s_(codigo) ? Ast_tipo_(codigo) : null;
+  if (t && t.logistica && t.logistica.sentido === cfg.sentido && t.ativo) return t;
+  var p = Ast_tipo_(cfg.tipo);
+  if (!p) throw new Error('Não foi possível concluir: o tipo de serviço "' + cfg.tipo + '" não existe mais. Cadastre um tipo de Logística em Regras > Tipos de serviço');
+  return p;
+}
+/**
+ * 03/11/2026 (caminho "já realizado"): a entrega, retirada ou envio aconteceu sem O.S. pelo aplicativo (ex.: entregue no balcão). Grava quem
+ * recebeu (nome completo; documento opcional, conferido se vier), quando (não no futuro) e o anexo do canhoto ou do termo em papel, e encerra
+ * o chamado. Chamar dentro da trava. d.realizada: { sentido, recebidoPor, documento, em, observacao, anexo: { nome, tipo, base64 } }
+ */
+function AstC_logisticaRealizada_(eu, c, d, fim) {
+  var r = d.realizada || {}, s = AST_TRIAGEM_LOGISTICA[Ast_up_(r.sentido)] ? Ast_up_(r.sentido) : 'ENTREGA';
+  var quem = Ast_texto_(r.recebidoPor, 120), doc = Ast_texto_(r.documento, 60), em = Ast_ms_(r.em), obs = Ast_texto_(r.observacao, 1000);
+  var verbo = { ENTREGA: 'entregue', RETIRADA: 'retirado', ENVIO: 'enviado' }[s], quemRot = { ENTREGA: 'quem recebeu', RETIRADA: 'quem entregou à Metrolabs', ENVIO: 'quem recebeu (destinatário)' }[s];
+  if (!Ast_nomeCompletoOk_(quem)) throw new Error('Não foi possível registrar: escreva o nome completo de ' + quemRot + ' (nome e sobrenome)');
+  var erroDoc = Ast_documentoErro_(doc);
+  if (erroDoc) throw new Error('Não foi possível registrar: ' + erroDoc);
+  if (em === null) throw new Error('Não foi possível registrar: informe a data e a hora em que foi ' + verbo);
+  if (em > Date.now() + 5 * 60000) throw new Error('Não foi possível registrar: a data e a hora não podem ser no futuro. Para o que ainda vai acontecer, use "' + AST_ACOES_TRIAGEM[s] + '"');
+  var anexo = null, a = r.anexo || null;
+  if (a && Ast_s_(a.base64)) {
+    try {
+      var blob = Utilities.newBlob(Utilities.base64Decode(String(a.base64)), Ast_s_(a.tipo) || 'application/octet-stream', Ast_texto_(a.nome, 120).replace(/[\\\/:*?"<>|]/g, '') || 'comprovante');
+      var arq = Ast_pastaPrivadaOS_(c.NUMERO).createFile(blob); Ast_privado_(arq);
+      anexo = { id: arq.getId(), nome: arq.getName(), tipo: Ast_s_(a.tipo) };
+    } catch (eA) { throw new Error('Não foi possível guardar o anexo (' + String((eA && eA.message) || eA) + '). Tente de novo ou registre sem o anexo e mande depois pela conversa do chamado'); }
+  }
+  var tl = AstC_tipoLogistica_(s, d.tipoCodigo);
+  var reg = { sentido: s, recebidoPor: quem, documento: doc, em: Ast_agora_(em), observacao: obs, anexo: anexo, por: eu.nome, registradoEm: Ast_agora_() };
+  var txt = (s === 'ENTREGA' ? 'Entrega já realizada' : s === 'RETIRADA' ? 'Retirada já realizada' : 'Envio já realizado') + ' em ' + Ast_br_(reg.em) + ', ' + quemRot + ': ' + quem + (doc ? ' (' + doc + ')' : '') +
+    (anexo ? '. Comprovante anexado: ' + anexo.nome : '. Sem comprovante anexado') + (obs ? '. ' + obs : '');
+  c = AstC_mudar_(eu, c, 'ENCERRADO', Object.assign(fim, { TIPO_CODIGO: tl.codigo, LOGISTICA_REGISTRO_JSON: JSON.stringify(reg), ATENDIDO_EM: reg.em, ENCERRADO_EM: Ast_agora_(), PROXIMA_ACAO: '' }), 'DECISAO', txt);
+  return c;
+}
 /** Aguardar peça (da triagem ou do campo): exige a peça; abre o pedido em Compras quando a regra manda. Chamar dentro da trava. */
 function AstC_aguardarPeca_(eu, c, d, campos) {
   var desc = Ast_texto_(d.pecaDescricao, 500);

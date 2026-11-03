@@ -33,8 +33,8 @@ function AstR_htmlTermo_(os, o, tipo, rascunho) {
   lg = lg || { itens: [], contraparte: {}, local: '', motivo: '', destino: '', embalagem: '', lacre: '', rastreio: '', observacoes: '' };
   var ctp = lg.contraparte || {};
   var serieEq = Ast_s_(os.SERIE_CONFIRMADA) || Ast_s_(eq.SERIE);
-  var itens = lg.itens.length ? lg.itens : (Ast_s_(os.EQUIPAMENTO_TEXTO) || Ast_s_(eq.TIPO) ? [{ descricao: Ast_s_(os.EQUIPAMENTO_TEXTO) || [Ast_s_(eq.TIPO), Ast_s_(eq.MODELO)].filter(Boolean).join(' · '), quantidade: 1,
-    identificacao: [serieEq ? 'Série ' + serieEq : '', Ast_s_(eq.PATRIMONIO) ? 'Patrimônio ' + Ast_s_(eq.PATRIMONIO) : '', Ast_s_(eq.TAG) ? 'TAG ' + Ast_s_(eq.TAG) : ''].filter(Boolean).join(' · '),
+  var itens = lg.itens.length ? lg.itens : (Ast_s_(os.EQUIPAMENTO_TEXTO) || Ast_s_(eq.TIPO) ? [{ descricao: [Ast_s_(eq.TIPO), Ast_s_(eq.MODELO)].filter(Boolean).join(' · ') || Ast_eqSemIdent_(os.EQUIPAMENTO_TEXTO), quantidade: 1,
+    identificacao: [!Ast_vazioCad_(serieEq) ? 'Série ' + serieEq : '', !Ast_vazioCad_(eq.PATRIMONIO) ? 'Patrimônio ' + Ast_s_(eq.PATRIMONIO) : '', !Ast_vazioCad_(eq.TAG) ? 'TAG ' + Ast_s_(eq.TAG) : ''].filter(Boolean).join(' · '),
     estado: '', avaria: '', acessorios: '' }] : []);
   var corpo = '';
   if (rascunho) corpo += RelA4_caixa_('RASCUNHO: a O.S. ainda não foi encerrada' + (Ast_s_(os.FALTAS) ? ' (falta: ' + Ast_s_(os.FALTAS) + ')' : '') + '. Este documento não vale como termo final.', 'aviso');
@@ -134,12 +134,12 @@ function AstR_htmlOS_(os, opcoes) {
   if (rascunho) corpo += RelA4_caixa_('RASCUNHO: a O.S. ainda não foi encerrada' + (Ast_s_(os.FALTAS) ? ' (falta: ' + Ast_s_(os.FALTAS) + ')' : '') + '. Este documento não vale como relatório final.', 'aviso');
   corpo += RelA4_secao_('Identificação', RelA4_identificacao_([
     ['Cliente', Ast_s_(os.CLIENTE_NOME) || Ast_clienteNome_(cli), { largo: true }], ['CNPJ', Ast_s_(cli.CNPJ)], ['Unidade', Ast_s_(os.UNIDADE_NOME)],
-    ['Endereço', Ast_s_(os.ENDERECO), { largo: true }], ['Equipamento', [Ast_s_(eq.TIPO), Ast_s_(eq.MODELO)].filter(Boolean).join(' · ') || Ast_s_(os.EQUIPAMENTO_TEXTO)],
+    ['Endereço', Ast_s_(os.ENDERECO), { largo: true }], ['Equipamento', [Ast_s_(eq.TIPO), Ast_s_(eq.MODELO)].filter(Boolean).join(' · ') || Ast_eqSemIdent_(os.EQUIPAMENTO_TEXTO)],
     ['TAG', Ast_s_(eq.TAG)], ['Nº de série (cadastro)', Ast_s_(os.SERIE_CADASTRO) || Ast_s_(eq.SERIE)], ['Nº de série (conferido no local)', Ast_s_(os.SERIE_CONFIRMADA) + (Ast_sim_(os.SERIE_DIVERGENTE) ? ' (DIVERGENTE do cadastro)' : '')],
     ['Setor', Ast_s_(eq.SETOR)], ['Patrimônio', Ast_s_(eq.PATRIMONIO)],
     // 22/10/2026: identificação completa do cadastro do equipamento (campo vazio não aparece).
     ['Fabricante (marca)', Ast_s_(eq.FABRICANTE)], ['Capacidade ou volume', Ast_s_(eq.CAPACIDADE)], ['Ano de fabricação', Ast_s_(eq.ANO_FABRICACAO)]
-  ].filter(function (p) { return ['Patrimônio', 'Fabricante (marca)', 'Capacidade ou volume', 'Ano de fabricação'].indexOf(p[0]) < 0 || Ast_s_(p[1]); })));
+  ].filter(function (p) { return ['Patrimônio', 'Fabricante (marca)', 'Capacidade ou volume', 'Ano de fabricação', 'TAG', 'Setor', 'Nº de série (cadastro)', 'Nº de série (conferido no local)'].indexOf(p[0]) < 0 || !Ast_vazioCad_(p[1]); })));
   var sla = c.ID ? Ast_slaEstado_(c, Date.now()) : null;
   corpo += RelA4_secao_('Chamado', RelA4_identificacao_([['Chamado', Ast_s_(os.CHAMADO_NUMERO)], ['Aberto em', Ast_br_(c.ABERTO_EM)], ['Solicitante', Ast_s_(c.SOLICITANTE)], ['Canal', AST_CANAIS[Ast_up_(c.CANAL)] || ''],
     ['Prioridade', AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || ''], ['Prazo de atendimento', sla ? sla.texto : '—'], ['Problema relatado', Ast_s_(c.SINTOMA), { largo: true }]]));
@@ -193,7 +193,7 @@ function AstR_htmlOS_(os, opcoes) {
   corpo += '<p class="nota" style="margin-top:4mm">Marca de conferência do conteúdo: ' + Ast_esc_(o.marca || '') + '. Qualquer alteração no conteúdo deste relatório muda esta marca.</p>';
   return RelA4_documento_({ titulo: 'Relatório de atendimento técnico' + (rascunho ? ' (rascunho)' : ''), subtitulo: Ast_s_(os.CLIENTE_NOME), tituloCurto: 'Relatório da O.S.', tituloArquivo: 'Relatorio da OS',
     // 22/10/2026: a revisão do cabeçalho é a revisão de verdade (0 na emissão; 1, 2... só com "Abrir para corrigir" e motivo), não a contagem de versões
-    numero: Ast_s_(os.NUMERO), revisao: Number(o.revisao) || 0, identificacao: Ast_s_(os.EQUIPAMENTO_TEXTO) || Ast_s_(os.CLIENTE_NOME), rotuloIdentificacao: 'Equipamento',
+    numero: Ast_s_(os.NUMERO), revisao: Number(o.revisao) || 0, identificacao: Ast_eqSemIdent_(os.EQUIPAMENTO_TEXTO) || Ast_s_(os.CLIENTE_NOME), rotuloIdentificacao: 'Equipamento',
     ficha: [['Tipo de serviço', tipo.nome], ['Técnico', Ast_s_(os.TECNICO_NOME)], ['Situação', rascunho ? 'Rascunho' : 'Encerrada em ' + Ast_br_(os.ENCERRADA_EM)]], corpo: corpo, capa: false, sumario: false });
 }
 

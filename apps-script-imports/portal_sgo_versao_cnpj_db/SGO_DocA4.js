@@ -538,7 +538,8 @@ function SGO_DocA4_inicioDocumento_(doc) {
   h.push('<div class="barra-tela"><a class="barra-voltar" id="sgoDocVoltar" href="/" hidden>Voltar ao SGO+</a><button type="button" onclick="window.print()">Imprimir ou salvar em PDF</button></div>');
   h.push('<script>(function(){try{var a=document.getElementById("sgoDocVoltar");if(!a)return;var direto=window.top===window&&!window.opener&&(location.protocol==="https:"||location.protocol==="http:")&&location.pathname.indexOf("/arquivos/")===0;if(direto){a.href=location.origin+"/";a.hidden=false;}}catch(e){}})();<\/script>');
   h.push('<main class="folha">');
-  h.push('<div class="cab-tela"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"><div class="meta">' +
+  // 03/11/2026 (pedido do dono): um logo só. Com capa, a capa já leva o logo e o número; a faixa de tela do topo não entra
+  if (!doc.capa) h.push('<div class="cab-tela"><img src="' + SGO_DocA4_logoDataUri_() + '" alt="Metrolabs"><div class="meta">' +
     SGO_DocA4_esc_(doc.tituloCurto || doc.titulo || '') + '<br>' + SGO_DocA4_esc_((doc.rotuloNumero || 'Nº') + ' ' + (doc.numero || '—') + ' · Revisão ' + SGO_DocA4_revisao_(doc.revisao)) + '</div></div>');
   if (doc.capa) h.push(SGO_DocA4_capa_(doc));
   if (doc.simulado) {

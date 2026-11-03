@@ -52,7 +52,9 @@ var AST_COLUNAS = {
     // 27/10/2026: triagem com fila livre (quem assumiu e quando; quando foi liberado para qualquer colaborador) e exclusão lógica
     // de chamado de teste ou simulação (nada é apagado: EXCLUIDO_EM preenchido tira o chamado das listas; restaurar limpa só EXCLUIDO_EM)
     'ASSUMIDO_POR_ID', 'ASSUMIDO_POR_NOME', 'ASSUMIDO_EM', 'FILA_LIVRE_EM', 'EXCLUSAO_ID', 'EXCLUIDO_EM', 'EXCLUIDO_POR_ID', 'EXCLUIDO_POR_NOME', 'EXCLUIDO_MOTIVO',
-    'RESTAURADO_EM', 'RESTAURADO_POR_NOME', 'RESTAURADO_MOTIVO', 'ATUALIZADO_EM', 'CRIADO_EM'],
+    'RESTAURADO_EM', 'RESTAURADO_POR_NOME', 'RESTAURADO_MOTIVO', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // 03/11/2026 (triagem com logística): o caminho "Outro" descrito e a entrega, retirada ou envio já realizados (quem recebeu, quando, canhoto)
+    'OUTRO_DESCRICAO', 'LOGISTICA_REGISTRO_JSON'],
   ATEC_OS: ['ID', 'NUMERO', 'CHAMADO_ID', 'CHAMADO_NUMERO', 'SITUACAO', 'TIPO_CODIGO', 'TIPO_NOME', 'MODELO_CODIGO', 'MODELO_VERSAO', 'PERGUNTAS_JSON',
     'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'EQUIPAMENTO_ID', 'EQUIPAMENTO_TEXTO', 'ENDERECO', 'TECNICO_ID', 'TECNICO_NOME',
     'AGENDADO_PARA', 'DURACAO_MIN', 'ORDEM_DIA', 'PREPARO_JSON', 'ORIENTACAO', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'CHEGOU_LAT', 'CHEGOU_LNG',
@@ -125,7 +127,8 @@ var AST_SITUACOES = {
  */
 var AST_TRANSICOES = {
   ABERTO: ['EM_TRIAGEM', 'CANCELADO'],
-  EM_TRIAGEM: ['RESOLVIDO_REMOTO', 'AGUARDANDO_ORCAMENTO', 'AGUARDANDO_PECA', 'PLANEJADO', 'CANCELADO'],
+  // 03/11/2026: ENCERRADO direto da triagem só pelo caminho "já realizada" (entrega, retirada ou envio feitos sem O.S., com o registro)
+  EM_TRIAGEM: ['RESOLVIDO_REMOTO', 'AGUARDANDO_ORCAMENTO', 'AGUARDANDO_PECA', 'PLANEJADO', 'ENCERRADO', 'CANCELADO'],
   RESOLVIDO_REMOTO: ['ENCERRADO', 'EM_TRIAGEM'],
   AGUARDANDO_ORCAMENTO: ['PLANEJADO', 'AGUARDANDO_PECA', 'CANCELADO'],
   AGUARDANDO_PECA: ['PLANEJADO', 'EM_TRIAGEM', 'CANCELADO'],
@@ -164,7 +167,12 @@ var AST_CANAIS = { INTERNO: 'Tela interna', TELEFONE: 'Telefone', EMAIL: 'E-mail
   COMERCIAL: 'Pedido aprovado do Comercial', PRESENCIAL: 'Presencial', CONTRATO: 'Preventiva do contrato',
   // 29/10/2026: pedido aberto pela representada no módulo Representação (SGO_Representacao.js)
   REPRESENTACAO: 'Representação' };
-var AST_ACOES_TRIAGEM = { RESOLVIDO_REMOTO: 'Resolvido remotamente', AGUARDANDO_ORCAMENTO: 'Precisa de orçamento', AGUARDANDO_PECA: 'Precisa de peça', PLANEJADO: 'Planejar visita' };
+var AST_ACOES_TRIAGEM = { RESOLVIDO_REMOTO: 'Resolvido remotamente', AGUARDANDO_ORCAMENTO: 'Precisa de orçamento', AGUARDANDO_PECA: 'Precisa de peça', PLANEJADO: 'Planejar visita',
+  // 03/11/2026 (pedido do dono, caso CH-2026-0008): logística e "outro" como caminhos da triagem
+  ENTREGA: 'Entrega de equipamento ou material', RETIRADA: 'Retirada de equipamento', ENVIO: 'Envio por transportadora',
+  LOGISTICA_REALIZADA: 'Entrega, retirada ou envio já realizado (registrar)', OUTRO: 'Outro (descreva)' };
+/** Caminhos de logística da triagem: o sentido do termo e o tipo de serviço padrão quando a pessoa não escolhe outro do grupo. */
+var AST_TRIAGEM_LOGISTICA = { ENTREGA: { sentido: 'ENTREGA', tipo: 'ENTREGA' }, RETIRADA: { sentido: 'RETIRADA', tipo: 'RETIRADA' }, ENVIO: { sentido: 'ENVIO', tipo: 'ENVIO_EQUIPAMENTOS' } };
 /** Checklist de triagem (reduzido do COMMAND: 9 itens viraram 6). */
 var AST_TRIAGEM_ITENS = [
   { k: 'sintomas_confirmados', t: 'Sintomas confirmados com o cliente', obrig: true },
@@ -507,13 +515,13 @@ var AST_MEMO = {};
 function Ast_memoLimpar_() { AST_MEMO = {}; }
 function Ast_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V6')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V7')) return; } catch (e) {}
   Object.keys(AST_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, AST_COLUNAS[aba]);
     AST_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (AST_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('ATEC_ABAS_OK_V6', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('ATEC_ABAS_OK_V7', '1', 21600); } catch (e) {}
 }
 /**
  * 27/10/2026: chamado de teste ou simulação excluído pela gestão (EXCLUIDO_EM preenchido) e as O.S. e orçamentos que saíram
@@ -928,8 +936,12 @@ function Ast_mapa_(aba) {
 function Ast_clienteNome_(c) { return c ? (Ast_s_(c.NOME_FANTASIA) || Ast_s_(c.RAZAO_SOCIAL)) : ''; }
 function Ast_equipTexto_(e) {
   if (!e) return '';
-  return [Ast_s_(e.TIPO), Ast_s_(e.MODELO), Ast_s_(e.TAG) ? 'TAG ' + Ast_s_(e.TAG) : '', Ast_s_(e.SERIE) ? 'série ' + Ast_s_(e.SERIE) : '', Ast_s_(e.SETOR)].filter(Boolean).join(' · ');
+  return [Ast_s_(e.TIPO), Ast_s_(e.MODELO), !Ast_vazioCad_(e.TAG) ? 'TAG ' + Ast_s_(e.TAG) : '', !Ast_vazioCad_(e.SERIE) ? 'série ' + Ast_s_(e.SERIE) : '', Ast_vazioCad_(e.SETOR) ? '' : Ast_s_(e.SETOR)].filter(Boolean).join(' · ');
 }
+/** 03/11/2026: valor de cadastro que não informa nada ("N/S", "S/N", "N/A", traço) conta como vazio nos documentos. */
+function Ast_vazioCad_(v) { var s = Ast_s_(v); return !s || /^(n\/?s|s\/?n|n\/?a|na|ns|sn|-+|—+|nao informad[oa]|não informad[oa])$/i.test(s); }
+/** Texto do equipamento sem a TAG e a série (nos documentos cada uma tem o campo próprio). */
+function Ast_eqSemIdent_(t) { return Ast_s_(t).split(' · ').filter(function (p) { return !/^(tag|s[ée]rie)\b/i.test(p.trim()); }).join(' · '); }
 function Ast_endereco_(un, cli) {
   if (un && (Ast_s_(un.ENDERECO) || Ast_s_(un.CIDADE))) return [Ast_s_(un.ENDERECO), [Ast_s_(un.CIDADE), Ast_s_(un.UF)].filter(Boolean).join('/')].filter(Boolean).join(', ');
   return cli ? Ast_s_(cli.ENDERECO) : '';

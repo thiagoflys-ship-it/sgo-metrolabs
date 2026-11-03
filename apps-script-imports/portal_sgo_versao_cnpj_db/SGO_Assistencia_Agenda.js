@@ -83,15 +83,18 @@ function AstA_agendar_(eu, d) {
   var motivo = Ast_texto_(d.motivo, 500);
   if (reag && motivo.length < 5) throw new Error('Não foi possível reagendar: escreva o motivo (pelo menos 5 letras). O técnico e o cliente recebem o horário novo');
   var p = d.preparo || {}, prep = {};
+  // 03/11/2026: entrega, retirada e envio não usam instrumentos, ferramentas, peças nem avaliação de risco de conserto; pedem acesso e documentação
+  var logi = !!tipo.logistica, exigePrep = logi ? ['acesso', 'documentacao'] : AST_PREPARO.map(function (k) { return k[0]; });
   AST_PREPARO.forEach(function (k) {
-    if (!(p[k[0]] === true || String(p[k[0]]) === 'true')) throw new Error('Não foi possível agendar: confirme no preparo "' + k[1] + '". O preparo evita visita perdida; marque os quatro itens ou resolva antes de agendar');
-    prep[k[0]] = true;
+    var marcado = p[k[0]] === true || String(p[k[0]]) === 'true';
+    if (!marcado && exigePrep.indexOf(k[0]) >= 0) throw new Error('Não foi possível agendar: confirme no preparo "' + k[1] + '". O preparo evita visita perdida; ' + (logi ? 'na logística, marque o acesso e a documentação' : 'marque os quatro itens') + ' ou resolva antes de agendar');
+    prep[k[0]] = marcado;
   });
   prep.pecas = p.pecas === true || String(p.pecas) === 'true';
   prep.pecasJustificativa = Ast_texto_(p.pecasJustificativa, 500);
-  if (!prep.pecas && prep.pecasJustificativa.length < 5) throw new Error('Não foi possível agendar: confirme que as peças estão separadas ou escreva por que não precisa (ex.: "visita de diagnóstico, sem peça")');
+  if (!logi && !prep.pecas && prep.pecasJustificativa.length < 5) throw new Error('Não foi possível agendar: confirme que as peças estão separadas ou escreva por que não precisa (ex.: "visita de diagnóstico, sem peça")');
   prep.risco = Ast_texto_(p.risco, 500);
-  if (prep.risco.length < 3) throw new Error('Não foi possível agendar: registre a avaliação de risco do atendimento (ex.: "baixo, equipamento desligado na chegada")');
+  if (!logi && prep.risco.length < 3) throw new Error('Não foi possível agendar: registre a avaliação de risco do atendimento (ex.: "baixo, equipamento desligado na chegada")');
   prep.observacoes = Ast_texto_(p.observacoes, 1000);
   var fimMs = iniMs + dur * 60000;
   var osAtual = Ast_porId_(AST_ABAS.OS, c.OS_ID);

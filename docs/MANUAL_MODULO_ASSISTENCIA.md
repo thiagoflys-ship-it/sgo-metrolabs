@@ -122,6 +122,18 @@ Decisão do dono: "Alerta + fila livre".
    - Precisa de orçamento: descreva o que orçar. O Comercial recebe a atividade.
    - Precisa de peça: diga qual peça. O pedido abre sozinho em Compras, ligado ao cliente e ao chamado.
    - Planejar visita: o chamado vai para "Planejado" e aparece para agendar.
+   - Entrega de equipamento ou material, Retirada de equipamento, Envio por transportadora (03/11/2026): o chamado vai para
+     "Planejado" com o tipo de logística do caminho (ou o de Logística que você escolher, do mesmo sentido). Ao agendar, nasce a
+     O.S. de logística: no SGO+ Campo o colaborador preenche o termo e colhe as duas assinaturas, e o documento sai como "Termo de
+     entrega", "Termo de retirada (recebimento)" ou "Termo de envio". No preparo da agenda, a logística pede só o acesso ao
+     cliente e a documentação em mãos (instrumentos, ferramentas, peças e risco não se aplicam).
+   - Entrega, retirada ou envio já realizado (registrar): quando já aconteceu sem O.S. pelo aplicativo (por exemplo, no balcão).
+     Informe o sentido, o nome completo de quem recebeu ou entregou, o documento (opcional), a data e a hora (não pode ser no futuro)
+     e anexe o canhoto ou o termo em papel (foto ou PDF, recomendado). O chamado é encerrado com o registro, que aparece na ficha e
+     no relatório do atendimento.
+   - Outro (descreva): quando nenhum caminho serve. Descreva (pelo menos 10 letras) e escolha o tipo de serviço; o chamado vai
+     para "Planejado" com a descrição como próximo passo.
+   Entrega, retirada, envio, já realizado e outro não pedem sintomas, risco nem diagnóstico (são itens de conserto).
 
 ## Agenda e despacho
 
@@ -219,6 +231,9 @@ Calibração e qualificação: emita o documento no módulo (certificado, relat�
 equipamento emitido depois da chegada é ligado sozinho à O.S. ao encerrar; também dá para ligar pela ficha da O.S.
 
 ## Relatório da O.S.
+
+Nos documentos (relatório da O.S., termo e relatório do atendimento), a série e a TAG aparecem só nos campos próprios, nunca ao
+lado do nome do equipamento, e campo de cadastro vazio ou que não informa nada ("N/S", "S/N", traço) não aparece (03/11/2026).
 
 Relatório de atendimento técnico em A4: identificação, chamado, atendimento (com a hora do aparelho quando difere da
 hora do servidor), serviço, checklist, peças, fotos, as duas assinaturas (cliente e técnico responsável, com o nome e o

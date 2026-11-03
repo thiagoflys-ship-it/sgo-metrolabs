@@ -515,7 +515,7 @@
         ["Solicitante", c.solicitante + (c.contato ? " · " + c.contato : "")], ["Aberto em", c.abertoEm + " por " + c.abertoPor + " (" + c.canalNome + ")"], ["Parada", c.paradaNome], ["Prazo", c.sla && c.sla.texto ? c.sla.texto + " · " + c.slaFonte : ""],
         ["Chegada ao local (contrato)", c.slaChegada ? "até " + c.slaChegada.ate + " · " + c.slaChegada.texto : ""],
         ["Triagem", c.triagemResponsavel + (c.prazoTriagem ? " · prazo " + c.prazoTriagem : "")], ["Tipo de serviço", c.tipoNome], ["Técnico", c.tecnicoNome + (c.agendadoPara ? " · " + c.agendadoPara + " (" + c.duracaoMin + " min)" : "")],
-        ["Orientação remota", c.orientacaoRemota], ["Orçamento", c.orcamentoDescricao], ["Peça", c.pecaDescricao + (c.requisicaoNumero ? " · pedido de compra " + c.requisicaoNumero : "") + (c.pecaDisponivelEm ? " · disponível em " + c.pecaDisponivelEm : "")], ["Reincidência", c.reincidente ? "Sim, do chamado " + c.reincidenciaDe : ""],
+        ["Orientação remota", c.orientacaoRemota], ["Outro caminho", c.outroDescricao], ["Já realizado (registro)", c.registroLogistica ? c.registroLogistica.texto : ""], ["Orçamento", c.orcamentoDescricao], ["Peça", c.pecaDescricao + (c.requisicaoNumero ? " · pedido de compra " + c.requisicaoNumero : "") + (c.pecaDisponivelEm ? " · disponível em " + c.pecaDisponivelEm : "")], ["Reincidência", c.reincidente ? "Sim, do chamado " + c.reincidenciaDe : ""],
         ["Encerrado em", c.encerradoEm], ["Cancelado", c.canceladoMotivo]]);
     if (c.podeTriar) h += At_formTriagem_(c, r);
     if (c.situacao === "RESOLVIDO_REMOTO" && ini.gestao) h += '<div class="at-caixa"><h3>Encerrar (resolvido remotamente)</h3><div class="at-grade2">' + At_campo_("Quem confirmou no cliente", '<input id="atRemQuem" maxlength="120">') +
@@ -592,10 +592,11 @@
   function At_formTriagem_(c, r) {
     var ini = AT.ini, tk = c.triagem || {};
     return '<div class="at-caixa"><h3>Triagem</h3><p class="at-meta">Registre o que confirmou com o cliente e decida o caminho. Os itens marcados com * são obrigatórios para concluir.</p>' +
+      '<p class="at-meta">Entrega, retirada, envio, já realizado e "outro" não pedem sintomas, risco nem diagnóstico (são de conserto).</p>' +
       (r.triagemItens || ini.triagemItens).map(function (it) { return At_campo_(it.t + (it.obrig ? " *" : ""), '<textarea data-tk="' + At_esc_(it.k) + '" maxlength="1000">' + At_esc_(tk[it.k] || "") + '</textarea>'); }).join("") +
       '<div class="at-grade2">' + At_campo_("Prioridade", '<select id="atTrPrio">' + At_opcoes_(At_mapaOpcoes_(ini.prioridades), c.prioridade) + '</select>') + At_campo_("Motivo da mudança de prioridade", '<input id="atTrPrioMot" maxlength="300" placeholder="Só se mudar">') + '</div>' +
       (c.equipNaoIdentificado ? At_campo_("Ligar ao equipamento do cadastro", '<select id="atTrEq"><option value="">Carregando…</option></select>', "O chamado chegou sem o equipamento do cadastro: escolha aqui.") : '') +
-      At_campo_("Tipo de serviço da visita", '<select id="atTrTipo">' + At_opcoes_(ini.tipos.map(function (t) { return { v: t.codigo, t: t.nome }; }), c.tipoCodigo, "Escolha") + '</select>', "Define o checklist, as fotos mínimas e o que o relatório exige.") +
+      At_campo_("Tipo de serviço", '<select id="atTrTipo">' + At_opcoes_(ini.tipos.map(function (t) { return { v: t.codigo, t: t.nome }; }), c.tipoCodigo, "Escolha") + '</select>', "Define o checklist, as fotos mínimas e o que o relatório exige.") +
       '<label class="at-meta">Caminho</label><div class="at-radios" id="atTrAcoes">' + Object.keys(ini.acoesTriagem).map(function (k) { return '<label><input type="radio" name="atTrAcao" value="' + k + '"> ' + At_esc_(ini.acoesTriagem[k]) + '</label>'; }).join("") + '</div>' +
       '<div id="atTrExtra"></div><div class="at-acoes"><button type="button" class="btn-secondary" id="atTrSalvar">Salvar a triagem</button><button type="button" class="btn-primary" id="atTrConcluir">Concluir a triagem</button></div><div id="atTrMsg"></div></div>';
   }
@@ -608,6 +609,13 @@
         var a = rd.value;
         extra.innerHTML = a === "RESOLVIDO_REMOTO" ? At_campo_("Orientação remota que resolveu", '<textarea id="atTrOri" maxlength="2000"></textarea>') :
           a === "AGUARDANDO_ORCAMENTO" ? At_campo_("O que precisa ser orçado", '<textarea id="atTrOrc" maxlength="1500"></textarea>', "Vira atividade para o Comercial, que faz o orçamento A4 e registra o aceite do cliente.") :
+          a === "ENTREGA" || a === "RETIRADA" || a === "ENVIO" ? '<p class="at-meta">Vira uma O.S. de logística depois do agendamento: no SGO+ Campo o colaborador preenche o termo (itens, quantidade, identificação, estado, de quem ou para quem' + (a === "RETIRADA" ? ', motivo e destino' : '') + ') e colhe as duas assinaturas. O documento sai como ' + (a === "RETIRADA" ? '"Termo de retirada (recebimento)"' : a === "ENVIO" ? '"Termo de envio"' : '"Termo de entrega"') + '. O tipo de serviço é o do caminho, ou o de Logística que você escolher acima.</p>' + At_campo_("Observação para o agendamento (opcional)", '<input id="atTrObs" maxlength="500">') :
+          a === "LOGISTICA_REALIZADA" ? '<p class="at-meta">Use quando a entrega, a retirada ou o envio já aconteceu sem O.S. pelo aplicativo (por exemplo, no balcão). O chamado é encerrado com o registro e o comprovante.</p>' +
+            '<div class="at-radios" id="atTrRealSent">' + [["ENTREGA", "Entrega"], ["RETIRADA", "Retirada"], ["ENVIO", "Envio"]].map(function (o, i) { return '<label><input type="radio" name="atTrRealSent" value="' + o[0] + '"' + (i ? '' : ' checked') + '> ' + o[1] + '</label>'; }).join("") + '</div>' +
+            '<div class="at-grade2">' + At_campo_("Nome completo de quem recebeu (ou entregou) *", '<input id="atTrRealQuem" maxlength="120">', "Nome e sobrenome.") + At_campo_("Documento (opcional)", '<input id="atTrRealDoc" maxlength="60">', "CPF, RG ou matrícula; em branco é aceito.") +
+            At_campo_("Data e hora *", '<input id="atTrRealEm" type="datetime-local">', "Quando foi feito (não pode ser no futuro).") + At_campo_("Canhoto ou termo em papel (foto ou PDF)", '<input id="atTrRealAnexo" type="file" accept="image/*,application/pdf">', "Opcional, recomendado.") + '</div>' +
+            At_campo_("Observação (opcional)", '<input id="atTrObs" maxlength="1000">') :
+          a === "OUTRO" ? At_campo_("Descreva o caminho *", '<textarea id="atTrOutro" maxlength="1500"></textarea>', "Pelo menos 10 letras: o que vai ser feito e por quê. Escolha também o tipo de serviço acima.") :
           a === "AGUARDANDO_PECA" ? '<div class="at-grade3">' + At_campo_("Peça que falta", '<input id="atTrPeca" maxlength="300">') + At_campo_("Número da peça (se souber)", '<input id="atTrPecaCod" maxlength="80">') + At_campo_("Quantidade", '<input id="atTrPecaQtd" type="number" min="1" value="1">') + '</div><p class="at-meta">O pedido de compra abre sozinho em Compras, ligado ao cliente e ao chamado.</p>' :
           At_campo_("Observação para a visita (opcional)", '<input id="atTrObs" maxlength="500">');
       };
@@ -618,15 +626,23 @@
       if (sel && sel.value) d.equipamentoId = sel.value;
       if (comAcao) {
         var a = corpo.querySelector('input[name="atTrAcao"]:checked');
-        if (!a) { At_msg_("atTrMsg", "Escolha o caminho (remoto, orçamento, peça ou visita) antes de concluir.", "aviso"); return null; }
+        if (!a) { At_msg_("atTrMsg", "Escolha o caminho (remoto, orçamento, peça, visita, entrega, retirada, envio, já realizado ou outro) antes de concluir.", "aviso"); return null; }
         d.acao = a.value;
         var v = function (id) { var el = corpo.querySelector("#" + id); return el ? el.value : ""; };
+        d.outroDescricao = v("atTrOutro");
+        if (d.acao === "LOGISTICA_REALIZADA") { var st = corpo.querySelector('input[name="atTrRealSent"]:checked'); d.realizada = { sentido: st ? st.value : "ENTREGA", recebidoPor: v("atTrRealQuem"), documento: v("atTrRealDoc"), em: v("atTrRealEm"), observacao: v("atTrObs") }; }
         d.orientacao = v("atTrOri"); d.orcamentoDescricao = v("atTrOrc"); d.pecaDescricao = v("atTrPeca"); d.pecaCodigo = v("atTrPecaCod"); d.pecaQuantidade = v("atTrPecaQtd"); d.observacao = v("atTrObs");
       }
       return d;
     };
     corpo.querySelector("#atTrSalvar").onclick = function () { var d = juntar(false); At_chamar_("triagem", d, function (x) { reabrir(x.message); }, function (m) { At_msg_("atTrMsg", m); }); };
-    corpo.querySelector("#atTrConcluir").onclick = function () { var d = juntar(true); if (!d) return; At_chamar_("triagem", d, function (x) { reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTrMsg", m); }, { carregando: "Concluindo a triagem…" }); };
+    corpo.querySelector("#atTrConcluir").onclick = function () {
+      var d = juntar(true); if (!d) return;
+      var enviar = function () { At_chamar_("triagem", d, function (x) { reabrir(x.message); At_carregarChamados_(); }, function (m) { At_msg_("atTrMsg", m); }, { carregando: "Concluindo a triagem…" }); };
+      var inp = corpo.querySelector("#atTrRealAnexo");
+      if (d.acao === "LOGISTICA_REALIZADA" && inp && inp.files && inp.files.length) At_lerArquivos_(inp, function (arqs) { if (arqs[0]) d.realizada.anexo = arqs[0]; enviar(); });
+      else enviar();
+    };
   }
   function At_dtLocal_(iso) { return iso ? String(iso).slice(0, 16) : ""; }
   function At_formAgendar_(c) {
@@ -639,7 +655,7 @@
       At_campo_("Duração (minutos)", '<input id="atAgDur" type="number" min="15" max="1440" step="15" value="' + At_esc_(c.duracaoMin || ini.duracaoPadrao || 90) + '">') + '</div>' +
       At_campo_("Tipo de serviço", '<select id="atAgTipo">' + At_opcoes_(ini.tipos.map(function (t) { return { v: t.codigo, t: t.nome }; }), c.tipoCodigo, "Escolha") + '</select>') +
       At_campo_("Orientação para o técnico (opcional)", '<input id="atAgOri" maxlength="1500" placeholder="Ex.: levar resistência reserva; falar com o Rui na CME">') +
-      '<label class="at-meta">Preparo (obrigatório)</label>' + ini.preparo.map(function (p) { return '<label class="at-check"><input type="checkbox" data-prep="' + p[0] + '"> ' + At_esc_(p[1].charAt(0).toUpperCase() + p[1].slice(1)) + '</label>'; }).join("") +
+      '<label class="at-meta">Preparo (obrigatório)</label><p class="at-meta">Entrega, retirada e envio pedem só o acesso ao cliente e a documentação em mãos; peças, instrumentos, ferramentas e risco não se aplicam.</p>' + ini.preparo.map(function (p) { return '<label class="at-check"><input type="checkbox" data-prep="' + p[0] + '"> ' + At_esc_(p[1].charAt(0).toUpperCase() + p[1].slice(1)) + '</label>'; }).join("") +
       '<label class="at-check"><input type="checkbox" id="atAgPecas"> Peças separadas</label>' + At_campo_("Se não há peça: por quê", '<input id="atAgPecasJ" maxlength="500" placeholder="Ex.: visita de diagnóstico, sem peça">') +
       '<div class="at-grade2">' + At_campo_("Risco do atendimento", '<input id="atAgRisco" maxlength="500" placeholder="Ex.: baixo, equipamento desligado">') + At_campo_("Observações do preparo", '<input id="atAgObs" maxlength="1000">') + '</div>' +
       (reag ? At_campo_("Motivo do reagendamento", '<input id="atAgMot" maxlength="500">', "O técnico e o cliente recebem o horário novo.") : '') +
