@@ -145,7 +145,8 @@
     LicCt_lerLinhas_(pre);
     var f = LICCT.form[pre] || { itens: [], entregas: [], obrigacoes: [] };
     return { numeroContrato: LicCt_valor_(pre + "Num"), tipo: LicCt_valor_(pre + "Tipo"), assinatura: LicCt_valor_(pre + "Ass"), inicio: LicCt_valor_(pre + "Ini"), fim: LicCt_valor_(pre + "Fim"), responsavelId: LicCt_valor_(pre + "Resp"),
-      itens: f.itens.map(function (i) { return { item: i.item, codigo: i.codigo, nome: i.nome, descricao: i.descricao, quantidade: i.quantidade, valorUnit: i.valorUnit }; }),
+      // revisão de 42a2c1f: a homologação e a fonte de cada item vão junto (o servidor também as preserva)
+      itens: f.itens.map(function (i) { return { item: i.item, codigo: i.codigo, nome: i.nome, descricao: i.descricao, quantidade: i.quantidade, valorUnit: i.valorUnit, homologacao: i.homologacao, fonte: i.fonte }; }),
       reajusteIndice: LicCt_valor_(pre + "RjI"), reajusteDataBase: LicCt_valor_(pre + "RjD"), reajusteFonte: LicCt_valor_(pre + "RjF"), garantiaTipo: LicCt_valor_(pre + "GaT"), garantiaValor: LicCt_valor_(pre + "GaV"), garantiaValidade: LicCt_valor_(pre + "GaD"), garantiaFonte: LicCt_valor_(pre + "GaF"),
       renovacaoPrevista: LicCt_marcado_(pre + "RnP"), renovacaoDecidirAte: LicCt_valor_(pre + "RnD"), entregas: f.entregas.filter(function (e) { return String(e.descricao || "").trim() || e.prazo; }), obrigacoes: f.obrigacoes.filter(function (e) { return String(e.descricao || "").trim(); }), obs: LicCt_valor_(pre + "Obs") };
   }
@@ -210,14 +211,14 @@
     if (cl.vinculado) h += '<p class="cm-txt">' + LicCt_selo_("verde", "vinculado") + " " + Lic_esc_(cl.vinculado.nome) + "</p>";
     else if (!cl.cnpjValido) h += Lic_faixa_(cl.semCnpj, "aviso");
     else if ((cl.encontrados || []).length) h += '<p class="cm-txt">CNPJ do órgão no PNCP: <span class="lic-mono">' + Lic_esc_(cl.cnpj) + "</span>. Já está no cadastro:</p>" + '<ul class="lct-lista">' + cl.encontrados.map(function (x) {
-      return "<li><b>" + Lic_esc_(x.fantasia || x.razao) + "</b> · " + Lic_esc_(x.cnpj) + " · " + Lic_esc_(x.onde) + (x.status === "INATIVO" ? " " + LicCt_selo_("cinza", "inativo") : ' <button type="button" class="btn-secondary" data-lct-vincular="' + Lic_esc_(x.id) + '">Vincular</button>') + "</li>";
+      return "<li><b>" + Lic_esc_(x.fantasia || x.razao) + "</b> · " + Lic_esc_(x.cnpj) + " · " + Lic_esc_(x.onde) + (x.status === "INATIVO" ? " " + LicCt_selo_("cinza", "inativo") + '<br><span class="cm-meta">' + Lic_esc_(x.orientacao || "") + "</span>" : ' <button type="button" class="btn-secondary" data-lct-vincular="' + Lic_esc_(x.id) + '">Vincular</button>') + "</li>";
     }).join("") + "</ul>";
     else h += '<p class="cm-txt">O CNPJ do órgão (<span class="lic-mono">' + Lic_esc_(cl.cnpj) + "</span>) não está no cadastro de clientes.</p>" + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-primary" data-lct-cli-criar>Cadastrar o órgão como cliente</button></div>';
     h += "</div>";
     // comercial
     h += '<div><h4>Comercial (oportunidade ganha)</h4>';
     if (co.vinculado) h += '<p class="cm-txt">' + LicCt_selo_("verde", "no Comercial") + " oportunidade " + Lic_esc_(co.vinculado.codigo) + "</p>";
-    else if (co.jaExiste) h += Lic_faixa_(co.porque, "aviso") + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-com-vincular="' + Lic_esc_(co.jaExiste.id) + '">Vincular a existente</button></div>';
+    else if (co.jaExiste) h += Lic_faixa_(co.porque, "aviso") + (co.podeVincular ? '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-com-vincular="' + Lic_esc_(co.jaExiste.id) + '">Vincular a existente</button></div>' : "");
     else if (co.porque) h += Lic_faixa_(co.porque, "aviso");
     else h += '<div class="lct-grade">' + (co.unidades.length ? '<div><label for="lctComUn">Unidade</label><select id="lctComUn">' + co.unidades.map(function (u) { return '<option value="' + Lic_esc_(u.id) + '">' + Lic_esc_(u.nome) + "</option>"; }).join("") + "</select></div>" : "") +
       '<div><label for="lctComCt">Contato do órgão</label><select id="lctComCt">' + co.contatos.map(function (c) { return '<option value="' + Lic_esc_(c.id) + '">' + Lic_esc_(c.nome + (c.cargo ? " (" + c.cargo + ")" : "")) + "</option>"; }).join("") + "</select></div></div>" +
@@ -225,12 +226,12 @@
     h += "</div>";
     // agenda única
     h += '<div><h4>Agenda única (Minhas atividades)</h4><ul class="lct-lista">' + (ag.marcos || []).map(function (x) {
-      return "<li>" + Lic_esc_(x.nome) + " · " + Lic_esc_(LicCt_dia_(x.dia)) + " " + (x.atividade ? LicCt_selo_(x.atividade.desatualizada ? "laranja" : "verde", x.atividade.desatualizada ? "na agenda com o prazo antigo (" + LicCt_dia_(x.atividade.dia) + ")" : "na agenda única") : x.passou ? LicCt_selo_("cinza", "já passou") : LicCt_selo_("azul", "a levar")) + "</li>";
+      return "<li>" + Lic_esc_(x.nome) + " · " + Lic_esc_(LicCt_dia_(x.dia)) + " " + (x.atividade ? LicCt_selo_(x.atividade.desatualizada ? "laranja" : "verde", x.atividade.desatualizada ? "na agenda com o prazo antigo (" + LicCt_dia_(x.atividade.dia) + ")" : "na agenda única") : x.emAndamento ? LicCt_selo_("laranja", "sendo lançada agora") : x.passou ? LicCt_selo_("cinza", "já passou") : LicCt_selo_("azul", "a levar")) + "</li>";
     }).join("") + "</ul>" + '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-agenda' + (ag.aLevar ? "" : ' disabled aria-disabled="true"') + ">Levar " + Lic_esc_(ag.aLevar || 0) + " marco(s) à agenda única</button></div></div>";
     // execução
     h += '<div><h4>Planejar a execução</h4><p class="cm-meta">' + Lic_esc_(ex.aviso || "") + "</p>" + (ex.grupos || []).map(function (g) {
       return '<div class="cm-caixa" style="margin:6px 0"><b>' + Lic_esc_(g.nome) + "</b>" + '<ul class="lct-lista">' + g.itens.map(function (i) { return "<li>Item " + Lic_esc_(i.item) + ": " + Lic_esc_(LicCt_qtd_(i.quantidade)) + " · " + Lic_esc_((i.codigo ? i.codigo + " " : "") + (i.nome || "")) + "</li>"; }).join("") + "</ul>" +
-        '<p class="cm-meta">No SGO+: ' + Lic_esc_(g.existe) + ". " + Lic_esc_(g.dependencia) + "</p>" + (g.criado ? '<p class="cm-txt">' + LicCt_selo_("verde", "planejamento lançado") + " " + Lic_esc_(g.criado.texto) + "</p>" :
+        '<p class="cm-meta">No SGO+: ' + Lic_esc_(g.existe) + ". " + Lic_esc_(g.dependencia) + "</p>" + (g.cancelado ? '<p class="cm-meta">' + LicCt_selo_("cinza", "planejamento cancelado") + " " + Lic_esc_(g.cancelado.texto) + "</p>" : "") + (g.emAndamento ? '<p class="cm-txt">' + LicCt_selo_("laranja", "sendo lançado agora") + "</p>" : g.criado ? '<p class="cm-txt">' + LicCt_selo_("verde", "planejamento lançado") + " " + Lic_esc_(g.criado.texto) + "</p>" :
           '<div class="lic-acoes-linha lct-acoes"><button type="button" class="btn-secondary" data-lct-exec="' + Lic_esc_(g.area) + '">Criar o planejamento</button></div>') + "</div>";
     }).join("") + "</div>";
     h += '</div><details class="lct-det"><summary>Módulos sem integração (dependência declarada)</summary><ul class="lct-lista">' + (t.dependencias || []).map(function (x) { return "<li><b>" + Lic_esc_(x.modulo) + ":</b> " + Lic_esc_(x.texto) + "</li>"; }).join("") + "</ul></details></div>";
@@ -290,7 +291,7 @@
       c.CIENTE = LicCt_marcado_("lctClCiente");
       bt.disabled = true;
       LicCt_chamar_("clienteCriar", { id: id, cliente: c }, function (r) {
-        if (!r.criado) { bt.disabled = false; Lic_$_("lctClMsg").innerHTML = Lic_faixa_(r.texto + ((r.faltam || []).length ? "<ul class=\"lct-lista\">" + r.faltam.map(function (f) { return "<li>" + Lic_esc_(f.texto) + "</li>"; }).join("") + "</ul>" : ""), "erro", true); return; }
+        if (!r.criado) { bt.disabled = false; Lic_$_("lctClMsg").innerHTML = Lic_faixa_(Lic_esc_(r.texto) + ((r.faltam || []).length ? "<ul class=\"lct-lista\">" + r.faltam.map(function (f) { return "<li>" + Lic_esc_(f.texto) + "</li>"; }).join("") + "</ul>" : ""), "erro", true); return; }
         ov.fechar(); Lic_toast_(r.texto); LicCt_ligarAba_(null, null, id);
       }, function (m) { bt.disabled = false; Lic_$_("lctClMsg").innerHTML = Lic_faixa_(m, "erro"); });
     };
@@ -309,10 +310,11 @@
   }
   function LicCt_janelaVersao_(id, origem) {
     var t = LICCT.aba[id], m = t.contrato;
-    var tipos = ["CORRECAO", "ADITIVO", "APOSTILAMENTO", "ENCERRAMENTO"].map(function (k) { return '<option value="' + k + '">' + Lic_esc_(t.versoesTipos[k]) + "</option>"; }).join("");
+    // contrato encerrado: só correção e, para o Administrador, a reabertura (com motivo e fonte); o servidor confere de novo
+    var tipos = (m.situacao === "VIGENTE" ? ["CORRECAO", "ADITIVO", "APOSTILAMENTO", "ENCERRAMENTO"] : ["CORRECAO"].concat(t.eu && t.eu.perfil === "ADMIN" ? ["REABERTURA"] : [])).map(function (k) { return '<option value="' + k + '">' + Lic_esc_(t.versoesTipos[k]) + "</option>"; }).join("");
     var corpo = '<div class="lct-grade"><div><label for="lctVTipo">Tipo da versão</label><select id="lctVTipo">' + tipos + '</select></div><div><label for="lctVAd">Número do aditivo</label><input id="lctVAd" maxlength="40" placeholder="Ex.: 1º termo aditivo"></div>' +
       '<div><label for="lctVSit">Encerramento</label><select id="lctVSit"><option value="">—</option><option value="ENCERRADO">Encerrado (cumprido)</option><option value="RESCINDIDO">Rescindido</option></select></div>' +
-      '<div class="lct-largo"><label for="lctVFonte">Fonte (aditivo, apostilamento e encerramento)</label><input id="lctVFonte" maxlength="300" placeholder="Ex.: termo aditivo publicado no PNCP em 10/03/2027"></div></div>' +
+      '<div class="lct-largo"><label for="lctVFonte">Fonte (aditivo, apostilamento, encerramento e reabertura)</label><input id="lctVFonte" maxlength="300" placeholder="Ex.: termo aditivo publicado no PNCP em 10/03/2027"></div></div>' +
       LicCt_formHtml_("lctV", m.dados, t, { itensEditaveis: true, manual: true }) +
       '<div class="lct-grade"><div class="lct-largo"><label for="lctVArq">Arquivo (termo aditivo ou contrato assinado, opcional)</label><input id="lctVArq" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*"></div>' +
       '<div class="lct-largo"><label for="lctVMot">Motivo (obrigatório)</label><textarea id="lctVMot" rows="2" maxlength="1000"></textarea></div></div><p class="cm-ajuda-campo">Só o que mudou entra na versão nova; a anterior fica no histórico. Nada é apagado.</p><div id="lctVMsg" aria-live="assertive"></div>';
@@ -321,7 +323,7 @@
     ov.querySelector("[data-lct-ok]").onclick = function () {
       var bt = this, msg = Lic_$_("lctVMsg"), tipo = LicCt_valor_("lctVTipo"), mot = LicCt_valor_("lctVMot");
       if (mot.trim().length < 10) { msg.innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi gravado.", "erro"); return; }
-      var campos = tipo === "ENCERRAMENTO" ? { situacao: LicCt_valor_("lctVSit") } : LicCt_lerForm_("lctV");
+      var campos = tipo === "ENCERRAMENTO" ? { situacao: LicCt_valor_("lctVSit") } : tipo === "REABERTURA" ? {} : LicCt_lerForm_("lctV");
       // apostilamento: só o reajuste (valores dos itens, índice e data-base); o resto é termo aditivo (o servidor confere)
       if (tipo === "APOSTILAMENTO") campos = { itens: campos.itens, reajusteIndice: campos.reajusteIndice, reajusteDataBase: campos.reajusteDataBase, reajusteFonte: campos.reajusteFonte, obs: campos.obs };
       LicCt_arquivo_("lctVArq", msg, function (arquivo) {

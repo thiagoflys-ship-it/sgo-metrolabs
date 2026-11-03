@@ -23,12 +23,14 @@ function SGO_ajudaTelas_LicitacoesContratos_() {
         { titulo: "Mudar o contrato (versões)", itens: [
           "\"Nova versão\" escolhe o tipo: correção de digitação, termo aditivo (número e fonte), apostilamento (reajuste dos valores, índice e data-base) ou encerramento (encerrado ou rescindido).",
           "Só o que muda entra na versão nova; a anterior fica no histórico, com o arquivo dela. Aditivo acima de 25% do valor inicial mostra o aviso da Lei 14.133/2021, art. 125.",
-          "Prazo que mudou vira versão nova na agenda (a anterior fica \"substituída\"); marco que saiu ou contrato encerrado cancela o prazo com o motivo, e os alertas acompanham."
+          "Prazo que mudou vira versão nova na agenda (a anterior fica \"substituída\"); marco que saiu ou contrato encerrado cancela o prazo com o motivo, e os alertas acompanham.",
+          "As atividades de Minhas atividades ligadas ao contrato acompanham: data nova = atividade replanejada; marco que saiu ou contrato encerrado = atividade cancelada com o motivo (o planejamento aberto também). Atividade já concluída não muda.",
+          "Encerramento registrado por engano: só o Administrador reabre (\"Reabertura\", com motivo e fonte). Com o contrato registrado, o resultado da disputa não muda mais: use uma versão do contrato."
         ] },
         { titulo: "Integrar com os módulos", itens: [
           "Cliente: o SGO+ procura o CNPJ do órgão (vindo do PNCP) no cadastro de clientes e de unidades. Achou: \"Vincular\". Não achou: \"Cadastrar o órgão como cliente\", com os dados do PNCP já preenchidos; complete endereço, contato, e-mail e telefone e marque o \"Ciente\". O CNPJ nunca é cadastrado duas vezes.",
           "Comercial: com o cliente vinculado e um contato do órgão no Comercial, \"Registrar como ganha no Comercial\" cria a oportunidade (origem Licitação) e a marca como ganha. Nenhuma proposta é criada no Comercial.",
-          "Agenda única: \"Levar à agenda única\" lança em Minhas atividades uma atividade por marco futuro, para o responsável. Marco já levado não se repete; se o contrato mudar depois, a tela avisa qual atividade ficou com o prazo antigo.",
+          "Agenda única: \"Levar à agenda única\" lança em Minhas atividades uma atividade por marco futuro, para o responsável. Marco já levado não se repete; marco de hoje vai para o próximo dia útil (nenhuma atividade nasce atrasada).",
           "Planejar a execução: os serviços aparecem por área, pelo código do catálogo (CAL Metrologia, QUA Qualificação, NR13 NR-13, os demais Assistência). \"Criar o planejamento\" lança a atividade para quem planeja (Metrologia, Qualificação e NR-13 caem no Kanban do Cronograma de execução). Nenhuma O.S., chamado ou requisição é criado."
         ] },
         { titulo: "Acompanhar", itens: [

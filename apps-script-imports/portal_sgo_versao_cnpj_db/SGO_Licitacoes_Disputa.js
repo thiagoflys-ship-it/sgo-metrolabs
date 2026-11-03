@@ -703,7 +703,11 @@ function LicD_resultado_(eu, d) {
   var venc = LicD_txt_(d.vencedor, 200), cnpj = Lic_s_(d.vencedorCnpj).replace(/\D/g, '');
   if (cnpj && cnpj.length !== 14) throw new Error('Escreva o CNPJ do vencedor com os 14 números (ou deixe em branco). Nada foi gravado');
   var r = Lic_comTrava_(function () {
-    var l = Lic_acharOp_(d.id), g = LicD_paraGravar_(l, { situacoes: ['ABERTA', 'RESULTADO'], semCadeia: true }), it = LicD_item_(g, d.item), agora = Lic_agora_();
+    var l = Lic_acharOp_(d.id);
+    // contratos (revisão de 42a2c1f): com o contrato registrado, o resultado não muda mais aqui; a mudança é versão do contrato
+    var ctr = typeof LicC_contratosDe_ === 'function' ? LicC_contratosDe_(l.ID)[0] : null;
+    if (ctr) throw new Error('Não foi possível: esta licitação já tem o contrato ' + Lic_s_(ctr.NUMERO_CONTRATO || ctr.NUMERO) + ' registrado, feito a partir deste resultado. Para mudar valor, item ou situação, grave uma versão do contrato (aba Contrato, "Nova versão": correção, aditivo ou encerramento, com o motivo). Nada foi gravado');
+    var g = LicD_paraGravar_(l, { situacoes: ['ABERTA', 'RESULTADO'], semCadeia: true }), it = LicD_item_(g, d.item), agora = Lic_agora_();
     // revisão de bddf933 (MÉDIA-ALTA 3): item desistido não é ganho; valor final acima do nosso último lance (ou da proposta) só com o motivo
     if (sit === 'GANHO' && it.desistiu) throw new Error('Não foi possível: a Diretoria desistiu do item ' + it.item + ' na sessão (' + it.desistenciaMotivo + '); ele não pode ficar como ganho. Registre perdido (ou o resultado da ata). Nada foi gravado');
     if (sit === 'GANHO' && vf > it.nossoAtual + 0.004 && motivo.length < 10) throw new Error('Não foi possível: o valor final de ' + LicD_moeda_(vf) + ' é maior que o nosso último lance do item ' + it.item + ' (' + LicD_moeda_(it.nossoAtual) + (it.nossoInformado ? '' : ', o valor da proposta') + '). Confira a ata; se o valor está certo, escreva o motivo (pelo menos 10 letras). Nada foi gravado');

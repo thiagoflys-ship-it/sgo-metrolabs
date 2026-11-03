@@ -286,12 +286,17 @@ test('agenda única e planejamento da execução: só com confirmação; uma ati
   // de novo: nada repetido
   assert.match(ok(a.c('agendaUnica', { confirmar: true })).texto, /Nenhuma atividade nova/);
   assert.equal(a.tabelas.ATV_ATIVIDADES.filter((x) => x.MODULO === 'licitacoes').length, 8);
-  // contrato mudou: avisa a atividade com o prazo antigo e leva o marco novo
-  ok(a.c('versao', { tipo: 'ADITIVO', aditivoNumero: '1º termo aditivo', motivo: 'Prorrogação por 12 meses', fonte: 'termo aditivo no PNCP', campos: { fim: '2028-11-30' } }));
+  // contrato mudou (revisão de 42a2c1f, ALTA 1): a atividade do fim é replanejada pela API de Minhas atividades, com o motivo; o marco novo é levado depois
+  const atvFim = atvs.find((x) => /Fim da vigência/.test(x.TITULO));
+  const va = ok(a.c('versao', { tipo: 'ADITIVO', aditivoNumero: '1º termo aditivo', motivo: 'Prorrogação por 12 meses', fonte: 'termo aditivo no PNCP', campos: { fim: '2028-11-30' } }));
+  assert.match(va.texto, /Minhas atividades replanejadas: .*Fim da vigência do contrato 012\/2026 para 30\/11\/2028/);
+  assert.equal(a.tabelas.ATV_ATIVIDADES.find((x) => x.ID === atvFim.ID).PRAZO, '2028-11-30T09:00');
+  assert.ok((a.tabelas.ATV_HISTORICO || []).some((h) => h.ATIVIDADE_ID === atvFim.ID), 'pelo histórico do próprio módulo');
+  assert.ok(a.tabelas.LIC_CONTRATO_VINCULOS.some((x) => x.ACAO === 'REPLANEJADA' && x.REF_ID === atvFim.ID && x.REF_CODIGO === '2028-11-30'));
   ag = a.tela().integracao.agendaUnica;
-  assert.ok(ag.marcos.some((x) => /Fim da vigência/.test(x.nome) && x.atividade && x.atividade.desatualizada && x.atividade.dia === '2027-11-30'));
+  assert.ok(ag.marcos.every((x) => !x.atividade || !x.atividade.desatualizada), 'nenhuma atividade com o prazo antigo');
   const r2 = ok(a.c('agendaUnica', { confirmar: true }));
-  assert.match(r2.texto, /prazo antigo.*Fim da vigência do contrato 012\/2026 \(agora 30\/11\/2028\).*Ajuste o prazo em Minhas atividades/);
+  assert.match(r2.texto, /^1 atividade\(s\) lançada\(s\)/, 'só o reajuste do 2º ano é novo');
   // planejamento da execução: CAL = Metrologia, no Cronograma de execução
   const ex = a.tela().integracao.execucao;
   assert.deepEqual(J(ex.grupos.map((g) => [g.area, g.itens.map((i) => i.item)])), [['METROLOGIA', ['1']]]);
@@ -441,4 +446,157 @@ test('integração na casca: menu, rota, inclusão do arquivo novo, ação do se
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'sem emoji');
   for (const f of ['SGO_Licitacoes_Contratos.js', 'JS_Licitacoes_Contratos.html', 'SGO_Ajuda_LicitacoesContratos.js']) assert.match(ler(f), /\r\n/, f + ' em CRLF');
+});
+
+// ---------------------------------------------------------------- revisão independente de 42a2c1f (um teste para cada ataque)
+const vinc = (a, f) => (a.tabelas.LIC_CONTRATO_VINCULOS || []).filter((x) => Object.keys(f).every((k) => x[k] === f[k]));
+const atv = (a, id) => a.tabelas.ATV_ATIVIDADES.find((x) => x.ID === id);
+
+test('revisão ALTA 1: prazo que sai cancela a atividade ligada; encerramento cancela as do contrato e o planejamento aberto; concluída não é mexida; ninguém fica travado', () => {
+  const a = ambienteContratos();
+  a.criar();
+  ok(a.c('agendaUnica', { confirmar: true }));
+  const e = ok(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', confirmar: true }));
+  const porNome = (rx) => vinc(a, { MODULO: 'ATIVIDADES', ACAO: 'ATIVIDADE' }).find((v) => rx.test(v.REF_TEXTO));
+  // a segunda entrega sai do contrato: a atividade dela é cancelada (pela API de Minhas atividades, com o motivo)
+  const v2 = porNome(/Segundo lote/);
+  const r = ok(a.c('versao', { tipo: 'CORRECAO', motivo: 'Segundo lote não existe no contrato assinado', campos: { entregas: [a.CAMPOS().entregas[0]] } }));
+  assert.match(r.texto, /Minhas atividades canceladas: Entrega do contrato 012\/2026: Segundo lote/);
+  assert.equal(atv(a, v2.REF_ID).SITUACAO, 'Cancelada');
+  assert.ok((a.tabelas.ATV_HISTORICO || []).some((h) => h.ATIVIDADE_ID === v2.REF_ID && /Motivo: Contrato LIC-2026-0001-CT: Correção de digitação/.test(h.TEXTO)));
+  assert.equal(vinc(a, { ACAO: 'CANCELADA', REF_ID: v2.REF_ID }).length, 1);
+  // a atividade do início foi concluída pela pessoa: o encerramento não mexe nela
+  const vIni = porNome(/Início da vigência/);
+  a.tabelas.ATV_ATIVIDADES.find((x) => x.ID === vIni.REF_ID).SITUACAO = 'Concluída';
+  const enc = ok(a.c('versao', { tipo: 'ENCERRAMENTO', motivo: 'Rescisão amigável pedida pelo órgão', fonte: 'termo de rescisão no PNCP', campos: { situacao: 'RESCINDIDO' } }));
+  assert.match(enc.texto, /Minhas atividades canceladas: .*planejamento de Metrologia \(calibração\)/);
+  const abertas = a.tabelas.ATV_ATIVIDADES.filter((x) => (x.MODULO === 'licitacoes' || x.ID === e.atividadeId) && x.SITUACAO !== 'Cancelada' && x.SITUACAO !== 'Concluída');
+  assert.deepEqual(abertas, [], 'nenhuma atividade aberta de contrato rescindido');
+  assert.equal(atv(a, vIni.REF_ID).SITUACAO, 'Concluída'); assert.equal(atv(a, e.atividadeId).SITUACAO, 'Cancelada');
+  assert.equal(a.tela().integracao.execucao.grupos[0].cancelado.acao, 'CANCELADA');
+  // sem a API de Minhas atividades respondendo: a resposta diz o que ajustar lá
+  const b = ambienteContratos(); b.criar(); ok(b.c('agendaUnica', { confirmar: true }));
+  b.ctx.Atividades_apiEditar = () => ({ ok: false, message: 'serviço fora do ar' });
+  assert.match(ok(b.c('versao', { tipo: 'ADITIVO', aditivoNumero: '1º', motivo: 'Prorrogação do contrato', fonte: 'termo aditivo', campos: { fim: '2028-11-30' } })).texto, /Não foi possível acompanhar em Minhas atividades \(ajuste lá\): .*serviço fora do ar/);
+});
+
+test('revisão ALTA 2: Comercial reservado sob a trava (segundo toque recusado); a existente aberta é marcada como ganha; perdida é recusada com o caminho; falha no "ganhar" não duplica', () => {
+  const prep = () => { const a = ambienteContratos({ cnpj: '11222333000181' }); a.criar(); ok(a.c('clienteVincular', { clienteId: 'c1' })); ok(a.api('s_dora', 'salvarContato', { clienteId: 'c1', unidadeId: 'un1', nome: 'Fiscal Teste', cargo: 'Fiscal', papel: 'USA', email: 'f@alfa.exemplo.test' })); a.ct0 = a.tela().integracao.comercial.contatos[0].id; return a; };
+  const a = prep();
+  // outra pessoa registrando agora (reserva recente): recusa; reserva vencida não vale
+  const ct = a.tabelas.LIC_CONTRATOS[0];
+  a.tabelas.LIC_CONTRATO_VINCULOS.push({ ID: 'res1', CONTRATO_ID: ct.ID, MODULO: 'COMERCIAL', ACAO: 'RESERVA', CHAVE: 'OPORTUNIDADE', POR_NOME: 'CHARLES', EM: new Date(a.relogio.agora - 60000).toISOString() });
+  assert.match(a.c('comercial', { unidadeId: 'un1', contatoId: a.ct0 }).message, /CHARLES está registrando este contrato no Comercial neste momento/);
+  a.tabelas.LIC_CONTRATO_VINCULOS.find((x) => x.ID === 'res1').EM = new Date(a.relogio.agora - 11 * 60000).toISOString();
+  // o "ganhar" falha depois de criar: a reserva é desfeita, nada duplicado, e o caminho é vincular a existente (que vira ganha)
+  const ganhar = a.ctx.ComOpo_ganhar_; let falhar = true;
+  a.ctx.ComOpo_ganhar_ = function () { if (falhar) { falhar = false; throw new Error('Comercial ocupado'); } return ganhar.apply(this, arguments); };
+  assert.match(a.c('comercial', { unidadeId: 'un1', contatoId: a.ct0 }).message, /foi criada no Comercial, mas não foi marcada como ganha \(Comercial ocupado\).*Vincular a existente/);
+  const o = a.tabelas.COM_OPORTUNIDADES.find((x) => x.ORIGEM_REF === 'LIC-CONTRATO:LIC-2026-0001-CT');
+  assert.equal(o.SITUACAO, 'ABERTA'); assert.equal(a.tabelas.LIC_CONTRATOS[0].COMERCIAL_OPO_ID, '');
+  assert.ok(vinc(a, { MODULO: 'COMERCIAL', ACAO: 'RESERVA_DESFEITA' }).some((x) => /Comercial ocupado/.test(x.MOTIVO)));
+  const tela = a.tela().integracao.comercial; assert.equal(tela.podeVincular, true); assert.match(tela.porque, /aberta.*marcada como ganha/);
+  assert.match(a.c('comercial', { unidadeId: 'un1', contatoId: a.ct0 }).message, /Já existe a oportunidade .*Vincular a existente/);
+  const r = ok(a.c('comercial', { vincularId: o.ID }));
+  assert.match(r.texto, /marcada como ganha/);
+  assert.equal(a.tabelas.COM_OPORTUNIDADES.find((x) => x.ID === o.ID).SITUACAO, 'GANHA');
+  assert.equal(a.tabelas.COM_OPORTUNIDADES.filter((x) => x.ORIGEM_REF === 'LIC-CONTRATO:LIC-2026-0001-CT').length, 1, 'nunca duplica');
+  assert.equal(vinc(a, { MODULO: 'COMERCIAL', ACAO: 'GANHA' }).length, 1); assert.equal(a.tabelas.LIC_CONTRATOS[0].COMERCIAL_OPO_ID, o.ID);
+  // perdida: recusa com o caminho da reabertura
+  const b = prep();
+  b.tabelas.COM_OPORTUNIDADES = (b.tabelas.COM_OPORTUNIDADES || []).concat([{ ID: 'opoP', CODIGO: 'OPO-0077', ORIGEM_REF: 'LIC-CONTRATO:LIC-2026-0001-CT', SITUACAO: 'PERDIDA', CLIENTE_ID: 'c1' }]);
+  const tb = b.tela().integracao.comercial; assert.equal(tb.podeVincular, false); assert.match(tb.porque, /está perdida: peça à gestão comercial a reabertura/);
+  assert.match(b.c('comercial', { vincularId: 'opoP' }).message, /está perdida: o contrato não é ligado.*Pedir reabertura.*Nada foi vinculado/);
+  assert.equal(b.tabelas.LIC_CONTRATOS[0].COMERCIAL_OPO_ID, ''); assert.equal(vinc(b, { MODULO: 'COMERCIAL' }).length, 0);
+});
+
+test('revisão MÉDIA 3: agenda única e planejamento reservam a chave antes de criar; falha desfaz a reserva e permite tentar de novo; reserva de outra pessoa não repete', () => {
+  const a = ambienteContratos();
+  a.criar();
+  const criar = a.ctx.Atividades_apiCriar; let n = 0;
+  a.ctx.Atividades_apiCriar = function (sid, p) { n++; if (/Fim da vigência/.test(p.titulo)) return { ok: false, message: 'Minhas atividades ocupado' }; return criar.apply(this, arguments); };
+  const r = ok(a.c('agendaUnica', { confirmar: true }));
+  assert.match(r.texto, /^7 atividade\(s\).*Não lançadas \(tente de novo\): Fim da vigência.*ocupado/);
+  assert.equal(vinc(a, { MODULO: 'ATIVIDADES', ACAO: 'RESERVA_DESFEITA' }).length, 1); assert.equal(vinc(a, { MODULO: 'ATIVIDADES', ACAO: 'RESERVA' }).length, 0);
+  a.ctx.Atividades_apiCriar = criar;
+  assert.match(ok(a.c('agendaUnica', { confirmar: true })).texto, /^1 atividade\(s\)/);
+  assert.equal(a.tabelas.ATV_ATIVIDADES.filter((x) => x.MODULO === 'licitacoes').length, 8, 'uma por marco, sem repetir');
+  // planejamento: outra pessoa lançando agora (reserva recente) é recusado; falha desfaz
+  const ct = a.tabelas.LIC_CONTRATOS[0];
+  a.tabelas.LIC_CONTRATO_VINCULOS.push({ ID: 'resE', CONTRATO_ID: ct.ID, MODULO: 'EXECUCAO', ACAO: 'RESERVA', CHAVE: 'METROLOGIA', POR_NOME: 'CHARLES', EM: new Date(a.relogio.agora).toISOString() });
+  assert.match(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', confirmar: true }).message, /sendo lançado agora por outra pessoa/);
+  a.tabelas.LIC_CONTRATO_VINCULOS = a.tabelas.LIC_CONTRATO_VINCULOS.filter((x) => x.ID !== 'resE');
+  a.ctx.Atividades_apiCriar = () => ({ ok: false, message: 'Não foi possível lançar a atividade: o responsável escolhido não está ativo no SGO+' });
+  assert.match(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', confirmar: true }).message, /não está ativo no SGO\+\. Nada foi criado/);
+  assert.equal(vinc(a, { MODULO: 'EXECUCAO', ACAO: 'RESERVA_DESFEITA' }).length, 1);
+  a.ctx.Atividades_apiCriar = criar;
+  ok(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', confirmar: true }));
+  assert.equal(vinc(a, { MODULO: 'EXECUCAO', ACAO: 'PLANEJAMENTO' }).length, 1);
+});
+
+test('revisão MÉDIA 4: a tela manda a homologação e a fonte de cada item, e o servidor as preserva do resultado (e da versão anterior quando não vêm)', () => {
+  const t = telaCliente();
+  const a = ambienteContratos();
+  const tl = J(a.tela());
+  t.ctx.LicCt_formHtml_('lctR', tl.previa.resultado.base, tl, { itensEditaveis: false });
+  const campos = J(t.ctx.LicCt_lerForm_('lctR'));
+  assert.equal(campos.itens[0].homologacao, '2026-11-24'); assert.equal(campos.itens[0].fonte, 'termo de homologação no PNCP');
+  ok(a.c('criar', { origem: 'RESULTADO', motivo: 'Contrato assinado recebido do órgão', campos: Object.assign(a.CAMPOS(), { itens: campos.itens.map((i) => Object.assign({}, i, { homologacao: '', fonte: '' })) }) }));
+  const d1 = JSON.parse(a.tabelas.LIC_CONTRATO_VERSOES[0].DADOS_JSON).itens[0];
+  assert.equal(d1.homologacao, '2026-11-24', 'do resultado, mesmo que a tela mande vazio'); assert.equal(d1.fonte, 'termo de homologação no PNCP');
+  // versão com os itens sem os campos (como a tela antiga mandava): ficam os da versão anterior
+  ok(a.c('versao', { tipo: 'CORRECAO', motivo: 'Quantidade do contrato assinado', campos: { itens: [{ item: '1', codigo: 'CAL-001', nome: 'Calibração', quantidade: '90', valorUnit: '185,00' }] } }));
+  const d2 = JSON.parse(a.tabelas.LIC_CONTRATO_VERSOES[1].DADOS_JSON).itens[0];
+  assert.equal(d2.quantidade, 90); assert.equal(d2.homologacao, '2026-11-24'); assert.equal(d2.fonte, 'termo de homologação no PNCP');
+  assert.match(ler('JS_Licitacoes_Contratos.html'), /homologacao: i\.homologacao, fonte: i\.fonte/);
+});
+
+test('revisão MÉDIA 5: com o contrato registrado, o resultado da disputa não muda: a mensagem manda fazer a versão do contrato', () => {
+  const a = ambienteContratos();
+  a.criar();
+  const n = a.tabelas.LIC_RESULTADOS.length;
+  const r = a.dsp('s_dora', 'resultado', { id: 'op1', item: '1', situacao: 'PERDIDO', fonte: 'decisão do recurso no portal' });
+  assert.equal(r.ok, false); assert.match(r.message, /já tem o contrato 012\/2026 registrado.*Nova versão.*correção, aditivo ou encerramento.*Nada foi gravado/);
+  assert.equal(a.tabelas.LIC_RESULTADOS.length, n); assert.equal(JSON.parse(a.tabelas.LIC_DISPUTAS[0].CONTRATO_JSON).itens.length, 1);
+});
+
+test('revisão MÉDIA 6: encerramento e apostilamento mantêm o responsável que saiu da Diretoria; reabrir contrato encerrado só o Administrador, com motivo, fonte e versão', () => {
+  const a = ambienteContratos();
+  a.criar();
+  a.tabelas.CAD_USUARIOS.find((u) => u.ID === 'u_dir').STATUS = 'INATIVO';
+  ok(a.c('versao', { tipo: 'APOSTILAMENTO', motivo: 'Reajuste anual pelo IPCA', fonte: 'apostila 1', campos: { reajusteIndice: 'IPCA', reajusteDataBase: '2026-11-20', reajusteFonte: 'cláusula 8' } }));
+  ok(a.c('versao', { tipo: 'ENCERRAMENTO', motivo: 'Contrato cumprido antes do prazo', fonte: 'termo de encerramento', campos: { situacao: 'ENCERRADO' } }));
+  assert.equal(JSON.parse(a.tabelas.LIC_CONTRATO_VERSOES[2].DADOS_JSON).responsavelId, 'u_dir');
+  assert.match(a.c('versao', { tipo: 'CORRECAO', motivo: 'Trocar o responsável sem ser da Diretoria', campos: { responsavelId: 'u_ven' } }).message, /responsável pelo contrato na lista/);
+  // reabrir: Diretoria não; Administrador com motivo de 20 letras e fonte
+  assert.match(a.c('versao', { tipo: 'REABERTURA', motivo: 'Encerramento registrado por engano', fonte: 'conferido no PNCP' }).message, /só o Administrador reabre/);
+  assert.match(a.c('versao', { tipo: 'ADITIVO', aditivoNumero: '1º', motivo: 'Aditivo depois do encerramento', fonte: 'termo', campos: { fim: '2028-11-30' } }).message, /peça ao Administrador a reabertura/);
+  assert.match(a.ct('s_admin', 'versao', { id: 'op1', tipo: 'REABERTURA', motivo: 'curto demais aqui', fonte: 'conferido no PNCP' }).message, /pelo menos 20 letras/);
+  const r = ok(a.ct('s_admin', 'versao', { id: 'op1', tipo: 'REABERTURA', motivo: 'Encerramento registrado por engano: o contrato segue', fonte: 'conferido no PNCP em 20/12/2026' }));
+  assert.match(r.texto, /Reabertura \(Administrador\) gravado como versão 4/);
+  assert.equal(a.tabelas.LIC_CONTRATOS[0].SITUACAO, 'VIGENTE'); assert.equal(a.tabelas.LIC_CONTRATO_VERSOES[3].TIPO, 'REABERTURA');
+  assert.ok(a.evs().some((e) => e.TIPO === 'CONTRATO_FIM' && e.SITUACAO === 'ATIVO'), 'os prazos voltam');
+  assert.match(a.ct('s_admin', 'versao', { id: 'op1', tipo: 'REABERTURA', motivo: 'Reabrir de novo sem estar encerrado', fonte: 'teste' }).message, /já está vigente/);
+});
+
+test('revisão BAIXA 7: hash do resumo cobre valor, vigência e CNPJ; cliente inativo orienta a reativar; atividade não nasce atrasada; texto do cadastro escapado na tela', () => {
+  const a = ambienteContratos({ cnpj: '11222333000181' });
+  a.criar({ campos: Object.assign(a.CAMPOS(), { obrigacoes: [{ descricao: 'Reunião de início com o fiscal', prazo: '2026-10-19' }] }) });
+  // hash do resumo
+  const ct = a.tabelas.LIC_CONTRATOS[0], orig = ct.VALOR_TOTAL;
+  for (const [k, v] of [['VALOR_TOTAL', 1], ['VIGENCIA_FIM', '2030-01-01'], ['ORGAO_CNPJ', '00000000000191']]) { const antes = ct[k]; ct[k] = v; assert.match(a.tela().contrato.cadeia.problema, /resumo do contrato foi mudado/, k); ct[k] = antes; }
+  assert.equal(ct.VALOR_TOTAL, orig); assert.equal(a.tela().contrato.cadeia.integra, true);
+  // cliente inativo
+  a.tabelas.CAD_CLIENTES.find((c) => c.ID === 'c1').STATUS = 'INATIVO';
+  assert.match(a.tela().integracao.cliente.encontrados[0].orientacao, /inativo.*reative em Cadastros › Clientes.*Reativar/);
+  assert.match(a.c('clienteVincular', { clienteId: 'c1' }).message, /inativo no cadastro: reative em Cadastros › Clientes/);
+  assert.match(a.c('clienteCriar', { cliente: {} }).message, /HOSPITAL TESTE ALFA LTDA|Hospital Teste Alfa.*inativo.*reative em Cadastros/);
+  // marco de hoje (segunda 19/10/2026): a atividade vai para o próximo dia útil
+  const r = ok(a.c('agendaUnica', { confirmar: true }));
+  assert.match(r.texto, /Para o próximo dia útil \(o marco é hoje\): Obrigação do contrato 012\/2026: Reunião de início/);
+  const ob = a.tabelas.ATV_ATIVIDADES.find((x) => /Reunião de início/.test(x.TITULO));
+  assert.equal(ob.PRAZO, '2026-10-20T09:00');
+  assert.ok(a.tabelas.ATV_ATIVIDADES.filter((x) => x.MODULO === 'licitacoes').every((x) => x.PRAZO > '2026-10-19T10:00'), 'nenhuma nasce atrasada');
+  assert.match(a.c('execucao', { area: 'METROLOGIA', responsavelId: 'u_gt', prazo: '2026-10-19', confirmar: true }).message, /precisa ser de amanhã em diante/);
+  assert.match(ler('JS_Licitacoes_Contratos.html'), /Lic_faixa_\(Lic_esc_\(r\.texto\)/);
 });
