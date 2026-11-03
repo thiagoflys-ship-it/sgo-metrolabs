@@ -1,0 +1,299 @@
+<!--
+  SGO+ LICITAÇÕES — PARECERES POR ÁREA E ALÇADAS DE DECISÃO (03/11/2026): a aba "Pareceres" da ficha (pedir parecer às áreas, o quadro
+  dos pareceres com as divergências calculadas pelo sistema e a aprovação da participação pela alçada), a tela "Meus pareceres" (a
+  pessoa do pedido vê só a oportunidade dele, sem custo, e registra o parecer) e a parte "Alçadas e pareceres" de Portais e
+  configurações. Servidor: SGO_Licitacoes_Pareceres.js (Licitacoes_api ação "pareceres" com { op }). Usa os utilitários de
+  JS_Licitacoes.html (Lic_esc_, Lic_chamar_, Lic_janela_, Lic_faixa_, Lic_tabelaHtml_, Lic_brlHtml_, Lic_toast_, Lic_carregando_,
+  Lic_erroTela_, Lic_ligarRefazer_, Lic_irFicha_, Lic_num_). Todo texto passa por Lic_esc_. Sem atualização automática: só redesenha
+  depois de uma ação de quem está na tela.
+-->
+<style>
+  .lpa-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .lpa-area { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+  .lpa-area h4 { margin: 0 0 4px; font-size: 14px; }
+  .lpa-area .cm-meta { overflow-wrap: anywhere; }
+  .lpa-campo { margin: 8px 0; }
+  .lpa-campo label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .lpa-campo input, .lpa-campo select, .lpa-campo textarea { width: 100%; min-height: 44px; box-sizing: border-box; max-width: 100%; }
+  .lpa-posicoes { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+  .lpa-posicoes label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-weight: 700; }
+  .lpa-posicoes input { width: 20px; height: 20px; }
+  .lpa-lista { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; }
+  .lpa-lista li { padding: 6px 0; border-top: 1px dashed var(--border); overflow-wrap: anywhere; }
+  .lpa-faixa { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 10px; align-items: end; padding: 8px 0; border-top: 1px dashed var(--border); }
+  .lpa-faixa input, .lpa-faixa select { width: 100%; min-height: 44px; box-sizing: border-box; }
+  .lpa-checks { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .lpa-checks label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+  .lpa-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px 14px; margin: 8px 0; font-size: 12.5px; }
+  .lpa-dl div { min-width: 0; }
+  .lpa-dl span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+  .lpa-dl b { font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .lpa-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  @media (max-width: 900px) { .lpa-acoes .btn-primary, .lpa-acoes .btn-secondary { flex: 1 1 140px; } }
+</style>
+<script>
+  var LICPA = { ficha: {}, meus: null, tela: null, cfg: null };
+  var LICPA_COR = { FAVORAVEL: "verde", RESSALVA: "laranja", CONTRARIO: "vermelho" };
+
+  function LicPa_chamar_(op, dados, ok, erro, o) { Lic_chamar_("pareceres", Object.assign({ op: op }, dados || {}), ok, erro, Object.assign({ ignorarVelha: true }, o || {})); }
+  function LicPa_selo_(cor, texto) { return '<span class="cm-selo ' + Lic_esc_(cor || "cinza") + '">' + Lic_esc_(texto) + "</span>"; }
+  function LicPa_valor_(id) { var e = Lic_$_(id); return e ? e.value : ""; }
+  function LicPa_posicaoSelo_(p) { return p ? LicPa_selo_(LICPA_COR[p.posicao] || "cinza", p.posicaoNome) : LicPa_selo_("cinza", "Sem parecer"); }
+  function LicPa_dl_(pares) { return '<div class="lpa-dl">' + pares.map(function (x) { return "<div><span>" + Lic_esc_(x[0]) + "</span><b>" + x[1] + "</b></div>"; }).join("") + "</div>"; }
+  function LicPa_msg_(id, texto, tipo) { var e = Lic_$_(id); if (e) e.innerHTML = Lic_faixa_(texto, tipo || "erro"); }
+
+  // ================= aba "Pareceres" da ficha (Diretoria) =================
+  function LicPa_htmlAba_(d) { return '<div id="licPareceres">' + Lic_carregando_(2) + "</div>"; }
+  function LicPa_ligarAba_(c, d, id) {
+    LicPa_chamar_("ficha", { id: id }, function (r) { LICPA.ficha[id] = r; LicPa_desenharFicha_(id); },
+      function (m) { var el = Lic_$_("licPareceres"); if (el) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, function () { LicPa_ligarAba_(c, d, id); }); } });
+  }
+  function LicPa_recarregar_(id) { var el = Lic_$_("licPareceres"); if (el) el.innerHTML = Lic_carregando_(2); LicPa_ligarAba_(null, null, id); }
+  function LicPa_desenharFicha_(id) {
+    var el = Lic_$_("licPareceres"), t = LICPA.ficha[id]; if (!el || !t) return;
+    el.innerHTML = LicPa_htmlFicha_(t);
+    el.querySelectorAll("[data-lpa-pedir]").forEach(function (b) { b.onclick = function () { LicPa_janelaPedir_(id, b.getAttribute("data-lpa-pedir"), t, b); }; });
+    el.querySelectorAll("[data-lpa-cancelar]").forEach(function (b) { b.onclick = function () { LicPa_janelaCancelar_(id, b.getAttribute("data-lpa-cancelar"), b); }; });
+    el.querySelectorAll("[data-lpa-atividade]").forEach(function (b) {
+      b.onclick = function () {
+        b.disabled = true;
+        LicPa_chamar_("atividadeDeNovo", { pedidoId: b.getAttribute("data-lpa-atividade") }, function (r) { Lic_toast_(r.texto, r.atividade && r.atividade.id ? "ok" : "erro"); LicPa_recarregar_(id); }, function (m) { b.disabled = false; Lic_toast_(m, "erro"); });
+      };
+    });
+    var ap = el.querySelector("[data-lpa-aprovar]"); if (ap) ap.onclick = function () { LicPa_janelaAprovar_(id, t.op.codigo, "Pareceres e alçadas", ap, function () { LicPa_recarregar_(id); }); };
+    var de = el.querySelector("[data-lpa-descartar]"); if (de) de.onclick = function () { if (typeof Lic_janelaMotivo_ === "function") Lic_janelaMotivo_("descartar", id, de); };
+    var cf = el.querySelector("[data-lpa-ir-cfg]"); if (cf) cf.onclick = function () { LIC.portaisAba = "alcadas"; abrir("licitacoes_portais"); };
+  }
+  function LicPa_htmlFicha_(t) {
+    var al = t.alcada || {}, cons = t.consolidacao || {}, h = "";
+    // 1. alçada e decisão
+    h += '<div class="cm-caixa"><h3>Decisão pela alçada</h3>' + LicPa_dl_([
+      ["Valor que decide a faixa", al.valor === null || al.valor === undefined ? "sem valor" : Lic_brlHtml_(al.valor)], ["De onde vem", Lic_esc_(al.valorOrigem || "")],
+      ["Faixa", Lic_esc_(al.faixaTxt || "")], ["Aprovações da Diretoria", Lic_esc_((al.aprovacoes || []).length + " de " + (al.necessarias || 1))],
+      ["Pareceres obrigatórios", Lic_esc_((al.obrigatorios || []).length ? al.obrigatorios.join(", ") : "nenhum")], ["Regras", Lic_esc_(al.padrao ? "padrão (um diretor basta)" : "alçadas versão " + al.versao)]]);
+    if ((al.aprovacoes || []).length) h += '<ul class="lpa-lista">' + al.aprovacoes.map(function (a) { return "<li><b>" + Lic_esc_(a.nome) + "</b> aprovou em " + Lic_esc_(a.emBr) + ": " + Lic_esc_(a.motivo) + "</li>"; }).join("") + "</ul>";
+    if (t.op.situacao === "DECISAO") h += Lic_faixa_("Participação aprovada: a licitação está em Decisão. Próximo passo: proposta (aba Proposta) e disputa (aba Disputa). Para desistir, descarte com o motivo.", "ok");
+    else if (!t.op.antesDaDecisao) h += Lic_faixa_("A oportunidade está \"" + t.op.situacaoNome + "\": a decisão pela alçada vale só no Radar e Em análise.", "aviso");
+    else {
+      if ((al.faltas || []).length) h += Lic_faixa_("Para participar" + (t.euJaAprovou ? "" : ", contando a sua aprovação,") + " ainda " + (al.faltas.length > 1 ? "faltam: " : "falta: ") + al.faltas.join("; ") + ".", "aviso");
+      else if (t.temSimulacao && !t.euJaAprovou) h += Lic_faixa_("A alçada está completa com a sua aprovação: ao aprovar, a licitação vai para Decisão (participar).", "ok");
+      if (!t.temSimulacao) h += Lic_faixa_("Falta a simulação de preço salva (aba Preço): sem ela não há preço mínimo e a aprovação é recusada.", "aviso");
+      if (t.euJaAprovou) h += Lic_faixa_("Você já aprovou. Falta a aprovação de outra pessoa da Diretoria.", "aviso");
+      h += '<div class="lic-acoes-linha lpa-acoes">' + (t.podeAprovar ? '<button type="button" class="btn-primary" data-lpa-aprovar>Aprovar a participação</button>' : "") +
+        '<button type="button" class="btn-secondary" data-lpa-descartar>Descartar (rejeitar)</button><button type="button" class="btn-secondary" data-lpa-ir-cfg>Ver as alçadas</button></div>' +
+        '<p class="cm-ajuda-campo">Aprovar pede o motivo e confere a alçada no servidor: faltando aprovação, a sua fica registrada e a passagem para Decisão espera a próxima. Descartar continua com um diretor.</p>';
+    }
+    h += "</div>";
+    // 2. consolidação: o quadro dos pareceres e as divergências (código, sem IA)
+    var linhas = (t.areas || []).map(function (a) {
+      var p = a.parecer;
+      return ["<b>" + Lic_esc_(a.nome) + "</b>" + (a.obrigatorio ? " " + LicPa_selo_("azul", "obrigatório") : ""), LicPa_posicaoSelo_(p),
+        p ? Lic_esc_(p.por + " · " + p.emBr + " · versão " + p.versao) + (p.integra ? "" : " " + LicPa_selo_("vermelho", "alterado fora do SGO+")) : (a.pedidoAberto ? Lic_esc_("pedido a " + a.pedidoAberto.pessoa + ", prazo " + a.pedidoAberto.prazoTxt) : "—"),
+        p ? Lic_esc_(p.motivo) : ""];
+    });
+    h += '<div class="cm-caixa"><h3>Pareceres e divergências</h3>' + Lic_tabelaHtml_(["Área", "Parecer", "Quem e quando", "Motivo"], linhas);
+    var dv = cons.divergencias || [];
+    h += dv.length ? '<h4 style="margin:10px 0 4px">Divergências apontadas pelo sistema (' + dv.length + ")</h4>" + dv.map(function (x) { return Lic_faixa_(x.texto, x.grau === "ALTA" ? "erro" : "aviso"); }).join("")
+      : '<p class="cm-txt">' + LicPa_selo_("verde", "Sem divergência") + " Nenhuma divergência entre os pareceres que valem e os dados da análise, da simulação e da habilitação.</p>";
+    h += '<p class="cm-ajuda-campo">' + Lic_esc_(cons.fonte || "") + "</p></div>";
+    // 3. por área: pedir, acompanhar, versões
+    h += '<div class="cm-caixa"><h3>Pedir parecer às áreas</h3><p class="cm-ajuda-campo">Ordem da missão: Licitações → Técnica → Financeira → Comercial → Diretoria. Cada pedido lança a atividade em Minhas atividades para a pessoa e sai pelo aviso de Licitações no expediente. A pessoa vê só esta oportunidade, sem custo, enquanto o pedido está aberto.</p><div class="lpa-grade">' +
+      (t.areas || []).map(function (a) { return LicPa_htmlArea_(a, t); }).join("") + "</div></div>";
+    return h;
+  }
+  function LicPa_htmlArea_(a, t) {
+    var h = '<div class="lpa-area"><h4>' + Lic_esc_(a.nome) + (a.obrigatorio ? " " + LicPa_selo_("azul", "obrigatório nesta faixa") : "") + '</h4><p class="cm-meta">' + Lic_esc_(a.foco) + "</p>";
+    var p = a.pedidoAberto;
+    if (p) {
+      h += '<p class="cm-txt">' + LicPa_selo_(p.atrasado ? "vermelho" : "laranja", p.atrasado ? "Pedido atrasado" : "Pedido aberto") + " " + Lic_esc_(p.pessoa) + ", prazo " + Lic_esc_(p.prazoTxt) + "</p>" +
+        (p.pergunta ? '<p class="cm-meta">Pergunta: ' + Lic_esc_(p.pergunta) + "</p>" : "") +
+        (p.atividadeId ? '<p class="cm-meta">Atividade em Minhas atividades: ' + Lic_esc_(p.atividadeSituacao || "lançada") + "</p>" : '<p class="cm-meta" style="color:var(--danger,#b00020)">Atividade não lançada: ' + Lic_esc_(p.atividadeErro || "tente de novo") + "</p>") +
+        '<div class="lic-acoes-linha lpa-acoes">' + (p.atividadeId ? "" : '<button type="button" class="btn-primary" data-lpa-atividade="' + Lic_esc_(p.id) + '">Lançar a atividade de novo</button>') +
+        '<button type="button" class="btn-secondary" data-lpa-cancelar="' + Lic_esc_(p.id) + '">Cancelar o pedido</button></div>';
+    } else if (t.op.antesDaDecisao) {
+      h += (a.candidatos || []).length ? '<div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-primary" data-lpa-pedir="' + Lic_esc_(a.codigo) + '">' + (a.parecer ? "Pedir versão nova" : "Pedir parecer") + "</button></div>"
+        : Lic_faixa_("Ninguém ativo na área " + a.nome + " (cadastro de usuários, campo Área, ou a lista em Portais e configurações › Alçadas e pareceres).", "aviso");
+    }
+    if ((a.versoes || []).length) {
+      h += '<details class="lpa-det"><summary>Versões do parecer (' + a.versoes.length + ')</summary><ul class="lpa-lista">' + a.versoes.map(function (v) {
+        return "<li>" + LicPa_posicaoSelo_(v) + " <b>versão " + Lic_esc_(v.versao) + "</b> · " + Lic_esc_(v.por) + " · " + Lic_esc_(v.emBr) + (v.integra ? "" : " " + LicPa_selo_("vermelho", "alterado fora do SGO+")) +
+          "<br>" + Lic_esc_(v.motivo) + (v.motivoNovaVersao ? '<br><span class="cm-meta">O que mudou: ' + Lic_esc_(v.motivoNovaVersao) + "</span>" : "") + "</li>";
+      }).join("") + "</ul></details>";
+    }
+    return h + "</div>";
+  }
+  function LicPa_janelaPedir_(id, area, t, origem) {
+    var a = (t.areas || []).filter(function (x) { return x.codigo === area; })[0]; if (!a) return;
+    var pz = t.prazoPadrao || {};
+    var ov = Lic_janela_("Pedir parecer " + a.rotulo, '<p class="cm-txt">Foco: ' + Lic_esc_(a.foco) + ".</p>" +
+      '<div class="lpa-campo"><label for="lpaPessoa">Quem dá o parecer</label><select id="lpaPessoa">' + a.candidatos.map(function (u) { return '<option value="' + Lic_esc_(u.id) + '">' + Lic_esc_(u.nome) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="lpa-campo"><label for="lpaPrazo">Prazo (até 18:00)</label><input id="lpaPrazo" type="date" value="' + Lic_esc_(pz.dia || "") + '"><p class="cm-ajuda-campo">Padrão: ' + Lic_esc_(pz.texto || "") + " (" + Lic_esc_(pz.regra || "") + "). Nunca no passado.</p></div>" +
+      '<div class="lpa-campo"><label for="lpaPergunta">O que a Diretoria quer saber (opcional)</label><textarea id="lpaPergunta" rows="3" maxlength="1000" placeholder="Ex.: temos padrão e equipe para as 40 balanças no prazo?"></textarea></div>' +
+      (a.parecer ? Lic_faixa_("Já existe o parecer versão " + a.parecer.versao + " (" + a.parecer.posicaoNome.toLowerCase() + "). O novo será a versão seguinte e substitui esse, com o motivo da mudança.", "aviso") : "") +
+      '<p class="cm-ajuda-campo">O SGO+ lança a atividade em Minhas atividades para a pessoa e manda o aviso no expediente. Um pedido aberto por área.</p><div id="lpaMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>Pedir parecer</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this; bt.disabled = true;
+      var dia = LicPa_valor_("lpaPrazo");
+      LicPa_chamar_("pedir", { id: id, area: area, usuarioId: LicPa_valor_("lpaPessoa"), prazo: dia && dia !== pz.dia ? dia : "", pergunta: LicPa_valor_("lpaPergunta") }, function (r) {
+        ov.fechar(); Lic_toast_(r.texto, r.atividade && r.atividade.id ? "ok" : "erro"); LicPa_recarregar_(id);
+      }, function (m) { bt.disabled = false; LicPa_msg_("lpaMsg", m); });
+    };
+  }
+  function LicPa_janelaCancelar_(id, pedidoId, origem) {
+    var ov = Lic_janela_("Cancelar o pedido de parecer", '<div class="lpa-campo"><label for="lpaMotCanc">Motivo (obrigatório)</label><textarea id="lpaMotCanc" rows="3" maxlength="1000" placeholder="Ex.: troca da pessoa, ela está de férias"></textarea><p class="cm-ajuda-campo">Pelo menos 10 letras. A atividade da pessoa é cancelada com este motivo; o pedido fica no histórico.</p></div><div id="lpaMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Voltar</button><button type="button" class="btn-primary" data-lic-confirmar>Cancelar o pedido</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = LicPa_valor_("lpaMotCanc");
+      if (mot.trim().length < 10) { LicPa_msg_("lpaMsg", "Escreva o motivo com pelo menos 10 letras. Nada foi alterado."); return; }
+      bt.disabled = true;
+      LicPa_chamar_("cancelar", { pedidoId: pedidoId, motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto); LicPa_recarregar_(id); }, function (m) { bt.disabled = false; LicPa_msg_("lpaMsg", m); });
+    };
+  }
+  /** "Aprovar a participação" (aba Pareceres e Kanban): pede o motivo; o servidor confere a alçada e diz o que falta. */
+  function LicPa_janelaAprovar_(id, codigo, fonte, origem, depois) {
+    var ov = Lic_janela_("Aprovar a participação: " + codigo, '<p class="cm-txt">O servidor confere a alçada: a simulação salva (preço mínimo), os pareceres obrigatórios e as aprovações da Diretoria da faixa de valor. Faltando aprovação, a sua fica registrada e a passagem para Decisão espera a próxima.</p>' +
+      '<div class="lpa-campo"><label for="lpaMotAp">Motivo da aprovação (obrigatório, fica no histórico)</label><textarea id="lpaMotAp" rows="3" maxlength="1000" placeholder="Ex.: nota alta, piso coberto e pareceres favoráveis"></textarea><p class="cm-ajuda-campo">Pelo menos 10 letras.</p></div><div id="lpaMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>Aprovar</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = LicPa_valor_("lpaMotAp");
+      if (mot.trim().length < 10) { LicPa_msg_("lpaMsg", "Escreva o motivo com pelo menos 10 letras. Nada foi alterado."); return; }
+      bt.disabled = true;
+      LicPa_chamar_("aprovar", { id: id, motivo: mot, fonte: fonte }, function (r) {
+        if (r.transicao) { ov.fechar(); Lic_toast_(r.texto); if (depois) depois(); return; }
+        LicPa_msg_("lpaMsg", r.texto, "aviso"); bt.textContent = "Aprovação registrada"; if (depois) setTimeout(depois, 0);
+        var c = ov.querySelector("[data-lic-cancelar]"); if (c) c.textContent = "Fechar";
+      }, function (m) { bt.disabled = false; LicPa_msg_("lpaMsg", m); });
+    };
+  }
+
+  // ================= tela "Meus pareceres" =================
+  function LicPa_renderMeus_() {
+    var c = Lic_corpo_(); if (!c) return;
+    if (LIC.abrirPedido) { var pid = LIC.abrirPedido; LIC.abrirPedido = ""; LicPa_abrirPedido_(pid); return; }
+    c.innerHTML = Lic_carregando_(2);
+    LicPa_chamar_("meus", {}, function (r) { LICPA.meus = r; c.innerHTML = LicPa_htmlMeus_(r); LicPa_ligarMeus_(c); }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, LicPa_renderMeus_); });
+  }
+  function LicPa_cartaoPedido_(p, comPessoa) {
+    return '<div class="cm-card p3"><p class="cm-txt" style="margin:0"><b>' + Lic_esc_(p.orgao) + '</b> <span class="cm-meta lic-mono">' + Lic_esc_(p.codigo) + "</span></p>" +
+      '<p class="cm-meta" style="margin:2px 0">' + Lic_esc_(p.local) + " · parecer " + Lic_esc_(p.areaNome) + (comPessoa ? " · " + Lic_esc_(p.pessoa) : "") + "</p>" +
+      '<p class="cm-txt" style="margin:4px 0">' + Lic_esc_(p.objeto) + "</p>" +
+      '<p class="cm-meta" style="margin:2px 0">' + LicPa_selo_(p.atrasado ? "vermelho" : "laranja", "Prazo " + p.prazoTxt) + " Propostas até " + Lic_esc_(p.encerramentoTxt || "não informado") + " · pedido por " + Lic_esc_(p.por) + "</p>" +
+      '<div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-primary" data-lpa-abrir="' + Lic_esc_(p.id) + '">' + (comPessoa ? "Ver o pedido" : "Abrir e dar o parecer") + "</button></div></div>";
+  }
+  function LicPa_htmlMeus_(r) {
+    var h = '<div class="cm-caixa"><h3>Pedidos de parecer para você (' + (r.abertos || []).length + ")</h3>" +
+      ((r.abertos || []).length ? r.abertos.map(function (p) { return LicPa_cartaoPedido_(p, false); }).join("") : '<p class="cm-vazio">Nenhum pedido de parecer aberto para você. Quando a Diretoria pedir, ele aparece aqui, em Minhas atividades e no aviso por e-mail.</p>') + "</div>";
+    if (r.todosAbertos) h += '<div class="cm-caixa"><h3>Todos os pedidos em aberto (Diretoria) (' + r.todosAbertos.length + ")</h3>" + (r.todosAbertos.length ? r.todosAbertos.map(function (p) { return LicPa_cartaoPedido_(p, true); }).join("") : '<p class="cm-vazio">Nenhum pedido em aberto.</p>') + "</div>";
+    if ((r.fechados || []).length) h += '<div class="cm-caixa"><h3>Últimos pedidos encerrados</h3><p class="cm-ajuda-campo">Pedido respondido, cancelado ou com a decisão tomada: a oportunidade sai da sua tela.</p><ul class="lpa-lista">' +
+      r.fechados.map(function (x) { return "<li><b>" + Lic_esc_(x.codigo) + "</b> · parecer " + Lic_esc_(x.areaNome) + " · " + Lic_esc_(x.situacaoNome) + " · " + Lic_esc_(x.quando) + "</li>"; }).join("") + "</ul></div>";
+    return h;
+  }
+  function LicPa_ligarMeus_(c) { c.querySelectorAll("[data-lpa-abrir]").forEach(function (b) { b.onclick = function () { LicPa_abrirPedido_(b.getAttribute("data-lpa-abrir")); }; }); }
+  function LicPa_abrirPedido_(pedidoId) {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(3);
+    LicPa_chamar_("tela", { pedidoId: pedidoId }, function (t) { LICPA.tela = t; c.innerHTML = LicPa_htmlTela_(t); LicPa_ligarTela_(c, t); },
+      function (m) { c.innerHTML = Lic_faixa_(m + " Nada foi alterado.", "aviso") + '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpa-voltar>Voltar aos meus pareceres</button></div>'; var v = c.querySelector("[data-lpa-voltar]"); if (v) v.onclick = LicPa_renderMeus_; });
+  }
+  function LicPa_htmlTela_(t) {
+    var o = t.op || {}, p = t.pedido || {}, n = t.nota || {}, h = '<div class="lic-acoes-linha" style="margin-bottom:10px"><button type="button" class="btn-secondary" data-lpa-voltar><i class="fas fa-arrow-left" aria-hidden="true"></i>&nbsp;Voltar aos meus pareceres</button></div>';
+    h += '<div class="cm-caixa"><h3>Parecer ' + Lic_esc_(p.areaNome) + ": " + Lic_esc_(o.orgao) + ' <span class="cm-meta lic-mono">' + Lic_esc_(o.codigo) + "</span></h3>" +
+      '<p class="cm-txt">Foco: ' + Lic_esc_(p.foco) + "." + (p.pergunta ? " <b>Pergunta da Diretoria:</b> " + Lic_esc_(p.pergunta) : "") + "</p>" +
+      LicPa_dl_([["Prazo do parecer", LicPa_selo_(p.atrasado ? "vermelho" : "laranja", p.prazoTxt)], ["Pedido por", Lic_esc_(p.por + " em " + p.emBr)], ["Propostas até", Lic_esc_(o.encerramentoTxt || "não informado")], ["Situação", Lic_esc_(o.situacaoNome)]]) + "</div>";
+    h += '<div class="cm-caixa"><h3>Resumo</h3><p class="lic-objeto">' + Lic_esc_(o.objeto) + "</p>" + LicPa_dl_([["Órgão", Lic_esc_(o.orgao + (o.unidade ? " · " + o.unidade : ""))], ["Local", Lic_esc_((o.municipio ? o.municipio + "/" : "") + o.uf)],
+      ["Modalidade", Lic_esc_(o.modalidade)], ["Número de controle", '<span class="lic-mono">' + Lic_esc_(o.numeroControle) + "</span>"], ["Valor estimado", Lic_brlHtml_(o.valor)]]) + "</div>";
+    h += '<div class="cm-caixa"><h3>Nota da análise</h3>' + (n.nota === null || n.nota === undefined ? '<p class="cm-vazio">Sem nota de análise concluída.</p>' :
+      '<p class="cm-txt"><b>' + Lic_esc_(Lic_num_(n.nota)) + " de 100</b> · " + Lic_esc_(n.classeNome) + " (versão " + Lic_esc_(n.versao) + ")" + (n.travasAConfirmar ? " " + LicPa_selo_("vermelho", n.travasAConfirmar + " trava(s) a confirmar") : "") + (n.trava ? " " + LicPa_selo_("vermelho", "Trava: " + n.trava) : "") + "</p>" +
+      (n.resumo ? '<p class="cm-txt">' + Lic_esc_(n.resumo) + "</p>" : "") +
+      ((n.criterios || []).length ? Lic_tabelaHtml_(["Critério", "Pontos", "Como"], n.criterios.map(function (c) { return [Lic_esc_(c.nome), Lic_esc_(Lic_num_(c.pontos) + " de " + Lic_num_(c.peso)), Lic_esc_(c.como)]; })) : "")) +
+      '<p class="cm-ajuda-campo">A nota é da análise por IA com verificador; ela não decide.</p></div>';
+    var le = t.leitura;
+    h += '<div class="cm-caixa"><h3>Leitura do edital</h3>' + (!le ? '<p class="cm-vazio">Leitura do edital indisponível neste ambiente.</p>' : le.erro ? Lic_faixa_(le.erro, "aviso") : !(le.itens || []).length ? '<p class="cm-vazio">Sem leitura do edital concluída ainda.</p>' :
+      '<p class="cm-meta">Versão ' + Lic_esc_(le.versao) + " · " + Lic_esc_(le.total) + " item(ns)" + (le.total > le.itens.length ? " (mostrando " + le.itens.length + ")" : "") + '</p><ul class="lpa-lista">' + le.itens.map(function (x) { return "<li><b>" + Lic_esc_(x.tema) + ":</b> " + Lic_esc_(x.trecho) + (x.fonte ? ' <span class="cm-meta">(' + Lic_esc_(x.fonte) + ")</span>" : "") + "</li>"; }).join("") + "</ul>") + "</div>";
+    var pr = t.preco;
+    h += '<div class="cm-caixa"><h3>Preço</h3>' + (!pr ? '<p class="cm-vazio">Sem simulação de preço salva ainda.</p>' : LicPa_dl_([["Simulação", Lic_esc_("versão " + pr.versao)], ["Total da proposta", Lic_brlHtml_(pr.totalProposta)], ["Total pelo preço do edital", Lic_brlHtml_(pr.totalEdital)],
+      ["Piso da Diretoria", pr.acimaDoPiso ? LicPa_selo_("verde", "respeitado") : LicPa_selo_("vermelho", pr.abaixoPiso ? pr.abaixoPiso + " item(ns) abaixo" : "abaixo")]].concat(t.gestao && pr.totalPiso !== undefined ? [["Piso (gestão)", Lic_brlHtml_(pr.totalPiso)], ["Custo (gestão)", Lic_brlHtml_(pr.totalCusto)]] : [])) +
+      (t.gestao ? "" : '<p class="cm-ajuda-campo">Custo, piso e margem são da Diretoria: aqui aparece só se o preço respeita o piso.</p>')) + "</div>";
+    var hb = t.habilitacao;
+    h += '<div class="cm-caixa"><h3>Habilitação</h3>' + (!hb ? '<p class="cm-vazio">Cruzamento da habilitação indisponível neste ambiente.</p>' : hb.erro ? Lic_faixa_(hb.erro, "aviso") : !(hb.itens || []).length ? '<p class="cm-vazio">Nenhuma exigência de habilitação lida ainda.</p>' :
+      '<p class="cm-meta">' + Lic_esc_(hb.contagens.total + " exigência(s), " + hb.contagens.pendencias + " pendente(s)") + '</p><ul class="lpa-lista">' + hb.itens.map(function (x) { return "<li>" + LicPa_selo_(x.cor || "cinza", x.situacaoNome) + " " + Lic_esc_(x.texto) + "</li>"; }).join("") + "</ul>") + "</div>";
+    if (t.atual) h += '<div class="cm-caixa"><h3>Parecer que vale hoje desta área</h3><p class="cm-txt">' + LicPa_posicaoSelo_(t.atual) + " versão " + Lic_esc_(t.atual.versao) + " · " + Lic_esc_(t.atual.por) + " · " + Lic_esc_(t.atual.emBr) + "</p><p class=\"cm-txt\">" + Lic_esc_(t.atual.motivo) + "</p></div>";
+    if (t.podeRegistrar) {
+      h += '<div class="cm-caixa"><h3>Registrar o parecer</h3><fieldset style="border:0;padding:0;margin:0"><legend class="cm-meta">Posição</legend><div class="lpa-posicoes">' +
+        [["FAVORAVEL", "Favorável"], ["RESSALVA", "Com ressalva"], ["CONTRARIO", "Contrário"]].map(function (x) { return '<label><input type="radio" name="lpaPos" value="' + x[0] + '">' + Lic_esc_(x[1]) + "</label>"; }).join("") + "</div></fieldset>" +
+        '<div class="lpa-campo"><label for="lpaMotivo">Motivo (obrigatório)</label><textarea id="lpaMotivo" rows="5" maxlength="3000" placeholder="O que você conferiu e por que chegou a essa posição"></textarea><p class="cm-ajuda-campo">Pelo menos ' + Lic_esc_(t.motivoMin) + " letras. O parecer não muda depois de registrado.</p></div>" +
+        (t.atual ? '<div class="lpa-campo"><label for="lpaMotNova">O que mudou desde a versão ' + Lic_esc_(t.atual.versao) + ' (obrigatório)</label><textarea id="lpaMotNova" rows="2" maxlength="1000"></textarea></div>' : "") +
+        '<div id="lpaMsg" aria-live="assertive"></div><div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-primary" data-lpa-registrar>Registrar o parecer</button></div></div>';
+    } else h += Lic_faixa_("Você está vendo o pedido de " + p.pessoa + ": só essa pessoa registra o parecer.", "aviso");
+    return h;
+  }
+  function LicPa_ligarTela_(c, t) {
+    var v = c.querySelector("[data-lpa-voltar]"); if (v) v.onclick = LicPa_renderMeus_;
+    var b = c.querySelector("[data-lpa-registrar]"); if (!b) return;
+    b.onclick = function () {
+      var marc = c.querySelector('input[name="lpaPos"]:checked'), mot = LicPa_valor_("lpaMotivo");
+      if (!marc) { LicPa_msg_("lpaMsg", "Escolha a posição: favorável, com ressalva ou contrário. Nada foi gravado."); return; }
+      if (mot.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, "").length < (t.motivoMin || 20)) { LicPa_msg_("lpaMsg", "Escreva o motivo com pelo menos " + (t.motivoMin || 20) + " letras. Nada foi gravado."); return; }
+      b.disabled = true;
+      LicPa_chamar_("registrar", { pedidoId: t.pedido.id, posicao: marc.value, motivo: mot, motivoNovaVersao: LicPa_valor_("lpaMotNova") }, function (r) { Lic_toast_(r.texto); LicPa_renderMeus_(); },
+        function (m) { b.disabled = false; LicPa_msg_("lpaMsg", m); });
+    };
+  }
+
+  // ================= Portais e configurações › Alçadas e pareceres =================
+  function LicPa_renderCfg_(corpo) {
+    corpo.innerHTML = Lic_carregando_(2); LICPA.rascunho = null;
+    LicPa_chamar_("cfg", {}, function (r) { LICPA.cfg = r; corpo.innerHTML = LicPa_htmlCfg_(r); LicPa_ligarCfg_(corpo, r); }, function (m) { corpo.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(corpo, function () { LicPa_renderCfg_(corpo); }); });
+  }
+  function LicPa_linhaFaixa_(f, i, total, areas) {
+    var ultima = i === total - 1;
+    return '<div class="lpa-faixa" data-lpa-faixa="' + i + '"><div><label for="lpaAte' + i + '">' + (ultima ? "Última faixa" : "Teto da faixa " + (i + 1) + " (R$)") + "</label>" +
+      (ultima ? '<input id="lpaAte' + i + '" value="sem teto (acima da anterior)" disabled>' : '<input id="lpaAte' + i + '" inputmode="decimal" value="' + Lic_esc_(f.ate === null || f.ate === undefined ? "" : String(f.ate).replace(".", ",")) + '" placeholder="100.000,00">') + "</div>" +
+      '<div><label for="lpaAp' + i + '">Aprovações da Diretoria</label><select id="lpaAp' + i + '">' + [1, 2, 3].map(function (n) { return '<option value="' + n + '"' + (Number(f.aprovacoes) === n ? " selected" : "") + ">" + n + "</option>"; }).join("") + "</select></div>" +
+      '<div style="grid-column:1/-1"><span class="cm-meta">Pareceres obrigatórios antes de participar</span><div class="lpa-checks">' + areas.map(function (a) { return '<label><input type="checkbox" data-lpa-par="' + i + '" value="' + Lic_esc_(a.codigo) + '"' + ((f.pareceres || []).indexOf(a.codigo) >= 0 ? " checked" : "") + ">" + Lic_esc_(a.nome) + "</label>"; }).join("") + "</div></div>" +
+      (total > 1 ? '<div><button type="button" class="btn-secondary" data-lpa-tirar="' + i + '">Tirar esta faixa</button></div>' : "") + "</div>";
+  }
+  function LicPa_htmlCfg_(r) {
+    var c = r.cfg || {}, faixas = (LICPA.rascunho || c.faixas || []);
+    var h = '<div class="cm-caixa"><h3>Alçadas de decisão</h3>' + (c.padrao ? Lic_faixa_("Em uso o padrão: um diretor basta em qualquer valor e nenhum parecer é obrigatório (o comportamento de antes). O dono ainda não definiu alçadas nem responsáveis por área.", "aviso") :
+      '<p class="cm-meta">Versão ' + Lic_esc_(c.versao) + " · " + Lic_esc_(c.atualizadoPor) + " · " + Lic_esc_(Lic_dataHora_(c.atualizadoEm)) + " · motivo: " + Lic_esc_(c.motivo) + "</p>") +
+      '<div class="lpa-campo"><label for="lpaBase">Valor que decide a faixa</label><select id="lpaBase">' + Object.keys(r.bases || {}).map(function (k) { return '<option value="' + Lic_esc_(k) + '"' + (c.base === k ? " selected" : "") + ">" + Lic_esc_(r.bases[k]) + "</option>"; }).join("") + '</select><p class="cm-ajuda-campo">Sem valor nenhum (estimado sigiloso e sem simulação), vale a faixa mais alta.</p></div>' +
+      '<div id="lpaFaixas">' + faixas.map(function (f, i) { return LicPa_linhaFaixa_(f, i, faixas.length, r.areas || []); }).join("") + "</div>" +
+      '<div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-secondary" data-lpa-mais>Acrescentar faixa</button></div>' +
+      '<p class="cm-ajuda-campo">Pessoas ativas da Diretoria e do Administrador: ' + Lic_esc_(r.diretoria) + ". Uma faixa não pode pedir mais aprovações do que isso. Descartar continua com um diretor.</p></div>";
+    h += '<div class="cm-caixa"><h3>Quem dá o parecer de cada área</h3><p class="cm-ajuda-campo">Sem ninguém marcado, vale o cadastro de usuários (campo Área): Técnica = Técnica/Campo, Metrologia e Qualidade; Financeira = Financeiro; Comercial = Comercial; Licitações = Diretoria e Administrador.</p>' +
+      (r.areas || []).map(function (a) {
+        return '<details class="lpa-det"><summary>' + Lic_esc_(a.nome) + " (" + Lic_esc_(a.lista.length ? a.lista.length + " na lista" : "pelo cadastro: " + a.candidatos.length) + ')</summary><div class="lpa-checks">' + (r.pessoas || []).map(function (u) {
+          return '<label><input type="checkbox" data-lpa-pessoa="' + Lic_esc_(a.codigo) + '" value="' + Lic_esc_(u.id) + '"' + (a.lista.indexOf(u.id) >= 0 ? " checked" : "") + ">" + Lic_esc_(u.nome) + "</label>";
+        }).join("") + "</div></details>";
+      }).join("") + "</div>";
+    h += '<div class="cm-caixa"><div class="lpa-campo"><label for="lpaMotCfg">Motivo da mudança (obrigatório)</label><textarea id="lpaMotCfg" rows="2" maxlength="500" placeholder="Ex.: decisão do dono: acima de R$ 500 mil, duas aprovações e o parecer Financeiro"></textarea><p class="cm-ajuda-campo">Pelo menos 10 letras. Cada gravação é uma versão nova, no histórico.</p></div>' +
+      '<div id="lpaMsgCfg" aria-live="assertive"></div><div class="lic-acoes-linha lpa-acoes"><button type="button" class="btn-primary" data-lpa-salvar>Salvar versão nova</button></div></div>';
+    return h;
+  }
+  function LicPa_lerFaixas_(corpo, n) {
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var par = []; corpo.querySelectorAll('[data-lpa-par="' + i + '"]').forEach(function (x) { if (x.checked) par.push(x.value); });
+      out.push({ ate: i === n - 1 ? null : LicPa_valor_("lpaAte" + i), aprovacoes: Number(LicPa_valor_("lpaAp" + i)) || 1, pareceres: par });
+    }
+    return out;
+  }
+  function LicPa_ligarCfg_(corpo, r) {
+    var n = (LICPA.rascunho || r.cfg.faixas || []).length;
+    var redesenhar = function (fx) { LICPA.rascunho = fx; corpo.innerHTML = LicPa_htmlCfg_(r); LicPa_ligarCfg_(corpo, r); };
+    var mais = corpo.querySelector("[data-lpa-mais]");
+    if (mais) mais.onclick = function () { var fx = LicPa_lerFaixas_(corpo, n); if (fx.length >= 6) { LicPa_msg_("lpaMsgCfg", "No máximo 6 faixas."); return; } fx.splice(fx.length - 1, 0, { ate: "", aprovacoes: 1, pareceres: [] }); redesenhar(fx); };
+    corpo.querySelectorAll("[data-lpa-tirar]").forEach(function (b) { b.onclick = function () { var fx = LicPa_lerFaixas_(corpo, n); fx.splice(Number(b.getAttribute("data-lpa-tirar")), 1); fx[fx.length - 1].ate = null; redesenhar(fx); }; });
+    var sv = corpo.querySelector("[data-lpa-salvar]");
+    if (sv) sv.onclick = function () {
+      var mot = LicPa_valor_("lpaMotCfg");
+      if (mot.trim().length < 10) { LicPa_msg_("lpaMsgCfg", "Escreva o motivo da mudança com pelo menos 10 letras. Nada foi alterado."); return; }
+      var areas = {}; corpo.querySelectorAll("[data-lpa-pessoa]").forEach(function (x) { var k = x.getAttribute("data-lpa-pessoa"); areas[k] = areas[k] || { pessoas: [] }; if (x.checked) areas[k].pessoas.push(x.value); });
+      sv.disabled = true;
+      LicPa_chamar_("cfgSalvar", { base: LicPa_valor_("lpaBase"), faixas: LicPa_lerFaixas_(corpo, n), areas: areas, motivo: mot }, function (x) { LICPA.rascunho = null; Lic_toast_(x.texto); LicPa_renderCfg_(corpo); },
+        function (m) { sv.disabled = false; LicPa_msg_("lpaMsgCfg", m); });
+    };
+  }
+</script>

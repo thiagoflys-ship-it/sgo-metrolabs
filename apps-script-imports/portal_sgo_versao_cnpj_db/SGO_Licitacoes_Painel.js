@@ -29,7 +29,7 @@
 var LIC_KANBAN_COLUNAS = [
   { codigo: 'RADAR', nome: 'Radar', dica: 'Candidatas e travadas da triagem por regras, ainda sem decisão da Diretoria.' },
   { codigo: 'ANALISE', nome: 'Em análise', dica: 'Enviadas para análise: arquivos do edital e nota da IA na ficha.' },
-  { codigo: 'DECISAO', nome: 'Decisão', dica: 'Participar ou descartar. Aqui ficam as descartadas pela Diretoria, com o motivo; "Participar" chega com a etapa de preços e proposta.' },
+  { codigo: 'DECISAO', nome: 'Decisão', dica: 'Participar ou descartar. Aqui ficam as descartadas pela Diretoria, com o motivo, e as com a participação aprovada pela alçada (aba Pareceres da ficha).' },
   { codigo: 'PROPOSTA', nome: 'Proposta', futura: 'Chega na etapa de preços e proposta (tabela de preços de licitação, simulador e proposta em A4 aprovada pela Diretoria).' },
   { codigo: 'DISPUTA', nome: 'Disputa', dica: 'Disputa aberta na Central de disputas (aba Disputa da ficha): lances digitados pela Diretoria, nunca abaixo do piso autorizado. O SGO+ não envia lance.' },
   { codigo: 'RESULTADO', nome: 'Resultado', dica: 'Resultado de cada item registrado com a fonte (ganho, perdido, fracassado, deserto, desclassificado, habilitação pendente, recurso).' },
@@ -73,7 +73,8 @@ function Lic_kanbanRegra_(de, para) {
   if (de === 'DESCARTADA' && para === 'RADAR') return { acao: 'reabrir', nome: 'Reabrir (volta para o radar)' };
   if (de === 'ANALISE' && para === 'RADAR') return { porque: 'Não há volta direta de Em análise para o Radar. Se a oportunidade não serve, descarte com o motivo (vai para Decisão); se mudar de ideia, reabra depois.' };
   if (de === 'DESCARTADA' && para === 'ANALISE') return { porque: 'Reabra primeiro (volta para o Radar, com o motivo) e depois envie para análise.' };
-  if (de === 'DECISAO') return { porque: '"Participar" e as etapas seguintes chegam com a etapa de preços e proposta.' };
+  // 03/11/2026 (alçadas, SGO_Licitacoes_Pareceres.js): DECISAO = participação aprovada; a disputa abre na aba Disputa (tratado acima)
+  if (de === 'DECISAO') return { porque: 'A participação foi aprovada pela alçada: monte e emita a proposta na aba Proposta e abra a disputa na aba Disputa. A etapa Proposta do Kanban chega depois; para desistir, descarte na ficha (Ações), com o motivo.', aba: 'proposta' };
   return { porque: 'Essa passagem ainda não existe no SGO+.' };
 }
 /** Todas as combinações (situação × coluna), para a tela desenhar o "Mover para" sem perguntar ao servidor a cada cartão. */
@@ -82,7 +83,8 @@ function Lic_kanbanRegras_() {
   ['RADAR', 'ANALISE', 'DECISAO', 'DESCARTADA', 'PROPOSTA', 'DISPUTA', 'RESULTADO', 'CONTRATO'].forEach(function (de) {
     LIC_KANBAN_COLUNAS.forEach(function (c) { m[de + '>' + c.codigo] = Lic_kanbanRegra_(de, c.codigo); });
   });
-  m.participar = { porque: '"Participar" chega na etapa de preços e proposta: exige a tabela de preços de licitação e o preço mínimo aprovado pela Diretoria. Por enquanto a decisão registrável é descartar, com o motivo.' };
+  // 03/11/2026 (alçadas, SGO_Licitacoes_Pareceres.js): "Participar" existe; a tela pede o motivo e o servidor confere a alçada (op aprovar)
+  m.participar = { acao: 'participar', nome: 'Participar (pela alçada)', porque: '"Participar" exige a simulação salva na aba Preço (o preço mínimo aprovado pela Diretoria é o piso dela) e confere a alçada: as aprovações da Diretoria e os pareceres obrigatórios da faixa de valor (Portais e configurações › Alçadas e pareceres). Faltando algo, a passagem é recusada com o que falta.' };
   return m;
 }
 

@@ -10,8 +10,8 @@
  ****************************************************/
 function SGO_ajudaTelas_Licitacoes_() {
   var quem = [
-    { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), ver a agenda e confirmar datas, receber os alertas de licitação e dar ciência, mudar a etapa no Kanban (com motivo), ver o Gantt e o Painel, mudar as regras dos alertas (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
-    { perfil: "GESTOR,COMERCIAL,FINANCEIRO,TECNICO,METROLOGIA,RH,CLIENTE", pode: "Não usa este módulo: o menu não aparece e o servidor recusa as chamadas (decisão do dono, 01/11/2026)." }
+    { perfil: "DIRETORIA,ADMIN", pode: "Tudo: ver o radar, enviar para análise, descartar com motivo, reabrir, buscar e abrir os arquivos do edital, pedir e refazer a análise por IA (com motivo), ver a agenda e confirmar datas, receber os alertas de licitação e dar ciência, mudar a etapa no Kanban (com motivo), pedir parecer às áreas e aprovar a participação pela alçada, ver o Gantt e o Painel, mudar as regras dos alertas (com motivo), parametrizar os portais, testar a conexão e ligar o coletor." },
+    { perfil: "GESTOR,COMERCIAL,FINANCEIRO,TECNICO,METROLOGIA,RH,CLIENTE", pode: "Não usa este módulo: o menu não aparece e o servidor recusa as chamadas (decisão do dono, 01/11/2026). A exceção é quem recebe um pedido de parecer da Diretoria: vê só a oportunidade do pedido, sem custo, em Meus pareceres, enquanto ele está aberto." }
   ];
   return {
     "licitacoes": {
@@ -139,6 +139,13 @@ function SGO_ajudaTelas_Licitacoes_() {
           "A Diretoria confere e toca em \"Marcar atende\" (escolhendo o documento, se houver) ou \"Marcar não atende\", sempre com o motivo. Cada decisão fica no histórico da exigência; marcar de novo cria outra versão.",
           "Falta, vence antes da sessão e não atende viram pendência no Hoje e no Painel. \"Gerar relação para conferência (A4)\" abre a lista dos documentos desta licitação com a validade e o SHA-256 de cada arquivo; cada relação gerada é uma versão que não muda. Nada é enviado a portal."
         ] },
+        { titulo: "Pareceres e decisão pela alçada", itens: [
+          "A aba Pareceres pede o parecer às áreas, na ordem da missão: Licitações (modalidade, prazos, exigências, habilitação e riscos), Técnica (capacidade), Financeira (custos, preço mínimo e margem) e Comercial. Escolha a pessoa (do cadastro de usuários, campo Área, ou da lista das alçadas), o prazo (padrão: 1 dia útil antes do fim das propostas, às 18:00; nunca no passado) e, se quiser, a pergunta.",
+          "O pedido lança a atividade em Minhas atividades para a pessoa e sai pelo aviso de Licitações só no expediente. Um pedido aberto por área; se a atividade não foi lançada, \"Lançar a atividade de novo\" acha a que já existe pela marca do pedido e não repete. \"Cancelar o pedido\" pede o motivo e cancela a atividade.",
+          "A pessoa vê só esta oportunidade, sem custo, piso nem margem, enquanto o pedido está aberto, e registra favorável, com ressalva ou contrário com o motivo. O parecer não muda depois; uma versão nova (pedido novo) substitui a anterior, que fica no histórico.",
+          "O quadro mostra o parecer que vale de cada área e as divergências calculadas pelo sistema (sem IA): parecer contrário, pareceres opostos, Técnico favorável com a capacidade técnica baixa na análise, Financeiro contrário com a simulação acima do piso, Licitações favorável com trava ou habilitação pendente, Comercial favorável com nota baixa e parecer dado sobre versão antiga.",
+          "\"Aprovar a participação\" pede o motivo e confere a alçada: a simulação salva (o preço mínimo), os pareceres obrigatórios e as aprovações da Diretoria da faixa de valor. Faltando aprovação, a sua fica registrada e a passagem para Decisão espera a próxima pessoa. Completa, a licitação vai para Decisão com os nomes no histórico. Descartar (rejeitar) continua com um diretor, também depois de aprovada."
+        ] },
         { titulo: "Proposta (A4)", itens: [
           "A aba Proposta monta o rascunho da proposta técnica e comercial: itens do edital, serviços do catálogo com a descrição técnica, os pontos ou condições, as normas citadas no catálogo e os entregáveis, os prazos e o pagamento com a frase do edital (leitura) e a planilha de preços, que é sempre a simulação salva da aba Preço, com a versão e o hash. Sem simulação salva não há proposta comercial.",
           "Com a chave da IA, a apresentação e a metodologia são redigidas pela IA e cada frase é conferida nas fontes (número, trecho literal, negação, sem RBC, sem fabricante, sem superlativo). Frase que não passa é retirada e aparece na lista com o motivo. A frase que passa só entra no documento quando a Diretoria marca \"Aceitar\" nela; sem frase aceita (ou sem a IA), vale o texto do catálogo e do edital.",
@@ -221,6 +228,11 @@ function SGO_ajudaTelas_Licitacoes_() {
           "O motivo é obrigatório; cada salvamento vira versão nova, e só o que mudou é gravado (o resto fica como estava). Os alertas programados passam a seguir a regra nova; os que saem dela são cancelados com o motivo.",
           "A faixa do alto diz se o modelo sgo_licitacao_prazo do WhatsApp está aprovado na Meta e quando chegou o último retorno de status.",
           "Nova oportunidade de alta aderência: liga ou desliga o alerta e define a nota mínima (de 50 a 100, padrão 70). Com versão, motivo e histórico, como o resto das regras. Subir a nota mínima cancela, com o motivo, os alertas de alta aderência ainda não enviados que ficaram abaixo dela."
+        ] },
+        { titulo: "Alçadas e pareceres", itens: [
+          "Padrão (o dono ainda não definiu): um diretor basta em qualquer valor e nenhum parecer é obrigatório, como antes.",
+          "Faixas de valor: o teto de cada faixa (a última não tem teto), quantas aprovações distintas da Diretoria são necessárias (de 1 até o número de pessoas ativas da Diretoria e do Administrador, no máximo 3) e quais pareceres são obrigatórios antes de participar. O valor que decide a faixa é o estimado do edital, o total da simulação ou o maior dos dois; sem valor nenhum, vale a faixa mais alta.",
+          "Quem dá o parecer de cada área: sem ninguém marcado, vale o cadastro de usuários (campo Área). O motivo é obrigatório; cada gravação é uma versão nova no histórico."
         ] },
         { titulo: "Regras do radar", itens: [
           "\"Coletor ligado\" liga ou desliga a coleta automática. Porte da matriz: EPP (decisão do dono).",
@@ -353,7 +365,7 @@ function SGO_ajudaTelas_Licitacoes_() {
       paraQueServe: "Mostra cada licitação numa etapa, do Radar ao Contrato: Radar, Em análise, Decisão, Proposta, Disputa, Resultado e Contrato. Mudar de etapa pede o motivo e fica no histórico com quem e quando.",
       antesDeComecar: [
         "Só as passagens que já existem no SGO+ estão liberadas: Radar para Em análise (enviar para análise), Radar ou Em análise para Decisão (descartar) e Decisão para Radar (reabrir uma descartada).",
-        "Proposta aparece vazia e diz em que etapa do módulo chega; Disputa, Resultado e Contrato explicam onde a passagem acontece (aba Disputa e aba Contrato da ficha). \"Participar\" (na coluna Decisão) chega com a etapa de preços e proposta, porque exige o preço mínimo aprovado pela Diretoria.",
+        "Proposta aparece vazia e diz em que etapa do módulo chega; Disputa, Resultado e Contrato explicam onde a passagem acontece (aba Disputa e aba Contrato da ficha). \"Participar\" (em Mover, junto de Decisão) pede o motivo e confere a alçada: exige a simulação salva (o preço mínimo aprovado pela Diretoria), os pareceres obrigatórios e as aprovações da faixa de valor; faltando algo, diz o que falta.",
         "As descartadas só pela regra do radar não entram no quadro: ficam em Oportunidades › Descartadas (o quadro diz quantas são)."
       ],
       passos: [
@@ -383,7 +395,7 @@ function SGO_ajudaTelas_Licitacoes_() {
       ],
       quemPode: quem,
       perguntas: [
-        { p: "Por que a coluna Decisão tem descartadas?", r: "Descartar é a decisão da Diretoria que já existe no SGO+ (com o motivo). \"Participar\" entra na mesma coluna quando a etapa de preços e proposta chegar." },
+        { p: "Por que a coluna Decisão tem descartadas?", r: "Decisão guarda as duas decisões da Diretoria: as descartadas (com o motivo) e as com a participação aprovada pela alçada (aba Pareceres da ficha ou \"Participar\" em Mover)." },
         { p: "Mover no Kanban é diferente de usar os botões da lista?", r: "Não. É a mesma ação (enviar para análise, descartar, reabrir), com o mesmo histórico. A diferença é que no Kanban o motivo é obrigatório em todas." }
       ]
     },

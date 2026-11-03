@@ -322,6 +322,8 @@ function Lic_jaAvisado_(e, min, uid, porChave, evPorId) {
 function Lic_alertaSemValer_(a, ops, evPorId, cfg, agoraMs) {
   // avisos dos documentos de habilitação (SGO_Licitacoes_Habilitacao.js): a regra é do documento (versão, faixa, sessão)
   if (Lic_s_(a.TIPO) === 'DOCUMENTO') return typeof LicH_alertaSemValer_ === 'function' ? LicH_alertaSemValer_(a, ops, cfg, agoraMs) : 'O cadastro de habilitação não está disponível neste ambiente.';
+  // 03/11/2026: avisos dos pareceres por área (SGO_Licitacoes_Pareceres.js): a regra é do pedido (aberto, antes da decisão) e do parecer
+  if (Lic_s_(a.TIPO) === 'PARECER_PEDIDO' || Lic_s_(a.TIPO) === 'PARECER_RECEBIDO') return typeof LicPar_alertaSemValer_ === 'function' ? LicPar_alertaSemValer_(a, ops) : 'Os pareceres não estão disponíveis neste ambiente.';
   var l = ops[Lic_s_(a.OPORTUNIDADE_ID)], m = Lic_opSemAlerta_(l, cfg);
   if (m) return 'Sem alerta: oportunidade ' + m + '.';
   if (Lic_s_(a.TIPO) === 'PRAZO') {
@@ -783,6 +785,7 @@ function Lic_alertaItem_(a, l, e, agoraMs) {
 function Lic_alertaConteudo_(a, l, e, quando) {
   if (Lic_s_(a.TIPO) === 'DOCUMENTO' && typeof LicH_alertaConteudo_ === 'function') return LicH_alertaConteudo_(a, l, quando);
   if (Lic_s_(a.TIPO) === 'ALTA_ADERENCIA') return Lic_altaConteudo_(a, l, e, quando);
+  if ((Lic_s_(a.TIPO) === 'PARECER_PEDIDO' || Lic_s_(a.TIPO) === 'PARECER_RECEBIDO') && typeof LicPar_alertaConteudo_ === 'function') return LicPar_alertaConteudo_(a, l, quando);
   var agoraMs = (quando instanceof Date ? quando : new Date()).getTime(), cb = Lic_alertaCabecalho_(a, l), it = Lic_alertaItem_(a, l, e, agoraMs);
   var orgao = cb.orgao, local = cb.local, mud = it.mud, prazo = it.prazo, interno = it.interno;
   var titulo = (it.esc ? 'Sem ciência · ' : it.reenvio ? 'Lembrete · ' : '') + 'Licitação ' + Lic_s_(a.CODIGO) + ': ' + prazo + (mud ? '' : ' (' + Lic_tempoRestante_(it.alvoMs - agoraMs) + ')') + ' · ' + Lic_texto_(orgao, 60);
@@ -975,7 +978,8 @@ function Lic_alertaEnviarGrupo_(linhas, quando, cfg, ops, evs) {
   return { chegou: chegou, email: em, whatsapp: wa };
 }
 /** Chave do envio agrupado: mesma licitação e mesma pessoa. Aviso de documento de habilitação: um por mensagem (a própria linha). */
-function Lic_chaveEnvio_(a) { return Lic_s_(a.TIPO) === 'DOCUMENTO' || !Lic_s_(a.OPORTUNIDADE_ID) ? 'D|' + Lic_s_(a.ID) : 'G|' + Lic_s_(a.OPORTUNIDADE_ID) + '|' + Lic_s_(a.USUARIO_ID); }
+// 03/11/2026: os avisos dos pareceres também saem um por mensagem (não entram no envio agrupado dos prazos)
+function Lic_chaveEnvio_(a) { return Lic_s_(a.TIPO) === 'DOCUMENTO' || Lic_s_(a.TIPO) === 'PARECER_PEDIDO' || Lic_s_(a.TIPO) === 'PARECER_RECEBIDO' || !Lic_s_(a.OPORTUNIDADE_ID) ? 'D|' + Lic_s_(a.ID) : 'G|' + Lic_s_(a.OPORTUNIDADE_ID) + '|' + Lic_s_(a.USUARIO_ID); }
 function Lic_envioId_() { return 'LG' + (Utilities.getUuid() + Utilities.getUuid()).replace(/[^0-9a-f]/gi, '').toLowerCase().slice(0, 10); }
 
 /**
@@ -1023,11 +1027,14 @@ function Lic_alertasEnviar_(quando) {
     // 1ª passada: o que não vale mais é cancelado; o ENVIANDO abandonado que já tinha saído é só fechado
     prontas.forEach(function (a) {
       var mot = '', uid = Lic_s_(a.USUARIO_ID);
-      if (!integ[uid]) mot = 'A pessoa não recebe mais alertas de licitação (saiu da Diretoria de Licitações ou foi desligada nas regras).';
+      // 03/11/2026: o aviso de parecer vai para a pessoa do pedido (de qualquer área) ou para quem pediu; a regra dele confere quem está ativo
+      var ehParecer = Lic_s_(a.TIPO) === 'PARECER_PEDIDO' || Lic_s_(a.TIPO) === 'PARECER_RECEBIDO';
+      if (!integ[uid] && !ehParecer) mot = 'A pessoa não recebe mais alertas de licitação (saiu da Diretoria de Licitações ou foi desligada nas regras).';
       else mot = Lic_alertaSemValer_(a, ops, evs, cfg, agoraMs);
       if (mot) { SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'CANCELADO', CANCELADO_EM: agora, CANCELADO_MOTIVO: Lic_texto_(mot, 500), ESCALONAR_EM: '', ATUALIZADO_EM: agora }); res.pulados++; return; }
       // alta aderência importante fora do expediente (08:00 às 18:00, dia útil): fica guardada para a primeira rodada do expediente
-      if (Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' && Lic_up_(a.NIVEL) !== 'CRITICO' && Lic_up_(a.SITUACAO) === 'PROGRAMADO' && !Lic_altaNoExpediente_(agoraMs)) { SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { LIBERAR_EM: Lic_altaLiberarEm_(agoraMs), ATUALIZADO_EM: agora }); return; }
+      // 03/11/2026: os avisos dos pareceres também (WhatsApp para a equipe só no expediente)
+      if (((Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' && Lic_up_(a.NIVEL) !== 'CRITICO') || ehParecer) && Lic_up_(a.SITUACAO) === 'PROGRAMADO' && !Lic_altaNoExpediente_(agoraMs)) { SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { LIBERAR_EM: Lic_altaLiberarEm_(agoraMs), ATUALIZADO_EM: agora }); return; }
       if (ehTitular(a) && maisRecente[Lic_s_(a.EVENTO_ID) + '|' + uid] !== a) {
         SGO_DATA.update(LIC_ABAS.ALERTAS, a.ID, { SITUACAO: 'PULADO', CANCELADO_EM: agora, CANCELADO_MOTIVO: 'Venceu junto com um aviso mais recente do mesmo prazo: saiu só o mais recente.', ATUALIZADO_EM: agora }); res.pulados++; return;
       }
@@ -1471,7 +1478,7 @@ function Lic_alertaParaTela_(a) {
   return {
     id: Lic_s_(a.ID), avisoId: Lic_s_(a.AVISO_ID), opId: Lic_s_(a.OPORTUNIDADE_ID), codigo: Lic_s_(a.CODIGO), eventoId: Lic_s_(a.EVENTO_ID), eventoTipo: Lic_s_(a.EVENTO_TIPO), tipo: Lic_s_(a.TIPO), papel: Lic_s_(a.PAPEL),
     antecedencia: Lic_s_(a.ANTECEDENCIA), nivel: Lic_up_(a.NIVEL), nivelNome: LIC_NIVEIS[Lic_up_(a.NIVEL)] || '', pessoa: Lic_s_(a.USUARIO_NOME), pessoaId: Lic_s_(a.USUARIO_ID), titulo: Lic_s_(a.TITULO), texto: Lic_s_(a.TIPO) === 'MUDANCA' || Lic_s_(a.TIPO) === 'DOCUMENTO' ? Lic_s_(a.TEXTO) : '',
-    abrirAba: Lic_s_(a.TIPO) === 'DOCUMENTO' ? 'habilitacao' : Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' ? 'analise' : 'prazos',
+    abrirAba: Lic_s_(a.TIPO) === 'DOCUMENTO' ? 'habilitacao' : Lic_s_(a.TIPO) === 'ALTA_ADERENCIA' ? 'analise' : /^PARECER_/.test(Lic_s_(a.TIPO)) ? 'pareceres' : 'prazos',
     situacao: s, situacaoNome: LIC_ALERTA_SITUACOES[s] || s, liberarEm: Lic_s_(a.LIBERAR_EM), alvoIso: Lic_s_(a.ALVO_ISO), email: em, emailMotivo: Lic_s_(a.EMAIL_MOTIVO), whatsapp: wa,
     whatsappNome: wa ? LIC_WA_ROTULOS[wa] || wa : '', whatsappMotivo: Lic_s_(a.WA_MOTIVO), alternativo: Lic_s_(a.CANAL_ALTERNATIVO), cienteEm: Lic_s_(a.CIENTE_EM), cientePor: Lic_s_(a.CIENTE_POR_NOME),
     cienteCanal: LIC_CANAIS_CIENCIA[Lic_s_(a.CIENTE_CANAL).replace(/_OUTRO$/, '')] || Lic_s_(a.CIENTE_CANAL), cienteOutro: /_OUTRO$/.test(Lic_s_(a.CIENTE_CANAL)), escalonarEm: Lic_s_(a.ESCALONAR_EM),
@@ -1532,6 +1539,8 @@ function Lic_alertasCentral_(eu, d) {
 }
 /** Link ?aviso=<código> de um alerta de licitação (depois do login): abre a ficha na aba Prazos e marca "em atendimento". */
 function Lic_avisoAbrir_(s, avisoId) {
+  // 03/11/2026: aviso de pedido de parecer abre "Meus pareceres" para a pessoa do pedido, que não é da Diretoria (SGO_Licitacoes_Pareceres.js)
+  if (typeof LicPar_avisoAbrir_ === 'function') { var rp = LicPar_avisoAbrir_(s, avisoId); if (rp) return rp; }
   var eu = { id: Lic_s_(s.userId), login: Lic_s_(s.usuario), perfil: Lic_up_(s.perfil) };
   if (!Lic_nivelDe_(eu).gestao) return { ok: false, tela: null, outraPessoa: true, message: 'Este link é de um alerta da Diretoria de Licitações. ' + LIC_MSG_SEM_ACESSO.charAt(0).toUpperCase() + LIC_MSG_SEM_ACESSO.slice(1) + '.' };
   var a = Lic_ler_(LIC_ABAS.ALERTAS).filter(function (x) { return Lic_s_(x.AVISO_ID) === Lic_s_(avisoId); })[0];

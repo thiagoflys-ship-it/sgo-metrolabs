@@ -257,6 +257,8 @@
           <button type="button" class="menu-btn" data-mod="licitacoes_disputas" data-busca="disputas disputa central sessao lances lance piso pregao resultado ganho perdido recurso contrarrazoes homologacao adjudicacao" onclick="abrir('licitacoes_disputas')"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Central de disputas</button>
           <!-- 02/11/2026: contratos conquistados e integração com os módulos (JS_Licitacoes_Contratos.html / SGO_Licitacoes_Contratos.js) -->
           <button type="button" class="menu-btn" data-mod="licitacoes_contratos" data-busca="contratos contrato ata vigencia aditivo apostilamento reajuste garantia renovacao entregas obrigacoes faturamento ganho cliente comercial execucao" onclick="abrir('licitacoes_contratos')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Contratos</button>
+          <!-- 03/11/2026: pareceres por área e alçadas de decisão (JS_Licitacoes_Pareceres.html / SGO_Licitacoes_Pareceres.js). Quem não é da Diretoria e tem pedido de parecer aberto vê o grupo só com este botão (Licitacoes_mostrarMenu_) -->
+          <button type="button" class="menu-btn" data-mod="licitacoes_pareceres" data-busca="pareceres parecer area tecnica financeira comercial licitacoes alcada aprovacao diretoria divergencias pedido" onclick="abrir('licitacoes_pareceres')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Meus pareceres</button>
           <button type="button" class="menu-btn" data-mod="licitacoes_habilitacao" data-busca="habilitacao documentos certidoes certidao atestados atestado capacidade tecnica balanco contrato social fgts cndt sicaf validade vencimento inmetro licitacao" onclick="abrir('licitacoes_habilitacao')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Documentos de habilitação</button>
           <button type="button" class="menu-btn" data-mod="licitacoes_precos" data-busca="precos preco licitacao tabela piso margem simulador custo diretoria sobra" onclick="abrir('licitacoes_precos')"><span class="menu-btn-icon"><i class="fas fa-tags" aria-hidden="true"></i></span>Preços de licitação</button>
           <button type="button" class="menu-btn" data-mod="licitacoes_portais" data-busca="portais licitacao integracoes api pncp compras gov bll bionexo parametrizar testar conexao regras do radar regras dos alertas antecedencias" onclick="abrir('licitacoes_portais')"><span class="menu-btn-icon"><i class="fas fa-plug" aria-hidden="true"></i></span>Portais e configurações</button>
@@ -402,6 +404,7 @@
 <?!= include('JS_Licitacoes_Relatorios'); ?>
 <?!= include('JS_Licitacoes_Disputa'); ?>
 <?!= include('JS_Licitacoes_Contratos'); ?>
+<?!= include('JS_Licitacoes_Pareceres'); ?>
 <?!= include('JS_LavCiclo'); ?>
 <?!= include('JS_Ponto'); ?>
 <?!= include('JS_Email'); ?>

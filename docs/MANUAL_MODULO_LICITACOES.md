@@ -33,6 +33,7 @@ Ficam para as próximas etapas: tabela de preços, simulador, proposta, habilita
 
 - Diretoria e Administrador: tudo nesta etapa.
 - Gestor, Comercial, Financeiro, Técnico, Metrologia, RH, cliente e representada: não usam. O menu não aparece e o servidor recusa as chamadas, mesmo que alguém tente abrir o endereço da tela.
+- Exceção (03/11/2026): quem recebe um pedido de parecer da Diretoria vê o menu Licitações só com "Meus pareceres", e nele só a oportunidade do pedido, sem custo, piso nem margem, enquanto o pedido está aberto e a decisão não foi tomada (seção "Pareceres por área e alçadas de decisão").
 
 ## 3. Onde fica
 
@@ -421,7 +422,7 @@ Uma coluna por etapa, na ordem do pedido do dono: Radar, Em análise, Decisão, 
 |---|---|
 | Radar | Candidatas e travadas da triagem por regras, sem decisão da Diretoria |
 | Em análise | As enviadas para análise (arquivos do edital e nota da IA na ficha) |
-| Decisão | As descartadas pela Diretoria, com o motivo. "Participar" entra aqui quando a etapa de preços e proposta chegar |
+| Decisão | As descartadas pela Diretoria, com o motivo, e as com a participação aprovada pela alçada (aba Pareceres da ficha ou "Participar" em Mover) |
 | Proposta | Vazia: chega na etapa de preços e proposta (tabela de preços de licitação, simulador e proposta em A4) |
 | Disputa | As licitações com a disputa aberta na Central de disputas (aba Disputa da ficha) |
 | Resultado | As licitações com o resultado de todos os itens registrado ("Concluir o resultado") |
@@ -439,11 +440,12 @@ Mudar de etapa: arrastar o cartão (computador) ou "Mover para" (qualquer aparel
 |---|---|---|
 | Radar | Em análise | Enviar para análise (você fica como responsável; o servidor lê os arquivos do edital) |
 | Radar ou Em análise | Decisão | Descartar (decisão da Diretoria; os alertas pendentes são cancelados) |
+| Radar ou Em análise | Decisão | "Participar" (botão em Mover, junto de Decisão): pede o motivo e confere a alçada (simulação salva, pareceres obrigatórios e aprovações da faixa de valor); faltando algo, a passagem é recusada com o que falta |
 | Decisão (descartada) | Radar | Reabrir (a regra do radar não descarta de novo) |
 | Disputa | Resultado | Concluir o resultado (só com o resultado de todos os itens registrado na aba Disputa, com a fonte) |
 | Resultado | Contrato | Explica e abre a aba Contrato da ficha: o contrato é registrado lá (com o motivo), e a licitação vai para Contrato ao gravar |
 
-O motivo é obrigatório em todas (pelo menos 10 letras) e vai para o histórico da ficha com quem, quando, de → para e a fonte "Kanban". As outras passagens ficam desabilitadas com o porquê escrito embaixo do botão (Em análise não volta direto ao Radar: descarte e reabra; Proposta chega na próxima etapa; o Contrato é registrado na aba Contrato da ficha; a entrada em Disputa é pela aba Disputa da ficha, que pede a proposta emitida e o piso de cada item, e o botão "Abrir a ficha" leva até lá; "Participar" exige o preço mínimo aprovado). Soltar numa coluna travada abre a janela com o porquê e "Nada foi alterado". Se outra pessoa mudou a oportunidade enquanto o quadro estava aberto, a mudança é recusada com "alguém mudou agora há pouco" e nada é alterado.
+O motivo é obrigatório em todas (pelo menos 10 letras) e vai para o histórico da ficha com quem, quando, de → para e a fonte "Kanban". As outras passagens ficam desabilitadas com o porquê escrito embaixo do botão (Em análise não volta direto ao Radar: descarte e reabra; Proposta chega na próxima etapa; o Contrato é registrado na aba Contrato da ficha; a entrada em Disputa é pela aba Disputa da ficha, que pede a proposta emitida e o piso de cada item, e o botão "Abrir a ficha" leva até lá; "Participar" exige o preço mínimo aprovado e a alçada). Soltar numa coluna travada abre a janela com o porquê e "Nada foi alterado". Se outra pessoa mudou a oportunidade enquanto o quadro estava aberto, a mudança é recusada com "alguém mudou agora há pouco" e nada é alterado.
 
 No celular (390 px), o quadro vira uma lista por etapa: as abas no alto (com a quantidade de cada uma) escolhem a etapa; a página não rola para os lados.
 
@@ -684,6 +686,59 @@ A licitação ganha vira contrato e o contrato alimenta os outros módulos do SG
 - **Contratos** (menu Licitações › Contratos): vigentes, a vencer em 90 dias, vigência terminada sem registro e o valor dos vigentes; busca e filtro por situação; "Resultados prontos para virar contrato" leva à aba Contrato.
 - **Relatório do contrato (A4)**: identificação, itens, condições, entregas e obrigações, prazos na agenda, previsão de faturamento, integração e versões, cada parte com a fonte. Versão imutável em LIC_RELATORIOS (tipo CONTRATO, número REL-CTR-...), com o SHA-256; aparece também em Licitações › Relatórios.
 - Quem pode: só Diretoria e Administrador (o servidor confere em toda ação). Quem recebe uma atividade a vê em Minhas atividades.
+
+## Pareceres por área e alçadas de decisão
+
+Pedido da missão: "Análise: Licitações (modalidade, prazos, exigências, habilitação, riscos) → Técnico (capacidade) → Financeiro (custos, preço mínimo, margem) → IA consolida e aponta divergências → Comercial analisa → Diretoria aprova ou rejeita por alçada. Registrar decisão e responsáveis." O dono ainda não definiu alçadas nem responsáveis por área: o padrão mantém o comportamento de antes (a Diretoria decide sozinha, um diretor basta, nenhum parecer obrigatório) e tudo fica configurável. Código: SGO_Licitacoes_Pareceres.js e JS_Licitacoes_Pareceres.html (regras LIC-PARECER-2026-11-03.1).
+
+### Pedir parecer (aba Pareceres da ficha)
+
+- Áreas, na ordem da missão: **Licitações** (modalidade, prazos, exigências, habilitação e riscos), **Técnica** (capacidade de executar), **Financeira** (custos, preço mínimo e margem) e **Comercial** (cliente, concorrência e estratégia de preço).
+- Quem é de cada área: a lista configurada em Portais e configurações › Alçadas e pareceres; sem lista, o cadastro de usuários (campo Área): Técnica = Técnica/Campo, Metrologia e Qualidade; Financeira = Financeiro; Comercial = Comercial; Licitações = Diretoria e Administrador ativos.
+- Só antes da decisão (Radar ou Em análise). Um pedido aberto por área; para trocar a pessoa ou o prazo, cancele (com o motivo) e peça de novo.
+- Prazo padrão: 1 dia útil antes do fim das propostas, às 18:00. Se já passou, hoje às 18:00 (em dia útil, antes das 18:00) ou o próximo dia útil: nunca no passado. A Diretoria pode escolher outro dia (nunca no passado).
+- O pedido lança a atividade em Minhas atividades para a pessoa (restrita, módulo Licitações › Pareceres, prioridade alta), com a sessão de quem pediu. A atividade é reservada no pedido antes de ser criada e leva a marca "[Ref. Licitações: pedido de parecer ...]": se a gravação cair depois de criar, "Lançar a atividade de novo" acha a atividade pela marca e não repete. Cancelar o pedido cancela a atividade; registrar o parecer a conclui.
+- Aviso: pela fila de alertas de Licitações (tipo PARECER_PEDIDO): interno, e-mail e WhatsApp só pelo modelo aprovado sgo_licitacao_prazo, e só no expediente (08:00 às 18:00 em dia útil; fora dele, fica para a primeira rodada do expediente). Sem escalonamento para a Diretoria. O link do aviso abre "Meus pareceres" no pedido. O aviso que não saiu é cancelado se o pedido for respondido, cancelado ou se a Diretoria decidir antes.
+
+### Registrar o parecer (Licitações › Meus pareceres)
+
+- A pessoa vê só a oportunidade do pedido dela, e só enquanto o pedido está aberto e a oportunidade está no Radar ou Em análise: resumo, nota da análise com os critérios, leitura do edital (checklist), preço (total da proposta, total do edital e se o piso é respeitado) e habilitação. Custo, piso e margem só para a Diretoria e o Administrador (o texto do critério margem também sai).
+- Posição: favorável, com ressalva ou contrário; motivo com pelo menos 20 letras. O parecer guarda a fotografia do que a pessoa viu (nota, versão da análise, da simulação e da leitura, versão da fonte) e se foi depois do prazo.
+- O parecer não muda depois de gravado (LIC_PARECERES, uma linha por versão, com o hash). Parecer novo da mesma área é a versão seguinte, num pedido novo, e pede o que mudou; a versão anterior continua no histórico. Versão alterada fora do SGO+ (hash que não confere) não vale e aparece como divergência.
+- Quem pediu recebe o aviso PARECER_RECEBIDO (também só no expediente).
+
+### Consolidação e divergências (sem IA nesta etapa)
+
+O quadro mostra o parecer que vale de cada área e as divergências calculadas pelo sistema:
+
+| Divergência | Quando |
+|---|---|
+| Parecer contrário | Qualquer área com parecer contrário |
+| Pareceres opostos | Uma área favorável e outra contrária |
+| Técnico × capacidade | Técnico favorável com a capacidade técnica da análise abaixo de 50% do peso, ou contrário com 75% ou mais |
+| Financeiro × piso | Financeiro contrário com a simulação acima do piso (nenhum item abaixo), ou favorável com item abaixo do piso ou sem simulação |
+| Licitações × trava ou habilitação | Licitações favorável com trava a confirmar ou confirmada, ou com exigência de habilitação pendente |
+| Comercial × nota | Comercial favorável com nota abaixo de 50 ou classe baixa ou de descarte |
+| Base antiga | Parecer dado sobre uma versão da análise ou da simulação que já mudou |
+
+### Alçadas (Portais e configurações › Alçadas e pareceres)
+
+- Faixas de valor (até 6): o teto de cada uma (a última não tem teto), as aprovações distintas da Diretoria necessárias (de 1 até o número de pessoas ativas da Diretoria e do Administrador, no máximo 3) e os pareceres obrigatórios antes de participar.
+- Valor que decide a faixa: o estimado do edital (padrão), o total da proposta na simulação salva ou o maior dos dois. Sem valor nenhum (estimado sigiloso e sem simulação), vale a faixa mais alta.
+- Padrão: uma faixa, qualquer valor, uma aprovação, nenhum parecer obrigatório. Cada gravação é uma versão nova em LIC_CONFIG (chave ALCADAS), com o motivo (10 letras ou mais) e o histórico ALCADAS (de → para).
+
+### Aprovar a participação
+
+- Na aba Pareceres ("Aprovar a participação") ou no Kanban ("Participar" em Mover). Pede o motivo (10 letras ou mais).
+- Exige a simulação de preço salva (o preço mínimo é o piso dela) e os pareceres obrigatórios da faixa; faltando, recusa: "falta o parecer Financeiro (obrigatório na faixa acima de R$ ...)". Nada é gravado.
+- Grava a aprovação da pessoa em LIC_APROVACOES (uma por pessoa, com o valor, a faixa, os pareceres e as divergências do momento, e o hash). Faltando aprovação, a sua fica registrada e a passagem é recusada: "falta a 2ª aprovação da Diretoria, valor acima de R$ ...". A mesma pessoa não aprova duas vezes.
+- Completa a alçada, a oportunidade vai para Decisão (participar), com os nomes de quem aprovou, a faixa, os pareceres e as divergências no histórico (PARTICIPACAO_APROVADA). Depois: proposta (aba Proposta) e disputa (aba Disputa).
+- Abrir a disputa direto do Radar ou de Em análise (aba Disputa) confere a mesma alçada: quem abre conta como uma aprovação. No padrão, nada muda.
+- Descartar (rejeitar) continua com um diretor, também depois de aprovada (desistir). Descartar e reabrir zera as aprovações.
+
+### Rastreabilidade
+
+LIC_PARECER_PEDIDOS (uma linha por pedido: área, pessoa, pergunta, prazo e a regra do prazo, atividade, situação, hash do que foi pedido), LIC_PARECERES (uma linha por versão, imutável, hash), LIC_APROVACOES (uma por aprovação, imutável, hash) e LIC_ALERTAS (PARECER_PEDIDO e PARECER_RECEBIDO). No histórico: PARECER_PEDIDO, PARECER_PEDIDO_CANCELADO, PARECER_REGISTRADO, APROVACAO_REGISTRADA, PARTICIPACAO_APROVADA e ALCADAS.
 
 ## 7. Problemas comuns
 

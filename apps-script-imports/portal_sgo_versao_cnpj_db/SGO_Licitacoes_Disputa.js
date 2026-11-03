@@ -507,6 +507,8 @@ function LicD_abrir_(eu, d) {
     var l = Lic_acharOp_(d.id);
     if (LicD_disputasDe_(l.ID).length) throw new Error('Não foi possível abrir: esta licitação já tem disputa. Atualize a aba Disputa. Nada foi gravado');
     if (Lic_s_(l.SITUACAO) === 'DESCARTADA') throw new Error('Não foi possível abrir: a oportunidade está descartada. Reabra antes (com o motivo). Nada foi gravado');
+    // 03/11/2026 (alçadas, SGO_Licitacoes_Pareceres.js): abrir direto do Radar ou de Em análise é a decisão de participar; quem abre conta como uma aprovação
+    if (typeof LicPar_conferirAbertura_ === 'function') LicPar_conferirAbertura_(eu, l);
     var f = LicD_fontes_(l);
     if (f.bloqueios.length) throw new Error('Não foi possível abrir a disputa: ' + f.bloqueios.join(' ') + ' Nada foi gravado');
     if (!sessaoIso) { var s = LicD_sessaoAgenda_(l); if (s) { sessaoIso = s.iso; sessaoFonte = s.fonte; } }

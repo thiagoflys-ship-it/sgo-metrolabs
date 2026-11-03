@@ -1,6 +1,6 @@
 // Ambiente dos testes da proposta em A4 e dos relatórios de Licitações (02/11/2026): o Comercial real com o catálogo oficial
 // implantado e a tabela de preços de licitação importada (tests/_licitacoes_precos_ambiente.cjs), mais a leitura do edital, a
-// habilitação, a proposta e os relatórios no mesmo contexto. Drive em memória (do ambiente do Comercial); a IA é simulada por uma
+// habilitação, a proposta e os relatórios no mesmo contexto (e, desde 03/11/2026, os pareceres e as alçadas no padrão: a disputa e os contratos rodam com eles). Drive em memória (do ambiente do Comercial); a IA é simulada por uma
 // função (prompt) => texto, ou desligada (sem a chave). Só dados de teste.
 'use strict';
 const vm = require('node:vm');
@@ -24,7 +24,7 @@ function comLeitura(a, oid, itens) {
 function ambienteProposta(o) {
   o = o || {};
   const a = ambientePrecos({ oportunidades: o.oportunidades || OPS });
-  for (const f of ['SGO_Licitacoes_Agenda.js', 'SGO_Licitacoes_Alertas.js', 'SGO_Licitacoes_Leitura.js', 'SGO_Licitacoes_Habilitacao.js', 'SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js']) vm.runInContext(a.ler(f), a.ctx, { filename: f });
+  for (const f of ['SGO_Licitacoes_Agenda.js', 'SGO_Licitacoes_Alertas.js', 'SGO_Licitacoes_Leitura.js', 'SGO_Licitacoes_Habilitacao.js', 'SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js', 'SGO_Licitacoes_Pareceres.js']) vm.runInContext(a.ler(f), a.ctx, { filename: f });
   const ok = (r) => { if (!r.ok) throw new Error(r.message); return r; };
   const pv = ok(a.lic('s_dora', 'importarPrevia')); ok(a.lic('s_dora', 'importar', { marca: pv.marca, motivo: 'Ponto de partida da tabela' }));
   // serviço de arquivos em memória com o acesso de cada arquivo (RESTRITO, PRIVATE, lixeira), como o do servidor do SGO+

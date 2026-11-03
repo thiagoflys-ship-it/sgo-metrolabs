@@ -31,7 +31,8 @@ var LIC_CAMPOS_RETIFICACAO = { OBJETO: 'Objeto', ABERTURA_PROPOSTAS: 'Abertura d
 var LIC_UFS_PRIORIDADE = ['GO', 'DF', 'MG', 'BA', 'TO', 'MT', 'MS', 'RJ'];
 
 var LIC_ACOES = {
-  acesso: function (eu) { return { nivel: eu.nivel, nome: eu.nome }; },
+  // 03/11/2026: pareceresAbertos = pedidos de parecer abertos para a pessoa (menu "Meus pareceres" para quem não é da Diretoria)
+  acesso: function (eu) { return { nivel: eu.nivel, nome: eu.nome, pareceresAbertos: typeof LicPar_abertosDe_ === 'function' ? LicPar_abertosDe_(eu.id) : 0 }; },
   hoje: function (eu) { return Lic_hoje_(eu); },
   oportunidades: function (eu, d) { return Lic_oportunidades_(eu, d); },
   ficha: function (eu, d) { return Lic_ficha_(eu, d); },
@@ -88,8 +89,12 @@ var LIC_ACOES = {
   // Central de disputas, modo assistido, e resultado (02/11/2026, SGO_Licitacoes_Disputa.js): { op: central | tela | abrir | lance | ... }
   disputa: function (eu, d) { return LicD_acao_(eu, d); },
   // contratos conquistados e integração com os módulos (02/11/2026, SGO_Licitacoes_Contratos.js): { op: lista | tela | criar | versao | ... }
-  contratos: function (eu, d) { return LicC_acao_(eu, d); }
+  contratos: function (eu, d) { return LicC_acao_(eu, d); },
+  // pareceres por área e alçadas de decisão (03/11/2026, SGO_Licitacoes_Pareceres.js): { op: meus | tela | registrar | ficha | pedir | aprovar | cfg | ... }
+  pareceres: function (eu, d) { if (typeof LicPar_acao_ !== 'function') throw new Error('Não foi possível: os pareceres não estão disponíveis neste ambiente. Atualize a página (F5)'); return LicPar_acao_(eu, d); }
 };
+/** Ações que passam sem a gestão: "acesso" e os pareceres (a pessoa do pedido vê só a oportunidade dele; LicPar_acao_ confere cada operação). */
+var LIC_ACOES_FORA_DA_GESTAO = ['acesso', 'pareceres'];
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */
 function Licitacoes_api(sessionId, acao, dados) {
@@ -99,7 +104,7 @@ function Licitacoes_api(sessionId, acao, dados) {
     var eu = Lic_eu_(sessionId);
     // contratos (02/11/2026): a ação explícita da Diretoria em outro módulo (cliente, Comercial, Minhas atividades) passa pela sessão dela; não enumerável (nunca vai para planilha nem tela)
     Object.defineProperty(eu, 'sessao', { value: sessionId, enumerable: false });
-    if (acao !== 'acesso') Lic_exigir_(eu, 'abrir');
+    if (LIC_ACOES_FORA_DA_GESTAO.indexOf(acao) < 0) Lic_exigir_(eu, 'abrir');
     if (eu.gestao) { try { Lic_garantirAbas_(); } catch (e) {} try { if (typeof Lic_garantirRotinaTalvez_ === 'function') Lic_garantirRotinaTalvez_(); } catch (e) {} }
     var r = fn(eu, dados || {});
     return JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
@@ -363,14 +368,14 @@ function Lic_mudarSituacaoSemTrava_(eu, d, de, para, tipo, extra, texto) {
   if (de.indexOf(Lic_s_(l.SITUACAO)) < 0) throw new Error('Não foi possível ' + texto + ': a oportunidade está "' + (LIC_SITUACAO_NOMES[Lic_s_(l.SITUACAO)] || l.SITUACAO) + '" (alguém mudou agora há pouco). Atualize a lista e confira; nada foi alterado');
   var agora = Lic_agora_(), mud = Object.assign({ SITUACAO: para, SITUACAO_DESDE: agora, ATUALIZADO_EM: agora }, extra || {});
   SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, mud);
-  var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: d.fonte === 'Kanban' || d.fonte === 'Central de disputas' || d.fonte === 'Contratos' ? d.fonte : 'Tela Oportunidades' });
+  var h = Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, tipo, eu, { de: l.SITUACAO, para: para, texto: d.textoHistorico, versao: l.VERSAO_FONTE, fonte: d.fonte === 'Kanban' || d.fonte === 'Central de disputas' || d.fonte === 'Contratos' || d.fonte === 'Pareceres e alçadas' ? d.fonte : 'Tela Oportunidades' });
   return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), situacao: para, hash: h.HASH };
 }
 
 function Lic_descartar_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva o motivo do descarte (pelo menos 10 letras): ele fica no histórico com o seu nome e a data, e ajuda a ajustar as regras do radar. Nada foi alterado');
-  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo, fonte: d.fonte }, ['RADAR', 'ANALISE'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
+  return Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo, fonte: d.fonte }, ['RADAR', 'ANALISE', 'DECISAO'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
     { DESCARTE_ORIGEM: 'PESSOA', DESCARTE_MOTIVO: motivo, DESCARTE_POR_ID: eu.id, DESCARTE_POR_NOME: eu.nome, DESCARTE_EM: Lic_agora_() }, 'descartar'));
 }
 /** Etapa 3: depois de mudar a situação, a agenda e os alertas acompanham (descartada = alertas pendentes cancelados com o motivo). */
