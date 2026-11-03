@@ -906,10 +906,15 @@ function RepDI_relatorioPeriodo_(eu, d) {
 }
 function RepDI_documentos_(eu, d) {
   d = d || {};
-  var podeVer = {};
-  Ast_ler_(AST_ABAS.CHAMADOS).forEach(function (c) { if (AstC_podeVer_(eu, c)) podeVer[RepD_s_(c.ID)] = true; });
+  var podeVer = {}, repDoChamado = {};
+  Ast_ler_(AST_ABAS.CHAMADOS).forEach(function (c) { if (AstC_podeVer_(eu, c)) podeVer[RepD_s_(c.ID)] = true; repDoChamado[RepD_s_(c.ID)] = RepD_s_(c.REPRESENTADA_ID); });
+  // 03/11/2026: a representada do documento vem do próprio registro ou do chamado (as versões interna e do cliente de um
+  // chamado de representada ficam sem REPRESENTADA_ID). No módulo Representação (soRepresentadas) só entram os documentos
+  // de chamados de representada e os relatórios do período do próprio módulo; antes apareciam os de qualquer cliente.
   return RepD_listar_(function (r) {
-    return (!d.representadaId || RepD_s_(r.REPRESENTADA_ID) === RepD_s_(d.representadaId)) && (!d.publico || Rep_up_(r.PUBLICO) === Rep_up_(d.publico)) && (!RepD_s_(r.CHAMADO_ID) || podeVer[RepD_s_(r.CHAMADO_ID)]);
+    var cid = RepD_s_(r.CHAMADO_ID), rep = RepD_s_(r.REPRESENTADA_ID) || (cid ? repDoChamado[cid] || '' : '');
+    if (d.soRepresentadas && (cid ? !rep : Rep_up_(r.PUBLICO) === 'CLIENTE')) return false;
+    return (!d.representadaId || rep === RepD_s_(d.representadaId)) && (!d.publico || Rep_up_(r.PUBLICO) === Rep_up_(d.publico)) && (!cid || podeVer[cid]);
   }, d);
 }
 /** Cliente do portal: só a versão do cliente, só dos chamados dele. */

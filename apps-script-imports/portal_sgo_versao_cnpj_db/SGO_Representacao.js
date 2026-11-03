@@ -632,7 +632,7 @@ var REP_ACOES_INTERNAS = {
   painel: function (eu, d) { return RepI_painel_(eu, d); },
   // 29/10/2026: documentos A4 (as três versões), fotos do chamado e liberação para os documentos externos
   relatorioAtendimento: function (eu, d) { return RepDI_relatorioAtendimento_(eu, d); }, relatorioPeriodo: function (eu, d) { return RepDI_relatorioPeriodo_(eu, d); },
-  documentos: function (eu, d) { return RepDI_documentos_(eu, d); }, fotosChamado: function (eu, d) { return RepD_fotosDoChamado_(eu, d); }, liberarFoto: function (eu, d) { return RepD_liberarFoto_(eu, d); },
+  documentos: function (eu, d) { return RepDI_documentos_(eu, Object.assign({}, d || {}, { soRepresentadas: true })); }, fotosChamado: function (eu, d) { return RepD_fotosDoChamado_(eu, d); }, liberarFoto: function (eu, d) { return RepD_liberarFoto_(eu, d); },
   ajuda: function () { return { ajuda: Rep_ajuda_('representacao') }; }
 };
 

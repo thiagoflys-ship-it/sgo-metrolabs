@@ -226,3 +226,20 @@ test('capa com quadro-resumo, próximo passo, linha do tempo vertical, glossári
   for (const s of ['Pontos de atenção', 'Prazo vencido', 'Aceite no prazo', 'Relatório do período · Representação', 'complemento da representada']) assert.ok(!pc.includes(s), 'cliente viu: ' + s);
   assert.ok(pc.includes('Relatório do período · Assistência técnica'));
 });
+
+test('03/11/2026: a lista da Metrolabs no módulo Representação só traz documentos de chamados de representada (os de outros clientes ficam só na Assistência)', () => {
+  const a = amb(), k = encerrado(a);
+  ok(a.rep('s_gil', 'relatorioAtendimento', { id: k.c.id, publico: 'INTERNO' }));
+  const comum = ok(a.api('s_gil', 'abrir', { clienteId: 'c1', unidadeId: 'un1', equipamentoId: 'eq1', sintoma: 'Autoclave de outro contrato não completa o ciclo', solicitante: 'Rui', contato: '62988887777', prioridade: 'P3', parada: 'NAO', canal: 'TELEFONE' })).chamado;
+  const dComum = ok(a.api('s_gil', 'relatorioAtendimento', { id: comum.id, publico: 'INTERNO' })).documento;
+  const dCli = ok(a.api('s_cliente.alfa', 'relatorioPeriodoCliente', { dias: 90 })).documento;
+  const naRep = ok(a.rep('s_gil', 'documentos', {})).documentos.map((d) => d.id);
+  assert.ok(!naRep.includes(dComum.id), 'relatório de chamado sem representada não pode aparecer na Representação');
+  assert.ok(!naRep.includes(dCli.id), 'relatório do período do cliente não pode aparecer na Representação');
+  assert.equal(naRep.length, 1);
+  assert.equal(ok(a.rep('s_gil', 'documentos', { representadaId: 'repA' })).documentos.length, 0);
+  assert.equal(ok(a.rep('s_gil', 'documentos', { representadaId: 'repB' })).documentos.length, 1);
+  // na Assistência continua tudo o que a pessoa acompanha
+  const naAst = ok(a.api('s_gil', 'documentosGerados', {})).documentos.map((d) => d.id);
+  assert.ok(naAst.includes(dComum.id));
+});

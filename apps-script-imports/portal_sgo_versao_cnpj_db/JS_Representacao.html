@@ -172,7 +172,7 @@
       corpo.innerHTML = '<div class="atv-vazio">Carregando…</div>';
       Rp_chamar_("documentos", interno ? { representadaId: RP.repPainel || "" } : {}, function (r) {
         corpo.innerHTML = PnA_caixa_("Relatórios gerados", PnA_docsHtml_(r.documentos, interno ? "Nenhum relatório gerado ainda. Use \"Relatório do período\" aqui ou \"Relatório do atendimento\" na ficha do chamado." : "Nenhum relatório gerado ainda. Use \"Relatório do período\" acima ou abra um chamado e toque em \"Gerar relatório\".", interno) +
-          '<div class="atv-sub" style="margin-top:6px">' + (interno ? "Todas as versões (Metrolabs, representada e cliente). Cada versão só mostra o que o público dela pode ler; a interna não deve sair da Metrolabs." : "Só os documentos da versão da sua empresa. Cada emissão é uma versão nova; nenhuma é apagada.") + "</div>");
+          '<div class="atv-sub" style="margin-top:6px">' + (interno ? "Todas as versões dos chamados de representada (Metrolabs, representada e cliente); os relatórios de outros clientes ficam na Assistência técnica. Cada versão só mostra o que o público dela pode ler; a interna não deve sair da Metrolabs." : "Só os documentos da versão da sua empresa. Cada emissão é uma versão nova; nenhuma é apagada.") + "</div>");
       }, function (m) { corpo.innerHTML = ""; Rp_msg_("rpMsg", m); });
       return;
     }
