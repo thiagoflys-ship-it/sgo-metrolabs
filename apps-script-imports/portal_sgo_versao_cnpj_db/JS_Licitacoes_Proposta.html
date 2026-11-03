@@ -74,7 +74,7 @@
     var s = p.simulacao;
     if (!s) return '<div class="cm-caixa">' + Lic_faixa_("Sem simulação de preço salva: não há proposta comercial. Salve a simulação na aba Preço (a planilha de preços da proposta é sempre a simulação salva, exatamente).", "erro") +
       '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpp-ir-preco>Ir para a aba Preço</button></div></div>';
-    return '<div class="cm-caixa"><h3>Preço: simulação salva</h3><div class="lpp-dl"><div><span>Versão</span><b>' + Lic_esc_(s.versao) + "</b></div><div><span>Total da proposta</span><b>" + Lic_esc_(Lic_brl_(s.proposta)) + "</b></div>" +
+    return '<div class="cm-caixa"><h3>Preço: simulação salva</h3><div class="lpp-dl"><div><span>Versão</span><b>' + Lic_esc_(s.versao) + "</b></div><div><span>Total da proposta</span><b>" + Lic_brlHtml_(s.proposta) + "</b></div>" +
       "<div><span>Salva em</span><b>" + Lic_esc_(Lic_dataHora_(s.em)) + " · " + Lic_esc_(s.por) + "</b></div><div><span>Hash do registro</span><b>" + LicPp_curto_(s.hash) + "</b></div></div>" +
       (s.integra ? "" : Lic_faixa_("O registro desta simulação não confere com o hash gravado (alterado fora do SGO+): salve uma versão nova na aba Preço.", "erro")) + "</div>";
   }
@@ -83,7 +83,7 @@
     if (!itens.length) return '<p class="cm-vazio">Nenhum item: a simulação de preço não tem itens.</p>';
     return Lic_tabelaHtml_(["Item", "Descrição do edital", "Serviço", "Qtd.", "Preço unitário", "Total", "Situação"], itens.map(function (i) {
       var cot = i.situacao === "COTADO";
-      return [Lic_esc_(i.numero), Lic_esc_(i.descricao || "—"), Lic_esc_(i.codigo ? i.codigo + (i.nome ? " · " + i.nome : "") : "—"), Lic_esc_(String(i.quantidade || 0).replace(".", ",")), Lic_esc_(cot ? Lic_brl_(i.precoUnit) : "—"), Lic_esc_(cot ? Lic_brl_(i.total) : "—"),
+      return [Lic_esc_(i.numero), Lic_esc_(i.descricao || "—"), Lic_esc_(i.codigo ? i.codigo + (i.nome ? " · " + i.nome : "") : "—"), Lic_esc_(String(i.quantidade || 0).replace(".", ",")), (cot ? Lic_brlHtml_(i.precoUnit) : "—"), (cot ? Lic_brlHtml_(i.total) : "—"),
         cot ? LicPp_selo_("verde", "Cotado") + (i.abaixoPiso ? " " + LicPp_selo_("vermelho", "abaixo do piso") : "") : LicPp_selo_("laranja", "Não cotado") + '<br><span class="cm-meta">' + Lic_esc_(i.motivo) + "</span>"];
     }));
   }
@@ -108,7 +108,7 @@
       '<p class="cm-ajuda-campo">Nada é enviado a portal: o SGO+ gera o documento para a Diretoria anexar.</p></div>';
     var c = a.conteudo || {}, ia = c.ia || {};
     h += '<div class="cm-caixa"><div class="lpp-cab"><h3>Proposta ' + Lic_esc_(a.numero) + " · versão " + Lic_esc_(a.versao) + "</h3>" + LicPp_selo_(LICPP_COR[a.situacao], a.situacaoNome) + (a.integra ? "" : " " + LicPp_selo_("vermelho", "registro alterado fora do SGO+")) + "</div>" +
-      '<div class="lpp-dl"><div><span>Total</span><b>' + Lic_esc_(Lic_brl_(a.total)) + "</b></div><div><span>Itens</span><b>" + Lic_esc_(a.cotados) + " cotado(s) · " + Lic_esc_(a.naoCotados) + " não cotado(s)</b></div>" +
+      '<div class="lpp-dl"><div><span>Total</span><b>' + Lic_brlHtml_(a.total) + "</b></div><div><span>Itens</span><b>" + Lic_esc_(a.cotados) + " cotado(s) · " + Lic_esc_(a.naoCotados) + " não cotado(s)</b></div>" +
       "<div><span>Simulação usada</span><b>" + (a.simulacaoVersao ? "versão " + Lic_esc_(a.simulacaoVersao) + " · " + LicPp_curto_(a.simulacaoHash) : "nenhuma") + "</b></div><div><span>Validade</span><b>" + Lic_esc_(c.validadeDias || "—") + " dias</b></div>" +
       "<div><span>Montada</span><b>" + Lic_esc_(Lic_dataHora_(a.montadoEm)) + " · " + Lic_esc_(a.montadoPor) + "</b></div><div><span>Texto técnico</span><b>" + Lic_esc_(LICPP_IA[ia.situacao] || ia.situacao || "—") + "</b></div>" +
       (a.aprovadoEm ? "<div><span>Aprovada</span><b>" + Lic_esc_(Lic_dataHora_(a.aprovadoEm)) + " · " + Lic_esc_(a.aprovadoPor) + "</b></div>" : "") +
@@ -134,7 +134,7 @@
       return "<li><b>" + Lic_esc_(e.nome) + "</b> · " + Lic_esc_(Lic_dataHora_(e.em)) + " · " + Lic_esc_(e.por) + (e.integra ? "" : " " + LicPp_selo_("vermelho", "alterado fora do SGO+")) + '<br><span class="cm-meta">De: ' + Lic_esc_(e.de || "(vazio)") + "</span><br><span class=\"cm-meta\">Para: " + Lic_esc_(e.para || "(vazio)") + '</span><br><span class="cm-meta">Motivo: ' + Lic_esc_(e.motivo) + "</span></li>";
     }).join("") + "</ul></details></div>";
     if ((p.versoes || []).length) h += '<div class="cm-caixa"><h3>Versões</h3>' + Lic_tabelaHtml_(["Versão", "Número", "Situação", "Total", "Montada", "Emitida", ""], p.versoes.map(function (v) {
-      return [Lic_esc_(v.versao), Lic_esc_(v.numero), LicPp_selo_(LICPP_COR[v.situacao], v.situacaoNome) + (v.integra ? "" : " " + LicPp_selo_("vermelho", "alterado fora do SGO+")), Lic_esc_(Lic_brl_(v.total)), Lic_esc_(Lic_dataHora_(v.montadoEm)),
+      return [Lic_esc_(v.versao), Lic_esc_(v.numero), LicPp_selo_(LICPP_COR[v.situacao], v.situacaoNome) + (v.integra ? "" : " " + LicPp_selo_("vermelho", "alterado fora do SGO+")), Lic_brlHtml_(v.total), Lic_esc_(Lic_dataHora_(v.montadoEm)),
         v.emitidoEm ? Lic_esc_(Lic_dataHora_(v.emitidoEm)) + "<br>" + LicPp_curto_(v.htmlSha256) : "—", '<button type="button" class="btn-secondary" data-lpp-ver="' + Lic_esc_(v.id) + '">Abrir</button>'];
     })) + "</div>";
     return h;
@@ -197,7 +197,7 @@
   }
   function LicPp_janelaAprovar_(id, origem) {
     var p = LICPP.aba[id] || {}, a = p.atual || {}, av = (a.avisos || []).length;
-    var corpo = '<p class="cm-txt">Aprovar a proposta ' + Lic_esc_(a.numero) + " (total " + Lic_esc_(Lic_brl_(a.total)) + "). A aprovação vale para o texto de agora: editar um trecho depois tira a aprovação.</p>" +
+    var corpo = '<p class="cm-txt">Aprovar a proposta ' + Lic_esc_(a.numero) + " (total " + Lic_brlHtml_(a.total) + "). A aprovação vale para o texto de agora: editar um trecho depois tira a aprovação.</p>" +
       (av ? Lic_faixa_(av + " aviso(s) para conferir na aba (o registro da aprovação diz que a Diretoria decidiu com eles).", "aviso") : "") +
       '<div class="cm-campo"><label for="lppMotivoAp">Motivo da aprovação (obrigatório)</label><textarea id="lppMotivoAp" rows="3" maxlength="1000" placeholder="Ex.: preços e escopo conferidos com a simulação versão 2"></textarea></div><div id="lppMsgAp" aria-live="assertive"></div>';
     var ov = Lic_janela_("Aprovar a proposta", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lpp-ok>Aprovar</button>', origem);

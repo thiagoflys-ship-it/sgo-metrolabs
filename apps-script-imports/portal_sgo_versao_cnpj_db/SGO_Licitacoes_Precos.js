@@ -453,7 +453,8 @@ function LicP_calcular_(l, e) {
   if (!LicP_temComercial_()) throw new Error('Não foi possível calcular: ' + LICP_MSG_SEM_COMERCIAL + '. Nada foi alterado');
   e = e || {};
   var lp = LicP_politica_(), pc = LicP_polConta_(lp), tabela = LicP_porCodigo_(), prods = LicP_produtos_(), hoje = LicP_hoje_();
-  var pend = [], avisos = [];
+  // 03/11/2026: informacoes = o que é só informação (a tela mostra na faixa verde); avisos = problema a olhar (faixa vermelha)
+  var pend = [], avisos = [], informacoes = [];
   // ---- execução e deslocamento (funções do Comercial)
   var x = e.execucao || {}, uf = Lic_up_(x.uf || l.UF), mun = Lic_texto_(x.municipio !== undefined ? x.municipio : l.MUNICIPIO, 120);
   if (uf && LIC_UFS.indexOf(uf) < 0) throw new Error('Escolha a UF de execução na lista. Nada foi gravado');
@@ -464,7 +465,7 @@ function LicP_calcular_(l, e) {
   else { var dist = LicP_distancia_(uf, mun, base); if (dist) { km = dist.km; kmFonte = dist.fonte; } }
   // revisão de ca99fe5: a viagem é da equipe própria; lote só de parceiro não tem viagem da equipe (o parceiro põe a dele no custo)
   var temPropria = (Array.isArray(e.itens) ? e.itens : []).some(function (it) { var t0 = tabela[Lic_up_(it.codigo)]; return !t0 || Lic_up_(t0.EXECUCAO) !== 'PARCEIRO'; });
-  if (!temPropria) avisos.push('O lote só tem itens por parceiro: sem viagem da equipe própria (o deslocamento do parceiro entra no custo dele).');
+  if (!temPropria) informacoes.push('O lote só tem itens por parceiro: sem viagem da equipe própria (o deslocamento do parceiro entra no custo dele).');
   if (km === null && temPropria) pend.push({ codigo: 'KM', texto: 'Informe o km do trecho (só a ida) de ' + (polBase.origemUnidade || (base === 'RJ' ? 'Rio de Janeiro/RJ' : 'Goiânia/GO')) + ' até ' + (mun ? mun + '/' : '') + (uf || 'o local de execução') + ': o SGO+ não tem essa distância. Sem o km, o deslocamento fica sem o custo do km.' });
   var T = LicP_int_(x.tecnicos, 1, 0, 20, 'o número de técnicos'), E = LicP_int_(x.engenheiros, 0, 0, 20, 'o número de engenheiros');
   var vg = LicP_int_(x.viagens, 1, 1, 365, 'o número de viagens'), dias = LicP_int_(x.dias, 1, 1, 365, 'os dias por viagem'), noites = LicP_int_(x.noites, 0, 0, 365, 'as noites por viagem');
@@ -601,7 +602,7 @@ function LicP_calcular_(l, e) {
     if (pisoLote > 0 && loteEdital < pisoLote - 0.004) {
       tot.loteEditalAbaixo = true;
       pend.push({ codigo: 'LOTE_EDITAL', texto: 'O total do lote no edital (' + LicP_moeda_(loteEdital) + ') está abaixo da soma dos pisos (' + LicP_moeda_(pisoLote) + (tot.pisoCompleto ? '' : ', ainda parcial: há item sem piso') + '): participar por esse valor não deixa a sobra mínima de ' + LicP_pct_(lp.margemMinPct, 0) + '. Leve à Diretoria antes de propor.' });
-    } else if (pisoLote > 0) avisos.push('O total do lote no edital (' + LicP_moeda_(loteEdital) + ') cobre a soma dos pisos (' + LicP_moeda_(pisoLote) + (tot.pisoCompleto ? '' : ', ainda parcial: há item sem piso') + ').');
+    } else if (pisoLote > 0) informacoes.push('O total do lote no edital (' + LicP_moeda_(loteEdital) + ') cobre a soma dos pisos (' + LicP_moeda_(pisoLote) + (tot.pisoCompleto ? '' : ', ainda parcial: há item sem piso') + ').');
   }
   // revisão de ca99fe5: item com piso e sem preço do edital (a nota não calcula a sobra só com parte dos itens)
   tot.semEdital = itens.filter(function (r) { return r.pisoUnit !== null && r.precoEdital === null; }).length;
@@ -621,7 +622,7 @@ function LicP_calcular_(l, e) {
     'Km ' + LicP_moeda_(pc.com.valorKm) + ' ida e volta; Incentivo de Missão de ' + LicP_moeda_(benef.valor) + ' por executante por viagem com trecho de ' + LicP_qtd_(benef.kmMinimo) + ' km ou mais (Programa de conduta).',
     'Execução: ' + viagem.baseNome + ', saindo de ' + viagem.origem + '.'
   ]);
-  return { regras: LICP_REGRAS, calculadoEm: Lic_agora_(), viagem: viagem, seguro: seguro, linhaExtra: linhaExtra, itens: itens, totais: tot, pendencias: pend, avisos: avisos, premissas: premissas,
+  return { regras: LICP_REGRAS, calculadoEm: Lic_agora_(), viagem: viagem, seguro: seguro, linhaExtra: linhaExtra, itens: itens, totais: tot, pendencias: pend, avisos: avisos, informacoes: informacoes, premissas: premissas,
     situacao: pend.length ? 'COM_PENDENCIA' : 'COMPLETA', valorEstimado: l.VALOR_ESTIMADO === '' || l.VALOR_ESTIMADO === null || l.VALOR_ESTIMADO === undefined ? null : Number(l.VALOR_ESTIMADO),
     politica: { licitacao: { versao: lp.versao, margemMinPct: lp.margemMinPct, margemAlvoPct: lp.margemAlvoPct, comissaoPct: lp.comissaoPct, pisoPorItem: lp.pisoPorItem, diluir: lp.diluir, ufsEquipeRio: lp.ufsEquipeRio, origem: lp.origem },
       comercial: { versao: pc.com.versao || 0, unidade: pc.pol.unidade, impostosServicoPct: pc.imp, impostosProdutoPct: pc.impP, creditoProdutoPct: pc.cred, custoHora: pc.com.custoHora, custoFixoPct: pc.com.custoFixoPct, bonusHora: bh.porHora || 0,

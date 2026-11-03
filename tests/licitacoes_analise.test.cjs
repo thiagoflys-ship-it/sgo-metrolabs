@@ -642,7 +642,7 @@ test('telas: abas Arquivos e Análise (hash, situação da extração, fatos com
   assert.match(t.ctx.Lic_cartaoHtml_(Object.assign({}, d.op, { nota: null })), /lic-nota media" aria-label="UF GO/);
   assert.match(t.ctx.Lic_cartaoHtml_(Object.assign({}, d.op, { nota: 0, notaClasse: 'DESCARTE', notaTrava: 'Exige laboratório acreditado RBC' })), /lic-nota n-descarte" aria-label="Nota 0 de 100, descarte, com trava"[\s\S]*trava: Exige laboratório acreditado RBC/);
   const cab = t.ctx.Lic_htmlListaCab_({ contagens: {}, sessoes: {} }, 'analisar', { busca: '', uf: '', selo: '', sessao: '' });
-  assert.match(cab, /<label for="licFOrdem">Ordenar por<\/label><select id="licFOrdem"><option value="prioridade" selected>Prioridade da UF e prazo<\/option><option value="nota">Nota \(maior primeiro\)/);
+  assert.match(cab, /<label for="licFOrdem">Ordenar por<\/label><select id="licFOrdem"><option value="prioridade" selected>Prioridade da UF e prazo<\/option><option value="nota">Nota \(maior primeiro, descarte no fim\)/);
   // celular 390 px: nada com largura fixa maior que a tela; sem atualização automática
   for (const m of t.html.matchAll(/(?:^|[^-])width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 360, 'largura fixa ' + m[0]);
   for (const m of t.html.matchAll(/min-width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 200, 'largura mínima ' + m[0]);

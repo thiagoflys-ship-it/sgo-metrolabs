@@ -35,6 +35,10 @@ function SGO_ajudaTelas_LicitacoesHabilitacao_() {
           "\"Abrir o arquivo\" e \"Baixar\" conferem o SHA-256 no servidor antes de entregar; se não conferir, o arquivo não é entregue e o caso fica no histórico.",
           "\"Verificar no emissor\" abre o site oficial informado no cadastro, em nova aba."
         ] },
+        { titulo: "Aba Habilitação da ficha conforme a situação", itens: [
+          "No radar: a faixa diz que a oportunidade ainda não está em análise (a habilitação entra nas pendências do Hoje e do Painel a partir de \"Em análise\"); o cruzamento já vale para conferir.",
+          "Em Resultado e em Contrato: a faixa azul diz que a habilitação da licitação foi concluída (ou contratada); a conferência continua visível para consulta e não gera pendência nova."
+        ] },
         { titulo: "Avisos de vencimento", itens: [
           "A 30 e a 15 dias do vencimento: aviso no SGO+ e por e-mail (nunca pelo WhatsApp). A 7 dias e vencido: também pelo WhatsApp oficial. Um aviso por faixa e por versão: a faixa que já passou não sai de novo, e o aviso mais novo tira o anterior da lista \"sem ciência\".",
           "Os avisos de documento saem das 8h às 18h (Brasília), para a Diretoria de Licitações (o responsável do documento, se for da Diretoria), com teto próprio de 10 por pessoa no dia. Documento que vence antes da sessão: um aviso só, com as licitações afetadas. Quem desligou o e-mail nas regras dos alertas vê o aviso só no SGO+.",

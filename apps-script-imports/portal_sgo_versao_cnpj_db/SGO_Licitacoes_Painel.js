@@ -418,6 +418,7 @@ function Lic_painel_(eu) {
       falhasSeguidasPncp: col && col.falhasSeguidasPncp ? Number(col.falhasSeguidasPncp) : 0, rotasComFalha: rotasFalha, rotas: col && col.rotas ? col.rotas.length : 0, aviso: (col && (col.erroLeitura || (!col.noServidor ? col.texto : ''))) || '',
       conexoes: cx, portais: portais,
       fonte: 'Coletor do servidor (lic_coleta_estado: última rodada e falhas seguidas por rota), registro das chamadas (lic_conexoes_log: as 300 mais recentes, janela de 24 h; quando as 300 são todas das últimas 24 h, a tela mostra "300 ou mais") e LIC_PORTAIS (situação de cada um dos ' + portais.total + ' portais).' },
-    ia: Object.assign(ia, { fonte: 'LIC_OPORTUNIDADES, coluna ANALISE_SITUACAO (situação da última análise por IA de cada oportunidade do Kanban): concluída, recusada pelo verificador ou erro da IA. Total e tempo médio: LIC_ANALISES (' + ia.total + ' linhas, uma por tentativa). Tempo médio só das análises com a duração medida (gravada desde a etapa 4, 02/11/2026).' })
+    // 03/11/2026: fila da análise automática (colunas ANALISE_PENDENTE_* de LIC_OPORTUNIDADES)
+    ia: Object.assign(ia, { fila: typeof Lic_filaContagem_ === 'function' ? Lic_filaContagem_(todas) : null, fonte: 'LIC_OPORTUNIDADES, coluna ANALISE_SITUACAO (situação da última análise por IA de cada oportunidade do Kanban): concluída, recusada pelo verificador ou erro da IA. Total e tempo médio: LIC_ANALISES (' + ia.total + ' linhas, uma por tentativa). Tempo médio só das análises com a duração medida (gravada desde a etapa 4, 02/11/2026).' })
   };
 }

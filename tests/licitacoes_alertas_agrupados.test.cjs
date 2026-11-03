@@ -165,7 +165,7 @@ test('falha do WhatsApp do grupo no retorno da Meta: um e-mail de reserva só, c
 
 test('coluna nova ENVIO_GRUPO entra por merge (cache das abas V7); ajuda, manual e base do assistente explicam o envio agrupado', () => {
   const cfg = ler('SGO_Licitacoes_Config.js');
-  assert.match(cfg, /'ENVIO_GRUPO'\]/); assert.match(cfg, /LIC_ABAS_OK_V7/);
+  assert.match(cfg, /'ENVIO_GRUPO'\]/); assert.match(cfg, /LIC_ABAS_OK_V([7-9]|\d\d)/, 'V7 ou depois (V8 em 03/11/2026: fila da análise)');
   assert.match(ler('SGO_Ajuda_Licitacoes.js'), /Vários prazos numa mensagem só/);
   assert.match(ler('SGO_AssistenteManuais.js'), /Envio agrupado \(03\/11\/2026/);
 });

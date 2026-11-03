@@ -32,6 +32,9 @@
   function LicPr_pct_(v) { if (v === null || v === undefined || !isFinite(Number(v))) return "—"; return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%"; }
   function LicPr_pct2_(v) { if (v === null || v === undefined || !isFinite(Number(v))) return "—"; return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%"; }
   function LicPr_moeda_(v) { return v === null || v === undefined || v === "" ? "—" : Lic_brl_(v); }
+  function LicPr_moedaHtml_(v) { return '<span class="lic-rs">' + Lic_esc_(LicPr_moeda_(v)) + "</span>"; }
+  /** Aviso que é só informação (o lote cobre os pisos; lote só de parceiros): faixa de informação, não de erro. Vale para as versões salvas antes de 03/11/2026. */
+  function LicPr_avisoInformativo_(a) { return /cobre a soma dos pisos|^O lote só tem itens por parceiro/.test(String(a || "")); }
   /** Valor de um campo: número vira texto com vírgula (pt-BR, sem separador de milhar); texto fica como foi digitado. */
   function LicPr_campo_(v) { if (v === null || v === undefined) return ""; if (typeof v === "number") return isFinite(v) ? String(v).replace(".", ",") : ""; return String(v); }
   function LicPr_dia_(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? m[3] + "/" + m[2] + "/" + m[1] : "—"; }
@@ -63,8 +66,8 @@
     if (!(d.itens || []).length) return h + '<div class="cm-vazio">A tabela está vazia. Toque em "Importar do catálogo" para começar com os serviços do catálogo do Comercial (você vê a prévia antes de gravar).</div>';
     return h + Lic_tabelaHtml_(["Código", "Serviço", "Execução", "Preço de referência", "Custo por equipamento", "Piso (sem deslocamento)", "Sobra no preço de referência", "Vigência", "Versão", "Ações"], itens.map(function (i) {
       return ['<span class="lic-mono">' + Lic_esc_(i.codigo) + "</span>", Lic_esc_(i.nome) + (i.ativo ? "" : ' <span class="cm-selo cinza">inativo</span>'),
-        Lic_esc_(i.execucaoNome), Lic_esc_(LicPr_moeda_(i.precoReferencia)) + (i.precoSituacao === "A_CONFIRMAR" ? ' <span class="cm-selo laranja">Preço a confirmar</span>' : ""),
-        Lic_esc_(LicPr_moeda_(i.custo)) + '<br><span class="cm-meta">' + Lic_esc_(i.custoFonte) + "</span>", Lic_esc_(LicPr_moeda_(i.pisoSemDeslocamento)),
+        Lic_esc_(i.execucaoNome), LicPr_moedaHtml_(i.precoReferencia) + (i.precoSituacao === "A_CONFIRMAR" ? ' <span class="cm-selo laranja">Preço a confirmar</span>' : ""),
+        LicPr_moedaHtml_(i.custo) + '<br><span class="cm-meta">' + Lic_esc_(i.custoFonte) + "</span>", LicPr_moedaHtml_(i.pisoSemDeslocamento),
         i.sobraNaReferenciaPct === null ? "—" : '<span class="' + (i.abaixoDoPiso ? "lpr-abaixo" : "") + '">' + Lic_esc_(LicPr_pct_(i.sobraNaReferenciaPct)) + (i.abaixoDoPiso ? " (abaixo do piso)" : "") + "</span>",
         Lic_esc_(LicPr_dia_(i.vigenciaDesde)) + (i.vigenciaAte ? " a " + Lic_esc_(LicPr_dia_(i.vigenciaAte)) : "") + (i.foraVigencia ? '<br><span class="lpr-abaixo">' + Lic_esc_(i.foraVigencia) + "</span>" : ""),
         Lic_esc_(i.versao), '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpr-editar="' + Lic_esc_(i.id) + '">Editar</button><button type="button" class="btn-secondary" data-lpr-versoes="' + Lic_esc_(i.id) + '">Histórico</button></div>'];
@@ -141,7 +144,7 @@
       el.innerHTML = '<p class="cm-txt">' + Lic_esc_(novos.length) + " serviço(s) novo(s); " + Lic_esc_(r.jaNaTabela) + " já estão na tabela e ficam como estão (nada é sobrescrito)" + (r.foraNaoServico ? "; " + Lic_esc_(r.foraNaoServico) + " produto(s) e peça(s) ficam fora" : "") + ".</p>" +
         (novos.length ? novos.map(function (l) {
           return '<label class="lic-pessoa" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" data-lpr-cod="' + Lic_esc_(l.codigo) + '" checked style="min-width:22px;min-height:22px"><span><span class="lic-mono">' + Lic_esc_(l.codigo) + "</span> " + Lic_esc_(l.nome) +
-            '<br><span class="cm-meta">Preço ' + Lic_esc_(LicPr_moeda_(l.preco)) + (l.aConfirmar ? " (" + Lic_esc_(l.aConfirmar) + ")" : "") + " · custo " + Lic_esc_(LicPr_moeda_(l.custo)) + " · " + Lic_esc_(l.execucao === "PARCEIRO" ? "parceiro" : "equipe própria") + "</span></span></label>";
+            '<br><span class="cm-meta">Preço ' + LicPr_moedaHtml_(l.preco) + (l.aConfirmar ? " (" + Lic_esc_(l.aConfirmar) + ")" : "") + " · custo " + LicPr_moedaHtml_(l.custo) + " · " + Lic_esc_(l.execucao === "PARCEIRO" ? "parceiro" : "equipe própria") + "</span></span></label>";
         }).join("") : '<p class="cm-vazio">Nada novo para importar.</p>') + '<div class="lpr-grade">' + LicPr_motivoHtml_() + "</div>";
       var bt = ov.querySelector("[data-lpr-gravar]"); bt.disabled = !novos.length;
     }, function (m) { var el = Lic_$_("lprImp"); if (el) el.innerHTML = Lic_faixa_(m, "erro"); });
@@ -209,8 +212,10 @@
     if (!res) return "";
     var t = res.totais || {}, v = res.viagem || {}, h = "";
     if ((res.pendencias || []).length) h += Lic_faixa_("<b>Pendências (" + res.pendencias.length + "):</b><br>" + res.pendencias.map(function (p) { return Lic_esc_(p.texto); }).join("<br>"), "aviso", true);
-    (res.avisos || []).forEach(function (a) { h += Lic_faixa_(a, "erro"); });
-    var caixa = function (rot, val, ruim) { return '<div class="' + (ruim ? "ruim" : "") + '"><span>' + Lic_esc_(rot) + "</span><b>" + Lic_esc_(val) + "</b></div>"; };
+    // 03/11/2026: vermelho só para problema; informação na faixa verde (as versões salvas antes trazem tudo em "avisos")
+    (res.informacoes || []).forEach(function (a) { h += Lic_faixa_(a, "ok"); });
+    (res.avisos || []).forEach(function (a) { h += Lic_faixa_(a, LicPr_avisoInformativo_(a) ? "ok" : "erro"); });
+    var caixa = function (rot, val, ruim) { return '<div class="' + (ruim ? "ruim" : "") + '"><span>' + Lic_esc_(rot) + '</span><b class="lic-rs">' + Lic_esc_(val) + "</b></div>"; };
     var pl = (res.politica && res.politica.licitacao) || {};
     h += '<div class="lpr-tot">' + caixa("Custo total", LicPr_moeda_(t.custo)) + caixa("Deslocamento (" + (v.baseNome || "") + ")", LicPr_moeda_(t.deslocamento)) + (t.seguro ? caixa("Seguro-garantia", LicPr_moeda_(t.seguro)) : "") +
       caixa("Piso (" + LicPr_pct_(pl.margemMinPct) + ")" + (t.pisoCompleto ? "" : " — parcial"), LicPr_moeda_(t.piso)) + caixa("Alvo (" + LicPr_pct_(pl.margemAlvoPct) + ")", LicPr_moeda_(t.alvo)) +
@@ -222,8 +227,8 @@
       var ab = r.abaixoPisoProposta || r.abaixoPisoEdital;
       var marca = function (pct, abaixo) { return pct === undefined || pct === null ? "—" : '<span class="' + (abaixo ? "lpr-abaixo" : "") + '">' + Lic_esc_(LicPr_pct_(pct)) + (abaixo ? " — abaixo do piso" : "") + "</span>"; };
       return { ab: ab, cel: [Lic_esc_(r.numero || r.n), '<span class="lic-mono">' + Lic_esc_(r.codigo || "—") + "</span> " + Lic_esc_(r.nome || r.descricao || ""), Lic_esc_(String(r.quantidade || 0).replace(".", ",")),
-        Lic_esc_(LicPr_moeda_(r.custoUnitTotal === null || r.custoUnitTotal === undefined ? null : Math.round(r.custoUnitTotal * 100) / 100)), r.pisoUnit === null ? '<span class="cm-selo laranja">sem piso</span>' : Lic_esc_(LicPr_moeda_(r.pisoUnit)), Lic_esc_(LicPr_moeda_(r.alvoUnit)),
-        Lic_esc_(LicPr_moeda_(r.precoEdital)), marca(r.margemEditalPct, r.abaixoPisoEdital), Lic_esc_(LicPr_moeda_(r.precoProposta)), marca(r.margemPropostaPct, r.abaixoPisoProposta)] };
+        LicPr_moedaHtml_(r.custoUnitTotal === null || r.custoUnitTotal === undefined ? null : Math.round(r.custoUnitTotal * 100) / 100), r.pisoUnit === null ? '<span class="cm-selo laranja">sem piso</span>' : LicPr_moedaHtml_(r.pisoUnit), LicPr_moedaHtml_(r.alvoUnit),
+        LicPr_moedaHtml_(r.precoEdital), marca(r.margemEditalPct, r.abaixoPisoEdital), LicPr_moedaHtml_(r.precoProposta), marca(r.margemPropostaPct, r.abaixoPisoProposta)] };
     });
     // linha abaixo do piso em vermelho, com o texto "abaixo do piso" na célula (não só a cor); célula com data-r (vira cartão no celular)
     h += '<div class="cm-caixa"><h3>Por item</h3><div style="overflow-x:auto"><table class="cm-tabela"><thead><tr>' + cab.map(function (c) { return "<th>" + Lic_esc_(c) + "</th>"; }).join("") + "</tr></thead><tbody>" +
@@ -243,8 +248,8 @@
     if (res.linhaExtra) h += Lic_faixa_("Deslocamento e seguro numa linha própria: " + res.linhaExtra.nome + ", custo " + LicPr_moeda_(res.linhaExtra.custo) + ", piso " + LicPr_moeda_(res.linhaExtra.piso) + ".", "ok");
     h += '<details class="lpr-det cm-caixa"><summary>Deslocamento: ' + Lic_esc_(v.baseNome || "") + ", " + Lic_esc_(v.origem || "") + " → " + Lic_esc_(v.destino || "") + (v.km === null || v.km === undefined ? " (sem km)" : ", " + Lic_esc_(String(v.km).replace(".", ",")) + " km") + "</summary>" +
       '<p class="cm-meta">' + Lic_esc_(v.kmFonte || "km não informado") + "</p>" + Lic_tabelaHtml_(["Linha", "Quantidade", "Valor", "Total"], (v.linhas || []).map(function (L) {
-        return [Lic_esc_(L.nome), Lic_esc_(L.nsa ? "não se aplica" : L.quantidade), Lic_esc_(L.nsa ? L.motivo : L.valor), Lic_esc_(L.nsa ? "—" : LicPr_moeda_(L.total))];
-      })) + '<p class="cm-meta">Custo da viagem: ' + Lic_esc_(LicPr_moeda_(v.custo)) + " (Incentivo de Missão " + Lic_esc_(LicPr_moeda_(v.incentivo)) + ").</p></details>";
+        return [Lic_esc_(L.nome), Lic_esc_(L.nsa ? "não se aplica" : L.quantidade), Lic_esc_(L.nsa ? L.motivo : L.valor), (L.nsa ? "—" : LicPr_moedaHtml_(L.total))];
+      })) + '<p class="cm-meta">Custo da viagem: ' + LicPr_moedaHtml_(v.custo) + " (Incentivo de Missão " + LicPr_moedaHtml_(v.incentivo) + ").</p></details>";
     h += '<details class="lpr-det cm-caixa" open><summary>Premissas e versões usadas</summary><ul class="lpr-conta">' + (res.premissas || []).map(function (p) { return "<li>" + Lic_esc_(p) + "</li>"; }).join("") + "</ul>" +
       '<p class="cm-meta">Política de Licitações versão ' + Lic_esc_(pl.versao || 0) + " · Comercial versão " + Lic_esc_((res.politica && res.politica.comercial && res.politica.comercial.versao) || 0) + " · regras " + Lic_esc_(res.regras) + "</p></details>";
     return h;

@@ -1117,6 +1117,8 @@ function Lic_alertasRodada_(quando) {
   passo('programar', function () { return Lic_alertasProgramar_(quando); });
   // avisos dos documentos de habilitação (validade e licitações acompanhadas), no máximo a cada 30 min (SGO_Licitacoes_Habilitacao.js)
   passo('habilitacao', function () { return typeof LicH_alertasProgramar_ === 'function' ? LicH_alertasProgramar_(quando) : null; });
+  // 03/11/2026: fila da análise automática (SGO_Licitacoes_Analise.js): varredura e, com análise vencida na fila, agenda a rotina dela
+  passo('filaAnalise', function () { return typeof Lic_filaVigiar_ === 'function' ? Lic_filaVigiar_() : null; });
   passo('escalonar', function () { return Lic_alertasEscalonar_(quando); });
   passo('enviar', function () { return Lic_alertasEnviar_(quando); });
   passo('concluir', function () { return Lic_alertasConcluir_(quando); });

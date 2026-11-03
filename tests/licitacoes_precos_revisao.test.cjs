@@ -99,7 +99,7 @@ test('revisão 6: a viagem só é rateada entre os itens da equipe própria; lot
   const so = calc(a, 'op2', [{ codigo: 'CAL-MONITOR', quantidade: 3, custoParceiro: '150' }], { uf: 'RJ', municipio: 'Niterói', pedagio: '' });
   assert.equal(so.viagem.custo, 0); assert.equal(so.totais.deslocamento, 0);
   assert.ok(!so.pendencias.some((p) => p.codigo === 'KM' || p.codigo === 'PEDAGIO'), 'sem pedir km nem pedágio da equipe');
-  assert.ok(so.avisos.some((x) => /só tem itens por parceiro/.test(x)));
+  assert.ok(so.informacoes.some((x) => /só tem itens por parceiro/.test(x)), 'informação (faixa verde), não aviso vermelho (03/11/2026)'); assert.ok(!so.avisos.some((x) => /só tem itens por parceiro/.test(x)));
   assert.equal(so.pendencias.length, 0);
 });
 
@@ -167,7 +167,7 @@ test('ajuste final 2b: edital só com o total do lote: abaixo da soma dos pisos 
   assert.ok(baixo.pendencias.some((p) => p.codigo === 'LOTE_EDITAL' && /abaixo da soma dos pisos/.test(p.texto)));
   const alto = ok(a.lic('s_dora', 'simulacaoCalcular', { id: 'op1', entrada: ent(String(Math.ceil(piso + 1000))) })).resultado;
   assert.equal(alto.totais.loteEditalAbaixo, false);
-  assert.ok(!alto.pendencias.some((p) => p.codigo === 'LOTE_EDITAL')); assert.ok(alto.avisos.some((x) => /cobre a soma dos pisos/.test(x)));
+  assert.ok(!alto.pendencias.some((p) => p.codigo === 'LOTE_EDITAL')); assert.ok(alto.informacoes.some((x) => /cobre a soma dos pisos/.test(x)), 'informação (faixa verde), não aviso vermelho (03/11/2026)'); assert.ok(!alto.avisos.some((x) => /cobre a soma dos pisos/.test(x)));
   assert.match(a.lic('s_dora', 'simulacaoCalcular', { id: 'op1', entrada: ent('abc') }).message, /o total do lote no edital/);
   // salvar guarda o total na entrada; a margem da nota fica como pendência (5 de 15)
   ok(a.lic('s_dora', 'simulacaoSalvar', { id: 'op1', entrada: ent(String(Math.floor(piso - 100))), motivo: 'Edital só com o total do lote' }));

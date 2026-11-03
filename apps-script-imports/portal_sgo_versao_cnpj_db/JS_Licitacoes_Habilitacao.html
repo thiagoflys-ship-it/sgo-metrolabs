@@ -273,9 +273,20 @@
     }).join("") + "</ul></details>";
     return h + "</article>";
   }
+  /**
+   * Faixa de cima da aba Habilitação (03/11/2026, captura real: em Resultado e Contrato aparecia "ainda não está em análise").
+   * No radar: ainda não acompanhada. Em Resultado e Contrato: habilitação concluída, a conferência fica para consulta, sem pendência nova.
+   */
+  function LicHb_faixaSituacao_(op) {
+    if (!op || op.acompanhada) return "";
+    if (op.situacao === "RESULTADO") return Lic_faixa_("Habilitação da licitação concluída (situação Resultado): a conferência abaixo continua visível para consulta e não gera pendência nova no Hoje nem no Painel.", "info");
+    if (op.situacao === "CONTRATO") return Lic_faixa_("Licitação contratada (situação Contrato): a habilitação foi concluída; a conferência abaixo continua visível para consulta e não gera pendência nova no Hoje nem no Painel. Os documentos do contrato ficam na tela Contratos.", "info");
+    if (op.situacao === "DESCARTADA") return Lic_faixa_("Oportunidade descartada: a habilitação não é acompanhada (não gera pendência no Hoje nem no Painel). O cruzamento abaixo fica para consulta.", "info");
+    return Lic_faixa_("Esta oportunidade ainda não está em análise: a habilitação entra nas pendências do Hoje e do Painel a partir de \"Em análise\". O cruzamento abaixo já vale para conferir.", "aviso");
+  }
   function LicHb_htmlAbaDados_(r) {
     var hb = r.habilitacao || {}, c = hb.contagens || {}, s = hb.sessao || {}, inf = hb.info || {};
-    var h = (r.op && !r.op.acompanhada ? Lic_faixa_("Esta oportunidade ainda não está em análise: a habilitação entra nas pendências do Hoje e do Painel a partir de \"Em análise\". O cruzamento abaixo já vale para conferir.", "aviso") : "") +
+    var h = LicHb_faixaSituacao_(r.op) +
       '<div class="cm-caixa"><h3>Habilitação desta licitação</h3><p class="cm-txt">Sessão: <b>' + Lic_esc_(LicHb_dia_(s.dia) || "sem data") + "</b> · " + Lic_esc_(s.fonte) + "</p>" +
       '<p class="cm-meta">Exigências: ' + (inf.leitura ? "leitura do edital versão " + Lic_esc_(inf.leitura.versao) + (inf.leitura.atual ? "" : " (há leitura mais nova em andamento)") : "sem leitura do edital consolidada") + " · " + (inf.analise ? "análise versão " + Lic_esc_(inf.analise.versao) : "sem análise concluída") + ". Cruzamento com o cadastro de habilitação pela regra de palavras do sistema (" + Lic_esc_(hb.regras) + ").</p>" +
       (inf.avisos || []).map(function (a) { return Lic_faixa_(a, "aviso"); }).join("") + (hb.cortadas ? Lic_faixa_("Mais " + hb.cortadas + " exigências ficaram fora da lista (limite da tela). Confira na aba Leitura do edital.", "aviso") : "") +

@@ -273,9 +273,19 @@ function Lic_abaDe_(l) {
   return 'analise';
 }
 function Lic_ativas_() { return Lic_ler_(LIC_ABAS.OPORTUNIDADES).filter(function (l) { return !Lic_s_(l.EXCLUIDO_EM); }); }
-/** Ordem "nota": maior nota primeiro; sem nota no fim; empate pela ordem padrão. */
+/**
+ * Ordem "nota" (03/11/2026, captura real: a nota 0 do descarte aparecia acima das sem nota): primeiro as notas acima de zero que não
+ * são de descarte (maior primeiro), depois as sem nota, e por último as de descarte (nota 0 ou classe "candidata a descarte").
+ * Empate pela ordem padrão.
+ */
+function Lic_grupoNota_(o) {
+  if (o.nota === null || o.nota === undefined) return 1;
+  return Number(o.nota) <= 0 || o.notaClasse === 'DESCARTE' ? 2 : 0;
+}
 function Lic_ordenarNota_(a, b) {
-  var na = a.nota === null || a.nota === undefined ? -1 : a.nota, nb = b.nota === null || b.nota === undefined ? -1 : b.nota;
+  var ga = Lic_grupoNota_(a), gb = Lic_grupoNota_(b);
+  if (ga !== gb) return ga - gb;
+  var na = ga === 1 ? 0 : Number(a.nota), nb = gb === 1 ? 0 : Number(b.nota);
   return nb !== na ? nb - na : Lic_ordenar_(a, b);
 }
 function Lic_ordenarPrazo_(a, b) { var ea = a.encerramentoIso || '9999', eb = b.encerramentoIso || '9999'; return ea < eb ? -1 : ea > eb ? 1 : 0; }
@@ -397,7 +407,9 @@ function Lic_hoje_(eu) {
   // etapa 3: alertas enviados e sem ciência (da Diretoria de Licitações inteira), para a faixa de cima
   var semC = [];
   try { if (typeof Lic_alertasSemCiencia_ === 'function') semC = Lic_alertasSemCiencia_(null).map(Lic_alertaParaTela_).sort(function (a, b) { return a.criadoEm < b.criadoEm ? 1 : -1; }); } catch (e) { semC = []; }
-  return { semCiencia: semC.slice(0, 5), semCienciaTotal: semC.length, kpis: k, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_(),
+  // 03/11/2026: fila da análise automática (SGO_Licitacoes_Analise.js)
+  var fila = typeof Lic_filaContagem_ === 'function' ? Lic_filaContagem_(todas) : null;
+  return { semCiencia: semC.slice(0, 5), semCienciaTotal: semC.length, kpis: k, filaAnalise: fila, prazos: prazos.slice(0, 12), novas: novas.slice(0, 8), coletor: Lic_situacaoColetor_(), ultimaColeta: Lic_json_(PropertiesService.getScriptProperties().getProperty('LIC_ULTIMA_COLETA'), null), cfg: Lic_cfg_(),
     // documentos de habilitação (SGO_Licitacoes_Habilitacao.js): vencimentos e pendências das licitações, com a fonte
     habilitacao: typeof LicH_resumo_ === 'function' ? LicH_resumo_() : null };
 }

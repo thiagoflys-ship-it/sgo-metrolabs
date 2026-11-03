@@ -390,7 +390,7 @@ test('telas: lista (vigência, a vencer, valor, prontos para virar contrato), pr
   const hp = t.ctx.LicCt_htmlAbaDados_(J(a.tela()));
   assert.match(hp, /id="lctRNum"/); assert.match(hp, /data-lct-criar="RESULTADO"/); assert.match(hp, /Itens \(do resultado homologado\)/); assert.match(hp, /Registro manual/); assert.match(hp, /id="lctRArq" type="file"/);
   t.ctx.LicCt_formHtml_('lctR', J(a.tela().previa.resultado.base), J(a.tela()), { itensEditaveis: false });
-  assert.match(t.ctx.LicCt_linhasHtml_('lctR', 'itens'), /Valor unitário homologado<\/span><br><b>R\$\s185,00/);
+  assert.match(t.ctx.LicCt_linhasHtml_('lctR', 'itens'), /Valor unitário homologado<\/span><br><b><span class="lic-rs">R\$\s185,00<\/span>/, 'valor em reais sem quebra (03/11/2026)');
   // contrato registrado
   a.criar({ campos: Object.assign(a.CAMPOS(), { numeroContrato: '<img src=x onerror=alert(1)>' }) });
   const d = J(a.tela());

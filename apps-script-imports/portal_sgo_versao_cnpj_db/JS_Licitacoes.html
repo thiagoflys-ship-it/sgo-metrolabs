@@ -83,6 +83,8 @@
   .lic-acoes-linha .btn-secondary, .lic-acoes-linha .btn-primary, .lic-acoes-linha a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
   #licTela :focus-visible { outline: 3px solid var(--info) !important; outline-offset: 2px; }
   #licTela .cm-tabela td { overflow-wrap: anywhere; }
+  /* 03/11/2026 (capturas reais: "R$ 8.380,0" + "0"): valor em reais nunca quebra no meio; no celular a tabela já vira cartão */
+  .lic-rs { white-space: nowrap; font-variant-numeric: tabular-nums; }
   /* etapa 3: agenda, alertas, regras dos alertas */
   .lic-dia { margin: 0 0 14px; }
   .lic-dia-cab { font-size: 15px; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); text-transform: capitalize; }
@@ -163,7 +165,7 @@
 <script>
   // ---------------- estado e utilitários ----------------
   var LIC = { nivel: "NENHUM", nome: "", mod: "", seq: 0, aba: "analisar", ordem: "prioridade", filtros: { busca: "", uf: "", selo: "", sessao: "" }, lista: null, portais: null, portaisAba: "portais", fichaAba: "resumo", fichaId: "", abrirFicha: "" };
-  var LIC_ORDENS = [["prioridade", "Prioridade da UF e prazo"], ["nota", "Nota (maior primeiro)"], ["prazo", "Prazo (mais perto primeiro)"]];
+  var LIC_ORDENS = [["prioridade", "Prioridade da UF e prazo"], ["nota", "Nota (maior primeiro, descarte no fim)"], ["prazo", "Prazo (mais perto primeiro)"]];
   var LIC_CLASSE_CSS = { ALTA: "n-alta", MEDIA: "n-media", BAIXA: "n-baixa", DESCARTE: "n-descarte", TRAVA_A_CONFIRMAR: "n-descarte" };
   var LIC_CLASSE_NOME = { ALTA: "alta", MEDIA: "média", BAIXA: "baixa", DESCARTE: "descarte", TRAVA_A_CONFIRMAR: "trava a confirmar" };
   var LIC_CRITERIOS = [["capacidade", "Capacidade técnica"], ["margem", "Margem"], ["documentacao", "Documentação"], ["localizacao", "Localização"], ["prazo", "Prazo"], ["valor", "Valor"], ["riscos", "Riscos"]];
@@ -188,6 +190,8 @@
   /** Endereço externo (PNCP, portal): só http/https vai a um href; o resto (javascript:, data:, aspas) vira "". */
   function Lic_url_(v) { var t = String(v === null || v === undefined ? "" : v).trim(); return /^https?:\/\/[^\s"'<>`]+$/i.test(t) ? t : ""; }
   function Lic_brl_(v) { if (v === null || v === undefined || v === "" || !isFinite(Number(v))) return "não informado"; return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+  /** Valor em reais já escapado, numa marcação que não quebra no meio do número (tabelas, listas e caixas). */
+  function Lic_brlHtml_(v) { return '<span class="lic-rs">' + Lic_esc_(Lic_brl_(v)) + "</span>"; }
   /** Texto da fonte sem fuso ("2026-11-13T08:00:00") → "sex 13/11/2026 08:00" sem converter (é o horário de Brasília presumido). */
   function Lic_dataFonte_(t) {
     var m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(String(t || ""));
@@ -361,12 +365,19 @@
     return Lic_faixaSemCienciaHtml_(d.semCiencia, d.semCienciaTotal) + Lic_coletorFaixaHtml_(d.coletor, d.cfg) + (typeof LicHb_hojeHtml_ === "function" ? LicHb_hojeHtml_(d.habilitacao) : "") +
       '<div class="cm-kpis">' + Lic_kpiHtml_(k.analisar || 0, "Para analisar", (k.analisar ? "aviso" : ""), "analisar") + Lic_kpiHtml_(k.travadas || 0, "Travadas (decisão da Diretoria)", "", "travadas") +
       Lic_kpiHtml_(k.analise || 0, "Em análise", "", "analise") + Lic_kpiHtml_(k.prazos7 || 0, "Prazos de proposta em 7 dias", (k.prazos7 ? "erro" : ""), "analisar") +
-      Lic_kpiHtml_(k.descartadasRegra7 || 0, "Descartadas pela regra (7 dias)", "", "descartadas") + Lic_kpiHtml_(k.retificadas7 || 0, "Com versão nova da fonte (7 dias)", "", "analisar") + "</div>" +
+      Lic_kpiHtml_(k.descartadasRegra7 || 0, "Descartadas pela regra (7 dias)", "", "descartadas") + Lic_kpiHtml_(k.retificadas7 || 0, "Com versão nova da fonte (7 dias)", "", "analisar") +
+      (d.filaAnalise ? Lic_kpiHtml_(d.filaAnalise.naFila || 0, "Na fila de análise por IA", "", "analisar") : "") + "</div>" + Lic_filaHojeHtml_(d.filaAnalise) +
       '<h3 class="cm-sec">Prazos de proposta nos próximos 7 dias</h3>' +
       ((d.prazos || []).length ? (d.prazos || []).map(Lic_linhaCurtaHtml_).join("") : '<div class="cm-vazio">Nenhum prazo de proposta nos próximos 7 dias entre as oportunidades no radar e em análise.</div>') +
       '<h3 class="cm-sec">Últimas que entraram no radar</h3>' +
       ((d.novas || []).length ? (d.novas || []).map(Lic_linhaCurtaHtml_).join("") : '<div class="cm-vazio">Nada no radar ainda. Com o coletor ligado, as candidatas aparecem aqui depois da primeira rodada.</div>') +
       '<p class="cm-modo-dica">Horários das propostas: como a fonte informa, presumidos de Brasília (o PNCP não informa o fuso). A nota de 0 a 100 e a leitura do edital pela IA ficam na ficha de cada oportunidade; os prazos com a fonte e a natureza estão em Agenda e prazos, e os alertas da Diretoria de Licitações na Central de alertas.</p>';
+  }
+  /** Fila da análise automática no Hoje: as que esperam nova tentativa e as que falharam 3 vezes (03/11/2026). */
+  function Lic_filaHojeHtml_(f) {
+    if (!f || (!f.esperando && !f.falharam)) return "";
+    return Lic_faixa_((f.esperando ? f.esperando + (f.esperando === 1 ? " oportunidade espera" : " oportunidades esperam") + " nova tentativa da análise automática (a IA não respondeu; a fila tenta de novo em 1 h e depois em 6 h). " : "") +
+      (f.falharam ? f.falharam + (f.falharam === 1 ? " oportunidade ficou" : " oportunidades ficaram") + " sem nota: a análise automática falhou 3 vezes. Abra a ficha e use \"Analisar agora\"." : ""), f.falharam ? "aviso" : "info");
   }
   function Lic_renderHoje_() {
     var c = Lic_corpo_(); if (!c) return;
@@ -438,7 +449,7 @@
       '<p class="cm-meta">' + Lic_esc_((o.municipio ? o.municipio + "/" : "") + o.uf) + " · " + Lic_esc_(o.modalidade) + (o.modo ? " · " + Lic_esc_(o.modo) : "") + (o.srp === "SIM" ? " · registro de preços" : "") + " · " + Lic_esc_(Lic_sessaoTexto_(o)) + "</p>" +
       '<p class="cm-txt" style="margin:0 0 4px">' + Lic_selosHtml_(o) + "</p>" +
       '<p class="lic-objeto">' + Lic_marcar_(String(o.objeto || "").slice(0, 600) + (String(o.objeto || "").length > 600 ? "…" : ""), termo || "") + "</p>" +
-      '<p class="cm-meta"><span class="lic-mono">' + Lic_esc_(o.numeroControle) + "</span> · estimado " + Lic_esc_(Lic_brl_(o.valor)) + " · propostas até <b>" + Lic_esc_(Lic_dataFonte_(o.encerramento)) + "</b>" + (o.fusoPresumido ? ' <span class="cm-meta">(Brasília, presumido)</span>' : "") + " " + Lic_tempo_(o.encerramentoIso) + "</p>" +
+      '<p class="cm-meta"><span class="lic-mono">' + Lic_esc_(o.numeroControle) + "</span> · estimado " + Lic_brlHtml_(o.valor) + " · propostas até <b>" + Lic_esc_(Lic_dataFonte_(o.encerramento)) + "</b>" + (o.fusoPresumido ? ' <span class="cm-meta">(Brasília, presumido)</span>' : "") + " " + Lic_tempo_(o.encerramentoIso) + "</p>" +
       Lic_motivosHtml_(o) + Lic_linhaNotaHtml_(o) + '</div><div class="lic-op-acoes">' + Lic_acoesCartaoHtml_(o, false) + "</div></article>";
   }
   /** Uma linha sobre a análise por IA no cartão (versão e data, trava, ou por que ainda não tem nota). */
@@ -567,7 +578,7 @@
   }
   function Lic_htmlFicha_(d, aba) {
     var o = d.op || {};
-    var num = [["Número de controle", '<span class="lic-mono">' + Lic_esc_(o.numeroControle) + "</span>"], ["Valor estimado", Lic_esc_(Lic_brl_(o.valor))], ["Propostas até", Lic_esc_(Lic_dataFonte_(o.encerramento)) + " " + Lic_tempo_(o.encerramentoIso)],
+    var num = [["Número de controle", '<span class="lic-mono">' + Lic_esc_(o.numeroControle) + "</span>"], ["Valor estimado", Lic_brlHtml_(o.valor)], ["Propostas até", Lic_esc_(Lic_dataFonte_(o.encerramento)) + " " + Lic_tempo_(o.encerramentoIso)],
       ["Modalidade", Lic_esc_(o.modalidade)], ["Lei", Lic_esc_(o.lei === "14133" ? "Lei 14.133/2021" : o.lei === "13303" ? "Lei 13.303/2016" : o.lei ? o.amparo : "a confirmar")], ["Situação no SGO+", Lic_esc_(o.situacaoNome)],
       ["Versão da fonte", Lic_esc_(o.versao) + (o.retificadaEm ? " (atualizada em " + Lic_esc_(Lic_dataHora_(o.retificadaEm)) + ")" : "")], ["Prioridade da UF", Lic_esc_(o.uf) + " · " + (o.prioridade || 0) + " de 8"]];
     var h = '<div class="lic-acoes-linha" style="margin-bottom:10px"><button type="button" class="btn-secondary" data-lic-voltar><i class="fas fa-arrow-left" aria-hidden="true"></i>&nbsp;Voltar à lista</button></div>' +
@@ -610,7 +621,7 @@
               Lic_esc_(v.substituidaEm ? Lic_dataHora_(v.substituidaEm) : "atual"), Lic_esc_(Lic_dataFonte_(v.encerramento)), Lic_esc_(v.situacao), '<span class="lic-mono" title="' + Lic_esc_(v.hash) + '">' + Lic_esc_(String(v.hash || "").slice(0, 16)) + "…</span>"];
           })) + "</div>" +
           '<div class="cm-caixa"><h3>Itens (Compras.gov.br)</h3>' + ((f.itens || []).length ? Lic_tabelaHtml_(["Item", "Descrição", "Tipo", "Quantidade", "Valor unitário", "Benefício"], f.itens.map(function (i) {
-            return [Lic_esc_(i.numero), Lic_esc_(i.descricao), Lic_esc_(i.tipo), Lic_esc_((i.quantidade === null || i.quantidade === undefined ? "" : String(i.quantidade).replace(".", ",")) + " " + (i.unidade || "")), Lic_esc_(i.sigiloso ? "sigiloso" : Lic_brl_(i.valorUnitario)), Lic_esc_(i.beneficio || "—")];
+            return [Lic_esc_(i.numero), Lic_esc_(i.descricao), Lic_esc_(i.tipo), Lic_esc_((i.quantidade === null || i.quantidade === undefined ? "" : String(i.quantidade).replace(".", ",")) + " " + (i.unidade || "")), (i.sigiloso ? "sigiloso" : Lic_brlHtml_(i.valorUnitario)), Lic_esc_(i.beneficio || "—")];
           })) : '<p class="cm-vazio">Itens ainda não lidos (o coletor lê os itens das candidatas e travadas a cada rodada) ou a fonte não informou.</p>') + "</div>";
       }
     } else if (aba === "historico") {
@@ -713,6 +724,8 @@
     if (a.erro) return Lic_faixa_(a.erro, "aviso");
     var at = a.atual, ul = a.ultima, h = '<p class="cm-modo-dica">A IA lê o edital e os dados da fonte e separa fatos (com o trecho e o arquivo), inferências e pendências. Ela não decide: descartar ou participar é da Diretoria.</p>';
     if (!a.iaDisponivel) h += Lic_faixa_(a.aviso || "Análise por IA indisponível: falta a chave da IA.", "aviso");
+    // 03/11/2026: fila da análise automática (posição, nova tentativa ou a falha)
+    if (a.fila && a.fila.texto) h += Lic_faixa_(a.fila.texto, a.fila.situacao === "FALHOU" ? "aviso" : "info");
     if (ul && (!at || ul.versao > at.versao)) h += Lic_faixa_("A última tentativa (versão " + ul.versao + ", " + Lic_dataHora_(ul.em) + ") " + (ul.situacao === "RECUSADA" ? "foi recusada pelo verificador" : "não terminou") + ". " + ul.resumo + (at ? " A nota mostrada é da versão " + at.versao + "." : ""), "aviso") +
       Lic_detalheTecnicoHtml_(ul);
     if (at && a.desatualizada) h += Lic_faixa_("Os dados da fonte ou os arquivos mudaram depois da análise versão " + at.versao + ". " + (a.iaDisponivel ? "A rotina refaz sozinha; ou toque em \"Refazer análise\"." : "Sem a chave da IA, ela não é refeita."), "aviso");
@@ -1621,7 +1634,8 @@
       '<p class="cm-meta"><button type="button" class="lic-link"' + Lic_linkAttr_({ mod: "licitacoes_portais", portais: "registro" }) + ">Ver o registro das chamadas</button> · " + po.total + " portais cadastrados.</p>", col.fonte);
     g += Lic_pnCaixa_("Análises por IA", Lic_pnBarras_([{ t: "Concluídas", n: ia.concluidas, cor: "var(--success)", link: kb({ ia: "CONCLUIDA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi concluída." },
       { t: "Recusadas pelo verificador", n: ia.recusadas, cor: "var(--warning)", link: kb({ ia: "RECUSADA" }), dica: "Abre o Kanban só com as oportunidades cuja última análise foi recusada." }, { t: "Erro da IA (não respondeu)", n: ia.erro, cor: "var(--danger)", link: kb({ ia: "ERRO" }), dica: "Abre o Kanban só com as oportunidades cuja última análise deu erro da IA." }]) +
-      '<dl class="cm-det"><dt>Tempo médio</dt><dd>' + Lic_esc_(Lic_tempoMedio_(ia.tempoMedioMs)) + (ia.medidas ? " (" + ia.medidas + (ia.medidas === 1 ? " análise medida" : " análises medidas") + ")" : "") + "</dd><dt>Tentativas registradas</dt><dd>" + ia.total + " (concluídas " + ((ia.tentativas || {}).CONCLUIDA || 0) + ", recusadas " + ((ia.tentativas || {}).RECUSADA || 0) + ", erro " + ((ia.tentativas || {}).ERRO || 0) + ")</dd><dt>Última</dt><dd>" + Lic_esc_(ia.ultima ? Lic_dataHora_(ia.ultima) : "nenhuma ainda") + "</dd></dl>", ia.fonte);
+      '<dl class="cm-det"><dt>Tempo médio</dt><dd>' + Lic_esc_(Lic_tempoMedio_(ia.tempoMedioMs)) + (ia.medidas ? " (" + ia.medidas + (ia.medidas === 1 ? " análise medida" : " análises medidas") + ")" : "") + "</dd><dt>Tentativas registradas</dt><dd>" + ia.total + " (concluídas " + ((ia.tentativas || {}).CONCLUIDA || 0) + ", recusadas " + ((ia.tentativas || {}).RECUSADA || 0) + ", erro " + ((ia.tentativas || {}).ERRO || 0) + ")</dd><dt>Última</dt><dd>" + Lic_esc_(ia.ultima ? Lic_dataHora_(ia.ultima) : "nenhuma ainda") + "</dd>" +
+      (ia.fila ? "<dt>Fila de análise</dt><dd>" + Lic_esc_((ia.fila.naFila || 0) + " na fila" + (ia.fila.esperando ? " (" + ia.fila.esperando + " esperando nova tentativa)" : "") + (ia.fila.falharam ? " · " + ia.fila.falharam + " com a análise automática falha (use \"Analisar agora\" na ficha)" : "")) + "</dd>" : "") + "</dl>", ia.fonte);
     // documentos de habilitação (JS_Licitacoes_Habilitacao.html): vencimentos e pendências das licitações, com a fonte
     if (typeof LicHb_painelHtml_ === "function") g += LicHb_painelHtml_(d.habilitacao);
     return h + g + "</div>";
