@@ -24,10 +24,12 @@ function SGO_ajudaTelas_LicitacoesMercado_() {
         { titulo: "Ler os números com cuidado", itens: [
           "\"Amostra pequena\" (menos de 5 preços): use como indício, não como referência de preço.",
           "\"Sem dados\": nenhum preço no período. O sistema nunca inventa um número.",
+          "Registro de preços: vence o item só o resultado de ordem 1 (ou o único não cancelado); os demais aparecem como \"cadastro de reserva\", contam como participação e ficam fora do preço.",
+          "Registro manual do mesmo item que o PNCP já trouxe não conta duas vezes: vale o PNCP.",
           "O grupo é reconhecido pelo texto do item (calibração, manutenção, qualificação, NR-13, segurança elétrica e o equipamento). Item com texto genérico cai em \"Outro serviço\"."
         ] },
         { titulo: "Cadastro de fornecedores e concorrentes", itens: [
-          "Um cadastro por CNPJ, conferido pelos dígitos verificadores (aceita o CNPJ com letras). Ele se forma sozinho com os vencedores lidos no PNCP e nas disputas.",
+          "Um cadastro por CNPJ, conferido pelos dígitos verificadores (aceita o CNPJ com letras). Digite as 14 posições. CPF que vier no nome do fornecedor não é gravado nem mostrado. Ele se forma sozinho com os vencedores lidos no PNCP e nas disputas.",
           "O que uma fonte traz só preenche campo vazio. Valor diferente do cadastro aparece em \"Variantes para conferir\", com a fonte e a data; \"Usar este valor\" troca o campo, com o motivo.",
           "\"Novo fornecedor\" cadastra pelo CNPJ (razão social obrigatória); \"Mudar o cadastro\" muda só os campos preenchidos (campo em branco não apaga nada). Todo campo mudado fica no histórico (de → para) com o seu nome.",
           "Concorrentes das disputas sem CNPJ: o nome digitado nos lances fica separado até você tocar em \"Ligar ao CNPJ\", com o motivo. A partir daí as participações e vitórias desse nome contam para o CNPJ."

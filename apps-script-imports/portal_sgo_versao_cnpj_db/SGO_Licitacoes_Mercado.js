@@ -41,7 +41,7 @@ var LICM_COLUNAS = {
   // UMA LINHA POR RESULTADO (item × sequencial da fonte, ou registro manual); a versão nova da fonte atualiza a linha (VERSAO, histórico)
   LIC_MERCADO_RESULTADOS: ['ID', 'CHAVE_RESULTADO', 'ORIGEM', 'PAPEL', 'CHAVE_FONTE', 'NUMERO_CONTROLE_PNCP', 'OPORTUNIDADE_ID', 'ORGAO_CNPJ', 'ORGAO_NOME', 'UF', 'MUNICIPIO', 'MODALIDADE',
     'OBJETO', 'ENCERRAMENTO_ISO', 'ITEM', 'ITEM_DESCRICAO', 'ITEM_TIPO', 'ITEM_QUANTIDADE', 'ITEM_UNIDADE', 'VALOR_UNIT_ESTIMADO', 'FORNECEDOR_CNPJ', 'FORNECEDOR_CNPJ_INFORMADO',
-    'FORNECEDOR_NOME', 'FORNECEDOR_PORTE', 'FORNECEDOR_TIPO', 'VALOR_UNIT_HOMOLOGADO', 'VALOR_TOTAL_HOMOLOGADO', 'QUANTIDADE_HOMOLOGADA', 'DESCONTO_FONTE_PCT', 'SITUACAO', 'DATA_RESULTADO',
+    'FORNECEDOR_NOME', 'FORNECEDOR_PORTE', 'FORNECEDOR_TIPO', 'ORDEM_CLASSIFICACAO', 'VALOR_UNIT_HOMOLOGADO', 'VALOR_TOTAL_HOMOLOGADO', 'QUANTIDADE_HOMOLOGADA', 'DESCONTO_FONTE_PCT', 'SITUACAO', 'DATA_RESULTADO',
     'FONTE', 'LINK', 'HASH_FONTE', 'SERVIDOR_ID', 'VERSAO', 'MOTIVO', 'POR_ID', 'POR_NOME', 'COLETADO_EM', 'SINCRONIZADO_EM', 'ANULADO_EM', 'ANULADO_POR_NOME', 'ANULADO_MOTIVO', 'HASH']
 };
 var LICM_COLUNAS_TEXTO = {
@@ -85,18 +85,25 @@ var LICM_EQUIPAMENTOS = [
 // ------------------------------------------------------------ abas e utilitários
 function LicM_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('LICM_ABAS_OK_V1')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('LICM_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(LICM_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LICM_COLUNAS[aba]);
     LICM_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LICM_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('LICM_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LICM_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 function LicM_temColetor_() { return typeof SGO_LICITACOES !== 'undefined' && SGO_LICITACOES && typeof SGO_LICITACOES.mercadoListar === 'function'; }
 function LicM_norm_(t) { var s = Lic_s_(t).toLowerCase(); try { s = s.normalize('NFD').replace(/[̀-ͯ]/g, ''); } catch (e) {} return s.replace(/[^a-z0-9]+/g, ' ').trim(); }
 /** Nome para comparar (sem acento, sem pontuação, sem LTDA/ME/EPP/SA/EIRELI no fim). */
-function LicM_nomeChave_(t) { return LicM_norm_(t).replace(/\b(ltda|me|epp|s a|sa|eireli|limitada|mei)\b/g, ' ').replace(/\s+/g, ' ').trim(); }
+function LicM_nomeChave_(t) { return LicM_norm_(LicM_semCpf_(t)).replace(/\b(ltda|me|epp|s a|sa|eireli|limitada|mei)\b/g, ' ').replace(/\s+/g, ' ').trim(); }
+/**
+ * Revisão de 642380b (privacidade): sequência de CPF (11 dígitos, com ou sem pontuação) sai do nome do fornecedor, ao gravar E ao mostrar
+ * (vale para o que já estava gravado). Empresário individual costuma vir com o CPF no nome; CNPJ (14 dígitos) e outros números ficam.
+ */
+function LicM_semCpf_(t) {
+  return Lic_s_(t).replace(/(?<![\d.\/-])\d{3}[.\s]?\d{3}[.\s]?\d{3}[-.\s]?\d{2}(?![\d\/-])/g, ' ').replace(/\s*[-–]\s*$/, '').replace(/^\s*[-–]\s*/, '').replace(/\s{2,}/g, ' ').trim();
+}
 function LicM_txt_(v, max) { return Lic_texto_(Lic_s_(v).replace(/\r\n/g, '\n').replace(/^(?:[=+@\s]|-(?!\d))+/, ''), max || 1000); }
 function LicM_n_(v) {
   if (typeof v === 'number') return isFinite(v) ? v : null;
@@ -188,7 +195,7 @@ function LicM_porte_(v) { var t = LicM_norm_(v); if (!t) return ''; if (/^(me|mi
 function LicM_limparCampo_(campo, v) {
   if (campo === 'UF') { var u = Lic_up_(v); return LICM_UFS.indexOf(u) >= 0 ? u : ''; }
   if (campo === 'PORTE') return LicM_porte_(v);
-  return LicM_txt_(v, campo === 'MUNICIPIO' ? 120 : 300);
+  return LicM_semCpf_(LicM_txt_(v, campo === 'MUNICIPIO' ? 120 : 300));
 }
 /**
  * Mescla o que uma fonte trouxe no cadastro (quem chama segura a trava). dados = { CNPJ, RAZAO_SOCIAL, ... }; o.origem COLETOR|DISPUTA|MANUAL;
@@ -242,7 +249,7 @@ function LicM_mesclar_(mapa, dados, o, eu) {
 function LicM_hashResultado_(x) {
   return Lic_hash_([Lic_s_(x.CHAVE_RESULTADO), Lic_up_(x.ORIGEM), Lic_up_(x.PAPEL), Lic_s_(x.ORGAO_CNPJ), Lic_s_(x.ORGAO_NOME), Lic_s_(x.ITEM), Lic_s_(x.ITEM_DESCRICAO), Lic_s_(x.ITEM_UNIDADE),
     Lic_s_(x.VALOR_UNIT_ESTIMADO), Lic_s_(x.FORNECEDOR_CNPJ), Lic_s_(x.FORNECEDOR_NOME), Lic_s_(x.VALOR_UNIT_HOMOLOGADO), Lic_s_(x.VALOR_TOTAL_HOMOLOGADO), Lic_s_(x.SITUACAO), Lic_s_(x.DATA_RESULTADO),
-    Lic_s_(x.FONTE), Lic_s_(x.LINK), Lic_s_(x.HASH_FONTE), String(Number(x.VERSAO) || 0), Lic_s_(x.POR_ID), Lic_s_(x.ANULADO_EM), Lic_s_(x.ANULADO_MOTIVO)].join('|'));
+    Lic_s_(x.FONTE), Lic_s_(x.LINK), Lic_s_(x.HASH_FONTE), Lic_s_(x.ORDEM_CLASSIFICACAO), String(Number(x.VERSAO) || 0), Lic_s_(x.POR_ID), Lic_s_(x.ANULADO_EM), Lic_s_(x.ANULADO_MOTIVO)].join('|'));
 }
 function LicM_v_(n) { return n === null || n === undefined || n === '' || !isFinite(Number(n)) ? '' : Number(n); }
 /** Linha do espelho a partir do que o servidor devolve (servicos/licitacoes/mercado.ts, listar). */
@@ -252,9 +259,9 @@ function LicM_linhaDoServidor_(it, opsPorChave) {
     NUMERO_CONTROLE_PNCP: Lic_s_(c.numeroControlePncp), OPORTUNIDADE_ID: op ? Lic_s_(op.ID) : '', ORGAO_CNPJ: Lic_s_(c.orgaoCnpj).replace(/\D/g, ''), ORGAO_NOME: Lic_texto_(c.orgaoNome, 300),
     UF: Lic_up_(c.uf), MUNICIPIO: Lic_texto_(c.municipio, 120), MODALIDADE: Lic_texto_(c.modalidadeNome, 80), OBJETO: Lic_texto_(c.objeto, 600), ENCERRAMENTO_ISO: Lic_s_(c.encerramentoEm),
     ITEM: Lic_s_(it.numeroItem), ITEM_DESCRICAO: Lic_texto_(i.descricao, 1000), ITEM_TIPO: Lic_up_(i.materialServico), ITEM_QUANTIDADE: LicM_v_(i.quantidade), ITEM_UNIDADE: Lic_texto_(i.unidade, 60),
-    VALOR_UNIT_ESTIMADO: LicM_v_(i.valorUnitarioEstimado), FORNECEDOR_CNPJ: LicM_cnpj_(f.cnpj), FORNECEDOR_CNPJ_INFORMADO: Lic_texto_(f.cnpjInformado, 20), FORNECEDOR_NOME: Lic_texto_(f.nome, 300),
+    VALOR_UNIT_ESTIMADO: LicM_v_(i.valorUnitarioEstimado), FORNECEDOR_CNPJ: LicM_cnpj_(f.cnpj), FORNECEDOR_CNPJ_INFORMADO: Lic_texto_(f.cnpjInformado, 20), FORNECEDOR_NOME: LicM_semCpf_(Lic_texto_(f.nome, 300)),
     FORNECEDOR_PORTE: Lic_texto_(f.porte, 40), FORNECEDOR_TIPO: Lic_up_(f.tipoPessoa), VALOR_UNIT_HOMOLOGADO: LicM_v_(it.valorUnitarioHomologado), VALOR_TOTAL_HOMOLOGADO: LicM_v_(it.valorTotalHomologado),
-    QUANTIDADE_HOMOLOGADA: LicM_v_(it.quantidadeHomologada), DESCONTO_FONTE_PCT: LicM_v_(it.percentualDesconto), SITUACAO: Lic_texto_(it.situacao, 60), DATA_RESULTADO: Lic_s_(it.dataResultado).slice(0, 10),
+    QUANTIDADE_HOMOLOGADA: LicM_v_(it.quantidadeHomologada), DESCONTO_FONTE_PCT: LicM_v_(it.percentualDesconto), ORDEM_CLASSIFICACAO: LicM_v_(it.ordemClassificacao), SITUACAO: Lic_texto_(it.situacao, 60), DATA_RESULTADO: Lic_s_(it.dataResultado).slice(0, 10),
     FONTE: 'PNCP, resultado do item ' + Lic_s_(it.numeroItem) + ' da contratação ' + Lic_s_(c.numeroControlePncp), LINK: Lic_url_(c.linkPncp) || Lic_url_(it.fonte && it.fonte.url), HASH_FONTE: Lic_s_(it.hash),
     SERVIDOR_ID: Lic_s_(it.id), COLETADO_EM: Lic_s_(it.coletadoEm) };
 }
@@ -342,10 +349,10 @@ function LicM_resultadosDisputa_() {
  */
 function LicM_observacoes_(o) {
   o = o || {};
-  var desde = LicM_desde_(LicM_meses_(o.meses)), out = [], fora = { cancelados: 0, alterados: 0, antigos: 0 }, vistos = {};
+  var desde = LicM_desde_(LicM_meses_(o.meses)), out = [], fora = { cancelados: 0, alterados: 0, antigos: 0, duplicados: 0 }, vistos = {};
   var forn = LicM_fornecedoresPorCnpj_(), apelidos = {};
   Object.keys(forn).forEach(function (c) { (Lic_json_(forn[c].APELIDOS_JSON, []) || []).forEach(function (a) { if (a && !apelidos[a]) apelidos[a] = c; }); });
-  var nomeDe = function (cnpj, nome) { var f = cnpj && forn[cnpj]; return f && Lic_s_(f.RAZAO_SOCIAL) ? Lic_s_(f.RAZAO_SOCIAL) : Lic_s_(nome); };
+  var nomeDe = function (cnpj, nome) { var f = cnpj && forn[cnpj]; return LicM_semCpf_(f && Lic_s_(f.RAZAO_SOCIAL) ? f.RAZAO_SOCIAL : nome); };
   var ops = {}; Lic_ler_(LIC_ABAS.OPORTUNIDADES).forEach(function (l) { ops[Lic_s_(l.ID)] = l; });
   var add = function (x) {
     x.data = LicM_diaIso_(x.data);
@@ -359,13 +366,24 @@ function LicM_observacoes_(o) {
     x.desconto = x.estimado > 0 && x.valor > 0 && x.papel === 'VENCEDOR' ? Math.round((1 - x.valor / x.estimado) * 1000) / 10 : null;
     out.push(x);
   };
-  // 1 e 3. espelho do PNCP e registros manuais
+  // 1 e 3. espelho do PNCP e registros manuais. Revisão de 642380b: (a) registro de preços: do PNCP, vence o item só a ordem de
+  // classificação 1, ou o único resultado não cancelado do item; os demais entram como participação ("cadastro de reserva"); (b) o
+  // registro manual do mesmo item que o PNCP já trouxe não entra duas vezes (vale o PNCP, como nas disputas)
+  var validas = [], porItem = {}, doPncp = {};
   Lic_ler_(LICM_ABAS.RESULTADOS).forEach(function (r) {
     if (LicM_hashResultado_(r) !== Lic_s_(r.HASH)) { fora.alterados++; return; }
     if (Lic_s_(r.ANULADO_EM) || /cancelad/i.test(Lic_s_(r.SITUACAO))) { fora.cancelados++; return; }
-    var cnpj = LicM_cnpj_(r.FORNECEDOR_CNPJ), pf = Lic_up_(r.FORNECEDOR_TIPO) === 'PF';
-    vistos[Lic_s_(r.CHAVE_FONTE) + '|' + Lic_s_(r.ITEM)] = true;
-    add({ origem: Lic_up_(r.ORIGEM) || 'COLETOR', papel: Lic_up_(r.PAPEL) || 'VENCEDOR', contratacao: Lic_s_(r.CHAVE_FONTE) || ('MANUAL:' + Lic_s_(r.ID)), oportunidadeId: Lic_s_(r.OPORTUNIDADE_ID),
+    validas.push(r);
+    if (Lic_up_(r.ORIGEM) !== 'MANUAL') { var k = Lic_s_(r.CHAVE_FONTE) + '|' + Lic_s_(r.ITEM); porItem[k] = (porItem[k] || 0) + 1; doPncp[k] = true; }
+  });
+  validas.sort(function (a, b) { return (Lic_up_(a.ORIGEM) === 'MANUAL' ? 1 : 0) - (Lic_up_(b.ORIGEM) === 'MANUAL' ? 1 : 0); });
+  validas.forEach(function (r) {
+    var cnpj = LicM_cnpj_(r.FORNECEDOR_CNPJ), pf = Lic_up_(r.FORNECEDOR_TIPO) === 'PF', k = Lic_s_(r.CHAVE_FONTE) + '|' + Lic_s_(r.ITEM), manual = Lic_up_(r.ORIGEM) === 'MANUAL';
+    var papel = Lic_up_(r.PAPEL) || 'VENCEDOR', reserva = false;
+    if (manual && papel === 'VENCEDOR' && Lic_s_(r.CHAVE_FONTE) && doPncp[k]) { fora.duplicados++; return; }
+    if (!manual && porItem[k] > 1 && Number(r.ORDEM_CLASSIFICACAO) !== 1) { papel = 'PARTICIPANTE'; reserva = true; }
+    vistos[k] = true;
+    add({ origem: Lic_up_(r.ORIGEM) || 'COLETOR', papel: papel, reserva: reserva, ordem: LicM_n_(r.ORDEM_CLASSIFICACAO), contratacao: Lic_s_(r.CHAVE_FONTE) || ('MANUAL:' + Lic_s_(r.ID)), oportunidadeId: Lic_s_(r.OPORTUNIDADE_ID),
       orgaoCnpj: Lic_s_(r.ORGAO_CNPJ).replace(/\D/g, ''), orgaoNome: Lic_s_(r.ORGAO_NOME), uf: Lic_up_(r.UF), objeto: Lic_s_(r.OBJETO), item: Lic_s_(r.ITEM), descricao: Lic_s_(r.ITEM_DESCRICAO), unidade: Lic_s_(r.ITEM_UNIDADE),
       estimado: LicM_n_(r.VALOR_UNIT_ESTIMADO), valor: LicM_n_(r.VALOR_UNIT_HOMOLOGADO), total: LicM_n_(r.VALOR_TOTAL_HOMOLOGADO), fornecedorCnpj: cnpj, fornecedorNome: pf ? 'Pessoa física' : nomeDe(cnpj, r.FORNECEDOR_NOME),
       pf: pf, proprio: false, data: Lic_s_(r.DATA_RESULTADO) || Lic_s_(r.ENCERRAMENTO_ISO) || Lic_s_(r.COLETADO_EM), link: Lic_url_(r.LINK), fonte: Lic_s_(r.FONTE), numeroControle: Lic_s_(r.NUMERO_CONTROLE_PNCP) });
@@ -397,7 +415,7 @@ function LicM_observacoes_(o) {
     var x = part[k], d = disputas[Lic_s_(x.DISPUTA_ID)] || {}, l = ops[Lic_s_(x.OPORTUNIDADE_ID)] || {}, cnpj = apelidos[LicM_nomeChave_(x.CONCORRENTE)] || '';
     add({ origem: 'DISPUTA', papel: 'PARTICIPANTE', contratacao: Lic_s_(l.CHAVE_FONTE) || ('OP:' + Lic_s_(x.OPORTUNIDADE_ID)), oportunidadeId: Lic_s_(x.OPORTUNIDADE_ID), orgaoCnpj: Lic_s_(l.ORGAO_CNPJ).replace(/\D/g, ''),
       orgaoNome: Lic_s_(l.ORGAO_NOME), uf: Lic_up_(l.UF), objeto: Lic_s_(l.OBJETO), item: Lic_s_(x.ITEM), descricao: Lic_s_(baseItem(d, x.ITEM).descricao), unidade: 'unidade', estimado: null, valor: null, total: null,
-      fornecedorCnpj: cnpj, fornecedorNome: nomeDe(cnpj, x.CONCORRENTE), apelido: Lic_s_(x.CONCORRENTE), pf: false, proprio: false, data: Lic_s_(x.QUANDO), link: Lic_url_(l.LINK_PNCP),
+      fornecedorCnpj: cnpj, fornecedorNome: nomeDe(cnpj, x.CONCORRENTE), apelido: LicM_semCpf_(x.CONCORRENTE), pf: false, proprio: false, data: Lic_s_(x.QUANDO), link: Lic_url_(l.LINK_PNCP),
       fonte: 'Disputa ' + Lic_s_(x.CODIGO) + ': lance do concorrente digitado pela Diretoria', numeroControle: Lic_s_(l.NUMERO_CONTROLE_PNCP) });
   });
   return { obs: out, fora: fora, desde: desde, meses: LicM_meses_(o.meses), fornecedores: forn };
@@ -421,7 +439,7 @@ function LicM_porFornecedor_(obs, cadastro) {
     var porServ = {};
     LicM_comPreco_(venc).forEach(function (x) { (porServ[x.grupo] = porServ[x.grupo] || { grupo: x.grupo, nome: x.grupoNome, valores: [] }).valores.push(x.valor); });
     var datas = l.map(function (x) { return x.data; }).filter(Boolean).sort();
-    return { chave: k, cnpj: cnpj, cnpjTxt: LicM_cnpjTxt_(cnpj), nome: cad && Lic_s_(cad.RAZAO_SOCIAL) ? Lic_s_(cad.RAZAO_SOCIAL) : l[0].fornecedorNome, cadastrado: !!cad, porte: cad ? LICM_PORTES[Lic_s_(cad.PORTE)] || '' : '',
+    return { chave: k, cnpj: cnpj, cnpjTxt: LicM_cnpjTxt_(cnpj), nome: LicM_semCpf_(cad && Lic_s_(cad.RAZAO_SOCIAL) ? cad.RAZAO_SOCIAL : l[0].fornecedorNome), cadastrado: !!cad, porte: cad ? LICM_PORTES[Lic_s_(cad.PORTE)] || '' : '',
       participacoes: LicM_distintas_(l), vitorias: LicM_distintas_(venc), itensGanhos: venc.length,
       valorGanho: Math.round(venc.reduce(function (a, x) { return a + (x.total > 0 ? x.total : 0); }, 0) * 100) / 100,
       orgaos: LicM_contar_(venc.length ? venc : l, function (x) { return x.orgaoChave; }, function (x) { return x.orgaoNome; }).slice(0, 8),
@@ -501,7 +519,7 @@ function LicM_concorrente_(eu, d) {
   var ctx = LicM_observacoes_({ meses: d.meses }), k = Lic_s_(d.chave), c = LicM_porFornecedor_(ctx.obs, ctx.fornecedores).filter(function (x) { return x.chave === k; })[0];
   if (!c) throw new Error('Não foi possível abrir: este concorrente não tem registro no período (' + ctx.meses + ' meses). Aumente o período ou volte à lista');
   var l = ctx.obs.filter(function (x) { return x.fornecedorChave === k; }).sort(function (a, b) { return a.data < b.data ? 1 : -1; });
-  return { meses: ctx.meses, desdeTxt: LicM_dia_(ctx.desde), concorrente: c, registros: l.slice(0, 200).map(function (x) { var t = LicM_fonteTela_(x); t.papel = x.papel; t.papelNome = LICM_PAPEIS[x.papel]; t.desconto = x.desconto; t.grupoNome = x.grupoNome; return t; }),
+  return { meses: ctx.meses, desdeTxt: LicM_dia_(ctx.desde), concorrente: c, registros: l.slice(0, 200).map(function (x) { var t = LicM_fonteTela_(x); t.papel = x.papel; t.papelNome = x.reserva ? 'Cadastro de reserva (registro de preços, ordem ' + (x.ordem || '—') + ')' : LICM_PAPEIS[x.papel]; t.desconto = x.desconto; t.grupoNome = x.grupoNome; return t; }),
     fornecedor: c.cnpj && ctx.fornecedores[c.cnpj] ? LicM_fornecedorTela_(ctx.fornecedores[c.cnpj]) : null };
 }
 function LicM_orgaos_(eu, d) {
@@ -602,12 +620,12 @@ function LicM_pedirResultados_(eu, d) {
 // ------------------------------------------------------------ cadastro: telas e ações da Diretoria
 function LicM_fornecedorTela_(f) {
   var campos = Lic_json_(f.CAMPOS_JSON, {}) || {}, origens = Lic_json_(f.ORIGENS_JSON, {}) || {};
-  return { id: Lic_s_(f.ID), cnpj: Lic_s_(f.CNPJ), cnpjTxt: LicM_cnpjTxt_(f.CNPJ), razaoSocial: Lic_s_(f.RAZAO_SOCIAL), nomeFantasia: Lic_s_(f.NOME_FANTASIA), uf: Lic_s_(f.UF), municipio: Lic_s_(f.MUNICIPIO),
+  return { id: Lic_s_(f.ID), cnpj: Lic_s_(f.CNPJ), cnpjTxt: LicM_cnpjTxt_(f.CNPJ), razaoSocial: LicM_semCpf_(f.RAZAO_SOCIAL), nomeFantasia: LicM_semCpf_(f.NOME_FANTASIA), uf: Lic_s_(f.UF), municipio: Lic_s_(f.MUNICIPIO),
     porte: Lic_s_(f.PORTE), porteNome: LICM_PORTES[Lic_s_(f.PORTE)] || '', obs: Lic_s_(f.OBS), versao: Number(f.VERSAO) || 0, integra: LicM_hashFornecedor_(f) === Lic_s_(f.HASH),
-    campos: Object.keys(LICM_CAMPOS).map(function (k) { var c = campos[k] || null; return { campo: k, nome: LICM_CAMPOS[k], valor: Lic_s_(f[k]), origem: c ? c.origem : '', origemNome: c ? LICM_ORIGENS[c.origem] || c.origem : '', emTxt: c ? LicM_dia_(LicM_diaIso_(c.em)) : '', ref: c ? Lic_s_(c.ref) : '' }; }),
-    variantes: (Lic_json_(f.VARIANTES_JSON, []) || []).filter(function (v) { return LicM_cmp_(v.campo, v.valor) !== LicM_cmp_(v.campo, f[v.campo]); }).map(function (v) { return { campo: v.campo, nome: LICM_CAMPOS[v.campo] || v.campo, valor: Lic_s_(v.valor), origemNome: LICM_ORIGENS[v.origem] || v.origem, emTxt: LicM_dia_(LicM_diaIso_(v.em)), ref: Lic_s_(v.ref) }; }),
+    campos: Object.keys(LICM_CAMPOS).map(function (k) { var c = campos[k] || null; return { campo: k, nome: LICM_CAMPOS[k], valor: LicM_semCpf_(f[k]), origem: c ? c.origem : '', origemNome: c ? LICM_ORIGENS[c.origem] || c.origem : '', emTxt: c ? LicM_dia_(LicM_diaIso_(c.em)) : '', ref: c ? Lic_s_(c.ref) : '' }; }),
+    variantes: (Lic_json_(f.VARIANTES_JSON, []) || []).filter(function (v) { return LicM_cmp_(v.campo, v.valor) !== LicM_cmp_(v.campo, f[v.campo]); }).map(function (v) { return { campo: v.campo, nome: LICM_CAMPOS[v.campo] || v.campo, valor: LicM_semCpf_(v.valor), origemNome: LICM_ORIGENS[v.origem] || v.origem, emTxt: LicM_dia_(LicM_diaIso_(v.em)), ref: Lic_s_(v.ref) }; }),
     origens: Object.keys(origens).map(function (k) { var o = origens[k]; return { origem: k, nome: LICM_ORIGENS[k] || k, primeiraTxt: LicM_dia_(LicM_diaIso_(o.primeira)), ultimaTxt: LicM_dia_(LicM_diaIso_(o.ultima)) }; }),
-    apelidos: Lic_json_(f.APELIDOS_JSON, []) || [], criadoEm: Lic_brDiaHora_(f.CRIADO_EM), criadoPor: Lic_s_(f.CRIADO_POR_NOME), atualizadoEm: Lic_brDiaHora_(f.ATUALIZADO_EM), atualizadoPor: Lic_s_(f.ATUALIZADO_POR_NOME) };
+    apelidos: (Lic_json_(f.APELIDOS_JSON, []) || []).map(LicM_semCpf_), criadoEm: Lic_brDiaHora_(f.CRIADO_EM), criadoPor: Lic_s_(f.CRIADO_POR_NOME), atualizadoEm: Lic_brDiaHora_(f.ATUALIZADO_EM), atualizadoPor: Lic_s_(f.ATUALIZADO_POR_NOME) };
 }
 function LicM_fornecedores_(eu, d) {
   var l = Lic_ler_(LICM_ABAS.FORNECEDORES).map(LicM_fornecedorTela_).sort(function (a, b) { return a.razaoSocial.localeCompare(b.razaoSocial, 'pt-BR'); });
@@ -619,12 +637,15 @@ function LicM_fornecedor_(eu, d) {
   var c = LicM_cnpj_(d.cnpj), f = c ? LicM_fornecedoresPorCnpj_()[c] : null;
   if (!f) throw new Error('Não foi possível abrir: o CNPJ ' + (c ? LicM_cnpjTxt_(c) : Lic_s_(d.cnpj)) + ' não está no cadastro de fornecedores e concorrentes. Cadastre em "Novo fornecedor"');
   var hist = Lic_ler_(LIC_ABAS.HISTORICO).filter(function (h) { return Lic_s_(h.ENTIDADE) === 'FORNECEDOR' && Lic_s_(h.ENTIDADE_ID) === Lic_s_(f.ID); }).sort(function (a, b) { return Lic_s_(b.DATA) < Lic_s_(a.DATA) ? -1 : 1; }).slice(0, 60)
-    .map(function (h) { return { tipo: Lic_s_(h.TIPO), de: Lic_s_(h.DE), para: Lic_s_(h.PARA), texto: Lic_s_(h.TEXTO), por: Lic_s_(h.USUARIO_NOME), emTxt: Lic_brDiaHora_(h.DATA) }; });
+    .map(function (h) { return { tipo: Lic_s_(h.TIPO), de: LicM_semCpf_(h.DE), para: LicM_semCpf_(h.PARA), texto: LicM_semCpf_(h.TEXTO), por: Lic_s_(h.USUARIO_NOME), emTxt: Lic_brDiaHora_(h.DATA) }; });
   return { fornecedor: LicM_fornecedorTela_(f), historico: hist, portes: LICM_PORTES, ufs: LICM_UFS, motivoMin: LICM_MOTIVO_MIN };
 }
 function LicM_motivo_(v, oQue) { var m = LicM_txt_(v, 1000); if (m.length < LICM_MOTIVO_MIN) throw new Error('Escreva o motivo ' + oQue + ' (pelo menos ' + LICM_MOTIVO_MIN + ' letras): ele fica no histórico, com o seu nome e a hora. Nada foi gravado'); return m; }
+/** Revisão de 642380b: o CNPJ DIGITADO tem de ter as 14 posições; completar com zeros à esquerda só ao ler da planilha (LicM_cnpj_). */
 function LicM_cnpjDigitado_(v) {
-  var c = LicM_cnpj_(v);
+  var t = Lic_up_(v).replace(/[.\-\/\s]/g, '');
+  if (t.length !== 14) throw new Error('Escreva o CNPJ com as 14 posições (por exemplo 11.222.333/0001-81): o número digitado tem ' + t.length + '. Confira no cartão CNPJ. Nada foi gravado');
+  var c = LicM_cnpjConfere_(t) ? t : '';
   if (!c) throw new Error('Escreva um CNPJ válido (14 posições, por exemplo 11.222.333/0001-81): o número digitado não confere nos dígitos verificadores. Confira no cartão CNPJ. Nada foi gravado');
   return c;
 }
@@ -703,11 +724,11 @@ function LicM_resultadoManual_(eu, d) {
   if ((valor !== null && !(valor > 0)) || (est !== null && !(est > 0)) || (qtd !== null && !(qtd > 0))) throw new Error('Os valores e a quantidade têm de ser números maiores que zero (por exemplo 185,40). Nada foi gravado');
   var dia = LicM_diaIso_(d.data);
   if (!dia || dia > LicM_hojeIso_()) throw new Error('Escolha a data do resultado (não pode ser no futuro). Nada foi gravado');
-  var orgCnpj = Lic_s_(d.orgaoCnpj) ? LicM_cnpj_(d.orgaoCnpj) : (l ? Lic_s_(l.ORGAO_CNPJ).replace(/\D/g, '') : '');
+  var orgCnpj = Lic_s_(d.orgaoCnpj) ? (function () { var t = Lic_up_(d.orgaoCnpj).replace(/[.\-\/\s]/g, ''); return t.length === 14 && LicM_cnpjConfere_(t) ? t : ''; })() : (l ? Lic_s_(l.ORGAO_CNPJ).replace(/\D/g, '') : '');
   if (Lic_s_(d.orgaoCnpj) && !orgCnpj) throw new Error('O CNPJ do órgão não confere nos dígitos verificadores (ou deixe em branco). Nada foi gravado');
   return Lic_comTrava_(function () {
     var mapa = LicM_fornecedoresPorCnpj_(), agora = Lic_agora_(), f = mapa[cnpj];
-    var nome = LicM_txt_(d.nome, 300) || (f ? Lic_s_(f.RAZAO_SOCIAL) : '');
+    var nome = LicM_semCpf_(LicM_txt_(d.nome, 300)) || (f ? LicM_semCpf_(f.RAZAO_SOCIAL) : '');
     if (LicM_nomeChave_(nome).length < 3) throw new Error('Escreva a razão social do fornecedor ' + LicM_cnpjTxt_(cnpj) + ' (ele ainda não está no cadastro). Nada foi gravado');
     var reg = { CHAVE_RESULTADO: 'MANUAL|' + Lic_hash_([cnpj, orgao, desc, String(valor), dia, agora, eu.id].join('|')).slice(0, 24), ORIGEM: 'MANUAL', PAPEL: papel, CHAVE_FONTE: l ? Lic_s_(l.CHAVE_FONTE) : '',
       NUMERO_CONTROLE_PNCP: LicM_txt_(d.numeroControle, 60) || (l ? Lic_s_(l.NUMERO_CONTROLE_PNCP) : ''), OPORTUNIDADE_ID: l ? Lic_s_(l.ID) : '', ORGAO_CNPJ: orgCnpj, ORGAO_NOME: orgao, UF: uf, MUNICIPIO: l ? Lic_s_(l.MUNICIPIO) : '',
@@ -738,7 +759,7 @@ function LicM_resultadoAnular_(eu, d) {
 }
 function LicM_registrosManuais_(eu) {
   return { lista: Lic_ler_(LICM_ABAS.RESULTADOS).filter(function (r) { return Lic_up_(r.ORIGEM) === 'MANUAL'; }).sort(function (a, b) { return Lic_s_(b.COLETADO_EM) < Lic_s_(a.COLETADO_EM) ? -1 : 1; }).slice(0, 100)
-    .map(function (r) { return { id: Lic_s_(r.ID), papelNome: LICM_PAPEIS[Lic_up_(r.PAPEL)] || '', orgao: Lic_s_(r.ORGAO_NOME), uf: Lic_s_(r.UF), descricao: Lic_texto_(r.ITEM_DESCRICAO, 200), fornecedor: Lic_s_(r.FORNECEDOR_NOME), cnpjTxt: LicM_cnpjTxt_(r.FORNECEDOR_CNPJ),
+    .map(function (r) { return { id: Lic_s_(r.ID), papelNome: LICM_PAPEIS[Lic_up_(r.PAPEL)] || '', orgao: Lic_s_(r.ORGAO_NOME), uf: Lic_s_(r.UF), descricao: Lic_texto_(r.ITEM_DESCRICAO, 200), fornecedor: LicM_semCpf_(r.FORNECEDOR_NOME), cnpjTxt: LicM_cnpjTxt_(r.FORNECEDOR_CNPJ),
       valor: LicM_n_(r.VALOR_UNIT_HOMOLOGADO), unidade: Lic_s_(r.ITEM_UNIDADE), dataTxt: LicM_dia_(r.DATA_RESULTADO), fonte: Lic_s_(r.FONTE), link: Lic_url_(r.LINK), por: Lic_s_(r.POR_NOME), anulado: !!Lic_s_(r.ANULADO_EM), anuladoMotivo: Lic_s_(r.ANULADO_MOTIVO), integra: LicM_hashResultado_(r) === Lic_s_(r.HASH) }; }),
     oportunidades: Lic_ativas_().sort(function (a, b) { return Lic_s_(b.CODIGO) < Lic_s_(a.CODIGO) ? -1 : 1; }).slice(0, 300).map(function (l) { return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), orgao: Lic_texto_(l.ORGAO_NOME, 120), uf: Lic_s_(l.UF) }; }),
     ufs: LICM_UFS, motivoMin: LICM_MOTIVO_MIN };

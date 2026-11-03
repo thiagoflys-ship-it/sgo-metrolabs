@@ -31,7 +31,7 @@ function RES(id, o) {
   return { id: String(id), chave: 'PNCP:' + nc, numeroItem: item, sequencial: o.seq || 1, hash: o.hash || ('h' + id), coletadoEm: '2026-11-01T12:00:00.000Z',
     fornecedor: o.pf ? { cnpj: '', cnpjInformado: '', tipoPessoa: 'PF', nome: 'Pessoa física', porte: '' } : { cnpj: o.cnpj === undefined ? C1 : o.cnpj, cnpjInformado: o.cnpj === undefined ? C1 : o.cnpj, tipoPessoa: 'PJ', nome: o.nome || 'CALIBRA TESTE LTDA', porte: o.porte === undefined ? 'ME' : o.porte },
     valorUnitarioHomologado: o.valor === undefined ? 150 : o.valor, valorTotalHomologado: (o.valor === undefined ? 150 : o.valor) * 10, quantidadeHomologada: 10, percentualDesconto: 25,
-    situacao: o.situacao || 'Informado', dataResultado: o.data || '2026-10-28',
+    situacao: o.situacao || 'Informado', dataResultado: o.data || '2026-10-28', ordemClassificacao: o.ordem === undefined ? null : o.ordem,
     contratacao: { chave: 'PNCP:' + nc, numeroControlePncp: nc, orgaoCnpj: o.orgaoCnpj === undefined ? ORGAO : o.orgaoCnpj, orgaoNome: o.orgao || 'UNIVERSIDADE ESTADUAL DO OESTE DO PARANA', uf: o.uf || 'PR', municipio: 'Cascavel',
       modalidadeNome: 'Pregão - Eletrônico', objeto: o.objeto || 'Serviços técnicos', encerramentoEm: '2026-10-20T12:00:00.000Z', linkPncp: 'https://pncp.gov.br/app/editais/' + nc.slice(0, 14) + '/2026/100' },
     item: { numeroItem: item, descricao: o.descricao || 'Calibração de termômetro digital com certificado', materialServico: 'S', quantidade: 10, unidade: o.unidade || 'Unidade', valorUnitarioEstimado: o.estimado === undefined ? 200 : o.estimado },
@@ -279,7 +279,8 @@ test('registro manual: fonte e valor obrigatórios, data não futura; entra nas 
   assert.match(a.m('s_cha', 'resultadoManual', Object.assign({}, base, { fonte: 'ata' })).message, /Escreva a fonte/);
   assert.match(a.m('s_cha', 'resultadoManual', Object.assign({}, base, { valor: '' })).message, /valor unitário que venceu/);
   assert.match(a.m('s_cha', 'resultadoManual', Object.assign({}, base, { data: '2026-12-01' })).message, /não pode ser no futuro/);
-  assert.match(a.m('s_cha', 'resultadoManual', Object.assign({}, base, { cnpj: '123' })).message, /não confere nos dígitos/);
+  assert.match(a.m('s_cha', 'resultadoManual', Object.assign({}, base, { cnpj: '123' })).message, /14 posições/);
+  assert.match(a.m('s_cha', 'resultadoManual', Object.assign({}, base, { cnpj: '11.444.777/0001-62' })).message, /não confere nos dígitos/);
   assert.match(a.m('s_cha', 'resultadoManual', Object.assign({}, base, { link: 'javascript:alert(1)' })).message, /http:\/\/ ou https:\/\//);
   assert.equal((a.tabelas.LIC_MERCADO_RESULTADOS || []).length, 0, 'nada gravado nas recusas');
   const r = a.ok(a.m('s_cha', 'resultadoManual', base));
@@ -316,6 +317,64 @@ test('tela vazia e sem o coletor: diz o quê e por quê; a sincronia segue com a
   const r = b.ctx.Lic_aposColeta_({ novas: 0 });
   assert.equal(r.mercado.novos, 1);
   assert.equal(b.tabelas.LIC_MERCADO_RESULTADOS.length, 1);
+});
+
+// ------------------------------------------------------------------ revisão de 4baded0/642380b
+test('revisão: registro de preços — vence só a ordem 1 (ou o único resultado não cancelado do item); os demais são cadastro de reserva (participação, fora do preço)', () => {
+  const a = amb();
+  a.srv.res = [RES(1, { seq: 1, ordem: 1, valor: 150 }), RES(2, { seq: 2, ordem: 2, cnpj: C2, nome: 'TERMO RIVAL TESTE', valor: 160 }),
+    RES(3, { seq: 3, ordem: 3, cnpj: C3, nome: 'OUTRA CALIBRA TESTE SA', valor: 170, situacao: 'Cancelado' }),
+    // item 2: o resultado da ordem 1 foi cancelado; sobra um só (ordem 2) e ele é o vencedor
+    RES(4, { item: 2, seq: 1, ordem: 1, situacao: 'Cancelado', valor: 90 }), RES(5, { item: 2, seq: 2, ordem: 2, cnpj: C2, nome: 'TERMO RIVAL TESTE', valor: 95 })];
+  a.sinc();
+  assert.deepEqual(a.tabelas.LIC_MERCADO_RESULTADOS.map((r) => r.ORDEM_CLASSIFICACAO), [1, 2, 3, 1, 2], 'a ordem é espelhada');
+  const conc = a.ok(a.m('s_cha', 'concorrentes')).lista;
+  const c1 = conc.find((c) => c.cnpj === C1), c2 = conc.find((c) => c.cnpj === C2);
+  assert.equal(c1.vitorias, 1); assert.equal(c1.itensGanhos, 1);
+  assert.equal(c2.vitorias, 1, 'ganhou o item 2 (único não cancelado)'); assert.equal(c2.itensGanhos, 1); assert.equal(c2.participacoes, 1);
+  const g = a.ok(a.m('s_cha', 'referencia')).lista.find((x) => x.nome === 'Calibração de termômetro (por unidade)');
+  assert.deepEqual([g.estat.n, g.estat.min, g.estat.max], [2, 95, 150], 'a reserva (160) e o cancelado (170, 90) ficam fora do preço');
+  const det = a.ok(a.m('s_cha', 'concorrente', { chave: 'CNPJ:' + C2 }));
+  assert.ok(det.registros.some((r) => /^Cadastro de reserva \(registro de preços, ordem 2\)/.test(r.papelNome)));
+});
+
+test('revisão: CPF sai do nome do fornecedor ao gravar e ao mostrar (também o que já estava gravado); CNPJ e outros números ficam', () => {
+  const a = amb();
+  assert.equal(a.ctx.LicM_semCpf_('FULANO DE TAL 123.456.789-09'), 'FULANO DE TAL');
+  assert.equal(a.ctx.LicM_semCpf_('12345678909 - FULANO ME'), 'FULANO ME');
+  assert.equal(a.ctx.LicM_semCpf_('CALIBRA LTDA 11.222.333/0001-81'), 'CALIBRA LTDA 11.222.333/0001-81');
+  assert.equal(a.ctx.LicM_semCpf_('CALIBRA 11222333000181'), 'CALIBRA 11222333000181');
+  a.srv.res = [RES(1, { nome: 'FULANO DE TAL 123.456.789-09' })];
+  a.sinc();
+  assert.equal(a.tabelas.LIC_MERCADO_RESULTADOS[0].FORNECEDOR_NOME, 'FULANO DE TAL');
+  assert.equal(a.forn(C1)[0].RAZAO_SOCIAL, 'FULANO DE TAL');
+  // gravado antes da correção (com o CPF): sai na leitura (lista, ficha do fornecedor, histórico)
+  const r = a.tabelas.LIC_MERCADO_RESULTADOS[0]; r.FORNECEDOR_NOME = 'FULANO DE TAL 987.654.321-00'; r.HASH = a.ctx.LicM_hashResultado_(r);
+  const f = a.forn(C1)[0]; f.RAZAO_SOCIAL = 'FULANO DE TAL 98765432100'; f.HASH = a.ctx.LicM_hashFornecedor_(f);
+  a.tabelas.LIC_HISTORICO.push({ ID: 'hx', ENTIDADE: 'FORNECEDOR', ENTIDADE_ID: f.ID, TIPO: 'FORNECEDOR_NOVO', PARA: 'FULANO DE TAL 98765432100', TEXTO: 'Cadastrado: FULANO DE TAL 98765432100', DATA: '2026-11-01T12:00:00.000Z' });
+  const txt = JSON.stringify([a.ok(a.m('s_cha', 'concorrentes')), a.ok(a.m('s_cha', 'fornecedor', { cnpj: C1 })), a.ok(a.m('s_cha', 'fornecedores')), a.ok(a.m('s_cha', 'orgaos')), a.ok(a.m('s_cha', 'referencia'))]);
+  assert.doesNotMatch(txt, /987\.?654\.?321-?00|98765432100/);
+  assert.match(txt, /FULANO DE TAL/);
+});
+
+test('revisão: CNPJ digitado exige as 14 posições (zeros à esquerda só ao ler da planilha); registro manual do item que o PNCP já trouxe não entra duas vezes no preço', () => {
+  const a = amb();
+  const r = a.m('s_cha', 'fornecedorSalvar', { cnpj: '644704000105', campos: { RAZAO_SOCIAL: 'EMPRESA COM ZEROS TESTE' }, motivo: 'Cadastro a partir da ata' });
+  assert.equal(r.ok, false); assert.match(r.message, /14 posições.*tem 12.*Nada foi gravado/);
+  assert.match(a.m('s_cha', 'vincular', { nome: 'X', cnpj: '644704000105', motivo: 'Ligar com zeros faltando' }).message, /14 posições/);
+  assert.equal((a.tabelas.LIC_FORNECEDORES || []).length, 0);
+  a.ok(a.m('s_cha', 'fornecedorSalvar', { cnpj: '00.644.704/0001-05', campos: { RAZAO_SOCIAL: 'EMPRESA COM ZEROS TESTE' }, motivo: 'Cadastro a partir da ata' }));
+  // planilha que perdeu os zeros: a leitura recupera (o mesmo cadastro, sem duplicar)
+  a.forn()[0].CNPJ = '644704000105';
+  assert.ok(a.ctx.LicM_fornecedoresPorCnpj_()['00644704000105']);
+  // o PNCP trouxe o item 1 da op1; o registro manual do mesmo item fica fora do preço (vale o PNCP)
+  a.srv.res = [RES(1, { nc: '78680337000770-1-000430/2026', valor: 150 })];
+  a.sinc();
+  a.ok(a.m('s_cha', 'resultadoManual', { papel: 'VENCEDOR', oportunidadeId: 'op1', item: '1', cnpj: C2, nome: 'TERMO RIVAL TESTE', descricao: 'Calibração de termômetro digital', valor: '140,00', data: '2026-10-28', fonte: 'ata da sessão, página 2', motivo: 'Lido na ata antes do PNCP' }));
+  a.ok(a.m('s_cha', 'resultadoManual', { papel: 'VENCEDOR', oportunidadeId: 'op1', item: '2', cnpj: C2, nome: 'TERMO RIVAL TESTE', descricao: 'Calibração de termômetro digital', valor: '145,00', data: '2026-10-28', fonte: 'ata da sessão, página 2', motivo: 'Item que o PNCP ainda não trouxe' }));
+  const g = a.ok(a.m('s_cha', 'referencia')).lista.find((x) => x.nome === 'Calibração de termômetro (por unidade)');
+  assert.deepEqual([g.estat.n, g.estat.min, g.estat.max], [2, 145, 150], 'o manual do item 1 não conta de novo; o do item 2 conta');
+  assert.equal(a.ok(a.m('s_cha', 'tela')).fora.duplicados, 1);
 });
 
 // ------------------------------------------------------------------ ligações, ajuda, manual e assistente
