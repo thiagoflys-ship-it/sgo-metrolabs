@@ -43,7 +43,9 @@ var LIC_COLUNAS = {
     'ANALISE_PENDENTE_RESERVA_ATE',
     // 03/11/2026: alerta de nova oportunidade de alta aderência (SGO_Licitacoes_Alertas.js, Lic_altaAvaliar_): ALTA (já alertada nesta
     // subida da nota) ou CAIU (depois do alerta, a nota caiu abaixo do limite ou apareceu trava); o ciclo conta as subidas alertadas
-    'ALTA_ADERENCIA_ESTADO', 'ALTA_ADERENCIA_CICLO', 'ALTA_ADERENCIA_EM', 'ALTA_ADERENCIA_NOTA'],
+    'ALTA_ADERENCIA_ESTADO', 'ALTA_ADERENCIA_CICLO', 'ALTA_ADERENCIA_EM', 'ALTA_ADERENCIA_NOTA',
+    // revisão de 7401585: ESPERA = TRIAGEM quando a nota é alta mas a triagem está travada (a rotina avalia de novo quando destravar)
+    'ALTA_ADERENCIA_ESPERA'],
   LIC_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'CODIGO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'VERSAO', 'FONTE', 'HASH', 'USUARIO_ID', 'USUARIO_NOME', 'DATA'],
   LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).

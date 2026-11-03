@@ -77,7 +77,7 @@ test('nota 78 sem trava e prazo em aberto: UM alerta importante por pessoa, com 
   assert.equal(p.length, 9);
   assert.equal(p[0], 'importante'); assert.match(p[1], /HOSPITAL ESTADUAL DE GOIANIA TESTE \(Goiânia\/GO\)/);
   assert.equal(p[4], 'Oportunidade com nota 78 (alta aderência)');
-  assert.match(p[5], /^fim das propostas sex 20\/11\/2026 09:00/); assert.match(p[7], /^classe Alta; mais fortes: localização 15 de 15/);
+  assert.equal(p[5], 'sex 20/11/2026 09:00 (horário de Brasília, presumido)', 'o fim das propostas inteiro, sem corte'); assert.match(p[7], /^classe Alta; mais fortes: localização 15 de 15/);
   assert.ok(p[7].length <= 200 && p.every((t) => !/[\n\t]/.test(t)));
   // o link abre a ficha na aba Análise
   const aviso = a.alta({ USUARIO_ID: 'u_cha' })[0].AVISO_ID;
@@ -188,7 +188,7 @@ test('agrupado com os prazos da mesma licitação: uma mensagem só por pessoa, 
   assert.equal(novos.length, 1, 'um e-mail só');
   assert.match(novos[0].subject, /Licitação LIC-2026-imbe: 2 alertas/);
   assert.match(novos[0].body, /2 alertas desta licitação nesta mensagem\. O mais urgente: Fim do envio das propostas, sex 13\/11\/2026 08:00/, 'o mais urgente é o prazo, não a nota');
-  assert.match(novos[0].body, /\n1\. Oportunidade com nota 81 \(alta aderência\) \(importante\)\n   Quando: fim das propostas sex 13\/11\/2026 08:00/, 'a alta aderência vem primeiro na lista');
+  assert.match(novos[0].body, /\n1\. Oportunidade com nota 81 \(alta aderência\) \(importante\)\n   Fim das propostas: sex 13\/11\/2026 08:00/, 'a alta aderência vem primeiro na lista');
   assert.match(novos[0].body, /Valor estimado: /); assert.match(novos[0].body, /Critérios mais fortes \(calculados pelo sistema\): /);
   assert.match(novos[0].body, /Fim do envio das propostas/);
   const zs = a.zap().slice(z0).filter((w) => w.corpo.to === '5562999990021');
@@ -277,4 +277,113 @@ test('tela: Hoje e Painel mostram os dois números com a fonte e o link da lista
   assert.match(h, /kbA\(\{ nota: "TRAVA" \}\), d\.travas\.fonte\) \+ Lic_altaKpisHtml_\(d\.altaAderencia\)/, 'Painel');
   assert.match(h, /\{ mod: "licitacoes_oportunidades", alta: 24 \}/); assert.match(h, /alta: LIC\.alta \|\| 0/);
   assert.match(h, /id="licAAltaLim"/); assert.match(h, /campos\.altaAderencia = alta/);
+});
+
+// ---------------------------------------------------------------- revisão de 7401585
+// Nota alta gravada direto na oportunidade (como a fila deixa depois de refazer as análises) e avaliada como na rotina.
+const NOTA_ALTA = (id, extra) => CANDIDATA(Object.assign({ ID: id, CODIGO: 'LIC-2026-' + id.slice(-4), CHAVE_FONTE: 'PNCP:' + id, RESPONSAVEL_ID: 'u_cha', RESPONSAVEL_NOME: 'CHARLES DIRETOR TESTE', SITUACAO: 'ANALISE',
+  NOTA: 80, NOTA_CLASSE: 'ALTA', ANALISE_VERSAO: 1, TRAVAS_A_CONFIRMAR: 0, NOTA_TRAVA: '', VALOR_ESTIMADO: 123456.78 }, extra || {}));
+const CRIT72 = { ENCERRAMENTO_PROPOSTAS: '2026-11-05T10:00:00', ENCERRAMENTO_ISO: '2026-11-05T13:00:00.000Z' };
+const avaliar = (a, id, o) => a.ctx.Lic_altaAvaliar_(id, null, Object.assign({ versao: 1, origem: 'AUTOMATICA' }, o || {}));
+const zapsDe = (a, desde, fone) => a.zap().slice(desde).filter((w) => !fone || w.corpo.to === fone);
+
+test('rajada de madrugada (revisão, script alta1): 7 críticos e 8 importantes às 03:00 — o crítico sai na hora, 5 por pessoa na rodada; o importante espera as 08:00 e passa de 5 no dia vai num resumo', () => {
+  const ops = [];
+  for (let i = 0; i < 15; i++) ops.push(NOTA_ALTA('op_a' + (100 + i), i < 7 ? CRIT72 : {}));
+  const a = amb({ ops, agora: '2026-11-03T02:50:00-03:00' });
+  a.rodada();
+  a.mudar('2026-11-03T03:00:00-03:00');
+  const cri = ops.map((o) => avaliar(a, o.ID));
+  assert.deepEqual(cri.map((c) => c.nivel[0] + c.criados), Array(7).fill('C2').concat(Array(8).fill('I1')), 'crítico para os dois; importante só para o responsável');
+  assert.ok(cri.slice(7).every((c) => c.liberarEm === '2026-11-03T11:00:00.000Z'), 'importante guardado para as 08:00');
+  const z0 = a.zap().length, e0 = a.emails.length;
+  a.rodada('2026-11-03T03:00:30-03:00');
+  assert.equal(a.zap().length - z0, 10, '5 críticos por pessoa na rodada (antes: 20 de 15 oportunidades)');
+  for (const uid of ['u_cha', 'u_thi']) {
+    const s = a.alta({ USUARIO_ID: uid, NIVEL: 'CRITICO' }).map((x) => x.SITUACAO);
+    assert.equal(s.filter((x) => x === 'ENVIADO').length, 5, uid); assert.equal(s.filter((x) => x === 'NO_RESUMO').length, 2, uid);
+  }
+  const res = a.emails.slice(e0).filter((m) => /2 oportunidades de alta aderência \(resumo\)/.test(m.subject));
+  assert.equal(res.length, 2, 'um resumo por pessoa, só por e-mail');
+  assert.match(res[0].body, /Valor estimado: R\$\s?123\.456,78/); assert.equal((res[0].body.match(/licciente=/g) || []).length, 2);
+  assert.ok(a.alta({ NIVEL: 'IMPORTANTE' }).every((x) => x.SITUACAO === 'PROGRAMADO'), 'nada importante de madrugada');
+  // 03:20: só o lembrete dos críticos (o importante não escalona à noite nem sai)
+  a.rodada('2026-11-03T03:20:30-03:00');
+  assert.ok(a.alta({ NIVEL: 'IMPORTANTE' }).every((x) => x.SITUACAO === 'PROGRAMADO'));
+  // 08:00: o Charles já recebeu 5 mensagens de alta aderência hoje (críticos): os 8 importantes vão num resumo só
+  const e1 = a.emails.length, z1 = a.zap().length;
+  a.rodada('2026-11-03T08:00:30-03:00');
+  const imp = a.alta({ NIVEL: 'IMPORTANTE', PAPEL: 'TITULAR' });
+  assert.ok(imp.every((x) => x.SITUACAO === 'NO_RESUMO'), JSON.stringify(imp.map((x) => x.SITUACAO)));
+  assert.equal(a.emails.slice(e1).filter((m) => m.to === 'charles@exemplo.test' && /8 oportunidades de alta aderência \(resumo\)/.test(m.subject)).length, 1);
+  assert.equal(zapsDe(a, z1).filter((w) => JSON.stringify(w.corpo).includes('alta aderência')).length, 0, 'o resumo não vai pelo WhatsApp');
+  assert.ok(a.hist('ALERTA_TETO').some((h) => /Teto de 5 alertas de alta aderência por pessoa no dia/.test(h.TEXTO)));
+});
+
+test('importante à noite sai às 08:00 do dia útil seguinte, 5 individuais e o resto no resumo; sem escalonamento depois das 18:00', () => {
+  const ops = [];
+  for (let i = 0; i < 8; i++) ops.push(NOTA_ALTA('op_n' + (100 + i)));
+  const a = amb({ ops, agora: '2026-11-03T20:00:00-03:00' });
+  a.rodada();
+  ops.forEach((o) => avaliar(a, o.ID));
+  const z0 = a.zap().length;
+  a.rodada('2026-11-03T20:05:00-03:00'); a.rodada('2026-11-04T06:00:00-03:00');
+  assert.equal(a.zap().length - z0, 0, 'nada à noite');
+  a.rodada('2026-11-04T08:00:30-03:00');
+  assert.equal(zapsDe(a, z0, '5562999990021').length, 5);
+  assert.equal(a.alta({ SITUACAO: 'NO_RESUMO' }).length, 3);
+  assert.ok(a.emails.some((m) => /3 oportunidades de alta aderência \(resumo\)/.test(m.subject)));
+  // enviado às 17:55: o escalonamento (15 min) não sai às 18:10; sai na primeira rodada do expediente seguinte
+  const b = amb({ ops: [NOTA_ALTA('op_tarde')], agora: '2026-11-04T17:50:00-03:00' });
+  b.rodada(); avaliar(b, 'op_tarde');
+  b.rodada('2026-11-04T17:55:00-03:00');
+  assert.equal(b.alta({ PAPEL: 'TITULAR' })[0].SITUACAO, 'ENVIADO');
+  b.rodada('2026-11-04T18:15:00-03:00'); b.rodada('2026-11-04T23:00:00-03:00');
+  assert.equal(b.alta({ PAPEL: 'ESCALONAMENTO' }).length, 0, 'sem escalonamento à noite');
+  b.rodada('2026-11-05T08:00:30-03:00');
+  assert.equal(b.alta({ PAPEL: 'ESCALONAMENTO', USUARIO_ID: 'u_thi' }).length, 1, 'escalona na primeira rodada do expediente');
+});
+
+test('histerese: entre o limite menos 5 e o limite não conta como queda; no máximo um "voltou a ficar alta" por semana', () => {
+  const a = amb({ ops: [NOTA_ALTA('op_hist')], agora: '2026-11-03T10:00:00-03:00' });
+  a.rodada();
+  const l = a.op('op_hist'); let v = 1;
+  const nota = (n) => { l.NOTA = n; l.ANALISE_VERSAO = ++v; return a.ctx.Lic_altaAvaliar_('op_hist', null, { versao: v }); };
+  assert.equal(avaliar(a, 'op_hist').criados, 1);
+  let r = nota(67);
+  assert.equal(r.caiu, undefined); assert.equal(l.ALTA_ADERENCIA_ESTADO, 'ALTA', '67 está na faixa de 65 a 70: não é queda');
+  assert.equal(nota(80).repetida, true, 'sem queda, a volta para 80 não alerta');
+  assert.equal(nota(60).caiu, true);
+  r = nota(72); assert.equal(r.criados, 1); assert.equal(r.voltou, true);
+  assert.equal(nota(60).caiu, true);
+  r = nota(72); assert.equal(r.criados, 0); assert.equal(r.semana, true); assert.match(r.motivo, /no máximo um por semana/);
+  assert.equal(l.ALTA_ADERENCIA_ESTADO, 'CAIU');
+  a.mudar('2026-11-11T10:00:00-03:00');
+  r = nota(72); assert.equal(r.criados, 1, 'depois de 7 dias pode voltar de novo'); assert.equal(r.voltou, true);
+});
+
+test('só Radar ou Em análise; critério marcado como pendência não é ponto forte; triagem que destrava alerta na rotina, sem reanálise', () => {
+  const a = amb({ ops: [NOTA_ALTA('op_prop', { SITUACAO: 'PROPOSTA' }), NOTA_ALTA('op_crit'), NOTA_ALTA('op_trv', { SITUACAO: 'RADAR', TRIAGEM: 'TRAVADA', RESPONSAVEL_ID: '', RESPONSAVEL_NOME: '' })], agora: '2026-11-03T10:00:00-03:00' });
+  a.rodada();
+  let r = avaliar(a, 'op_prop');
+  assert.equal(r.criados, 0); assert.match(r.motivo, /só no radar e em análise/);
+  // critérios: margem sem simulação e valor não informado são pendência
+  a.tabelas.LIC_ANALISES.push({ ID: 'an_crit', OPORTUNIDADE_ID: 'op_crit', VERSAO: 1, SITUACAO: 'CONCLUIDA', CRITERIOS_JSON: JSON.stringify({
+    margem: { pontos: 15, peso: 15, origem: 'CODIGO', como: 'Sem simulação de preço salva: 5 de 15, como pendência.' },
+    valor: { pontos: 10, peso: 10, origem: 'CODIGO', como: 'Valor estimado não informado ou sigiloso: 5 de 10, como pendência.' },
+    documentacao: { pontos: 15, peso: 15, origem: 'HABILITACAO', como: 'Tudo atende.', pendencia: true },
+    prazo: { pontos: 10, peso: 10, origem: 'CODIGO', como: '12 dias úteis.' }, localizacao: { pontos: 12, peso: 15, origem: 'CODIGO', como: 'UF GO.' },
+    capacidade: { pontos: 30, peso: 30, origem: 'IA_CODIGO', como: 'IA.' } }) });
+  a.op('op_crit').ANALISE_ID = 'an_crit';
+  assert.deepEqual(Array.from(a.ctx.Lic_altaCriterios_(a.op('op_crit'))).map((c) => c.nome), ['Prazo', 'Localização']);
+  // triagem travada com a nota alta: guarda a espera; quando destrava, a rotina dos alertas avalia
+  r = avaliar(a, 'op_trv');
+  assert.equal(r.criados, 0); assert.equal(a.op('op_trv').ALTA_ADERENCIA_ESPERA, 'TRIAGEM');
+  a.rodada('2026-11-03T10:05:00-03:00');
+  assert.equal(a.alta({ OPORTUNIDADE_ID: 'op_trv' }).length, 0, 'ainda travada');
+  a.op('op_trv').TRIAGEM = 'CANDIDATA';
+  a.rodada('2026-11-03T10:10:00-03:00');
+  assert.equal(a.alta({ OPORTUNIDADE_ID: 'op_trv' }).length, 2, 'sem responsável: os dois');
+  assert.equal(a.op('op_trv').ALTA_ADERENCIA_ESPERA, '');
+  assert.match(a.hist('ALERTA_ALTA_ADERENCIA').find((h) => /a triagem do radar deixou de travar/.test(h.TEXTO)).TEXTO, /nota 80/);
 });
