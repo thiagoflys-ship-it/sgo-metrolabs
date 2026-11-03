@@ -286,6 +286,8 @@ Nenhuma credencial aparece na tela depois de gravada, nem em log, e-mail, aviso 
 3. Escreva o motivo (mínimo de 5 caracteres) e confirme. Vale na hora; fica na auditoria ("Trocou por onde o dispositivo trabalha", com o antes, o depois e o motivo).
 - Com a ponte fora do ar, o próprio cartão mostra "Trabalhar pela Nuvem Tuya" com o motivo já escrito (um toque para confirmar).
 - "Ponte local" só para dispositivo cadastrado no celular da ponte (senão ele ficaria sem funcionar). Para cadastrar, veja `portoes_local/LEIAME.md`, "Cadastrar um dispositivo na ponte".
+- **Sincronizar primeiro:** dispositivo que aparece como "Outro" (o refrigerador lido antes de 03/11/2026) não pode ir para a Ponte: toque em "Sincronizar com o Smart Life" para o SGO+ reconhecer o tipo e depois troque o canal. No canal Ponte, a sincronização só reclassifica pela categoria da lista (sem outra chamada) e, no refrigerador sem o modelo guardado, lê o modelo uma vez.
+- O canal padrão do portão é gravado e auditado uma única vez (a rotina garante a coluna CANAL na aba antes de gravar).
 - Voltar para a nuvem com a cota esgotada: a tela avisa que, pela nuvem, nada sai até ela voltar.
 
 **Comandos recusados pela ponte fora do ar:** ficam no registro como "Recusado — ponte local fora do ar, nada enviado" e na auditoria como COMANDO_PONTE_FORA.
@@ -305,7 +307,9 @@ Nenhuma credencial aparece na tela depois de gravada, nem em log, e-mail, aviso 
 
 **Histórico:** aba AUT_LEITURAS; grava uma linha quando algo muda (temperatura, ajuste, modo, erro, trava, bateria, online; a tensão oscila e fica de fora) e a cada leitura agendada. "Histórico" no cartão mostra o gráfico (linha cheia = atual; tracejada = ajustada) de 24 h, 48 h, 7 ou 30 dias e as últimas 30 leituras.
 
-**Alerta de faixa (opcional, desligado por padrão):** em "Administrar", marque "Avisar a gestão quando a temperatura sair da faixa" e informe a mínima e a máxima de cada compartimento. Duas leituras seguidas fora da faixa avisam a Diretoria e o Administrador (dispositivo não restrito) uma vez, no sistema e por e-mail (evento S79 da matriz de avisos), com o quê, por quê e o que fazer, e de novo quando a temperatura volta. Equipamento offline não é avaliado.
+**Alerta de faixa (opcional, desligado por padrão):** em "Administrar", marque "Avisar a gestão quando a temperatura ficar fora da faixa" e informe a mínima e a máxima de cada compartimento. Conta por tempo, não por leitura: fora da faixa por pelo menos o intervalo de leitura (padrão 10 min, com 2 leituras ou mais; vale também pela ponte, que lê a cada minuto), o SGO+ avisa a Diretoria e o Administrador (dispositivo não restrito) uma vez, no sistema e por e-mail (evento S79 da matriz de avisos), com o quê, por quê e o que fazer. A volta exige 0,5 °C de folga para dentro da faixa (histerese) e também é avisada. Entre dois avisos do mesmo tipo do mesmo dispositivo, no mínimo 60 min (os demais ficam só na auditoria). Equipamento offline não é avaliado.
+
+**Leitura que falha:** a tentativa fica marcada e não é repetida a cada minuto; erros seguidos recuam (o intervalo vezes 2, 4 e no máximo 8). Pela nuvem, a leitura agendada só sai com a automação em uso e com folga no minuto (os comandos e a abertura automática têm prioridade), e depois da campainha na rotina de 1 minuto. Com o serviço de mensagens da Tuya conectado, as mudanças do refrigerador chegam por evento (devicePropertyMessage) sem chamada, e a leitura agendada vira reserva.
 
 **Mapa dos pontos (dp: código):** 101 OnOff (ligado), 102 Lock (trava infantil), 103 Mode (MAX/ECO/HEAT), 104 BatteryProtect (L/M/H), 105 TempUnit, 106 Error (bits E1..E9), 107 Switch (divisória dupla), 108 HeatBox, 109 Spdt, 110 A_BoxOnOff, 111 B_BoxOnOff, 112 A_Temp_C, 113 B_Temp_C, 114 A_TempSet_C, 115 B_TempSet_C, 116 HeatTemp_Set_C, 117 a 121 os mesmos em °F (não usados), 122 A_BatteryVoltage (x0,1 V), 123 BatteryPencent, 124 A_BatteryCharge, 125 e 126 bateria B.
 

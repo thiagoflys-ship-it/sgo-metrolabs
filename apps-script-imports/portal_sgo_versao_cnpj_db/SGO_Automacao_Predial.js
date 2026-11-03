@@ -427,18 +427,36 @@ function AutPred_textoPonteFora_(d, s, sessao, verbo) {
     (sessao && AutPred_administra_(sessao) ? ' Para usar a nuvem da Tuya enquanto isso: no cartão do dispositivo, toque em "Trabalhar pela Nuvem Tuya". Para religar a ponte: confira o celular da ponte (carregador, Wi-Fi da empresa, Termux aberto).' : ' A gestão pode trocar o dispositivo para a nuvem da Tuya.');
 }
 
-/** Primeira rotina com a ponte: o padrão PONTE do portão vira escolha gravada (nunca muda sozinho depois). Devolve quantos. */
+/**
+ * Primeira rotina com a ponte: o padrão PONTE do portão vira escolha gravada (nunca muda sozinho depois). Devolve quantos.
+ * Revisão 03/11/2026: garante as colunas antes (em produção a aba veio antes de CANAL); grava e audita UMA vez por
+ * dispositivo: só audita quando a gravação ficou na aba, e um dispositivo que não gravou (coluna ausente) não é tentado de
+ * novo nesta instalação (AUT_CANAL_PADRAO_TENTADO). Não segura trava nenhuma (a auditoria usa a dela, curta).
+ */
+var AUT_PROP_CANAL_TENTADO = 'AUT_CANAL_PADRAO_TENTADO';
 function AutPred_fixarCanaisPadrao_() {
   if (!AutPred_ponteExiste_()) return 0;
+  var pend = AutPred_dispositivos_().filter(function (d) { return !AutPred_s_(d.CANAL) && AutPred_canalPadrao_(d) === 'PONTE'; });
+  if (!pend.length) return 0;
+  var props = PropertiesService.getScriptProperties(), tentados = AutPred_deJson_(props.getProperty(AUT_PROP_CANAL_TENTADO), {}) || {};
+  pend = pend.filter(function (d) { return !tentados[AutPred_s_(d.ID)]; });
+  if (!pend.length) return 0;
+  AutPred_bootstrap_();
   var n = 0;
-  AutPred_dispositivos_().forEach(function (d) {
-    if (AutPred_s_(d.CANAL) || AutPred_canalPadrao_(d) !== 'PONTE') return;
+  pend.forEach(function (d) {
     var upd = { CANAL: 'PONTE', CANAL_POR: 'Padrão do SGO+', CANAL_POR_ID: '', CANAL_EM: SGO_UTILS.nowIso(), CANAL_MOTIVO: 'portão cadastrado no celular da ponte local (padrão: portões pela ponte)', ATUALIZADO_EM: SGO_UTILS.nowIso() };
     SGO_DATA.update(AUT_ABA_DISPOSITIVOS, d.ID, upd);
+    tentados[AutPred_s_(d.ID)] = Date.now();
+    var gravado = SGO_DATA.getById(AUT_ABA_DISPOSITIVOS, d.ID);
+    if (!gravado || AutPred_s_(gravado.CANAL).toUpperCase() !== 'PONTE') {
+      console.error('Automação predial, canal padrão: a aba ' + AUT_ABA_DISPOSITIVOS + ' não gravou a coluna CANAL; o padrão continua calculado (ponte) sem auditoria.');
+      return;
+    }
     AutPred_auditar_({ evento: 'CANAL_ALTERADO', quem: AUT_SISTEMA, disp: Object.assign({}, d, upd), resultado: 'OK', detalhe: 'Trabalhar pela: Ponte local (celular), padrão dos portões cadastrados no celular da ponte.' });
     n++;
   });
-  if (n) AutPred_canalMemoLimpar_();
+  props.setProperty(AUT_PROP_CANAL_TENTADO, JSON.stringify(tentados));
+  AutPred_canalMemoLimpar_();
   return n;
 }
 
@@ -458,6 +476,8 @@ function AutPred_definirCanal_(sessao, dados) {
   if (novo === atual && AutPred_s_(disp.CANAL)) return { mensagem: nome + ' já trabalha pela ' + AUT_CANAIS[novo] + '.' };
   if (novo === 'PONTE') {
     if (!AutPred_ponteExiste_()) throw new Error('Não foi possível trocar para a ponte: a ponte local só existe no servidor próprio do SGO+. Continue pela Nuvem Tuya.');
+    // revisão 03/11/2026: tipo desconhecido (ex.: refrigerador lido antes desta versão como "Outro"): sincronizar primeiro
+    if (['PORTAO', 'FECHADURA', 'REFRIGERADOR'].indexOf(AutPred_s_(disp.TIPO)) < 0) throw new Error('Não foi possível trocar para a ponte: ' + nome + ' ainda está como "Outro" no SGO+. Sincronize primeiro (Segurança predial › "Sincronizar com o Smart Life", Administrador ou diretor) para o SGO+ reconhecer o tipo, e depois troque o canal.');
     var s = Tuya_ponteSituacao_(AutPred_s_(disp.DEVICE_ID));
     if (!s.naPonte) throw new Error('Não foi possível trocar para a ponte: ' + nome + ' não está cadastrado no celular da ponte, e ficaria sem funcionar pelo SGO+. Peça ao responsável pelo sistema para incluí-lo na ponte (portoes_local/LEIAME.md, "Cadastrar um dispositivo na ponte") e tente de novo quando ele aparecer como cadastrado.');
   }
@@ -495,7 +515,8 @@ function AutPred_canalParaTela_(d) {
 // E1..E9), 107 Switch (divisória dupla), 108 HeatBox, 109 Spdt, 110 A_BoxOnOff, 111 B_BoxOnOff, 112 A_Temp_C, 113 B_Temp_C,
 // 114 A_TempSet_C, 115 B_TempSet_C, 116 HeatTemp_Set_C, 122 A_BatteryVoltage (x0,1 V provável), 123 BatteryPencent.
 // Histórico em AUT_LEITURAS: grava quando muda ou a cada leitura agendada. Alerta de faixa por dispositivo (desligado por
-// padrão): fora da faixa em 2 leituras seguidas avisa a gestão uma vez (S79) e de novo quando volta.
+// padrão): fora da faixa por pelo menos refrigIntervaloMin (2 leituras ou mais) avisa a gestão uma vez (S79) e de novo quando
+// volta com 0,5 °C de folga; no mínimo 60 min entre avisos do mesmo tipo por dispositivo.
 // ------------------------------------------------------------
 var AUT_REFRIG_ESCALA_PADRAO = { A_BatteryVoltage: 1 };   // x0,1 V; o modelo da nuvem (MODELO_JSON) confirma na sincronização
 var AUT_REFRIG_ONLINE_MS = 3600000;                       // pela nuvem, "online" conferido no detalhe de hora em hora
@@ -598,7 +619,28 @@ function AutPred_faixaTexto_(cfg) {
   return [a ? 'A: ' + a : '', b ? 'B: ' + b : ''].filter(Boolean).join('; ');
 }
 
-/** Alerta de faixa (opcional, desligado por padrão): 2 leituras seguidas fora avisam uma vez; a volta avisa de novo. */
+/**
+ * Volta à faixa com histerese (função pura): só conta como "dentro" a AUT_REFRIG_HISTERESE_C da borda (0,5 °C). Entre a borda e
+ * a histerese, o estado anterior continua.
+ */
+var AUT_REFRIG_HISTERESE_C = 0.5;
+var AUT_REFRIG_AVISO_MIN_MS = 3600000;   // no mínimo 60 min entre avisos do mesmo tipo (fora / de volta) por dispositivo
+function AutPred_refrigDentroComFolga_(cfg, l) {
+  var h = AUT_REFRIG_HISTERESE_C, ok = true, algum = false;
+  [['a'], ['b']].forEach(function (k) {
+    var x = l[k[0]], min = cfg[k[0] + 'Min'], max = cfg[k[0] + 'Max'];
+    if (!x || !x.ativo || x.temp === null) return;
+    algum = true;
+    if ((min !== null && x.temp < min + h) || (max !== null && x.temp > max - h)) ok = false;
+  });
+  return algum && ok;
+}
+/**
+ * Alerta de faixa (opcional, desligado por padrão). Revisão 03/11/2026: conta por TEMPO, não por leitura: avisa quando a
+ * temperatura está fora há pelo menos refrigIntervaloMin (padrão 10 min; vale também pela ponte, que lê a cada minuto), com
+ * pelo menos 2 leituras fora; a volta exige 0,5 °C para dentro da faixa (histerese); no mínimo 60 min entre avisos do mesmo
+ * tipo por dispositivo (o que fica dentro dos 60 min vai só para a auditoria).
+ */
 function AutPred_refrigAlerta_(d, l) {
   var cfg = AutPred_refrigCfg_(d), st = AutPred_deJson_(d.REFRIG_ALERTA_JSON, {}) || {}, antes = AutPred_json_(st);
   var nome = AutPred_s_(d.NOME || d.NOME_PROVEDOR), agora = Date.now();
@@ -606,25 +648,35 @@ function AutPred_refrigAlerta_(d, l) {
     try { if (typeof SGO_notificar_ === 'function') SGO_notificar_({ usuarios: AutPred_usuariosGestao_(AutPred_restrito_(d)), titulo: titulo, canais: ['sgo', 'email'], origem: 'AUTOMACAO', refId: AutPred_s_(d.ID) + '-' + (st.desde || agora), evento: 'S79', texto: texto }); }
     catch (eN) { console.error('Automação predial, aviso do refrigerador: ' + ((eN && eN.message) || eN)); }
   };
+  var tempo = AutPred_saudeCfg_().refrigIntervaloMin * 60000;
+  // os horários dos últimos avisos sobrevivem à volta ao normal (mínimo de 60 min entre avisos do mesmo tipo)
+  var ultFora = Number(st.ultimoForaAvisoEm) || 0, ultVolta = Number(st.ultimoVoltaAvisoEm) || 0;
+  var limpo = function () { var x = {}; if (ultFora) x.ultimoForaAvisoEm = ultFora; if (ultVolta) x.ultimoVoltaAvisoEm = ultVolta; return x; };
   if (!cfg.alerta) st = {};
   else if (AutPred_s_(d.ONLINE).toUpperCase() !== 'NAO') {
     var f = AutPred_refrigForaDaFaixa_(cfg, l);
     if (f.fora) {
       st.seguidas = (Number(st.seguidas) || 0) + 1;
       if (!st.desde) st.desde = agora;
-      if (st.seguidas >= 2 && !st.avisado) {
+      if (st.seguidas >= 2 && agora - Number(st.desde) >= tempo && !st.avisado) {
         st.avisado = true; st.avisadoEm = agora;
-        var t = f.partes.join('; ');
-        AutPred_auditar_({ evento: 'REFRIG_FORA_DA_FAIXA', quem: AUT_SISTEMA, disp: d, resultado: 'AVISADO', detalhe: 'Fora da faixa em 2 leituras seguidas: ' + t + '. Faixa: ' + AutPred_faixaTexto_(cfg) + '.' });
-        avisar('Refrigerador fora da faixa: ' + nome, 'O quê: ' + nome + ' com ' + t + ' (leitura de ' + AutPred_hora_(agora) + '). Por quê: 2 leituras seguidas fora da faixa configurada (' + AutPred_faixaTexto_(cfg) + '). O que fazer: confira o equipamento no local (porta fechada, energia, ajuste de temperatura) e o material guardado nele. O SGO+ avisa de novo quando a temperatura voltar à faixa.');
+        var t = f.partes.join('; '), minutos = Math.round((agora - Number(st.desde)) / 60000);
+        var repetido = ultFora && agora - ultFora < AUT_REFRIG_AVISO_MIN_MS;
+        AutPred_auditar_({ evento: 'REFRIG_FORA_DA_FAIXA', quem: AUT_SISTEMA, disp: d, resultado: repetido ? 'NAO_AVISADO' : 'AVISADO', detalhe: 'Fora da faixa há ' + minutos + ' min: ' + t + '. Faixa: ' + AutPred_faixaTexto_(cfg) + '.' + (repetido ? ' Aviso não repetido: menos de 60 min do anterior.' : '') });
+        if (!repetido) {
+          st.ultimoForaAvisoEm = agora;
+          avisar('Refrigerador fora da faixa: ' + nome, 'O quê: ' + nome + ' com ' + t + ' (leitura de ' + AutPred_hora_(agora) + '). Por quê: fora da faixa configurada (' + AutPred_faixaTexto_(cfg) + ') há ' + minutos + ' min. O que fazer: confira o equipamento no local (porta fechada, energia, ajuste de temperatura) e o material guardado nele. O SGO+ avisa de novo quando a temperatura voltar à faixa.');
+        }
       }
-    } else {
+    } else if (AutPred_refrigDentroComFolga_(cfg, l)) {
       if (st.avisado) {
-        AutPred_auditar_({ evento: 'REFRIG_NORMALIZADO', quem: AUT_SISTEMA, disp: d, resultado: 'OK', detalhe: 'Temperatura de volta à faixa (' + AutPred_faixaTexto_(cfg) + '): ' + l.texto + '.' });
-        avisar('Refrigerador de volta à faixa: ' + nome, nome + ' voltou à faixa configurada (' + AutPred_faixaTexto_(cfg) + ') às ' + AutPred_hora_(agora) + ': ' + l.texto + '.');
+        var repV = ultVolta && agora - ultVolta < AUT_REFRIG_AVISO_MIN_MS;
+        AutPred_auditar_({ evento: 'REFRIG_NORMALIZADO', quem: AUT_SISTEMA, disp: d, resultado: repV ? 'NAO_AVISADO' : 'OK', detalhe: 'Temperatura de volta à faixa (' + AutPred_faixaTexto_(cfg) + '): ' + l.texto + '.' + (repV ? ' Aviso não repetido: menos de 60 min do anterior.' : '') });
+        if (!repV) { ultVolta = agora; avisar('Refrigerador de volta à faixa: ' + nome, nome + ' voltou à faixa configurada (' + AutPred_faixaTexto_(cfg) + ') às ' + AutPred_hora_(agora) + ': ' + l.texto + '.'); }
       }
-      st = {};
+      st = limpo();
     }
+    // entre a borda e a histerese: nada muda (nem conta como fora, nem como volta)
   }
   if (AutPred_json_(st) !== antes) { var upd = { REFRIG_ALERTA_JSON: AutPred_json_(st) }; SGO_DATA.update(AUT_ABA_DISPOSITIVOS, d.ID, upd); d.REFRIG_ALERTA_JSON = upd.REFRIG_ALERTA_JSON; }
   return st;
@@ -679,22 +731,72 @@ function AutPred_refrigRegistrar_(d, l, canal, motivo) {
  * refrigIntervaloMin; canal Tuya = uma leitura da sombra a cada refrigIntervaloMin (24 h; para no bloqueio e no modo
  * econômico, como toda leitura automática). Devolve quantas leituras fez.
  */
+/**
+ * Revisão 03/11/2026: a TENTATIVA de leitura também é marcada (AUT_REFRIG_TENT_<id>: { em, falhas }): leitura que falha não
+ * é repetida a cada minuto; erro repetido recua (intervalo x 2, x 4, até x 8; pela ponte, a partir de 1 min).
+ */
+var AUT_PROP_REFRIG_TENT = 'AUT_REFRIG_TENT_';
+function AutPred_refrigTentativa_(d) { return AutPred_deJson_(PropertiesService.getScriptProperties().getProperty(AUT_PROP_REFRIG_TENT + AutPred_s_(d.ID)), {}) || {}; }
+function AutPred_refrigMarcar_(d, ok) {
+  var t = AutPred_refrigTentativa_(d);
+  var novo = { em: Date.now(), falhas: ok ? 0 : (Number(t.falhas) || 0) + 1 };
+  try { PropertiesService.getScriptProperties().setProperty(AUT_PROP_REFRIG_TENT + AutPred_s_(d.ID), JSON.stringify(novo)); } catch (e) {}
+  return novo;
+}
+/** Espera até a próxima tentativa (função pura): base, recuando 2x por falha seguida, no máximo 8x. */
+function AutPred_refrigEspera_(baseMs, falhas) { return baseMs * Math.min(8, Math.pow(2, Math.max(0, (Number(falhas) || 0) - 1))); }
+
+/**
+ * Eventos da nuvem do refrigerador (serviço de mensagens: devicePropertyMessage, gravado pelo servidor em TUYA_EVT_<id>) com
+ * algum ponto recebido no intervalo: aplicados sem chamada. Devolve true quando havia evento recente.
+ */
+function AutPred_refrigDoEvento_(d, intervaloMs, agoraMs) {
+  var ev = AutPred_eventoDisp_(AutPred_s_(d.DEVICE_ID));
+  if (!ev || !ev.props) return false;
+  var recente = Object.keys(ev.props).some(function (k) { return agoraMs - Number(ev.props[k] && ev.props[k].time) < intervaloMs; });
+  if (!recente) return false;
+  var m = AutPred_pontosDe_(d);
+  Object.keys(ev.props).forEach(function (k) { var p = ev.props[k]; if (p && (p.value === null || typeof p.value !== 'object')) m[k] = p.value; });
+  var lista = Object.keys(m).map(function (k) { return { code: k, value: m[k] }; }), agora = SGO_UTILS.nowIso();
+  var upd = { ESTADO_JSON: AutPred_json_(lista).slice(0, 8000), ESTADO_EM: agora, LEITURA_EM: agora, ATUALIZADO_EM: agora };
+  if (ev.online === true || ev.online === false) { upd.ONLINE = ev.online ? 'SIM' : 'NAO'; upd.ONLINE_EM = agora; }
+  SGO_DATA.update(AUT_ABA_DISPOSITIVOS, d.ID, upd);
+  Object.assign(d, upd);
+  var l = AutPred_refrigLeitura_(d, AutPred_pontosDe_(d));
+  AutPred_refrigRegistrar_(d, l, 'TUYA', agoraMs - AutPred_ms_(d.LEITURA_LINHA_EM) >= intervaloMs ? 'AGENDADA' : '');
+  try { AutPred_refrigAlerta_(d, l); } catch (eA) {}
+  return true;
+}
+
 function AutPred_rotinaRefrigeradores_(c, agoraMs) {
   agoraMs = agoraMs || Date.now();
   var lista = AutPred_dispositivos_().filter(function (d) { return AutPred_ehRefrig_(d) && AutPred_s_(d.ATIVO).toUpperCase() !== 'NAO'; });
   if (!lista.length) return 0;
-  var intervalo = AutPred_saudeCfg_().refrigIntervaloMin * 60000, n = 0;
+  var intervalo = AutPred_saudeCfg_().refrigIntervaloMin * 60000, n = 0, emUso = null;
   lista.forEach(function (d) {
+    var t = AutPred_refrigTentativa_(d), ponte = AutPred_canal_(d) === 'PONTE';
+    // tentativa recente (com recuo depois de falhas seguidas): não tenta de novo
+    if (Number(t.em) && agoraMs - Number(t.em) < AutPred_refrigEspera_(ponte ? 60000 : intervalo, t.falhas) - 1000) return;
     try {
-      if (AutPred_canal_(d) === 'PONTE') {
+      if (ponte) {
         if (AutPred_ponteFora_(d)) return;
         AutPred_refrigLer_(c, d, 'AUTOMATICA', agoraMs - AutPred_ms_(d.LEITURA_LINHA_EM) >= intervalo);
       } else {
-        if (!c.podeLer || agoraMs - AutPred_ms_(d.LEITURA_EM) < intervalo || Tuya_motivoPausa_('AUTOMATICA')) return;
+        if (!c.podeLer || agoraMs - AutPred_ms_(d.LEITURA_EM) < intervalo - 1000) return;
+        // com os eventos da nuvem chegando, a leitura agendada vira reserva (nenhuma chamada)
+        if (AutPred_refrigDoEvento_(d, intervalo, agoraMs)) { AutPred_refrigMarcar_(d, true); n++; return; }
+        if (emUso === null) emUso = AutPred_emUso_(c);
+        if (!emUso || Tuya_motivoPausa_('AUTOMATICA')) return;
+        // a folga do minuto fica para os comandos e a abertura automática
+        if (typeof Tuya_chamadasNoMinuto_ === 'function' && Tuya_chamadasNoMinuto_() >= AutPred_reservaMinuto_()) return;
         AutPred_refrigLer_(c, d, 'AUTOMATICA', true);
       }
+      AutPred_refrigMarcar_(d, true);
       n++;
-    } catch (e) { console.error('Automação predial, leitura do refrigerador: ' + Tuya_limpar_((e && e.message) || e, c)); }
+    } catch (e) {
+      var m = AutPred_refrigMarcar_(d, false);
+      console.error('Automação predial, leitura do refrigerador (falha ' + m.falhas + '): ' + Tuya_limpar_((e && e.message) || e, c));
+    }
   });
   return n;
 }
@@ -747,7 +849,22 @@ function AutPred_sincronizar_(sessao) {
     var ex = existentes[d.deviceId];
     // 03/11/2026: dispositivo do canal Ponte não é lido na nuvem (nem comandos, nem estado): só o nome e o produto
     if (ex && AutPred_canal_(ex) === 'PONTE') {
-      SGO_DATA.update(AUT_ABA_DISPOSITIVOS, ex.ID, { NOME_PROVEDOR: d.nome, PRODUTO_ID: d.produtoId, PRODUTO_NOME: d.produtoNome, SINCRONIZADO_EM: agora, ATUALIZADO_EM: agora });
+      // revisão 03/11/2026: o tipo é reclassificado pela categoria da lista (sem chamada extra); o modelo do refrigerador é lido
+      // uma vez quando falta (metadado da nuvem, só nesta sincronização pedida pela gestão)
+      var catP = String(d.categoria || ex.CATEGORIA || '').toLowerCase();
+      var updP = { NOME_PROVEDOR: d.nome, PRODUTO_ID: d.produtoId, PRODUTO_NOME: d.produtoNome, SINCRONIZADO_EM: agora, ATUALIZADO_EM: agora };
+      var tipoP = TUYA_CATEGORIAS_REFRIGERACAO[catP] ? 'REFRIGERADOR' : TUYA_CATEGORIAS_FECHADURA[catP] ? 'FECHADURA' : TUYA_CATEGORIAS_PORTAO[catP] ? 'PORTAO' : '';
+      if (catP) { updP.CATEGORIA = catP; updP.CATEGORIA_NOME = TUYA_CATEGORIAS_PORTAO[catP] || TUYA_CATEGORIAS_FECHADURA[catP] || TUYA_CATEGORIAS_REFRIGERACAO[catP] || 'Categoria ' + catP; }
+      if (tipoP && tipoP !== AutPred_s_(ex.TIPO)) updP.TIPO = tipoP;
+      if (tipoP === 'REFRIGERADOR') {
+        var cr = Tuya_compatibilidade_(catP, [], []);
+        updP.COMPAT_OK = 'NAO'; updP.COMPAT_MOTIVO = cr.motivo; updP.COMANDO_ABRIR_JSON = ''; updP.REMOTO_FECHADURA = '';
+        if (!AutPred_s_(ex.MODELO_JSON)) {
+          try { var rmP = Tuya_comCanal_('TUYA', function () { return Tuya_chamar_(c, 'GET', '/v2.0/cloud/thing/' + encodeURIComponent(d.deviceId) + '/model', {}); }); if (rmP.j && rmP.j.success === true) updP.MODELO_JSON = AutPred_json_(AutPred_modeloEscalas_(rmP.j.result)).slice(0, 8000); }
+          catch (eMP) { problemas.push(d.nome + ': modelo não lido (' + Tuya_limpar_(eMP && eMP.message, c) + ')'); }
+        }
+      }
+      SGO_DATA.update(AUT_ABA_DISPOSITIVOS, ex.ID, updP);
       atualizados++;
       return;
     }
@@ -776,7 +893,11 @@ function AutPred_sincronizar_(sessao) {
     if (compat.tipo === 'REFRIGERADOR' && !(d.status || []).length) { delete upd.ESTADO_JSON; delete upd.ESTADO_EM; }
     if (ex) {
       // comando de abertura ajustado à mão pelo Administrador é preservado
-      if (AutPred_s_(ex.COMANDO_ABRIR_JSON) && AutPred_s_(ex.COMANDO_ABRIR_JSON) !== upd.COMANDO_ABRIR_JSON && compat.tipo !== 'FECHADURA') { upd.COMANDO_ABRIR_JSON = ex.COMANDO_ABRIR_JSON; upd.COMPAT_OK = 'SIM'; }
+      // revisão 03/11/2026: refrigerador nunca fica com COMPAT_OK = SIM (nenhum comando)
+      if (AutPred_s_(ex.COMANDO_ABRIR_JSON) && AutPred_s_(ex.COMANDO_ABRIR_JSON) !== upd.COMANDO_ABRIR_JSON && compat.tipo !== 'FECHADURA' && compat.tipo !== 'REFRIGERADOR') { upd.COMANDO_ABRIR_JSON = ex.COMANDO_ABRIR_JSON; upd.COMPAT_OK = 'SIM'; }
+      if (compat.tipo === 'REFRIGERADOR') { upd.COMANDO_ABRIR_JSON = ''; upd.COMPAT_OK = 'NAO'; }
+      // modelo lido antes e a leitura de agora falhou: o guardado continua
+      if (!upd.MODELO_JSON) delete upd.MODELO_JSON;
       SGO_DATA.update(AUT_ABA_DISPOSITIVOS, ex.ID, upd);
       atualizados++;
     } else {
@@ -899,8 +1020,10 @@ function AutPred_lerEstadoCompartilhado_(c, disp) {
   var k = AUT_ESTADO_CACHE + AutPred_s_(disp.DEVICE_ID), cache = null;
   var limite = AutPred_emMovimento_(disp) ? AUT_ESTADO_CACHE_MS : AutPred_portaoParadoMs_();
   try { cache = CacheService.getScriptCache(); if (Date.now() - Number(cache.get(k) || 0) < limite) return false; } catch (e) {}
-  if (Tuya_motivoPausa_('TELA')) return false;
-  if (typeof Tuya_chamadasNoMinuto_ === 'function' && Tuya_chamadasNoMinuto_() >= AutPred_reservaMinuto_()) return false;
+  // revisão 03/11/2026: portão do canal Ponte lê pela ponte mesmo com a nuvem bloqueada (pausa e folga do minuto são da nuvem)
+  var pelaPonte = AutPred_canal_(disp) === 'PONTE';
+  if (!pelaPonte && Tuya_motivoPausa_('TELA')) return false;
+  if (!pelaPonte && typeof Tuya_chamadasNoMinuto_ === 'function' && Tuya_chamadasNoMinuto_() >= AutPred_reservaMinuto_()) return false;
   try { if (cache) cache.put(k, String(Date.now()), 900); } catch (e2) {}
   var d = Tuya_comOrigem_('TELA', function () { return Tuya_dispositivo_(c, disp.DEVICE_ID); });
   var upd = { ONLINE: d.online ? 'SIM' : 'NAO', ESTADO_JSON: AutPred_json_(d.status) };
@@ -1366,11 +1489,14 @@ function AutPred_quemDestrava_(disp) {
 function AutPred_rotinaPedidos() {
   if (typeof SGO_execucaoInterna_ === 'function' && !SGO_execucaoInterna_()) return null;
   var c = AutPred_cfg_();
-  // 03/11/2026: canal padrão dos portões da ponte fixado; refrigerador pela ponte (sem nuvem) ou pela sombra da nuvem
+  // 03/11/2026: canal padrão dos portões da ponte fixado; refrigerador pela ponte (sem nuvem) ou pela sombra da nuvem.
+  // Revisão: os dois rodam DEPOIS da campainha (a campainha tem prioridade no minuto).
   var refrig = 0;
-  try { AutPred_fixarCanaisPadrao_(); } catch (eCanal) { console.error('Automação predial, canal padrão: ' + ((eCanal && eCanal.message) || eCanal)); }
-  try { refrig = AutPred_rotinaRefrigeradores_(c); } catch (eRef) { console.error('Automação predial, refrigeradores: ' + ((eRef && eRef.message) || eRef)); }
-  if (!c.podeLer || !AutPred_emUso_(c)) return { texto: 'automação desligada ou em implantação: nada lido', refrigeradores: refrig };
+  var depois = function () {
+    try { AutPred_fixarCanaisPadrao_(); } catch (eCanal) { console.error('Automação predial, canal padrão: ' + ((eCanal && eCanal.message) || eCanal)); }
+    try { refrig = AutPred_rotinaRefrigeradores_(c); } catch (eRef) { console.error('Automação predial, refrigeradores: ' + ((eRef && eRef.message) || eRef)); }
+  };
+  if (!c.podeLer || !AutPred_emUso_(c)) { depois(); return { texto: 'automação desligada ou em implantação: nada lido', refrigeradores: refrig }; }
   var avisos = 0;
   // 23/10/2026: portão aceito sem confirmação nos últimos 15 min é confirmado pelo sensor mesmo sem tela aberta
   // 27/10/2026: com eventos, pelo que chegou (nenhuma chamada); sem eventos, uma leitura (pausada no modo econômico)
@@ -1394,6 +1520,7 @@ function AutPred_rotinaPedidos() {
     }
     if (AutPred_tratarPedido_(c, d, p, ev ? 'EVENTO' : 'AUTOMATICA')) avisos++;
   });
+  depois();
   return { avisos: avisos, refrigeradores: refrig };
 }
 
@@ -1630,6 +1757,8 @@ function AutPred_prepararComando_(sessao, dados) {
   var dir = AutPred_direitos_(sessao, disp, AutPred_permissoesDe_(sessao.userId));
   if (!dir.ver) throw new Error('Não foi possível continuar: o dispositivo não foi encontrado ou não está liberado para você. Clique em "Atualizar"; se precisar dele, peça ao Administrador ou à Diretoria.');
   var verbo = disp.TIPO === 'FECHADURA' ? 'destravar' : 'abrir';
+  // revisão 03/11/2026: refrigerador é só leitura: nenhum comando, qualquer que seja o cadastro
+  if (AutPred_ehRefrig_(disp)) throw new Error('Não foi possível enviar comando: ' + AutPred_s_(disp.NOME || disp.NOME_PROVEDOR) + ' é um refrigerador e o SGO+ só lê (temperaturas, modo, bateria e erros). Ligar, desligar e ajustar continuam no próprio equipamento ou no aplicativo Smart Life.');
   if (!dir.acionar) throw new Error('Não foi possível ' + verbo + ': ' + dir.motivo + '.');
   if (AutPred_s_(disp.ATIVO).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': o dispositivo está desativado no SGO+ (o Administrador ou um diretor reativa em Administrar).');
   if (AutPred_s_(disp.COMPAT_OK).toUpperCase() !== 'SIM') throw new Error('Não foi possível ' + verbo + ': não disponível pela API: ' + AutPred_s_(disp.COMPAT_MOTIVO));
@@ -1764,6 +1893,7 @@ function AutPred_executarComTrava_(sessao, dados, soltar) {
     AutPred_auditar_({ evento: evento || 'COMANDO_NEGADO', quem: sessao, disp: disp, operacaoId: opId, resultado: 'NEGADO', detalhe: motivo });
     throw new Error('Não foi possível ' + verbo.toLowerCase() + ': ' + motivo + '.');
   };
+  if (AutPred_ehRefrig_(disp)) negar('refrigerador é só leitura no SGO+: nenhum comando é enviado (não disponível pela API para comandos)', 'COMANDO_NAO_DISPONIVEL');
   if (!dir.acionar) negar(dir.motivo, 'COMANDO_NAO_AUTORIZADO');
   if (AutPred_s_(disp.ATIVO).toUpperCase() !== 'SIM') negar('o dispositivo está desativado no SGO+ (Administrador ou Diretoria reativa em Administrar dispositivos)');
   // 22/10/2026 (dono): sem digitar. A confirmação é o toque em "Sim, abrir agora" na janela, que só existe com o token de uso

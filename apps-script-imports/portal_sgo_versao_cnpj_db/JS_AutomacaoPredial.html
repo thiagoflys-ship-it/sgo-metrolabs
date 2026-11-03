@@ -981,10 +981,10 @@
     var id = d.id, al = (d.refrig && d.refrig.alerta) || {}, esc = AutPred_esc_;
     var n = function (x) { return x === null || x === undefined ? "" : String(x).replace(".", ","); };
     var campo = function (p, rot, val) { return '<label for="' + p + id + '">' + rot + '</label><input id="' + p + id + '" inputmode="decimal" maxlength="6" placeholder="ex.: -18" value="' + esc(n(val)) + '">'; };
-    return '<label class="aut-check"><input type="checkbox" id="autRfAl_' + id + '"' + (al.ligado ? " checked" : "") + "> Avisar a gestão quando a temperatura sair da faixa (2 leituras seguidas)</label>" +
+    return '<label class="aut-check"><input type="checkbox" id="autRfAl_' + id + '"' + (al.ligado ? " checked" : "") + "> Avisar a gestão quando a temperatura ficar fora da faixa por pelo menos o intervalo de leitura (padrão 10 min)</label>" +
       campo("autRfAMin_", "Compartimento A: mínima (°C)", al.aMin) + campo("autRfAMax_", "Compartimento A: máxima (°C)", al.aMax) +
       campo("autRfBMin_", "Compartimento B: mínima (°C, deixe vazio sem divisória)", al.bMin) + campo("autRfBMax_", "Compartimento B: máxima (°C)", al.bMax) +
-      '<div class="cadx-sub">O aviso vai à Diretoria e ao Administrador no sistema e por e-mail, uma vez por ocorrência, e de novo quando a temperatura volta à faixa. Com o equipamento offline, nada é avaliado.</div>';
+      '<div class="cadx-sub">O aviso vai à Diretoria e ao Administrador no sistema e por e-mail, uma vez por ocorrência, e de novo quando a temperatura volta à faixa (com folga de 0,5 °C). Entre dois avisos do mesmo tipo, no mínimo 60 min. Com o equipamento offline, nada é avaliado.</div>';
   }
 
   function AutPred_homologar_(id, sim, comando) {

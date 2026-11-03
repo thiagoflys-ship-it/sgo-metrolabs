@@ -116,6 +116,7 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Na janela, escreva o motivo (mínimo de 5 caracteres) e confirme. A troca vale na hora e fica na auditoria (\"Trocou por onde o dispositivo trabalha\").",
           "Com a ponte fora do ar, o próprio cartão mostra o botão \"Trabalhar pela Nuvem Tuya\", com o motivo já escrito: um toque para confirmar.",
           "\"Trabalhar pela ponte local\" só aparece para dispositivo cadastrado no celular da ponte; sem isso, ele ficaria sem funcionar pelo SGO+. O responsável pelo sistema cadastra pelo LEIAME da ponte.",
+          "Dispositivo que aparece como \"Outro\" (por exemplo, o refrigerador lido antes de 03/11/2026): toque em \"Sincronizar com o Smart Life\" primeiro, para o SGO+ reconhecer o tipo; só depois troque o canal.",
           "Quando a ponte voltar, troque de volta para \"ponte local\" para não gastar a cota da nuvem.",
           "A porta da Diretoria (restrita) só um diretor troca."
         ] },
@@ -126,7 +127,7 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
           "Toque em \"Histórico\" para ver o gráfico das temperaturas (linha cheia = atual; tracejada = ajustada) e a lista das últimas leituras. Escolha 24 h, 48 h, 7 dias ou 30 dias.",
           "O histórico grava uma linha quando algo muda (temperatura, ajuste, modo, erro) e a cada leitura agendada.",
           "Erro \"E1\" a \"E9\": é código de erro do próprio equipamento. Consulte o manual do refrigerador e confira no local.",
-          "Alerta de temperatura (opcional, desligado por padrão): em \"Administrar\", marque \"Avisar a gestão quando a temperatura sair da faixa\" e informe a mínima e a máxima de cada compartimento (vírgula para decimais). Duas leituras seguidas fora da faixa avisam a Diretoria e o Administrador uma vez (no sistema e por e-mail) e de novo quando a temperatura volta."
+          "Alerta de temperatura (opcional, desligado por padrão): em \"Administrar\", marque \"Avisar a gestão quando a temperatura sair da faixa\" e informe a mínima e a máxima de cada compartimento (vírgula para decimais). Fora da faixa por pelo menos o intervalo de leitura (padrão 10 min, com 2 leituras ou mais), o SGO+ avisa a Diretoria e o Administrador uma vez (no sistema e por e-mail) e de novo quando a temperatura volta com folga de 0,5 °C para dentro da faixa. Entre dois avisos do mesmo tipo, no mínimo 60 minutos (os demais ficam só na auditoria)."
         ] },
         { titulo: "Ler o estado e ver o histórico", itens: [
           "No cartão do dispositivo, toque em \"Ler estado\" para reler o estado na nuvem agora.",
@@ -195,7 +196,7 @@ function SGO_ajudaTelas_AutomacaoPredial_() {
         { nome: "Selo azul \"Pela ponte local\" e selo roxo \"Pela nuvem Tuya\"", significado: "Por onde o dispositivo trabalha: pelo celular da ponte na rede da empresa (sem gastar a nuvem) ou pela nuvem da Tuya." },
         { nome: "Selo vermelho \"Ponte local fora do ar\" e faixa \"... a ponte local está fora do ar desde hh:mm\"", significado: "O dispositivo trabalha pela ponte e ela não responde: nada é enviado, nem pela nuvem. Use o controle ou o aplicativo Smart Life; a gestão pode trocar para a Nuvem Tuya." },
         { nome: "Selo azul \"Só leitura\" (refrigerador)", significado: "O SGO+ só lê o refrigerador; nenhum comando sai." },
-        { nome: "Compartimento com fundo vermelho e faixa \"Fora da faixa configurada\" (refrigerador)", significado: "Duas leituras seguidas fora da faixa do alerta: a gestão foi avisada. Confira o equipamento no local." },
+        { nome: "Compartimento com fundo vermelho e faixa \"Fora da faixa configurada\" (refrigerador)", significado: "Fora da faixa do alerta por pelo menos o intervalo de leitura: a gestão foi avisada. Confira o equipamento no local." },
         { nome: "Faixa amarela \"Economia da nuvem ligada\"", significado: "Modo econômico de emergência: sem eventos, a posição e a campainha não são relidas sozinhas. Use \"Ler estado\" e \"Verificar campainha agora\" e confira no local." },
         { nome: "Resultado \"Recusado — nuvem bloqueada (cota ou plano), nada enviado\"", significado: "A nuvem da Tuya estava bloqueada: o SGO+ não enviou nada. Use o controle ou o aplicativo Smart Life." },
         { nome: "Cartões verde, amarelo, vermelho e cinza (Saúde da infraestrutura)", significado: "Normal, atenção, falha e desligado." }

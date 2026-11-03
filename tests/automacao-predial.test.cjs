@@ -136,7 +136,7 @@ function ambiente(o) {
   const comandosApi = () => api.pedidos.filter((p) => p.metodo === 'POST');
   const homologar = (nome) => { const anterior = sessao.atual; como(DIR); const r = api_('homologar', { id: disp(nome).ID, homologado: true, motivo: 'teste presencial acompanhado' }); assert.equal(r.ok, true, r.message); como(anterior); };
   const envelhecer = () => { (tabelas.AUT_COMANDOS || []).forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 120000).toISOString(); }); (tabelas.AUT_DISPOSITIVOS || []).forEach((d) => { if (d.ULT_CMD_EM) d.ULT_CMD_EM = new Date(Date.now() - 120000).toISOString(); }); };
-  return { ctx, props, tabelas, api, notificacoes, como, api_, abrir, disp, comandosApi, cache, homologar, envelhecer };
+  return { ctx, props, tabelas, api, notificacoes, como, api_, abrir, disp, comandosApi, cache, homologar, envelhecer, cabecalhos };
 }
 
 function sincronizar(amb) { amb.como(DONO); const r = amb.api_('sincronizar'); assert.equal(r.ok, true, r.message); return r; }
@@ -1697,7 +1697,7 @@ test('refrigerador (xbx, "Car Refrigerator"): só leitura; sincronização lê o
   amb.como(DONO);
   // nenhum comando
   const p = amb.api_('preparar', { dispositivoId: fz.ID, operacaoId: 'op-frz-comando01' });
-  assert.equal(p.ok, false); assert.match(p.message, /não disponível pela API: Só leitura/);
+  assert.equal(p.ok, false); assert.match(p.message, /é um refrigerador e o SGO\+ só lê/);
   // leitura pedida (sombra v2.0 + detalhe para o online)
   const n0 = amb.api.pedidos.length;
   const r = amb.api_('estado', { dispositivoId: fz.ID });
@@ -1734,7 +1734,19 @@ test('refrigerador (xbx, "Car Refrigerator"): só leitura; sincronização lê o
   assert.equal(ct.refrig.a.tempTexto, '-17 °C'); assert.equal(ct.refrig.alerta.aMin, undefined);
 });
 
-test('refrigerador pela nuvem: leitura agendada a cada 10 min (5 a 60, na Saúde), conta na cota por dispositivo, para no modo econômico e no bloqueio', () => {
+// "o tempo passa" para o refrigerador: recua os horários guardados (leitura, linha, tentativa e alerta) em min minutos
+function avancarFz(amb, min, nome) {
+  const d = amb.tabelas.AUT_DISPOSITIVOS.find((x) => x.NOME === (nome || 'Car Refrigerator'));
+  const ms = min * 60000, antes = (iso) => (iso ? new Date(new Date(iso).getTime() - ms).toISOString() : iso);
+  d.LEITURA_EM = antes(d.LEITURA_EM); d.LEITURA_LINHA_EM = antes(d.LEITURA_LINHA_EM);
+  const kt = 'AUT_REFRIG_TENT_' + d.ID;
+  if (amb.props[kt]) { const t = JSON.parse(amb.props[kt]); t.em -= ms; amb.props[kt] = JSON.stringify(t); }
+  if (d.REFRIG_ALERTA_JSON) { const st = JSON.parse(d.REFRIG_ALERTA_JSON); ['desde', 'avisadoEm', 'ultimoForaAvisoEm', 'ultimoVoltaAvisoEm'].forEach((k) => { if (st[k]) st[k] -= ms; }); d.REFRIG_ALERTA_JSON = JSON.stringify(st); }
+  return d;
+}
+const frzChamadas = (amb, de) => amb.api.pedidos.slice(de).filter((x) => /dev-frz-1/.test(x.caminho));
+
+test('refrigerador pela nuvem: leitura agendada a cada 10 min (5 a 60, na Saúde), conta na cota por dispositivo, para no modo econômico, no bloqueio, sem a automação em uso e com o minuto cheio; falha marca a tentativa e recua', () => {
   const amb = ambiente({ freezer: true }); sincronizar(amb);
   amb.homologar('Portão principal');
   amb.como(DONO);
@@ -1743,24 +1755,50 @@ test('refrigerador pela nuvem: leitura agendada a cada 10 min (5 a 60, na Saúde
   assert.equal(amb.tabelas.AUT_LEITURAS[0].MOTIVO, 'AGENDADA');
   const n0 = amb.api.pedidos.length;
   amb.ctx.AutPred_rotinaPedidos();
-  assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)), 'dentro dos 10 min, nenhuma chamada do refrigerador');
+  assert.equal(frzChamadas(amb, n0).length, 0, 'dentro dos 10 min, nenhuma chamada do refrigerador');
   // passados 11 min: uma leitura (a sombra; o online só de hora em hora) e uma linha, mesmo sem mudança
-  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_EM = new Date(Date.now() - 11 * 60000).toISOString();
+  avancarFz(amb, 11);
   const n1 = amb.api.pedidos.length;
   amb.ctx.AutPred_rotinaPedidos();
-  assert.deepEqual(amb.api.pedidos.slice(n1).filter((x) => /dev-frz-1/.test(x.caminho)).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties']);
+  assert.deepEqual(frzChamadas(amb, n1).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties']);
   assert.equal(amb.tabelas.AUT_LEITURAS.length, 2); assert.equal(amb.tabelas.AUT_LEITURAS[1].MOTIVO, 'AGENDADA');
   assert.ok(uso(amb).diaDisp['dev-frz-1'].AUTOMATICA >= 2, 'conta na cota, por dispositivo');
-  // modo econômico e bloqueio: nada sai
+  // modo econômico, bloqueio, minuto cheio e automação fora de uso: nada sai
   amb.props.AUT_ECONOMICO = JSON.stringify({ mes: amb.ctx.AutPred_orcamentoAgora_().chave, desde: Date.now(), por: 'teste', motivo: 'teste' });
-  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_EM = new Date(Date.now() - 11 * 60000).toISOString();
+  avancarFz(amb, 11);
   const n2 = amb.api.pedidos.length;
   amb.ctx.AutPred_rotinaPedidos();
-  assert.ok(!amb.api.pedidos.slice(n2).some((x) => /dev-frz-1/.test(x.caminho)), 'modo econômico: leitura automática pausada');
+  assert.equal(frzChamadas(amb, n2).length, 0, 'modo econômico: leitura automática pausada');
   delete amb.props.AUT_ECONOMICO;
+  const k = 'TUYA_CHAMADAS_MIN_' + Math.floor(Date.now() / 60000);
+  amb.cache[k] = '75';
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n2).length, 0, 'minuto com 70+ chamadas: a folga fica para os comandos');
+  delete amb.cache[k];
+  const h = amb.disp('Portão principal'); h.HOMOLOGADO = 'NAO';
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n2).length, 0, 'automação em implantação: sem leitura pela nuvem');
+  h.HOMOLOGADO = 'SIM';
   bloquear(amb);
   amb.ctx.AutPred_rotinaPedidos();
-  assert.ok(!amb.api.pedidos.slice(n2).some((x) => /dev-frz-1/.test(x.caminho)), 'bloqueio: nada sai');
+  assert.equal(frzChamadas(amb, n2).length, 0, 'bloqueio: nada sai');
+  delete amb.props.TUYA_USO_V1;
+  // falha: a tentativa fica marcada (não repete a cada minuto) e o recuo dobra
+  amb.api.falhaRede = true;
+  const n3 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  const tent = () => JSON.parse(amb.props['AUT_REFRIG_TENT_' + amb.disp('Car Refrigerator').ID]);
+  assert.equal(tent().falhas, 1); assert.equal(frzChamadas(amb, n3).length, 1);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n3).length, 1, 'falhou agora: não tenta de novo no minuto seguinte');
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(tent().falhas, 2); assert.equal(frzChamadas(amb, n3).length, 2);
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n3).length, 2, '2 falhas: espera 20 min');
+  assert.equal(amb.ctx.AutPred_refrigEspera_(600000, 4), 4800000); assert.equal(amb.ctx.AutPred_refrigEspera_(600000, 9), 4800000);
+  amb.api.falhaRede = false;
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(tent().falhas, 0, 'voltou: zera o recuo');
   // intervalo na Saúde (diretor), com motivo
   const base = { consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 60, consultaDias: [1, 2, 3, 4, 5], motivo: 'freezer da calibração' };
   assert.match(amb.api_('saudeCfg', Object.assign({}, base, { refrigIntervaloMin: 3 })).message, /5 a 60 minutos/);
@@ -1772,7 +1810,23 @@ test('refrigerador pela nuvem: leitura agendada a cada 10 min (5 a 60, na Saúde
   assert.equal(lf.canalNome, 'Nuvem Tuya'); assert.ok(lf.mes >= 3);
 });
 
-test('refrigerador pela ponte: leitura local sem nuvem (agente da ponte), histórico quando muda e a cada intervalo, ponte fora não cai para a nuvem; alerta de faixa avisa uma vez (S79) e na volta', () => {
+test('refrigerador pela nuvem com o serviço de mensagens: devicePropertyMessage recente é aplicado sem chamada; a leitura agendada vira reserva', () => {
+  const amb = ambiente({ freezer: true }); sincronizar(amb); amb.homologar('Portão principal');
+  const agora = Date.now();
+  amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: agora, desde: agora - 600000 });
+  amb.props['TUYA_EVT_dev-frz-1'] = JSON.stringify({ props: { A_Temp_C: { value: -21, time: agora - 30000 }, A_TempSet_C: { value: -22, time: agora - 30000 }, OnOff: { value: true, time: agora - 30000 } }, online: true, recebidoEm: agora });
+  const n0 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n0).length, 0, 'evento recente: nenhuma chamada');
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1); assert.equal(amb.tabelas.AUT_LEITURAS[0].A_TEMP_C, -21);
+  // evento velho (mais que o intervalo): volta a leitura agendada da nuvem
+  amb.props['TUYA_EVT_dev-frz-1'] = JSON.stringify({ props: { A_Temp_C: { value: -21, time: agora - 3600000 } }, recebidoEm: agora - 3600000 });
+  avancarFz(amb, 11);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.deepEqual(frzChamadas(amb, n0).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties']);
+});
+
+test('refrigerador pela ponte: leitura local sem nuvem (agente da ponte), histórico quando muda e a cada intervalo, falha recua, ponte fora não cai para a nuvem', () => {
   const pt = ponteSimulada();
   const amb = ambiente({ freezer: true, globais: { SGO_PORTOES_LOCAIS: pt.api } });
   pt.amb = amb; sincronizar(amb);
@@ -1786,41 +1840,21 @@ test('refrigerador pela ponte: leitura local sem nuvem (agente da ponte), histó
   const n0 = amb.api.pedidos.length;
   amb.ctx.AutPred_rotinaPedidos();
   assert.equal(amb.tabelas.AUT_LEITURAS.length, 1); assert.equal(amb.tabelas.AUT_LEITURAS[0].CANAL, 'PONTE'); assert.equal(amb.tabelas.AUT_LEITURAS[0].A_TEMP_C, -18);
-  amb.ctx.AutPred_rotinaPedidos();
+  avancarFz(amb, 1); amb.ctx.AutPred_rotinaPedidos();
   assert.equal(amb.tabelas.AUT_LEITURAS.length, 1, 'sem mudança e dentro do intervalo: nenhuma linha');
   pt.mudar('dev-frz-1', 'A_Temp_C', -16); pt.gravar();
   amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1, 'tentativa de menos de 1 min: espera');
+  avancarFz(amb, 1); amb.ctx.AutPred_rotinaPedidos();
   assert.equal(amb.tabelas.AUT_LEITURAS.length, 2); assert.equal(amb.tabelas.AUT_LEITURAS[1].MOTIVO, 'MUDOU');
-  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_LINHA_EM = new Date(Date.now() - 11 * 60000).toISOString();
-  amb.ctx.AutPred_rotinaPedidos();
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
   assert.equal(amb.tabelas.AUT_LEITURAS.length, 3); assert.equal(amb.tabelas.AUT_LEITURAS[2].MOTIVO, 'AGENDADA');
   const r = amb.api_('estado', { dispositivoId: fz.ID });
   assert.match(r.mensagem, /Leitura agora \(Ponte local \(celular\)\): Compartimento A -16 °C/);
-  // alerta de faixa (desligado por padrão): ligado com máximo de -15 °C no compartimento A
-  const s0 = amb.notificacoes.length;
-  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true } }).message, /pelo menos uma temperatura/);
-  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-10', aMax: '-15' } }).message, /mínima precisa ser menor/);
-  const sv = amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-25', aMax: '-15' } });
-  assert.equal(sv.ok, true, sv.message); assert.match(sv.mensagem, /alerta de temperatura ligado \(A: -25 °C a -15 °C\)/);
-  pt.mudar('dev-frz-1', 'A_Temp_C', -12); pt.gravar();
-  amb.ctx.AutPred_rotinaPedidos();
-  assert.equal(amb.notificacoes.length, s0, '1 leitura fora: ainda sem aviso');
-  amb.ctx.AutPred_rotinaPedidos();
-  let s79 = amb.notificacoes.filter((x) => x.evento === 'S79');
-  assert.equal(s79.length, 1); assert.match(s79[0].titulo, /Refrigerador fora da faixa: Car Refrigerator/); assert.match(s79[0].texto, /compartimento A em -12 °C \(máximo -15 °C\)/);
-  assert.deepEqual(Array.from(s79[0].canais), ['sgo', 'email']);
-  amb.ctx.AutPred_rotinaPedidos();
-  assert.equal(amb.notificacoes.filter((x) => x.evento === 'S79').length, 1, 'uma vez por ocorrência');
-  assert.equal(cartaoDe(amb, 'Car Refrigerator').refrig.alerta.fora, true);
-  pt.mudar('dev-frz-1', 'A_Temp_C', -19); pt.gravar();
-  amb.ctx.AutPred_rotinaPedidos();
-  s79 = amb.notificacoes.filter((x) => x.evento === 'S79');
-  assert.equal(s79.length, 2); assert.match(s79[1].titulo, /de volta à faixa/);
-  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'REFRIG_FORA_DA_FAIXA') && amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'REFRIG_NORMALIZADO'));
   assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)), 'refrigerador da ponte: nenhuma chamada à nuvem');
   // ponte fora: nada pela nuvem; a tela diz desde quando
   pt.vivo = false; pt.gravar();
-  amb.tabelas.AUT_DISPOSITIVOS.find((d) => d.NOME === 'Car Refrigerator').LEITURA_LINHA_EM = new Date(Date.now() - 11 * 60000).toISOString();
+  avancarFz(amb, 11);
   const l0 = amb.tabelas.AUT_LEITURAS.length;
   amb.ctx.AutPred_rotinaPedidos();
   assert.equal(amb.tabelas.AUT_LEITURAS.length, l0);
@@ -1828,4 +1862,103 @@ test('refrigerador pela ponte: leitura local sem nuvem (agente da ponte), histó
   assert.equal(r2.ok, true); assert.match(r2.mensagem, /Car Refrigerator trabalha pela ponte local .* fora do ar desde/); assert.match(r2.mensagem, /Confira o equipamento no local/);
   assert.match(cartaoDe(amb, 'Car Refrigerator').ponteTexto, /fora do ar desde/);
   assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)));
+});
+
+test('alerta de faixa do refrigerador (S79): conta por tempo (fora há pelo menos o intervalo, também pela ponte que lê a cada minuto), histerese de 0,5 °C na volta e no mínimo 60 min entre avisos do mesmo tipo', () => {
+  const pt = ponteSimulada();
+  const amb = ambiente({ freezer: true, globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb; sincronizar(amb);
+  pt.online['dev-frz-1'] = true; pt.props['dev-frz-1'] = Object.assign({}, FREEZER_PONTOS); pt.gravar();
+  const fz = amb.disp('Car Refrigerator');
+  amb.como(DONO);
+  amb.api_('canal', { id: fz.ID, canal: 'PONTE', motivo: 'freezer cadastrado na ponte' });
+  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true } }).message, /pelo menos uma temperatura/);
+  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-10', aMax: '-15' } }).message, /mínima precisa ser menor/);
+  const sv = amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-25', aMax: '-15' } });
+  assert.equal(sv.ok, true, sv.message); assert.match(sv.mensagem, /alerta de temperatura ligado \(A: -25 °C a -15 °C\)/);
+  const s79 = () => amb.notificacoes.filter((x) => x.evento === 'S79');
+  const minuto = () => { avancarFz(amb, 1); amb.ctx.AutPred_rotinaPedidos(); };
+  pt.mudar('dev-frz-1', 'A_Temp_C', -12); pt.gravar();
+  amb.ctx.AutPred_rotinaPedidos();
+  for (let i = 0; i < 5; i++) minuto();
+  assert.equal(s79().length, 0, 'fora há 5 min (6 leituras pela ponte): ainda sem aviso');
+  for (let i = 0; i < 5; i++) minuto();
+  assert.equal(s79().length, 1, 'fora há 10 min: avisa');
+  assert.match(s79()[0].titulo, /Refrigerador fora da faixa: Car Refrigerator/); assert.match(s79()[0].texto, /compartimento A em -12 °C \(máximo -15 °C\).*há 10 min/);
+  assert.deepEqual(Array.from(s79()[0].canais), ['sgo', 'email']);
+  minuto(); assert.equal(s79().length, 1, 'uma vez por ocorrência');
+  assert.equal(cartaoDe(amb, 'Car Refrigerator').refrig.alerta.fora, true);
+  // histerese: -15,2 °C está dentro, mas a menos de 0,5 °C da borda: ainda não é volta
+  pt.mudar('dev-frz-1', 'A_Temp_C', -15.2); pt.gravar(); minuto();
+  assert.equal(s79().length, 1); assert.equal(cartaoDe(amb, 'Car Refrigerator').refrig.alerta.fora, true);
+  pt.mudar('dev-frz-1', 'A_Temp_C', -16); pt.gravar(); minuto();
+  assert.equal(s79().length, 2); assert.match(s79()[1].titulo, /de volta à faixa/);
+  // sai de novo em menos de 60 min: fica na auditoria, sem novo aviso
+  pt.mudar('dev-frz-1', 'A_Temp_C', -11); pt.gravar();
+  for (let i = 0; i < 12; i++) minuto();
+  assert.equal(s79().length, 2, 'menos de 60 min do aviso anterior: não repete');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'REFRIG_FORA_DA_FAIXA' && x.RESULTADO === 'NAO_AVISADO'));
+  // voltou e saiu de novo depois de 60 min: avisa
+  pt.mudar('dev-frz-1', 'A_Temp_C', -18); pt.gravar(); minuto();
+  avancarFz(amb, 61);
+  pt.mudar('dev-frz-1', 'A_Temp_C', -10); pt.gravar();
+  for (let i = 0; i < 11; i++) minuto();
+  assert.equal(s79().filter((x) => /fora da faixa/.test(x.titulo)).length, 2, 'passados 60 min: novo aviso');
+  // nenhuma chamada à nuvem do refrigerador da ponte
+  assert.ok(!amb.api.pedidos.some((x) => /dev-frz-1\/shadow/.test(x.caminho)));
+});
+
+test('revisão: canal padrão grava e audita uma vez (aba sem a coluna CANAL); portão da Ponte lê pela ponte com a nuvem bloqueada; refrigerador nunca recebe comando; tipo "Outro" pede sincronizar; sincronização reclassifica no canal Ponte', () => {
+  const pt = ponteSimulada();
+  const amb = ambiente({ freezer: true, globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb; amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal'); amb.homologar('Portão secundário');
+  pt.online['dev-frz-1'] = true; pt.props['dev-frz-1'] = Object.assign({}, FREEZER_PONTOS); pt.gravar();
+  // A1: aba criada antes das colunas novas (como em produção): a rotina garante a coluna, grava e audita uma vez só
+  ['CANAL', 'CANAL_POR', 'CANAL_POR_ID', 'CANAL_EM', 'CANAL_MOTIVO'].forEach((k) => { const i = amb.cabecalhos.AUT_DISPOSITIVOS.indexOf(k); if (i >= 0) amb.cabecalhos.AUT_DISPOSITIVOS.splice(i, 1); });
+  for (let i = 0; i < 5; i++) amb.ctx.AutPred_rotinaPedidos();
+  amb.api_('painel'); amb.api_('painel');
+  assert.equal(amb.disp('Portão principal').CANAL, 'PONTE');
+  const canalAud = (id) => amb.tabelas.AUT_AUDITORIA.filter((x) => x.EVENTO === 'CANAL_ALTERADO' && x.DISPOSITIVO_ID === id).length;
+  assert.equal(canalAud(amb.disp('Portão principal').ID), 1); assert.equal(canalAud(amb.disp('Portão secundário').ID), 1);
+  // aba que não aceita a coluna (garantirColuna sem efeito): sem gravação, sem auditoria repetida
+  const amb2 = ambiente({ globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb2; sincronizar(amb2); pt.gravar();
+  amb2.ctx.CertCal_garantirColuna_ = () => {};
+  amb2.cabecalhos.AUT_DISPOSITIVOS = amb2.cabecalhos.AUT_DISPOSITIVOS.filter((k) => !/^CANAL/.test(k));
+  for (let i = 0; i < 4; i++) amb2.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb2.tabelas.AUT_AUDITORIA.filter((x) => x.EVENTO === 'CANAL_ALTERADO').length, 0);
+  assert.equal(amb2.ctx.AutPred_canal_(amb2.disp('Portão principal')), 'PONTE', 'o padrão continua valendo (calculado)');
+  pt.amb = amb;
+  // B4: portão da Ponte com a nuvem bloqueada lê pela ponte (sem parar na pausa da nuvem)
+  bloquear(amb);
+  delete amb.props['TUYA_EVT_dev-portao-1'];   // sem evento guardado: a leitura compartilhada vai à ponte
+  amb.como(DONO);
+  const n0 = amb.api.pedidos.length, ch0 = pt.chamadas || 0;
+  const port = amb.api_('portoes');
+  assert.equal(port.ok, true, port.message);
+  assert.ok((pt.chamadas || 0) > ch0, 'leu pela ponte'); assert.equal(amb.api.pedidos.length, n0, 'nada à nuvem');
+  delete amb.props.TUYA_USO_V1;
+  // B1: refrigerador nunca recebe comando, mesmo com COMPAT_OK forçado
+  const fz = amb.disp('Car Refrigerator');
+  fz.COMPAT_OK = 'SIM'; fz.COMANDO_ABRIR_JSON = '{"code":"OnOff","value":false}'; fz.HOMOLOGADO = 'SIM';
+  const p = amb.api_('preparar', { dispositivoId: fz.ID, operacaoId: 'op-frz-forcado-01' });
+  assert.equal(p.ok, false); assert.match(p.message, /é um refrigerador e o SGO\+ só lê/);
+  assert.throws(() => amb.ctx.AutPred_executarComTrava_({ userId: 'uA', usuario: 'admin', nome: 'DONO TESTE', perfil: 'ADMIN' }, { dispositivoId: fz.ID, operacaoId: 'op-frz-forcado-02', confirmacaoToken: 'x' }, () => {}), /refrigerador é só leitura/);
+  assert.equal(amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-frz-forcado-02').SITUACAO, 'NEGADO');
+  assert.ok(!amb.api.pedidos.some((x) => /dev-frz-1\/commands/.test(x.caminho)) && !(pt.comandos || []).some((x) => x.devId === 'dev-frz-1'));
+  // M3: refrigerador lido antes desta versão como "Outro": trocar para a Ponte pede sincronizar primeiro
+  fz.TIPO = 'OUTRO'; fz.COMPAT_OK = 'SIM'; fz.MODELO_JSON = ''; fz.CANAL = '';
+  assert.match(amb.api_('canal', { id: fz.ID, canal: 'PONTE', motivo: 'freezer na ponte' }).message, /Sincronize primeiro/);
+  // mesmo já no canal Ponte, a sincronização reclassifica pela categoria e lê o modelo uma vez (só ela)
+  fz.CANAL = 'PONTE'; amb.ctx.AutPred_canalMemoLimpar_();
+  const nS = amb.api.pedidos.length;
+  sincronizar(amb);
+  const fz2 = amb.disp('Car Refrigerator');
+  assert.equal(fz2.TIPO, 'REFRIGERADOR'); assert.equal(fz2.COMPAT_OK, 'NAO'); assert.equal(fz2.COMANDO_ABRIR_JSON, ''); assert.equal(fz2.CANAL, 'PONTE');
+  assert.equal(JSON.parse(fz2.MODELO_JSON).A_BatteryVoltage.scale, 1);
+  assert.deepEqual(frzChamadas(amb, nS).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/model'], 'só o modelo, uma vez');
+  const nS2 = amb.api.pedidos.length;
+  sincronizar(amb);
+  assert.equal(frzChamadas(amb, nS2).length, 0, 'com o modelo guardado, nada');
 });

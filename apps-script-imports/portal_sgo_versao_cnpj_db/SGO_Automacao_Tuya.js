@@ -480,8 +480,15 @@ function Tuya_chamarBruto_(c, metodo, caminho, query, corpo, o) {
  *    PONTE  só a ponte local; sem ela, erro "ponte fora do ar" e NENHUMA chamada à nuvem (nem leitura de tela ou rotina);
  *    TUYA   só a nuvem, mesmo com a ponte viva (a ponte não é usada);
  *    ''     dispositivo fora do cadastro (ex.: na sincronização): como antes (ponte quando atende, senão a nuvem). */
+var Tuya_canalForcado_ = '';
+/** Roda fn com o canal forçado (só a sincronização, para o metadado "modelo" do refrigerador da ponte, uma vez). */
+function Tuya_comCanal_(canal, fn) {
+  var antes = Tuya_canalForcado_;
+  Tuya_canalForcado_ = String(canal || '');
+  try { return fn(); } finally { Tuya_canalForcado_ = antes; }
+}
 function Tuya_chamar_(c, metodo, caminho, query, corpo) {
-  var dev = Tuya_devDoCaminho_(caminho), canal = dev ? Tuya_canalDe_(dev) : '';
+  var dev = Tuya_devDoCaminho_(caminho), canal = Tuya_canalForcado_ || (dev ? Tuya_canalDe_(dev) : '');
   if (canal !== 'TUYA') {
     var local = Tuya_local_(metodo, caminho, query, corpo);
     if (local) return local;
