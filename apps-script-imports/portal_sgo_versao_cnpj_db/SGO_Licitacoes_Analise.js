@@ -142,6 +142,14 @@ var LIC_TERMOS_NEGATIVOS = ['pneu', 'pneus', 'borracharia', 'castracao', 'caes',
 /** Compra do equipamento (sem palavra de serviço no trecho) não prova serviço: termos sem acento e sem caixa. */
 var LIC_COMPRA = / (aquisicao|aquisicoes|compra|compras|fornecimento|fornecer|adquirir|adquiridos?|adquiridas?) /;
 var LIC_SERVICO_ACAO = / (calibra[a-z]*|manutenc[a-z]*|qualifica[a-z]*|requalifica[a-z]*|inspec[a-z]*|ensaio[a-z]*|aferi[a-z]*|validacao|validacoes|mapeamento[a-z]*|testes?|verificac[a-z]*|certificacao|certificacoes|laudos?|assistencia tecnica|reparos?|consertos?|revisao|revisoes|instalac[a-z]*|hora tecnica|horas tecnicas|corretivas?|preventivas?|esterilizacao|esterilizacoes)( |$)/;
+/**
+ * Objeto do ramo com palavra genérica (revisão final de 501f6aa): pede serviço E cita equipamento, instrumento, esterilização,
+ * CME, médico-hospitalar, odontológico, laboratório, câmara ou registrador ("Manutenção de equipamentos médico-hospitalares",
+ * "Validação do processo de esterilização da CME"). Aí "não atende" em tudo é recusado; FORA_DO_CATALOGO automática só para
+ * objeto que não pede serviço (compra, obra, despacho, locação...). Termos sem acento e sem caixa.
+ */
+var LIC_RAMO_SERVICO = / (calibra[a-z]*|manutenc[a-z]*|qualifica[a-z]*|requalifica[a-z]*|validacao|validacoes|inspec[a-z]*|monitoramento|monitorizacao|aferi[a-z]*|ensaios?|reparos?|assistencia tecnica|engenharia clinica)( |$)/;
+var LIC_RAMO_OBJETO = / (equipamentos?|instrumentos?|esteriliza[a-z]*|cme|medicos?|medico hospitalar(es)?|hospitalar(es)?|odontologic[oa]s?|laboratori[a-z]*|camaras?|registrador(es)?|data ?loggers?)( |$)/;
 /** O trecho tem o termo compatível com o serviço e nenhum termo negativo? '' = sim; senão, o motivo. */
 function Lic_servicoCompativel_(servico, trecho) {
   var termos = LIC_SERVICOS[servico];
@@ -979,8 +987,8 @@ function Lic_verificarAnalise_(j, ctx) {
   // genérica) não fazem o objeto ser do ramo, nem "monitoramento" vira monitor (banco de prova: 8 objetos fora do ramo recusados)
   var cabemObj = fObjC ? Lic_servicosQueCabem_(fObjC.texto).filter(function (c) {
     return !LIC_SERVICOS_GRAU_MAX[c] && LIC_SERVICOS[c].some(function (t) { return new RegExp(' ' + t + '(e?s)? ').test(objN); });
-  }) : [], objDoRamo = !!fObjC && LIC_SERVICO_ACAO.test(objN) && cabemObj.length > 0;
-  if (todosNaoIA && objDoRamo) problemas.push('capacidade: o objeto tem serviços do catálogo (' + cabemObj.slice(0, 8).join(', ') + '): "não atende" em tudo não vale para este objeto. Classifique cada item com o código e o grau, citando o trecho literal; se algum item for de fato fora do catálogo, diga qual e por quê numa PENDENCIA');
+  }) : [], objDoRamo = !!fObjC && ((LIC_SERVICO_ACAO.test(objN) && cabemObj.length > 0) || (!objCompra && LIC_RAMO_SERVICO.test(objN) && LIC_RAMO_OBJETO.test(objN)));
+  if (todosNaoIA && objDoRamo) problemas.push('capacidade: o objeto tem serviços do catálogo (' + (cabemObj.length ? cabemObj.slice(0, 8).join(', ') : 'serviço sobre equipamento, instrumento, esterilização ou laboratório: confira HORA_TECNICO, CAL-..., QUA-... e MP_... na lista O QUE A METROLABS FAZ') + '): "não atende" em tudo não vale para este objeto. Classifique cada item com o código e o grau, citando o trecho literal; se algum item for de fato fora do catálogo, diga qual e por quê numa PENDENCIA');
   if (itens.length && !saida.capacidade.itens.length) problemas.push('capacidade: nenhum item conferiu com trecho da fonte. Cite cada item pelo ITEM:n, pelo objeto (CAMPO:objeto) ou por uma frase seguida do arquivo; se o objeto não é serviço da Metrolabs, classifique como NAO_ATENDE');
   // proporção de itens: ALTA provada conta 1, MÉDIA provada conta meio, o resto zero (item caído conta zero)
   // denominador: os itens da FONTE (ITEM:n), quando houver; senão os que a IA classificou (inclusive os que caíram)

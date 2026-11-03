@@ -140,3 +140,39 @@ test('revisão 501f6aa (4): a pendência do que caiu não mostra texto com nega�
   for (const t of ['O edital não exige RBC', 'Sem exigência de vistoria', 'Exige registro no CREA', 'Pede atestado', 'Acreditação Inmetro', 'Salvo se aceitar rastreabilidade'])
     assert.equal(ctx.Lic_textoCaidoMostra_(t, montar().cv), '', t);
 });
+
+// revisão final de 501f6aa (o script ramo.cjs virou este teste): objeto do ramo com palavra genérica não vira fora do ramo
+test('revisão 501f6aa (3b): objeto que pede serviço sobre equipamento, esterilização, laboratório ou câmara não vira FORA automática; compra, obra e despacho continuam', () => {
+  const doRamo = [
+    'Manutenção preventiva e corretiva de autoclaves hospitalares', 'Manutenção preventiva e corretiva de esterilizadores a vapor do hospital',
+    'Manutenção preventiva e corretiva de termodesinfectoras da central de material', 'Manutenção preventiva e corretiva de lavadoras ultrassônicas da central de material',
+    'Serviço de calibração de balanças antropométricas das unidades de saúde', 'Manutenção preventiva e corretiva de equipamentos médico-hospitalares da rede municipal',
+    'Manutenção de equipamentos odontológicos e médico hospitalares com reposição de peças', 'Prestação de serviços de engenharia clínica para o parque de equipamentos médicos',
+    'Calibração de termômetros e termo-higrômetros das salas de vacina', 'Qualificação térmica de câmaras frias de vacinas da rede de frio',
+    'Serviço de validação do processo de esterilização da central de material esterilizado', 'Manutenção de seladoras e estufas de secagem do CME',
+    'Calibração e manutenção de monitores multiparamétricos e desfibriladores', 'Inspeção de segurança de vasos de pressão conforme NR-13',
+    'Calibração de manômetros e válvulas de segurança', 'Serviços de manutenção de esfigmomanômetros e balanças do Inmetro',
+    'Calibração de instrumentos de medição dos laboratórios municipais', 'Manutenção preventiva e corretiva de equipamentos de esterilização',
+    'Monitoramento de temperatura de câmaras de vacina com registradores'];
+  const foraDoRamo = [
+    'Contratação de serviços de despacho aduaneiro e desembaraço alfandegário de mercadorias importadas',
+    'Contratação de empresa para o fornecimento, instalação e entrega em pleno funcionamento de sistema de sonorização e painel de LED',
+    'Aquisição de equipamentos e acessórios oftalmológicos, incluindo a instalação, com os devidos laudos de calibração',
+    'Contratação de empresa especializada para a prestação contínua de serviços de tratamento de água para terapia renal',
+    'Fornecimento de medicamentos e produtos de uso veterinário pelo sistema de registro de preços',
+    'Locação de veículos com motorista para a secretaria de saúde', 'Obra de reforma e ampliação da unidade básica de saúde'];
+  const resp = (obj) => { const tr = obj.split(' ').slice(0, 8).join(' ');
+    return { resumo: 'O objeto não é do catálogo. A nota é baixa.', capacidade: { justificativa: 'Fora do catálogo.', itens: [{ descricao: 'Objeto fora do catálogo', grau: 'NAO_ATENDE', servico: '', fonte: { ref: 'CAMPO:objeto', trecho: tr } }] },
+      documentacao: { pontos: 5, justificativa: 'A conferir.', exigencias: [] }, riscos: [], travas: [], afirmacoes: [{ tipo: 'FATO', criterio: 'capacidade', texto: 'Objeto citado.', fonte: { ref: 'CAMPO:objeto', trecho: tr } }, { tipo: 'PENDENCIA', criterio: 'x', texto: 'Conferir.' }] }; };
+  for (const o of doRamo) {
+    const v = rodar(resp(o), o);
+    assert.equal(v.ok, false, 'do ramo, não pode virar fora do ramo: ' + o);
+    assert.match(v.problemas[0], /^capacidade: o objeto tem serviços do catálogo \(.+\): "não atende" em tudo não vale para este objeto/, o);
+  }
+  for (const o of foraDoRamo) {
+    const v = rodar(resp(o), o);
+    assert.equal(v.ok, true, o + ' → ' + v.problemas.join('; '));
+    assert.equal(v.nf.classe, 'TRAVA_A_CONFIRMAR', o);
+    assert.deepEqual(local(v.saida.travas.map((t) => t.codigo)), ['FORA_DO_CATALOGO'], o);
+  }
+});

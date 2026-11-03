@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "694ca49dab40",
+ "versao": "762b9f34d007",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3204,7 +3204,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Telas > Análise por IA e nota de 0 a 100 (aba Análise da ficha) (parte 7)",
-     "texto": "A trava \"tudo fora do catálogo\" fica a confirmar, provada pelo trecho da IA ou pelo objeto inteiro e pela frase do catálogo; o sistema a põe quando a IA classificou tudo como \"não atende\". Objeto do ramo (que pede serviço e tem termo de serviço do catálogo, como \"Manutenção preventiva e corretiva de autoclaves hospitalares\") com \"não atende\" em tudo é recusado, com o que cabe no catálogo. Com algum item que a IA classificou como alto ou médio, a trava \"tudo fora do catálogo\" não vale (vira pendência). Grau alto ou médio também não vale com trecho de compra do equipamento (\"o fornecimento de 03 monitores\") nem com trecho que só nomeia o equipamento quando o objeto não pede serviço (lista de produtos); objeto que começa como compra ganha a pendência \"o serviço provado pode ser só acessório da compra\"."
+     "texto": "A trava \"tudo fora do catálogo\" fica a confirmar, provada pelo trecho da IA ou pelo objeto inteiro e pela frase do catálogo; o sistema a põe quando a IA classificou tudo como \"não atende\". Objeto do ramo com \"não atende\" em tudo é recusado, com o que cabe no catálogo: o que pede serviço e tem termo de serviço do catálogo (\"Manutenção preventiva e corretiva de autoclaves hospitalares\") e o que pede serviço (calibração, manutenção, qualificação, validação, inspeção, monitoramento, aferição, ensaio, reparo, assistência técnica, engenharia clínica) sobre equipamento, instrumento, esterilização, CME, material médico-hospitalar ou odontológico, laboratório, câmara ou registrador. A trava automática \"tudo fora do catálogo\" fica só para objeto que não pede serviço (compra, obra, despacho, locação...). Com algum item que a IA classificou como alto ou médio, a trava \"tudo fora do catálogo\" não vale (vira pendência). Grau alto ou médio também não vale com trecho de compra do equipamento (\"o fornecimento de 03 monitores\") nem com trecho que só nomeia o equipamento quando o objeto não pede serviço (lista de produtos); objeto que começa como compra ganha a pendência \"o serviço provado pode ser só acessório da compra\"."
     },
     {
      "titulo": "Telas > Análise por IA e nota de 0 a 100 (aba Análise da ficha) (parte 8)",
