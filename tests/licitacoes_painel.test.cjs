@@ -269,7 +269,7 @@ test('Painel: números com a fonte; prazos batem com a Agenda, alertas com a Cen
 test('análise por IA grava a duração (DURACAO_MS) para o tempo médio do Painel', () => {
   assert.match(ler('SGO_Licitacoes_Analise.js'), /DURACAO_MS: Math\.max\(0, Date\.now\(\) - inicio\)/);
   assert.match(ler('SGO_Licitacoes_Config.js'), /'RESPOSTAS_IA_JSON',\n\s+\/\/ etapa 4[^\n]*\n\s+'DURACAO_MS'\]/);
-  assert.match(ler('SGO_Licitacoes_Config.js'), /LIC_ABAS_OK_V6/, 'o cache das abas muda para a coluna nova entrar');
+  assert.match(ler('SGO_Licitacoes_Config.js'), /LIC_ABAS_OK_V([6-9]|\d\d)/, 'o cache das abas muda para a coluna nova entrar (V7 em 03/11/2026: ENVIO_GRUPO)');
 });
 
 // ------------------------------------------------------------------ desempenho

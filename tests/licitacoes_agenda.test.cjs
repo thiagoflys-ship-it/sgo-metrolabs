@@ -231,7 +231,8 @@ test('ciência: na tela, pelo link do botão do WhatsApp e pela resposta CIENTE;
   const zap = a.zap().find((w) => w.corpo.to === '5562999990022' && JSON.stringify(w.corpo).includes('esclarecimento'));
   const botao = zap.corpo.template.components.find((c) => c.type === 'button');
   const token = botao.parameters[0].text;
-  assert.match(token, /^c1w\.LA[0-9a-f]{10}\.[0-9a-f]{24}$/);
+  // revisão 03/11/2026: impugnação e esclarecimento de 2 dias vencem juntos e vão numa mensagem só; o token é o do envio (LG)
+  assert.match(token, /^c1w\.LG[0-9a-f]{10}\.[0-9a-f]{24}$/);
   assert.equal(a.ctx.Licitacoes_cienciaLink(token.slice(0, -1) + (token.slice(-1) === '0' ? '1' : '0'), 'confirmar').ok, false, 'token adulterado não vale');
   const ver = a.ctx.Licitacoes_cienciaLink(token, 'ver');
   assert.equal(ver.ok, true); assert.equal(ver.nome, 'THIAGO'); assert.equal(ver.ciente, false);
@@ -339,7 +340,9 @@ test('retorno da Meta: aceito -> enviado -> entregue -> lido só pelo webhook, s
   assert.ok(['ALERTA_WHATSAPP_ENVIADO', 'ALERTA_WHATSAPP_ENTREGUE', 'ALERTA_WHATSAPP_LIDO'].every((t) => a.hist(t).length === 1), 'cada status do provedor no histórico');
   assert.ok(JSON.parse(a.props.SGO_WA_RETORNO_ULTIMO).em, 'a tela mostra quando chegou o último retorno');
   assert.equal(a.api('s_cha', 'alertas', {}).retorno.recebido, true);
-  // failed: WhatsApp falhou na entrega -> e-mail na hora como canal alternativo
+  // failed: WhatsApp falhou na entrega -> e-mail na hora como canal alternativo (revisão 03/11/2026: a rodada das 09:01 de 06/11
+  // faz o lembrete do aviso de 7 dias; sem ela, o lembrete e o aviso de 3 dias iriam juntos, com o e-mail do lembrete)
+  a.rodada('2026-11-06T09:01:00-03:00');
   a.rodada('2026-11-10T08:00:30-03:00');
   const z = a.al({ EVENTO_ID: lim.ID, ANTECEDENCIA: '3 dias' })[0];
   const nEmails = a.emails.length;
