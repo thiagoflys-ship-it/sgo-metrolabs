@@ -58,7 +58,10 @@ var LIC_COLUNAS = {
     'USUARIO_ID', 'USUARIO_NOME', 'CANAIS', 'TITULO', 'TEXTO', 'ALVO_ISO', 'LIBERAR_EM', 'SITUACAO', 'TENTATIVAS', 'ENVIANDO_EM', 'ENVIADO_EM', 'INTERNO_EM',
     'EMAIL_SITUACAO', 'EMAIL_MOTIVO', 'EMAIL_EM', 'WA_SITUACAO', 'WA_MOTIVO', 'WA_ID', 'WA_EM', 'ENTREGUE_EM', 'LIDO_EM', 'FALHOU_EM', 'CANAL_ALTERNATIVO',
     'CIENTE_EM', 'CIENTE_POR_ID', 'CIENTE_POR_NOME', 'CIENTE_CANAL', 'ABERTO_EM', 'ESCALONAR_EM', 'ESCALONADO_EM', 'ESCALONADO_PARA', 'ORIGEM_ALERTA_ID',
-    'CANCELADO_EM', 'CANCELADO_MOTIVO', 'CONCLUIDO_EM', 'ATUALIZADO_EM', 'CRIADO_EM']
+    'CANCELADO_EM', 'CANCELADO_MOTIVO', 'CONCLUIDO_EM', 'ATUALIZADO_EM', 'CRIADO_EM',
+    // revisão de 03/11/2026 (repetidos na caixa do dono): os alertas da mesma licitação para a mesma pessoa na mesma rodada saem
+    // numa mensagem só; ENVIO_GRUPO é o código desse envio (LG...), o mesmo do link de ciência que vale para todos eles
+    'ENVIO_GRUPO']
 };
 var LIC_COLUNAS_TEXTO = { LIC_OPORTUNIDADES: ['ORGAO_CNPJ', 'NUMERO_CONTROLE_PNCP', 'ID_COMPRAS_GOV', 'ABERTURA_PROPOSTAS', 'ENCERRAMENTO_PROPOSTAS', 'ATUALIZACAO_FONTE'],
   LIC_EVENTOS: ['QUANDO_ISO', 'QUANDO_TEXTO', 'LIMITE_INTERNO_ISO', 'BASE_ISO', 'CONFIRMADO_EM'],
@@ -160,14 +163,15 @@ function Lic_garantirAbas_() {
   // V2 (02/11/2026): aba LIC_ANALISES e as colunas da nota em LIC_OPORTUNIDADES (entram por merge; nada é apagado)
   // V4 (02/11/2026, etapa 3): abas LIC_EVENTOS e LIC_ALERTAS e as colunas da agenda em LIC_OPORTUNIDADES
   // V6 (02/11/2026, etapa 4): coluna DURACAO_MS em LIC_ANALISES
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V6')) return; } catch (e) {}
+  // V7 (03/11/2026): coluna ENVIO_GRUPO em LIC_ALERTAS (envio agrupado por licitação e pessoa)
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V7')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V6', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V7', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */

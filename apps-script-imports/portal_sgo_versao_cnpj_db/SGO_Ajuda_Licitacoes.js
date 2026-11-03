@@ -289,12 +289,19 @@ function SGO_ajudaTelas_Licitacoes_() {
       passos: [
         { titulo: "Dar ciência", itens: [
           "Toque em \"Ciente\" no alerta (aqui, no Hoje, na Agenda ou na aba Prazos da ficha). Também vale o botão \"Confirmar ciência\" do WhatsApp, o link do e-mail ou responder só a palavra CIENTE à mensagem (\"ok\" não vale).",
-          "A ciência de um integrante encerra a cobrança daquele alerta para os dois. Ciência não conclui a tarefa: a ação continua no portal e no SGO+."
+          "A ciência de um integrante encerra a cobrança daquele alerta para os dois. Ciência não conclui a tarefa: a ação continua no portal e no SGO+.",
+          "Mensagem com vários prazos: o link \"Confirmar ciência\" do e-mail, o botão do WhatsApp e a resposta CIENTE valem para todos os prazos daquela mensagem. Aqui na Central, \"Ciente\" vale só para o alerta em que você tocou."
+        ] },
+        { titulo: "Vários prazos numa mensagem só", itens: [
+          "Na mesma rodada, os alertas da mesma licitação para a mesma pessoa saem num e-mail só e numa mensagem só de WhatsApp. O assunto diz quantos são (por exemplo: \"Licitação LIC-2026-0131: 3 prazos nos próximos 7 dias\") e o e-mail começa pelo mais urgente; cada prazo vem com a data e a hora, o limite interno, a natureza, a fonte e a ação.",
+          "No WhatsApp, o campo do prazo traz o resumo (\"3 prazos: impugnação, esclarecimento e fim das propostas\"), a data e o tempo do mais próximo; os outros ficam no e-mail e no SGO+.",
+          "Cada alerta continua com a sua linha nesta tela, com a situação e o histórico próprios. A mensagem sai no nível do mais grave: com um crítico no grupo, ela sai na hora e fora do teto do dia.",
+          "O lembrete sem ciência também é um só por licitação e por pessoa. O teto do dia conta cada mensagem uma vez, com quantos prazos ela tiver; o teto por alerta continua contando cada alerta. Avisos de documento de habilitação continuam um por mensagem."
         ] },
         { titulo: "Entender os estados", itens: [
           "1 Criado, 2 Enviado ao provedor, 3 Aceito pelo provedor, 4 Entregue, 5 Lido, 6 Ciência, 7 Em atendimento (abriu pelo link), 8 Concluído (o prazo passou com ciência), 9 Falha, 10 Escalonado.",
           "Entregue e Lido só aparecem quando a Meta manda o retorno de status. Sem retorno, o último estado garantido é \"Aceito pela Meta\".",
-          "Sem ciência no tempo do nível (padrão 60, 15 e 5 minutos), o alerta vai para o outro integrante e é reenviado por outro canal. Falha nos dois canais escalona na hora."
+          "Sem ciência no tempo do nível (padrão 60, 15 e 5 minutos; ajustável nas regras), o alerta vai para o outro integrante e é reenviado por outro canal. Os prazos de uma mesma mensagem escalonam juntos, no tempo do mais grave. Falha nos dois canais escalona na hora."
         ] },
         { titulo: "Falhas e reenvio", itens: [
           "Na aba \"Falhas e canal alternativo\" ficam os alertas em que um canal falhou, com o motivo e o que foi feito (por exemplo: WhatsApp falhou, e-mail enviado como canal alternativo).",
@@ -316,6 +323,7 @@ function SGO_ajudaTelas_Licitacoes_() {
       quemPode: quem,
       perguntas: [
         { p: "Por que um alerta de 7 dias não saiu?", r: "A oportunidade entrou no radar quando a antecedência de 7 dias já tinha passado. Sai só o aviso mais recente; os anteriores não são enviados para não mandar vários de uma vez." },
+        { p: "Por que recebi um e-mail com 3 prazos e não 3 e-mails?", r: "Desde 03/11/2026 os alertas da mesma licitação que vencem na mesma rodada vão juntos, para não encher a caixa com mensagens quase iguais. Nenhum alerta some: cada um tem a sua linha aqui na Central." },
         { p: "O valor estimado vai no WhatsApp?", r: "Não. A mensagem leva o órgão, o processo, o objeto resumido, o prazo, o tempo restante e a ação; o valor fica só no SGO+." }
       ]
     },
