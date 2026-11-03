@@ -79,7 +79,10 @@ var LIC_ACOES = {
   // tabela de preços de licitação e simulador (02/11/2026, SGO_Licitacoes_Precos.js): { op: tabela | itemSalvar | simulacao | ... }
   precos: function (eu, d) { return LicP_acao_(eu, d); },
   // documentos de habilitação, cruzamento com o edital e relação para conferência (02/11/2026, SGO_Licitacoes_Habilitacao.js)
-  habilitacao: function (eu, d) { return LicH_acao_(eu, d); }
+  habilitacao: function (eu, d) { return LicH_acao_(eu, d); },
+  // proposta técnica e comercial em A4 e relatórios em A4 (02/11/2026, SGO_Licitacoes_Proposta.js e SGO_Licitacoes_Relatorios.js)
+  proposta: function (eu, d) { return LicProp_acao_(eu, d); },
+  relatorios: function (eu, d) { return LicRel_acao_(eu, d); }
 };
 
 /** google.script.run: Licitacoes_api(sessionId, acao, dados). Nunca lança. */

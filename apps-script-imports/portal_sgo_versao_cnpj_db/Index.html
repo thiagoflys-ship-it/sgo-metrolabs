@@ -243,7 +243,7 @@
           </div>
         </div>
 
-        <!-- 01/11/2026: SGO+ Licitações, etapa 1 (JS_Licitacoes.html / SGO_Licitacoes*.js). Grupo só da Diretoria e do Administrador (Licitacoes_mostrarMenu_; o servidor confere toda chamada). Etapas 2 e 3: IA, agenda e alertas. Etapa 4 (02/11/2026): Painel (Dashboard), Kanban e Gantt. Simulador, propostas, disputas e contratos entram nas próximas etapas. -->
+        <!-- 01/11/2026: SGO+ Licitações, etapa 1 (JS_Licitacoes.html / SGO_Licitacoes*.js). Grupo só da Diretoria e do Administrador (Licitacoes_mostrarMenu_; o servidor confere toda chamada). Etapas 2 e 3: IA, agenda e alertas. Etapa 4 (02/11/2026): Painel (Dashboard), Kanban e Gantt. Proposta em A4 (aba Proposta da ficha) e Relatórios em A4 (02/11/2026). Disputas e contratos entram nas próximas etapas. -->
         <div class="sidebar-section menu-grupo" data-grupo="licitacoes" id="menu-secao-licitacoes" style="display:none;">
           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-licitacoes" onclick="Menu_alternarGrupo_('licitacoes')"><span class="menu-grupo-nome">Licitações</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
           <div class="menu-grupo-itens" id="menu-grupo-itens-licitacoes">
@@ -257,6 +257,7 @@
           <button type="button" class="menu-btn" data-mod="licitacoes_habilitacao" data-busca="habilitacao documentos certidoes certidao atestados atestado capacidade tecnica balanco contrato social fgts cndt sicaf validade vencimento inmetro licitacao" onclick="abrir('licitacoes_habilitacao')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Documentos de habilitação</button>
           <button type="button" class="menu-btn" data-mod="licitacoes_precos" data-busca="precos preco licitacao tabela piso margem simulador custo diretoria sobra" onclick="abrir('licitacoes_precos')"><span class="menu-btn-icon"><i class="fas fa-tags" aria-hidden="true"></i></span>Preços de licitação</button>
           <button type="button" class="menu-btn" data-mod="licitacoes_portais" data-busca="portais licitacao integracoes api pncp compras gov bll bionexo parametrizar testar conexao regras do radar regras dos alertas antecedencias" onclick="abrir('licitacoes_portais')"><span class="menu-btn-icon"><i class="fas fa-plug" aria-hidden="true"></i></span>Portais e configurações</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_relatorios" data-busca="relatorios relatorio licitacao a4 periodo oportunidade nota leitura habilitacao preco proposta historico rastreabilidade imprimir pdf" onclick="abrir('licitacoes_relatorios')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>Relatórios</button>
           </div>
         </div>
 
@@ -394,6 +395,8 @@
 <?!= include('JS_Licitacoes_Leitura'); ?>
 <?!= include('JS_Licitacoes_Precos'); ?>
 <?!= include('JS_Licitacoes_Habilitacao'); ?>
+<?!= include('JS_Licitacoes_Proposta'); ?>
+<?!= include('JS_Licitacoes_Relatorios'); ?>
 <?!= include('JS_LavCiclo'); ?>
 <?!= include('JS_Ponto'); ?>
 <?!= include('JS_Email'); ?>

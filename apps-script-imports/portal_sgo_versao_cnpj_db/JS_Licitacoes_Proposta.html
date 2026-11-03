@@ -1,0 +1,210 @@
+<!--
+  SGO+ LICITAÇÕES — PROPOSTA TÉCNICA E COMERCIAL EM A4 (02/11/2026): a aba "Proposta" da ficha. Rascunho montado pelo sistema
+  (itens do edital, serviços do catálogo com as características técnicas, prazos e pagamento com a frase do edital, planilha de
+  preços = a simulação salva da aba Preço, com a versão e o hash), texto técnico redigido pela IA e conferido nas fontes (frases
+  retiradas listadas com o motivo), revisão de trechos com motivo e de → para, aprovação da Diretoria e emissão (A4 congelado com
+  SHA-256; nova versão para mudar). Servidor: SGO_Licitacoes_Proposta.js (Licitacoes_api ação "proposta" com { op }).
+  Usa os utilitários de JS_Licitacoes.html (Lic_esc_, Lic_chamar_, Lic_janela_, Lic_faixa_, Lic_tabelaHtml_, Lic_brl_, Lic_toast_,
+  Lic_dataHora_, Lic_carregando_, Lic_erroTela_, Lic_ligarRefazer_). Todo texto passa por Lic_esc_. O A4 abre em aba nova no
+  computador (no celular, o visualizador de tela cheia do SGO+). Sem atualização automática: nada redesenha formulário aberto.
+-->
+<style>
+  .lpp-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+  .lpp-grade label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .lpp-grade input, .lpp-grade select, .lpp-grade textarea { width: 100%; min-height: 40px; box-sizing: border-box; max-width: 100%; }
+  .lpp-grade .lpp-largo { grid-column: 1 / -1; }
+  .lpp-cab { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+  .lpp-cab h3 { margin: 0; min-width: 0; flex: 1 1 220px; overflow-wrap: anywhere; }
+  .lpp-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 14px; margin: 8px 0; font-size: 12.5px; }
+  .lpp-dl div { min-width: 0; }
+  .lpp-dl span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+  .lpp-dl b { font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .lpp-trecho { border: 1px solid var(--border); border-left: 4px solid var(--bc-line-2); border-radius: 8px; padding: 10px 12px; margin: 0 0 10px; background: var(--card); overflow-wrap: anywhere; }
+  .lpp-trecho.ia { border-left-color: var(--info); }
+  .lpp-trecho.dir { border-left-color: var(--success); }
+  .lpp-trecho p { margin: 6px 0; }
+  .lpp-lista { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; }
+  .lpp-lista li { padding: 5px 0; border-top: 1px dashed var(--border); overflow-wrap: anywhere; }
+  .lpp-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  .lpp-nao td { background: var(--warning-bg, #fdf5e6); }
+  @media (max-width: 900px) { .lpp-acoes .btn-primary, .lpp-acoes .btn-secondary { flex: 1 1 140px; } }
+</style>
+<script>
+  var LICPP = { aba: {} };
+  var LICPP_COR = { RASCUNHO: "cinza", REVISAO: "laranja", APROVADA: "azul", EMITIDA: "verde", SUBSTITUIDA: "cinza" };
+  var LICPP_ORIGEM = { IA: "Redigido pela IA e conferido nas fontes", SISTEMA: "Texto do sistema (catálogo e edital, como estão)", DIRETORIA: "Editado pela Diretoria" };
+  var LICPP_IA = { CONFERIDA: "IA conferida pelo verificador", PARCIAL: "IA com frases retiradas pelo verificador", RECUSADA: "IA recusada: texto do sistema", ERRO: "IA fora do ar: texto do sistema", SEM_IA: "Sem a chave da IA: texto do sistema", NAO_PEDIDA: "Montada sem a IA, a pedido", SEM_ITENS: "Sem itens cotados" };
+
+  function LicPp_chamar_(op, dados, ok, erro, o) { Lic_chamar_("proposta", Object.assign({ op: op }, dados || {}), ok, erro, Object.assign({ ignorarVelha: true }, o || {})); }
+  function LicPp_selo_(cor, texto) { return '<span class="cm-selo ' + Lic_esc_(cor || "cinza") + '">' + Lic_esc_(texto) + "</span>"; }
+  function LicPp_valor_(id) { var e = Lic_$_(id); return e ? e.value : ""; }
+  function LicPp_curto_(h) { return '<span class="lic-hash" title="' + Lic_esc_(h) + '">' + Lic_esc_(String(h || "").slice(0, 16)) + (h ? "…" : "—") + "</span>"; }
+
+  /** Abre a janela no toque (antes da resposta do servidor): no computador, aba nova; no celular, o visualizador do SGO+. */
+  function LicPp_abrirJanela_(titulo) {
+    try { var j = window.open("", "_blank"); if (j && j.document) j.document.title = titulo || "Abrindo o documento…"; return j; } catch (e) { return null; }
+  }
+  function LicPp_escreverJanela_(j, html) {
+    if (!j) { Lic_toast_("O navegador bloqueou a janela do documento: libere as janelas do SGO+ e toque de novo.", "erro"); return; }
+    try { j.document.open(); j.document.write(html); j.document.close(); }
+    catch (e) { try { j.location.href = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" })); } catch (x) { Lic_toast_("Não foi possível mostrar o documento: " + (e && e.message ? e.message : e), "erro"); } }
+  }
+  function LicPp_fecharJanela_(j) { if (j) { try { j.close(); } catch (e) {} } }
+
+  // ================= aba "Proposta" da ficha =================
+  function LicPp_htmlAba_(d) { return '<div id="licProposta">' + Lic_carregando_(2) + "</div>"; }
+  function LicPp_ligarAba_(c, d, id) {
+    LicPp_chamar_("tela", { id: id }, function (r) { LICPP.aba[id] = r.proposta; LicPp_desenhar_(id); },
+      function (m) { var el = Lic_$_("licProposta"); if (el) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, function () { LicPp_ligarAba_(c, d, id); }); } });
+  }
+  function LicPp_simHtml_(p) {
+    var s = p.simulacao;
+    if (!s) return '<div class="cm-caixa">' + Lic_faixa_("Sem simulação de preço salva: não há proposta comercial. Salve a simulação na aba Preço (a planilha de preços da proposta é sempre a simulação salva, exatamente).", "erro") +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpp-ir-preco>Ir para a aba Preço</button></div></div>';
+    return '<div class="cm-caixa"><h3>Preço: simulação salva</h3><div class="lpp-dl"><div><span>Versão</span><b>' + Lic_esc_(s.versao) + "</b></div><div><span>Total da proposta</span><b>" + Lic_esc_(Lic_brl_(s.proposta)) + "</b></div>" +
+      "<div><span>Salva em</span><b>" + Lic_esc_(Lic_dataHora_(s.em)) + " · " + Lic_esc_(s.por) + "</b></div><div><span>Hash do registro</span><b>" + LicPp_curto_(s.hash) + "</b></div></div>" +
+      (s.integra ? "" : Lic_faixa_("O registro desta simulação não confere com o hash gravado (alterado fora do SGO+): salve uma versão nova na aba Preço.", "erro")) + "</div>";
+  }
+  function LicPp_itensHtml_(c) {
+    var itens = (c && c.itens) || [];
+    if (!itens.length) return '<p class="cm-vazio">Nenhum item: a simulação de preço não tem itens.</p>';
+    return Lic_tabelaHtml_(["Item", "Descrição do edital", "Serviço", "Qtd.", "Preço unitário", "Total", "Situação"], itens.map(function (i) {
+      var cot = i.situacao === "COTADO";
+      return [Lic_esc_(i.numero), Lic_esc_(i.descricao || "—"), Lic_esc_(i.codigo ? i.codigo + (i.nome ? " · " + i.nome : "") : "—"), Lic_esc_(String(i.quantidade || 0).replace(".", ",")), Lic_esc_(cot ? Lic_brl_(i.precoUnit) : "—"), Lic_esc_(cot ? Lic_brl_(i.total) : "—"),
+        cot ? LicPp_selo_("verde", "Cotado") + (i.abaixoPiso ? " " + LicPp_selo_("vermelho", "abaixo do piso") : "") : LicPp_selo_("laranja", "Não cotado") + '<br><span class="cm-meta">' + Lic_esc_(i.motivo) + "</span>"];
+    }));
+  }
+  function LicPp_trechoHtml_(t, editavel) {
+    var cls = t.origem === "IA" ? " ia" : t.origem === "DIRETORIA" ? " dir" : "";
+    var h = '<article class="lpp-trecho' + cls + '"><div class="lpp-cab"><b>' + Lic_esc_(t.nome) + "</b>" + LicPp_selo_(t.origem === "IA" ? "azul" : t.origem === "DIRETORIA" ? "verde" : "cinza", LICPP_ORIGEM[t.origem] || t.origem) + "</div>" +
+      (t.texto ? "<p>" + Lic_esc_(t.texto) + "</p>" : '<p class="cm-meta">' + (t.chave === "observacoes" ? "Sem observações (opcional)." : "Sem texto: a proposta mostra só a descrição técnica do catálogo neste ponto.") + "</p>");
+    if ((t.frases || []).length) h += '<details class="lpp-det"><summary>Fontes de cada frase (' + t.frases.length + ")</summary><ul class=\"lpp-lista\">" + t.frases.map(function (f) {
+      return "<li>" + Lic_esc_(f.texto) + '<br><span class="cm-meta">Fontes: ' + Lic_esc_((f.fontes || []).join(", ")) + (f.trecho ? ' · trecho de ' + Lic_esc_(f.trechoRef || "") + ': "' + Lic_esc_(f.trecho) + '"' : "") + "</span></li>";
+    }).join("") + "</ul></details>";
+    if (t.editadoPor) h += '<p class="cm-meta">Editado por ' + Lic_esc_(t.editadoPor) + " em " + Lic_esc_(Lic_dataHora_(t.editadoEm)) + ".</p>";
+    if (editavel) h += '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lpp-editar="' + Lic_esc_(t.chave) + '">Editar este trecho</button></div>';
+    return h + "</article>";
+  }
+  function LicPp_htmlAbaDados_(p) {
+    var a = p.atual, h = LicPp_simHtml_(p);
+    if (!a) return h + '<div class="cm-caixa"><h3>Proposta</h3><p class="cm-txt">Ainda não há proposta. "Montar rascunho" junta os itens do edital, os serviços do catálogo com as características técnicas, os prazos e o pagamento do edital (frase literal da leitura) e a planilha de preços da simulação salva.' +
+      (p.iaDisponivel ? " A IA redige a apresentação e a metodologia; cada frase é conferida nas fontes." : " Sem a chave da IA, a proposta usa o texto do catálogo e do edital como estão.") + "</p>" +
+      '<div class="lic-acoes-linha lpp-acoes"><button type="button" class="btn-primary" data-lpp-montar>Montar rascunho</button><button type="button" class="btn-secondary" data-lpp-relatorio>Relatório desta oportunidade (A4)</button></div>' +
+      '<p class="cm-ajuda-campo">Nada é enviado a portal: o SGO+ gera o documento para a Diretoria anexar.</p></div>';
+    var c = a.conteudo || {}, ia = c.ia || {};
+    h += '<div class="cm-caixa"><div class="lpp-cab"><h3>Proposta ' + Lic_esc_(a.numero) + " · versão " + Lic_esc_(a.versao) + "</h3>" + LicPp_selo_(LICPP_COR[a.situacao], a.situacaoNome) + (a.integra ? "" : " " + LicPp_selo_("vermelho", "registro alterado fora do SGO+")) + "</div>" +
+      '<div class="lpp-dl"><div><span>Total</span><b>' + Lic_esc_(Lic_brl_(a.total)) + "</b></div><div><span>Itens</span><b>" + Lic_esc_(a.cotados) + " cotado(s) · " + Lic_esc_(a.naoCotados) + " não cotado(s)</b></div>" +
+      "<div><span>Simulação usada</span><b>" + (a.simulacaoVersao ? "versão " + Lic_esc_(a.simulacaoVersao) + " · " + LicPp_curto_(a.simulacaoHash) : "nenhuma") + "</b></div><div><span>Validade</span><b>" + Lic_esc_(c.validadeDias || "—") + " dias</b></div>" +
+      "<div><span>Montada</span><b>" + Lic_esc_(Lic_dataHora_(a.montadoEm)) + " · " + Lic_esc_(a.montadoPor) + "</b></div><div><span>Texto técnico</span><b>" + Lic_esc_(LICPP_IA[ia.situacao] || ia.situacao || "—") + "</b></div>" +
+      (a.aprovadoEm ? "<div><span>Aprovada</span><b>" + Lic_esc_(Lic_dataHora_(a.aprovadoEm)) + " · " + Lic_esc_(a.aprovadoPor) + "</b></div>" : "") +
+      (a.emitidoEm ? "<div><span>Emitida</span><b>" + Lic_esc_(Lic_dataHora_(a.emitidoEm)) + " · " + Lic_esc_(a.emitidoPor) + "</b></div><div><span>SHA-256 do documento</span><b>" + LicPp_curto_(a.htmlSha256) + "</b></div>" : "") + "</div>" +
+      ((a.bloqueios || []).length ? Lic_faixa_("<b>Antes de aprovar e emitir:</b><ul class=\"lpp-lista\">" + a.bloqueios.map(function (b) { return "<li>" + Lic_esc_(b) + "</li>"; }).join("") + "</ul>", "erro", true) : "") +
+      ((a.avisos || []).length ? '<details class="lpp-det"' + ((a.bloqueios || []).length ? "" : " open") + "><summary>Avisos para conferir (" + a.avisos.length + ')</summary><ul class="lpp-lista">' + a.avisos.map(function (b) { return "<li>" + Lic_esc_(b) + "</li>"; }).join("") + "</ul></details>" : "") +
+      (a.situacao === "EMITIDA" ? Lic_faixa_("Emitida: o documento está congelado e não muda nunca. Para mudar, toque em \"Nova versão\". Nada foi enviado a portal: baixe e anexe no portal da licitação." + (a.pdfAviso ? " " + a.pdfAviso : ""), "ok") : "") +
+      '<div class="lic-acoes-linha lpp-acoes">' +
+      '<button type="button" class="btn-secondary" data-lpp-ver="' + Lic_esc_(a.id) + '">' + (a.situacao === "EMITIDA" ? "Abrir a proposta emitida (A4)" : "Ver a prévia em A4") + "</button>" +
+      (a.podeAprovar ? '<button type="button" class="btn-primary" data-lpp-aprovar>Aprovar (Diretoria)</button>' : "") +
+      (a.podeEmitir ? '<button type="button" class="btn-primary" data-lpp-emitir>Emitir (congela o documento)</button>' : "") +
+      (a.pdf ? '<button type="button" class="btn-secondary" data-lpp-pdf="' + Lic_esc_(a.id) + '">Baixar o PDF</button>' : "") +
+      '<button type="button" class="btn-secondary" data-lpp-montar>' + (a.situacao === "EMITIDA" ? "Nova versão" : "Montar de novo") + "</button>" +
+      '<button type="button" class="btn-secondary" data-lpp-relatorio>Relatório desta oportunidade (A4)</button></div>' +
+      '<p class="cm-ajuda-campo">' + Lic_esc_(p.avisoImagens || "") + "</p></div>";
+    h += '<div class="cm-caixa"><h3>Itens do edital</h3><p class="cm-meta">Preço = a simulação salva (versão e hash acima). Item fora do catálogo, sem preço da proposta ou fora da simulação sai como "não cotado", com o motivo.</p>' + LicPp_itensHtml_(c) + "</div>";
+    h += '<div class="cm-caixa"><h3>Trechos do texto</h3><p class="cm-meta">A descrição técnica, os pontos, as condições, as normas e os entregáveis vêm do catálogo como estão; prazos e pagamento, da frase do edital. Os trechos abaixo podem ser editados pela Diretoria (motivo obrigatório; o verificador confere).</p>' +
+      (a.trechos || []).map(function (t) { return LicPp_trechoHtml_(t, a.editavel); }).join("") + "</div>";
+    if ((ia.retiradas || []).length) h += '<div class="cm-caixa"><details class="lpp-det"><summary>Frases da IA retiradas pelo verificador (' + ia.retiradas.length + ')</summary><ul class="lpp-lista">' + ia.retiradas.map(function (x) {
+      return "<li><b>" + Lic_esc_(x.secao) + ":</b> " + Lic_esc_(x.texto) + '<br><span class="cm-meta">Motivo: ' + Lic_esc_(x.motivo) + "</span></li>";
+    }).join("") + "</ul></details></div>";
+    if ((a.edicoes || []).length) h += '<div class="cm-caixa"><details class="lpp-det"><summary>Edições desta versão (' + a.edicoes.length + ')</summary><ul class="lpp-lista">' + a.edicoes.map(function (e) {
+      return "<li><b>" + Lic_esc_(e.nome) + "</b> · " + Lic_esc_(Lic_dataHora_(e.em)) + " · " + Lic_esc_(e.por) + (e.integra ? "" : " " + LicPp_selo_("vermelho", "alterado fora do SGO+")) + '<br><span class="cm-meta">De: ' + Lic_esc_(e.de || "(vazio)") + "</span><br><span class=\"cm-meta\">Para: " + Lic_esc_(e.para || "(vazio)") + '</span><br><span class="cm-meta">Motivo: ' + Lic_esc_(e.motivo) + "</span></li>";
+    }).join("") + "</ul></details></div>";
+    if ((p.versoes || []).length) h += '<div class="cm-caixa"><h3>Versões</h3>' + Lic_tabelaHtml_(["Versão", "Número", "Situação", "Total", "Montada", "Emitida", ""], p.versoes.map(function (v) {
+      return [Lic_esc_(v.versao), Lic_esc_(v.numero), LicPp_selo_(LICPP_COR[v.situacao], v.situacaoNome) + (v.integra ? "" : " " + LicPp_selo_("vermelho", "alterado fora do SGO+")), Lic_esc_(Lic_brl_(v.total)), Lic_esc_(Lic_dataHora_(v.montadoEm)),
+        v.emitidoEm ? Lic_esc_(Lic_dataHora_(v.emitidoEm)) + "<br>" + LicPp_curto_(v.htmlSha256) : "—", '<button type="button" class="btn-secondary" data-lpp-ver="' + Lic_esc_(v.id) + '">Abrir</button>'];
+    })) + "</div>";
+    return h;
+  }
+  function LicPp_desenhar_(id) {
+    var el = Lic_$_("licProposta"), p = LICPP.aba[id]; if (!el || !p) return;
+    el.innerHTML = LicPp_htmlAbaDados_(p);
+    var ip = el.querySelector("[data-lpp-ir-preco]"); if (ip) ip.onclick = function () { LIC.fichaAba = "preco"; Lic_renderFicha_(id); };
+    el.querySelectorAll("[data-lpp-montar]").forEach(function (b) { b.onclick = function () { LicPp_janelaMontar_(id, b); }; });
+    el.querySelectorAll("[data-lpp-ver]").forEach(function (b) { b.onclick = function () { LicPp_ver_(id, b.getAttribute("data-lpp-ver")); }; });
+    el.querySelectorAll("[data-lpp-editar]").forEach(function (b) { b.onclick = function () { LicPp_janelaEditar_(id, b.getAttribute("data-lpp-editar"), b); }; });
+    el.querySelectorAll("[data-lpp-relatorio]").forEach(function (b) { b.onclick = function () { if (typeof LicRl_gerarOportunidade_ === "function") LicRl_gerarOportunidade_(id, b); else Lic_toast_("A tela de relatórios não carregou: atualize a página (F5).", "erro"); }; });
+    var ap = el.querySelector("[data-lpp-aprovar]"); if (ap) ap.onclick = function () { LicPp_janelaAprovar_(id, ap); };
+    var em = el.querySelector("[data-lpp-emitir]"); if (em) em.onclick = function () { LicPp_janelaEmitir_(id, em); };
+    var pd = el.querySelector("[data-lpp-pdf]"); if (pd) pd.onclick = function () { LicPp_baixarPdf_(id, pd.getAttribute("data-lpp-pdf")); };
+  }
+  function LicPp_ver_(id, pid) {
+    var j = LicPp_abrirJanela_("Abrindo a proposta…");
+    LicPp_chamar_("ver", { id: id, propostaId: pid }, function (r) { LicPp_escreverJanela_(j, r.html); if (!r.integra) Lic_toast_("Atenção: o registro desta proposta não confere com o hash gravado (pode ter sido alterado fora do SGO+).", "erro"); },
+      function (m) { LicPp_fecharJanela_(j); Lic_toast_(m, "erro"); }, { carregando: "Montando o documento…" });
+  }
+  function LicPp_janelaMontar_(id, origem) {
+    var p = LICPP.aba[id] || {}, a = p.atual, nova = !!a;
+    var corpo = '<p class="cm-txt">' + (nova ? "Monta uma versão nova com os dados de agora (simulação salva, catálogo, leitura do edital). " + (a.situacao === "EMITIDA" ? "A versão emitida continua guardada e não muda." : "O rascunho atual fica como \"substituído\" (nada é apagado).") : "Monta o rascunho com os dados de agora.") + "</p>" +
+      '<div class="lpp-grade"><div><label for="lppValidade">Validade da proposta (dias)</label><input id="lppValidade" type="number" min="1" max="365" inputmode="numeric" value="' + Lic_esc_((a && a.conteudo && a.conteudo.validadeDias) || p.validadePadrao || 60) + '"></div>' +
+      '<div><label for="lppIa">Texto técnico</label><select id="lppIa"><option value="1"' + (p.iaDisponivel ? " selected" : "") + ">Redigir com a IA (conferido nas fontes)</option><option value=\"0\"" + (p.iaDisponivel ? "" : " selected") + ">Só o texto do catálogo e do edital</option></select></div>" +
+      '<div class="lpp-largo"><label for="lppMotivo">Motivo' + (nova ? " (obrigatório, fica no histórico)" : " (opcional)") + '</label><textarea id="lppMotivo" rows="2" maxlength="1000" placeholder="Ex.: simulação de preço nova com o km confirmado"></textarea></div></div>' +
+      (p.iaDisponivel ? "" : Lic_faixa_("Sem a chave da IA: a proposta usa o texto do catálogo e do edital como estão. Quem cadastra a chave é o Administrador.", "aviso")) + '<div id="lppMsg" aria-live="assertive"></div>';
+    var ov = Lic_janela_(nova ? (a.situacao === "EMITIDA" ? "Nova versão da proposta" : "Montar de novo") : "Montar rascunho", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lpp-ok>Montar</button>', origem);
+    ov.querySelector("[data-lpp-ok]").onclick = function () {
+      var bt = this, mot = LicPp_valor_("lppMotivo");
+      if (nova && mot.trim().length < 10) { Lic_$_("lppMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi gravado.", "erro"); return; }
+      bt.disabled = true;
+      LicPp_chamar_("montar", { id: id, validadeDias: LicPp_valor_("lppValidade"), motivo: mot, usarIA: LicPp_valor_("lppIa") !== "0" }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Rascunho montado."); LicPp_ligarAba_(null, null, id); },
+        function (m) { bt.disabled = false; Lic_$_("lppMsg").innerHTML = Lic_faixa_(m, "erro"); }, { carregando: "Montando a proposta (a IA pode levar até 2 minutos)…" });
+    };
+  }
+  function LicPp_janelaEditar_(id, chave, origem) {
+    var p = LICPP.aba[id] || {}, a = p.atual || {}, t = (a.trechos || []).filter(function (x) { return x.chave === chave; })[0];
+    if (!t) return;
+    var corpo = '<div class="cm-campo"><label for="lppTexto">' + Lic_esc_(t.nome) + '</label><textarea id="lppTexto" rows="6" maxlength="4000">' + Lic_esc_(t.texto) + "</textarea>" +
+      '<p class="cm-ajuda-campo">Texto corrido, sem lista nem marcação. O verificador recusa superlativo de marketing, acreditação RBC, Inmetro fora de balança e esfigmomanômetro, fabricante e número que não esteja no edital, no catálogo ou na simulação.</p></div>' +
+      '<div class="cm-campo"><label for="lppMotivoEd">Motivo (obrigatório)</label><textarea id="lppMotivoEd" rows="2" maxlength="1000" placeholder="Ex.: o órgão pede a descrição do método no item 5.2"></textarea><p class="cm-ajuda-campo">Fica no histórico do trecho (de → para), com o seu nome e a data.' + (a.situacao === "APROVADA" ? " A proposta já está aprovada: editar tira a aprovação, e ela precisa ser aprovada de novo." : "") + "</p></div><div id=\"lppMsgEd\" aria-live=\"assertive\"></div>";
+    var ov = Lic_janela_("Editar trecho", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lpp-ok>Gravar</button>', origem);
+    ov.querySelector("[data-lpp-ok]").onclick = function () {
+      var bt = this, mot = LicPp_valor_("lppMotivoEd");
+      if (mot.trim().length < 10) { Lic_$_("lppMsgEd").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      LicPp_chamar_("trechoEditar", { id: id, propostaId: a.id, trecho: chave, texto: LicPp_valor_("lppTexto"), motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Gravado."); LicPp_ligarAba_(null, null, id); },
+        function (m) { bt.disabled = false; Lic_$_("lppMsgEd").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicPp_janelaAprovar_(id, origem) {
+    var p = LICPP.aba[id] || {}, a = p.atual || {}, av = (a.avisos || []).length;
+    var corpo = '<p class="cm-txt">Aprovar a proposta ' + Lic_esc_(a.numero) + " (total " + Lic_esc_(Lic_brl_(a.total)) + "). A aprovação vale para o texto de agora: editar um trecho depois tira a aprovação.</p>" +
+      (av ? Lic_faixa_(av + " aviso(s) para conferir na aba (o registro da aprovação diz que a Diretoria decidiu com eles).", "aviso") : "") +
+      '<div class="cm-campo"><label for="lppMotivoAp">Motivo da aprovação (obrigatório)</label><textarea id="lppMotivoAp" rows="3" maxlength="1000" placeholder="Ex.: preços e escopo conferidos com a simulação versão 2"></textarea></div><div id="lppMsgAp" aria-live="assertive"></div>';
+    var ov = Lic_janela_("Aprovar a proposta", corpo, '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lpp-ok>Aprovar</button>', origem);
+    ov.querySelector("[data-lpp-ok]").onclick = function () {
+      var bt = this, mot = LicPp_valor_("lppMotivoAp");
+      if (mot.trim().length < 10) { Lic_$_("lppMsgAp").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
+      bt.disabled = true;
+      LicPp_chamar_("aprovar", { id: id, propostaId: a.id, motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto || "Aprovada."); LicPp_ligarAba_(null, null, id); }, function (m) { bt.disabled = false; Lic_$_("lppMsgAp").innerHTML = Lic_faixa_(m, "erro"); });
+    };
+  }
+  function LicPp_janelaEmitir_(id, origem) {
+    var p = LICPP.aba[id] || {}, a = p.atual || {};
+    var ov = Lic_janela_("Emitir a proposta", '<p class="cm-txt">Emitir congela o documento A4 da proposta ' + Lic_esc_(a.numero) + ": o HTML é guardado com o SHA-256 (e o PDF ao lado, quando o servidor gera) e não muda nunca. Para mudar depois, monte uma nova versão.</p>" +
+      Lic_faixa_("Nada é enviado a portal: depois de emitir, abra o documento, baixe e anexe no portal da licitação.", "aviso") + '<div id="lppMsgEm" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lpp-ok>Emitir</button>', origem);
+    ov.querySelector("[data-lpp-ok]").onclick = function () {
+      var bt = this; bt.disabled = true;
+      var j = LicPp_abrirJanela_("Emitindo a proposta…");
+      LicPp_chamar_("emitir", { id: id, propostaId: a.id }, function (r) { ov.fechar(); LicPp_escreverJanela_(j, r.html); Lic_toast_(r.texto || "Emitida."); LicPp_ligarAba_(null, null, id); },
+        function (m) { bt.disabled = false; LicPp_fecharJanela_(j); Lic_$_("lppMsgEm").innerHTML = Lic_faixa_(m, "erro"); }, { carregando: "Emitindo e guardando o documento…" });
+    };
+  }
+  function LicPp_baixarPdf_(id, pid) {
+    LicPp_chamar_("pdf", { id: id, propostaId: pid }, function (r) {
+      var bin = atob(r.base64 || ""), u8 = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      var url = URL.createObjectURL(new Blob([u8], { type: "application/pdf" })), el = document.createElement("a");
+      el.href = url; el.download = r.nome || "proposta.pdf"; document.body.appendChild(el); el.click(); try { el.remove(); } catch (e) {}
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 120000);
+      Lic_toast_(r.integra ? "PDF baixado (SHA-256 conferido no servidor)." : "PDF baixado, mas ele não confere com o SHA-256 gravado: use o documento A4.", r.integra ? "ok" : "erro");
+    }, function (m) { Lic_toast_(m, "erro"); }, { carregando: "Buscando o PDF…" });
+  }
+</script>

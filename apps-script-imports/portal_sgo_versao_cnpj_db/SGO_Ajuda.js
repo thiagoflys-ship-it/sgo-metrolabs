@@ -55,7 +55,9 @@ var SGO_AJUDA_NOMES = {
   // 02/11/2026: tabela de preços de licitação (SGO_Ajuda_LicitacoesPrecos.js)
   licitacoes_precos: 'Preços de licitação',
   // 02/11/2026: documentos de habilitação (SGO_Ajuda_LicitacoesHabilitacao.js)
-  licitacoes_habilitacao: 'Documentos de habilitação'
+  licitacoes_habilitacao: 'Documentos de habilitação',
+  // 02/11/2026: relatórios em A4 (SGO_Ajuda_LicitacoesRelatorios.js)
+  licitacoes_relatorios: 'Relatórios de Licitações'
 };
 
 /**
@@ -107,6 +109,8 @@ function SGO_Ajuda_todas_() {
   if (typeof SGO_ajudaTelas_LicitacoesPrecos_ === 'function') fontes.push(['LicitacoesPrecos', SGO_ajudaTelas_LicitacoesPrecos_]);
   // 02/11/2026: Documentos de habilitação (SGO_Ajuda_LicitacoesHabilitacao.js).
   if (typeof SGO_ajudaTelas_LicitacoesHabilitacao_ === 'function') fontes.push(['LicitacoesHabilitacao', SGO_ajudaTelas_LicitacoesHabilitacao_]);
+  // 02/11/2026: Relatórios de Licitações em A4 (SGO_Ajuda_LicitacoesRelatorios.js).
+  if (typeof SGO_ajudaTelas_LicitacoesRelatorios_ === 'function') fontes.push(['LicitacoesRelatorios', SGO_ajudaTelas_LicitacoesRelatorios_]);
   var todas = {}, ordem = [];
   fontes.forEach(function (f) {
     var obj;

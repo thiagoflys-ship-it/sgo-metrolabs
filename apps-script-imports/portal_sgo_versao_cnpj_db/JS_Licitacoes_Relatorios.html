@@ -1,0 +1,86 @@
+<!--
+  SGO+ LICITAÇÕES — RELATÓRIOS EM A4 (02/11/2026): tela "Relatórios" (Licitações › Relatórios). Relatório da oportunidade
+  (resumo, nota, leitura do edital com a cobertura, habilitação, preço, propostas, decisões e histórico) e relatório do período
+  (etapas, UF, notas, prazos, alertas, propostas emitidas e resultados), cada número com a fonte. Cada relatório gerado é uma
+  versão imutável, guardada com o SHA-256 e a data; a lista mostra todos e abre qualquer um. O A4 abre em aba nova no computador
+  e no visualizador de tela cheia do SGO+ no celular. Servidor: SGO_Licitacoes_Relatorios.js (Licitacoes_api ação "relatorios").
+  Usa os utilitários de JS_Licitacoes.html. Todo texto passa por Lic_esc_. Sem atualização automática.
+-->
+<style>
+  .lrl-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; }
+  .lrl-grade label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .lrl-grade input, .lrl-grade select { width: 100%; min-height: 40px; box-sizing: border-box; max-width: 100%; }
+  .lrl-grade .lrl-largo { grid-column: 1 / -1; }
+  .lrl-duas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  @media (max-width: 900px) { .lrl-acoes .btn-primary, .lrl-acoes .btn-secondary { flex: 1 1 140px; } }
+</style>
+<script>
+  var LICRL = { tela: null, busca: "" };
+  function LicRl_chamar_(op, dados, ok, erro, o) { Lic_chamar_("relatorios", Object.assign({ op: op }, dados || {}), ok, erro, Object.assign({ ignorarVelha: true }, o || {})); }
+  function LicRl_dia_(d) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || "")); return m ? m[3] + "/" + m[2] + "/" + m[1] : ""; }
+  function LicRl_janela_(titulo) { return typeof LicPp_abrirJanela_ === "function" ? LicPp_abrirJanela_(titulo) : (function () { try { return window.open("", "_blank"); } catch (e) { return null; } })(); }
+  function LicRl_escrever_(j, html) {
+    if (typeof LicPp_escreverJanela_ === "function") return LicPp_escreverJanela_(j, html);
+    if (!j) { Lic_toast_("O navegador bloqueou a janela do documento: libere as janelas do SGO+ e toque de novo.", "erro"); return; }
+    try { j.document.open(); j.document.write(html); j.document.close(); } catch (e) {}
+  }
+  function LicRl_fechar_(j) { if (j) { try { j.close(); } catch (e) {} } }
+
+  /** Gera o relatório da oportunidade (também chamado pela aba Proposta da ficha) e abre em A4. */
+  function LicRl_gerarOportunidade_(id, botao) {
+    if (!id) { Lic_toast_("Escolha a oportunidade na lista.", "erro"); return; }
+    var j = LicRl_janela_("Gerando o relatório…");
+    if (botao) botao.disabled = true;
+    LicRl_chamar_("gerarOportunidade", { id: id }, function (r) { if (botao) botao.disabled = false; LicRl_escrever_(j, r.html); Lic_toast_(r.texto || "Relatório gerado."); if (LIC.mod === "licitacoes_relatorios") LicRl_renderTela_(); },
+      function (m) { if (botao) botao.disabled = false; LicRl_fechar_(j); Lic_toast_(m, "erro"); }, { carregando: "Montando o relatório da oportunidade…" });
+  }
+  function LicRl_gerarPeriodo_(botao) {
+    var de = (Lic_$_("lrlDe") || {}).value || "", ate = (Lic_$_("lrlAte") || {}).value || "";
+    if (!de || !ate) { Lic_toast_("Escolha as datas de início e de fim do período.", "erro"); return; }
+    if (ate < de) { Lic_toast_("O fim do período é antes do começo. Corrija as datas.", "erro"); return; }
+    var j = LicRl_janela_("Gerando o relatório…");
+    if (botao) botao.disabled = true;
+    LicRl_chamar_("gerarPeriodo", { de: de, ate: ate }, function (r) { if (botao) botao.disabled = false; LicRl_escrever_(j, r.html); Lic_toast_(r.texto || "Relatório gerado."); LicRl_renderTela_(); },
+      function (m) { if (botao) botao.disabled = false; LicRl_fechar_(j); Lic_toast_(m, "erro"); }, { carregando: "Montando o relatório do período…" });
+  }
+  function LicRl_ver_(rid) {
+    var j = LicRl_janela_("Abrindo o relatório…");
+    LicRl_chamar_("ver", { relatorioId: rid }, function (r) { LicRl_escrever_(j, r.html); if (!r.integra) Lic_toast_("Atenção: este relatório não confere com o SHA-256 gravado (pode ter sido alterado fora do SGO+).", "erro"); },
+      function (m) { LicRl_fechar_(j); Lic_toast_(m, "erro"); }, { carregando: "Abrindo o relatório guardado…" });
+  }
+
+  // ================= tela "Relatórios" =================
+  function LicRl_renderTela_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(2);
+    LicRl_chamar_("tela", {}, function (d) { LICRL.tela = d; LicRl_desenhar_(); }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, LicRl_renderTela_); });
+  }
+  function LicRl_opcoesHtml_(ops, busca) {
+    var b = String(busca || "").toLowerCase();
+    var l = (ops || []).filter(function (o) { return !b || (o.codigo + " " + o.orgao + " " + o.uf).toLowerCase().indexOf(b) >= 0; });
+    return '<option value="">Escolha a oportunidade (' + l.length + ")</option>" + l.map(function (o) { return '<option value="' + Lic_esc_(o.id) + '">' + Lic_esc_(o.codigo + " · " + o.orgao + (o.uf ? " (" + o.uf + ")" : "") + " · " + o.situacao) + "</option>"; }).join("");
+  }
+  function LicRl_htmlTela_(d) {
+    var h = Lic_faixa_("Cada relatório gerado é uma versão que não muda: o documento A4 fica guardado com o SHA-256 e a data, e a lista abaixo abre qualquer um. Cada número do relatório diz de onde vem.", "ok") +
+      '<div class="lrl-duas"><div class="cm-caixa"><h3>Relatório da oportunidade</h3><p class="cm-meta">Resumo, nota, leitura do edital com a cobertura, habilitação, preço, propostas, decisões e histórico.</p>' +
+      '<div class="lrl-grade"><div class="lrl-largo"><label for="lrlBusca">Buscar</label><input id="lrlBusca" type="search" placeholder="código, órgão ou UF" value="' + Lic_esc_(LICRL.busca) + '"></div>' +
+      '<div class="lrl-largo"><label for="lrlOp">Oportunidade</label><select id="lrlOp">' + LicRl_opcoesHtml_(d.oportunidades, LICRL.busca) + "</select></div></div>" +
+      '<div class="lic-acoes-linha lrl-acoes"><button type="button" class="btn-primary" data-lrl-op>Gerar o relatório (A4)</button></div></div>' +
+      '<div class="cm-caixa"><h3>Relatório do período</h3><p class="cm-meta">Oportunidades por etapa e UF, notas, prazos, alertas, propostas emitidas e resultados.</p>' +
+      '<div class="lrl-grade"><div><label for="lrlDe">De</label><input id="lrlDe" type="date" value="' + Lic_esc_(d.inicioMes) + '"></div><div><label for="lrlAte">Até</label><input id="lrlAte" type="date" value="' + Lic_esc_(d.hoje) + '"></div></div>' +
+      '<div class="lic-acoes-linha lrl-acoes"><button type="button" class="btn-primary" data-lrl-per>Gerar o relatório (A4)</button></div></div></div>';
+    h += '<div class="cm-caixa"><h3>Relatórios gerados (' + Lic_esc_(d.total || 0) + ")</h3>" + ((d.relatorios || []).length ? Lic_tabelaHtml_(["Relatório", "Versão", "Gerado em", "Por", "SHA-256", ""], d.relatorios.map(function (r) {
+      return ["<b>" + Lic_esc_(r.titulo) + "</b><br><span class=\"cm-meta\">" + Lic_esc_(r.numero) + " · " + Lic_esc_(r.resumo) + "</span>", Lic_esc_(r.versao), Lic_esc_(Lic_dataHora_(r.em)), Lic_esc_(r.por),
+        '<span class="lic-hash" title="' + Lic_esc_(r.sha256) + '">' + Lic_esc_(String(r.sha256 || "").slice(0, 16)) + "…</span>" + (r.integra ? "" : ' <span class="cm-selo vermelho">alterado fora do SGO+</span>'), '<button type="button" class="btn-secondary" data-lrl-ver="' + Lic_esc_(r.id) + '">Abrir</button>'];
+    })) + (d.total > (d.relatorios || []).length ? '<p class="cm-meta">Mostrados os ' + d.relatorios.length + " mais novos.</p>" : "") : '<p class="cm-vazio">Nenhum relatório gerado ainda.</p>') + "</div>";
+    return h;
+  }
+  function LicRl_desenhar_() {
+    var c = Lic_corpo_(), d = LICRL.tela; if (!c || !d) return;
+    c.innerHTML = LicRl_htmlTela_(d);
+    var bu = Lic_$_("lrlBusca"); if (bu) bu.addEventListener("input", function () { LICRL.busca = bu.value; var s = Lic_$_("lrlOp"); if (s) s.innerHTML = LicRl_opcoesHtml_(d.oportunidades, LICRL.busca); });
+    var bo = c.querySelector("[data-lrl-op]"); if (bo) bo.onclick = function () { LicRl_gerarOportunidade_((Lic_$_("lrlOp") || {}).value || "", bo); };
+    var bp = c.querySelector("[data-lrl-per]"); if (bp) bp.onclick = function () { LicRl_gerarPeriodo_(bp); };
+    c.querySelectorAll("[data-lrl-ver]").forEach(function (b) { b.onclick = function () { LicRl_ver_(b.getAttribute("data-lrl-ver")); }; });
+  }
+</script>

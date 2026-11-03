@@ -1,6 +1,6 @@
 # Manual do módulo Licitações (SGO+) — etapas 1, 2, 3 e 4
 
-Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA; etapa 3: agenda de prazos e alertas com ciência e escalonamento; etapa 4: Kanban, Gantt e Painel; leitura especialista do edital, seção 6.6.1). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
+Versão de 02/11/2026 (etapa 2: arquivos do edital e nota 0–100 pela IA; etapa 3: agenda de prazos e alertas com ciência e escalonamento; etapa 4: Kanban, Gantt e Painel; leitura especialista do edital, seção 6.6.1; proposta em A4 e relatórios em A4). Quem usa: Diretoria e Administrador. Os demais perfis não veem o módulo.
 
 ## 1. Para que serve
 
@@ -47,6 +47,7 @@ Menu lateral, grupo "Licitações":
 - Central de alertas
 - Preços de licitação
 - Portais e configurações
+- Relatórios (relatório da oportunidade e relatório do período, em A4)
 
 No celular, a tela inicial ganha o atalho "Licitações" e cada tela do módulo abre com a barra de seções no topo (Hoje, Painel, Oportunidades, Kanban, Gantt, Agenda, Alertas, Preços, Portais e configurações). Em Oportunidades, Kanban e Gantt, a barra "Lista · Kanban · Gantt" troca a forma de ver as mesmas licitações.
 
@@ -169,6 +170,7 @@ Ações:
 - Prazos: os prazos com a fonte e a natureza, os alertas de cada um e as versões anteriores (seção 6.7).
 - Arquivos: os arquivos do edital (seção 6.5).
 - Análise: a nota e a leitura do edital pela IA (seção 6.6).
+- Proposta: a proposta técnica e comercial em A4 (seção "Proposta (aba Proposta da ficha)").
 - Histórico: cada fato com quando, quem, o quê (de → para), versão, fonte e hash.
 
 ### 6.4 Portais e configurações
@@ -546,6 +548,38 @@ Pela mesma infraestrutura dos alertas de licitação (LIC_ALERTAS, Central de al
 4. Falta, vence antes da sessão e "não atende" são pendências: aparecem no Hoje em Licitações e no Painel, com a fonte da contagem (licitações em análise, decisão, proposta ou disputa com a sessão por vir).
 5. **Gerar relação para conferência (A4)**: abre em nova aba a lista dos documentos desta licitação (exigência, documento, número, emissão, validade, versão e SHA-256 do arquivo) e as pendências. Cada relação é uma versão que não muda (LIC_HAB_PACOTES, com o hash). Nada é enviado a portal.
 
+## Proposta (aba Proposta da ficha)
+
+Pedido do dono: "Gerar proposta com IA em HTML A4 e imagens e características técnicas, fazer relatório em A4 HTML, salvar tudo e rastreabilidade de tudo." Só Diretoria e Administrador. Nada é enviado a portal: o SGO+ gera o documento para a Diretoria anexar.
+
+### O que entra na proposta
+
+- **Planilha de preços**: é sempre a última simulação salva da aba Preço, exatamente (preço da proposta de cada item vezes a quantidade, com o mesmo arredondamento), com a versão e o hash da simulação. Sem simulação salva não há proposta comercial: o rascunho pode ser montado, mas não é aprovado nem emitido. Item com preço da proposta e sem custo conferido na simulação também impede a aprovação (resolva na aba Preço).
+- **Itens do edital**: os da simulação e, com o coletor, os do PNCP que ficaram fora dela. Item sem serviço do catálogo, sem preço da proposta ou fora da simulação sai como "não cotado", com o motivo (no documento: "Serviço fora do escopo de atendimento da licitante" ou "Item não cotado nesta proposta").
+- **Características técnicas**: do catálogo oficial do Comercial, como estão: descrição técnica (com os pontos, as condições ou processos e os parâmetros padrão do serviço), normas citadas no catálogo, entregáveis que o catálogo descreve (certificado, relatório, ART) e as observações técnicas. Nenhuma característica é escrita fora do catálogo.
+- **Edital**: objeto, órgão, processo, modalidade e local (PNCP); prazo de execução, pagamento e garantia com a frase literal do checklist da leitura do edital, com o arquivo e a página. Sem leitura, "conforme o edital" e um aviso para conferir.
+- **Licitante**: matriz de Goiânia/GO, porte da configuração do radar (EPP), razão social e CNPJ da configuração dos documentos A4. Validade da proposta: os dias informados ao montar (padrão 60; quando o edital fala da validade, a aba avisa para conferir).
+- **Imagens**: só a logomarca oficial da Metrolabs. O SGO+ não tem fotos nem ícones dos serviços: a proposta sai sem elas e a aba diz o que falta. Nenhuma imagem é gerada por IA nem vem de fora.
+
+### Texto pela IA e o verificador
+
+Com a chave da IA, a apresentação e a metodologia de cada serviço cotado são redigidas pela IA. Cada frase cita as fontes (catálogo, item do edital, item da leitura, campo do PNCP, dados da licitante) e copia um trecho literal de uma delas. O verificador é o mesmo da leitura do edital e da análise: fonte que existe, cada número com a unidade dentro de uma fonte citada, trecho literal com a negação conferida, sentido não trocado, sem decidir pela Diretoria, sem prometer RBC, sem fabricante, sem emoji. Por cima: superlativo ou promessa de marketing, acreditação, Inmetro fora de balança e esfigmomanômetro e palavra técnica que não está nas fontes citadas. Frase que não passa é retirada e aparece na aba com o motivo; o resto vale. Sem a chave, com a IA fora do ar ou com tudo retirado, a proposta usa o texto do sistema (o catálogo e o edital como estão).
+
+### Fluxo
+
+1. **Montar rascunho**: validade em dias, texto técnico com ou sem a IA e, a partir da segunda versão, o motivo. Montar de novo troca o rascunho em aberto (ele fica "substituído"; nada é apagado).
+2. **Revisão**: "Editar este trecho" (apresentação, metodologia de cada serviço, observações) pede o motivo e grava o de → para (LIC_PROPOSTA_EDICOES). O texto da Diretoria passa pelas mesmas regras (sem superlativo, sem acreditação, Inmetro só em balança e esfigmomanômetro, sem fabricante, número só se estiver no edital, no catálogo ou na simulação).
+3. **Aprovar** (Diretoria, motivo obrigatório): só sem bloqueio (simulação salva, íntegra e a mais nova; pelo menos um item cotado; deslocamento dentro do preço dos itens; total igual ao da simulação). Vale para o texto daquele momento: editar depois tira a aprovação.
+4. **Emitir**: congela o documento A4 (HTML guardado restrito no serviço de arquivos do SGO+, com o SHA-256; PDF ao lado quando o servidor gera). A versão emitida não muda nunca; "Abrir a proposta emitida" confere o SHA-256. Para mudar, "Nova versão".
+5. "Ver a prévia em A4" mostra o rascunho com a faixa "não vale como proposta". No computador abre em aba nova; no celular, em tela cheia.
+
+## Relatórios (Licitações › Relatórios)
+
+- **Relatório da oportunidade**: resumo (PNCP), nota da última análise concluída com os critérios, leitura do edital (versão, cobertura e o checklist com a frase e a página), habilitação (atende, a conferir, vence antes da sessão, falta), preço (a última simulação com a versão e o hash), propostas (versões, situação e o SHA-256 da emitida), decisões e histórico. Também sai pela aba Proposta da ficha.
+- **Relatório do período** (até 400 dias): oportunidades novas (primeira coleta no período) por etapa de hoje e por UF, notas por classe e a média, fins de proposta no período, alertas criados no período (situação, nível, sem ciência), análises, propostas emitidas e as licitações em Resultado ou Contrato. O SGO+ ainda não registra o vencedor nem o valor homologado.
+- Cada parte do documento tem a linha "Fonte" (aba do SGO+ e o filtro usado).
+- Cada relatório gerado é uma versão imutável (LIC_RELATORIOS): o HTML exato fica guardado restrito com o SHA-256 e a data; "Abrir" confere o SHA-256. Gerar de novo cria a versão seguinte.
+
 ## 7. Problemas comuns
 
 | Situação | O que fazer |
@@ -589,6 +623,8 @@ Pela mesma infraestrutura dos alertas de licitação (LIC_ALERTAS, Central de al
 - Kanban: a mudança de etapa grava o mesmo fato da lista (ENVIADA_PARA_ANALISE, DESCARTADA_PELA_DIRETORIA, REABERTA) com a fonte "Kanban", o motivo, de → para e o hash.
 - Análise por IA: DURACAO_MS em LIC_ANALISES (desde a etapa 4) guarda quanto a análise levou, para o tempo médio do Painel.
 - Documentos de habilitação: LIC_HAB_DOCUMENTOS (estado atual), LIC_HAB_VERSOES (uma linha por versão, com a fotografia, o arquivo e o hash), LIC_HAB_CONFERENCIAS (decisões da Diretoria por exigência) e LIC_HAB_PACOTES (relações geradas); no histórico, DOCUMENTO_CADASTRADO, DOCUMENTO_VERSAO, DOCUMENTO_RETIRADO, DOCUMENTO_REATIVADO, ARQUIVO_ABERTO, ARQUIVO_NAO_CONFERE, HABILITACAO_CONFERENCIA e HABILITACAO_RELACAO.
+- Proposta: LIC_PROPOSTAS (uma linha por versão, com a simulação usada, o hash do conteúdo, a aprovação e a emissão; a emitida guarda o SHA-256 do HTML congelado e do PDF), LIC_PROPOSTA_EDICOES (de → para de cada trecho, com o hash); no histórico, PROPOSTA_RASCUNHO, PROPOSTA_TRECHO_EDITADO, PROPOSTA_APROVADA, PROPOSTA_EMITIDA, PROPOSTA_NOVA_VERSAO e PROPOSTA_SUBSTITUIDA.
+- Relatórios: LIC_RELATORIOS (uma linha por relatório gerado, com a versão, o SHA-256 do HTML guardado e o hash do registro); no histórico, RELATORIO_GERADO.
 - Nada é apagado: a situação muda.
 
 ### 8.1 Regra de guarda (aprovada pelo dono em 02/11/2026)
