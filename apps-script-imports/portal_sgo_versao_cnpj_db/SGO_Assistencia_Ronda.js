@@ -39,6 +39,9 @@ var AST_RONDA_DESC_MIN = 10, AST_RONDA_MOTIVO_MIN = 5;
 var AST_RONDA_HORIZONTE_DIAS = 35;
 var AST_RONDA_JANELA_PADRAO = 2;
 var AST_RONDA_PAUSA_PREFIXO = 'Recorrência pausada';
+/** Revisão de 03/11/2026: a ronda cancelada pela mudança de data, hora ou periodicidade do contrato também volta a nascer (com a data nova). */
+var AST_RONDA_ALTERADO_PREFIXO = 'Contrato de ronda alterado';
+function AstRd_canceladaParaGerar_(o) { var m = Ast_s_(o.CANCELADA_MOTIVO); return m.indexOf(AST_RONDA_PAUSA_PREFIXO) === 0 || m.indexOf(AST_RONDA_ALTERADO_PREFIXO) === 0; }
 /** Decisão do dono a confirmar: foto da ronda entra liberada no relatório do cliente (achado documentado); a gestão recolhe na ficha. */
 var AST_RONDA_FOTO_LIBERADA_PADRAO = true;
 /** Decisão do dono (03/11/2026): não há preço por ronda; a ronda está incluída no contrato do cliente (nada de cobrança aqui). */
@@ -110,11 +113,18 @@ function AstRd_setoresUnidade_(unidadeId) {
 }
 /** Data AAAA-MM-DD de um valor de documento (ISO, dd/mm/aaaa). */
 function AstRd_dia_(v) { var ms = Ast_ms_(v); return ms === null ? '' : Ast_agora_(ms).slice(0, 10); }
-/** Validade de calibração e qualificação por equipamento (Arquivo de documentos e certificados de calibração). */
-function AstRd_validades_(clienteId) {
+/**
+ * Validade de calibração e qualificação por equipamento (Arquivo de documentos e certificados de calibração). Revisão de 03/11/2026:
+ * só os equipamentos da unidade e guardada na memória do pedido (o escopo é montado várias vezes na mesma chamada).
+ */
+function AstRd_validades_(clienteId, unidadeId) {
+  var chaveMemo = '__rdVal_' + Ast_s_(clienteId) + '|' + Ast_s_(unidadeId);
+  if (AST_MEMO[chaveMemo]) return AST_MEMO[chaveMemo];
+  var daUnidade = {};
+  Ast_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { if (Ast_s_(e.UNIDADE_ID) === Ast_s_(unidadeId) && Ast_s_(e.CLIENTE_ID) === Ast_s_(clienteId)) daUnidade[Ast_s_(e.ID)] = true; });
   var r = {}, hoje = Ast_hoje_();
   var por = function (eq, cat, ate, origem) {
-    if (!eq || !ate) return;
+    if (!eq || !ate || !daUnidade[eq]) return;
     r[eq] = r[eq] || {};
     if (!r[eq][cat] || ate > r[eq][cat].ate) r[eq][cat] = { ate: ate, vencida: ate < hoje, origem: origem };
   };
@@ -134,6 +144,7 @@ function AstRd_validades_(clienteId) {
       });
     }
   } catch (e2) {}
+  AST_MEMO[chaveMemo] = r;
   return r;
 }
 function AstRd_equipPublico_(e, val) {
@@ -144,7 +155,7 @@ function AstRd_equipPublico_(e, val) {
 /** Escopo vivo (cadastro de agora): setores da unidade, filtrados pelo contrato, com os equipamentos ativos de cada um. */
 function AstRd_escopoVivo_(os) {
   var reg = AstRd_registro_(os), filtro = reg.filtroSetores.map(AstRd_chaveSetor_);
-  var val = AstRd_validades_(os.CLIENTE_ID), mapa = {}, setores = [];
+  var val = AstRd_validades_(os.CLIENTE_ID, os.UNIDADE_ID), mapa = {}, setores = [];
   var setor = function (nome) { var k = AstRd_chaveSetor_(nome); if (!mapa[k]) { mapa[k] = { nome: Ast_s_(nome), chave: k, equipamentos: [] }; setores.push(mapa[k]); } return mapa[k]; };
   AstRd_setoresCadastrados_(os.UNIDADE_ID).forEach(function (s) { setor(s.NOME); });
   Ast_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) { return Ast_s_(e.UNIDADE_ID) === Ast_s_(os.UNIDADE_ID) && Ast_up_(e.STATUS || 'ATIVO') !== 'INATIVO'; })
@@ -170,6 +181,12 @@ function AstRd_escopo_(os) {
     vistos[k] = true;
   });
   return esc;
+}
+/** A chave está no escopo base da ronda (congelado no Cheguei; antes dele, o cadastro de agora)? */
+function AstRd_noEscopoBase_(os, chave) {
+  var esc = Ast_json_(os.RONDA_ESCOPO_JSON, null);
+  if (!esc || !Array.isArray(esc.setores)) esc = AstRd_escopoVivo_(os);
+  return esc.setores.some(function (s) { return (s.equipamentos || []).some(function (e) { return e.chave === chave; }); });
 }
 function AstRd_eqTexto_(e) { return [e.tipo, e.modelo, e.tag ? 'TAG ' + e.tag : '', e.serie ? 'série ' + e.serie : ''].filter(Boolean).join(' · ') || 'Equipamento sem identificação'; }
 
@@ -279,10 +296,19 @@ function AstRd_aplicarEvento_(eu, os, d, x) {
     if (d.setor !== undefined) novo.setor = Ast_texto_(d.setor, 120);
     if (d.parada !== undefined) novo.parada = AST_RONDA_PARADAS[Ast_up_(d.parada)] ? Ast_up_(d.parada) : '';
     var eqId = '';
-    if (/^e:/.test(chave)) eqId = chave.slice(2);
-    else {
+    if (/^e:/.test(chave)) {
+      eqId = chave.slice(2);
+      var eqE = Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[eqId];
+      if (!eqE || Ast_s_(eqE.CLIENTE_ID) !== Ast_s_(os.CLIENTE_ID) || Ast_s_(eqE.UNIDADE_ID) !== Ast_s_(os.UNIDADE_ID))
+        return { ok: false, definitivo: true, motivo: 'o equipamento ' + (eqE ? Ast_equipTexto_(eqE) : eqId) + ' não é da unidade ' + Ast_s_(os.UNIDADE_NOME) + ' do cliente ' + Ast_s_(os.CLIENTE_NOME), corrigir: 'Confira o equipamento; se ele está mesmo neste setor, cadastre em "Equipamento fora do cadastro" (a gestão confere o vínculo depois).' };
+      if (!reg.itens[chave] && !AstRd_noEscopoBase_(os, chave))
+        return { ok: false, definitivo: true, motivo: 'o equipamento ' + Ast_equipTexto_(eqE) + ' não faz parte do escopo desta ronda (setores e equipamentos fixados no Cheguei)', corrigir: 'Se ele está neste setor, registre em "Equipamento fora do cadastro" ou peça à gestão para incluir o setor na próxima ronda.' };
+    } else {
       eqId = typeof AstApp_idReal_ === 'function' ? AstApp_idReal_('EQUIPAMENTO', Ast_s_(d.equipamentoId) || chave.slice(2)) : Ast_s_(d.equipamentoId);
-      if (!Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[eqId]) eqId = '';
+      var eqN = Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[eqId];
+      if (!eqN) eqId = '';
+      else if (Ast_s_(eqN.CLIENTE_ID) !== Ast_s_(os.CLIENTE_ID) || Ast_s_(eqN.UNIDADE_ID) !== Ast_s_(os.UNIDADE_ID))
+        return { ok: false, definitivo: true, motivo: 'o equipamento cadastrado em campo já existe no cadastro em outra unidade ou cliente (' + Ast_equipTexto_(eqN) + ')', corrigir: 'Fale com a gestão: ela confere o vínculo em Cadastros > Vínculos; o equipamento não entra nesta ronda.' };
       if (d.ident && typeof d.ident === 'object') {
         var id0 = novo.ident || {};
         ['tipo', 'modelo', 'serie', 'tag', 'patrimonio'].forEach(function (k) { if (d.ident[k] !== undefined) id0[k] = Ast_texto_(d.ident[k], 80); });
@@ -463,12 +489,14 @@ function AstRd_diaUtil_(dia) { var cfg = Ast_expediente_(); for (var i = 0; i < 
  */
 function AstRd_gerarPlano_(eu, p, hojeIso) {
   if (Ast_up_(p.SITUACAO) !== 'ATIVA') return 0;
+  Ast_memoLimpar_();   // revisão de 03/11/2026: dentro da trava, sempre a leitura de agora (outra geração pode ter acabado de gravar)
+  p = Ast_porId_(AST_ABAS.RONDA_PLANOS, p.ID) || p;
   var hoje = hojeIso || Ast_hoje_(), ate = Ast_somarDias_(hoje, Number(p.HORIZONTE_DIAS) || AST_RONDA_HORIZONTE_DIAS);
   var de = Ast_s_(p.INICIO).slice(0, 10) > hoje ? Ast_s_(p.INICIO).slice(0, 10) : hoje;
   var existe = {};
   Ast_lerTudo_(AST_ABAS.OS).forEach(function (o) {
     var k = Ast_s_(o.RONDA_CHAVE); if (!k) return;
-    var pausa = Ast_up_(o.SITUACAO) === 'CANCELADA' && Ast_s_(o.CANCELADA_MOTIVO).indexOf(AST_RONDA_PAUSA_PREFIXO) === 0;
+    var pausa = Ast_up_(o.SITUACAO) === 'CANCELADA' && AstRd_canceladaParaGerar_(o);
     if (!pausa) existe[k] = true;
   });
   var v = { cli: Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[Ast_s_(p.CLIENTE_ID)], un: Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(p.UNIDADE_ID)] };
@@ -511,7 +539,12 @@ function AstRd_salvarPlano_(eu, d) {
       p = Ast_porId_(AST_ABAS.RONDA_PLANOS, d.id);
       if (!p) throw new Error('Não foi possível ' + acao + ': o contrato não foi encontrado. Atualize a tela');
       if (Ast_up_(p.SITUACAO) === 'ENCERRADA') throw new Error('Não foi possível ' + acao + ': o contrato ' + p.CODIGO + ' está encerrado. Crie um contrato novo');
+      var mudouAgenda = Ast_s_(p.INICIO).slice(0, 10) !== ini || Ast_up_(p.PERIODICIDADE) !== per || Ast_s_(p.HORA).slice(0, 5) !== hora;
       Ast_atualizar_(AST_ABAS.RONDA_PLANOS, p.ID, campos);
+      if (mudouAgenda && Ast_up_(p.SITUACAO) === 'ATIVA') {
+        var nc = AstRd_cancelarFuturas_(eu, p, AST_RONDA_ALTERADO_PREFIXO + ' (data, hora ou periodicidade): ' + (Ast_texto_(d.motivo, 200) || 'nova programação'));
+        if (nc) Ast_evento_('RONDA_PLANO', p.ID, 'REPROGRAMADO', eu, Ast_plural_(nc, 'ronda futura cancelada', 'rondas futuras canceladas') + ' e geradas de novo com a programação nova', { numero: p.CODIGO });
+      }
       Ast_evento_('RONDA_PLANO', p.ID, 'EDICAO', eu, 'Contrato de ronda alterado' + (Ast_texto_(d.motivo, 300) ? ': ' + Ast_texto_(d.motivo, 300) : '') + '. As rondas já agendadas continuam como estão (reagende uma a uma, se precisar)', { numero: p.CODIGO });
     } else {
       var seq = Ast_lerTudo_(AST_ABAS.RONDA_PLANOS).length + 1;
@@ -582,12 +615,19 @@ function AstRd_salvarSetor_(eu, d) {
 // ------------------------------------------------------------
 // DEPOIS DE ENCERRADA: CHAMADO AUTOMÁTICO, SUGESTÃO AO COMERCIAL, AVISOS, SETORES NOVOS (idempotente)
 // ------------------------------------------------------------
-function AstRd_posConclusao_(eu, osId) {
+/**
+ * Revisão de 03/11/2026: tudo dentro da trava da Assistência, com a memória limpa e a O.S. lida de novo (duas execuções seguidas, ou a
+ * rotina junto do encerramento, nunca abrem chamado em dobro); a marca "em andamento" vai antes dos chamados.
+ */
+function AstRd_posConclusao_(eu, osId) { return Ast_comTrava_(function () { Ast_memoLimpar_(); return AstRd_posConclusaoNaTrava_(eu, osId); }); }
+function AstRd_posConclusaoNaTrava_(eu, osId) {
   var os = Ast_porId_(AST_ABAS.OS, osId);
   if (!os || !AstRd_ehRonda_(os) || Ast_up_(os.SITUACAO) !== 'ENCERRADA') return { feito: false };
   if (Ast_s_(os.RONDA_POS_EM)) return { feito: true, repetido: true, pos: AstRd_pos_(os) };
   var sis = Ast_sistema_('Ronda ' + os.NUMERO), pos = AstRd_pos_(os), L = AstRd_linhas_(os), avisos = [];
   pos.chamados = pos.chamados || {};
+  pos.andamentoEm = pos.andamentoEm || Ast_agora_();
+  Ast_atualizar_(AST_ABAS.OS, os.ID, { RONDA_POS_JSON: JSON.stringify(pos), ATUALIZADO_EM: Ast_agora_() });
   // 1) equipamento fora de uso ou com defeito: um chamado por equipamento, ligado à ronda (ORIGEM_REF RONDA:<os>:<chave>)
   var todos = Ast_lerTudo_(AST_ABAS.CHAMADOS);
   L.linhas.forEach(function (l) {
@@ -596,10 +636,11 @@ function AstRd_posConclusao_(eu, osId) {
     var ja = todos.filter(function (c) { return Ast_s_(c.ORIGEM_REF) === ref; })[0];
     if (ja) { pos.chamados[l.eq.chave] = { id: ja.ID, numero: ja.NUMERO, novo: true }; return; }
     var eqId = Ast_s_(l.item.equipamentoId) || Ast_s_(l.eq.id), eq = eqId ? Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[eqId] : null;
+    if (eq && (Ast_s_(eq.CLIENTE_ID) !== Ast_s_(os.CLIENTE_ID) || Ast_s_(eq.UNIDADE_ID) !== Ast_s_(os.UNIDADE_ID))) { eq = null; eqId = ''; }
     var fotosTxt = l.fotos.length ? ' Fotos na ronda ' + os.NUMERO + ': ' + l.fotos.length + '.' : '';
     var limitado = Ast_up_(l.item.parada) === 'PARCIAL', cfg = AstRd_cfg_();
     var sintoma = 'Encontrado na ronda de engenharia clínica ' + os.NUMERO + ' (' + Ast_brDia_(os.CHEGOU_EM) + ', setor ' + l.setor + '), ' + (limitado ? 'funciona com defeito ou limitação' : 'parado, não pode ser usado') + ': ' + Ast_s_(l.item.descricao) + '.' + fotosTxt;
-    var aberto = eq ? todos.filter(function (c) { return Ast_s_(c.EQUIPAMENTO_ID) === eqId && AST_TERMINAIS.indexOf(Ast_up_(c.SITUACAO)) < 0 && !Ast_excluido_(c); })[0] : null;
+    var aberto = eq ? todos.filter(function (c) { return Ast_s_(c.EQUIPAMENTO_ID) === eqId && Ast_s_(c.CLIENTE_ID) === Ast_s_(os.CLIENTE_ID) && AST_TERMINAIS.indexOf(Ast_up_(c.SITUACAO)) < 0 && !Ast_excluido_(c); })[0] : null;
     if (aberto) {
       Ast_evento_('CHAMADO', aberto.ID, 'RONDA', sis, 'Achado da ronda ' + os.NUMERO + ': ' + sintoma, { numero: aberto.NUMERO });
       pos.chamados[l.eq.chave] = { id: aberto.ID, numero: aberto.NUMERO, novo: false };
@@ -786,7 +827,7 @@ function AstRd_html_(os, publico, meta) {
       a.p.rec + (ch ? ' (chamado ' + ch.numero + ')' : '')];
   }), { vazio: 'Nenhum achado: todos os equipamentos verificados estavam em funcionamento.' }));
   // 6. chamados abertos a partir da ronda
-  var chs = Object.keys(pos.chamados || {}).map(function (k) { var x = pos.chamados[k], c = Ast_porId_(AST_ABAS.CHAMADOS, x.id) || {}; return [x.numero, Ast_s_(c.EQUIPAMENTO_TEXTO), x.novo ? 'Aberto pela ronda' : 'Achado registrado no chamado que já estava aberto', AST_SITUACOES[Ast_up_(c.SITUACAO)] || '—']; });
+  var chs = Object.keys(pos.chamados || {}).filter(function (k) { var c = Ast_porId_(AST_ABAS.CHAMADOS, pos.chamados[k].id); return !c || Ast_s_(c.CLIENTE_ID) === Ast_s_(os.CLIENTE_ID); }).map(function (k) { var x = pos.chamados[k], c = Ast_porId_(AST_ABAS.CHAMADOS, x.id) || {}; return [x.numero, Ast_s_(c.EQUIPAMENTO_TEXTO), x.novo ? 'Aberto pela ronda' : 'Achado registrado no chamado que já estava aberto', AST_SITUACOES[Ast_up_(c.SITUACAO)] || '—']; });
   corpo += RelA4_secao_('Chamados abertos a partir da ronda', RelA4_tabela_([{ t: 'Chamado' }, { t: 'Equipamento' }, { t: 'Origem' }, { t: 'Situação' }], chs, { vazio: meta.rascunho ? 'Os chamados são abertos quando a ronda é encerrada.' : 'Nenhum equipamento fora de uso ou com defeito.' }));
   // 7. comparação com a ronda anterior
   var cmp = AstRd_comparacao_(os, L.linhas);
@@ -850,6 +891,7 @@ function AstRd_emitirRelatorio_(eu, osId, o) {
     var agora = Ast_agora_();
     if (rascunho) {
       var gr = salvar(publico, Ast_pastaPrivadaOS_(os.NUMERO), false);
+      Ast_inserir_(AST_ABAS.RELATORIOS, { OS_ID: os.ID, OS_NUMERO: os.NUMERO, VERSAO: versao, REVISAO: 0, MOTIVO: 'prévia (' + (publico === 'CLIENTE' ? 'versão do cliente' : 'versão interna') + ')', RASCUNHO: 'SIM', PDF_ID: gr.pdfId, PDF_URL: gr.pdfUrl, HTML_ID: gr.htmlId, MARCA: marca, EMITIDO_EM: agora, EMITIDO_POR_NOME: Ast_s_(eu && eu.nome), DOC_REGISTRADO: '' });
       Ast_atualizar_(AST_ABAS.OS, os.ID, { RELATORIO_VERSAO: versao, ATUALIZADO_EM: agora });
       return { salvo: true, rascunho: true, html: gr.html, pdfUrl: gr.pdfUrl, pdfId: gr.pdfId, versao: versao, revisao: 0, emitidoEm: Ast_br_(agora) };
     }
@@ -982,12 +1024,15 @@ function AstRd_portal_(eu) {
 function AstRd_arquivoClientePermitido_(sessionId, arquivoId) {
   var id = Ast_s_(arquivoId);
   if (!id) return null;
-  var oss = Ast_lerCru_(AST_ABAS.OS);
-  var interno = oss.some(function (o) { return Ast_s_(o.RONDA_INTERNO_PDF_ID) === id || Ast_s_(o.RONDA_INTERNO_HTML_ID) === id; });
-  if (interno) return false;
-  var cli = oss.filter(function (o) { return (Ast_s_(o.RELATORIO_PDF_ID) === id || Ast_s_(o.RELATORIO_HTML_ID) === id) && Ast_s_(o.RONDA_INTERNO_PDF_ID); })[0];
-  if (!cli) return null;
-  try { var eu = Ast_eu_(sessionId); return !!eu.clienteId && eu.clienteId === Ast_s_(cli.CLIENTE_ID); } catch (e) { return false; }
+  var oss = Ast_lerCru_(AST_ABAS.OS), porOs = {};
+  oss.forEach(function (o) { porOs[Ast_s_(o.ID)] = o; });
+  if (oss.some(function (o) { return Ast_s_(o.RONDA_INTERNO_PDF_ID) === id || Ast_s_(o.RONDA_INTERNO_HTML_ID) === id; })) return false;
+  // revisão de 03/11/2026: toda emissão da ronda fica em ATEC_RELATORIOS; versão interna e prévia (rascunho) nunca abrem para cliente
+  var rel = Ast_lerCru_(AST_ABAS.RELATORIOS).filter(function (r) { var o = porOs[Ast_s_(r.OS_ID)]; return o && AstRd_ehRonda_(o) && (Ast_s_(r.PDF_ID) === id || Ast_s_(r.HTML_ID) === id); });
+  if (rel.some(function (r) { return /interna/i.test(Ast_s_(r.MOTIVO)) || Ast_sim_(r.RASCUNHO); })) return false;
+  var os = rel.length ? porOs[Ast_s_(rel[0].OS_ID)] : oss.filter(function (o) { return (Ast_s_(o.RELATORIO_PDF_ID) === id || Ast_s_(o.RELATORIO_HTML_ID) === id) && AstRd_ehRonda_(o); })[0];
+  if (!os) return null;
+  try { var eu = Ast_eu_(sessionId); return !!eu.clienteId && eu.clienteId === Ast_s_(os.CLIENTE_ID); } catch (e) { return false; }
 }
 
 // ------------------------------------------------------------
