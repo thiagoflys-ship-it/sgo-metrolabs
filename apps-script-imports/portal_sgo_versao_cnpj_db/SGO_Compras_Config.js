@@ -159,6 +159,8 @@ var CMP_REGRAS_PADRAO = {
   versao: 1,
   compradores: [],
   substitutos: [],
+  // Acesso financeiro limitado a Compras; não altera perfil ou área da pessoa.
+  financeiros: [],
   areaCompras: 'LOGISTICA',
   faixas: [
     { ate: 1000, aprovador: 'COMPRADOR', cotacoes: 1 },
@@ -343,6 +345,8 @@ function Cmp_validarRegras_(r) {
   if (!r || typeof r !== 'object') throw new Error('as regras vieram vazias. Atualize a tela e salve de novo');
   if (!Array.isArray(r.compradores) || !Array.isArray(r.substitutos)) throw new Error('a lista de compradores veio em formato errado. Atualize a tela e salve de novo');
   var us = Cmp_usuarios_();
+  if (!Array.isArray(r.financeiros)) throw new Error('a lista de responsáveis financeiros de Compras veio em formato inválido');
+  r.financeiros.forEach(function (id) { var u = us[Cmp_s_(id)]; if (!u || !u.ativo || ['CLIENTE','AUVO_SYNC','TECNICO','METROLOGIA','RH'].indexOf(u.perfil) >= 0) throw new Error('escolha um usuário interno ativo habilitado para a conferência de Compras'); });
   r.compradores.concat(r.substitutos).forEach(function (id) {
     if (!us[Cmp_s_(id)]) throw new Error('um dos compradores escolhidos não existe mais no cadastro de usuários. Tire a pessoa da lista e salve de novo');
   });
@@ -371,6 +375,11 @@ function Cmp_validarRegras_(r) {
 function Cmp_gravarRegras_(r, eu, motivo) {
   var limpa = {};
   Object.keys(CMP_REGRAS_PADRAO).forEach(function (k) { if (k !== 'versao' && r[k] !== undefined) limpa[k] = r[k]; });
+  var anterioresFinanceiros = (Cmp_regras_().financeiros || []).map(Cmp_s_);
+  var novosFinanceiros = r.financeiros === undefined ? anterioresFinanceiros : r.financeiros;
+  if (!Array.isArray(novosFinanceiros)) throw new Error('a lista de responsáveis financeiros de Compras veio em formato inválido');
+  limpa.financeiros = novosFinanceiros.map(Cmp_s_).filter(function (id, i, l) { return id && l.indexOf(id) === i; });
+  if (anterioresFinanceiros.slice().sort().join('|') !== limpa.financeiros.slice().sort().join('|') && !(eu.admin || eu.diretoria || Cmp_ehDono_(eu.login))) throw new Error('somente o Administrador ou a Diretoria pode liberar a conferência financeira de Compras');
   limpa.compradores = (limpa.compradores || []).map(Cmp_s_).filter(Boolean);
   limpa.substitutos = (limpa.substitutos || []).map(Cmp_s_).filter(function (id, i, l) { return id && l.indexOf(id) === i && limpa.compradores.indexOf(id) < 0; });
   limpa.areaCompras = Cmp_up_(limpa.areaCompras || 'LOGISTICA');
@@ -434,7 +443,7 @@ function Cmp_nivelDe_(u, regras) {
   var gestao = admin || diretoria || (perfil === 'GESTOR' && area === Cmp_up_(regras.areaCompras));
   var compradorLista = !!id && lista.indexOf(id) >= 0;
   var gestor = perfil === 'GESTOR';
-  var financeiro = perfil === 'FINANCEIRO' || area === 'FINANCEIRO';
+  var financeiro = perfil === 'FINANCEIRO' || area === 'FINANCEIRO' || ((regras.financeiros || []).map(Cmp_s_).indexOf(id) >= 0 && ['CLIENTE','AUVO_SYNC','TECNICO','METROLOGIA','RH'].indexOf(perfil) < 0);
   var comprador = gestao || compradorLista;
   var nivel = gestao ? 'GESTAO' : compradorLista ? 'COMPRADOR' : gestor ? 'GESTOR' : financeiro ? 'FINANCEIRO' : 'SOLICITANTE';
   return { nivel: nivel, gestao: gestao, comprador: comprador, compradorLista: compradorLista, gestor: gestor || gestao, financeiro: financeiro || diretoria || admin,

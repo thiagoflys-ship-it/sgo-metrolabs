@@ -21,7 +21,8 @@ var CMP_PASTA_RELATORIOS = 'Compras - Relatórios';
 function CmpFin_pedidoPorId_(id) { return id ? SGO_DATA.getById(CMP_ABAS.PEDIDOS, Cmp_s_(id)) : null; }
 function CmpFin_idsFinanceiro_(us, excluir) {
   excluir = excluir || [];
-  return Object.keys(us).filter(function (id) { var u = us[id]; return u.ativo && (u.perfil === 'FINANCEIRO' || u.area === 'FINANCEIRO') && excluir.indexOf(id) < 0; });
+  var delegados = (Cmp_regras_().financeiros || []).map(Cmp_s_);
+  return Object.keys(us).filter(function (id) { var u = us[id], delegado = delegados.indexOf(id) >= 0 && ['CLIENTE','AUVO_SYNC','TECNICO','METROLOGIA','RH'].indexOf(u.perfil) < 0; return u.ativo && (u.perfil === 'FINANCEIRO' || u.area === 'FINANCEIRO' || delegado) && excluir.indexOf(id) < 0; });
 }
 
 /** Registrar (ou corrigir) o pagamento. d: { requisicaoId, valorPago, pagoEm, formaPagamento..., comprovante:{...}, correcao (texto, quando divergente) } */
