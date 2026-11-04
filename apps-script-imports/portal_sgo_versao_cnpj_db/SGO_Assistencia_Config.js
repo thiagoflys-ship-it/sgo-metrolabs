@@ -76,9 +76,9 @@ var AST_COLUNAS = {
     // 03/11/2026 (decisão do dono): a gestão encerra sem a assinatura do técnico só com justificativa (fica no histórico)
     'COLAB_DISPENSA_JUSTIFICATIVA', 'COLAB_DISPENSA_POR_NOME', 'COLAB_DISPENSA_EM',
     // 03/11/2026 (ronda de engenharia clínica): o registro da ronda (itens por equipamento, setores, orientações), o escopo
-    // congelado no Cheguei, o contrato e a chave da recorrência (plano|data prevista: nunca gera em dobro), a janela, o preço
-    // fechado do contrato (cobrança só preparada), o pós-processamento (chamados e sugestões) e a versão interna do relatório
-    'RONDA_JSON', 'RONDA_ESCOPO_JSON', 'RONDA_PLANO_ID', 'RONDA_CHAVE', 'RONDA_PREVISTA', 'RONDA_JANELA_ATE', 'RONDA_PRECO', 'RONDA_POS_EM', 'RONDA_POS_JSON',
+    // congelado no Cheguei, o contrato e a chave da recorrência (plano|data prevista: nunca gera em dobro), a janela (a ronda está
+    // incluída no contrato: sem preço por ronda), o pós-processamento (chamados e sugestões) e a versão interna do relatório
+    'RONDA_JSON', 'RONDA_ESCOPO_JSON', 'RONDA_PLANO_ID', 'RONDA_CHAVE', 'RONDA_PREVISTA', 'RONDA_JANELA_ATE', 'RONDA_POS_EM', 'RONDA_POS_JSON',
     'RONDA_INTERNO_PDF_ID', 'RONDA_INTERNO_PDF_URL', 'RONDA_INTERNO_HTML_ID'],
   ATEC_EVENTOS: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'NUMERO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'PUBLICO', 'USUARIO_ID', 'USUARIO_NOME', 'EM', 'EM_APARELHO', 'ID_LOCAL', 'CRIADO_EM'],
   ATEC_FOTOS: ['ID', 'OS_ID', 'ID_LOCAL', 'PERGUNTA_ID', 'LEGENDA', 'NOME', 'ARQUIVO_ID', 'URL', 'TAMANHO', 'SHA256', 'TIRADA_EM', 'RECEBIDA_EM', 'POR_ID', 'POR_NOME', 'ATIVA', 'CRIADO_EM',
@@ -106,7 +106,7 @@ var AST_COLUNAS = {
     'EQUIPAMENTO_ID_SGO', 'RESUMO', 'QTD_ARQUIVOS', 'CRIADO_EM'],
   // 03/11/2026 (ronda): contrato de ronda recorrente por cliente e unidade (semanal, quinzenal, mensal) e setores da unidade
   ATEC_RONDA_PLANOS: ['ID', 'CODIGO', 'SITUACAO', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'PERIODICIDADE', 'INICIO', 'HORA', 'DURACAO_MIN', 'JANELA_DIAS',
-    'TECNICO_ID', 'TECNICO_NOME', 'SETORES_JSON', 'ORIENTACAO', 'PRECO_RONDA', 'CONTRATO_REF', 'HORIZONTE_DIAS', 'GERADO_ATE', 'MOTIVO', 'PAUSADO_EM', 'ENCERRADO_EM',
+    'TECNICO_ID', 'TECNICO_NOME', 'SETORES_JSON', 'ORIENTACAO', 'CONTRATO_REF', 'HORIZONTE_DIAS', 'GERADO_ATE', 'MOTIVO', 'PAUSADO_EM', 'ENCERRADO_EM',
     'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   ATEC_SETORES: ['ID', 'CLIENTE_ID', 'UNIDADE_ID', 'NOME', 'ORDEM', 'ATIVO', 'ORIGEM', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM']
 };

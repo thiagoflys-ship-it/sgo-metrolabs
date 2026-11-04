@@ -729,6 +729,7 @@ var AST_ACOES = {
   rondaSugestaoDecidir: function (eu, d) { return AstRd_decidirSugestao_(eu, d); },
   rondaIndicadores: function (eu, d) { return { indicadores: AstRd_indicadores_(eu, d) }; },
   rondaFotoLiberar: function (eu, d) { return AstRd_liberarFoto_(eu, d); },
+  rondaCfgSalvar: function (eu, d) { return AstRd_salvarCfg_(eu, d); },
   rondaRelatorio: function (eu, d) {
     var os = AstO_obter_(eu, d && d.osId, 'abrir o relatório da ronda');
     if (!AstRd_ehRonda_(os)) throw new Error('Não foi possível abrir: a O.S. ' + os.NUMERO + ' não é uma ronda');

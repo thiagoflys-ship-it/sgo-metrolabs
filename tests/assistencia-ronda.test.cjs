@@ -35,7 +35,7 @@ test('contrato de ronda semanal gera as próximas rondas sozinho, sem duplicar; 
   assert.equal(r.geradas, 5, r.message);
   jeq(ativas().map((o) => o.RONDA_PREVISTA).sort(), ['2026-10-20', '2026-10-27', '2026-11-03', '2026-11-10', '2026-11-17']);
   assert.equal(new Set(daPlano().map((o) => o.RONDA_CHAVE)).size, 5);
-  assert.equal(linhaOs(amb, daPlano()[0].ID).RONDA_PRECO, 1200);
+  assert.equal(r.plano.cobranca, 'Ronda incluída no contrato');
   // de novo (rotina e gerar todos): nada em dobro
   assert.equal(amb.ctx.AstRd_gerarTodos_().geradas, 0);
   amb.ctx.Assistencia_rotina_(new Date(), true);
@@ -78,7 +78,7 @@ test('ronda em campo: chegada antes; situação por equipamento; foto e descriç
   assert.equal(s.recusados.length, 1); assert.equal(s.recusados[0].definitivo, false);
   s = ok(sync(amb, [ev('CHEGUEI', os.id, {}, '2026-10-20T09:05:00'),
     ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq1', setor: 'CME', situacao: 'FUNCIONANDO', respostas: SIM5 }),
-    ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq2', setor: 'CME', situacao: 'FORA_USO', descricao: 'Vazamento de água pela porta, equipamento parado', respostas: { registro: 'SIM', vazamento: 'NAO', limpeza: 'SIM', etiqueta: 'SIM', alarme: 'SIM' } }),
+    ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq2', setor: 'CME', situacao: 'FORA_USO', parada: 'TOTAL', descricao: 'Vazamento de água pela porta, equipamento parado', respostas: { registro: 'SIM', vazamento: 'NAO', limpeza: 'SIM', etiqueta: 'SIM', alarme: 'SIM' } }),
     ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq4', setor: 'Farmácia', situacao: 'FUNCIONANDO', respostas: { temperatura: '5,5', faixa: 'SIM', registro: 'SIM', porta: 'NAO', alarme: 'SIM', etiqueta: 'SIM' } }),
     ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq5', setor: 'UTI', situacao: 'NAO_VERIFICADO', motivo: 'Em uso com paciente no leito' })]));
   assert.equal(s.recusados.length, 0, JSON.stringify(s.recusados));
@@ -121,7 +121,7 @@ test('ronda em campo: chegada antes; situação por equipamento; foto e descriç
   // chamado automático: um por equipamento fora de uso, canal RONDA, ligado à ronda
   const chs = () => amb.tabelas.ATEC_CHAMADOS.filter((c) => /^RONDA:/.test(c.ORIGEM_REF));
   assert.equal(chs().length, 1);
-  assert.equal(chs()[0].EQUIPAMENTO_ID, 'eq2'); assert.equal(chs()[0].CANAL, 'RONDA'); assert.match(chs()[0].SINTOMA, /Vazamento/);
+  assert.equal(chs()[0].EQUIPAMENTO_ID, 'eq2'); assert.equal(chs()[0].CANAL, 'RONDA'); assert.equal(chs()[0].PRIORIDADE, 'P2'); assert.equal(chs()[0].PARADA, 'TOTAL'); assert.match(chs()[0].SINTOMA, /Vazamento/);
   // reenvio (mesmos idLocal) e pós-processamento de novo: nada em dobro
   s = ok(sync(amb, conc));
   assert.ok(s.aceitos.every((a) => a.duplicado));
@@ -209,13 +209,36 @@ test('isolamento do cliente: portal mostra só as rondas dele e só a versão do
   assert.match(amb.api('s_cliente.alfa', 'rondaTela', {}).message, /equipe interna/);
 });
 
-test('cobrança preparada: o item RONDA-EC entra no catálogo uma vez só, inativo até a Diretoria definir o preço', () => {
+test('decisão do dono: sem preço por ronda (incluída no contrato, nenhum item de catálogo); chamado P2 se parado e P3 se funciona com limitação, configurável pela gestão', () => {
   const amb = ambRonda();
   amb.tabelas.COM_PRODUTOS = [];
-  ok(amb.api('s_gil', 'rondaPlanoSalvar', { clienteId: 'c1', unidadeId: 'un1', periodicidade: 'MENSAL', inicio: '2026-10-31', hora: '08:00', tecnicoId: 'u_tec' }));
+  const p1 = ok(amb.api('s_gil', 'rondaPlanoSalvar', { clienteId: 'c1', unidadeId: 'un1', periodicidade: 'MENSAL', inicio: '2026-10-31', hora: '08:00', tecnicoId: 'u_tec', precoRonda: '1.200,00' }));
   ok(amb.api('s_gil', 'rondaPlanoSalvar', { clienteId: 'c2', unidadeId: 'un2', periodicidade: 'QUINZENAL', inicio: '2026-10-21', hora: '13:30', tecnicoId: 'u_tec2' }));
-  const it = amb.tabelas.COM_PRODUTOS.filter((p) => p.CODIGO === 'RONDA-EC');
-  assert.equal(it.length, 1); assert.equal(it[0].ATIVO, 'NAO'); assert.equal(it[0].REGRA_PRECO, 'FIXO');
+  assert.equal(amb.tabelas.COM_PRODUTOS.length, 0, 'nenhum item de catálogo');
+  assert.equal(p1.plano.cobranca, 'Ronda incluída no contrato');
+  assert.equal('PRECO_RONDA' in amb.tabelas.ATEC_RONDA_PLANOS[0], false);
+  // fora de uso: o técnico diz se está parado ou se funciona com limitação
+  const os = agendarAvulsa(amb);
+  ok(sync(amb, [ev('CHEGUEI', os.id, {}), ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq1', situacao: 'FORA_USO', descricao: 'Não completa o ciclo; aborta na secagem', respostas: SIM5 }),
+    ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq2', situacao: 'FORA_USO', parada: 'PARCIAL', descricao: 'Braço aspersor travado; lava só com o cesto de baixo', respostas: { registro: 'SIM', vazamento: 'SIM', limpeza: 'NAO', etiqueta: 'SIM', alarme: 'SIM' } })]));
+  ok(amb.app('Ast_appEnviarFoto', 's_tiago', { osId: os.id, idLocal: 'foto-p-eq1', nome: 'a.jpg', base64: FOTO, perguntaId: 'ronda:e:eq1' }));
+  ok(amb.app('Ast_appEnviarFoto', 's_tiago', { osId: os.id, idLocal: 'foto-p-eq2', nome: 'b.jpg', base64: FOTO, perguntaId: 'ronda:e:eq2' }));
+  let L = amb.ctx.AstRd_linhas_(linhaOs(amb, os.id)).linhas;
+  jeq(L.find((l) => l.eq.chave === 'e:eq1').faltas, ['dizer se o equipamento está parado ou funciona com defeito ou limitação']);
+  ok(sync(amb, [ev('RONDA', os.id, { parte: 'ITEM', chave: 'e:eq1', parada: 'TOTAL' })]));
+  assert.equal(amb.ctx.AstRd_cfg_().prioridadeParado, 'P2'); assert.equal(amb.ctx.AstRd_cfg_().prioridadeLimitado, 'P3');
+  // a gestão muda a prioridade do "funciona com limitação" para P4 (só a gestão; motivo obrigatório)
+  assert.match(amb.api('s_tiago', 'rondaCfgSalvar', { prioridadeParado: 'P1', prioridadeLimitado: 'P4', motivo: 'teste de permissão' }).message, /gestão da área Técnica/);
+  assert.match(amb.api('s_gil', 'rondaCfgSalvar', { prioridadeParado: 'P2', prioridadeLimitado: 'P4', motivo: 'curto' }).message, /motivo/);
+  ok(amb.api('s_gil', 'rondaCfgSalvar', { prioridadeParado: 'P2', prioridadeLimitado: 'P4', motivo: 'Contrato do cliente pede P4 para equipamento ainda em uso' }));
+  for (const [k, sit] of [['e:eq4', 'NAO_VERIFICADO'], ['e:eq5', 'NAO_VERIFICADO']]) ok(sync(amb, [ev('RONDA', os.id, { parte: 'ITEM', chave: k, situacao: sit, motivo: 'Setor fechado na hora' })]));
+  const s = ok(sync(amb, [ev('ASSINATURA', os.id, { nome: 'Rui Responsável Teste', imagem: ASSINATURA, versaoApp: 't' }), ev('ASSINATURA', os.id, { papel: 'COLABORADOR', nome: 'Tiago Tecnico Teste', imagem: ASSINATURA, versaoApp: 't' }), ev('CONCLUI', os.id, {})]));
+  assert.equal(s.os[0].situacao, 'ENCERRADA', JSON.stringify(s.os[0].pendencias));
+  const ch = (eq) => amb.tabelas.ATEC_CHAMADOS.find((c) => /^RONDA:/.test(c.ORIGEM_REF) && c.EQUIPAMENTO_ID === eq);
+  assert.equal(ch('eq1').PRIORIDADE, 'P2'); assert.equal(ch('eq1').PARADA, 'TOTAL');
+  assert.equal(ch('eq2').PRIORIDADE, 'P4'); assert.equal(ch('eq2').PARADA, 'PARCIAL'); assert.match(ch('eq2').SINTOMA, /funciona com defeito ou limitação/);
+  const h = htmlDe(amb, /Relatorio de ronda/).find((x) => /versão do cliente/.test(x));
+  assert.match(h, /Funciona com defeito ou limitação/); assert.doesNotMatch(h, /R\$|catálogo/);
   // mensal no dia 31: novembro cai no dia 30
   assert.ok(amb.ctx.AstRd_datasPrevistas_({ INICIO: '2026-10-31', PERIODICIDADE: 'MENSAL' }, '2026-10-01', '2026-12-31').includes('2026-11-30'));
 });

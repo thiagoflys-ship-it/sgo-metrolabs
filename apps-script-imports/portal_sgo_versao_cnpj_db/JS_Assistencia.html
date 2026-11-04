@@ -152,7 +152,7 @@
   function At_modal_(titulo, corpo, rodape, largura) {
     var ov = document.createElement("div");
     ov.className = "atv-overlay";
-    ov.innerHTML = '<div class="atv-modal" style="max-width:' + (largura || 600) + 'px"><div class="atv-modal-cab"><h3>' + At_esc_(titulo) + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
+    ov.innerHTML = '<div class="atv-modal" role="dialog" aria-modal="true" style="max-width:' + (largura || 600) + 'px"><div class="atv-modal-cab"><h3>' + At_esc_(titulo) + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
       '<div class="atv-modal-corpo">' + corpo + '</div>' + (rodape ? '<div class="atv-modal-rod">' + rodape + '</div>' : '') + '</div>';
     ov.querySelector(".atv-fechar").onclick = function () { ov.remove(); };
     document.body.appendChild(ov);
@@ -1316,8 +1316,7 @@
       At_campo_("Duração estimada (min)", '<input id="atRdDur" type="number" min="30" max="720" step="15" value="' + At_esc_(x.duracaoMin || 180) + '">') +
       (ehPlano ? At_campo_("Janela (dias de tolerância)", '<input id="atRdJan" type="number" min="0" max="10" value="' + At_esc_(x.janelaDias === undefined ? 2 : x.janelaDias) + '">', "Depois do último dia, a ronda vira pendência da gestão.") : '') + '</div>' +
       At_campo_("Orientação ao técnico (opcional)", '<textarea id="atRdOri" maxlength="1500">' + At_esc_(x.orientacao || "") + '</textarea>') +
-      (ehPlano ? '<div class="at-grade2">' + At_campo_("Preço fechado por ronda (opcional, cobrança preparada)", '<input id="atRdPreco" inputmode="decimal" value="' + At_esc_(x.precoRonda === "" || x.precoRonda === undefined ? "" : String(x.precoRonda).replace(".", ",")) + '" placeholder="Ex.: 1.200,00">', "Fica no contrato; não fatura sozinho (item " + AT.ronda.catalogo.codigo + " do catálogo).") +
-        At_campo_("Referência do contrato (opcional)", '<input id="atRdRef" maxlength="120" value="' + At_esc_(x.contratoRef || "") + '">') + '</div>' + (x.id ? At_campo_("O que mudou e por quê", '<input id="atRdMot" maxlength="300">') : '') :
+      (ehPlano ? '<div class="at-grade2">' + At_campo_("Referência do contrato (opcional)", '<input id="atRdRef" maxlength="120" value="' + At_esc_(x.contratoRef || "") + '">') + '<p class="at-txt">Ronda incluída no contrato: não há preço por ronda.</p></div>' + (x.id ? At_campo_("O que mudou e por quê", '<input id="atRdMot" maxlength="300">') : '') :
         '<label class="at-check"><input type="checkbox" id="atRdAvisar" checked> Avisar o cliente por e-mail (data e responsável)</label>') +
       '<div id="atRdConf"></div><div id="atRdMsg"></div>',
       '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>' + (ehPlano ? "Salvar o contrato e gerar as rondas" : "Agendar a ronda") + '</button>', 760);
@@ -1328,7 +1327,7 @@
     var enviar = function (confirmar) {
       var v = function (id) { var el = ov.querySelector("#" + id); return el ? el.value : ""; };
       var d = { clienteId: v("atRdCliId"), unidadeId: v("atRdUn"), tecnicoId: v("atRdTec"), duracaoMin: v("atRdDur"), orientacao: v("atRdOri"), setores: At_lerSetores_(setoresEl) };
-      if (ehPlano) Object.assign(d, { id: x.id || "", periodicidade: v("atRdPer"), inicio: v("atRdIni"), hora: v("atRdHora"), janelaDias: v("atRdJan"), precoRonda: v("atRdPreco"), contratoRef: v("atRdRef"), motivo: v("atRdMot") });
+      if (ehPlano) Object.assign(d, { id: x.id || "", periodicidade: v("atRdPer"), inicio: v("atRdIni"), hora: v("atRdHora"), janelaDias: v("atRdJan"), contratoRef: v("atRdRef"), motivo: v("atRdMot") });
       else Object.assign(d, { inicio: v("atRdQuando"), avisarCliente: ov.querySelector("#atRdAvisar").checked, confirmarConflito: !!confirmar, motivoConflito: v("atRdMotConf") });
       At_chamar_(ehPlano ? "rondaPlanoSalvar" : "rondaAgendar", d, function (r) {
         if (r.conflito) {
@@ -1345,7 +1344,7 @@
     div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Rondas de engenharia clínica", "Inspeção periódica dos equipamentos da unidade, setor a setor, feita no SGO+ Campo. Avulsa ou pelo contrato de ronda (semanal, quinzenal ou mensal).",
       '<button type="button" class="btn-secondary" id="atRdAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' + (ini.gestao ? '<button type="button" class="btn-secondary" id="atRdAvulsa">Agendar ronda avulsa</button><button type="button" class="btn-primary" id="atRdPlano">Novo contrato de ronda</button>' : '')) +
       '<div id="atRdMsgTopo"></div><div class="at-tabs" id="atRdGrupos">' + [["PROXIMAS", "Próximas e em andamento"], ["REALIZADAS", "Realizadas"], ["TODAS", "Todas"]].map(function (g) { return '<button type="button" class="at-tab' + (AT.rondaFiltro === g[0] ? " active" : "") + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</div>' +
-      '<div id="atRdLista"><div class="at-vazio">Carregando…</div></div><div id="atRdPlanos"></div><div id="atRdSug"></div><div id="atRdSet"></div><div id="atRdInd"></div></div>';
+      '<div id="atRdLista"><div class="at-vazio">Carregando…</div></div><div id="atRdPlanos"></div><div id="atRdCfg"></div><div id="atRdSug"></div><div id="atRdSet"></div><div id="atRdInd"></div></div>';
     var msg = function (m) { At_msg_("atRdMsgTopo", m, "ok"); };
     var recarregar = function (m) { At_renderRondas_(div); if (m) setTimeout(function () { msg(m); }, 400); };
     At_$_("atRdAtualizar").onclick = function () { recarregar(); };
@@ -1376,7 +1375,7 @@
         var pl = At_$_("atRdPlanos");
         pl.innerHTML = '<div class="at-sec">Contratos de ronda (recorrentes)</div>' + ((r.planos || []).length ? '<div class="at-lista">' + r.planos.map(function (p) {
           return '<div class="at-card' + (p.situacao === "ENCERRADA" ? " fim" : "") + '"><p class="at-card-tit">' + At_esc_(p.codigo) + ' · ' + At_esc_(p.clienteNome) + ' · ' + At_esc_(p.unidadeNome) + '</p><p class="at-meta">' + At_esc_(p.periodicidadeNome) + ' a partir de ' + At_esc_(p.inicio.split("-").reverse().join("/")) + ' às ' + At_esc_(p.hora) + ' · ' + At_esc_(p.tecnicoNome) +
-            ' · janela de ' + At_esc_(p.janelaDias) + ' dia(s)' + (p.setores.length ? ' · setores: ' + At_esc_(p.setores.join(", ")) : ' · todos os setores') + (p.precoRonda !== "" && ini.valores ? ' · ' + At_esc_("R$ " + Number(p.precoRonda).toFixed(2).replace(".", ",")) + ' por ronda' : '') + '</p>' +
+            ' · janela de ' + At_esc_(p.janelaDias) + ' dia(s)' + (p.setores.length ? ' · setores: ' + At_esc_(p.setores.join(", ")) : ' · todos os setores') + ' · ' + At_esc_(p.cobranca) + '</p>' +
             '<div>' + At_selo_(p.situacao === "ATIVA" ? "verde" : p.situacao === "PAUSADA" ? "laranja" : "cinza", p.situacaoNome) + (p.motivo && p.situacao !== "ATIVA" ? '<span class="at-meta"> ' + At_esc_(p.motivo) + '</span>' : '') + '</div>' +
             (p.situacao === "ENCERRADA" ? '' : '<div class="at-acoes"><button type="button" class="btn-secondary" data-pl-ed="' + At_esc_(p.id) + '">Editar</button>' + (p.situacao === "ATIVA" ? '<button type="button" class="btn-secondary" data-pl-ac="PAUSAR" data-pl="' + At_esc_(p.id) + '">Pausar</button>' : '<button type="button" class="btn-secondary" data-pl-ac="RETOMAR" data-pl="' + At_esc_(p.id) + '">Retomar</button>') +
               '<button type="button" class="btn-secondary" data-pl-ac="ENCERRAR" data-pl="' + At_esc_(p.id) + '">Encerrar</button></div>') + '</div>';
@@ -1396,9 +1395,18 @@
         At_escolherClienteUnidade_(st, "atSt", listarSet);
         At_$_("atStOk").onclick = function () { At_chamar_("rondaSetorSalvar", { clienteId: At_$_("atStCliId").value, unidadeId: At_$_("atStUn").value, nome: At_$_("atStNome").value }, function (x) { At_msg_("atStMsg", x.message, "ok"); At_$_("atStNome").value = ""; listarSet(At_$_("atStCliId").value, At_$_("atStUn").value); }, function (m) { At_msg_("atStMsg", m); }); };
       }
+      if (r.gestao) At_rondaCfg_(At_$_("atRdCfg"), r, recarregar);
       if (r.podeSugestao) At_rondaSugestoes_(At_$_("atRdSug"));
       At_rondaIndicadores_(At_$_("atRdInd"));
     }, function (m) { At_msg_("atRdLista", m); });
+  }
+  /** Decisão do dono (03/11/2026): prioridade do chamado aberto pela ronda (parado: P2; funciona com limitação: P3), configurável. */
+  function At_rondaCfg_(el, r, recarregar) {
+    if (!el) return;
+    el.innerHTML = '<div class="at-sec">Chamado aberto pela ronda</div><div class="at-caixa"><p class="at-txt">O equipamento "Fora de uso ou com defeito" vira chamado sozinho quando a ronda é encerrada. O técnico diz se ele está parado ou se funciona com defeito ou limitação; a prioridade do chamado sai daqui.</p><div class="at-grade2">' +
+      At_campo_("Parado: não pode ser usado", '<select id="atRdCfgP">' + At_opcoes_(r.prioridades, r.cfg.prioridadeParado) + '</select>') + At_campo_("Funciona com defeito ou limitação", '<select id="atRdCfgL">' + At_opcoes_(r.prioridades, r.cfg.prioridadeLimitado) + '</select>') + '</div>' +
+      '<div class="at-acoes"><button type="button" class="btn-secondary" id="atRdCfgOk">Salvar a prioridade</button></div></div>';
+    At_$_("atRdCfgOk").onclick = function () { At_pedirTexto_("Prioridade do chamado da ronda", "Vale para as rondas encerradas daqui em diante. O motivo fica no histórico da configuração.", "Motivo", 10, function (t, ov) { At_chamar_("rondaCfgSalvar", { prioridadeParado: At_$_("atRdCfgP").value, prioridadeLimitado: At_$_("atRdCfgL").value, motivo: t }, function (x) { ov.remove(); recarregar(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Salvar"); };
   }
   function At_rondaSugestoes_(el) {
     if (!el) return;
@@ -1438,16 +1446,16 @@
     var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') + '<div>' + At_selo_(AT_COR_SIT[o.situacao], o.situacaoNome) + At_selo_("azul", "Ronda de engenharia clínica") + '</div>' +
       (o.faltas && o.faltas.length ? '<div class="at-faixa erro"><b>Para fechar a ronda falta:</b><ul class="at-faltas">' + o.faltas.map(function (f) { return '<li>' + At_esc_(f) + '</li>'; }).join("") + '</ul>A ronda é feita no SGO+ Campo; o técnico completa por lá.</div>' : '') +
       '<dl class="at-det">' + [["Cliente", o.clienteNome + (o.unidadeNome ? " · " + o.unidadeNome : "")], ["Endereço", o.endereco], ["Responsável", o.tecnicoNome], ["Agendada", o.agendadoPara + " (" + o.duracaoMin + " min)"], ["Data prevista", rd.prevista], ["Janela até", rd.janelaAte],
-        ["Chegada", o.chegouEm], ["Conclusão", o.concluiuEm], ["Preço do contrato", rd.preco]].filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>' +
+        ["Chegada", o.chegouEm], ["Conclusão", o.concluiuEm], ["Cobrança", rd.cobranca]].filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>' +
       '<div class="at-kpis">' + [[rs.equipamentos, "Equipamentos"], [rs.porSituacao.FUNCIONANDO, "Em funcionamento", "ok"], [rs.porSituacao.OBSERVACAO, "Com observação", rs.porSituacao.OBSERVACAO ? "aviso" : ""], [rs.porSituacao.FORA_USO, "Fora de uso", rs.porSituacao.FORA_USO ? "critico" : ""],
         [rs.porSituacao.NAO_LOCALIZADO, "Não localizados", ""], [rs.porSituacao.NAO_VERIFICADO, "Não verificados", ""], [rs.semSituacao, "Sem situação", rs.semSituacao ? "aviso" : "ok"], [rd.chamados.length, "Chamados da ronda", ""]].map(function (x) { return '<div class="at-kpi ' + (x[2] || "") + '"><span class="v">' + At_esc_(x[0]) + '</span><span class="r">' + At_esc_(x[1]) + '</span></div>'; }).join("") + '</div>';
     var foto = function (f) { return (f.url ? '<a href="' + At_esc_(f.url) + '" target="_blank" rel="noopener">' + At_esc_(f.legenda || "Foto") + '</a>' : '<span>' + At_esc_(f.legenda || "Foto") + '</span>') + (rd.podeLiberarFoto ? ' <button type="button" class="btn-secondary" data-rd-foto="' + At_esc_(f.id) + '" data-pub="' + (f.publico ? "" : "SIM") + '">' + (f.publico ? "Recolher do cliente" : "Liberar ao cliente") + '</button>' : (f.publico ? ' <span class="at-meta">(liberada)</span>' : '')); };
     rd.setores.forEach(function (s) {
-      h += '<div class="at-sec">Setor: ' + At_esc_(s.nome) + (s.extra ? ' (acrescentado em campo)' : '') + '</div>' + (s.achados ? '<p class="at-txt"><b>Achados do setor:</b> ' + At_esc_(s.achados) + '</p>' : '') +
+      h += '<div class="at-sec">Setor ' + At_esc_(s.nome) + (s.extra ? ' (acrescentado em campo)' : '') + '</div>' + (s.achados ? '<p class="at-txt"><b>Achados do setor:</b> ' + At_esc_(s.achados) + '</p>' : '') +
         (s.fotosSetor.length ? '<div class="at-fotos">' + s.fotosSetor.map(foto).join("") + '</div>' : '') +
         '<table class="at-tabela"><thead><tr><th>Equipamento</th><th>Situação</th><th>Observações</th></tr></thead><tbody>' + s.itens.map(function (it) {
           return '<tr><td data-r="Equipamento">' + At_esc_(it.texto) + (it.novo ? ' ' + At_selo_("verde", "Cadastrado na ronda") : '') + '</td><td data-r="Situação">' + At_selo_({ FUNCIONANDO: "verde", OBSERVACAO: "laranja", FORA_USO: "vermelho", NAO_LOCALIZADO: "laranja", NAO_VERIFICADO: "cinza" }[it.situacao] || "cinza", it.situacaoNome) + '</td>' +
-            '<td data-r="Observações">' + At_esc_([it.descricao, it.motivo ? "Motivo: " + it.motivo : "", it.vencimentos.join("; ")].filter(Boolean).join(". ")) + (it.chamado ? ' <b>Chamado ' + At_esc_(it.chamado.numero) + '</b>' : '') + (it.faltas.length ? '<br><span style="color:var(--danger)">Falta: ' + At_esc_(it.faltas.join("; ")) + '</span>' : '') +
+            '<td data-r="Observações">' + At_esc_([it.paradaNome, it.descricao, it.motivo ? "Motivo: " + it.motivo : "", it.vencimentos.join("; ")].filter(Boolean).join(". ")) + (it.chamado ? ' <b>Chamado ' + At_esc_(it.chamado.numero) + '</b>' : '') + (it.faltas.length ? '<br><span style="color:var(--danger)">Falta: ' + At_esc_(it.faltas.join("; ")) + '</span>' : '') +
             (it.fotos.length ? '<div class="at-fotos">' + it.fotos.map(foto).join("") + '</div>' : '') + '</td></tr>';
         }).join("") + '</tbody></table>';
     });

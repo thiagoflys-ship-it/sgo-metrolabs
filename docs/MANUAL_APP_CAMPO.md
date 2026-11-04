@@ -176,7 +176,7 @@ A ronda aparece no Meu dia como as outras O.S. ("Ronda de engenharia clínica"),
 1. **Cheguei** na unidade. A partir daqui os setores e os equipamentos do cadastro ficam fixos para esta ronda.
 2. **Setores e equipamentos:** a lista mostra cada setor com a barra de progresso ("3 de 5 equipamento(s) com situação"). Toque no setor.
 3. Em cada equipamento, **um toque** na situação: Em funcionamento, Com observação, Fora de uso ou com defeito, Não localizado ou Não verificado.
-   - **Com observação** e **Fora de uso**: escreva o que encontrou e toque em "Tirar a foto do problema". A foto é obrigatória só quando há problema. Fotografe só o equipamento, nunca paciente nem documento de paciente.
+   - **Com observação** e **Fora de uso**: escreva o que encontrou e toque em "Tirar a foto do problema". No **Fora de uso**, toque também em **Parado: não pode ser usado** ou **Funciona com defeito ou limitação** (define a prioridade do chamado que nasce da ronda). A foto é obrigatória só quando há problema. Fotografe só o equipamento, nunca paciente nem documento de paciente.
    - **Não verificado**: escreva o motivo (ex.: "em uso com paciente").
    - **Perguntas fixas** (autoclave, lavadora, câmara fria ou refrigerador, seladora): Sim, Não ou Não se aplica; na câmara fria, a temperatura do display em °C (com vírgula). Uma resposta "Não" não combina com "Em funcionamento": marque "Com observação" ou "Fora de uso" e descreva.
    - O cartão mostra o que falta; completo, ele fica com o sinal de feito. Calibração ou qualificação vencida aparece num selo vermelho.
