@@ -1,0 +1,16 @@
+{
+  "originalQueryMissingWorkbookKey": true,
+  "multiWorkbookTieGroups": 21,
+  "oldUnstableDigestRestoredBaseline": "a480ed242ad4ce3a1f75efc2cf39f05d",
+  "oldUnstableDigestCandidate": "aa36afa2b838466c7fdb9bf61bcddca4",
+  "canonicalComparison": {
+    "baselineRows": 298,
+    "afterRows": 298,
+    "changedRows": 0,
+    "changes": [],
+    "hashes": {
+      "baseline": "51d66ba1a234ed5c261dfe409e4e32b9a64d663d75f66b0ec9d74c888ee8fec1",
+      "after": "51d66ba1a234ed5c261dfe409e4e32b9a64d663d75f66b0ec9d74c888ee8fec1"
+    }
+  }
+}

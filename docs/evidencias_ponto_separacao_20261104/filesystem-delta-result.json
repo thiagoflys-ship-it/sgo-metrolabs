@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "baseArchiveRetained": "/opt/metrolabs/qa/sgo-ponto-avisos-20261104/backup-verificado/dados.tgz",
+  "deltaArchive": "/opt/metrolabs/qa/sgo-ponto-separar-20261104/backup-verificado/filesystem-delta.tgz",
+  "deltaSha256": "335176924179a056d2cace8403d573ed8dacc2de4ffce201d011a4eae9ea5382",
+  "changedEntries": 15,
+  "removedPaths": 0,
+  "composedManifestEqualsObserved": true,
+  "deltaRestoredBytesOwnersModes": true,
+  "fullFilesystemRestoreRepeated": false,
+  "productionChanged": false
+}

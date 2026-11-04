@@ -1,0 +1,96 @@
+{
+  "passed": true,
+  "sourceCommit": "26914c81a0ab3eab7022999d8ad5972f4ed61cdf",
+  "runtimeCommit": "10ce79ebdcb49957c3f1d5bedd54774615c95dce",
+  "sourceTestsPassed": 1686,
+  "serverTestsPassed": 351,
+  "pointTestsPassed": 22,
+  "editorBrowser": {
+    "ok": true,
+    "synthetic": true,
+    "checks": [
+      "full Ponto_render with global theme; compact nine-person list; dispensas collapsed",
+      "individual save persisted; other person unchanged",
+      "draft survives back, search, another person and reopening",
+      "cancel restores saved choice; clean save disabled; focus restored after save/cancel",
+      "presets do not save; pending request locks form; failed save retains draft",
+      "default previews current four marks; saves only after explicit save with null",
+      "390 and 320 no horizontal overflow; full-themed screenshots captured",
+      "refresh render retains in-memory draft",
+      "mobile390/320 name below fixed header; save CTA inside viewport on opening and end",
+      "sem intervalo keeps stored meal choices passively; explicit Nenhum saves []; Todos dispon\u00edveis saves only entry/exit",
+      "dispensa/removal blocked during reminder save; reload deferred until completion",
+      "logout clears drafts",
+      "ENTRADA_SAIDA global default previews two marks, not four, and explicit null restore persists"
+    ],
+    "errors": [],
+    "saveCalls": [
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_ana",
+          "marcacoes": [
+            "ENTRADA",
+            "SAIDA"
+          ]
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_ana",
+          "marcacoes": null
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_beto",
+          "marcacoes": []
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_beto",
+          "marcacoes": [
+            "ENTRADA",
+            "SAIDA"
+          ]
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_ana",
+          "marcacoes": null
+        }
+      }
+    ],
+    "theme": "UI_Estilos.html",
+    "entry": "Ponto_render_",
+    "screenshots": [
+      "desktop-lista",
+      "desktop-editor",
+      "390-editor",
+      "390-lista",
+      "320-editor",
+      "320-lista"
+    ]
+  },
+  "monthBrowser": {
+    "passed": true,
+    "synthetic": true,
+    "checks": [
+      "4 unconfirmed notices retained",
+      "0 explicit forget declarations",
+      "no false escalation badge",
+      "320/390 no overflow",
+      "history unchanged",
+      "zero JS errors"
+    ]
+  },
+  "typescript": true,
+  "originalNativeFailurePreserved": true,
+  "nativeAcceptance": "native-acceptance-result.json; independent PK comparison plus previously unstarted rollback phase"
+}

@@ -33,3 +33,6 @@ Stage: /opt/metrolabs/qa/sgo-ponto-mobile-20261104. Novo snapshot SQL restaurado
 Manter o arquivo base anterior, o dump novo, delta, manifestos, app-anterior e imagens de rollback. O stage novo sozinho não substitui o arquivo base. O PG de QA está parado; o diretório nativo de ensaio foi mantido. Somente quatro contêineres próprios de QA já parados foram retirados, preservando os 36 em execução. Cerca de 30 GB livres ao encerrar.
 
 Provas brutas e SHA256 em docs/evidencias_ponto_mobile_20261104/index.json. A publicação foi única e confirmada; não repetir publicação, ensaios ou limpeza já encerrados. Os controladores têm namespace e guardas próprios. Para reproduzir o navegador local: node tests/ponto_mobile_browser.cjs, usando o Playwright instalado no projeto sgo_servidor.
+
+
+Correção posterior da contagem: publicada separação entre avisos não confirmados e esquecimentos declarados, imagem ee715e6.../rev10ce79e. Layout preservado. Ver PONTO_SEPARACAO_20261104.md; não repetir publicações anteriores.

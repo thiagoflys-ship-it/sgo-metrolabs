@@ -1,0 +1,4 @@
+import pathlib,subprocess,json,hashlib
+p=pathlib.Path('/opt/metrolabs/qa/sgo-ponto-separar-20261104');freeze=json.loads((p/'deployment-freeze.json').read_text());assert hashlib.sha256((p/'codigo.tgz').read_bytes()).hexdigest()==freeze['archiveSha256'];assert not(p/'build-result.json').exists();b=p/'codigo';b.mkdir(mode=0o700);subprocess.run(['tar','-xzf',str(p/'codigo.tgz'),'-C',str(b)],check=True)
+with (p/'build.log').open('w') as f:subprocess.run(['docker','build','--label','org.opencontainers.image.revision='+freeze['revision'],'-t','metrolabs/sgo:ponto-separar-10ce79ebdcb4',str(b)],check=True,stdout=f,stderr=subprocess.STDOUT)
+x=json.loads(subprocess.check_output(['docker','image','inspect','metrolabs/sgo:ponto-separar-10ce79ebdcb4']))[0];r={'passed':True,'image':x['Id'],'revision':x['Config']['Labels']['org.opencontainers.image.revision']};(p/'build-result.json').write_text(json.dumps(r,indent=2));print(json.dumps(r))

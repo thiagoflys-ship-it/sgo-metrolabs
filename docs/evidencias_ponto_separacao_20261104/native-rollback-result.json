@@ -1,0 +1,11 @@
+{
+  "passed": false,
+  "productionChanged": false,
+  "sequence": [
+    {
+      "phase": "old-before",
+      "image": "sha256:0c35261ce54fa812ba0e3a4bf4042c2d2891ca33ef0ee3342c752c7e5a5286a8",
+      "passed": true
+    }
+  ]
+}

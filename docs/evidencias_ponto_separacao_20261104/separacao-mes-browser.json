@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "synthetic": true,
+  "checks": [
+    "4 unconfirmed notices retained",
+    "0 explicit forget declarations",
+    "no false escalation badge",
+    "320/390 no overflow",
+    "history unchanged",
+    "zero JS errors"
+  ]
+}

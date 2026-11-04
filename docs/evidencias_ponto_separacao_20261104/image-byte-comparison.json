@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "oldImage": "sha256:0c35261ce54fa812ba0e3a4bf4042c2d2891ca33ef0ee3342c752c7e5a5286a8",
+  "newImage": "sha256:ee715e61336f3994c665d17cb1de14c21824970fb03131ed6d949c36aa318690",
+  "filesCompared": 901,
+  "changedFiles": [
+    "/app/legado/JS_Ponto.html",
+    "/app/legado/SGO_Ajuda_Ponto.js",
+    "/app/legado/SGO_AssistenteManuais.js",
+    "/app/legado/SGO_Conduta_Qualidade.js",
+    "/app/legado/SGO_Ponto_Api.js",
+    "/app/legado/SGO_Ponto_Rodada.js",
+    "/app/legado/_ORIGEM.json"
+  ],
+  "allUnrelatedCoreCommandModelsBytesPreserved": true
+}
