@@ -333,9 +333,13 @@ function Lic_lerColunas_(aba, colunas) {
   }
 }
 /** Tela Painel: números reais, cada um com a fonte e o destino do clique. */
-function Lic_painel_(eu) {
+function Lic_painel_(eu, d) {
   var t0 = Date.now(), agoraMs = t0, agoraIso = new Date(t0).toISOString(), hoje = Lic_diaSp_(agoraIso);
-  var todas = Lic_ativas_(), ops = {}, etapas = {}, ufs = {}, notas = { ALTA: 0, MEDIA: 0, BAIXA: 0, DESCARTE: 0, TRAVA: 0, SEM: 0 }, k = { andamento: 0, descartadasRegra: 0, descartadasPessoa: 0, travadas: 0, travasAConfirmar: 0, comNota: 0, situacaoDesconhecida: 0 }, iaOp = { CONCLUIDA: 0, RECUSADA: 0, ERRO: 0 };
+  // 03/11/2026, filtro do ramo: tipo de serviço (triagem confirmada pela análise); com o filtro, todos os números contam só esse tipo
+  var lidas = Lic_ativas_(), tipoF = Lic_s_((d || {}).tipo), tiposN = {}, tipoDe = function (l) { return typeof Lic_tipoDe_ === 'function' ? Lic_tipoDe_(l).codigo || 'NC' : 'NC'; };
+  try { if (typeof Lic_ramoAcertarIA_ === 'function') Lic_ramoAcertarIA_(lidas); } catch (e) {}
+  lidas.forEach(function (l) { if (Lic_s_(l.SITUACAO) !== 'DESCARTADA') { var t = tipoDe(l); tiposN[t] = (tiposN[t] || 0) + 1; } });
+  var todas = tipoF ? lidas.filter(function (l) { return tipoDe(l) === tipoF; }) : lidas, ops = {}, etapas = {}, ufs = {}, notas = { ALTA: 0, MEDIA: 0, BAIXA: 0, DESCARTE: 0, TRAVA: 0, SEM: 0 }, k = { andamento: 0, descartadasRegra: 0, descartadasPessoa: 0, travadas: 0, travasAConfirmar: 0, comNota: 0, situacaoDesconhecida: 0 }, iaOp = { CONCLUIDA: 0, RECUSADA: 0, ERRO: 0 };
   LIC_KANBAN_COLUNAS.forEach(function (c) { etapas[c.codigo] = 0; });
   todas.forEach(function (l) {
     ops[Lic_s_(l.ID)] = l;
@@ -406,6 +410,8 @@ function Lic_painel_(eu) {
   var linhasOp = todas.length;
   return {
     hoje: hoje, geradoEm: agoraIso, ms: Date.now() - t0,
+    tipos: { filtro: tipoF, itens: (typeof LIC_TIPOS_SERVICO !== 'undefined' ? LIC_TIPOS_SERVICO : []).concat([['NC', 'Não classificado']]).map(function (t) { return { codigo: t[0], nome: t[1], n: tiposN[t[0]] || 0 }; }),
+      fonte: 'LIC_OPORTUNIDADES, colunas TIPO_SERVICO_TRIAGEM (pela triagem do servidor) e TIPO_SERVICO_IA (pela última análise concluída: itens com grau alto ou médio e o código do catálogo; vence a da triagem), das ' + lidas.filter(function (l) { return Lic_s_(l.SITUACAO) !== 'DESCARTADA'; }).length + ' em andamento (sem as descartadas). "Não classificado" = triagem anterior às regras de 03/11/2026 e ainda sem análise.' },
     etapas: { itens: LIC_KANBAN_COLUNAS.map(function (c) { return { codigo: c.codigo, nome: c.nome, n: etapas[c.codigo], futura: !!c.futura }; }), andamento: k.andamento, travadas: k.travadas, descartadasRegra: k.descartadasRegra, descartadasPessoa: k.descartadasPessoa, situacaoDesconhecida: k.situacaoDesconhecida,
       fonte: 'LIC_OPORTUNIDADES, coluna SITUACAO (' + linhasOp + ' oportunidades lidas). Decisão = descartadas pela Diretoria; as descartadas só pela regra ficam fora do Kanban.' },
     ufs: { itens: listaUf, total: k.andamento, fonte: 'LIC_OPORTUNIDADES, coluna UF, das ' + k.andamento + ' em andamento (sem as descartadas). Prioridade da pontuação: GO e DF, vizinhos (MG, BA, TO, MT, MS) e RJ (decisão do dono, 01/11/2026).' },

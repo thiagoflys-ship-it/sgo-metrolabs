@@ -65,7 +65,9 @@ var SGO_AJUDA_NOMES = {
   // 03/11/2026: pareceres por área e alçadas de decisão (SGO_Ajuda_LicitacoesPareceres.js)
   licitacoes_pareceres: 'Meus pareceres (Licitações)',
   // 03/11/2026: fornecedores, concorrentes e inteligência de mercado (SGO_Ajuda_LicitacoesMercado.js)
-  licitacoes_mercado: 'Inteligência de mercado (Licitações)'
+  licitacoes_mercado: 'Inteligência de mercado (Licitações)',
+  // 03/11/2026: filtro do ramo (SGO_Ajuda_Licitacoes.js)
+  licitacoes_ramo: 'Revisar o filtro do ramo (Licitações)'
 };
 
 /**
