@@ -1,0 +1,1 @@
+{"state": "POST_CLEANUP_ID_LOOKUP_FAILURE_RECONCILED", "reason": "docker ps -q gives 12-character IDs; lookup used full64ID", "mutationsNotRepeated": true, "persistedBeforeSnapshotCompared": true}

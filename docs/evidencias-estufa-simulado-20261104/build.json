@@ -1,0 +1,12 @@
+{
+  "state": "EXACT_PARENT_BUILD_AND_NETWORK_NONE_SMOKE_PASS",
+  "imageId": "sha256:1b1bf6fee10bd7d24f3f9ebc9dca98846682997c3028648075f1cfd4c9c25951",
+  "parentImage": "sha256:551da0fc1d41b0a92da3e708009d346eb107fd6fee389ce874a161aca9e41d7a",
+  "pins": {
+    "legado/SGO_EstufaBanhoRel_Simulador.js": "7b66b14fa35bfc103e02e7d58015b3e4c8b83180037a69841e4c11069515da60",
+    "legado/SGO_EstufaBanhoRel_ConteudoModulo.js": "f9ee3b52a641009c93915a5a6fcf4a52e300022baae4eab653d51500eb349b7b"
+  },
+  "productionAppUnchanged": true,
+  "syntheticTests": 20,
+  "nativeDatabaseAcceptanceClaimed": false
+}

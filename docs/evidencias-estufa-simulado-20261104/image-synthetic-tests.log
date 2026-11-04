@@ -1,0 +1,28 @@
+✔ ESTUFA_INCUBACAO: forçar APROVADO passa pelo motor novo, não por troca de parecer (151.488759ms)
+✔ ESTUFA_INCUBACAO: forçar REPROVADO passa pelo motor novo, não por troca de parecer (62.254949ms)
+✔ BANHO_MARIA: forçar APROVADO passa pelo motor novo, não por troca de parecer (60.019603ms)
+✔ BANHO_MARIA: forçar REPROVADO passa pelo motor novo, não por troca de parecer (63.805684ms)
+✔ SECADORA_TRAQUEIAS: forçar APROVADO passa pelo motor novo, não por troca de parecer (43.805864ms)
+✔ SECADORA_TRAQUEIAS: forçar REPROVADO passa pelo motor novo, não por troca de parecer (51.291047ms)
+✔ ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO: forçar APROVADO passa pelo motor novo, não por troca de parecer (60.383771ms)
+✔ ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO: forçar REPROVADO passa pelo motor novo, não por troca de parecer (50.907078ms)
+✔ prévia e documento: mesmos dados sem cache, inclusive por sensor (1995.263305ms)
+✔ cache/fingerprint muda com critérios, perfil, repetições e resultado (8.278979ms)
+✔ ABERTURA_PORTA: APROVADO com tempo-alvo no motor novo (68.836852ms)
+✔ ABERTURA_PORTA: REPROVADO com tempo-alvo no motor novo (72.575843ms)
+✔ QUEDA_ENERGIA: APROVADO com tempo-alvo no motor novo (65.087445ms)
+✔ QUEDA_ENERGIA: REPROVADO com tempo-alvo no motor novo (72.267448ms)
+✔ despirogenização FD: APROVADO, sem inventar resultado de laboratório (35.369097ms)
+✔ despirogenização FD: REPROVADO, sem inventar resultado de laboratório (38.091487ms)
+✔ Forçar aprovado nunca altera o resultado não conforme do laboratório (46.647173ms)
+✔ falhas de entrada dizem como corrigir, sem inventar aprovação nem recortar dados (9.845669ms)
+✔ períodos sobrepostos de resultados contraditórios são recusados (6.288691ms)
+✔ o modo real ignora a escolha de simulação e continua reprovando leitura fora da faixa (228.122072ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3287.394572

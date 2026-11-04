@@ -1,0 +1,17 @@
+{
+  "state": "NETWORK_RETIRED_INDEPENDENT_LIMITED_AUDIT",
+  "originalHelperFailedAfterRemoval": true,
+  "failedCheck": "Whole network-settings dictionary equality for another container; original in-memory before snapshot not retained",
+  "doNotClaimGlobalNetworkOrFilesystemEquality": true,
+  "removedNetworkId": "5ef05478a1f723cfd9fd246f659a8eb188aa14dfe1893476b07d58c687351098",
+  "retainedQaContainerId": "7479531a978cb7a006a9237f889535c8b8d912f5544cc60d6dce8be6c8f3e675",
+  "retainedVolume": "13704c2681d1029ff26ebce50dbf157c1959c1c0e66d384528f7bce2151113c0",
+  "verifiedProductionContainerIds": {
+    "sgo-app-1": "8e221ef5330df0be4f8bba0aaebb0f0134af543c07298409c5f3aa67f2e8733e",
+    "sgo-db-1": "f96c5a43ac028fd9616053ecb0d6aae1b8c232de3f3e7f4d153760435f126ec8",
+    "rh-app-1": "5d900c25b0d8f60fc181180d64f1ecbc2755e62b6bc4c7636b97b9caf4dc5b1f",
+    "rh-db-1": "045eaad80f313ca9e32c7d4c0194f7cd6bcae96173ae5ab5b3cbeafcc9875806"
+  },
+  "backupSha256": "5abe591174d6ea8f97a672837efdd6d70561f490f8120e59a5d67d202268bcac",
+  "productionContainersStillRunning": true
+}

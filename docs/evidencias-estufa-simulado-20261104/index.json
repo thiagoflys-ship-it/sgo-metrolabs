@@ -1,0 +1,97 @@
+{
+  "state": "DELIVERED",
+  "files": {
+    ".gitattributes": {
+      "sha256": "8b9c3028d6467ff3be7c793141927841d70f47f52d0590677438f488ca154992",
+      "bytes": 9
+    },
+    "browser.json": {
+      "sha256": "96133c0d1bb40939df2ea18dfbd20f6feb5f3ba3305b9237467e15486bb1ace8",
+      "bytes": 3766
+    },
+    "build.json": {
+      "sha256": "edfec82045a47fe5f2ec7c08191ed703e1cf33b7bfe373cbe12512dcd3a59dde",
+      "bytes": 594
+    },
+    "completed-compras-network-retirement.json": {
+      "sha256": "a3237c4fc8ee3a5a33cde01dcb03f8e9ec9ab02e5a07928c1383db41ea7b15d8",
+      "bytes": 1072
+    },
+    "delivery.json": {
+      "sha256": "8e2e7353890a8af71dd23ec12e5d194e0b8968380f605d79b1d9cb35a9b2ea46",
+      "bytes": 1825
+    },
+    "ESTUFA_SIMULADO_RELEASE.json": {
+      "sha256": "ac6f3627109f37272d38cdd3ea5c0708331bc9cdea902f993f6a47bfff50e341",
+      "bytes": 514
+    },
+    "finalizer-original-failure.json": {
+      "sha256": "b0e7e19421c7ce39bea8b86a699f8e11512b708094ca6d945ca8468ecddc6263",
+      "bytes": 196
+    },
+    "image-document-tests.log": {
+      "sha256": "6dc842e5c7132fd12e91e68673a7ef6ba3f87079bc62e4a2ad62fdb2a7d7cecb",
+      "bytes": 226
+    },
+    "image-synthetic-tests.log": {
+      "sha256": "71e52e294f9158fdfae11560642966105e3f3d1563a55449b56b2a56613642d8",
+      "bytes": 2000
+    },
+    "native-consistent-backup-result.json": {
+      "sha256": "a62b26a4f36aad29cf5bf46209ca7cc0f276422573c902388ff619b7f8be17ba",
+      "bytes": 457
+    },
+    "native-final-backup-result.json": {
+      "sha256": "315b6eeb6f3d0589a0b095308986817f2b7d3a5a54a17f883481b0da11e430a3",
+      "bytes": 457
+    },
+    "preparation-failure.json": {
+      "sha256": "888f024f8aea72cc6b8ea03131cf7e5364cc0308e074bd8df0dc66c37f6839e5",
+      "bytes": 233
+    },
+    "publication.json": {
+      "sha256": "82e9a8fce09b537718922ae16147066b9f81682f83e8e5a4134c0e92117a1951",
+      "bytes": 1342
+    },
+    "smoke.json": {
+      "sha256": "9e08e6009787e3a4a16802be344856b3facdbfc76faf1a61ffd993d094c1b657",
+      "bytes": 96
+    },
+    "source-tests.log": {
+      "sha256": "bac071ede3d14c56c7c9e8e7aaac1fc2d2a7f98b86e5e3ab58ca907ab4f39dc5",
+      "bytes": 239339
+    },
+    "ui-1280-BANHO_MARIA.png": {
+      "sha256": "2f441094bbe40c8c1eddd6770b49831fd4a25d98af642bd4581defbd85c916f7",
+      "bytes": 61489
+    },
+    "ui-1280-ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO.png": {
+      "sha256": "53a375aae739b88ec42fd5464c4503b4a61e264e3639735514a5cd1beae49a80",
+      "bytes": 62323
+    },
+    "ui-1280-ESTUFA_INCUBACAO.png": {
+      "sha256": "1da859e23472b4e82e9e02732a7be4bef227b5da4e2b7a82a5eca91dfe620367",
+      "bytes": 61462
+    },
+    "ui-1280-SECADORA_TRAQUEIAS.png": {
+      "sha256": "16ad38ac52077cb54e182479243fc9684b88efa48b7dd07412cd4cef76a23564",
+      "bytes": 61481
+    },
+    "ui-390-BANHO_MARIA.png": {
+      "sha256": "c350cb06cb1a2fbbef0a56256b9d9dd7b6fb6e395fb9efd118677f1852ca11b0",
+      "bytes": 36856
+    },
+    "ui-390-ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO.png": {
+      "sha256": "6b906951d84390f03d9fa4e7be95b4915d7a195f8f2f3b8bbaa8bbac44cdb8d0",
+      "bytes": 38126
+    },
+    "ui-390-ESTUFA_INCUBACAO.png": {
+      "sha256": "1356f0378fceca6bba81942eaaf4fcc8d73a3b2daf15df01735bf42adf9dd654",
+      "bytes": 36866
+    },
+    "ui-390-SECADORA_TRAQUEIAS.png": {
+      "sha256": "a8a90b21425236caebf0dac97b4ea26c8997f3e6275b168105236ff698567f9f",
+      "bytes": 36855
+    }
+  }
+}

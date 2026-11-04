@@ -1,0 +1,37 @@
+{
+  "state": "DELIVERED_ESTUFA_SIMULATED_OUTCOMES",
+  "imageId": "sha256:1b1bf6fee10bd7d24f3f9ebc9dca98846682997c3028648075f1cfd4c9c25951",
+  "appId": "7874d296a523e0639157f1b74119e1bed7a396621252584a4a03870750f97b94",
+  "parentImage": "sha256:551da0fc1d41b0a92da3e708009d346eb107fd6fee389ce874a161aca9e41d7a",
+  "pins": {
+    "legado/SGO_EstufaBanhoRel_Simulador.js": "7b66b14fa35bfc103e02e7d58015b3e4c8b83180037a69841e4c11069515da60",
+    "legado/SGO_EstufaBanhoRel_ConteudoModulo.js": "f9ee3b52a641009c93915a5a6fcf4a52e300022baae4eab653d51500eb349b7b"
+  },
+  "regressionTestsPassed": 1713,
+  "specificSyntheticTestsPassed": 20,
+  "additionalDocumentWorkflowTestPassed": true,
+  "documentScenarios": 8,
+  "browserSyntheticCases": 16,
+  "browserJavaScriptErrors": 0,
+  "backupFinalRestored": {
+    "state": "CONSISTENT_SNAPSHOT_BACKUP_RESTORED_PASS",
+    "tables": 30,
+    "snapshotExportedReadOnly": true,
+    "allTablesComparedRowByRowSerialization": true,
+    "constantMemoryHashing": true,
+    "sourceUninterrupted": true,
+    "sourceImage": "sha256:1b1bf6fee10bd7d24f3f9ebc9dca98846682997c3028648075f1cfd4c9c25951",
+    "filesystemRestoreClaimed": false,
+    "databaseOwnerAclRestoreClaimed": false,
+    "dumpSha256": "0d8a88e0cf47d6fbab894d66327637beef189c467c10f1615ad8d1ee75bb5af4"
+  },
+  "rollbackImageRetained": "sha256:551da0fc1d41b0a92da3e708009d346eb107fd6fee389ce874a161aca9e41d7a",
+  "codeRollbackExecuted": false,
+  "qaContainerStopped": true,
+  "qaNetworkRemoved": "5d3360d73732e92f684eba93a3d17d15ad09b534a270faf2fc21bf94eaf6ab3d",
+  "qaVolumeRetained": "774a3d7e6ab010538f47068840d98abb8fe7d735cd3e8289ac46b2beb9e0750e",
+  "stableInventoryComparisonPassed": true,
+  "noMigrationOrGrantOrProductionSimulations": true,
+  "finalBackupPending": false,
+  "cleanupPreviousTaskVerificationLimitPreserved": true
+}

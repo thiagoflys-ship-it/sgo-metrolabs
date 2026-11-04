@@ -1,0 +1,11 @@
+{
+  "scope": "Estufa/Banho-maria synthetic simulation only",
+  "baseImage": "sha256:551da0fc1d41b0a92da3e708009d346eb107fd6fee389ce874a161aca9e41d7a",
+  "sourcePins": {
+    "legado/SGO_EstufaBanhoRel_Simulador.js": "7b66b14fa35bfc103e02e7d58015b3e4c8b83180037a69841e4c11069515da60",
+    "legado/SGO_EstufaBanhoRel_ConteudoModulo.js": "f9ee3b52a641009c93915a5a6fcf4a52e300022baae4eab653d51500eb349b7b"
+  },
+  "runtimeFilesChanged": 2,
+  "realEvaluatorChanged": false,
+  "autoclaveLavadoraChanged": false
+}

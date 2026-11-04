@@ -1,0 +1,34 @@
+{
+  "state": "PUBLISHED_HEALTH_AND_PINS_CONFIRMED",
+  "imageId": "sha256:1b1bf6fee10bd7d24f3f9ebc9dca98846682997c3028648075f1cfd4c9c25951",
+  "parentImage": "sha256:551da0fc1d41b0a92da3e708009d346eb107fd6fee389ce874a161aca9e41d7a",
+  "runtimeFilesChanged": 2,
+  "migration": false,
+  "rollbackImageRetained": "sha256:551da0fc1d41b0a92da3e708009d346eb107fd6fee389ce874a161aca9e41d7a",
+  "backupRestored": {
+    "state": "CONSISTENT_SNAPSHOT_BACKUP_RESTORED_PASS",
+    "tables": 30,
+    "snapshotExportedReadOnly": true,
+    "allTablesComparedRowByRowSerialization": true,
+    "constantMemoryHashing": true,
+    "sourceUninterrupted": true,
+    "sourceImage": "sha256:551da0fc1d41b0a92da3e708009d346eb107fd6fee389ce874a161aca9e41d7a",
+    "filesystemRestoreClaimed": false,
+    "databaseOwnerAclRestoreClaimed": false,
+    "dumpSha256": "a1edf708e32df6ad422b17d044eb09526cf61837ceb5d110c7bb6e05a62a8a45"
+  },
+  "finalBackupPending": true,
+  "appId": "7874d296a523e0639157f1b74119e1bed7a396621252584a4a03870750f97b94",
+  "public": {
+    "sgo": 200,
+    "command": 200,
+    "rh": 200
+  },
+  "environmentMountsNetworksUnchanged": true,
+  "otherSystemIdsImagesPidsMountsUnchanged": true,
+  "realEvaluatorChanged": false,
+  "qaSyntheticTests": 20,
+  "sourceRegression": 1713,
+  "browserSyntheticCases": 16,
+  "productionSimulationsExecuted": false
+}

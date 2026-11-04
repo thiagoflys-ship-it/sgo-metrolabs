@@ -1,0 +1,153 @@
+{
+  "state": "SYNTHETIC_UI_AND_REAL_ANALYSIS_PASS",
+  "cases": [
+    {
+      "width": 390,
+      "perfil": "ESTUFA_INCUBACAO",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 390,
+      "perfil": "ESTUFA_INCUBACAO",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    },
+    {
+      "width": 390,
+      "perfil": "BANHO_MARIA",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 390,
+      "perfil": "BANHO_MARIA",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    },
+    {
+      "width": 390,
+      "perfil": "SECADORA_TRAQUEIAS",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 390,
+      "perfil": "SECADORA_TRAQUEIAS",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    },
+    {
+      "width": 390,
+      "perfil": "ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 390,
+      "perfil": "ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "ESTUFA_INCUBACAO",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "ESTUFA_INCUBACAO",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "BANHO_MARIA",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "BANHO_MARIA",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "SECADORA_TRAQUEIAS",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "SECADORA_TRAQUEIAS",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO",
+      "resultado": "APROVADO",
+      "status": "APROVADO",
+      "bloqueado": false,
+      "choice": "APROVADO",
+      "penetracao": "APROVADO"
+    },
+    {
+      "width": 1280,
+      "perfil": "ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO",
+      "resultado": "REPROVADO",
+      "status": "REPROVADO",
+      "bloqueado": false,
+      "choice": "REPROVADO",
+      "penetracao": "REPROVADO"
+    }
+  ],
+  "errors": [],
+  "backend": "legacy dispatch, synthetic in-memory compatibility services; no production connection",
+  "liveProviderCalls": false,
+  "realUsersChanged": false
+}

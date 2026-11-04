@@ -68,3 +68,12 @@ test('o modo real ignora a escolha de simulação e continua reprovando leitura 
  const r=e.fn('EstufaQ_montarContexto_')(p);assert.equal(r.simulado,false);assert.equal(r.statusConsolidado,'REPROVADO');
 });
 
+
+test('documentos simulados: prévia, relatório e planilha mantêm o resultado nos quatro perfis',()=>{
+ for(const perfil of perfis)for(const resultado of ['APROVADO','REPROVADO']) {
+  const e=ambiente(),p=payload(perfil,resultado);p.certNumero='SIM-TESTE';p.responsavelTecnico='Técnico sintético';
+  const r=e.estufa('adm','apiQGerarRascunho',JSON.parse(JSON.stringify(p)));assert.equal(r.bloqueado,false,JSON.stringify(r.travas));assert.equal(r.contexto.statusConsolidado,resultado);
+  const em=e.estufa('adm','apiQEmitir',Object.assign({},JSON.parse(JSON.stringify(p)),{assinaturaContexto:r.assinaturaContexto,textosCertificado:r.textos}));assert.equal(em.resultado,resultado,perfil);
+  const plan=e.estufa('adm','apiGerarPlanilhaDados',JSON.parse(JSON.stringify(p)));assert.equal(plan.statusAprovacao,resultado,perfil);assert.match(plan.html,/RECONSTITU|SIMULAD|RELATÓRIO INTERNO/i);
+ }
+});
