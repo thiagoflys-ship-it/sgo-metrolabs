@@ -435,3 +435,10 @@ test('revisão (tela): o aviso recua e volta sozinho (nunca para de vez) e tem c
   assert.match(bloco, /RepAl_celular_\(\) && !REPAL\.aberto \? 2/); assert.match(bloco, /"mais " \+ escondidos/);
   assert.match(js, /Excluídos do catálogo/);
 });
+
+test('03/11/2026: botão "mais N / recolher os avisos" só aparece no celular com mais de 2 avisos (a classe do botão passava por cima do hidden)', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const t = fs.readFileSync(path.join(__dirname, '..', 'apps-script-imports', 'portal_sgo_versao_cnpj_db', 'JS_Representacao.html'), 'utf8');
+  assert.ok(/mais\.style\.display = "none"/.test(t), 'nasce escondido pelo estilo, não só pelo hidden');
+  assert.ok(/mais\.style\.display = mostrar \? "" : "none"/.test(t), 'mostrado ou escondido pelo estilo a cada conferência');
+});
