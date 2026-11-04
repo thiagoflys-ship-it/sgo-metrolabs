@@ -40,3 +40,6 @@ Provas imutáveis em docs/evidencias_ponto_20261104 com índiceSHA. Backupverifi
 
 
 Fechamento: qa-retirement-result.json PASS,4QAapps próprias paradas retiradas,FSrestaurado próprio removido após SHA integral reverificado,10.58GB liberados,31.14GB livres. Banco.dump/dados.tgz/app-anterior/imagens e PGQAparado preservados. Todos36running IDs/imagens/PIDs inalterados durante limpeza. Nenhuma operação remota pendente; não repetir publicação/limpeza.
+
+
+Atualização visual posterior: publicado redesignmobile imagem0c35261.../rev689ee68 após revisãoespecialista+designer+desenvolvedor. Regras/seleções/jornadas preservadas. Estadoatual e provas em docs/PONTO_REDESIGN_MOBILE_20261104.md e docs/evidencias_ponto_mobile_20261104. Não repetir publicação anterior.

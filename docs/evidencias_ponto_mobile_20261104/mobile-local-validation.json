@@ -1,0 +1,90 @@
+{
+  "passed": true,
+  "scope": "UI-only; backend/permissons unchanged",
+  "sourceCommit": "a3f8f7fb9447d5eaee7ff66ce2e3e2420fef3db6",
+  "runtimeCommit": "689ee689d504ed164b72c6d1c51036d517d1dd62",
+  "uiSha256": "cea4e7b3e56c7df971e03b9c26f06c58428d6197b812e0c8d153ac6e8bfd377a",
+  "targetedTestsPassed": 32,
+  "targetedTestsFailed": 0,
+  "browser": {
+    "ok": true,
+    "synthetic": true,
+    "checks": [
+      "full Ponto_render with global theme; compact nine-person list; dispensas collapsed",
+      "individual save persisted; other person unchanged",
+      "draft survives back, search, another person and reopening",
+      "cancel restores saved choice; clean save disabled; focus restored after save/cancel",
+      "presets do not save; pending request locks form; failed save retains draft",
+      "default previews current four marks; saves only after explicit save with null",
+      "390 and 320 no horizontal overflow; full-themed screenshots captured",
+      "refresh render retains in-memory draft",
+      "mobile390/320 name below fixed header; save CTA inside viewport on opening and end",
+      "sem intervalo keeps stored meal choices passively; explicit Nenhum saves []; Todos dispon\u00edveis saves only entry/exit",
+      "dispensa/removal blocked during reminder save; reload deferred until completion",
+      "logout clears drafts",
+      "ENTRADA_SAIDA global default previews two marks, not four, and explicit null restore persists"
+    ],
+    "errors": [],
+    "saveCalls": [
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_ana",
+          "marcacoes": [
+            "ENTRADA",
+            "SAIDA"
+          ]
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_ana",
+          "marcacoes": null
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_beto",
+          "marcacoes": []
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_beto",
+          "marcacoes": [
+            "ENTRADA",
+            "SAIDA"
+          ]
+        }
+      },
+      {
+        "acao": "salvarLembretes",
+        "d": {
+          "usuarioId": "u_ana",
+          "marcacoes": null
+        }
+      }
+    ],
+    "theme": "UI_Estilos.html",
+    "entry": "Ponto_render_",
+    "screenshots": [
+      "desktop-lista",
+      "desktop-editor",
+      "390-editor",
+      "390-lista",
+      "320-editor",
+      "320-lista"
+    ]
+  },
+  "typescriptNoEmit": true,
+  "functionalReview": "accepted by especialista_ponto",
+  "visualReview": "accepted by designer_ponto desktop/320/390 open/end viewport",
+  "limits": [
+    "Late response after logout checked statically; runtime checks clearing drafts",
+    "No claim of complete screen-reader audit",
+    "Prior verified full filesystem restore not repeated; fresh SQL restore plus base/delta verification"
+  ]
+}

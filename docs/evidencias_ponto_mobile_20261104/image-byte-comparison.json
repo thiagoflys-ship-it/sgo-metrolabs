@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "oldImage": "sha256:fa1e066352d2d6f70ba966f0e1290eae094e41e2572512555fc6bdb5eb8c7169",
+  "newImage": "sha256:0c35261ce54fa812ba0e3a4bf4042c2d2891ca33ef0ee3342c752c7e5a5286a8",
+  "filesCompared": 901,
+  "changedFiles": [
+    "/app/legado/JS_Ponto.html",
+    "/app/legado/_ORIGEM.json"
+  ],
+  "allBackendCoreCommandModelsBytesPreserved": true
+}

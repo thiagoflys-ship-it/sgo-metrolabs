@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "productionChanged": false,
+  "scope": "UI-only; fresh SQL snapshot restored; prior verified full FS backup retained",
+  "snapshot": "00000006-0006F368-1",
+  "tables": 30,
+  "filesystemEntries": 29433,
+  "regularFiles": 29362,
+  "dumpSha256": "487469f2aec4efa852e986f2cc7865f57accede874d3d84c2ab5b7ad068806da",
+  "filesystemRestoreRepeated": false,
+  "priorVerifiedFilesystemArchive": "/opt/metrolabs/qa/sgo-ponto-avisos-20261104/backup-verificado/dados.tgz",
+  "priorVerifiedFilesystemSha256": "9eefb2c698790897bb5251ca0e837ae8e1dfa0f13a77bd17930e34c6bbbadfa8",
+  "currentFilesystemManifestSha256": "5b225a2e7ab0fb8fcf2fa421987b55edb28c60990185308fd28fe69b623fec33",
+  "restoreContainer": "sgo-ponto-mobile-restore-20261104",
+  "existingRunningContainersPreserved": 36
+}

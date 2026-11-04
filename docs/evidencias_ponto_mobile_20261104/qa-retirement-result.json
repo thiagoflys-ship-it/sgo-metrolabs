@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "retiredStoppedOwnContainers": [
+    "3ea8f23bf7b86ebb953f5522dcaa59935158f7a5fe62eec80aaea8c770668293",
+    "f9611479142967c834beaf32ba0c285e7600240f79d1606f326068dce3ae925a",
+    "82a691a50524379ebab01d428f30f3a894a8938910b13114f3885160f8af9cff",
+    "0625e39d54e7b3b30b87d79f062c60b2a3bca4c62dceb2c84dc62a58d4e77a57"
+  ],
+  "runningPreserved": 36,
+  "qaDatabaseStoppedRetained": true,
+  "nativeScratchAndBackupsRetained": true,
+  "bytesFree": 29796708352
+}

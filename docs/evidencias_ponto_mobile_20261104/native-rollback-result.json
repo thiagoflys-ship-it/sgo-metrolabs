@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "productionChanged": false,
+  "sequence": [
+    {
+      "phase": "old-before",
+      "image": "sha256:fa1e066352d2d6f70ba966f0e1290eae094e41e2572512555fc6bdb5eb8c7169",
+      "passed": true
+    },
+    {
+      "phase": "candidate",
+      "image": "sha256:0c35261ce54fa812ba0e3a4bf4042c2d2891ca33ef0ee3342c752c7e5a5286a8",
+      "passed": true
+    },
+    {
+      "phase": "old-rollback",
+      "image": "sha256:fa1e066352d2d6f70ba966f0e1290eae094e41e2572512555fc6bdb5eb8c7169",
+      "passed": true
+    }
+  ],
+  "personSettingsPreservedAcrossRollback": true,
+  "filesystemScope": "fresh isolated scratch; no new full FS restore",
+  "notificationsSent": 0
+}

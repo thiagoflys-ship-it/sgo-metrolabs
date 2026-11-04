@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "publicHealth": {
+    "ok": true,
+    "sistema": "sgo",
+    "workers": 6,
+    "arquivos": 367
+  },
+  "publicUiMarkers": {
+    "pt-pessoas-layout": true,
+    "Ponto_salvarAvisosEditor_": true,
+    "pt-aviso-rodape": true
+  }
+}

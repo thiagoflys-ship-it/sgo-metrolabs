@@ -1,0 +1,27 @@
+{
+  "originalFailuresPreservedInSession": [
+    {
+      "phase": "pending-RPC harness assertion",
+      "original": "Playwright locator.isDisabled(fieldset) returned false although DOM fieldset.disabled=true; debug confirmed true and actual inputs disabled.",
+      "correction": "assert disabled attribute for fieldset and isDisabled on actual navigation control; test now passes."
+    },
+    {
+      "phase": "mobile viewport CTA",
+      "original": {
+        "nameTop": 168,
+        "headerBottom": 53,
+        "saveTop": 925.390625,
+        "saveBottom": 969.390625,
+        "viewportHeight": 844
+      },
+      "correction": "theme content ancestor overflow defeated sticky; mobile footer fixed to viewport with reserved editor space. 320/390 open/end rect asserts pass."
+    },
+    {
+      "phase": "independent visual review",
+      "original": "Global checkbox width16px/backgroundwhite hid switch on/off; mobile fixed header overlapped name on scrollIntoView.",
+      "correction": "separate visual track + real accessible checkbox; scroll-margin-top76px; designer reviewed final four viewport PNG PASS."
+    }
+  ],
+  "notProductionFailures": true,
+  "notTestsReplayedToClaimOriginalPass": true
+}

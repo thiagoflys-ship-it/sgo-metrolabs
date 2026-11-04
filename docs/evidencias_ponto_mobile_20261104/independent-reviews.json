@@ -1,0 +1,26 @@
+{
+  "sourceCommit": "a3f8f7fb9447d5eaee7ff66ce2e3e2420fef3db6",
+  "functional": {
+    "reviewer": "especialista_ponto",
+    "decision": "ACCEPTED",
+    "scope": "presets/default2/4, drafts, save failures/guards, sem intervalo, user context/logout",
+    "limit": "late async logout callback checked statically, not runtime"
+  },
+  "design": {
+    "reviewer": "designer_ponto",
+    "decision": "ACCEPTED",
+    "viewports": [
+      "desktop",
+      "320 open/end",
+      "390 open/end"
+    ],
+    "scope": "contrast, header/name no overlap, Save CTA visible, focus restoration; compact list/editor",
+    "limit": "not a complete screen-reader audit"
+  },
+  "developer": {
+    "reviewer": "desenvolvedor_ponto",
+    "decision": "FROZEN",
+    "browserChecksPassed": 13,
+    "pointRoleTestsPassed": 32
+  }
+}
