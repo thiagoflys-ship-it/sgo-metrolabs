@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "retiredStoppedOwnContainers": [
+    "1f3a2b41558a97706e38dd50fc30da8cd5291478efdf68ba593301b1373e13f9",
+    "baa4112e9273ba572d354d958601093b9bd7464d29c0405d6ccd6bdd0cc27c26",
+    "f0c1ecf28976ab8984e8850a2ffe83f35ff2abb7f6270a352bee8cc56a09cc3f",
+    "bd2f56d533b62e2327c50efe260f7180edfd52bff832b516c68610e29d08768a"
+  ],
+  "retiredPath": "/opt/metrolabs/qa/sgo-ponto-avisos-20261104/backup-verificado/fs-restaurado",
+  "fullVerifiedArchiveAndDumpRetained": true,
+  "runningPreserved": 36,
+  "bytesReleased": 10584682496,
+  "bytesFree": 31138025472
+}

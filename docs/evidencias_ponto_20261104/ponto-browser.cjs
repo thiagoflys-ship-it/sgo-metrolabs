@@ -1,0 +1,30 @@
+const fs=require('fs'),assert=require('node:assert/strict');
+const {chromium}=require('C:/Users/venda/projetos/sgo_servidor/node_modules/playwright');
+const {ambiente}=require('../tests/_ponto_ambiente.cjs');
+(async()=>{
+const a=ambiente();const browser=await chromium.launch({headless:true});
+try{const page=await browser.newPage({viewport:{width:1280,height:900}});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.exposeFunction('qaApi',(acao,d)=>JSON.parse(JSON.stringify(a.api('s_rita',acao,d))));
+await page.setContent('<div id="ptMsg"></div><main id="qa"></main>'+fs.readFileSync('apps-script-imports/portal_sgo_versao_cnpj_db/JS_Ponto.html','utf8'));
+await page.evaluate(()=>{window.escapeHtml_=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));Pto_chamar_=function(acao,d,ok,erro){qaApi(acao,d).then(r=>r.ok?ok(r):erro(r.message));};Ponto_abaPessoas_(document.getElementById('qa'));});
+await page.getByRole('checkbox',{name:'Saída para almoço — ANA TECNICA TESTE',exact:true}).waitFor();
+await page.getByRole('checkbox',{name:'Saída para almoço — ANA TECNICA TESTE',exact:true}).uncheck();
+await page.getByRole('checkbox',{name:'Retorno do almoço — ANA TECNICA TESTE',exact:true}).uncheck();
+await page.locator('tr').filter({has:page.getByRole('checkbox',{name:'Entrada — ANA TECNICA TESTE',exact:true})}).getByRole('button',{name:'Salvar avisos',exact:true}).click();
+await page.getByText('Avisos salvos.',{exact:false}).waitFor();
+await page.evaluate(()=>Ponto_abaPessoas_(document.getElementById('qa')));
+await page.waitForTimeout(100);
+assert.equal(await page.getByRole('checkbox',{name:'Saída para almoço — ANA TECNICA TESTE',exact:true}).isChecked(),false);
+assert.equal(await page.getByRole('checkbox',{name:'Saída para almoço — BETO TECNICO TESTE',exact:true}).isChecked(),true);
+await page.screenshot({path:'output/ponto-painel-desktop.png',fullPage:true});
+await page.locator('#ptAvisoBusca').fill('BETO');
+assert.equal(await page.getByRole('checkbox',{name:'Entrada — ANA TECNICA TESTE',exact:true}).isVisible(),false);
+await page.locator('#ptAvisoBusca').fill('');
+assert.equal(await page.getByRole('checkbox',{name:'Saída para almoço — ANA TECNICA TESTE',exact:true}).isChecked(),false);
+await page.setViewportSize({width:320,height:844});
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+await page.screenshot({path:'output/ponto-painel-mobile.png',fullPage:true});
+assert.deepEqual(errors,[]);fs.writeFileSync('output/ponto-browser.json',JSON.stringify({ok:true,checks:['separate selections','save persistence','other person unchanged','mobile320 no overflow','search preserves selections','zero JS errors'],synthetic:true},null,2));console.log('Browser PASS');
+}finally{await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "sourceCommit": "579224db8addbe61d94c25a7709580a6c4737059",
+  "runtimeCommit": "aba38552eaa17b4cdc06cd0d770b1dd59e261cb1",
+  "sourceTests": 1682,
+  "sourceFailed": 0,
+  "pointFinalTests": 18,
+  "serverTests": 351,
+  "serverFailed": 0,
+  "browser": {
+    "ok": true,
+    "checks": [
+      "separate selections",
+      "save persistence",
+      "other person unchanged",
+      "mobile320 no overflow",
+      "search preserves selections",
+      "zero JS errors"
+    ],
+    "synthetic": true
+  },
+  "typescript": true
+}

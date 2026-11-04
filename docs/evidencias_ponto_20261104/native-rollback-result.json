@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "productionChanged": false,
+  "sequence": [
+    {
+      "phase": "old-before",
+      "image": "sha256:3eeef084dd35cd7a16470e898477f118b2f908b33411ec35e8f82f25494fc005",
+      "passed": true
+    },
+    {
+      "phase": "candidate",
+      "image": "sha256:fa1e066352d2d6f70ba966f0e1290eae094e41e2572512555fc6bdb5eb8c7169",
+      "passed": true
+    },
+    {
+      "phase": "old-rollback",
+      "image": "sha256:3eeef084dd35cd7a16470e898477f118b2f908b33411ec35e8f82f25494fc005",
+      "passed": true
+    }
+  ]
+}

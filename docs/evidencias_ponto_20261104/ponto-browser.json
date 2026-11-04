@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "checks": [
+    "separate selections",
+    "save persistence",
+    "other person unchanged",
+    "mobile320 no overflow",
+    "search preserves selections",
+    "zero JS errors"
+  ],
+  "synthetic": true
+}

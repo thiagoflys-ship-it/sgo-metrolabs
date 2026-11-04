@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "productionChanged": false,
+  "snapshot": "00000003-003D10DF-1",
+  "tables": 30,
+  "filesystemEntries": 29430,
+  "regularFiles": 29359,
+  "dumpSha256": "93f61f35de1989a2d7812ff9ea5bc126be391ab246bf6f3931e6b0fef99d7500",
+  "filesArchiveSha256": "9eefb2c698790897bb5251ca0e837ae8e1dfa0f13a77bd17930e34c6bbbadfa8",
+  "restoreContainer": "sgo-ponto-restore-20261104",
+  "existingRunningContainersPreserved": 36
+}
