@@ -99,7 +99,7 @@ function Ponto_fechar_(R) {
 function Ponto_lembretesDe_(R, part) {
   var u = part.u, dia = R.p.dia, j = Ponto_jornada_(R.cfg, part.pessoa, dia);
   var inicio = Pto_ms_(dia, j.entrada) - PONTO_ANTES_MIN * 60000, fim = Pto_ms_(dia, j.saida);
-  R.cfg.marcacoes.forEach(function (marc) {
+  Ponto_marcacoesPessoa_(R.cfg, part.pessoa).forEach(function (marc) {
     var k = Ponto_chave_(u.id, dia, marc);
     if (R.M[k]) return;   // já lembrada, confirmada, pedida ao RH ou dispensada: nunca um segundo lembrete
     var hr = Ponto_horario_(marc, dia, j, R.M[Ponto_chave_(u.id, dia, 'ALMOCO')] || null);

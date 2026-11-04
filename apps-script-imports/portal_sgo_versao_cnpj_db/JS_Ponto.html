@@ -281,13 +281,13 @@
   function Ponto_abaPessoas_(alvo) {
     Pto_chamar_("pessoas", {}, function (r) {
       PT.cache.pessoas = r;
-      var h = '<div class="pt-faixa">' + r.aptos + " de " + r.pessoas.length + " colaboradores ativos recebem os lembretes. Só CLT recebe" + (r.piloto.ligado ? "; com o piloto do WhatsApp ligado, só quem está na lista do piloto (Administração > Piloto do WhatsApp)" : "") +
-        ". Jornada geral: " + Pto_esc_(r.jornadaGeral) + '. Campos vazios na jornada da pessoa seguem a geral.</div>';
-      h += '<div class="pt-caixa"><table class="pt-tabela"><thead><tr><th>Colaborador</th><th>Vínculo</th><th>Contato</th><th>Jornada</th><th>Situação</th><th></th></tr></thead><tbody>' +
+      var h = '<div class="pt-faixa"><span id="ptAvisoContagem">' + r.aptos + '</span>' + " de " + r.pessoas.length + " colaboradores ativos recebem os lembretes. Só CLT recebe" + (r.piloto.ligado ? "; com o piloto do WhatsApp ligado, só quem está na lista do piloto (Administração > Piloto do WhatsApp)" : "") +
+        ". Jornada geral: " + Pto_esc_(r.jornadaGeral) + '. Marque os avisos de cada pessoa e toque em Salvar avisos. Para a matriz, você pode desmarcar almoço e retorno; para a filial, mantê-los. Os horários seguem a jornada exibida: entrada e saída avisam 5 minutos antes; almoço na hora e retorno após a pausa. Ajustar permite mudar a jornada. Campos vazios seguem a geral.</div>';
+      h += '<div class="pt-caixa"><div class="pt-campo"><label for="ptAvisoBusca">Buscar pessoa ou área</label><input type="search" id="ptAvisoBusca"></div><table class="pt-tabela" id="ptAvisoTabela"><thead><tr><th>Colaborador</th><th>Vínculo</th><th>Contato</th><th>Jornada</th><th>Situação</th><th>Avisos por pessoa</th><th></th></tr></thead><tbody>' +
         r.pessoas.map(function (p, k) {
           return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(p.nome) + '</b><div class="pt-mini">' + Pto_esc_(p.area) + '</div></td><td data-r="Vínculo">' + Pto_esc_(Pto_vinculo_(p.vinculo, "não informado")) + "</td>" +
             '<td data-r="Contato">' + (p.celular ? "celular " + Pto_esc_(p.celular) : "sem celular") + (p.temEmail ? " · e-mail" : " · sem e-mail") + '</td><td data-r="Jornada">' + Pto_esc_(p.jornada) + (p.observacao ? '<div class="pt-mini">' + Pto_esc_(p.observacao) + "</div>" : "") + "</td>" +
-            '<td data-r="Situação">' + (p.apto ? Pto_selo_("Recebe", "verde") : Pto_selo_("Não recebe", "cinza") + '<div class="pt-mini">' + Pto_esc_(p.foraTexto) + "</div>") + '</td><td><button type="button" class="btn-secondary" onclick="Ponto_editarPessoa_(' + k + ')">Ajustar</button></td></tr>';
+            '<td data-r="Situação" id="ptAvisoSituacao' + k + '">' + (p.apto ? Pto_selo_("Recebe", "verde") : Pto_selo_("Não recebe", "cinza") + '<div class="pt-mini">' + Pto_esc_(p.foraTexto) + "</div>") + '</td><td data-r="Avisos por pessoa">' + Ponto_controlesAvisos_(p, k) + '</td><td><button type="button" class="btn-secondary" onclick="Ponto_editarPessoa_(' + k + ')">Ajustar</button></td></tr>';
         }).join("") + "</tbody></table></div>";
       h += '<div class="pt-caixa"><h3>Folgas e dispensas (não lembrar nestes dias)</h3><p class="pt-mini">Férias e afastamentos lançados no Programa de conduta já valem sozinhos. Aqui o RH lança folga, atestado, consulta ou viagem sem marcação de ponto. Nada é apagado: "Retirar" só marca a dispensa como retirada.</p>' +
         '<div class="pt-grade3"><div class="pt-campo"><label for="ptDsPessoa">Colaborador</label><select id="ptDsPessoa">' + Pto_opcoes_(r.pessoas.map(function (p) { return [p.id, p.nome]; }), "", "Escolha") + "</select></div>" +
@@ -298,12 +298,33 @@
           return '<tr><td data-r="Colaborador">' + Pto_esc_(x.pessoa) + '</td><td data-r="Período">' + Pto_esc_(x.deBr + (x.ateBr !== x.deBr ? " a " + x.ateBr : "")) + '</td><td data-r="Motivo">' + Pto_esc_(x.motivo) + (x.observacao ? '<div class="pt-mini">' + Pto_esc_(x.observacao) + "</div>" : "") + '</td><td><button type="button" class="btn-secondary" onclick="Ponto_removerDispensa_(\'' + Pto_esc_(x.id) + '\')">Retirar</button></td></tr>';
         }).join("") + "</tbody></table>" : "") + "</div>";
       alvo.innerHTML = h;
+      Pto_$_("ptAvisoBusca").oninput = function () { var busca = this.value.toLocaleLowerCase("pt-BR"); Array.prototype.forEach.call(Pto_$_("ptAvisoTabela").querySelectorAll("tbody tr"), function (tr) { tr.hidden = tr.cells[0].textContent.toLocaleLowerCase("pt-BR").indexOf(busca) < 0; }); };
       Pto_$_("ptDsSalvar").onclick = function () {
         var b = this; b.disabled = true;
         Pto_chamar_("salvarDispensa", { usuarioId: Pto_$_("ptDsPessoa").value, de: Pto_$_("ptDsDe").value, ate: Pto_$_("ptDsAte").value, motivo: Pto_$_("ptDsMot").value, observacao: Pto_$_("ptDsObs").value },
           function (x) { Pto_msg_("ptMsg", x.message, "ok"); Ponto_abaPessoas_(alvo); }, function (m) { b.disabled = false; Pto_msg_("ptDsMsg", m); });
       };
     }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div>"; });
+  }
+  function Ponto_controlesAvisos_(p, k) {
+    var tipos = ["ENTRADA", "ALMOCO", "RETORNO", "SAIDA"], nomes = ["Entrada", "Saída para almoço", "Retorno do almoço", "Saída"];
+    return '<div class="pt-mini" id="ptAvisoOrigem' + k + '">' + (p.avisosProprios ? "Escolha individual" : "Segue o padrão geral") + '</div>' + tipos.map(function (m, i) {
+      return '<label class="pt-check" style="min-height:44px"><input type="checkbox" id="ptAviso' + k + m + '"' + (p.marcacoes.indexOf(m) >= 0 ? ' checked' : '') + ' aria-label="' + Pto_esc_(nomes[i] + ' — ' + p.nome) + '"> ' + nomes[i] + ' · ' + Pto_esc_(p.horasAvisos[m]) + (m === 'RETORNO' ? ' (ajusta após confirmar almoço)' : '') + '</label>';
+    }).join("") + '<button type="button" class="btn-primary" onclick="Ponto_salvarAvisos_(' + k + ',this,false)">Salvar avisos</button> <button type="button" class="btn-secondary" onclick="Ponto_salvarAvisos_(' + k + ',this,true)">Usar padrão geral</button><div id="ptAvisosMsg' + k + '" role="status"></div>';
+  }
+  function Ponto_salvarAvisos_(k, botao, padrao) {
+    var p = PT.cache.pessoas.pessoas[k], tipos = ["ENTRADA", "ALMOCO", "RETORNO", "SAIDA"];
+    var selecionados = tipos.filter(function (m) { return Pto_$_("ptAviso" + k + m).checked; });
+    botao.disabled = true;
+    Pto_chamar_("salvarLembretes", { usuarioId: p.id, marcacoes: padrao ? null : selecionados }, function (r) {
+      botao.disabled = false;
+      Pto_msg_("ptAvisosMsg" + k, r.message, "ok");
+      p.marcacoes = r.marcacoes; p.avisosProprios = !padrao; p.apto = r.apto;
+      Pto_$_("ptAvisoOrigem" + k).textContent = padrao ? "Segue o padrão geral" : "Escolha individual";
+      Pto_$_("ptAvisoContagem").textContent = PT.cache.pessoas.pessoas.filter(function (x) { return x.apto; }).length;
+      tipos.forEach(function (m) { Pto_$_("ptAviso" + k + m).checked = r.marcacoes.indexOf(m) >= 0; });
+      Pto_$_("ptAvisoSituacao" + k).innerHTML = r.apto ? Pto_selo_("Recebe", "verde") : Pto_selo_("Não recebe", "cinza") + '<div class="pt-mini">' + Pto_esc_(r.foraTexto) + "</div>";
+    }, function (m) { botao.disabled = false; Pto_msg_("ptAvisosMsg" + k, m); });
   }
   function Ponto_removerDispensa_(id) { if (!confirm("Retirar esta dispensa? Os lembretes voltam para esses dias.")) return; Pto_chamar_("removerDispensa", { id: id }, function (r) { Pto_msg_("ptMsg", r.message, "ok"); Ponto_desenharAba_(); }); }
   function Ponto_editarPessoa_(k) {
@@ -337,7 +358,7 @@
       var c = r.config, j = c.jornada, pr = r.prontidao;
       var h = '<div class="pt-caixa"><h3>Ligar e desligar</h3><label class="pt-check"><input type="checkbox" id="ptCfgLig"' + (c.ligado ? " checked" : "") + "> <b>Assistente ligado</b> (com ele desligado nada sai)</label>" +
         '<p class="pt-mini">Ao ligar, a rotina de 5 minutos é instalada. Com o assistente do SGO+ ligado, o do COMMAND não manda nada (sem mensagem em dobro).' + (pr.piloto.ligado ? " O piloto do WhatsApp está ligado: só quem está na lista do piloto participa." : "") + "</p>" +
-        '<div class="pt-campo"><label for="ptCfgConj">Quais marcações lembrar</label><select id="ptCfgConj">' + Pto_opcoes_(r.conjuntos.map(function (x) { return [x.codigo, x.nome]; }), c.conjunto) + "</select></div></div>";
+        '<div class="pt-campo"><label for="ptCfgConj">Marcações padrão (pessoas sem escolha individual)</label><select id="ptCfgConj">' + Pto_opcoes_(r.conjuntos.map(function (x) { return [x.codigo, x.nome]; }), c.conjunto) + "</select></div></div>";
       h += '<div class="pt-caixa"><h3>Jornada geral</h3><p class="pt-mini">Os dias úteis e os feriados vêm do expediente comum do SGO+ (' + Pto_esc_(r.expediente.ini + "–" + r.expediente.fim) + "). Entrada vazia = início do expediente comum. Cada pessoa pode ter outro horário em Pessoas e jornadas.</p>" +
         '<div class="pt-grade3"><div class="pt-campo"><label for="ptCfgEnt">Entrada</label><input type="time" id="ptCfgEnt" value="' + Pto_esc_(j.entrada) + '"><div class="pt-ajuda-campo">Lembrete 5 minutos antes.</div></div>' +
         '<div class="pt-campo"><label for="ptCfgAlm">Saída para o almoço</label><input type="time" id="ptCfgAlm" value="' + Pto_esc_(j.almoco) + '"><div class="pt-ajuda-campo">Lembrete na hora.</div></div>' +

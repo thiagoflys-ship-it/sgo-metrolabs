@@ -162,3 +162,10 @@ Categoria Utilidade, idioma Português (BR). Cada modelo tem um botão de link "
 - "Ninguém para mostrar neste dia" diz o motivo (fim de semana ou feriado, assistente desligado, ou ninguém com jornada no dia) e o que fazer: escolher outro dia no campo Dia ou conferir a jornada em "Pessoas e jornadas".
 - "Nenhum pedido pendente" explica que o pedido aparece quando alguém toca em "Esqueci de bater"; "Nenhuma marcação" no mês diz se o assistente estava desligado.
 - No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
+
+
+### Avisos por pessoa
+
+Em Pessoas e jornadas, marque Entrada, Saída para almoço, Retorno do almoço e Saída para cada colaborador e use Salvar avisos. É possível deixar almoço e retorno desmarcados para as pessoas da matriz e marcados para as da filial. Nenhuma pessoa é agrupada automaticamente por unidade. Desmarcar todos desliga os avisos dessa pessoa. Usar padrão geral remove a escolha individual.
+
+A seleção não altera a jornada nem os registros anteriores. Ajustar permite editar os horários: entrada e saída avisam cinco minutos antes; almoço na hora; retorno após a pausa, ajustado pela saída confirmada. Continuam valendo as restrições de vínculo, piloto, expediente, folgas e afastamentos.

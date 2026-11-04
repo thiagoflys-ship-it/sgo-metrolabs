@@ -419,7 +419,7 @@ function Ponto_acao_(eu, acao, d) {
       var aj = Pto_ler_(PONTO_ABAS.AJUSTES).filter(function (a) { return Pto_s_(a.USUARIO_ID) === eu.id; }).map(function (a) { return Ponto_ajusteTela_(a, us); })
         .sort(function (a, b) { return b.criadoEm.localeCompare(a.criadoEm); }).slice(0, 60);
       return { mes: mes, mesNome: Pto_mesNome_(mes), ligado: cfg.ligado, participa: !fora, foraTexto: fora ? PONTO_FORA_TEXTO[fora] : '',
-        jornada: Ponto_jornadaTexto_(Ponto_jornada_(cfg, pessoas[eu.id], hoje)), marcacoesLembradas: cfg.marcacoes.map(function (m) { return PONTO_MARC[m].rotulo; }),
+        jornada: Ponto_jornadaTexto_(Ponto_jornada_(cfg, pessoas[eu.id], hoje)), marcacoesLembradas: Ponto_marcacoesPessoa_(cfg, pessoas[eu.id]).map(function (m) { return PONTO_MARC[m].rotulo; }),
         marcacoes: marcs, pedidos: aj, hoje: hoje, prazoDias: PONTO_AJUSTE_PRAZO_DIAS };
     }
     case 'confirmarMeu':
@@ -460,7 +460,7 @@ function Ponto_acao_(eu, acao, d) {
       var lista2 = Object.keys(us).map(function (id) { return us[id]; }).filter(function (u) { return u.ativo && !u.sistema; }).map(function (u) {
         var p = pe[u.id] || {}, fora = Ponto_motivoFora_(u, pe[u.id], pil, cfg);
         return { id: u.id, nome: u.nome, area: u.areaNome, vinculo: u.vinculo || '', celular: Pto_mascara_(u.celular), temEmail: !!u.email, apto: !fora, fora: fora, foraTexto: fora ? PONTO_FORA_TEXTO[fora] : '',
-          participa: !(Pto_s_(p.PARTICIPA) && !Pto_verdade_(p.PARTICIPA)), entrada: Pto_normHora_(p.ENTRADA), almoco: Pto_normHora_(p.ALMOCO), retorno_min: Pto_s_(p.RETORNO_MIN),
+          horasAvisos: Ponto_horasAvisos_(cfg, p), marcacoes: Ponto_marcacoesPessoa_(cfg, p), avisosProprios: !!Pto_s_(p.LEMBRETES_JSON), participa: !(Pto_s_(p.PARTICIPA) && !Pto_verdade_(p.PARTICIPA)), entrada: Pto_normHora_(p.ENTRADA), almoco: Pto_normHora_(p.ALMOCO), retorno_min: Pto_s_(p.RETORNO_MIN),
           saida: Pto_normHora_(p.SAIDA), saida_sexta: Pto_normHora_(p.SAIDA_SEXTA), sem_almoco: Pto_verdade_(p.SEM_ALMOCO), observacao: Pto_s_(p.OBSERVACAO),
           jornada: Ponto_jornadaTexto_(Ponto_jornada_(cfg, pe[u.id], hoje)) };
       }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
@@ -471,7 +471,22 @@ function Ponto_acao_(eu, acao, d) {
       return { pessoas: lista2, aptos: lista2.filter(function (x) { return x.apto; }).length, dispensas: disp, motivosDispensa: PONTO_MOTIVOS_DISPENSA,
         piloto: { ligado: !!(pil && pil.ligado) }, jornadaGeral: Ponto_jornadaTexto_(Ponto_jornada_(cfg, null, hoje)) };
     }
+    case 'salvarLembretes': {
+      return Pto_comTrava_(function () {
+      Ponto_exigir_(eu, 'pessoas', 'configurar os avisos da pessoa');
+      var usuarioAviso = Ponto_usuarios_()[Pto_s_(d.usuarioId)];
+      if (!usuarioAviso || !usuarioAviso.ativo || usuarioAviso.sistema) throw new Error('Escolha um colaborador ativo na lista.');
+      var selecaoAviso = d.marcacoes === null ? '' : JSON.stringify(Ponto_validarLembretes_(d.marcacoes));
+      var pessoaAviso = Ponto_pessoas_()[usuarioAviso.id];
+      var camposAviso = { USUARIO_ID: usuarioAviso.id, LEMBRETES_JSON: selecaoAviso, ATUALIZADO_POR: eu.nome, ATUALIZADO_EM: Pto_agoraIso_(new Date()) };
+      if (pessoaAviso) SGO_DATA.update(PONTO_ABAS.PESSOAS, pessoaAviso.ID, camposAviso); else SGO_DATA.insert(PONTO_ABAS.PESSOAS, camposAviso);
+      try { SGO_DATA.log('PONTO_AVISOS_PESSOA', eu.login, usuarioAviso.id + ': ' + selecaoAviso, 'PONTO'); } catch (e) {}
+      var salvoAviso = Ponto_pessoas_()[usuarioAviso.id], foraAviso = Ponto_motivoFora_(usuarioAviso, salvoAviso, Ponto_pilotoCfg_(), cfg);
+      return { message: 'Avisos salvos. A escolha vale na próxima rodada; a jornada foi preservada.', marcacoes: Ponto_marcacoesPessoa_(cfg, salvoAviso), apto: !foraAviso, foraTexto: PONTO_FORA_TEXTO[foraAviso] || '' };
+      });
+    }
     case 'salvarPessoa': {
+      return Pto_comTrava_(function () {
       Ponto_exigir_(eu, 'pessoas', 'salvar a jornada da pessoa');
       us = Ponto_usuarios_();
       var alvo = us[Pto_s_(d.usuarioId)];
@@ -487,6 +502,7 @@ function Ponto_acao_(eu, acao, d) {
       if (atual) SGO_DATA.update(PONTO_ABAS.PESSOAS, atual.ID, campos); else SGO_DATA.insert(PONTO_ABAS.PESSOAS, campos);
       try { SGO_DATA.log('PONTO_PESSOA', eu.login, alvo.nome + ': ' + JSON.stringify(campos).slice(0, 600), 'PONTO'); } catch (e) {}
       return { message: 'Salvo: ' + alvo.nome + (campos.PARTICIPA === 'NAO' ? ' (fora do assistente)' : '') + '.' };
+      });
     }
     case 'salvarDispensa': {
       Ponto_exigir_(eu, 'pessoas', 'lançar a folga ou dispensa');

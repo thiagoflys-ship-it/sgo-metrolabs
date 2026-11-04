@@ -414,3 +414,39 @@ test('sem envio em dobro com o COMMAND: a configuração do SGO+ fica na proprie
   const cmd = path.join(__dirname, '../../metrolabs_command/Ponto.js');
   if (fs.existsSync(cmd)) { const t = fs.readFileSync(cmd, 'utf8'); assert.match(t, /PONTO_SGO_CONFIG/); assert.match(t, /CMD_PONTO_NO_SGO/); }
 });
+
+ test('avisos individuais: matriz sem almoço, filial com almoço; jornada preservada', () => {
+ const a=ambiente();
+ ok(a.api('s_rita','salvarLembretes',{usuarioId:'u_ana',marcacoes:['ENTRADA','SAIDA']}));
+ a.rodar(SEG('11:00')); a.rodar(SEG('12:00'));
+ assert.equal(a.msgs('u_ana').length,0);
+ assert.deepEqual(nomes(a.msgs('u_beto')),['sgo_ponto_almoco','sgo_ponto_retorno']);
+ const p=ok(a.api('s_rita','pessoas',{})).pessoas.find(p=>p.id==='u_ana');
+ assert.deepEqual(Array.from(p.marcacoes),['ENTRADA','SAIDA']);
+ assert.equal(p.sem_almoco,false);
+ });
+ test('avisos individuais: validação, permissão, vazio e independência do padrão', () => {
+ const a=ambiente({cfg:{conjunto:'ENTRADA_SAIDA'}});
+ assert.equal(a.api('s_ana','salvarLembretes',{usuarioId:'u_beto',marcacoes:[]}).ok,false);
+ assert.equal(a.api('s_rita','salvarLembretes',{usuarioId:'u_ana',marcacoes:['INVALIDA']}).ok,false);
+ ok(a.api('s_rita','salvarLembretes',{usuarioId:'u_ana',marcacoes:[]}));
+ ok(a.api('s_rita','salvarLembretes',{usuarioId:'u_beto',marcacoes:['ALMOCO','RETORNO']}));
+ a.rodar(SEG('07:55')); a.rodar(SEG('11:00')); a.rodar(SEG('12:00'));
+ assert.equal(a.msgs('u_ana').length,0);
+ assert.deepEqual(nomes(a.msgs('u_beto')),['sgo_ponto_almoco','sgo_ponto_retorno']);
+ });
+
+test('avisos individuais: salvar não muda jornada; editar jornada preserva avisos; padrão pode ser retomado', () => {
+ const a=ambiente();
+ ok(a.api('s_rita','salvarPessoa',{usuarioId:'u_ana',entrada:'09:00',almoco:'12:00',retorno_min:'60',saida:'18:00'}));
+ ok(a.api('s_rita','salvarLembretes',{usuarioId:'u_ana',marcacoes:['ENTRADA','SAIDA']}));
+ let p=ok(a.api('s_rita','pessoas',{})).pessoas.find(p=>p.id==='u_ana');
+ assert.equal(p.entrada,'09:00');assert.equal(p.almoco,'12:00');
+ assert.equal(p.horasAvisos.ENTRADA,'08:55');
+ ok(a.api('s_rita','salvarPessoa',{usuarioId:'u_ana',entrada:'09:30',almoco:'12:00',retorno_min:'60',saida:'18:00'}));
+ p=ok(a.api('s_rita','pessoas',{})).pessoas.find(p=>p.id==='u_ana');
+ assert.deepEqual(Array.from(p.marcacoes),['ENTRADA','SAIDA']);
+ ok(a.api('s_rita','salvarLembretes',{usuarioId:'u_ana',marcacoes:null}));
+ p=ok(a.api('s_rita','pessoas',{})).pessoas.find(p=>p.id==='u_ana');
+ assert.equal(p.marcacoes.length,4);assert.equal(p.entrada,'09:30');
+});

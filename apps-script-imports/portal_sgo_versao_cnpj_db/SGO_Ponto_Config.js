@@ -54,7 +54,7 @@ var PONTO_COLUNAS = {
     'CONFIRMADO_EM', 'CONFIRMADO_POR', 'HORARIO_INFORMADO', 'JUSTIFICATIVA', 'AJUSTE_ID', 'OBS', 'ATUALIZADO_EM', 'CRIADO_EM'],
   PONTO_AJUSTES: ['ID', 'CODIGO', 'USUARIO_ID', 'USUARIO_NOME', 'DIA', 'MARCACAO', 'HORARIO_INFORMADO', 'JUSTIFICATIVA', 'EVIDENCIA', 'ORIGEM', 'SITUACAO',
     'OBSERVACAO', 'TRATADO_POR_ID', 'TRATADO_POR_NOME', 'TRATADO_EM', 'MARCACAO_ID', 'ATIVIDADE_ID', 'CRIADO_POR_ID', 'ATUALIZADO_EM', 'CRIADO_EM'],
-  PONTO_PESSOAS: ['ID', 'USUARIO_ID', 'PARTICIPA', 'ENTRADA', 'ALMOCO', 'RETORNO_MIN', 'SAIDA', 'SAIDA_SEXTA', 'SEM_ALMOCO', 'OBSERVACAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  PONTO_PESSOAS: ['ID', 'USUARIO_ID', 'PARTICIPA', 'ENTRADA', 'ALMOCO', 'RETORNO_MIN', 'SAIDA', 'SAIDA_SEXTA', 'SEM_ALMOCO', 'LEMBRETES_JSON', 'OBSERVACAO', 'ATUALIZADO_POR', 'ATUALIZADO_EM', 'CRIADO_EM'],
   PONTO_DISPENSAS: ['ID', 'USUARIO_ID', 'USUARIO_NOME', 'DE', 'ATE', 'MOTIVO', 'OBSERVACAO', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'EXCLUIDA_EM', 'EXCLUIDA_POR', 'CRIADO_EM'],
   PONTO_RESUMOS: ['ID', 'CHAVE', 'USUARIO_ID', 'USUARIO_NOME', 'MES', 'QUANTIDADE', 'TEXTO', 'DESTINATARIOS_IDS', 'SUGESTAO', 'DIA', 'CRIADO_EM'],
   PONTO_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_TIPO', 'REF_ID', 'DATA', 'LIDO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO', 'CRIADO_EM']
@@ -178,13 +178,13 @@ function Pto_comTrava_(fn) {
 // ------------------------------------------------------------
 function Ponto_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('PONTO_ABAS_OK_V1')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('PONTO_ABAS_OK_V2')) return; } catch (e) {}
   Object.keys(PONTO_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, PONTO_COLUNAS[aba]);
     PONTO_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (PONTO_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('PONTO_ABAS_OK_V1', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('PONTO_ABAS_OK_V2', '1', 21600); } catch (e) {}
 }
 function Pto_ler_(aba) {
   try { return SGO_DATA.getAll(aba) || []; } catch (e) { if (/Aba não encontrada/i.test(String((e && e.message) || e))) return []; throw e; }
@@ -220,6 +220,26 @@ function Ponto_gravarCfg_(c, por) {
 }
 
 /** Jornada da pessoa no dia, em minutos: { entrada, almoco (null = sem intervalo registrado), retorno_min, saida, sexta }. */
+/** Ausente herda o padrão; vazio explícito desliga todos. Configuração inválida falha fechada. */
+function Ponto_marcacoesPessoa_(cfg, pessoa) {
+  if (!pessoa || !Pto_s_(pessoa.LEMBRETES_JSON)) return cfg.marcacoes.slice();
+  try { return Ponto_validarLembretes_(JSON.parse(pessoa.LEMBRETES_JSON)); } catch (e) { return []; }
+}
+function Ponto_horasAvisos_(cfg, pessoa) {
+  var horas = {}, dia = '2026-10-19', sexta = '2026-10-23';
+  ['ENTRADA','ALMOCO','RETORNO','SAIDA'].forEach(function (m) {
+    var h = Ponto_horario_(m, dia, Ponto_jornada_(cfg, pessoa, dia), null);
+    var f = Ponto_horario_(m, sexta, Ponto_jornada_(cfg, pessoa, sexta), null);
+    horas[m] = h ? Pto_horaDe_(new Date(h.lembrete).toISOString()) + (f && f.lembrete && Pto_horaDe_(new Date(f.lembrete).toISOString()) !== Pto_horaDe_(new Date(h.lembrete).toISOString()) ? ' (sexta: ' + Pto_horaDe_(new Date(f.lembrete).toISOString()) + ')' : '') : 'sem intervalo na jornada';
+  });
+  return horas;
+}
+function Ponto_validarLembretes_(lista) {
+  var ordem = ['ENTRADA', 'ALMOCO', 'RETORNO', 'SAIDA'];
+  if (!Array.isArray(lista) || lista.length > 4 || lista.some(function (m, i) { return ordem.indexOf(m) < 0 || lista.indexOf(m) !== i; })) throw new Error('Escolha somente entrada, almoço, retorno e saída, sem repetir.');
+  return ordem.filter(function (m) { return lista.indexOf(m) >= 0; });
+}
+
 function Ponto_jornada_(cfg, pessoa, dia) {
   var ex = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : { ini: '08:00', fim: '17:30' };
   var p = pessoa || {}, j = cfg.jornada, sexta = Pto_semanaDe_(dia) === 5;
@@ -330,7 +350,7 @@ function Ponto_areasDoGestor_(eu) {
 var PONTO_FORA_TEXTO = {
   INATIVO: 'usuário inativo', SISTEMA: 'conta do sistema', PJ: 'PJ: não recebe nada do ponto', DIRETORIA: 'Diretoria: não recebe nada do ponto',
   SEM_VINCULO: 'vínculo de trabalho não informado (cadastre CLT, PJ ou Diretoria em Administração > Usuários > Vínculo)',
-  NAO_PARTICIPA: 'tirado do assistente pelo RH (Pessoas e jornadas)', FORA_PILOTO: 'fora da lista do piloto do WhatsApp (Administração > Piloto do WhatsApp)',
+  SEM_AVISOS: 'nenhum aviso selecionado para esta pessoa', NAO_PARTICIPA: 'tirado do assistente pelo RH (Pessoas e jornadas)', FORA_PILOTO: 'fora da lista do piloto do WhatsApp (Administração > Piloto do WhatsApp)',
   SEM_CONTATO: 'sem celular e sem e-mail no cadastro (Administração > Usuários)',
   // 03/11/2026: vínculo Cliente ou Representante (contas de fora da Metrolabs)
   EXTERNO: 'conta de fora da Metrolabs (cliente ou representante): não recebe nada do ponto'
@@ -342,6 +362,7 @@ function Ponto_motivoFora_(u, pessoa, pilotoCfg, cfg) {
   if (u.vinculo === 'DIRETORIA') return 'DIRETORIA';   // 22/10/2026: Diretoria não bate ponto, como PJ
   if (u.vinculo === 'CLIENTE' || u.vinculo === 'REPRESENTANTE') return 'EXTERNO';   // 03/11/2026: contas de fora
   if (u.vinculo !== 'CLT') return 'SEM_VINCULO';
+  if (pessoa && Pto_s_(pessoa.LEMBRETES_JSON) && !Ponto_marcacoesPessoa_(cfg, pessoa).length) return 'SEM_AVISOS';
   if (pessoa && Pto_s_(pessoa.PARTICIPA) && !Pto_verdade_(pessoa.PARTICIPA)) return 'NAO_PARTICIPA';
   if (pilotoCfg && pilotoCfg.ligado && typeof SGO_waPilotoMotivo_ === 'function' && SGO_waPilotoMotivo_({ id: u.id, perfil: u.perfil, telefone: u.celular }, pilotoCfg, { categoria: 'PONTO', origem: 'PONTO' })) return 'FORA_PILOTO'; // 26/10/2026: e com o grupo "Ponto" marcado
   if (!u.celular && !(cfg && cfg.emailReserva && u.email)) return 'SEM_CONTATO';

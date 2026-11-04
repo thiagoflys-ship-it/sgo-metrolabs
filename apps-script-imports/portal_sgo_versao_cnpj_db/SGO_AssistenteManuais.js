@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "3596802af8e7",
+ "versao": "19eeb541d42a",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3989,6 +3989,10 @@ var SGO_ASSIST_MANUAIS = {
     {
      "titulo": "No celular e o voltar (01/11/2026)",
      "texto": "Trocar de aba (Hoje, Pedidos de ajuste, Mês, Meus lembretes, Pessoas e jornadas, Configuração) é um passo do voltar: voltar devolve a aba de antes.\n\"Ninguém para mostrar neste dia\" diz o motivo (fim de semana ou feriado, assistente desligado, ou ninguém com jornada no dia) e o que fazer: escolher outro dia no campo Dia ou conferir a jornada em \"Pessoas e jornadas\".\n\"Nenhum pedido pendente\" explica que o pedido aparece quando alguém toca em \"Esqueci de bater\"; \"Nenhuma marcação\" no mês diz se o assistente estava desligado.\nNo celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo."
+    },
+    {
+     "titulo": "No celular e o voltar (01/11/2026) > Avisos por pessoa",
+     "texto": "Em Pessoas e jornadas, marque Entrada, Saída para almoço, Retorno do almoço e Saída para cada colaborador e use Salvar avisos. É possível deixar almoço e retorno desmarcados para as pessoas da matriz e marcados para as da filial. Nenhuma pessoa é agrupada automaticamente por unidade. Desmarcar todos desliga os avisos dessa pessoa. Usar padrão geral remove a escolha individual.\n\nA seleção não altera a jornada nem os registros anteriores. Ajustar permite editar os horários: entrada e saída avisam cinco minutos antes; almoço na hora; retorno após a pausa, ajustado pela saída confirmada. Continuam valendo as restrições de vínculo, piloto, expediente, folgas e afastamentos."
     }
    ]
   },
