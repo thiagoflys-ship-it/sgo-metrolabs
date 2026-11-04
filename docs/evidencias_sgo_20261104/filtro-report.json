@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "synthetic": true,
+  "checks": [
+    {
+      "pass": true,
+      "text": "sincronia usa coletor interno real"
+    },
+    {
+      "pass": true,
+      "text": "duas candidatas sintéticas com razão de entrada"
+    },
+    {
+      "pass": true,
+      "text": "tela mostra as duas candidatas"
+    },
+    {
+      "pass": true,
+      "text": "simular não grava nem descarta"
+    },
+    {
+      "pass": true,
+      "text": "Aplicar refaz triagem real e preserva calibração"
+    },
+    {
+      "pass": true,
+      "text": "tirar palavra recupera oportunidade sem apagar dados"
+    },
+    {
+      "pass": true,
+      "text": "filtro cabe no celular de 390 px"
+    },
+    {
+      "pass": true,
+      "text": "técnico não muda regras do filtro"
+    },
+    {
+      "pass": true,
+      "text": "sem erro de JavaScript na tela"
+    }
+  ]
+}

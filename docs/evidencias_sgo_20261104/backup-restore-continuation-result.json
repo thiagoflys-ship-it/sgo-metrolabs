@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "productionChanged": false,
+  "continuedExistingCapture": true,
+  "originalFailedProofPreserved": true,
+  "newDumpCreated": false,
+  "snapshot": "exported-during-original-capture",
+  "tables": 30,
+  "filesystemEntries": 29425,
+  "regularFiles": 29354,
+  "dumpSha256": "1550282f7ca38c8d5ff54b7a1a14276dafbf1107b9dfaa4994d42680cdcd2bd2",
+  "filesArchiveSha256": "2eb5d23a3bfd00e92e91dbe314a52008b294bb5dd36d89a5727810bfece0d57c",
+  "restoreContainer": "sgo-retomada-restore-1157a80ec5b4",
+  "existingRunningContainersPreserved": 36
+}

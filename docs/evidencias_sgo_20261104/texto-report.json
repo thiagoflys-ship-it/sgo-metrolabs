@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "synthetic": true,
+  "os": "0a2fff81-abd3-46a6-95e6-187caea49dda",
+  "gravadoEmMs": 24,
+  "beforeDebounce": true,
+  "reopenedOffline": true,
+  "rendererCrashTested": false,
+  "restoredToQueue": true
+}

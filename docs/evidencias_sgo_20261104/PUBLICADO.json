@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "revision": "1157a80ec5b446bdaf188f1150a6fe8dd825793a",
+  "oldImage": "sha256:4958e80c6f637d6f12f3fc2379d9df1752f1141a21985d4342d3f8080643bdac",
+  "newImage": "sha256:3eeef084dd35cd7a16470e898477f118b2f908b33411ec35e8f82f25494fc005",
+  "databaseRestoredInProduction": false,
+  "appId": "8d2d32ec62752d82b6236b60f6ba2de429a795aafbb8b55d658f1969d3058c46",
+  "postgresContainerUnchanged": true,
+  "otherRunningContainersPreserved": 35,
+  "environmentPreserved": true,
+  "mountsPreserved": true,
+  "publicTLS": true
+}
