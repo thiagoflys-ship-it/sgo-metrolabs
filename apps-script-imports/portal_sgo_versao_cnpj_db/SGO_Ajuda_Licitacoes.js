@@ -5,7 +5,8 @@
  * Contrato: docs/AJUDA_CONTRATO_20261017.md. Manual completo: docs/MANUAL_MODULO_LICITACOES.md.
  * Telas: licitacoes (Hoje em Licitações), licitacoes_oportunidades (lista e ficha), licitacoes_agenda (Agenda e prazos),
  * licitacoes_alertas (Central de alertas), licitacoes_portais (Portais e configurações), licitacoes_kanban (Kanban),
- * licitacoes_gantt (Gantt) e licitacoes_painel (Painel). Texto conferido com JS_Licitacoes.html, SGO_Licitacoes.js e SGO_Licitacoes_Config.js e com o coletor
+ * licitacoes_gantt (Gantt), licitacoes_painel (Painel) e licitacoes_ramo (Revisar o filtro do ramo, 03/11/2026: JS_Licitacoes_Ramo.html e
+ * SGO_Licitacoes_Ramo.js). Texto conferido com JS_Licitacoes.html, SGO_Licitacoes.js e SGO_Licitacoes_Config.js e com o coletor
  * do servidor (sgo_servidor/src/servicos/licitacoes). Texto puro, sem HTML.
  ****************************************************/
 function SGO_ajudaTelas_Licitacoes_() {
@@ -61,9 +62,11 @@ function SGO_ajudaTelas_Licitacoes_() {
       ],
       passos: [
         { titulo: "Escolher a parte da lista", itens: [
-          "Para analisar: candidatas, sem nada que descarte ou trave.",
+          "Para analisar: candidatas, sem nada que descarte ou trave. Com o segundo filtro pela IA ligado (Revisar o filtro do ramo), só as que a análise automática concluiu com nota no mínimo (padrão 40) e sem \"fora do ramo\", as trazidas de volta pela Diretoria e as de prazo curto (fim das propostas em menos de 48 h), estas com o selo \"Sem análise (prazo curto)\".",
+          "Aguardando a análise: candidatas que a análise automática ainda não concluiu, com o porquê (na fila, recusada pelo verificador, falhou). Saem sozinhas quando a análise termina.",
           "Travadas: têm impeditivo que depende de decisão (exige acreditação RBC, dedicação exclusiva de mão de obra, software próprio, suspensa na fonte).",
           "Em análise: enviadas para análise pela Diretoria.",
+          "Descartadas pela IA: a análise concluiu com nota abaixo do mínimo ou apontou \"fora do ramo\". Continuam no Radar (nada é descartado de vez pela IA).",
           "Descartadas: pela regra do radar (com o motivo e o trecho) ou pela Diretoria (com o motivo escrito)."
         ] },
         { titulo: "Filtrar", itens: [
@@ -71,19 +74,22 @@ function SGO_ajudaTelas_Licitacoes_() {
           "UF: Brasil inteiro, a prioridade (GO, DF, MG, BA, TO, MT, MS e RJ) ou uma UF.",
           "Selo: exclusivo ME/EPP, Autorizada Inmetro, exige RBC, acreditação opcional, rastreabilidade à RBC (não trava), Lei 13.303 (estatal), suspensa, dedicação exclusiva, software exigido.",
           "Onde é a sessão: o portal de disputa quando a fonte permite saber; \"Sistema municipal ou outro\" quando a plataforma da sessão precisa ser lida no edital.",
-          "Ordenar por: prioridade da UF e prazo (padrão), nota (maior primeiro; depois as sem nota; as de descarte, com nota 0 ou abaixo de 30, por último) ou prazo (mais perto primeiro)."
+          "Ordenar por: prioridade da UF e prazo (padrão), nota (maior primeiro; depois as sem nota; as de descarte, com nota 0 ou abaixo de 30, por último) ou prazo (mais perto primeiro).",
+          "Tipo de serviço: calibração, qualificação e validação, manutenção, NR-13 e inspeção, engenharia clínica, outro ou não classificado (triagem anterior a 03/11/2026 e ainda sem análise)."
         ] },
         { titulo: "Ler o cartão", itens: [
           "O quadro à esquerda mostra a nota de 0 a 100 e a classe (alta, média, baixa ou descarte) quando a análise por IA já foi feita; sem nota, mostra a UF e a situação (radar, trava, análise ou fora). A borda vermelha indica trava ou descarte.",
           "Abaixo do motivo, a linha \"Nota da análise por IA\" diz a versão e a data da análise e a trava, se houver. A IA não decide: descartar ou participar é da Diretoria.",
           "Selos verdes são pontos fortes (exclusivo ME/EPP: a matriz é EPP e pode participar; Autorizada Inmetro para balanças e esfigmomanômetros). Selo vermelho \"Exige acreditação RBC — não atendemos\": a Metrolabs faz calibração rastreável, não acreditada.",
           "Propostas até: data e hora como a fonte informa, presumidas de Brasília (o PNCP não informa o fuso). Em AM, MT, MS, RO, RR e AC confirme no edital se o horário é local.",
-          "O motivo e o trecho entre aspas mostram de onde veio a decisão da regra. PENDENTE é o que precisa ser conferido no edital."
+          "O motivo e o trecho entre aspas mostram de onde veio a decisão da regra. PENDENTE é o que precisa ser conferido no edital.",
+          "O selo cinza com o tipo de serviço vem da triagem (termos do objeto) e é confirmado ou corrigido pela análise da IA; passe o mouse para ver de onde veio."
         ] },
         { titulo: "Agir", itens: [
           "Abrir ficha: resumo, arquivos do edital, análise por IA, fonte (versões, itens, hashes) e histórico.",
           "Enviar para análise: escreva uma observação se quiser; você fica como responsável.",
-          "Descartar: o motivo é obrigatório (pelo menos 10 letras) e fica no histórico com o seu nome e a data.",
+          "Descartar: escolha o motivo na lista (Fora do ramo, Prazo insuficiente, Exigência que não atendemos, Valor ou margem inviável, Local ou logística inviável, Outro motivo) e, se quiser, um complemento (em \"Outro motivo\" o texto é obrigatório, pelo menos 10 letras). Fica no histórico com o seu nome e a data. \"Fora do ramo\" cria uma sugestão de palavra que exclui na tela Revisar o filtro do ramo (nada é aplicado sozinho).",
+          "Trazer de volta (Aguardando a análise e Descartadas pela IA): leva a candidata para \"Para analisar\" agora, com o motivo, e ela fica lá mesmo que a IA dê nota baixa depois. A análise não muda.",
           "Reabrir: devolve uma descartada ao radar; o motivo é obrigatório. Depois de reaberta pela Diretoria, a regra do radar não descarta de novo (a triagem nova fica só no histórico).",
           "Abrir no portal: abre o processo no sistema de origem em nova aba (quando a fonte informa o link). Ver no PNCP: abre a página da contratação no PNCP."
         ] },
@@ -454,6 +460,53 @@ function SGO_ajudaTelas_Licitacoes_() {
         { p: "Por que a hora mostra \"Brasília, presumido\"?", r: "O PNCP não informa o fuso. O SGO+ trata o horário como de Brasília e avisa; em UF com outro fuso, confira no edital." }
       ]
     },
+    "licitacoes_ramo": {
+      titulo: "Revisar o filtro do ramo",
+      paraQueServe: "Mostra as palavras que fazem uma licitação entrar no radar e as que fazem sair, com a versão e o histórico, e as candidatas de agora agrupadas pelo termo que fez cada uma entrar. Aqui a Diretoria marca o que não é do ramo, escolhe a expressão que deve excluir, acrescenta palavra que inclui, decide as sugestões dos descartes \"Fora do ramo\" e regula o segundo filtro pela IA.",
+      antesDeComecar: [
+        "A triagem por palavras é feita no servidor próprio do SGO+: a tela muda só as palavras configuradas pela Diretoria, que se somam às da taxonomia (mostradas no alto de cada coluna) e valem para o PNCP e o Compras.gov.br.",
+        "A palavra é comparada sem acento e sem diferença de maiúscula, em qualquer ponto do objeto, da informação complementar e dos itens. A palavra que exclui configurada vence até um termo forte: prefira a expressão mais específica (\"tratamento de água\", não \"água\").",
+        "Nada é apagado. Quem sai vai para Oportunidades › Descartadas (só a regra do radar), com o motivo, e volta se a palavra for tirada. O que a Diretoria reabriu ou enviou para análise nunca é desfeito pela regra."
+      ],
+      passos: [
+        { titulo: "Ler as candidatas", itens: [
+          "Cada candidata mostra o órgão, a UF, o prazo, o objeto com o termo destacado e a frase \"Entrou pelo termo ...\": o termo de interesse que a fez entrar, onde ele estava e os outros termos de interesse do texto.",
+          "Os botões no alto da lista filtram pelo termo (por exemplo, só as que entraram por \"osmose reversa\"), com a quantidade de cada um.",
+          "O selo cinza é o tipo de serviço; \"Aguardando a análise\" e \"Descartada pela IA\" mostram onde a candidata está no Radar."
+        ] },
+        { titulo: "Marcar o que não é do ramo", itens: [
+          "Marque \"Não é do ramo\" na candidata. O sistema sugere as expressões do objeto que não têm termo de interesse; toque numa ou edite a expressão escolhida.",
+          "Para acrescentar palavra que inclui ou que exclui sem marcar candidata, use \"Acrescentar\" na coluna. Para tirar uma palavra configurada, toque nela (fica riscada, com \"sai\"); toque de novo para manter.",
+          "\"Conferir o efeito\" mostra quais candidatas e travadas sairiam com as palavras novas (o servidor confere o objeto, a informação complementar e os itens). Nada é gravado.",
+          "Escreva o motivo e toque em \"Aplicar\": versão nova das palavras (motivo, quem, quando), triagem refeita agora pelo servidor nas candidatas, travadas e descartadas pela regra em aberto, e o resultado: quantas saíram, quantas voltaram e as marcadas que continuam no Radar com o porquê. As demais licitações em aberto são refeitas na próxima rodada do coletor (até 2 horas)."
+        ] },
+        { titulo: "Sugestões dos descartes \"Fora do ramo\"", itens: [
+          "Quando alguém descarta com o motivo \"Fora do ramo\", aparece aqui a sugestão: a oportunidade, o termo que a fez entrar e a expressão do objeto para excluir (com as alternativas).",
+          "\"Aprovar e aplicar\" aplica a expressão escolhida pelo mesmo caminho do \"Aplicar\" (versão nova e triagem refeita). \"Recusar\" não muda nada no filtro. A sugestão decidida fica guardada, com quem e quando."
+        ] },
+        { titulo: "Segundo filtro pela IA", itens: [
+          "Ligado (padrão), a candidata nova só aparece em \"Para analisar\", nos alertas e no resumo depois que a análise automática concluir com nota igual ou acima do mínimo (padrão 40) e sem \"fora do ramo\". Abaixo disso vai para \"Descartadas pela IA\"; sem análise, fica em \"Aguardando a análise\".",
+          "Prazo de propostas em menos de 48 h nunca espera a IA: aparece em \"Para analisar\" com o selo \"Sem análise (prazo curto)\".",
+          "A IA usa a mesma fila e o mesmo teto por dia da análise automática: o filtro não chama a IA a mais. Sem a chave da IA cadastrada, o filtro não esconde nada.",
+          "Mudar a nota mínima ou desligar pede o motivo e cria versão nova, com histórico."
+        ] }
+      ],
+      cores: [
+        { nome: "Cartão com faixa vermelha", significado: "Candidata marcada como \"não é do ramo\"." },
+        { nome: "Selo vermelho \"Sai com ...\"", significado: "A candidata tem no objeto uma das expressões que serão acrescentadas: sai no próximo \"Aplicar\"." },
+        { nome: "Palavra riscada", significado: "Palavra configurada que sai na próxima versão." }
+      ],
+      problemas: [
+        { situacao: "A marcada continuou no Radar depois do \"Aplicar\"", oQueFazer: "O resultado diz o porquê: reaberta pela Diretoria (a regra não descarta de novo), parecer pedido às áreas ou a expressão não aparece no texto que a triagem lê. Escolha outra expressão ou descarte a oportunidade com o motivo \"Fora do ramo\"." },
+        { situacao: "A triagem não pôde ser refeita agora", oQueFazer: "A versão nova ficou gravada e vale na próxima rodada do coletor (até 2 horas). Se o aviso diz que o coletor roda só no servidor próprio, use o SGO+ do servidor." },
+        { situacao: "Uma licitação boa saiu por uma palavra que exclui", oQueFazer: "Toque na palavra para tirá-la, escreva o motivo e aplique: quem saiu por ela volta para o Radar. Para uma só, reabra a oportunidade em Descartadas, com o motivo." }
+      ],
+      quemPode: quem,
+      perguntas: [
+        { p: "Por que a tela não usa a IA para decidir o que é do ramo?", r: "Quem decide é a Diretoria. A IA só dá a nota (segundo filtro, sempre reversível) e as sugestões nunca são aplicadas sozinhas." },
+        { p: "As candidatas antigas têm o termo que as fez entrar?", r: "Sim. Ao abrir a tela, o servidor refaz a triagem das candidatas que ainda não tinham a razão guardada, pela mesma conta; enquanto isso, a razão é lida do motivo da triagem." }
+      ]
+    },
     "licitacoes_painel": {
       titulo: "Painel de Licitações (Dashboard)",
       paraQueServe: "Reúne os indicadores do módulo com números reais: oportunidades por etapa, por UF e por nota, prazos dos próximos 7 e 30 dias, alertas sem ciência, travas a confirmar, saúde do coletor e dos portais e as análises por IA.",
@@ -467,7 +520,8 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Os prazos de 7 e 30 dias seguem a mesma regra da Agenda (sem descartadas e sem travadas), por isso o número bate com a lista que abre.",
           "\"Em andamento por UF\" mostra primeiro a prioridade da pontuação: GO e DF, os vizinhos de GO e o RJ (filial), mesmo quando estão em zero.",
           "\"Alta aderência (24 h)\" e \"(7 dias)\": oportunidades com o alerta de nova oportunidade de alta aderência no período que continuam com a nota no limite ou acima, sem trava e com o prazo em aberto (a mesma conta do Hoje). O toque abre Oportunidades filtrada.",
-          "\"Análises por IA\" conta as oportunidades pela situação da última análise (concluída, recusada pelo verificador ou erro da IA); as tentativas registradas aparecem à parte. O tempo médio vale para as análises feitas desde a etapa 4 (antes a duração não era gravada)."
+          "\"Análises por IA\" conta as oportunidades pela situação da última análise (concluída, recusada pelo verificador ou erro da IA); as tentativas registradas aparecem à parte. O tempo médio vale para as análises feitas desde a etapa 4 (antes a duração não era gravada).",
+          "Tipo de serviço (no alto): escolha um tipo e todos os números passam a contar só esse tipo (os destinos do Kanban e da Agenda abrem sem esse filtro). A caixa \"Em andamento por tipo de serviço\" abre Oportunidades já filtrada pelo tipo."
         ] }
       ],
       cores: [

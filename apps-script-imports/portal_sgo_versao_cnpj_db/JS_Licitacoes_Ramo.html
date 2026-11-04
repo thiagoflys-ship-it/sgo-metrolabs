@@ -1,0 +1,297 @@
+<!--
+  SGO+ LICITAÇÕES — "Revisar o filtro do ramo" (03/11/2026, decisão do dono). Tela licitacoes_ramo, só Diretoria e Administrador
+  (o servidor confere em toda chamada). Servidor: SGO_Licitacoes_Ramo.js (Licitacoes_api "ramo"); a regra da triagem fica no
+  servidor próprio (sgo_servidor/src/servicos/licitacoes/triagem.ts), aqui só a configuração.
+  Partes: segundo filtro pela IA (ligado e nota mínima, com motivo e versão); sugestões dos descartes "Fora do ramo" (aprovar ou
+  recusar com um toque); palavras que incluem e que excluem (taxonomia do servidor e as configuradas, tirar e acrescentar); as
+  candidatas de agora agrupadas pelo termo que as fez entrar, cada uma com "Não é do ramo" e a expressão que exclui (o sistema
+  sugere as do objeto); "Conferir o efeito" (simulação, nada gravado) e "Aplicar" (versão nova, triagem refeita agora, quantas
+  saíram); histórico das versões. Sem atualização automática: nada redesenha o que está sendo marcado.
+-->
+<style>
+  .lrm-grupo { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+  .lrm-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); font: inherit; font-size: 13px; color: inherit; cursor: pointer; }
+  .lrm-chip b { font-variant-numeric: tabular-nums; }
+  .lrm-chip.ativo, .lrm-chip[aria-pressed="true"] { border-color: var(--bc-action-line); background: var(--bc-surface-2); font-weight: 700; }
+  .lrm-chip.tirar { text-decoration: line-through; color: var(--danger); border-color: var(--bc-danger-line); }
+  .lrm-chip.nova { border-color: var(--bc-action-line); color: var(--success); }
+  .lrm-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .lrm-cand { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; align-items: start; }
+  .lrm-cand.marcada { border-color: var(--bc-danger-line); box-shadow: inset 4px 0 0 var(--danger); }
+  .lrm-cand.sai { opacity: .78; }
+  .lrm-marcar { display: flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .lrm-marcar input { width: 20px; height: 20px; }
+  .lrm-escolha { grid-column: 1 / -1; border-top: 1px dashed var(--border); padding-top: 8px; }
+  .lrm-escolha .lrm-outra { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+  .lrm-escolha .lrm-outra input { flex: 1 1 220px; min-height: 40px; }
+  .lrm-barra { position: sticky; bottom: 0; z-index: 5; background: var(--card); border: 1px solid var(--bc-action-line); border-radius: 10px; padding: 12px; margin-top: 12px; box-shadow: 0 -4px 14px rgba(0, 0, 0, .08); }
+  .lrm-barra textarea { width: 100%; min-height: 54px; }
+  .lrm-rotulo { font-weight: 700; margin: 14px 0 4px; }
+  .lrm-add { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-top: 8px; }
+  .lrm-add .cm-campo { flex: 1 1 220px; margin: 0; }
+  @media (max-width: 900px) {
+    .lrm-colunas { grid-template-columns: minmax(0, 1fr); }
+    .lrm-cand { grid-template-columns: minmax(0, 1fr); }
+    .lrm-marcar { white-space: normal; }
+    .lrm-barra .lic-acoes-linha button { flex: 1 1 140px; }
+  }
+</style>
+<script>
+  var LRM = { d: null, marcadas: {}, negAdd: [], posAdd: [], negRem: [], posRem: [], grupo: "", resultado: null, simulacao: null };
+  var LRM_TIPO_ORIGEM = { TRIAGEM: "pela triagem", CONFIRMADO: "confirmado pela IA", CORRIGIDO: "corrigido pela IA", ANALISE: "pela IA" };
+
+  function LicRm_norm_(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim(); }
+  function LicRm_tem_(lista, x) { return lista.some(function (y) { return LicRm_norm_(y) === LicRm_norm_(x); }); }
+  function LicRm_tirarDe_(lista, x) { return lista.filter(function (y) { return LicRm_norm_(y) !== LicRm_norm_(x); }); }
+  /** As palavras que excluem que "Aplicar" vai acrescentar: as digitadas e as escolhidas nas candidatas marcadas. */
+  function LicRm_negNovas_() {
+    var out = LRM.negAdd.slice();
+    Object.keys(LRM.marcadas).forEach(function (id) { var e = LRM.marcadas[id]; if (e && !LicRm_tem_(out, e)) out.push(e); });
+    return out;
+  }
+  function LicRm_temMudanca_() { return LicRm_negNovas_().length + LRM.posAdd.length + LRM.negRem.length + LRM.posRem.length > 0; }
+  function LicRm_casa_(texto, expr) { var e = LicRm_norm_(expr); return !!e && LicRm_norm_(texto).indexOf(e) >= 0; }
+
+  function LicRm_renderTela_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(4);
+    // o resultado do "Aplicar" aparece uma vez (na volta do Aplicar); entrar de novo na tela começa limpo
+    if (!LRM.manterResultado) LRM.resultado = null;
+    LRM.manterResultado = false;
+    Lic_chamar_("ramo", { op: "tela" }, function (d) {
+      LRM.d = d; LRM.simulacao = null;
+      // marcas de candidatas que saíram da lista (aplicadas ou mudadas por outra pessoa) não ficam presas
+      var ids = {}; (d.candidatas || []).forEach(function (x) { ids[x.id] = true; });
+      Object.keys(LRM.marcadas).forEach(function (id) { if (!ids[id]) delete LRM.marcadas[id]; });
+      LicRm_desenhar_();
+    }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, LicRm_renderTela_); });
+  }
+
+  function LicRm_desenhar_() {
+    var c = Lic_corpo_(), d = LRM.d; if (!c || !d) return;
+    c.innerHTML = LicRm_html_(d);
+    LicRm_ligar_(c);
+  }
+
+  function LicRm_html_(d) {
+    var cfg = d.cfg || {}, f = d.filtroIA || {}, h = "";
+    if (LRM.resultado) h += LRM.resultado;
+    if (d.coletorNoServidor === false) h += Lic_faixa_("O coletor de licitações roda só no servidor próprio do SGO+. Neste ambiente a versão nova das palavras fica gravada, mas a triagem só é refeita no servidor.", "aviso");
+    if (d.reconstrucao && d.reconstrucao.erro) h += Lic_faixa_(d.reconstrucao.erro, "aviso");
+    else if (d.reconstrucao && d.reconstrucao.pedidas) h += Lic_faixa_("A razão da triagem de " + d.reconstrucao.pedidas + " candidata(s) antiga(s) foi refeita agora pelo servidor, com a mesma conta da triagem.", "ok");
+    h += '<p class="cm-modo-dica">A triagem por palavras é feita no servidor: uma licitação entra no radar quando o objeto, a informação complementar ou um item tem um termo de interesse, e sai quando tem um termo que exclui. Aqui você ajusta as palavras (cada mudança é uma versão nova, com o motivo, quem e quando), vê o termo que fez cada candidata entrar e marca as que não são do ramo. Nada é apagado: quem sai vai para "Descartadas pela regra", com o motivo, e volta se a palavra for tirada.</p>';
+    h += '<div class="cm-kpis">' +
+      Lic_kpiHtml_((d.candidatas || []).length, "Candidatas no Radar agora", "", "analisar") +
+      (f.ativo ? Lic_kpiHtml_((d.radar || {}).analisar || 0, "Na lista principal", "", "analisar") + Lic_kpiHtml_((d.radar || {}).aguardando || 0, "Aguardando a análise da IA", "", "aguardando") + Lic_kpiHtml_((d.radar || {}).descartadas_ia || 0, "Descartadas pela IA", "", "descartadas_ia") : "") +
+      Lic_kpiHtml_(d.pendentes || 0, "Sugestões dos descartes esperando", d.pendentes ? "aviso" : "", "") + "</div>";
+    h += LicRm_htmlFiltroIA_(f) + LicRm_htmlSugestoes_(d) + LicRm_htmlPalavras_(d, cfg) + LicRm_htmlCandidatas_(d) + LicRm_htmlBarra_() + LicRm_htmlHistorico_(d);
+    return h;
+  }
+
+  function LicRm_htmlFiltroIA_(f) {
+    var est = !f.iaDisponivel ? Lic_faixa_("A chave da IA não está cadastrada: o segundo filtro não esconde nada (todas as candidatas ficam na lista principal) até a chave ser cadastrada em Administração > Chaves e senhas.", "aviso") : "";
+    return '<details class="cm-caixa"' + (f.ativo ? "" : " open") + '><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Segundo filtro pela IA: ' + (f.ligado ? "ligado, nota mínima " + Lic_esc_(f.notaMinima) : "desligado") + (f.versao ? " (versão " + Lic_esc_(f.versao) + ")" : " (padrão)") + "</summary>" + est +
+      '<p class="cm-txt">Com o filtro ligado, a candidata nova só aparece em "Para analisar" (e nos alertas e no resumo) depois que a análise automática da IA concluir com nota igual ou acima do mínimo e sem "fora do ramo". Abaixo disso vai para "Descartadas pela IA", com a nota e o motivo; sem análise ainda, fica em "Aguardando a análise". Prazo de propostas em menos de ' + Lic_esc_(f.prazoCurtoHoras || 48) + ' h nunca espera: aparece com o selo "Sem análise". A IA usa a mesma fila e o mesmo teto por dia da análise automática (nenhum custo a mais) e nunca descarta de vez: "Trazer de volta" leva para a lista principal, com o motivo.</p>' +
+      '<div class="cm-filtros"><div><label class="lrm-marcar" for="lrmIaLig"><input type="checkbox" id="lrmIaLig"' + (f.ligado ? " checked" : "") + "> Filtro ligado</label></div>" +
+      '<div><label for="lrmIaNota">Nota mínima (1 a 100)</label><input id="lrmIaNota" type="number" min="1" max="100" step="1" inputmode="numeric" value="' + Lic_esc_(f.notaMinima) + '"></div>' +
+      '<div style="flex:2 1 260px"><label for="lrmIaMot">Motivo da mudança (obrigatório)</label><input id="lrmIaMot" maxlength="500" placeholder="Ex.: muitas candidatas boas com nota entre 30 e 40"></div></div>' +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lrm-ia-salvar>Salvar o segundo filtro</button></div><div id="lrmIaMsg" aria-live="polite"></div>' +
+      (f.versao ? '<p class="cm-meta">Versão ' + Lic_esc_(f.versao) + " por " + Lic_esc_(f.por || "—") + " em " + Lic_esc_(Lic_dataHora_(f.em)) + ": " + Lic_esc_(f.motivo || "") + "</p>" : "") + "</details>";
+  }
+
+  function LicRm_htmlSugestoes_(d) {
+    var pend = (d.sugestoes || []).filter(function (s) { return s.situacao === "PENDENTE"; }), feitas = (d.sugestoes || []).filter(function (s) { return s.situacao !== "PENDENTE"; });
+    var h = '<section class="cm-caixa"><h3>Sugestões dos descartes "Fora do ramo" (' + pend.length + ")</h3>";
+    if (!pend.length) h += '<p class="cm-txt">Nenhuma sugestão esperando. Quando a Diretoria descarta uma oportunidade com o motivo "Fora do ramo", o sistema calcula o termo que a fez entrar e sugere aqui uma expressão do objeto para excluir. Nada é aplicado sozinho.</p>';
+    pend.forEach(function (s) {
+      var alt = (s.expressoes || []).filter(Boolean);
+      h += '<article class="cm-card p1" data-lrm-sug="' + Lic_esc_(s.id) + '"><p class="cm-card-tit">' + Lic_esc_(s.orgaoUf || "") + ' <span class="cm-meta lic-mono">' + Lic_esc_(s.codigo) + "</span></p>" +
+        '<p class="lic-objeto">' + Lic_marcar_(s.objeto || "", s.termo || "") + "</p>" +
+        '<p class="cm-meta">Entrou pelo termo de interesse "' + Lic_esc_(s.entrada || "—") + '". Descartada por ' + Lic_esc_(s.por) + " em " + Lic_esc_(Lic_dataHora_(s.em)) + ": " + Lic_esc_(s.motivo) + "</p>" +
+        '<div class="lrm-escolha"><p class="lrm-rotulo">Expressão que exclui</p><div class="lrm-grupo" role="group" aria-label="Expressões sugeridas">' + alt.map(function (x, i) {
+          return '<button type="button" class="lrm-chip" data-lrm-sug-exp="' + Lic_esc_(x) + '" aria-pressed="' + (i === 0) + '">' + Lic_esc_(x) + "</button>";
+        }).join("") + "</div>" +
+        '<div class="lrm-outra"><label for="lrmSugOutra' + Lic_esc_(s.id) + '">Ou digite outra</label><input id="lrmSugOutra' + Lic_esc_(s.id) + '" maxlength="80" value="' + Lic_esc_(alt[0] || "") + '" data-lrm-sug-txt></div>' +
+        '<div class="lic-acoes-linha" style="margin-top:8px"><button type="button" class="btn-primary" data-lrm-sug-aprovar>Aprovar e aplicar</button><button type="button" class="btn-secondary" data-lrm-sug-recusar>Recusar</button></div><div data-lrm-sug-msg aria-live="polite"></div></div></article>';
+    });
+    if (feitas.length) h += '<details><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer">Sugestões já decididas (' + feitas.length + ")</summary>" + Lic_tabelaHtml_(["Oportunidade", "Expressão", "Decisão", "Quem e quando"], feitas.map(function (s) {
+      return [Lic_esc_(s.codigo), Lic_esc_(s.expressao || "—"), s.situacao === "APROVADA" ? '<span class="cm-selo verde">Aprovada' + (s.versao ? " (versão " + Lic_esc_(s.versao) + ")" : "") + "</span>" : '<span class="cm-selo cinza">Recusada</span>', Lic_esc_((s.decididoPor || "—") + " · " + Lic_dataHora_(s.decididoEm))];
+    })) + "</details>";
+    return h + "</section>";
+  }
+
+  function LicRm_chipsPalavras_(lista, rem, add, tipo) {
+    var h = lista.map(function (x) { var t = LicRm_tem_(rem, x); return '<button type="button" class="lrm-chip' + (t ? " tirar" : "") + '" data-lrm-tirar="' + tipo + '" data-v="' + Lic_esc_(x) + '" aria-pressed="' + t + '" title="' + (t ? "Toque para manter" : "Toque para tirar na próxima versão") + '">' + Lic_esc_(x) + (t ? " (sai)" : "") + "</button>"; }).join("");
+    h += add.map(function (x) { return '<button type="button" class="lrm-chip nova" data-lrm-desfazer="' + tipo + '" data-v="' + Lic_esc_(x) + '" title="Toque para desfazer">+ ' + Lic_esc_(x) + "</button>"; }).join("");
+    return h || '<span class="cm-meta">Nenhuma configurada.</span>';
+  }
+  function LicRm_htmlPalavras_(d, cfg) {
+    var p = d.padroes || {};
+    return '<section class="cm-caixa"><h3>Palavras do ramo' + (cfg.versao ? " (versão " + Lic_esc_(cfg.versao) + ")" : " (sem versão salva)") + "</h3>" +
+      (cfg.versao ? '<p class="cm-meta">Versão ' + Lic_esc_(cfg.versao) + " por " + Lic_esc_(cfg.por || "—") + " em " + Lic_esc_(Lic_dataHora_(cfg.em)) + ": " + Lic_esc_(cfg.motivo || "") + "</p>" : "") +
+      '<div class="lrm-colunas"><div><p class="lrm-rotulo">Incluem (fazem entrar)</p><p class="cm-txt"><b>Da taxonomia do servidor:</b> ' + Lic_esc_(p.positivos || "") + "</p>" +
+      '<p class="cm-meta">Configuradas pela Diretoria (toque para tirar):</p><div class="lrm-grupo">' + LicRm_chipsPalavras_(cfg.positivas || [], LRM.posRem, LRM.posAdd, "pos") + "</div>" +
+      '<div class="lrm-add"><div class="cm-campo"><label for="lrmPosNova">Acrescentar palavra que inclui</label><input id="lrmPosNova" maxlength="80" placeholder="Ex.: gasometria"></div><button type="button" class="btn-secondary" data-lrm-add="pos">Acrescentar</button></div></div>' +
+      '<div><p class="lrm-rotulo">Excluem (fazem sair)</p><p class="cm-txt"><b>Da taxonomia do servidor:</b> ' + Lic_esc_(p.negativos || "") + "</p>" +
+      '<p class="cm-meta">Configuradas pela Diretoria (toque para tirar):</p><div class="lrm-grupo">' + LicRm_chipsPalavras_(cfg.negativas || [], LRM.negRem, LRM.negAdd, "neg") + "</div>" +
+      '<div class="lrm-add"><div class="cm-campo"><label for="lrmNegNova">Acrescentar palavra que exclui</label><input id="lrmNegNova" maxlength="80" placeholder="Ex.: tratamento de água"></div><button type="button" class="btn-secondary" data-lrm-add="neg">Acrescentar</button></div></div></div>' +
+      '<p class="cm-ajuda-campo">A palavra vale para o PNCP e o Compras.gov.br, sem acento e sem diferença de maiúscula, em qualquer ponto do objeto, da informação complementar e dos itens. A palavra que exclui configurada vence até um termo forte (como "certificado de calibração"): confira o efeito antes de aplicar. Travas e compra de produto continuam como estão (' + Lic_esc_(p.travas ? "travas: " + p.travas : "") + ").</p></section>";
+  }
+
+  function LicRm_htmlCandidatas_(d) {
+    var lista = d.candidatas || [], grupos = d.grupos || [], negNovas = LicRm_negNovas_();
+    var vis = LRM.grupo ? lista.filter(function (x) { return (x.razao ? x.razao.rotulo : "(sem a razão)") === LRM.grupo; }) : lista;
+    var h = '<section class="cm-caixa"><h3>Candidatas de agora, pelo termo que as fez entrar (' + lista.length + ")</h3>" +
+      '<div class="lrm-grupo" role="group" aria-label="Filtrar pelo termo que fez entrar"><button type="button" class="lrm-chip' + (!LRM.grupo ? " ativo" : "") + '" data-lrm-grupo="">Todas <b>' + lista.length + "</b></button>" +
+      grupos.map(function (g) { return '<button type="button" class="lrm-chip' + (LRM.grupo === g.rotulo ? " ativo" : "") + '" data-lrm-grupo="' + Lic_esc_(g.rotulo) + '">' + Lic_esc_(g.rotulo) + " <b>" + g.n + "</b></button>"; }).join("") + "</div>";
+    if (!lista.length) return h + '<div class="cm-vazio">Nenhuma candidata no Radar agora.</div></section>';
+    var atual = "";
+    vis.forEach(function (x) {
+      var r = x.razao, rot = r ? r.rotulo : "(sem a razão)", marcada = Object.prototype.hasOwnProperty.call(LRM.marcadas, x.id);
+      var sai = negNovas.filter(function (e) { return LicRm_casa_(x.objeto, e); })[0];
+      if (rot !== atual) { atual = rot; h += '<p class="lrm-rotulo">Entraram por "' + Lic_esc_(rot) + '"</p>'; }
+      h += '<article class="cm-card p3 lrm-cand' + (marcada ? " marcada" : "") + (sai && !marcada ? " sai" : "") + '" data-lrm-cand="' + Lic_esc_(x.id) + '"><div>' +
+        '<p class="cm-card-tit">' + Lic_esc_(x.orgao) + ' <span class="cm-meta lic-mono">' + Lic_esc_(x.codigo) + "</span></p>" +
+        '<p class="cm-meta">' + Lic_esc_((x.municipio ? x.municipio + "/" : "") + x.uf) + " · " + Lic_tempo_(x.encerramentoIso) + "</p>" +
+        '<p class="cm-txt" style="margin:2px 0">' + (x.tipo && x.tipo.codigo ? '<span class="cm-selo cinza">' + Lic_esc_(x.tipo.nome) + (LRM_TIPO_ORIGEM[x.tipo.origem] ? " · " + LRM_TIPO_ORIGEM[x.tipo.origem] : "") + "</span>" : '<span class="cm-selo cinza">Tipo não classificado</span>') +
+        (x.radar === "AGUARDANDO" ? '<span class="cm-selo azul">Aguardando a análise</span>' : x.radar === "DESCARTADA_IA" ? '<span class="cm-selo laranja" title="' + Lic_esc_(x.radarTexto) + '">Descartada pela IA</span>' : "") +
+        (x.nota !== null && x.nota !== undefined ? '<span class="cm-selo azul">Nota ' + Lic_esc_(Lic_num_(x.nota)) + "</span>" : "") + (sai && !marcada ? '<span class="cm-selo vermelho">Sai com "' + Lic_esc_(sai) + '"</span>' : "") + "</p>" +
+        '<p class="lic-objeto">' + Lic_marcar_(x.objeto, r ? r.termo : "") + "</p>" +
+        (r ? '<p class="cm-meta">Entrou pelo termo "' + Lic_esc_(r.rotulo) + '"' + (r.termo && LicRm_norm_(r.termo) !== LicRm_norm_(r.rotulo) ? ' (no texto: "' + Lic_esc_(r.termo) + '")' : "") + " no " + Lic_esc_(r.fonte || "objeto") + (r.origem === "configurada" ? ", palavra configurada pela Diretoria" : ", taxonomia do servidor") +
+          ((r.todas || []).length > 1 ? ". Outros termos de interesse no texto: " + Lic_esc_(r.todas.filter(function (t) { return t !== r.rotulo; }).join(", ")) : "") + (r.reconstruida ? " (razão lida do motivo da triagem; o servidor confirma na próxima triagem)" : "") + ".</p>" : '<p class="cm-meta">Sem a razão guardada: o servidor ainda não refez a triagem desta candidata.</p>') +
+        '</div><label class="lrm-marcar"><input type="checkbox" data-lrm-marcar' + (marcada ? " checked" : "") + "> Não é do ramo</label>";
+      if (marcada) {
+        var exp = x.expressoes || [], esc = LRM.marcadas[x.id] || "";
+        h += '<div class="lrm-escolha"><p class="lrm-rotulo">Qual expressão deve excluir?</p>' + (exp.length ? '<div class="lrm-grupo" role="group" aria-label="Expressões do objeto">' + exp.map(function (e) {
+          return '<button type="button" class="lrm-chip" data-lrm-exp="' + Lic_esc_(e) + '" aria-pressed="' + (LicRm_norm_(e) === LicRm_norm_(esc)) + '">' + Lic_esc_(e) + "</button>"; }).join("") + "</div>" : '<p class="cm-meta">O objeto não tem expressão sem termo de interesse: digite a expressão.</p>') +
+          '<div class="lrm-outra"><label for="lrmOutra' + Lic_esc_(x.id) + '">Expressão escolhida (pode editar)</label><input id="lrmOutra' + Lic_esc_(x.id) + '" maxlength="80" value="' + Lic_esc_(esc) + '" data-lrm-outra></div>' +
+          '<p class="cm-ajuda-campo">A expressão exclui toda licitação que a tiver no texto, não só esta. Prefira a mais específica (por exemplo "tratamento de água" em vez de "água").</p></div>';
+      }
+      h += "</article>";
+    });
+    return h + "</section>";
+  }
+
+  function LicRm_htmlBarra_() {
+    var neg = LicRm_negNovas_(), partes = [];
+    if (neg.length) partes.push("exclui " + neg.map(function (x) { return '"' + x + '"'; }).join(", "));
+    if (LRM.posAdd.length) partes.push("inclui " + LRM.posAdd.map(function (x) { return '"' + x + '"'; }).join(", "));
+    if (LRM.negRem.length) partes.push("deixa de excluir " + LRM.negRem.map(function (x) { return '"' + x + '"'; }).join(", "));
+    if (LRM.posRem.length) partes.push("deixa de incluir " + LRM.posRem.map(function (x) { return '"' + x + '"'; }).join(", "));
+    var marc = Object.keys(LRM.marcadas).length, semExp = Object.keys(LRM.marcadas).filter(function (id) { return !LRM.marcadas[id]; }).length;
+    return '<div class="lrm-barra" role="region" aria-label="Aplicar as mudanças"><p class="cm-txt" style="margin:0 0 6px"><b>Mudanças para a próxima versão:</b> ' + (partes.length ? Lic_esc_(partes.join("; ")) + "." : "nenhuma ainda. Marque \"Não é do ramo\" numa candidata ou acrescente ou tire uma palavra.") +
+      (marc ? " " + marc + " candidata(s) marcada(s)" + (semExp ? ", " + semExp + " sem a expressão escolhida" : "") + "." : "") + "</p>" +
+      (LRM.simulacao ? LRM.simulacao : "") +
+      '<div class="cm-campo"><label for="lrmMotivo">Motivo da mudança (obrigatório)</label><textarea id="lrmMotivo" maxlength="500" placeholder="Ex.: hemodiálise e tratamento de água não são do ramo">' + Lic_esc_(LRM.motivo || "") + "</textarea></div>" +
+      '<div class="lic-acoes-linha"><button type="button" class="btn-secondary" data-lrm-simular' + (LicRm_temMudanca_() ? "" : " disabled") + '>Conferir o efeito</button><button type="button" class="btn-primary" data-lrm-aplicar' + (LicRm_temMudanca_() ? "" : " disabled") + '>Aplicar</button>' +
+      (LicRm_temMudanca_() ? '<button type="button" class="btn-secondary" data-lrm-limpar>Desfazer as marcas</button>' : "") + '</div><div id="lrmMsg" aria-live="assertive"></div></div>';
+  }
+
+  function LicRm_htmlHistorico_(d) {
+    var hist = d.historico || [];
+    return '<details class="cm-caixa"><summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:700">Histórico das versões (' + hist.length + ")</summary>" +
+      (hist.length ? '<ul class="cm-hist" style="list-style:none;padding:0;margin:0">' + hist.map(function (x) {
+        return '<li style="padding:8px 0;border-bottom:1px solid var(--border)"><p class="cm-meta" style="margin:0"><b>' + Lic_esc_(Lic_dataHora_(x.quando)) + "</b> · " + Lic_esc_(x.quem) + (x.versao ? " · versão " + Lic_esc_(x.versao) : "") + " · " + Lic_esc_({ RAMO_VERSAO: "Palavras do ramo", FILTRO_IA_CONFIG: "Segundo filtro pela IA", SUGESTAO_RECUSADA: "Sugestão recusada" }[x.tipo] || x.tipo) + "</p>" +
+          '<p class="cm-txt" style="margin:2px 0">' + Lic_esc_(x.texto) + "</p>" + (x.de || x.para ? '<p class="cm-meta" style="margin:0">De: ' + Lic_esc_(x.de || "—") + "<br>Para: " + Lic_esc_(x.para || "—") + "</p>" : "") + "</li>";
+      }).join("") + "</ul>" : '<p class="cm-txt">Nenhuma versão salva ainda: valem só os termos da taxonomia do servidor.</p>') + "</details>";
+  }
+
+  function LicRm_ligar_(c) {
+    Lic_ligarLinksKpi_(c);
+    c.querySelectorAll("[data-lrm-grupo]").forEach(function (b) { b.onclick = function () { LRM.grupo = b.getAttribute("data-lrm-grupo"); LicRm_redesenharMantendo_(); }; });
+    c.querySelectorAll("[data-lrm-cand]").forEach(function (card) {
+      var id = card.getAttribute("data-lrm-cand"), x = (LRM.d.candidatas || []).filter(function (y) { return y.id === id; })[0];
+      var cb = card.querySelector("[data-lrm-marcar]");
+      if (cb) cb.onchange = function () { if (cb.checked) LRM.marcadas[id] = (x && x.expressoes && x.expressoes[0]) || ""; else delete LRM.marcadas[id]; LRM.simulacao = null; LicRm_redesenharMantendo_(); };
+      card.querySelectorAll("[data-lrm-exp]").forEach(function (b) { b.onclick = function () { LRM.marcadas[id] = b.getAttribute("data-lrm-exp"); LRM.simulacao = null; LicRm_redesenharMantendo_(); }; });
+      var outra = card.querySelector("[data-lrm-outra]");
+      if (outra) outra.addEventListener("change", function () { LRM.marcadas[id] = outra.value.trim(); LRM.simulacao = null; LicRm_redesenharMantendo_(); });
+    });
+    c.querySelectorAll("[data-lrm-tirar]").forEach(function (b) { b.onclick = function () { var t = b.getAttribute("data-lrm-tirar"), v = b.getAttribute("data-v"), k = t === "pos" ? "posRem" : "negRem"; LRM[k] = LicRm_tem_(LRM[k], v) ? LicRm_tirarDe_(LRM[k], v) : LRM[k].concat([v]); LRM.simulacao = null; LicRm_redesenharMantendo_(); }; });
+    c.querySelectorAll("[data-lrm-desfazer]").forEach(function (b) { b.onclick = function () { var k = b.getAttribute("data-lrm-desfazer") === "pos" ? "posAdd" : "negAdd"; LRM[k] = LicRm_tirarDe_(LRM[k], b.getAttribute("data-v")); LRM.simulacao = null; LicRm_redesenharMantendo_(); }; });
+    c.querySelectorAll("[data-lrm-add]").forEach(function (b) {
+      b.onclick = function () {
+        var t = b.getAttribute("data-lrm-add"), el = Lic_$_(t === "pos" ? "lrmPosNova" : "lrmNegNova"), v = (el && el.value || "").replace(/\s+/g, " ").trim();
+        if (LicRm_norm_(v).length < 3) { Lic_toast_("Escreva a palavra ou expressão com pelo menos 3 letras.", "erro"); return; }
+        var k = t === "pos" ? "posAdd" : "negAdd", outra = t === "pos" ? LicRm_negNovas_() : LRM.posAdd;
+        if (LicRm_tem_(outra, v)) { Lic_toast_("A mesma expressão não pode incluir e excluir ao mesmo tempo.", "erro"); return; }
+        if (!LicRm_tem_(LRM[k], v)) LRM[k].push(v);
+        LRM.simulacao = null; LicRm_redesenharMantendo_();
+      };
+    });
+    var lim = c.querySelector("[data-lrm-limpar]"); if (lim) lim.onclick = function () { LRM.marcadas = {}; LRM.negAdd = []; LRM.posAdd = []; LRM.negRem = []; LRM.posRem = []; LRM.simulacao = null; LicRm_redesenharMantendo_(); };
+    var mot = Lic_$_("lrmMotivo"); if (mot) mot.addEventListener("input", function () { LRM.motivo = mot.value; });
+    var sim = c.querySelector("[data-lrm-simular]"); if (sim) sim.onclick = function () { LicRm_simular_(sim); };
+    var apl = c.querySelector("[data-lrm-aplicar]"); if (apl) apl.onclick = function () { LicRm_aplicar_(apl); };
+    var ia = c.querySelector("[data-lrm-ia-salvar]"); if (ia) ia.onclick = function () { LicRm_salvarIA_(ia); };
+    c.querySelectorAll("[data-lrm-sug]").forEach(function (card) {
+      var id = card.getAttribute("data-lrm-sug"), txt = card.querySelector("[data-lrm-sug-txt]"), msg = card.querySelector("[data-lrm-sug-msg]");
+      card.querySelectorAll("[data-lrm-sug-exp]").forEach(function (b) { b.onclick = function () { card.querySelectorAll("[data-lrm-sug-exp]").forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); }); if (txt) txt.value = b.getAttribute("data-lrm-sug-exp"); }; });
+      card.querySelector("[data-lrm-sug-aprovar]").onclick = function () {
+        var bt = this, v = (txt && txt.value || "").trim();
+        if (LicRm_norm_(v).length < 3) { msg.innerHTML = Lic_faixa_("Escolha ou digite a expressão que exclui (pelo menos 3 letras). Nada foi alterado.", "erro"); return; }
+        bt.disabled = true; msg.innerHTML = '<p class="cm-meta">Aplicando: versão nova e triagem refeita agora…</p>';
+        Lic_chamar_("ramo", { op: "sugestao", id: id, decisao: "APROVAR", expressao: v }, function (r) { LicRm_mostrarResultado_(r); }, function (m) { bt.disabled = false; msg.innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+      };
+      card.querySelector("[data-lrm-sug-recusar]").onclick = function () {
+        var bt = this; bt.disabled = true;
+        Lic_chamar_("ramo", { op: "sugestao", id: id, decisao: "RECUSAR" }, function (r) { Lic_toast_(r.texto || "Sugestão recusada."); LicRm_renderTela_(); }, function (m) { bt.disabled = false; msg.innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+      };
+    });
+  }
+  /** Redesenha sem perder o que a pessoa digitou (motivo) e a rolagem (nada vem do servidor). */
+  function LicRm_redesenharMantendo_() {
+    var mot = Lic_$_("lrmMotivo"); if (mot) LRM.motivo = mot.value;
+    var y = window.scrollY || 0, foco = document.activeElement && document.activeElement.id;
+    LicRm_desenhar_();
+    try { window.scrollTo(0, y); } catch (e) {}
+    if (foco) { var f = Lic_$_(foco); if (f && f.focus) { try { f.focus(); } catch (e) {} } }
+  }
+  function Lic_ligarLinksKpi_(c) {
+    c.querySelectorAll("[data-lic-kpi]").forEach(function (b) { var a = b.getAttribute("data-lic-kpi"); if (!a) { b.disabled = true; return; } b.onclick = function () { LIC.aba = a; LIC.alta = 0; abrir("licitacoes_oportunidades"); }; });
+  }
+
+  function LicRm_pedido_() {
+    var neg = LicRm_negNovas_();
+    return { negativasAdd: neg, positivasAdd: LRM.posAdd.slice(), negativasRemover: LRM.negRem.slice(), positivasRemover: LRM.posRem.slice(), marcadas: Object.keys(LRM.marcadas), motivo: ((Lic_$_("lrmMotivo") || {}).value || LRM.motivo || "").trim() };
+  }
+  function LicRm_simular_(bt) {
+    var p = LicRm_pedido_();
+    bt.disabled = true;
+    Lic_chamar_("ramo", { op: "simular", negativas: p.negativasAdd, positivas: p.positivasAdd }, function (r) {
+      var nomes = {}; (LRM.d.candidatas || []).forEach(function (x) { nomes[x.id] = x.codigo + " · " + x.orgao + " (" + x.uf + ")"; });
+      LRM.simulacao = Lic_faixa_(Lic_esc_(r.texto) + ((r.sairiam || []).length ? "<br>" + r.sairiam.slice(0, 40).map(function (x) { return Lic_esc_(nomes[x.id] || x.codigo) + ": " + Lic_esc_(x.motivo); }).join("<br>") + (r.sairiam.length > 40 ? "<br>…e mais " + (r.sairiam.length - 40) + "." : "") : "") +
+        (p.negativasRemover.length || p.positivasRemover.length ? "<br>Tirar palavra não é simulado aqui: o que estava descartado por ela volta na triagem refeita." : ""), "info", true);
+      LicRm_redesenharMantendo_();
+    }, function (m) { bt.disabled = false; Lic_$_("lrmMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+  }
+  function LicRm_aplicar_(bt) {
+    var p = LicRm_pedido_();
+    var semExp = Object.keys(LRM.marcadas).filter(function (id) { return LicRm_norm_(LRM.marcadas[id]).length < 3; });
+    if (semExp.length) { Lic_$_("lrmMsg").innerHTML = Lic_faixa_("Escolha ou digite a expressão que exclui em cada candidata marcada (" + semExp.length + " sem expressão). Nada foi alterado.", "erro"); return; }
+    if (p.motivo.length < 5) { Lic_$_("lrmMsg").innerHTML = Lic_faixa_("Escreva o motivo da mudança (pelo menos 5 letras). Nada foi alterado.", "erro"); var m = Lic_$_("lrmMotivo"); if (m) m.focus(); return; }
+    bt.disabled = true; Lic_$_("lrmMsg").innerHTML = '<p class="cm-meta">Aplicando: versão nova, triagem refeita agora pelo servidor e sincronia (pode levar alguns segundos)…</p>';
+    Lic_chamar_("ramo", Object.assign({ op: "aplicar" }, p), function (r) { LRM.marcadas = {}; LRM.negAdd = []; LRM.posAdd = []; LRM.negRem = []; LRM.posRem = []; LRM.motivo = ""; LicRm_mostrarResultado_(r); },
+      function (m) { bt.disabled = false; Lic_$_("lrmMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true, carregando: true });
+  }
+  function LicRm_mostrarResultado_(r) {
+    var h = "";
+    if (r.semMudanca) h = Lic_faixa_(r.texto || "Nada mudou.", "info");
+    else {
+      var l = function (lista) { return lista.slice(0, 60).map(function (x) { return Lic_esc_(x.codigo + " · " + x.orgao + " (" + x.uf + ")") + (x.motivo ? ": " + Lic_esc_(x.motivo) : ""); }).join("<br>"); };
+      h = Lic_faixa_("<b>Versão " + Lic_esc_(r.versao) + " aplicada.</b> " + Lic_esc_(r.texto || "") + (r.aviso ? " " + Lic_esc_(r.aviso) : "") +
+        ((r.sairam || []).length ? "<br><b>Saíram do Radar (" + r.sairam.length + "):</b><br>" + l(r.sairam) : "") + ((r.voltaram || []).length ? "<br><b>Voltaram (" + r.voltaram.length + "):</b><br>" + l(r.voltaram) : "") +
+        ((r.ficaram || []).length ? "<br><b>Marcadas que continuam no Radar:</b><br>" + r.ficaram.map(function (x) { return Lic_esc_(x.codigo) + ": " + Lic_esc_(x.porque); }).join("<br>") : "") +
+        '<br><button type="button" class="lic-link" data-lic-ir="' + Lic_esc_(JSON.stringify({ mod: "licitacoes_oportunidades", aba: "descartadas", origem: "REGRA" })) + '">Ver as descartadas pela regra</button>', r.aviso ? "aviso" : "ok", true);
+    }
+    LRM.resultado = h; LRM.manterResultado = true;
+    LicRm_renderTela_();
+    setTimeout(function () { var c = Lic_corpo_(); if (c && typeof Lic_ligarLinks_ === "function") Lic_ligarLinks_(c); try { window.scrollTo(0, 0); } catch (e) {} }, 50);
+  }
+  function LicRm_salvarIA_(bt) {
+    var d = { op: "filtroIA", ligado: !!(Lic_$_("lrmIaLig") || {}).checked, notaMinima: (Lic_$_("lrmIaNota") || {}).value, motivo: (Lic_$_("lrmIaMot") || {}).value || "" };
+    if (String(d.motivo).trim().length < 5) { Lic_$_("lrmIaMsg").innerHTML = Lic_faixa_("Escreva o motivo da mudança (pelo menos 5 letras). Nada foi alterado.", "erro"); return; }
+    bt.disabled = true;
+    Lic_chamar_("ramo", d, function (r) { Lic_toast_(r.texto || "Salvo."); LicRm_renderTela_(); }, function (m) { bt.disabled = false; Lic_$_("lrmIaMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
+  }
+</script>

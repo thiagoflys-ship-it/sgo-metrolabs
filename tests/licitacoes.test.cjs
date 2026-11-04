@@ -336,7 +336,8 @@ test('listas, filtros, ficha básica, Hoje, coletar agora e regras do radar', ()
   a.coletor.itens = [item('PNCP:' + IMBEL.numeroControlePncp, 1, IMBEL, TRI_IMBEL), item('PNCP:' + ANSN.numeroControlePncp, 1, ANSN, TRI_ANSN), item('PNCP:' + CAJAMAR.numeroControlePncp, 1, CAJAMAR, TRI_CAJAMAR)];
   a.ctx.Lic_sincronizar_(null);
   let r = a.api('s_dora', 'oportunidades', { aba: 'analisar' });
-  assert.deepEqual(r.contagens, { analisar: 1, travadas: 1, analise: 0, descartadas: 1 });
+  // 03/11/2026 (filtro do ramo): as abas do segundo filtro pela IA entram na contagem (zeradas sem o SGO_Licitacoes_Ramo.js)
+  assert.deepEqual(r.contagens, { analisar: 1, aguardando: 0, travadas: 1, analise: 0, descartadas_ia: 0, descartadas: 1 });
   assert.equal(r.lista[0].numeroControle, IMBEL.numeroControlePncp);
   assert.equal(r.lista[0].sessao, 'Compras.gov.br (dados abertos)');
   assert.equal(r.lista[0].termo, 'NR-13');

@@ -362,7 +362,7 @@ test('telas: Kanban (computador: 7 colunas; celular: uma etapa por aba), Gantt (
   // Painel
   h = pc.ctx.Lic_htmlPainel_(pn);
   const fontes = (h.match(/<b>Fonte:<\/b>/g) || []).length;
-  assert.equal(fontes, 6, 'cada caixa com a fonte');
+  assert.equal(fontes, 7, 'cada caixa com a fonte (03/11/2026: mais a caixa do tipo de serviço)');
   const kpis = h.match(/<button type="button" class="cm-kpi[^>]*>/g) || [];
   assert.ok(kpis.length >= 6 && kpis.every((k) => /data-lic-ir="/.test(k) && /title="Fonte: /.test(k)), 'todo número clicável e com a fonte');
   const barras = h.match(/<button type="button" class="atv-barra-ind lic-pn-barra"[^>]*>/g) || [];

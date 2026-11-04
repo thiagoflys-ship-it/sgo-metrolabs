@@ -15,7 +15,9 @@
  * Nada é apagado: a situação muda; parâmetros mudam com merge, versão e motivo.
  ****************************************************/
 
-var LIC_ABAS = { PORTAIS: 'LIC_PORTAIS', OPORTUNIDADES: 'LIC_OPORTUNIDADES', HISTORICO: 'LIC_HISTORICO', CONFIG: 'LIC_CONFIG', ANALISES: 'LIC_ANALISES', EVENTOS: 'LIC_EVENTOS', ALERTAS: 'LIC_ALERTAS' };
+var LIC_ABAS = { PORTAIS: 'LIC_PORTAIS', OPORTUNIDADES: 'LIC_OPORTUNIDADES', HISTORICO: 'LIC_HISTORICO', CONFIG: 'LIC_CONFIG', ANALISES: 'LIC_ANALISES', EVENTOS: 'LIC_EVENTOS', ALERTAS: 'LIC_ALERTAS',
+  // 03/11/2026: sugestões de palavra que exclui criadas pelos descartes "Fora do ramo" (SGO_Licitacoes_Ramo.js)
+  RAMO_SUGESTOES: 'LIC_RAMO_SUGESTOES' };
 var LIC_COLUNAS = {
   LIC_PORTAIS: ['ID', 'CODIGO', 'NOME', 'CATEGORIA', 'URL', 'URL_API', 'DOCUMENTACAO', 'TIPO', 'AUTENTICACAO', 'CREDENCIAL_REF', 'SITUACAO', 'PRIORIDADE',
     'LIGADO', 'PALAVRAS_POSITIVAS', 'PALAVRAS_NEGATIVAS', 'UFS', 'VALOR_MINIMO', 'FREQUENCIA_MIN', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME',
@@ -45,8 +47,16 @@ var LIC_COLUNAS = {
     // subida da nota) ou CAIU (depois do alerta, a nota caiu abaixo do limite ou apareceu trava); o ciclo conta as subidas alertadas
     'ALTA_ADERENCIA_ESTADO', 'ALTA_ADERENCIA_CICLO', 'ALTA_ADERENCIA_EM', 'ALTA_ADERENCIA_NOTA',
     // revisão de 7401585: ESPERA = TRIAGEM quando a nota é alta mas a triagem está travada (a rotina avalia de novo quando destravar)
-    'ALTA_ADERENCIA_ESPERA'],
+    'ALTA_ADERENCIA_ESPERA',
+    // 03/11/2026, filtro do ramo (SGO_Licitacoes_Ramo.js): a razão da triagem (o termo que fez entrar, do servidor), o tipo de serviço
+    // pela triagem e pela análise, o veredito da última análise concluída (fora do ramo; refeito quando a análise ou as decisões de
+    // trava mudam: IA_FILTRO_BASE), o "Trazer de volta" do segundo filtro pela IA e o motivo padronizado do descarte pela Diretoria
+    'TRIAGEM_ENTRADA_JSON', 'TIPO_SERVICO_TRIAGEM', 'TIPO_SERVICO_IA', 'IA_FILTRO_BASE', 'IA_FORA_RAMO', 'IA_TRAZIDA_EM', 'IA_TRAZIDA_POR_ID', 'IA_TRAZIDA_POR_NOME', 'IA_TRAZIDA_MOTIVO',
+    'DESCARTE_MOTIVO_PADRAO'],
   LIC_HISTORICO: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'CODIGO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'VERSAO', 'FONTE', 'HASH', 'USUARIO_ID', 'USUARIO_NOME', 'DATA'],
+  // 03/11/2026, filtro do ramo: UMA LINHA POR SUGESTÃO (PENDENTE, APROVADA ou RECUSADA); nada é apagado
+  LIC_RAMO_SUGESTOES: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'TIPO', 'EXPRESSAO', 'EXPRESSOES_JSON', 'ENTRADA_ROTULO', 'ENTRADA_TERMO', 'OBJETO', 'ORGAO_UF', 'ORIGEM', 'MOTIVO', 'SITUACAO',
+    'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'CRIADO_EM', 'DECIDIDO_POR_ID', 'DECIDIDO_POR_NOME', 'DECIDIDO_EM', 'DECISAO_MOTIVO', 'VERSAO_APLICADA'],
   LIC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
   // etapa 2 (02/11/2026): UMA LINHA POR ANÁLISE (versão); nada é sobrescrito. CONCLUIDA, RECUSADA (verificador) ou ERRO (IA fora).
   LIC_ANALISES: ['ID', 'OPORTUNIDADE_ID', 'CODIGO', 'VERSAO', 'SITUACAO', 'NOTA', 'SOMA', 'CLASSE', 'TRAVADA', 'RESUMO', 'CRITERIOS_JSON', 'ITENS_JSON', 'EXIGENCIAS_JSON', 'RISCOS_JSON',
@@ -176,14 +186,15 @@ function Lic_garantirAbas_() {
   // V7 (03/11/2026): coluna ENVIO_GRUPO em LIC_ALERTAS (envio agrupado por licitação e pessoa)
   // V8 (03/11/2026): colunas ANALISE_PENDENTE_* em LIC_OPORTUNIDADES (fila da análise automática)
   // V9 (03/11/2026): colunas ALTA_ADERENCIA_* em LIC_OPORTUNIDADES (alerta de nova oportunidade de alta aderência)
-  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V9')) return; } catch (e) {}
+  // V10 (03/11/2026): filtro do ramo (colunas TRIAGEM_ENTRADA_JSON, TIPO_SERVICO_*, IA_* e DESCARTE_MOTIVO_PADRAO; aba LIC_RAMO_SUGESTOES)
+  try { cache = CacheService.getScriptCache(); if (cache.get('LIC_ABAS_OK_V10')) return; } catch (e) {}
   Object.keys(LIC_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, LIC_COLUNAS[aba]);
     LIC_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (LIC_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
   Lic_garantirPortais_();
-  try { if (cache) cache.put('LIC_ABAS_OK_V9', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('LIC_ABAS_OK_V10', '1', 21600); } catch (e) {}
 }
 
 /** Os 33 portais: insere só os códigos que faltam (portal já cadastrado nunca é sobrescrito). */
@@ -282,6 +293,8 @@ function Lic_publicarCfgColetor_() {
       negativas: Lic_lista_(p.PALAVRAS_NEGATIVAS), ufs: Lic_lista_(p.UFS).map(Lic_up_), valorMinimo: Lic_num_(p.VALOR_MINIMO) || 0 };
   });
   var valor = { versao: cfg.versao, porte: cfg.porte, portais: portais };
+  // 03/11/2026: palavras do filtro do ramo (todos os portais; tela "Revisar o filtro do ramo", SGO_Licitacoes_Ramo.js)
+  if (typeof Lic_ramoParaColetor_ === 'function') valor.ramo = Lic_ramoParaColetor_();
   var props = PropertiesService.getScriptProperties();
   props.setProperty('LIC_CFG_COLETOR', JSON.stringify(valor));
   if (cfg.versao) props.setProperty('LIC_COLETOR_LIGADO', cfg.coletorLigado ? '1' : '0');   // sem versão salva pela tela, a chave fica como está

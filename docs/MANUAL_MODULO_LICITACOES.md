@@ -95,19 +95,20 @@ A lei vem do amparo legal da contratação, não da modalidade. Estatal (por exe
 
 | Resultado | Quando | Onde aparece |
 |---|---|---|
-| Candidata | Tem termo de interesse e nada que descarte ou trave | Oportunidades > Para analisar |
+| Candidata | Tem termo de interesse e nada que descarte ou trave | Oportunidades > Para analisar (com o segundo filtro pela IA ligado: Aguardando a análise ou Descartadas pela IA até a nota sair; ver 6.14) |
 | Travada | Tem termo de interesse e um impeditivo que depende de decisão da Diretoria | Oportunidades > Travadas |
 | Descartada pela regra | Tem termo de interesse, mas a regra descarta | Oportunidades > Descartadas |
 | Fora | Nenhum termo de interesse | Não aparece |
 
-Toda decisão da regra vem com o motivo e o trecho literal do objeto, da informação complementar ou do item que a disparou.
+Toda decisão da regra vem com o motivo e o trecho literal do objeto, da informação complementar ou do item que a disparou. Desde 03/11/2026 a triagem guarda também a razão da entrada (o termo de interesse que fez a licitação entrar, onde estava e os outros termos achados) e o tipo de serviço do catálogo, mesmo quando outra regra descarta ou trava: o cartão diz "Entrou pelo termo ..." e a tela Revisar o filtro do ramo agrupa as candidatas por esse termo.
 
 ### 5.2 Termos de interesse
 
-Calibração, aferição, metrologia, qualificação térmica e de equipamento, validação de processo de esterilização, mapeamento térmico, termodesinfectora, lavadora ultrassônica, autoclave, esterilização, seladora, NR-13, vaso de pressão, caldeira, válvula de segurança, engenharia clínica, registrador de temperatura, osmose reversa, termo-higrômetro, esfigmomanômetro e manutenção de equipamentos de saúde ou de laboratório. Palavras a mais podem ser incluídas em Parametrizar (PNCP e Compras.gov.br).
+Calibração, aferição, metrologia, qualificação térmica e de equipamento, validação de processo de esterilização, mapeamento térmico, termodesinfectora, lavadora ultrassônica, autoclave, esterilização, seladora, NR-13, vaso de pressão, caldeira, válvula de segurança, engenharia clínica, registrador de temperatura, osmose reversa, termo-higrômetro, esfigmomanômetro e manutenção de equipamentos de saúde ou de laboratório. Palavras a mais podem ser incluídas na tela Revisar o filtro do ramo (valem para o PNCP e o Compras.gov.br, com versão e histórico; ver 6.14) ou em Parametrizar, por portal.
 
 ### 5.3 O que descarta
 
+- Palavras que excluem configuradas pela Diretoria na tela Revisar o filtro do ramo (6.14). Ao contrário dos termos negativos da taxonomia, a palavra configurada descarta mesmo com um termo mais específico no texto: a Diretoria decidiu.
 - Termos negativos, tirados de falsos positivos reais: castração e esterilização de animais, reagentes e soluções de calibração, borracharia e calibragem de pneus, embalagem para esterilização, terceirização da esterilização de materiais, vidraria calibrada, equipamento de pavimento, audiologia, nobreak, locação de equipamento, insumos para CME. Se um termo mais específico também aparece (por exemplo, "calibração de termômetros"), a regra não descarta e põe o selo "Termo negativo junto: conferir".
 - Compra de produto: dois sinais juntos entre objeto de aquisição ou fornecimento, itens de material, especificação construtiva (volume em litros, inox), garantia de fábrica ou prazo de entrega, adesão a ata, lista de insumos e objeto sem nenhuma palavra de serviço. O último sinal é uma leitura desta etapa: quando a Diretoria cadastrar produtos ou representadas, a trilha de produto passa a ser avaliada em vez de descartada.
 - Contratação direta já decidida (ato que autoriza a contratação direta).
@@ -148,7 +149,9 @@ Mudou uma palavra, a UF, o valor mínimo ou o porte, a próxima rodada refaz a t
 
 ### 6.2 Oportunidades
 
-Partes: Para analisar, Travadas, Em análise, Descartadas. Filtros: busca, UF (ou a prioridade), selo, onde é a sessão, "Quem descartou" (só na parte Descartadas: todas, só a regra do radar ou a Diretoria; feito no servidor) e "Ordenar por" (prioridade da UF e prazo, nota, prazo).
+Partes: Para analisar, Aguardando a análise, Travadas, Em análise, Descartadas pela IA, Descartadas. As duas do segundo filtro pela IA (Aguardando a análise e Descartadas pela IA) só aparecem com o filtro ligado e a chave da IA cadastrada (ver 6.14). Filtros: busca, UF (ou a prioridade), selo, onde é a sessão, tipo de serviço (calibração, qualificação e validação, manutenção, NR-13 e inspeção, engenharia clínica, outro ou não classificado), "Quem descartou" (só na parte Descartadas: todas, só a regra do radar ou a Diretoria; feito no servidor) e "Ordenar por" (prioridade da UF e prazo, nota, prazo).
+
+O tipo de serviço vem da triagem (os termos de serviço do objeto, o primeiro que aparece; sem nenhum, pelo termo que fez entrar) e é confirmado ou corrigido pela última análise concluída da IA (o código do catálogo dos itens com grau alto ou médio; "fora do ramo" vira "outro"). O selo cinza do cartão diz o tipo; passando o mouse, de onde ele veio. A ficha mostra o tipo no quadro de números.
 
 Cada cartão mostra a nota de 0 a 100 e a classe quando a análise por IA já foi feita (sem nota: a UF e a situação), o órgão e o código LIC, município, modalidade, modo de disputa, registro de preços, onde é a sessão, os selos, o objeto com o termo destacado, o número de controle, o valor estimado, o prazo de proposta com o tempo restante, o motivo, o trecho da fonte e as pendências.
 
@@ -160,7 +163,8 @@ Ações:
 |---|---|---|
 | Abrir ficha | Resumo, Arquivos, Análise, Fonte e Histórico | — |
 | Enviar para análise | Leva para "Em análise", com você como responsável | Observação opcional |
-| Descartar | Leva para "Descartadas" | Motivo obrigatório (pelo menos 10 letras) |
+| Descartar | Leva para "Descartadas" | Motivo da lista (Fora do ramo, Prazo insuficiente, Exigência que não atendemos, Valor ou margem inviável, Local ou logística inviável, Outro motivo) e complemento opcional; em "Outro motivo", o texto é obrigatório (pelo menos 10 letras). "Fora do ramo" cria a sugestão de palavra que exclui (6.14) |
+| Trazer de volta | Leva uma candidata de "Aguardando a análise" ou "Descartadas pela IA" para "Para analisar", e ela fica lá mesmo com nota baixa depois | Motivo obrigatório (pelo menos 10 letras); a análise não muda |
 | Reabrir | Devolve uma descartada ao radar; a regra não a descarta de novo | Motivo obrigatório |
 | Abrir no portal | Abre o processo no sistema de origem, em nova aba | Só quando a fonte informa o link e ele é um endereço http/https (outro tipo de link vindo da fonte é ignorado, por segurança) |
 | Ver no PNCP | Abre a contratação no site do PNCP, em nova aba | — |
@@ -499,6 +503,33 @@ Cada tela lê cada aba uma vez e agrega no servidor (nada de uma chamada por car
 | Volume: 388 oportunidades (260 em andamento), 1.085 prazos | 43 a 64 ms | 88 a 100 ms | 63 a 125 ms | 81 a 162 ms |
 
 No navegador, do toque no menu até a tela pronta: 77 a 131 ms no ensaio (computador e celular). O teste automático com 260 oportunidades e 960 prazos confere que cada tela lê cada aba uma só vez.
+
+### 6.14 Revisar o filtro do ramo
+
+Tela da Diretoria e do Administrador (Licitações › Revisar o filtro do ramo), criada em 03/11/2026 depois do caso real LIC-2026-0232 (Fundação Estatal de Saúde do Pantanal: "consultoria, assessoria, tratamento de água e treinamento de pessoal"), que entrou no radar pelo termo "osmose reversa".
+
+**O que mostra**
+
+- As palavras que incluem e as que excluem: as da taxonomia do servidor (fixas, mudam só com versão nova do servidor) e as configuradas pela Diretoria, com a versão, quem mudou, quando e o motivo. As configuradas valem para o PNCP e o Compras.gov.br e se somam às de cada portal (Parametrizar).
+- As candidatas de agora agrupadas pelo termo que fez cada uma entrar, com o órgão, a UF, o prazo, o objeto com o termo destacado, o tipo de serviço, a nota (quando há) e onde ela está no Radar. Candidata antiga, de antes de a razão ser guardada, tem a triagem refeita pelo servidor ao abrir a tela, pela mesma conta; enquanto isso, a razão é lida do motivo da triagem.
+- As sugestões dos descartes "Fora do ramo" e o histórico das versões.
+
+**Ajustar as palavras**
+
+1. Marque "Não é do ramo" na candidata. O sistema sugere as expressões do objeto que não têm termo de interesse (no caso do Pantanal: consultoria, assessoria, tratamento de água, treinamento de pessoal, educação continuada, monitoramento mensal, coleta, análises de água). Escolha uma ou edite.
+2. Para acrescentar palavra que inclui ou que exclui sem marcar candidata, use "Acrescentar" na coluna. Para tirar uma configurada, toque nela (fica riscada).
+3. "Conferir o efeito" mostra, sem gravar nada, quais candidatas e travadas sairiam (o servidor confere o objeto, a informação complementar e os itens).
+4. Escreva o motivo e toque em "Aplicar". O SGO+ grava a versão nova (motivo, quem, quando), entrega ao coletor, pede ao servidor a triagem refeita agora das candidatas, das travadas e das descartadas só pela regra com prazo em aberto, traz o resultado e mostra quantas saíram, quantas voltaram e as marcadas que continuam no Radar com o porquê (reaberta pela Diretoria, parecer pedido às áreas ou expressão que não aparece no texto). As demais licitações em aberto são refeitas na próxima rodada do coletor.
+
+A palavra é comparada sem acento e sem diferença de maiúscula, em qualquer ponto do texto. A palavra que exclui configurada vence até um termo forte ("certificado de calibração", "NR-13"): prefira a expressão mais específica. Nada é apagado: quem sai vai para Descartadas (só a regra do radar), com o motivo, e volta quando a palavra é tirada.
+
+**Aprender com os descartes**
+
+O descarte com o motivo "Fora do ramo" cria uma sugestão: a oportunidade, o termo de interesse que a fez entrar e a primeira expressão do objeto sem termo de interesse, com as outras como alternativas. "Aprovar e aplicar" aplica a expressão escolhida pelo mesmo caminho do "Aplicar"; "Recusar" não muda o filtro. A sugestão nunca é aplicada sozinha, e a mesma oportunidade não gera duas sugestões esperando.
+
+**Segundo filtro pela IA**
+
+Ligado por padrão, com nota mínima 40 (mudar pede o motivo e cria versão nova). A candidata nova só aparece em "Para analisar", nos alertas e no resumo depois que a análise automática concluir com nota igual ou acima do mínimo e sem "fora do ramo" (trava "Todos os itens fora do que a Metrolabs faz" ou "Compra de produto sem item no catálogo", enquanto a Diretoria não disser "Não é trava"). Abaixo disso vai para "Descartadas pela IA", com a nota e o motivo; sem análise concluída, fica em "Aguardando a análise", com o porquê (na fila, recusada pelo verificador, falhou 3 vezes). Prazo de propostas em menos de 48 h não espera: aparece em "Para analisar" com o selo "Sem análise (prazo curto)". Reaberta pela Diretoria e "Trazer de volta" ficam na lista principal. A IA nunca descarta de vez: a oportunidade continua no Radar e volta com um toque. O filtro usa a mesma fila e o mesmo teto por dia da análise automática (nenhuma chamada a mais à IA). Sem a chave da IA cadastrada, o filtro não esconde nada.
 
 ## Preços de licitação e simulador
 
