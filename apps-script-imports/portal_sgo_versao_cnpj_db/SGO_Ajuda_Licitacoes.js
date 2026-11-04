@@ -232,7 +232,8 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Antecedências se escrevem como \"7d normal, 3d importante, 24h importante, 4h crítico, 1h crítico\" (d = dias, h = horas, min = minutos).",
           "O motivo é obrigatório; cada salvamento vira versão nova, e só o que mudou é gravado (o resto fica como estava). Os alertas programados passam a seguir a regra nova; os que saem dela são cancelados com o motivo.",
           "A faixa do alto diz se o modelo sgo_licitacao_prazo do WhatsApp está aprovado na Meta e quando chegou o último retorno de status.",
-          "Nova oportunidade de alta aderência: liga ou desliga o alerta e define a nota mínima (de 50 a 100, padrão 70). Com versão, motivo e histórico, como o resto das regras. Subir a nota mínima cancela, com o motivo, os alertas de alta aderência ainda não enviados que ficaram abaixo dela."
+          "Nova oportunidade de alta aderência: liga ou desliga o alerta e define a nota mínima (de 50 a 100, padrão 70). Com versão, motivo e histórico, como o resto das regras. Subir a nota mínima cancela, com o motivo, os alertas de alta aderência ainda não enviados que ficaram abaixo dela.",
+          "Candidatas do Radar: \"Alertas individuais para candidatas do Radar\" fica desligado por padrão (decisão do dono, 03/11/2026). Desligado, a oportunidade no Radar não gera alerta de prazo nem de mudança; ela vai no resumo diário por e-mail, na hora escolhida (padrão 08:00, de 06:00 a 20:00, horário de Brasília). Ligado, a candidata recebe a sequência completa, como em análise. Com versão, motivo e histórico; abaixo do campo aparece como foi o último resumo."
         ] },
         { titulo: "Alçadas e pareceres", itens: [
           "Padrão (o dono ainda não definiu): um diretor basta em qualquer valor e nenhum parecer é obrigatório, como antes.",
@@ -330,6 +331,17 @@ function SGO_ajudaTelas_Licitacoes_() {
           "Cada alerta continua com a sua linha nesta tela, com a situação e o histórico próprios. A mensagem sai no nível do mais grave: com um crítico no grupo, ela sai na hora e fora do teto do dia.",
           "O lembrete sem ciência também é um só por licitação e por pessoa. O teto do dia conta cada mensagem uma vez, com quantos prazos ela tiver; o teto por alerta continua contando cada alerta. Avisos de documento de habilitação continuam um por mensagem."
         ] },
+        { titulo: "Candidatas do Radar: resumo diário", itens: [
+          "Oportunidade no Radar (candidata) não gera alerta individual de prazo (fim das propostas, sessão, impugnação, esclarecimento e os demais) nem de mudança na fonte. A sequência completa (antecedências, lembrete, escalonamento e ciência) vale para a oportunidade em análise e nas etapas seguintes.",
+          "Em vez disso, cada pessoa que recebe os alertas ganha UM e-mail por dia útil, às 08:00 (hora das regras), com as candidatas que têm prazo nas próximas 72 horas: órgão, UF, objeto curto, fim das propostas, nota (se houver), o link da ficha e o link \"Não vou participar\". Sem WhatsApp, sem lembrete e sem escalonamento. Lista vazia não manda e-mail. Fim de semana e feriado: sai no próximo dia útil.",
+          "Alertas que já estavam programados para uma candidata do Radar são cancelados na rodada seguinte, com o motivo \"Candidata no Radar: vai no resumo diário\" (nada é enviado). Quando a oportunidade vai para análise, os alertas dela são programados como sempre; o que já tinha saído não se repete.",
+          "O alerta de nova oportunidade de alta aderência continua saindo à parte, com as regras dele."
+        ] },
+        { titulo: "Não vou participar", itens: [
+          "O e-mail do alerta, a página do link \"Confirmar ciência\" e o resumo diário trazem o link \"Não vou participar\". Ele pede o login e abre a ficha da oportunidade já na janela do descarte, com o motivo obrigatório. Fechar a janela não altera nada.",
+          "Ao descartar, todos os alertas pendentes da oportunidade são cancelados na hora, com o motivo do descarte, e o lembrete e o escalonamento dos já enviados param.",
+          "Só a Diretoria e o Administrador descartam, e só no Radar, em análise ou em decisão. Se a oportunidade já foi descartada ou está em outra etapa, a ficha abre com o aviso do motivo e nada é alterado."
+        ] },
         { titulo: "Nova oportunidade de alta aderência", itens: [
           "Quando uma análise concluída (automática ou pedida) dá nota no limite das regras ou acima (padrão 70), sem trava (nem trava a confirmar) e com o fim das propostas em aberto, sai UM alerta \"Nova oportunidade de alta aderência\". Só para oportunidade no radar ou em análise. \"Não é trava\" que deixa a nota alta também gera o alerta, e a triagem do radar que deixa de travar também (a rotina confere, sem refazer a análise).",
           "O e-mail traz o órgão, a UF, o processo, o objeto resumido, o valor estimado, o fim das propostas com a natureza e a fonte, a nota e a classe, os 2 ou 3 critérios mais fortes calculados pelo sistema (localização, prazo, valor, margem, documentação pela habilitação; nunca os da IA) e o link da ficha, que abre na aba Análise. No WhatsApp, o campo do prazo diz \"Oportunidade com nota 78 (alta aderência)\"; o valor fica no e-mail e no SGO+.",
@@ -362,6 +374,7 @@ function SGO_ajudaTelas_Licitacoes_() {
       quemPode: quem,
       perguntas: [
         { p: "Por que um alerta de 7 dias não saiu?", r: "A oportunidade entrou no radar quando a antecedência de 7 dias já tinha passado. Sai só o aviso mais recente; os anteriores não são enviados para não mandar vários de uma vez." },
+        { p: "Por que uma candidata do Radar não mandou o alerta de 1 dia, de 4 h e de 1 h?", r: "Desde 03/11/2026 candidata do Radar não gera alerta individual de prazo: ela vem no resumo diário das 08:00, por e-mail, enquanto tiver prazo nas próximas 72 horas. Para receber a sequência completa, envie para análise; se não vai participar, use \"Não vou participar\" e descarte com o motivo. A regra pode ser ligada em Portais e configurações › Regras dos alertas." },
         { p: "Por que recebi um e-mail com 3 prazos e não 3 e-mails?", r: "Desde 03/11/2026 os alertas da mesma licitação que vencem na mesma rodada vão juntos, para não encher a caixa com mensagens quase iguais. Nenhum alerta some: cada um tem a sua linha aqui na Central." },
         { p: "O valor estimado vai no WhatsApp?", r: "Não. A mensagem leva o órgão, o processo, o objeto resumido, o prazo, o tempo restante e a ação; o valor fica no SGO+ e, no alerta de alta aderência, também no e-mail." },
         { p: "Por que a mesma oportunidade não mandou outro alerta de alta aderência depois da reanálise?", r: "O alerta sai uma vez por subida da nota. Enquanto a nota continua no limite ou acima, reanálise não repete. Só depois de a nota cair abaixo do limite (ou aparecer trava) e voltar a ficar alta sai um novo, \"a nota voltou a ficar alta\"." }

@@ -21,7 +21,7 @@ const USUARIOS = [
 const ARQ_LIC = ['SGO_Licitacoes_Config.js', 'SGO_Licitacoes.js', 'SGO_Licitacoes_Analise.js', 'SGO_Licitacoes_Agenda.js', 'SGO_Licitacoes_Alertas.js', 'SGO_WhatsappPiloto.js', 'SGO_Ajuda.js', 'SGO_Ajuda_Licitacoes.js'];
 const APROVADO = JSON.stringify({ em: '2026-10-20T10:00:00', modelos: { sgo_licitacao_prazo: 'APPROVED', sgo_gestao_acao: 'APPROVED' } });
 
-const OP = (id, extra) => Object.assign({ ID: id, CODIGO: 'LIC-2026-' + id.slice(-4), CHAVE_FONTE: 'PNCP:' + id, SITUACAO: 'RADAR', TRIAGEM: 'CANDIDATA', LEI: '14133', MODALIDADE: 'Pregão - Eletrônico',
+const OP = (id, extra) => Object.assign({ ID: id, CODIGO: 'LIC-2026-' + id.slice(-4), CHAVE_FONTE: 'PNCP:' + id, SITUACAO: 'ANALISE', TRIAGEM: 'CANDIDATA', LEI: '14133', MODALIDADE: 'Pregão - Eletrônico',
   PORTAL_SESSAO: 'PUB-002', PORTAL_ORIGEM: 'PNCP', UF: 'PR', MUNICIPIO: 'Cascavel', ORGAO_NOME: 'UNIVERSIDADE ESTADUAL DO OESTE DO PARANA', NUMERO_CONTROLE_PNCP: '78680337000770-1-000430/2026',
   OBJETO: 'Manutenção preventiva e corretiva com certificado de calibração de equipamentos de laboratório', VALOR_ESTIMADO: 98765.43, ABERTURA_PROPOSTAS: '2026-10-20T08:00:00',
   ENCERRAMENTO_PROPOSTAS: '2026-11-04T08:30:00', ENCERRAMENTO_ISO: '2026-11-04T11:30:00.000Z', FUSO_PRESUMIDO: 'SIM', VERSAO_FONTE: 1, VERSAO_HASH: 'h1', SITUACAO_FONTE: 'Divulgada no PNCP', AMPARO_LEGAL: 'Lei 14.133/2021, Art. 28, I' }, extra || {});
@@ -157,8 +157,8 @@ test('suspensão, revogação e reabertura: alerta crítico para os dois, alerta
 
 // ------------------------------------------------------------------ alertas
 test('antecedências: horário certo, implantação sem rajada, só a mais recente quando já passou, nada para descartada, sem termo, travada ou pendente', () => {
-  const a = ambiente({ ops: [OP('op_casc'), IMBEL(), OP('op_desc', { SITUACAO: 'DESCARTADA', TRIAGEM: 'DESCARTADA', DESCARTE_ORIGEM: 'REGRA' }), OP('op_trav', { TRIAGEM: 'TRAVADA' }),
-    OP('op_semt', { TRIAGEM: '' }), OP('op_inco', { ABERTURA_PROPOSTAS: '2026-11-13T07:59:00', ENCERRAMENTO_PROPOSTAS: '2026-11-13T08:00:00', ENCERRAMENTO_ISO: '2026-11-13T11:00:00.000Z' })] });
+  const a = ambiente({ ops: [OP('op_casc'), IMBEL(), OP('op_desc', { SITUACAO: 'DESCARTADA', TRIAGEM: 'DESCARTADA', DESCARTE_ORIGEM: 'REGRA' }), OP('op_trav', { SITUACAO: 'RADAR', TRIAGEM: 'TRAVADA' }),
+    OP('op_semt', { SITUACAO: 'RADAR', TRIAGEM: '' }), OP('op_inco', { ABERTURA_PROPOSTAS: '2026-11-13T07:59:00', ENCERRAMENTO_PROPOSTAS: '2026-11-13T08:00:00', ENCERRAMENTO_ISO: '2026-11-13T11:00:00.000Z' })] });
   a.rodada();
   const lim = a.ev('op_casc', 'LIMITE_PROPOSTA')[0];
   const ch = a.al({ EVENTO_ID: lim.ID, USUARIO_ID: 'u_cha' }).map((x) => [x.ANTECEDENCIA, x.NIVEL, brt(x.LIBERAR_EM)]);
@@ -414,7 +414,10 @@ test('descartar cancela os alertas pendentes com o motivo; reabrir programa de n
   assert.equal(a.api('s_cha', 'descartar', { id: 'op_casc', motivo: 'Escopo é peça de reposição, não serviço' }).ok, true);
   assert.ok(a.al({ OPORTUNIDADE_ID: 'op_casc', TIPO: 'PRAZO' }).every((x) => x.SITUACAO === 'CANCELADO' && /descartada pela Diretoria/.test(x.CANCELADO_MOTIVO)));
   assert.equal(a.api('s_cha', 'reabrir', { id: 'op_casc', motivo: 'O edital aceita calibração rastreável' }).ok, true);
-  assert.equal(a.al({ OPORTUNIDADE_ID: 'op_casc', TIPO: 'PRAZO', SITUACAO: 'PROGRAMADO' }).length, 22);
+  // 03/11/2026: reaberta volta para o Radar (candidata): sem alerta individual (vai no resumo diário); em análise, a programação volta
+  assert.equal(a.al({ OPORTUNIDADE_ID: 'op_casc', TIPO: 'PRAZO', SITUACAO: 'PROGRAMADO' }).length, 0);
+  assert.equal(a.api('s_cha', 'enviarAnalise', { id: 'op_casc' }).ok, true);
+  assert.equal(a.al({ OPORTUNIDADE_ID: 'op_casc', TIPO: 'PRAZO', SITUACAO: 'PROGRAMADO' }).length, 11, 'com responsável (quem enviou para análise), só ele recebe primeiro');
   // sessão da IMBEL (BLL): pendente, sem alerta; confirmada pela Diretoria com o fuso e onde conferiu
   const ses = a.ev('op_imbe', 'SESSAO_PUBLICA')[0];
   assert.equal(a.al({ EVENTO_ID: ses.ID }).length, 0);

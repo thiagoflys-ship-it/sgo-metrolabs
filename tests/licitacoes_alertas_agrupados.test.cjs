@@ -6,7 +6,10 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ambiente, OP, ler } = require('./_licitacoes_alertas_ambiente.cjs');
+const { ambiente, OP: OP_BASE, ler } = require('./_licitacoes_alertas_ambiente.cjs');
+// 03/11/2026: a sequência completa dos alertas (antecedências, lembrete, escalonamento, ciência) vale para a oportunidade em análise;
+// a candidata do Radar vai no resumo diário (tests/licitacoes_alertas_radar.test.cjs). Aqui as oportunidades estão em análise.
+const OP = (id, extra) => OP_BASE(id, Object.assign({ SITUACAO: 'ANALISE' }, extra || {}));
 
 // LIC-2026-0114: impugnação e esclarecimento com o mesmo limite interno (ter 03/11 17:00); a sessão é na seg 09/11 09:00.
 // LIC-2026-0131: os mesmos dois e o fim das propostas na seg 09/11 17:00: o aviso de 7 dias do fim das propostas vence junto

@@ -4,7 +4,10 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ambiente, OP, IMBEL, USUARIOS } = require('./_licitacoes_alertas_ambiente.cjs');
+const { ambiente, OP: OP_BASE, IMBEL, USUARIOS } = require('./_licitacoes_alertas_ambiente.cjs');
+// 03/11/2026: a sequência completa dos alertas (antecedências, lembrete, escalonamento, ciência) vale para a oportunidade em análise;
+// a candidata do Radar vai no resumo diário (tests/licitacoes_alertas_radar.test.cjs). Aqui as oportunidades estão em análise.
+const OP = (id, extra) => OP_BASE(id, Object.assign({ SITUACAO: 'ANALISE' }, extra || {}));
 
 test('GRAVE 1, laço sem fim: Meta devolvendo "failed" e sem e-mail de reserva não gera escalonamento de escalonamento; tetos por alerta e por dia', () => {
   const us = USUARIOS.map((u) => Object.assign({}, u)); us[0].EMAIL = '';
@@ -99,8 +102,9 @@ test('conferência 2 a 5: erro de uma oportunidade não derruba a agenda; candid
   assert.ok(a.props.LIC_ALERTAS_IMPLANTADO_EM, 'a implantação é marcada mesmo com o erro isolado');
   assert.match(a.api('s_cha', 'alertas', {}).rotina.texto, /Agenda com erro em 1 oportunidade\(s\): LIC-2026-ruim \(linha com data corrompida\)/);
   assert.ok(a.props.LIC_CIENCIA_SEGREDO, 'o segredo dos links nasce no início da rodada');
-  // coletada antes da implantação (descartada pela regra) e triada candidata depois: recebe o aviso vencido mais recente
-  Object.assign(a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === 'op_desc'), { SITUACAO: 'RADAR', TRIAGEM: 'CANDIDATA', DESCARTE_ORIGEM: '' });
+  // coletada antes da implantação (descartada pela regra) e que passou a poder ter alerta depois: recebe o aviso vencido mais recente
+  // (03/11/2026: candidata do Radar vai no resumo diário; a sequência completa vale em análise)
+  Object.assign(a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === 'op_desc'), { SITUACAO: 'ANALISE', TRIAGEM: 'CANDIDATA', DESCARTE_ORIGEM: '' });
   a.rodada('2026-10-26T10:10:00-03:00');
   assert.ok(a.al({ OPORTUNIDADE_ID: 'op_desc', SITUACAO: 'ENVIADO' }).length >= 1);
   assert.ok(a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === 'op_desc').ALERTAVEL_DESDE > a.props.LIC_ALERTAS_IMPLANTADO_EM);
@@ -132,7 +136,7 @@ test('MÉDIO 3, descarte: escalonamento e reenvio pendentes param; envio e escal
   a.rodada('2026-11-06T09:05:00-03:00'); a.rodada('2026-11-06T09:10:00-03:00');
   assert.equal(a.zap().length, n0, 'antes: mais 2 WhatsApp (escalonamento e reenvio) depois do descarte');
   const t = a.al({ PAPEL: 'TITULAR', SITUACAO: 'ENVIADO' })[0];
-  assert.equal(t.ESCALONAR_EM, ''); assert.match(t.CANCELADO_MOTIVO, /Escalonamento cancelado: Sem alerta: oportunidade descartada pela Diretoria/);
+  assert.equal(t.ESCALONAR_EM, ''); assert.match(t.CANCELADO_MOTIVO, /Escalonamento cancelado: (Sem alerta: o|O)portunidade descartada pela Diretoria/);
   // reenvio já programado quando a oportunidade foi descartada: o envio reconfere e cancela
   const b = ambiente({ ops: [IMBEL()] });
   b.rodada(); b.rodada('2026-11-06T08:00:30-03:00');
@@ -233,7 +237,9 @@ test('MENOR 8 e 10: um segredo só para os links; destinatários padrão = Diret
 });
 
 test('MENOR 11: a regra de guarda remove também os prazos e os alertas da oportunidade que sai, com o histórico', () => {
-  const a = ambiente({ ops: [OP('op_ve01', { PUBLICACAO_EM: '2023-01-10T10:00:00.000Z', PRIMEIRA_COLETA_EM: '2023-01-10T10:00:00.000Z' }), OP('op_fica', { RESPONSAVEL_ID: 'u_cha' })] });
+  const a = ambiente({ ops: [OP('op_ve01', { SITUACAO: 'RADAR', PUBLICACAO_EM: '2023-01-10T10:00:00.000Z', PRIMEIRA_COLETA_EM: '2023-01-10T10:00:00.000Z' }), OP('op_fica', { RESPONSAVEL_ID: 'u_cha' })] });
+  // a guarda só remove candidata do Radar: com os alertas individuais das candidatas ligados (regra de 03/11/2026), ela tem alertas
+  assert.equal(a.api('s_thi', 'alertasCfgSalvar', { campos: { radar: { individuais: true } }, motivo: 'teste da guarda com alertas de candidata' }).ok, true);
   a.rodada();
   assert.ok(a.ev('op_ve01').length > 0 && a.al({ OPORTUNIDADE_ID: 'op_ve01' }).length > 0);
   a.ctx.SGO_DATA.remove = (t, id) => { const i = (a.tabelas[t] || []).findIndex((x) => String(x.ID) === String(id)); if (i < 0) return false; a.tabelas[t].splice(i, 1); return true; };

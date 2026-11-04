@@ -310,7 +310,7 @@
     var co = div.querySelector("[data-lic-coletar]"); if (co) co.onclick = function () { Lic_coletarAgora_(co); };
     var rt = div.querySelector("[data-lic-recarregar-tela]"); if (rt) rt.onclick = function () { var fn = LIC_TELAS_RECARREGAR[LIC.mod]; if (fn) fn(); };
     if (LIC.mod === "licitacoes") Lic_renderHoje_();
-    else if (LIC.mod === "licitacoes_oportunidades") { LIC.fichaId = LIC.abrirFicha || ""; LIC.abrirFicha = ""; LIC.fichaAba = LIC.abrirFichaAba || "resumo"; LIC.abrirFichaAba = ""; Lic_renderOportunidades_(); }
+    else if (LIC.mod === "licitacoes_oportunidades") { LIC.fichaId = LIC.abrirFicha || ""; LIC.abrirFicha = ""; LIC.fichaAba = LIC.abrirFichaAba || "resumo"; LIC.abrirFichaAba = ""; LIC.fichaAcao = LIC.fichaId ? LIC.abrirFichaAcao || "" : ""; LIC.abrirFichaAcao = ""; Lic_renderOportunidades_(); }
     else if (LIC.mod === "licitacoes_agenda") Lic_renderAgenda_();
     else if (LIC.mod === "licitacoes_alertas") Lic_renderAlertas_();
     else if (LIC.mod === "licitacoes_kanban") Lic_renderKanban_();
@@ -580,17 +580,18 @@
     ov.fechar = fechar;
     return ov;
   }
-  function Lic_janelaMotivo_(tipo, id, origem) {
+  function Lic_janelaMotivo_(tipo, id, origem, naoParticipar) {
     var desc = tipo === "descartar";
-    var ov = Lic_janela_(desc ? "Descartar oportunidade" : "Reabrir oportunidade",
+    var ov = Lic_janela_(desc ? (naoParticipar ? "Não vou participar: descartar a oportunidade" : "Descartar oportunidade") : "Reabrir oportunidade",
+      (desc && naoParticipar ? '<p class="cm-txt">Você veio pelo link "Não vou participar". Escreva o motivo e confirme: a oportunidade vai para as descartadas, com o seu nome e a data. Se não quiser descartar, feche esta janela; nada é alterado.</p>' : "") +
       '<div class="cm-campo"><label for="licMotivo">' + (desc ? "Motivo do descarte (obrigatório)" : "Por que volta para o radar (obrigatório)") + '</label><textarea id="licMotivo" rows="4" maxlength="1000" placeholder="' + (desc ? "Ex.: escopo é peça de reposição, não serviço" : "Ex.: o edital aceita calibração rastreável") + '"></textarea>' +
-      '<p class="cm-ajuda-campo">' + (desc ? "Fica no histórico com o seu nome e a data, e ajuda a ajustar as regras do radar. A oportunidade pode ser reaberta depois." : "Fica no histórico com o seu nome e a data.") + '</p></div><div id="licJanMsg" aria-live="assertive"></div>',
+      '<p class="cm-ajuda-campo">' + (desc ? "Fica no histórico com o seu nome e a data, e ajuda a ajustar as regras do radar. Ao descartar, todos os alertas pendentes desta oportunidade são cancelados na hora. A oportunidade pode ser reaberta depois." : "Fica no histórico com o seu nome e a data.") + '</p></div><div id="licJanMsg" aria-live="assertive"></div>',
       '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>' + (desc ? "Descartar" : "Reabrir") + "</button>", origem);
     ov.querySelector("[data-lic-confirmar]").onclick = function () {
       var bt = this, motivo = (Lic_$_("licMotivo") || {}).value || "";
       if (motivo.trim().length < 10) { Lic_$_("licJanMsg").innerHTML = Lic_faixa_("Escreva o motivo com pelo menos 10 letras. Nada foi alterado.", "erro"); return; }
       bt.disabled = true;
-      Lic_chamar_(tipo, { id: id, motivo: motivo }, function (r) { ov.fechar(); Lic_toast_((desc ? "Descartada: " : "Reaberta: ") + r.codigo + ". Registrado no histórico."); LIC.fichaId ? Lic_renderFicha_(LIC.fichaId) : Lic_renderOportunidades_(); },
+      Lic_chamar_(tipo, { id: id, motivo: motivo }, function (r) { ov.fechar(); Lic_toast_((desc ? "Descartada: " : "Reaberta: ") + r.codigo + ". Registrado no histórico." + (desc && r.alertasCancelados ? " " + r.alertasCancelados + (r.alertasCancelados === 1 ? " alerta pendente cancelado." : " alertas pendentes cancelados.") : "") + (r.alertasAviso ? " " + r.alertasAviso : "")); LIC.fichaId ? Lic_renderFicha_(LIC.fichaId) : Lic_renderOportunidades_(); },
         function (m) { bt.disabled = false; Lic_$_("licJanMsg").innerHTML = Lic_faixa_(m, "erro"); }, { ignorarVelha: true });
     };
   }
@@ -696,6 +697,14 @@
         if (LIC.fichaAba === "mercado" && typeof LicMk_ligarAba_ === "function") LicMk_ligarAba_(c, d, id);
       };
       desenhar();
+      // 03/11/2026: veio do link "Não vou participar": a janela do descarte abre sozinha (motivo obrigatório); fora do Radar,
+      // em análise ou em decisão, diz por que não há o que descartar (nada é alterado)
+      if (LIC.fichaAcao === "descartar") {
+        LIC.fichaAcao = "";
+        var op = d.op || {};
+        if (["RADAR", "ANALISE", "DECISAO"].indexOf(op.situacao) >= 0) Lic_janelaMotivo_("descartar", id, null, true);
+        else Lic_toast_("Esta oportunidade está \"" + (op.situacaoNome || op.situacao || "") + "\": o descarte vale só no Radar, em análise ou em decisão. Nada foi alterado.", "erro");
+      }
     }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, function () { Lic_renderFicha_(id); }); });
   }
 
@@ -1053,7 +1062,8 @@
   function Licitacoes_irPara_(acao) {
     if (!acao) { abrir("licitacoes"); return; }
     if (acao.pedido) LIC.abrirPedido = String(acao.pedido);   // 03/11/2026: aviso de pedido de parecer abre o pedido em "Meus pareceres"
-    if (acao.id) { LIC.abrirFicha = String(acao.id); LIC.abrirFichaAba = acao.aba || "prazos"; abrir("licitacoes_oportunidades"); return; }
+    // 03/11/2026: "Não vou participar" (link do alerta, da página do link ou do resumo do Radar) abre a ficha já no descarte
+    if (acao.id) { LIC.abrirFicha = String(acao.id); LIC.abrirFichaAba = acao.aba || "prazos"; LIC.abrirFichaAcao = acao.acao === "descartar" ? "descartar" : ""; abrir("licitacoes_oportunidades"); return; }
     abrir(acao.mod || "licitacoes");
   }
   function Lic_seloHtml_(par, extra) { return par ? '<span class="cm-selo ' + par[0] + '">' + Lic_esc_(par[1]) + (extra ? " " + Lic_esc_(extra) : "") + "</span>" : ""; }
@@ -1290,6 +1300,9 @@
       (c.tipos || []).map(function (t) { return '<div class="cm-campo"><label for="licAAnt-' + t.tipo + '">' + Lic_esc_(t.nome) + '</label><input id="licAAnt-' + t.tipo + '" value="' + Lic_esc_(Lic_antTexto_(c.antecedencias[t.tipo])) + '" autocomplete="off"></div>'; }).join("") + "</div>" +
       '<div class="cm-caixa"><h3>Nova oportunidade de alta aderência</h3>' + ch("licAAltaLig", (c.altaAderencia || {}).ligado !== false, "Alertar quando uma análise concluída der nota alta, sem trava e com o prazo em aberto") +
       '<div class="cm-campo"><label for="licAAltaLim">Nota mínima (50 a 100)</label><input id="licAAltaLim" inputmode="numeric" value="' + Lic_esc_((c.altaAderencia || {}).limite) + '"><p class="cm-ajuda-campo">Padrão 70. Um alerta por oportunidade a cada subida da nota (reanálise com a nota ainda alta não repete; se a nota cair abaixo do limite e voltar, sai um alerta "a nota voltou a ficar alta"). Importante para quem recebe primeiro; crítico, para os dois, com o fim das propostas em até 72 h. Entra no envio agrupado da licitação, nos tetos, no lembrete e na ciência.</p></div></div>' +
+      '<div class="cm-caixa"><h3>Candidatas do Radar</h3>' + ch("licARadInd", (c.radar || {}).individuais === true, "Alertas individuais para candidatas do Radar (padrão: desligado)") +
+      '<p class="cm-ajuda-campo">Desligado (padrão, decisão do dono de 03/11/2026): oportunidade no Radar não gera alerta individual de prazo nem de mudança. Em vez disso sai um e-mail por pessoa por dia útil, na hora abaixo, com as candidatas que têm prazo nas próximas 72 h (órgão, UF, objeto, fim das propostas, nota, link da ficha e "Não vou participar"). Sem WhatsApp, sem lembrete e sem escalonamento; lista vazia não manda e-mail. Ao enviar para análise, a sequência completa dos alertas começa (o que já saiu não se repete). O alerta de alta aderência continua à parte.</p>' +
+      '<div class="cm-campo"><label for="licARadHora">Hora do resumo diário (' + Lic_esc_((c.radar || {}).horaMin || "06:00") + " a " + Lic_esc_((c.radar || {}).horaMax || "20:00") + ')</label><input id="licARadHora" inputmode="numeric" maxlength="5" value="' + Lic_esc_((c.radar || {}).resumoHora || "08:00") + '"><p class="cm-ajuda-campo">Padrão 08:00, horário de Brasília. Fim de semana e feriado: sai no próximo dia útil.' + ((c.radar || {}).situacao ? " " + Lic_esc_(c.radar.situacao) : "") + "</p></div></div>" +
       '<div class="cm-caixa"><h3>Mudanças na fonte</h3><div class="cm-grade3">' + Object.keys(c.mudancasNomes || {}).map(function (k) { return '<div class="cm-campo"><label for="licAMud-' + k + '">' + Lic_esc_(c.mudancasNomes[k]) + '</label><select id="licAMud-' + k + '">' + Lic_opcoes_(niv, c.mudancas[k]) + "</select></div>"; }).join("") +
       '</div><p class="cm-ajuda-campo">Crítico vai para os dois na hora; importante e normal, para quem recebe primeiro. Retificação, suspensão, revogação ou anulação cancelam os alertas pendentes com o motivo.</p></div>' +
       '<div class="cm-caixa"><div class="cm-campo"><label for="licAMot">Motivo da mudança (obrigatório para salvar)</label><input id="licAMot" maxlength="500"></div><div id="licAMsg" aria-live="assertive"></div><div class="lic-acoes-linha"><button type="button" class="btn-primary" data-lic-alertas-salvar>Salvar versão nova</button></div></div>';
@@ -1319,6 +1332,8 @@
         if (Object.keys(ant).length) campos.antecedencias = ant;
         var aa = c.altaAderencia || {}, alta = {}; if (b("licAAltaLig") !== (aa.ligado !== false)) alta.ligado = b("licAAltaLig");
         var lim = String(($("licAAltaLim") || {}).value || "").trim(); if (lim !== String(aa.limite)) alta.limite = lim; if (Object.keys(alta).length) campos.altaAderencia = alta;
+        var rd = c.radar || {}, rad = {}; if (b("licARadInd") !== (rd.individuais === true)) rad.individuais = b("licARadInd");
+        var rh = String(($("licARadHora") || {}).value || "").trim(); if (rh !== String(rd.resumoHora || "08:00")) rad.resumoHora = rh; if (Object.keys(rad).length) campos.radar = rad;
         var mud = {}; Object.keys(c.mudancasNomes || {}).forEach(function (k) { var v = ($("licAMud-" + k) || {}).value; if (v && v !== c.mudancas[k]) mud[k] = v; }); if (Object.keys(mud).length) campos.mudancas = mud;
         if (!Object.keys(campos).length) { msg.innerHTML = Lic_faixa_("Nada mudou: os valores são iguais aos atuais.", "aviso"); return; }
         bt.disabled = true;

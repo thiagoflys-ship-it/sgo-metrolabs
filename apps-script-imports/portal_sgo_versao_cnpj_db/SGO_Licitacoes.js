@@ -384,8 +384,14 @@ function Lic_mudarSituacaoSemTrava_(eu, d, de, para, tipo, extra, texto) {
 function Lic_descartar_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva o motivo do descarte (pelo menos 10 letras): ele fica no histórico com o seu nome e a data, e ajuda a ajustar as regras do radar. Nada foi alterado');
-  var r = Lic_aposSituacao_(d.id, Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo, fonte: d.fonte }, ['RADAR', 'ANALISE', 'DECISAO'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
-    { DESCARTE_ORIGEM: 'PESSOA', DESCARTE_MOTIVO: motivo, DESCARTE_POR_ID: eu.id, DESCARTE_POR_NOME: eu.nome, DESCARTE_EM: Lic_agora_() }, 'descartar'));
+  var r = Lic_mudarSituacao_(eu, { id: d.id, textoHistorico: 'Descartada pela Diretoria: ' + motivo, fonte: d.fonte }, ['RADAR', 'ANALISE', 'DECISAO'], 'DESCARTADA', 'DESCARTADA_PELA_DIRETORIA',
+    { DESCARTE_ORIGEM: 'PESSOA', DESCARTE_MOTIVO: motivo, DESCARTE_POR_ID: eu.id, DESCARTE_POR_NOME: eu.nome, DESCARTE_EM: Lic_agora_() }, 'descartar');
+  // 03/11/2026 ("Não vou participar"): todos os alertas pendentes da oportunidade são cancelados na hora, com o motivo do descarte
+  if (typeof Lic_alertasCancelarDaOp_ === 'function') {
+    try { r.alertasCancelados = Lic_alertasCancelarDaOp_(d.id, 'Oportunidade descartada pela Diretoria (' + eu.nome + '): ' + motivo); }
+    catch (e) { r.alertasAviso = 'Descarte registrado; os alertas pendentes serão cancelados na próxima rodada (' + Lic_s_(e && e.message) + ').'; }
+  }
+  Lic_aposSituacao_(d.id, r);
   // revisão de e361160: pedidos de parecer abertos são cancelados com as atividades; reabrir não os traz de volta (a Diretoria pede de novo)
   if (typeof LicPar_fecharPedidosDaOp_ === 'function') { var fx = LicPar_fecharPedidosDaOp_(eu, d.id, 'descartada pela Diretoria: ' + motivo); if (fx.cancelados || fx.erros.length) r.pedidosTexto = LicPar_fechadosTxt_(fx).trim(); }
   return r;

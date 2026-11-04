@@ -889,7 +889,8 @@ function SGO_AvisosGestao_api(sessionId, acao, dados) {
     if (acao !== 'abrir') throw new Error('Ação desconhecida.');
     var id = AvG_s_(d.aviso);
     // 02/11/2026: link de alerta de licitação (LA + 10): abre a ficha na aba Prazos (SGO_Licitacoes_Alertas.js)
-    if (/^LA[0-9a-f]{10}$/.test(id) && typeof Lic_avisoAbrir_ === 'function') return Lic_avisoAbrir_(s, id);
+    // 03/11/2026: "Não vou participar" (LA...-NAO, LIC-AAAA-NNNN-NAO) e a ficha do resumo diário do Radar (LIC-AAAA-NNNN)
+    if (/^(LA[0-9a-f]{10}|LIC-\d{4}-\d{1,6})(-NAO)?$/.test(id) && typeof Lic_avisoAbrir_ === 'function') return Lic_avisoAbrir_(s, id);
     var l = /^[A-Za-z0-9-]{4,40}$/.test(id) ? AvG_ler_().filter(function (x) { return AvG_s_(x.AVISO_ID) === id; })[0] : null;
     if (!l) return { ok: false, tela: { tipo: 'modulo', mod: 'gestao_decisoes' }, message: 'Não encontramos este aviso (o link pode ser de outro ambiente ou ter sido copiado pela metade). Abrimos a Caixa de decisões: o item continua lá até ser resolvido.' };
     // revisão 01/11/2026: só o destinatário do aviso e a gestão abrem pelo link
