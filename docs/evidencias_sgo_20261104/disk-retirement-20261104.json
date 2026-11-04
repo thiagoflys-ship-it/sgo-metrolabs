@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "archiveVerified": "2eb5d23a3bfd00e92e91dbe314a52008b294bb5dd36d89a5727810bfece0d57c",
+  "removedPath": "/opt/metrolabs/qa/sgo-retomada-20261104-1157a80ec5b4/backup-verificado/fs-restaurado",
+  "logicalBytes": 10479176644,
+  "beforeFree": 18452664320,
+  "retiredContainers": [
+    {
+      "name": "/sgo-retomada-old-rollback-1157a80ec5b4",
+      "id": "ad369a4cc3634d1aa9d78d1469824e01ca70ca2dfe75503c0f58124012715300"
+    },
+    {
+      "name": "/sgo-retomada-candidate-1157a80ec5b4",
+      "id": "7b6e641e8067490c2705100db93d1d16328ba8cc9a841255ed3dc7107ff08ea8"
+    },
+    {
+      "name": "/sgo-retomada-old-before-1157a80ec5b4",
+      "id": "5fde420c24fae76345eb62cf9ed025952688b6e949560705f7ea0af3adc1a74b"
+    }
+  ],
+  "afterFree": 28994494464,
+  "releasedBytes": 10541830144,
+  "runningPreserved": 36,
+  "backupPreserved": true,
+  "productionChanged": false
+}

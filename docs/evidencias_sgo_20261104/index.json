@@ -8,6 +8,10 @@
     "sha256": "e941f95740ca92a1851657933e2db8e77eb440a576f61263af01bd8696d5249a"
   },
   {
+    "file": "build-cache-retirement-20261104.json",
+    "sha256": "1f786b255b557d724662431d441512cedefb3ef8420d268071b2864b819eecbc"
+  },
+  {
     "file": "build-freeze-r2.json",
     "sha256": "42a6e09bebc4d6310d4450c45f7684164167c1dd857da00c7d2df67325c6b5d1"
   },
@@ -30,6 +34,14 @@
   {
     "file": "destinatario-report.json",
     "sha256": "b5caf18c9d6b278d5898e03caddc01590a10e336c1a288f8d3c5afcf8286f3e9"
+  },
+  {
+    "file": "disk-health-20261104.json",
+    "sha256": "b95ef8473f914bea688a775a326cec45a60aa6b221bbdd253029bfb46dd1e5bf"
+  },
+  {
+    "file": "disk-retirement-20261104.json",
+    "sha256": "c2edad31f30e995f40a2cf018e6eaea1ad451f5096e0f806b287e6dcee221845"
   },
   {
     "file": "filtro-report.json",

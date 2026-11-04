@@ -1,0 +1,23 @@
+{
+  "passed": true,
+  "beforeFree": 28994482176,
+  "afterFree": 42041532416,
+  "releasedBytes": 13047050240,
+  "diskUsedPercent": 79.7,
+  "command": [
+    "docker",
+    "builder",
+    "prune",
+    "--filter",
+    "until=24h",
+    "--max-used-space",
+    "8GB",
+    "--force"
+  ],
+  "imagesPreserved": 135,
+  "containersPreserved": 128,
+  "volumesPreserved": 79,
+  "networksPreserved": 31,
+  "runningPreserved": 36,
+  "productionChanged": false
+}
