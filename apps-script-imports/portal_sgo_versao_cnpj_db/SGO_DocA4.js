@@ -27,6 +27,11 @@ function SGO_DocA4_css_() {
   return '' +
     'p,li{text-align:justify;hyphens:auto;-webkit-hyphens:auto;orphans:3;widows:3}' +
     'td p,th p,td li,th li{text-align:inherit}' +
+    // 03/11/2026 (régua do dono): texto longo dentro das células também justificado (condições, endereço, descrição); números, colunas centralizadas, sem quebra e cabeçalhos ficam como estão
+    'td:not(.num):not(.cen):not(.nw):not([style*="text-align"]){text-align:justify;hyphens:auto;-webkit-hyphens:auto}' +
+    'table td:not(.num):not(.cen) .sub{text-align:justify;hyphens:auto;-webkit-hyphens:auto}' +
+    'table td > b:first-child{display:block;text-align:left}' +
+    'table.ident td:not([colspan]):not(.num):not(.cen):not(.nw){text-align:left}' +
     'h1,h2,h3,h4{page-break-after:avoid;break-after:avoid}' +
     'thead{display:table-header-group}' +
     'tr,.assinatura,.assinaturas,.figura-item,.foto-item{break-inside:avoid;page-break-inside:avoid}' +
