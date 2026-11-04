@@ -1,0 +1,9 @@
+{
+  "state": "OWN_COMPLETED_337_NETWORK_RETIRED_PASS",
+  "removedNetworkId": "44aafb3db9242d84bb7e505fc4a7bbed687075b14becdb49ed32aabeb499c229",
+  "stoppedContainersRetained": 16,
+  "allContainerIdentitiesImagesPidsMountsConfigsPreserved": true,
+  "onlyExpectedNetworkMembershipRemoved": true,
+  "backupFinalBytesUnchanged": true,
+  "productionChanged": false
+}

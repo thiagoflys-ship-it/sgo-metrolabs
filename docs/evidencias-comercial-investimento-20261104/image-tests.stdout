@@ -1,0 +1,17 @@
+✔ investment option preserves type, amounts and validity, records history and is idempotent (199.708046ms)
+✔ unbound sellers, finance and malformed flags cannot change investment mode (17.414473ms)
+✔ approved, canceled and superseded quotes cannot switch off collections (89.288022ms)
+✔ sending an investment creates no automatic return task and leaves manual task unchanged (26.855013ms)
+✔ switching a sent normal quote to investment cancels only its persisted automatic return (22.738162ms)
+✔ investment maintains price expiry but generates no approaching-expiry task (12.239206ms)
+✔ all-investment opportunity pauses cadence, mixed normal proposal resumes it (14.585901ms)
+✔ investment suppresses seller proposal reminders and manager cadence; approval handoff remains (15.575182ms)
+✔ explicit removal returns commercial cadence, no prices or validity extension (20.477286ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 521.722382

@@ -483,7 +483,7 @@
   }
   function Com_seloProp_(p) {
     var cor = { RASCUNHO: "cinza", AGUARDANDO_APROVACAO: "laranja", PRONTA: "azul", ENVIADA: "azul", APROVADA: "verde", RECUSADA: "vermelho", VENCIDA: "vermelho", CANCELADA: "cinza", SUBSTITUIDA: "cinza" }[p.situacao] || "cinza";
-    return '<span class="cm-selo ' + cor + '">' + Com_esc_(p.situacaoNome) + "</span>";
+    return '<span class="cm-selo ' + cor + '">' + Com_esc_(p.situacaoNome) + "</span>" + (p.investimento ? ' <span class="cm-selo">Investimento</span>' : '');
   }
 
   // =========================================================
@@ -969,7 +969,7 @@
     if (p.descontoSituacao === "NEGADO" && s === "RASCUNHO") h += '<div class="cm-faixa erro">Desconto não aprovado por ' + Com_esc_(p.descontoDecisaoPor) + ': ' + Com_esc_(p.descontoDecisao) + '</div>';
     if (p.descontoSituacao === "APROVADO" || p.descontoSituacao === "EXCECAO_GESTAO") h += '<div class="cm-faixa ok">' + Com_esc_(p.descontoDecisao || "Desconto aprovado") + (p.descontoDecisaoPor ? ' (' + Com_esc_(p.descontoDecisaoPor) + ')' : '') + '</div>';
     h += '<dl class="cm-det"><dt>Cliente</dt><dd>' + Com_esc_(p.cliente) + (p.unidade ? ' · ' + Com_esc_(p.unidade) : '') + '</dd><dt>A/C</dt><dd>' + Com_esc_(p.contato || "—") + '</dd><dt>Responsável</dt><dd>' + Com_esc_(p.responsavel) + '</dd>' +
-      '<dt>Válida até</dt><dd>' + Com_esc_(p.validaAte) + '</dd>' + (p.tipoOrcamentoNome ? '<dt>Tipo de orçamento</dt><dd>' + Com_esc_(p.tipoOrcamentoNome) + (p.tipoOrcamentoEscolhido ? '' : ' (automático pelos itens)') + '</dd>' : '') + (p.totalTxt ? '<dt>Total</dt><dd><b>' + Com_esc_(p.totalTxt) + '</b> (subtotal ' + Com_esc_(p.subtotalTxt) + ', desconto ' + Com_esc_(p.descontoTxt) + ', ' + Com_esc_(p.descontoPctTxt) + ' sobre a tabela)</dd>' : '') +
+      '<dt>Acompanhamento</dt><dd>' + (p.investimento ? '<b>Orçamento para investimento</b> · aguardando aprovação, sem cobranças automáticas de retorno' : 'Fluxo comercial normal') + '</dd><dt>Válida até</dt><dd>' + Com_esc_(p.validaAte) + '</dd>' + (p.tipoOrcamentoNome ? '<dt>Tipo de orçamento</dt><dd>' + Com_esc_(p.tipoOrcamentoNome) + (p.tipoOrcamentoEscolhido ? '' : ' (automático pelos itens)') + '</dd>' : '') + (p.totalTxt ? '<dt>Total</dt><dd><b>' + Com_esc_(p.totalTxt) + '</b> (subtotal ' + Com_esc_(p.subtotalTxt) + ', desconto ' + Com_esc_(p.descontoTxt) + ', ' + Com_esc_(p.descontoPctTxt) + ' sobre a tabela)</dd>' : '') +
       // 01/11/2026 (C2): a margem mostrada é a única (depois de impostos, comissão e deslocamento); no rascunho ela fica no quadro do preço
       (p.margemTxt && !p.editavel ? '<dt>Margem (só gestão)</dt><dd>' + Com_esc_(p.deslocamento && p.deslocamento.analiseTxt ? p.deslocamento.analiseTxt.margem + ' depois de impostos, comissão e deslocamento · custo ' + p.deslocamento.analiseTxt.custoTotal : p.margemTxt + ' · custo ' + p.custoTxt) + '</dd>' : '') + (p.enviadaEm ? '<dt>Enviada</dt><dd>' + Com_esc_(p.enviadaEm) + ' · ' + Com_esc_(p.envioComo) + '</dd>' : '') +
       (p.respostaEm ? '<dt>Resposta</dt><dd>' + Com_esc_(p.respostaEm) + ' · ' + Com_esc_(p.respostaTexto) + (p.motivoRecusa ? ' (' + Com_esc_(p.motivoRecusa) + ')' : '') + (p.aceiteNome ? '<br>Aceite: ' + Com_esc_(p.aceiteNome) : '') + '</dd>' : '') +
@@ -993,6 +993,7 @@
       '<div class="cm-txt" style="white-space:pre-wrap;text-align:justify;margin-top:8px">' + Com_esc_(p.termos.texto) + '</div>' + (p.termos.concordancia ? '<p class="cm-txt"><b>' + Com_esc_(p.termos.concordancia) + '</b></p>' : '') + '</details>';
     var acoes = [];
     if (meu && !ini.financeiro) {
+      if (["RASCUNHO", "PRONTA", "ENVIADA", "VENCIDA", "AGUARDANDO_APROVACAO"].indexOf(s) >= 0) acoes.push(b("investimento", p.investimento ? "Retomar fluxo normal" : "Marcar como investimento"));
       if (s === "RASCUNHO" && p.editavel) acoes.push(b("salvar", "Salvar rascunho"), b("revisar", '<i class="fas fa-user-tie" aria-hidden="true"></i>&nbsp;Revisão da gestora'), b("concluir", "Concluir", "btn-primary"));
       // 29/10/2026: "Editar" da proposta ainda não enviada (volta para rascunho; ao concluir, a política é conferida de novo)
       if (s === "AGUARDANDO_APROVACAO" || s === "PRONTA") acoes.push(b("voltar", "Editar (volta para rascunho)"));
@@ -1044,6 +1045,7 @@
       gerar: function () { Com_chamar_("gerarDocumento", { id: p.id }, function (x) { recarregar(x.message + (x.alertas && x.alertas.length ? " Alertas da revisão: " + x.alertas.join("; ") + "." : "")); }, function (m) { Com_msg_(area, m); }, { carregando: "Gerando a folha A4 e salvando na pasta do cliente…" }); },
       enviar: function () { if (window.SGO_EnviarDoc && SGO_EnviarDoc.abrir) { SGO_EnviarDoc.abrir({ arquivoId: p.pdfId, htmlId: p.htmlId, dica: { clienteId: p.clienteId } }); area.innerHTML = '<div class="cm-faixa">Depois de enviar, toque em "Já enviei: atualizar". O sistema confere o envio registrado e marca a proposta como enviada.</div>'; } else alert("A janela Enviar documento não carregou. Atualize a página (F5)."); },
       jaEnviei: function () { Com_chamar_("sincronizarEnvios", {}, function (x) { recarregar(x.atualizadas ? "Envio encontrado: proposta marcada como enviada e o retorno ao cliente agendado." : "Ainda não há envio registrado deste documento. Se enviou agora, aguarde alguns segundos e tente de novo."); }); },
+      investimento: function () { if (!window.confirm(p.investimento ? "Retomar as cobranças automáticas de retorno deste orçamento?" : "Marcar como orçamento para investimento? Os avisos de retorno ficam suspensos enquanto aguarda aprovação. A validade dos preços e os recebíveis não mudam.")) return; var aplicar = function () { Com_chamar_("marcarInvestimento", { id: p.id, investimento: !p.investimento }, function (x) { recarregar(x.message); }, function (e) { Com_msg_(area, e); }); }; if (p.editavel) acao.salvar(aplicar); else aplicar(); },
       marcar: function () { var m = window.prompt("Como a proposta chegou ao cliente? (por exemplo: entregue em mãos na reunião)"); if (m) Com_chamar_("marcarEnviada", { id: p.id, como: m }, function (x) { recarregar(x.message); }, function (e) { Com_msg_(area, e); }); },
       resposta: function () {
         area.innerHTML = '<div class="cm-caixa"><h3>Resposta do cliente</h3>' + Com_campo_("O cliente", '<select id="cmRResp"><option value="APROVADA">Aprovou</option><option value="RECUSADA">Recusou</option></select>') +

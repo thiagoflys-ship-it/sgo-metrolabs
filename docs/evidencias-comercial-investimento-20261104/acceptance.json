@@ -1,0 +1,28 @@
+{
+  "state": "DELIVERED_AND_FINAL_BACKUP_RESTORED",
+  "imageId": "sha256:6ebc6c63d6c3819adcda728ec275198d894f912fbe8bff8d83b3f40575b4c8a0",
+  "appId": "f2d4b1ebb5f90c99e4748c9cc97bd0ebf610acbbd9f1131e6473a7694cbd5cb5",
+  "finalBackup": {
+    "state": "CONSISTENT_SNAPSHOT_BACKUP_RESTORED_PASS",
+    "tables": 30,
+    "snapshotExportedReadOnly": true,
+    "allTablesComparedRowByRowSerialization": true,
+    "constantMemoryHashing": true,
+    "sourceUninterrupted": true,
+    "sourceImage": "sha256:6ebc6c63d6c3819adcda728ec275198d894f912fbe8bff8d83b3f40575b4c8a0",
+    "filesystemRestoreClaimed": false,
+    "databaseOwnerAclRestoreClaimed": false,
+    "dumpSha256": "800b766940d6ce46428c978ad7d7b35cdd7057cccd3764f5f57c4d98de24612a"
+  },
+  "regressionTests": 1723,
+  "syntheticCases": 9,
+  "twoNativeWorkers": true,
+  "originalHarnessFailuresPreserved": true,
+  "actualBusinessRowsUnchangedAtSchemaMigration": true,
+  "realQuotesAutomaticallyMarked": false,
+  "financialCollectionUnchanged": true,
+  "ownQaStoppedAndNetworkRetired": true,
+  "stoppedContainersRetained": 4,
+  "allOtherContainerIdentitiesImagesPidsMountsConfigsNetworksUnchanged": true,
+  "backupsAndDataRetained": true
+}

@@ -1,0 +1,28 @@
+{
+  "state": "PUBLISHED_HEALTH_AND_PINS_CONFIRMED",
+  "imageId": "sha256:6ebc6c63d6c3819adcda728ec275198d894f912fbe8bff8d83b3f40575b4c8a0",
+  "parentImage": "sha256:1b1bf6fee10bd7d24f3f9ebc9dca98846682997c3028648075f1cfd4c9c25951",
+  "runtimeFilesChanged": 6,
+  "regressionTests": 1723,
+  "syntheticTests": 9,
+  "nativeWorkers": 2,
+  "browserWidths": [
+    320,
+    390,
+    1280
+  ],
+  "backupRestored": true,
+  "oldHeaderColumns": 75,
+  "newHeaderColumns": 77,
+  "realQuotesAutomaticallyMarked": false,
+  "finalBackupPending": true,
+  "allExistingBusinessRowsUnchangedDuringMigration": true,
+  "appId": "f2d4b1ebb5f90c99e4748c9cc97bd0ebf610acbbd9f1131e6473a7694cbd5cb5",
+  "public": {
+    "sgo": 200,
+    "command": 200,
+    "rh": 200
+  },
+  "environmentMountsNetworksUnchanged": true,
+  "otherSystemIdsImagesPidsMountsUnchanged": true
+}

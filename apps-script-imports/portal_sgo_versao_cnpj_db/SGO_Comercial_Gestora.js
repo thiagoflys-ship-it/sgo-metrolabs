@@ -127,6 +127,7 @@ function ComG_itensVendedor_(uid, ctx) {
     }
   });
   props.forEach(function (p) {
+    if (ComP_investimento_(p) && Com_up_(p.SITUACAO) !== 'APROVADA') return;
     var s = Com_up_(p.SITUACAO), ref = { tipo: 'proposta', id: Com_s_(p.ID) }, base = ComP_rotulo_(p) + ' · ' + Com_s_(p.CLIENTE_NOME), valor = Number(p.TOTAL) || 0;
     if (s === 'APROVADA' && (Com_up_(p.PEDIDO_SITUACAO) === 'SEM_PASSAGEM' || !Com_s_(p.PEDIDO_SITUACAO))) add({ chave: 'PEDIDO:' + p.ID, regra: 'PEDIDO_SEM_PASSAGEM', prioridade: 1, titulo: base + ': pedido aprovado sem passagem aos setores', ref: ref, valor: valor,
       porque: 'O cliente aprovou em ' + Com_brDia_(p.RESPOSTA_EM) + '. Sem a passagem, a técnica, compras e o financeiro não sabem do pedido.', acao: 'Toque em "Passar aos setores" na proposta.' });
@@ -192,6 +193,7 @@ function ComG_panorama_(ctx) {
     var uid = Com_s_(o.RESPONSAVEL_ID), e = equipe[uid] = equipe[uid] || { id: uid, nome: Com_s_(o.RESPONSAVEL_NOME), abertas: 0, semProxima: 0, atrasadas: 0, paradas: 0, valorAberto: 0, contatos10d: 0 };
     if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') return;
     var d = ComOpo_derivados_(o, { met: met, agora: agora, atividades: atvs });
+    if (d.investimento) return;
     e.abertas++; e.valorAberto += Number(o.VALOR_ESTIMADO) || 0;
     var criada = Com_dia_(o.CRIADO_EM) || hoje; if (!e.maisAntiga || criada < e.maisAntiga) e.maisAntiga = criada;
     if (d.semProxima) e.semProxima++; if (d.atrasada) e.atrasadas++; if (d.parada) e.paradas++;
@@ -450,7 +452,7 @@ function ComG_aprendizado_() {
 /** Sugestões das regras para a ficha (sem IA, rápidas). */
 function ComG_sugestoesDaOportunidade_(eu, o, t, contatos) {
   var met = Com_metodologia_(), l = [];
-  if (t.situacao !== 'ABERTA') return l;
+  if (t.situacao !== 'ABERTA' || t.investimento) return l;
   var temProp = ComP_lerPropostas_().some(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id && Com_up_(p.SITUACAO) === 'ENVIADA'; });
   if (t.mudarEstrategia || t.parada) {
     var est = ComG_estrategia_(o, contatos.map(function (c) { return { TIPO: Object.keys(COM_TIPOS_CONTATO).filter(function (k) { return COM_TIPOS_CONTATO[k] === c.tipo; })[0] }; }), temProp, (ComCt_listar_(t.clienteId) || []).length, met);
@@ -464,6 +466,7 @@ function ComG_sugestoesDaOportunidade_(eu, o, t, contatos) {
 function ComG_proximoPasso_(eu, d) {
   Com_exigir_(eu, 'VENDEDOR', 'pedir o próximo passo à gestora');
   var o = ComOpo_obter_(eu, d && d.id, 'pedir o próximo passo');
+  if (ComP_opInvestimento_(o)) return { sugestaoId: '', origem: 'REGRAS', aviso: '', sugestao: { proximoPasso: 'Aguardar a aprovação do investimento.', porque: 'Orçamento para investimento fora da cadência automática.', perguntas: [], mensagem: '', emailAssunto: '', emailCorpo: '' }, lembrete: 'Retome o fluxo normal na proposta quando o cliente estiver pronto.' };
   var c = ComG_contextoOportunidade_(eu, o);
   var met = c.met, t = c.t, regras = c.regras, fatos = c.fatos;
   var saida = Com_copia_(regras), origem = 'REGRAS', aviso = '';

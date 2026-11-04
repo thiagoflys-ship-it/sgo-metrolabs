@@ -507,6 +507,7 @@ var COM_ACOES = {
   decidirDesconto: function (eu, sid, d) { return ComP_decidirDesconto_(eu, d); },
   voltarRascunho: function (eu, sid, d) { return ComP_voltarRascunho_(eu, d); },
   gerarDocumento: function (eu, sid, d) { return ComP_gerarDocumento_(eu, d); },
+  marcarInvestimento: function (eu, sid, d) { return ComP_marcarInvestimento_(eu, d); },
   marcarEnviada: function (eu, sid, d) { return ComP_marcarEnviada_(eu, d); },
   sincronizarEnvios: function (eu) { Com_exigir_(eu, 'VENDEDOR', 'conferir os envios'); return { atualizadas: ComP_sincronizarEnvios_() }; },
   novaRevisao: function (eu, sid, d) { return ComP_novaRevisao_(eu, d); },

@@ -1,0 +1,19 @@
+{
+  "state": "HEADER_APPEND_ROLLBACK_REAPPLY_PASS",
+  "phases": [
+    "append",
+    "rollback",
+    "reapply",
+    "final-rollback"
+  ],
+  "columnsAdded": [
+    "INVESTIMENTO",
+    "VENCIMENTO_ATIVIDADE_ID"
+  ],
+  "oldColumns": 75,
+  "oldOrderPreserved": true,
+  "allExistingBusinessRowsExact": true,
+  "actualRowsNeverMarkedInvestment": true,
+  "backupRestored": true,
+  "productionChanged": false
+}

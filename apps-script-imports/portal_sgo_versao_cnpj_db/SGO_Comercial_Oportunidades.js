@@ -42,14 +42,15 @@ function ComOpo_derivados_(o, ctx) {
   var base = Com_dia_(o.ULTIMO_CONTATO_EM) || Com_dia_(o.CRIADO_EM) || hoje;
   var dias = Math.max(0, Com_diasEntre_(base, hoje) || 0);
   var naEtapa = Math.max(0, Com_diasEntre_(Com_dia_(o.ETAPA_DESDE) || base, hoje) || 0);
-  var aberta = Com_up_(o.SITUACAO || 'ABERTA') === 'ABERTA';
+  var investimento = typeof ComP_opInvestimento_ === 'function' && ComP_opInvestimento_(o, ctx.propostas);
+  var aberta = Com_up_(o.SITUACAO || 'ABERTA') === 'ABERTA' && !investimento;
   var atv = ctx.atividades ? ctx.atividades[Com_s_(o.ATIVIDADE_ID)] : Com_atividade_(o.ATIVIDADE_ID);
   var atvAberta = Com_atividadeAberta_(atv);
   var prev = atvAberta ? Com_iso_(atv.PREVISAO_ATUAL || atv.PRAZO) : '';
   var c = met.cadencia || {};
   var r = {
     probabilidade: Number(etapa.probabilidade) || 0, etapaNome: Com_s_(etapa.nome) || Com_s_(o.ETAPA), maxDias: Number(etapa.maxDias) || 0,
-    diasSemContato: dias, diasNaEtapa: naEtapa,
+    investimento: investimento, diasSemContato: dias, diasNaEtapa: naEtapa,
     parada: aberta && dias >= (Number(c.paradaDias) || 10),
     esfriando: aberta && dias >= (Number(c.esfriandoDias) || 7) && dias < (Number(c.paradaDias) || 10),
     estagnada: aberta && !!etapa.maxDias && naEtapa > Number(etapa.maxDias),
@@ -78,7 +79,7 @@ function ComOpo_paraTela_(eu, o, ctx) {
     ganhaEm: Com_brDia_(o.GANHA_EM), perdidaEm: Com_brDia_(o.PERDIDA_EM), reaberturaPedida: !!Com_s_(o.REABERTURA_PEDIDA_EM), reaberturaMotivo: Com_s_(o.REABERTURA_MOTIVO),
     observacoes: Com_s_(o.OBSERVACOES), origemRef: Com_s_(o.ORIGEM_REF), criadaEm: Com_brDia_(o.CRIADO_EM),
     diasSemContato: d.diasSemContato, diasNaEtapa: d.diasNaEtapa, parada: d.parada, esfriando: d.esfriando, estagnada: d.estagnada, semProxima: d.semProxima, atrasada: d.atrasada,
-    venceHoje: d.hoje, mudarEstrategia: d.mudarEstrategia,
+    investimento: d.investimento, venceHoje: d.hoje, mudarEstrategia: d.mudarEstrategia,
     // 01/11/2026 (Comercial C4): quem ganhou (na perda), para a ficha mostrar e oferecer "Completar quem ganhou" quando falta
     concorrenteVencedor: Com_s_(o.CONCORRENTE_VENCEDOR), temValorVencedor: Number(o.VALOR_VENCEDOR) > 0
   };

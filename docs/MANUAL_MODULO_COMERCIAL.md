@@ -484,3 +484,12 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - "Reativar um item arquivado é da gestão": peça à gestão comercial ou ao Financeiro.
 - "Não foi possível excluir ... já foi ao cliente": use "Cancelar proposta" com o motivo; ela sai do funil e fica no histórico.
 - "A proposta ... foi excluída em ...": alguém excluiu (a mensagem diz quem, quando e o motivo); atualize a lista e, se a oportunidade continua, faça "Nova proposta".
+
+
+## Orçamento para investimento
+
+Em Comercial → Propostas, abra o orçamento e toque em **Marcar como investimento**. Serve para uma aprovação de investimento que pode levar meses. Só o responsável ou a gestão comercial pode mudar a opção; ela fica no histórico. A lista e a ficha mostram o selo Investimento.
+
+Enquanto aguarda aprovação, ficam suspensos os retornos automáticos dessa proposta e os avisos de cobrança comercial. Se a oportunidade tiver outra proposta normal, ela continua no fluxo normal. A validade dos preços permanece: antes de aprovar uma proposta vencida, será necessária a revisão adequada. Pedidos já aprovados e cobranças financeiras não mudam. Tarefas manuais são preservadas.
+
+Quando o cliente estiver pronto para retomar, abra a proposta e use **Retomar fluxo normal**. Confira a próxima ação na oportunidade. Nenhuma proposta existente foi marcada automaticamente na publicação.

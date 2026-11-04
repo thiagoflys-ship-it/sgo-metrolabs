@@ -462,6 +462,7 @@ function ComP_paraTela_(eu, p, completo) {
     editavel: s === 'RASCUNHO' && (eu.gestao || Com_s_(p.RESPONSAVEL_ID) === eu.id), qtdItens: itens.length
   };
   var to = ComP_tipoOrcamento_(p, itens);
+  t.investimento = ComP_investimento_(p);
   t.tipoOrcamento = to.tipo; t.tipoOrcamentoNome = to.nome; t.tipoOrcamentoEscolhido = to.escolhido; t.tipoOrcamentoSugerido = to.sugerido; t.tiposOrcamento = COM_TIPOS_ORCAMENTO;
   if (eu.veValores) {
     t.subtotal = Number(p.SUBTOTAL) || 0; t.descontoGeral = Number(p.DESCONTO_GERAL) || 0; t.total = Number(p.TOTAL) || 0; t.descontoPct = Number(p.DESCONTO_PCT) || 0;
@@ -970,7 +971,7 @@ function ComP_aoEnviar_(p, quando, como, eu) {
     var dias = Number(met.cadencia.propostaLembreteDiaUtil) || 2;
     var prazo = Com_somarDiasUteis_(campos.ENVIADA_EM.slice(0, 10), dias) + 'T10:00';
     if (prazo < agora) prazo = Com_somarDiasUteis_(Com_hoje_(), 1) + 'T10:00';
-    try {
+    if (!ComP_investimento_(p)) try {
       if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Concluída', 'Proposta ' + ComP_rotulo_(p) + ' enviada ao cliente; o próximo passo é o retorno sobre a proposta.');
       var atv = Com_criarAtividade_({ comoPessoa: eu || null, responsavelId: Com_s_(o.RESPONSAVEL_ID), titulo: 'Retorno sobre a proposta ' + ComP_rotulo_(p) + ': ' + Com_s_(o.CLIENTE_NOME),
         descricao: 'Ligue para o cliente e combine a data de decisão da proposta ' + ComP_rotulo_(p) + ' (enviada em ' + Com_br_(campos.ENVIADA_EM) + ').\nRegistre o contato na oportunidade ' + o.CODIGO + ' (Comercial > Oportunidades).',
@@ -1047,7 +1048,7 @@ function ComP_novaRevisao_(eu, d) {
     var met = Com_metodologia_(), val = Number(p.VALIDADE_DIAS) || Number(met.proposta.validadeDias) || 15, agora = Com_agora_();
     var copia = {};
     // 29/10/2026: a revisão leva os custos da viagem e do frete (DESLOCAMENTO_JSON); o checklist é conferido de novo ao concluir
-    ['NUMERO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TIPO_ORCAMENTO', 'TITULO', 'ESCOPO', 'APRESENTACAO',
+    ['NUMERO', 'OPORTUNIDADE_ID', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'CONTATO_ID', 'CONTATO_NOME', 'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'MODELO', 'TIPO_ORCAMENTO', 'INVESTIMENTO', 'TITULO', 'ESCOPO', 'APRESENTACAO',
       'DESLOCAMENTO_JSON', 'PRAZO_JSON', 'ITENS_JSON', 'CONDICOES_JSON', 'VALIDADE_DIAS', 'SUBTOTAL', 'DESCONTO_GERAL', 'TOTAL', 'DESCONTO_PCT', 'MARGEM_PCT', 'CUSTO_TOTAL'].forEach(function (k) { copia[k] = p[k]; });
     copia.REVISAO = maior + 1; copia.SITUACAO = 'RASCUNHO'; copia.DESCONTO_SITUACAO = 'DENTRO'; copia.VALIDA_ATE = Com_somarDias_(Com_hoje_(), val); copia.REVISAO_DE = p.ID; copia.PEDIDO_SITUACAO = '';
     copia.ATUALIZADO_EM = agora; copia.CRIADO_POR_ID = eu.id;
@@ -1421,13 +1422,13 @@ function ComP_rotinaValidade_() {
       return;
     }
     var falta = Com_diasEntre_(hoje, ate);
-    if (falta <= (Number(met.cadencia.propostaVencendoDias) || 3) && !Com_s_(p.VENCIMENTO_AVISADO_EM)) {
+    if (!ComP_investimento_(p) && falta <= (Number(met.cadencia.propostaVencendoDias) || 3) && !Com_s_(p.VENCIMENTO_AVISADO_EM)) {
       try {
-        Com_criarAtividade_({ responsavelId: Com_s_(p.RESPONSAVEL_ID), titulo: 'Proposta ' + ComP_rotulo_(p) + ' vence em ' + Com_brDia_(ate) + ': ' + Com_s_(p.CLIENTE_NOME),
+        var avisoAtividade = Com_criarAtividade_({ responsavelId: Com_s_(p.RESPONSAVEL_ID), titulo: 'Proposta ' + ComP_rotulo_(p) + ' vence em ' + Com_brDia_(ate) + ': ' + Com_s_(p.CLIENTE_NOME),
           descricao: 'Confirme a decisão do cliente ou renove a validade com uma nova revisão. Se não houver mais interesse, registre a perda com o motivo real.', prazo: hoje + 'T17:00',
           clienteId: Com_s_(p.CLIENTE_ID), unidadeId: Com_s_(p.UNIDADE_ID), porQue: 'A proposta está perto de vencer sem resposta do cliente.', onde: 'Comercial > Propostas > ' + ComP_rotulo_(p), restrita: true });
       } catch (e) { console.error('Comercial, aviso de validade: ' + ((e && e.message) || e)); }
-      SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { VENCIMENTO_AVISADO_EM: Com_agora_() });
+      SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { VENCIMENTO_AVISADO_EM: Com_agora_(), VENCIMENTO_ATIVIDADE_ID: avisoAtividade || '' });
       r.avisadas++;
     }
   });
@@ -1446,4 +1447,38 @@ function ComP_pedidos_(eu, filtro) {
     t.passagem = ComP_situacaoPassagem_(Com_json_(p.PASSAGEM_JSON, []));
     return t;
   }).sort(function (a, b) { return String(b.respostaEm.split(' ')[0].split('/').reverse().join('')).localeCompare(String(a.respostaEm.split(' ')[0].split('/').reverse().join(''))); });
+}
+
+
+/** Investimento suspende apenas a cadência comercial; não altera validade, preço ou recebíveis. */
+function ComP_investimento_(p) { return Com_up_(p && p.INVESTIMENTO) === 'SIM'; }
+function ComP_opInvestimento_(o, propostas) {
+  var l = (propostas || ComP_lerPropostas_()).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID) && !Com_s_(p.SUBSTITUIDA_POR) && ['RASCUNHO', 'PRONTA', 'ENVIADA', 'VENCIDA', 'AGUARDANDO_APROVACAO'].indexOf(Com_up_(p.SITUACAO)) >= 0; });
+  return l.length > 0 && l.every(ComP_investimento_);
+}
+function ComP_marcarInvestimento_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'definir orçamento para investimento');
+  if (!d || typeof d.investimento !== 'boolean') throw new Error('Informe se o orçamento é para investimento.');
+  return Com_comTrava_(function () {
+    var p = ComP_obter_(eu, d.id, 'definir orçamento para investimento');
+    if (!eu.gestao && Com_s_(p.RESPONSAVEL_ID) !== eu.id) throw new Error('Somente o responsável ou a gestão pode mudar esta opção.');
+    if (['RASCUNHO', 'PRONTA', 'ENVIADA', 'VENCIDA', 'AGUARDANDO_APROVACAO'].indexOf(Com_up_(p.SITUACAO)) < 0 || Com_s_(p.SUBSTITUIDA_POR)) throw new Error('Esta proposta está encerrada ou substituída. Use a revisão atual.');
+    if (ComP_investimento_(p) === d.investimento) return { proposta: ComP_paraTela_(eu, p, true), message: 'A opção já estava aplicada.' };
+    var campos = { INVESTIMENTO: d.investimento ? 'SIM' : 'NAO', ATUALIZADO_EM: Com_agora_() }, canceladas = [];
+    if (d.investimento) {
+      ['RETORNO_ATIVIDADE_ID', 'VENCIMENTO_ATIVIDADE_ID'].forEach(function (k) {
+        var id = Com_s_(p[k]), a = Com_atividade_(id);
+        // Somente o vínculo guardado pela própria proposta e seu responsável atual; nenhuma busca/cancelamento por título.
+        if (id && Com_atividadeAberta_(a) && Com_s_(a.RESPONSAVEL_ID) === Com_s_(p.RESPONSAVEL_ID) && Com_s_(a.CLIENTE_ID) === Com_s_(p.CLIENTE_ID)) {
+          if (!Com_mudarAtividade_(id, 'Cancelada', 'Orçamento para investimento: cadência comercial suspensa na proposta ' + ComP_rotulo_(p) + '.')) throw new Error('Não foi possível suspender a atividade automática vinculada. Tente novamente.');
+          canceladas.push(id); campos[k] = '';
+        }
+      });
+      var o = SGO_DATA.getById(COM_ABAS.OPORTUNIDADES, Com_s_(p.OPORTUNIDADE_ID));
+      if (o && canceladas.indexOf(Com_s_(o.ATIVIDADE_ID)) >= 0) SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { ATIVIDADE_ID: '', PROXIMA_ACAO: '', PROXIMA_ACAO_TIPO: '', PROXIMA_ACAO_EM: '', ATUALIZADO_EM: Com_agora_() });
+    }
+    SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, campos);
+    Com_historico_('PROPOSTA', p.ID, 'INVESTIMENTO', eu, { de: ComP_investimento_(p) ? 'Investimento' : 'Fluxo normal', para: d.investimento ? 'Investimento' : 'Fluxo normal', texto: d.investimento ? 'Aguardando aprovação de investimento; sem cobranças automáticas de retorno. Preços e validade preservados.' : 'Fluxo comercial normal retomado por decisão do responsável.' });
+    return { proposta: ComP_paraTela_(eu, Object.assign({}, p, campos), true), message: d.investimento ? 'Orçamento marcado como investimento. Cobranças automáticas de retorno suspensas; a validade dos preços permanece.' : 'Orçamento voltou ao fluxo comercial normal. Confira a próxima ação na oportunidade.' };
+  });
 }

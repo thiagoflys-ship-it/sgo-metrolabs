@@ -1,0 +1,12 @@
+{
+  "archiveSha256": "3cb736ab721d4d3c19a681de016609f5e8027c5e0be9675e55c5435da6a78200",
+  "manifestSha256": "de72fd8a0feb02aa287c727813ed5d60d9555c9e7d01d9c7ebeee3ca4500fbe1",
+  "pins": {
+    "legado/SGO_Comercial_Config.js": "f813a6c2c67863f152bd50c9851a141a352fcd82eafa083d360e34971733986c",
+    "legado/SGO_Comercial_Propostas.js": "6cd46457b0d455bc48f7f9fd769108f5765d020206ff8690f75b1a15062cbc86",
+    "legado/SGO_Comercial_Oportunidades.js": "33b8838bac8b095e9e1dfc5eb7f8f561c6bae959f9704e56d9ad8679e3f433fd",
+    "legado/SGO_Comercial_Gestora.js": "a6dff62dded074604d3ef8ed7edb97bdba20519cd8618409ee93d441599f19a5",
+    "legado/SGO_Comercial_Painel.js": "2fcf8ac42257b913cf3145a4bfb75072bf7091fc20002d69ced971281d5ef5e5",
+    "legado/JS_Comercial.html": "698b659467b595dcc2c28d2dc20ec3a73c9646845e188668962438d3e4f5946f"
+  }
+}
