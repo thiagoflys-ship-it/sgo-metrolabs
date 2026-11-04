@@ -1,0 +1,4 @@
+{"state":"SCOPED_PURCHASES_ACCESS_CONFIRMED","target":"QA","changed":true,"rulesVersion":3,"rowsAdded":2,"users":[{"id":"1749164c-7e45-494e-b81c-4bd1f4080bf0","login":"elisa","financialReview":true,"registerCards":true,"globalProfile":"GESTOR","area":"RH"},{"id":"2263e0c4-e5d2-48f4-bf2c-86badf283993","login":"matheusgodoi","financialReview":true,"registerCards":true,"globalProfile":"GESTOR","area":"QUALIDADE"}],"usersProfilesPasswordsAreasUnchanged":true,"buyersAndApprovalLimitsUnchanged":true,"otherUsersUnchanged":true,"actualCardsOrPurchasesCreated":false}
+
+
+terminal 0

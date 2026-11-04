@@ -1,0 +1,10 @@
+{
+  "build.stdout": "5bf0b465f42e8327b182756ee5d5d07592fed391ae9f2f1159cff3f33f31ab73",
+  "delivery.json": "9362fe6727e33ee9d965f93f5929e75595338484ce6cafb34038ada3b5d60d2e",
+  "final-backup.stdout": "7ba4173a20b01739475a21f360598f24aef47d35235824d5d9623a3c4c264db8",
+  "native-consistent-backup.stdout": "d61fe9bff022abf636df2953f61fe59fcf81ad81171a6624a35801522e564bd4",
+  "native-grant-qa.stdout": "28da2f279e2aeb555fe684a5056043e9f7a1f2b4abfae8671b4f95931ddb4604",
+  "native-rollback.stdout": "5ea8b148e762708db34784412d04aa2f31517b55c099688fbd349621e636f684",
+  "publication.stdout": "b7381c3dbf15bb2afd6e0688c32db48629f97de71e929d1a9e85a128b0128a6c",
+  "smoke.stdout": "18bcfbd1d8ad36af46e6f64774b3d12dcdb7c4ade49d8e50350c3f043ab5ca51"
+}
