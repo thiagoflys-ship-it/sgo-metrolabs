@@ -18,9 +18,8 @@
  * Wrapper de cache: garante que o Relatório (Planilha) e o Certificado
  * (HTML, ver Certificado.js) gerados a partir do MESMO formulário no
  * modo simulado tenham exatamente os mesmos números — sem isso, cada
- * clique gera uma curva aleatória nova (ver seedBase abaixo, que usa
- * UUID/timestamp de propósito, para dar variedade quando o técnico
- * clica "gerar" várias vezes testando cenários) e os dois documentos
+ * parâmetros diferentes geram outra curva, enquanto os mesmos parâmetros
+ * mantêm as leituras inclusive sem cache. Assim os dois documentos
  * poderiam divergir. A senha é sempre validada aqui, mesmo em cache
  * hit — nunca pular autenticação por causa do cache.
  */
@@ -61,10 +60,10 @@ function EstufaBanhoRel_ebGerarOuReaproveitarDadosSimulados_(payload, estudosCon
 }
 function EstufaBanhoRel_ebFingerprintSimulado_(payload, estudosConfig, faixa, multiArquivo) {
   const sim = payload.simulacao || {};
-  const partes = [multiArquivo ? 'MULTI' : 'UNICO', payload.nSensores, sim.temperaturaAlvo, sim.intervaloSegundos, sim.inicioEstudo, sim.fimEstudo, sim.autonomiaEstimadaMinutos, faixa && faixa.tMin, faixa && faixa.tMax, faixa && faixa.tolerancia];
-  (estudosConfig || []).forEach(function (cfg) {
-    partes.push(cfg.tipoEstudo, cfg.janelaInicioMs, cfg.janelaFimMs, cfg.resultadoDesejado, cfg.tipoAbertura, cfg.tempoAlvoMinutos, cfg.inicioEventoMs, cfg.fimEventoMs);
-  });
+  // Versiona o algoritmo e todos os parâmetros que alteram as leituras. Não inclui senha nem metadados gerados.
+  const partes = ['SIM_V2_20261104', multiArquivo ? 'MULTI' : 'UNICO', payload.perfil,
+    payload.nSensores, JSON.stringify(payload.sensoresAtivos || []), JSON.stringify(sim),
+    JSON.stringify(payload.qualif || {}), JSON.stringify(faixa || {}), JSON.stringify(estudosConfig || [])];
   return EstufaBanhoRel_ebHashSimulado_(partes.join('|'));
 }
 function EstufaBanhoRel_ebHashSimulado_(texto) {
@@ -116,31 +115,16 @@ function EstufaBanhoRel_ebGerarDadosSimuladosAdmin_(payload, estudosConfig, faix
   // reprovado, e com que amplitude/tempo de ruptura — mantendo isso fixo
   // por segmento (em vez de recalcular a cada leitura) é o que garante
   // uma curva coerente em vez de ruído aleatório sem sentido físico.
-  const segmentos = estudosConfig.map(function (cfg) {
-    return EstufaBanhoRel_ebMontarSegmentoSimulado_(cfg, faixa, inicioMs, fimMs, rand);
-  });
-  const sensorOffsets = [];
-  const sensorFase = [];
-  for (let s = 0; s < nSensores; s++) {
-    sensorOffsets.push((rand() - 0.5) * 0.6);
-    sensorFase.push(rand() * Math.PI * 2);
-  }
+  const segmentos = EstufaBanhoRel_ebSegmentosControlados_(payload, estudosConfig, faixa, inicioMs, fimMs, intervaloSeg, rand);
   const rows = [];
   for (let ms = inicioMs, idx = 0; ms <= fimMs; ms += intervaloSeg * 1000, idx++) {
     const d = new Date(ms);
-    const segmento = EstufaBanhoRel_ebEncontrarSegmentoSimulado_(ms, segmentos);
-    const tempBase = EstufaBanhoRel_ebCalcularTemperaturaBaseSimulada_(ms, segmento, alvo, faixa);
+    const segmento = segmentos.filter(function (s) { return ms >= s.inicioMs && ms <= s.fimMs; })[0];
     const temps = [];
-    for (let s = 0; s < nSensores; s++) {
-      const ondaLenta = Math.sin(idx / 14 + sensorFase[s]) * 0.06;
-      const ruido = (rand() - 0.5) * 0.14;
-      temps.push(EstufaBanhoRel_ebRoundSimulador_(tempBase + sensorOffsets[s] + ondaLenta + ruido, 2));
+    for (let sensor = 0; sensor < nSensores; sensor++) {
+      temps.push(EstufaBanhoRel_ebTemperaturaControlada_(ms, idx, sensor, segmento, alvo));
     }
-    rows.push({
-      tempoStr: Utilities.formatDate(d, EstufaBanhoRel_EBCFG.TZ, 'dd/MM/yyyy HH:mm:ss'),
-      tempoDate: d,
-      temperaturas: temps
-    });
+    rows.push({ tempoStr: Utilities.formatDate(d, EstufaBanhoRel_EBCFG.TZ, 'dd/MM/yyyy HH:mm:ss'), tempoDate: d, temperaturas: temps });
   }
   const segmentoAutonomia = segmentos.filter(function (s) {
     return s.tipoEstudo === 'AUTONOMIA';
@@ -178,28 +162,13 @@ function EstufaBanhoRel_ebGerarDadosSimuladosMultiArquivoAdmin_(payload, estudos
   const base = EstufaBanhoRel_ebGerarDadosSimuladosAdmin_(payload, estudosConfig, faixa);
   const nSensores = Array.isArray(base[0] && base[0].temperaturas) ? base[0].temperaturas.length : 0;
   if (!nSensores || base.length < 2) return base;
-  let somaDelta = 0;
-  let countDelta = 0;
-  for (let i = 1; i < base.length; i++) {
-    const dt = base[i].tempoDate.getTime() - base[i - 1].tempoDate.getTime();
-    if (dt > 0) {
-      somaDelta += dt;
-      countDelta++;
-    }
-  }
-  const intervaloMedioMs = countDelta ? somaDelta / countDelta : 60000;
-  const rand = EstufaBanhoRel_ebCriarRandomSimulador_('multiarquivo|' + Utilities.getUuid());
+  // No cenário controlado não se introduzem perdas aleatórias: o veredito escolhido deve sobreviver
+  // à separação e mesclagem reais dos canais. Mesmas datas e mesmos parâmetros = mesmas leituras.
   const seriesPorSensor = [];
   for (let s = 0; s < nSensores; s++) {
     const serieSensor = [];
     base.forEach(function (row) {
-      // ~2% das leituras somem (simula falha pontual de gravação do
-      // aparelho individual) e o restante ganha um desvio de relógio de
-      // até ±30% do intervalo (aparelhos independentes não estão
-      // perfeitamente sincronizados entre si).
-      if (rand() < 0.02) return;
-      const jitterMs = Math.round((rand() * 2 - 1) * intervaloMedioMs * 0.3);
-      const tempoDate = new Date(row.tempoDate.getTime() + jitterMs);
+      const tempoDate = new Date(row.tempoDate.getTime());
       serieSensor.push({
         tempoStr: Utilities.formatDate(tempoDate, EstufaBanhoRel_EBCFG.TZ, 'dd/MM/yyyy HH:mm:ss'),
         tempoDate: tempoDate,
@@ -407,4 +376,71 @@ function EstufaBanhoRel_ebCriarRandomSimulador_(seedText) {
 function EstufaBanhoRel_ebRoundSimulador_(n, d) {
   const p = Math.pow(10, d || 0);
   return Math.round(Number(n || 0) * p) / p;
+}
+
+/** Dados reconstituídos: o mesmo motor da medição decide o parecer. Nunca substitui status/critério. */
+function EstufaBanhoRel_ebSegmentosControlados_(payload, configs, faixa, ini, fim, intervaloSeg, rand) {
+  const sim = payload.simulacao || {}, q = payload.qualif || {};
+  const numero = function (v, def) { return EstufaBanhoRel_ebParseNumeroMain_(v, def); };
+  let min = faixa.tMin, max = faixa.tMax;
+  if (payload.perfil === 'SECADORA_TRAQUEIAS') { min -= faixa.tolerancia; max += faixa.tolerancia; }
+  const alvo = numero(sim.temperaturaAlvo, (min + max) / 2);
+  if (alvo < min || alvo > max) throw new Error('Simulado: a temperatura alvo deve ficar dentro da faixa de aceitação do perfil. Confira a faixa e o alvo.');
+  const configsIndividuais = [];
+  configs.forEach(function (cfg) {
+    (cfg.repeticoesJanelas || [cfg]).forEach(function (j) {
+      configsIndividuais.push(Object.assign({}, cfg, j, { repeticoesJanelas: null }));
+    });
+  });
+  const segmentos = configsIndividuais.map(function (cfg) {
+    const tipo = cfg.tipoEstudo, evento = tipo === 'ABERTURA_PORTA' || tipo === 'QUEDA_ENERGIA';
+    const penetracao = tipo === 'PENETRACAO_CARGA_E';
+    const desejado = EstufaBanhoRel_ebNormalizarResultadoDesejado_(cfg.resultadoDesejado || (penetracao ? sim.resultadoPenetracao : sim.resultadoDistribuicao));
+    const resultado = EstufaBanhoRel_ebDecidirResultadoEfetivo_(desejado, rand);
+    const s = { tipoEstudo: tipo, inicioMs: cfg.janelaInicioMs, fimMs: cfg.janelaFimMs, resultadoEfetivo: resultado, min: min, max: max, alvo: alvo, evento: evento, penetracao: penetracao };
+    if (s.inicioMs < ini || s.fimMs > fim) throw new Error('Simulado: o início e o fim do arquivo precisam cobrir todos os períodos dos estudos, sem cortar o ensaio.');
+    s.primeiraMs = ini + Math.ceil((s.inicioMs - ini) / (intervaloSeg * 1000)) * intervaloSeg * 1000;
+    s.ultimaMs = ini + Math.floor((s.fimMs - ini) / (intervaloSeg * 1000)) * intervaloSeg * 1000;
+    if ((s.ultimaMs - s.primeiraMs) / (intervaloSeg * 1000) < 2) throw new Error('Simulado: cada período precisa conter pelo menos três leituras. Reduza o intervalo entre leituras.');
+    if (evento) {
+      s.inicioEventoMs = cfg.inicioEventoMs;
+      const alvoMin = numero(cfg.tempoAlvoMinutos, null), recuperacao = numero(q.recuperacaoMaxMin, null);
+      if (desejado !== 'ALEATORIO' && !(alvoMin > 0) && !(recuperacao > 0)) throw new Error('Simulado: para forçar o resultado de porta/energia, informe o tempo-alvo mínimo ou o limite de recuperação no protocolo. Sem critério, o resultado é informativo.');
+      if (resultado === 'APROVADO' && alvoMin > 0 && s.ultimaMs - cfg.inicioEventoMs < alvoMin * 60000) throw new Error('Simulado: o período de porta/energia deve observar pelo menos o tempo-alvo mínimo. Amplie o fim do arquivo e do estudo.');
+      s.falhaMs = ini + Math.ceil((cfg.inicioEventoMs - ini) / (intervaloSeg * 1000)) * intervaloSeg * 1000;
+      if (resultado === 'REPROVADO' && alvoMin > 0 && s.falhaMs - cfg.inicioEventoMs >= alvoMin * 60000) throw new Error('Simulado: o intervalo entre leituras não permite representar a ruptura antes do tempo-alvo. Reduza o intervalo.');
+    } else s.falhaMs = s.primeiraMs + Math.floor((s.ultimaMs - s.primeiraMs) / (intervaloSeg * 1000) / 2) * intervaloSeg * 1000;
+    if (penetracao) {
+      const letal = EstufaBanhoRel_EBCFG.LETALIDADE[cfg.tipoLetalidade];
+      const minimo = numero(cfg.valorMinimoExigido, letal.valorLabel === 'FD' ? letal.fdMinimoNormativo : letal.fhMinimoSugerido);
+      const minutos = (s.ultimaMs - s.primeiraMs) / 60000;
+      if (!(minimo > 0)) throw new Error('Simulado: informe um mínimo de letalidade positivo.');
+      const requerida = letal.tBase + letal.z * Math.log(minimo / minutos) / Math.LN10;
+      s.alvo = resultado === 'REPROVADO' ? requerida - letal.z : Math.max(alvo, requerida + 0.2);
+      if (resultado === 'APROVADO' && s.alvo > max) throw new Error('Simulado: a faixa e a duração não permitem atingir a letalidade mínima. Aumente o tempo ou confira a temperatura do protocolo; o parecer não será forçado.');
+    }
+    // Margem dimensionada pelos critérios do protocolo, não ruído fixo de até 1,3 °C.
+    const margens = [0.12, Math.max(0, Math.min(s.alvo - min, max - s.alvo)) * 0.35];
+    const uniforme = numero(q.limUniformidade, null), estabilidade = numero(q.limEstabilidade, null), desvio = numero(q.limDesvioSetpoint, null), setpoint = numero(q.setpoint, null);
+    if (uniforme > 0) margens.push(uniforme / 4);
+    if (estabilidade > 0) margens.push(estabilidade / 3);
+    if (!penetracao && desvio > 0 && setpoint !== null) {
+      if (Math.abs(s.alvo - setpoint) > desvio) throw new Error('Simulado: o alvo informado não atende ao limite de desvio da temperatura programada. Confira os dois campos.');
+      margens.push(Math.max(0, desvio - Math.abs(s.alvo - setpoint)) / 3);
+    }
+    s.amplitude = Math.min.apply(null, margens);
+    return s;
+  });
+  // Um único arquivo não pode aprovar e reprovar a mesma leitura em dois estudos sobrepostos.
+  segmentos.forEach(function (s, i) { segmentos.slice(i + 1).forEach(function (outro) {
+    if (Math.max(s.inicioMs, outro.inicioMs) <= Math.min(s.fimMs, outro.fimMs) && s.resultadoEfetivo !== outro.resultadoEfetivo) throw new Error('Simulado: estudos com resultados diferentes têm períodos sobrepostos. Separe os períodos ou escolha o mesmo resultado.');
+  }); });
+  return segmentos;
+}
+function EstufaBanhoRel_ebTemperaturaControlada_(ms, idx, sensor, s, alvo) {
+  if (!s) return EstufaBanhoRel_ebRoundSimulador_(alvo, 4);
+  // Penetração reprovada reduz toda a integral térmica; distribuição/evento têm excursão verificável.
+  let t = s.alvo + s.amplitude * (0.5 * Math.sin(idx / 17) + 0.25 * Math.sin(sensor * 1.7 + idx / 29));
+  if (!s.penetracao && s.resultadoEfetivo === 'REPROVADO' && ms >= s.falhaMs && (s.evento || ms <= s.falhaMs + 60000)) t = s.max + Math.max(1, (s.max - s.min) * 0.5);
+  return EstufaBanhoRel_ebRoundSimulador_(t, 4);
 }
