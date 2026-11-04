@@ -80,6 +80,7 @@ function AstA_agendar_(eu, d) {
   if (!(dur >= 15 && dur <= 24 * 60)) throw new Error('Não foi possível agendar: informe a duração estimada (de 15 minutos a 24 horas)');
   var tipo = Ast_tipo_(d.tipoCodigo || c.TIPO_CODIGO);
   if (!tipo) throw new Error('Não foi possível agendar: escolha o tipo de serviço (define o checklist, as fotos e o que o relatório exige)');
+  if (tipo.ronda) throw new Error('Não foi possível agendar: a ronda de engenharia clínica não nasce de um chamado. Agende em Assistência técnica > Rondas (avulsa ou pelo contrato de ronda) e escolha aqui outro tipo de serviço');
   var motivo = Ast_texto_(d.motivo, 500);
   if (reag && motivo.length < 5) throw new Error('Não foi possível reagendar: escreva o motivo (pelo menos 5 letras). O técnico e o cliente recebem o horário novo');
   var p = d.preparo || {}, prep = {};

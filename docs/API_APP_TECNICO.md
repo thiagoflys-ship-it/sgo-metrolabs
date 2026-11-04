@@ -268,6 +268,19 @@ na ordem, e sobem um por chamada (como as fotos). `ENTRADA` numa `NOVA_OS` é re
 que apontavam para ela (com o que fazer). O número do pedido (`X-Pedido-Id`) do item é estável (`N`/`C` + idLocal + rodada +
 resumo da sessão).
 
+## Ronda de engenharia clínica (03/11/2026)
+
+O.S. do tipo `RONDA_EC` (grupo `RONDA`, sem chamado). Aplicativo antigo ignora o bloco e mostra a O.S. como as demais (sem conseguir registrar a ronda).
+
+- `Ast_appMeuDia`: o item da O.S. traz `tipo.ronda: true` e o bloco `ronda`: `{ clienteId, unidadeId, unidadeNome, congelado, setores: [{ nome, chave, extra, equipamentos: [{ chave ("e:<id>" ou "n:<idLocal>"), id, tipo, modelo, serie, tag, patrimonio, categoria (AUTOCLAVE | LAVADORA | FRIO | SELADORA | ""), validade: { cal: { ate, vencida }, qual }, novo }] }], perguntas: { CATEGORIA: [pergunta] }, categorias, situacoes: [{ codigo, nome, problema }], regras: { descricaoMin, motivoMin }, registrado: { itens, setores, orientacoes, pedidosCliente } }`. O escopo fica congelado no `CHEGUEI` (`congelado: true`). A ronda não aparece em `tipos` (não se abre em campo).
+- `Ast_appSincronizar`, evento `RONDA` (depois do `CHEGUEI`; antes dele é recusado sem ser definitivo). `dados.parte`:
+  - `ITEM`: `{ chave, setor, situacao (FUNCIONANDO | OBSERVACAO | FORA_USO | NAO_LOCALIZADO | NAO_VERIFICADO), descricao, motivo, respostas: { perguntaId: valor }, equipamentoId, ident: { tipo, modelo, serie, tag, patrimonio } }`. Só os campos enviados mudam (merge). Equipamento cadastrado em campo: `chave "n:<idLocal do CADASTRO>"` e `equipamentoId` = o idLocal (o servidor troca pelo id real). Resposta inválida (número que não é número) é recusada com o motivo.
+  - `SETOR`: `{ setor, achados, novo }` (achados do setor; `novo: true` para setor acrescentado em campo).
+  - `ORIENTACOES`: `{ orientacoes, pedidosCliente }`.
+  - Só técnico ou engenheiro (perfil Técnico ou área Técnica) responsável pela O.S. ou a gestão; outro colaborador recebe recusa definitiva.
+- `Ast_appEnviarFoto`: `perguntaId` `"ronda:<chave>"` (foto do equipamento) ou `"ronda:setor:<CHAVE DO SETOR>"` (foto do setor).
+- Pendências (`pendencias` do item e do resumo): o que falta por setor, as duas assinaturas e a chegada. Observação e defeito exigem descrição e foto; "não verificado", o motivo; perguntas fixas obrigatórias nas três primeiras situações; resposta "Não" não fica com "Em funcionamento".
+
 ## Mudanças
 
 - 03/11/2026 (logística): `tipo.grupo` e `tipo.logistica` (`{ sentido: ENTREGA|RETIRADA|ENVIO, termo: true, colaborador, titulo }`,

@@ -120,6 +120,7 @@ function AstR_nomeTermo_(sentido) { return { ENTREGA: 'Termo de entrega da OS', 
 /** Título do documento da O.S. para e-mail, Enviar documento e avisos: termo (logística) ou relatório de atendimento técnico. */
 function AstR_tituloDocOS_(os) {
   var t = Ast_tipo_(os && os.TIPO_CODIGO);
+  if (t && t.ronda) return 'Relatório de ronda de engenharia clínica';
   return t && t.logistica ? (AST_LOG_ROTULOS[t.logistica.sentido] || AST_LOG_ROTULOS.ENTREGA).titulo : 'Relatório de atendimento técnico';
 }
 
@@ -233,6 +234,8 @@ function AstR_emitirRelatorioOS_(eu, osId, opcoes) {
   try {
     var os = Ast_porId_(AST_ABAS.OS, osId);
     if (!os) return { salvo: false, aviso: 'O.S. não encontrada' };
+    // 03/11/2026: a ronda de engenharia clínica tem o relatório próprio, em duas versões (cliente e interna)
+    if (typeof AstRd_ehRonda_ === 'function' && AstRd_ehRonda_(os)) return AstRd_emitirRelatorio_(eu, osId, o);
     var rascunho = Ast_up_(os.SITUACAO) !== 'ENCERRADA';
     if (!rascunho && Ast_s_(os.RELATORIO_PDF_ID) && !o.revisao) {
       // relatório vigente da O.S. encerrada: reabre o mesmo (nenhuma versão nova sem motivo)
@@ -325,6 +328,7 @@ function AstR_corrigirRelatorio_(eu, d) {
   d = d || {};
   var os = AstO_obter_(eu, d.osId, 'corrigir o relatório');
   if (Ast_up_(os.SITUACAO) !== 'ENCERRADA') throw new Error('Não foi possível corrigir: a O.S. ' + os.NUMERO + ' ainda não foi encerrada. Corrija pelo próprio atendimento (aplicativo ou ficha da O.S.)');
+  if (typeof AstRd_ehRonda_ === 'function' && AstRd_ehRonda_(os)) return AstRd_corrigir_(eu, os, d);
   if (!Ast_s_(os.RELATORIO_PDF_ID)) throw new Error('Não foi possível corrigir: a O.S. ' + os.NUMERO + ' ainda não tem o relatório emitido. Toque em "Relatório A4" primeiro');
   var motivo = Ast_texto_(d.motivo, 500);
   if (motivo.length < 10) throw new Error('Não foi possível corrigir: escreva o motivo da revisão (pelo menos 10 letras). Ele aparece no histórico de revisões do documento');
@@ -370,6 +374,15 @@ function AstR_textoEnvio_(os, eu) {
   var c = Ast_porId_(AST_ABAS.CHAMADOS, os.CHAMADO_ID) || {}, rev = Number(os.RELATORIO_REVISAO) || 0;
   var un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(os.UNIDADE_ID)] || {};
   var tipoT = Ast_tipo_(os.TIPO_CODIGO);
+  if (tipoT && tipoT.ronda) {
+    // 03/11/2026: ronda de engenharia clínica (o anexo é a versão do cliente do relatório)
+    var resR = typeof AstRd_resumo_ === 'function' ? AstRd_resumo_(os) : { equipamentos: 0, problemas: 0 };
+    return { assunto: ('Relatório de ronda de engenharia clínica ' + Ast_s_(os.NUMERO) + (rev > 0 ? ' (Rev. ' + (rev < 10 ? '0' : '') + rev + ')' : '') + ' | ' + Ast_s_(os.UNIDADE_NOME) + ' | ' + Ast_s_(os.CLIENTE_NOME)).slice(0, 180),
+      texto: 'Prezados(as),\n\nEncaminhamos em anexo o relatório da ronda de engenharia clínica ' + Ast_s_(os.NUMERO) + (rev > 0 ? ' (revisão ' + (rev < 10 ? '0' : '') + rev + ', que substitui a anterior)' : '') + ', realizada na unidade ' + Ast_s_(os.UNIDADE_NOME) +
+        (Ast_s_(os.CHEGOU_EM) ? ' em ' + Ast_brDia_(os.CHEGOU_EM) : '') + ' por ' + Ast_s_(os.TECNICO_NOME) + '.\n\n' + 'Foram verificados ' + resR.equipamentos + ' equipamento(s), setor a setor; ' + resR.problemas + ' com observação ou fora de uso. ' +
+        'O relatório traz a situação de cada equipamento, os achados com as recomendações e a prioridade, os chamados abertos a partir da ronda, a comparação com a ronda anterior e as assinaturas.\n\n' +
+        'Ele também fica disponível no portal do cliente do SGO+.\n\nEm caso de dúvida, estamos à disposição.\n\nAtenciosamente,\n' + (Ast_s_(eu && eu.nome) || 'Equipe Metrolabs') + '\nMetrolabs' };
+  }
   if (tipoT && tipoT.logistica) {
     // 03/11/2026 (logística): o anexo é o termo de entrega, retirada ou envio, não um relatório técnico
     var tt = AstR_tituloDocOS_(os), lgT = AstO_logistica_(os) || { itens: [] };

@@ -61,6 +61,8 @@ function AstO_faltas_(os, fotos, regras) {
   regras = regras || Ast_regras_();
   fotos = fotos || AstO_fotos_(os.ID);
   var tipo = Ast_tipo_(os.TIPO_CODIGO) || { exige: { relato: true, assinatura: true, fotosMin: 0, qrOuSerie: false }, semVisita: false };
+  // 03/11/2026: ronda de engenharia clínica tem a regra própria (setores, situação de cada equipamento, fotos dos problemas)
+  if (tipo.ronda && typeof AstRd_faltas_ === 'function') return AstRd_faltas_(os, fotos, regras, tipo);
   var f = [];
   // 03/11/2026: logística (entrega, retirada, envio) pede o termo, nunca condição encontrada, teste funcional nem QR/série.
   // O.S. de logística antiga (sem termo, só com o relato escrito) continua valendo pelo relato.
@@ -190,7 +192,7 @@ function AstO_normSerie_(s) { return Ast_semAcento_(s).replace(/[^A-Z0-9]/g, '')
 function AstO_aplicarEvento_(eu, ev, ctx) {
   ctx = ctx || {};
   var tipo = Ast_up_(ev.tipo), d = ev.dados || {};
-  var tipos = ['SAIU', 'CHEGUEI', 'RESPOSTA', 'FOTO', 'RELATO', 'PECA', 'ASSINATURA', 'CONCLUI'];
+  var tipos = ['SAIU', 'CHEGUEI', 'RESPOSTA', 'FOTO', 'RELATO', 'PECA', 'ASSINATURA', 'CONCLUI', 'RONDA'];
   if (tipos.indexOf(tipo) < 0) return { ok: false, definitivo: true, motivo: 'tipo de evento desconhecido (' + tipo + ')', corrigir: 'Atualize o aplicativo: os tipos aceitos são ' + tipos.join(', ') + '.' };
   var os = Ast_porId_(AST_ABAS.OS, ev.osId);
   if (!os) return { ok: false, definitivo: true, motivo: 'a O.S. não existe mais no servidor', corrigir: 'Atualize o Meu dia; se a O.S. sumiu, fale com a gestão da área Técnica.' };
@@ -232,6 +234,8 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
       } else obs = 'Chegada sem localização (o aparelho não informou).';
       if (obs) campos.OBS_LOCALIZACAO = Ast_texto_([Ast_s_(os.OBS_LOCALIZACAO), obs].filter(Boolean).join(' '), 500);
       gravar(campos); s = 'NO_LOCAL';
+      // 03/11/2026 (ronda): o escopo (setores e equipamentos do cadastro) fica congelado na chegada
+      if (tipoOs.ronda && !Ast_s_(os.RONDA_ESCOPO_JSON) && typeof AstRd_escopoVivo_ === 'function') { try { gravar({ RONDA_ESCOPO_JSON: JSON.stringify(AstRd_escopoVivo_(os)) }); } catch (eEsc) {} }
       c = AstO_chamadoPara_(eu, c, 'NO_LOCAL', {}, 'CHEGUEI', 'Técnico chegou ao cliente' + (obs ? ' (' + obs + ')' : ''));
       Ast_evento_('OS', os.ID, 'CHEGUEI', eu, 'Chegou ao cliente' + (obs ? '. ' + obs : ''), extraEv);
       if (obs && /km do endere/.test(obs)) Ast_avisar_(Ast_gestoresTecnica_(), 'LOCALIZACAO', 'Chegada longe do endereço: ' + os.NUMERO, obs + ' Técnico ' + Ast_s_(os.TECNICO_NOME) + '. Não bloqueia; confira se o endereço da unidade está certo.', os.ID, { autorId: eu.id });
@@ -370,6 +374,10 @@ function AstO_aplicarEvento_(eu, ev, ctx) {
       gravar({ ASSINATURA_ARQUIVO_ID: arq.getId(), ASSINATURA_NOME: nome, ASSINATURA_DOCUMENTO: Ast_texto_(d.documento, 60), ASSINATURA_EM: hora });
       Ast_evento_('OS', os.ID, 'ASSINATURA', eu, 'Assinado por ' + nome + (Ast_s_(d.documento) ? ' (' + Ast_texto_(d.documento, 60) + ')' : '') + (notaAss ? '. ' + notaAss : ''), extraEv);
       return { ok: true, nota: notaAss };
+    case 'RONDA':
+      // 03/11/2026: ronda de engenharia clínica (SGO_Assistencia_Ronda.js): item por equipamento, setor e orientações
+      if (typeof AstRd_aplicarEvento_ !== 'function') return { ok: false, definitivo: false, motivo: 'o servidor ainda não tem a ronda de engenharia clínica', corrigir: 'Avise o supervisor; o que está guardado continua no aparelho.' };
+      return AstRd_aplicarEvento_(eu, os, d, { gravar: gravar, hora: hora, extraEv: extraEv, exigeLocal: exigeLocal, iniciarExecucao: iniciarExecucao });
     case 'CONCLUI':
       if (!tipoOs.semVisita && !Ast_s_(os.CHEGOU_EM)) return { ok: false, definitivo: false, motivo: 'a chegada não foi registrada', corrigir: 'Toque em "Cheguei" (envie o evento CHEGUEI antes do CONCLUI) e sincronize de novo.' };
       var co2 = AstO_coord_(d);
@@ -412,6 +420,8 @@ function AstO_tentarEncerrar_(eu, osId) {
   if (c) c = AstO_chamadoPara_(eu, c, 'ENCERRADO', { PROXIMA_ACAO: '' }, 'ENCERRAMENTO', 'O.S. ' + os.NUMERO + ' encerrada' + (Ast_s_(os.ASSINATURA_NOME) ? ' com assinatura de ' + Ast_s_(os.ASSINATURA_NOME) : Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) ? ' sem assinatura (recebido por ' + Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) + ')' : ''));
   Ast_mudarAtividade_(os.ATIVIDADE_ID, 'Concluída', 'O.S. ' + os.NUMERO + ' encerrada com a documentação completa.');
   var euR = eu, idR = os.ID;
+  // 03/11/2026 (ronda): chamados automáticos, sugestão ao Comercial e avisos antes do relatório (o relatório lista os chamados)
+  if (typeof AstRd_ehRonda_ === 'function' && AstRd_ehRonda_(os)) Ast_depois_(function () { AstRd_posConclusao_(euR, idR); });
   Ast_depois_(function () { if (typeof AstR_emitirRelatorioOS_ === 'function') AstR_emitirRelatorioOS_(euR, idR, { aoEncerrar: true }); });
   return { encerrada: true, faltas: [] };
 }
@@ -487,6 +497,8 @@ function AstO_publico_(os, eu) {
     envio: AstO_envio_(os, eu),
     reserva: Ast_s_(os.RESERVA_CODIGO), podeCampo: !!eu && (eu.gestao || Ast_s_(os.TECNICO_ID) === eu.id) && AST_OS_ABERTAS.indexOf(s) >= 0,
     abertaEmCampo: Ast_sim_(os.ABERTA_EM_CAMPO),
+    // 03/11/2026: ronda de engenharia clínica (setores, itens, resumo, chamados, versão interna do relatório)
+    ronda: tipo && tipo.ronda && typeof AstRd_publico_ === 'function' ? AstRd_publico_(os, eu) : null,
     eventos: Ast_ler_(AST_ABAS.EVENTOS).filter(function (e) { return Ast_up_(e.ENTIDADE) === 'OS' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(os.ID); }).sort(function (a, b) { return String(a.EM).localeCompare(String(b.EM)); })
       .map(function (e) { return { tipo: Ast_s_(e.TIPO), texto: Ast_s_(e.TEXTO), por: Ast_s_(e.USUARIO_NOME), em: Ast_br_(e.EM), emAparelho: Ast_br_(e.EM_APARELHO) }; })
   };
@@ -533,7 +545,9 @@ function AstO_salvarFoto_(eu, d) {
   var nome = Ast_s_(d.nome) || (idLocal + '.jpg');
   if (!AST_RX_FOTO.test(nome)) throw new Error('Não foi possível enviar a foto: use JPG, PNG ou WEBP (o arquivo é "' + nome + '")');
   var perg = Ast_s_(d.perguntaId);
-  if (perg && !AstO_perguntas_(os).some(function (p) { return p.id === perg; })) perg = '';
+  // 03/11/2026 (ronda): a foto do equipamento ou do setor da ronda leva "ronda:<chave>" ou "ronda:setor:<setor>"
+  var ehRonda = typeof AstRd_ehRonda_ === 'function' && AstRd_ehRonda_(os);
+  if (perg && !(ehRonda && /^ronda:[A-Za-z0-9_.: -]{2,200}$/.test(perg)) && !AstO_perguntas_(os).some(function (p) { return p.id === perg; })) perg = '';
   var mime = /\.png$/i.test(nome) ? 'image/png' : /\.webp$/i.test(nome) ? 'image/webp' : 'image/jpeg';
   var pasta = Ast_pastaPrivadaOS_(os.NUMERO);
   var nomeArq = SGO_DocSalvar_sanitizarNome_(os.NUMERO + ' - ' + idLocal + ' - ' + nome);
@@ -545,7 +559,8 @@ function AstO_salvarFoto_(eu, d) {
     var dup = Ast_ler_(AST_ABAS.FOTOS).filter(function (x) { return Ast_s_(x.OS_ID) === Ast_s_(os.ID) && Ast_s_(x.ID_LOCAL) === idLocal; })[0];
     if (dup) return { dup: dup };
     var r = Ast_inserir_(AST_ABAS.FOTOS, { OS_ID: os.ID, ID_LOCAL: idLocal, PERGUNTA_ID: perg, LEGENDA: Ast_texto_(d.legenda, 200), NOME: nome, ARQUIVO_ID: f.getId(), URL: f.getUrl(), TAMANHO: bytes,
-      SHA256: marca, TIRADA_EM: AstO_horaCampo_(d.em), RECEBIDA_EM: Ast_agora_(), POR_ID: eu.id, POR_NOME: eu.nome, ATIVA: 'SIM' });
+      SHA256: marca, TIRADA_EM: AstO_horaCampo_(d.em), RECEBIDA_EM: Ast_agora_(), POR_ID: eu.id, POR_NOME: eu.nome, ATIVA: 'SIM',
+      PUBLICO: ehRonda && AST_RONDA_FOTO_LIBERADA_PADRAO ? 'SIM' : '' });
     var o2 = Ast_porId_(AST_ABAS.OS, os.ID);
     var campos = { QTD_FOTOS: AstO_fotos_(os.ID).length, ATUALIZADO_EM: Ast_agora_(), ULTIMA_SINC_EM: Ast_agora_() };
     if (Ast_up_(o2.SITUACAO) === 'NO_LOCAL') { campos.SITUACAO = 'EM_EXECUCAO'; campos.INICIO_EM = Ast_s_(o2.INICIO_EM) || Ast_agora_(); var c = Ast_porId_(AST_ABAS.CHAMADOS, o2.CHAMADO_ID); AstO_chamadoPara_(eu, c, 'EM_EXECUCAO', {}, 'INICIO_SERVICO', 'Serviço iniciado'); }

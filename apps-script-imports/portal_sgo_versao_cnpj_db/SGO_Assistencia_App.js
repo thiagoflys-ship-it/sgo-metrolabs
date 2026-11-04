@@ -64,7 +64,7 @@ function AstApp_os_(os, eu, opcoes) {
     id: Ast_s_(os.ID), numero: Ast_s_(os.NUMERO), chamadoId: Ast_s_(os.CHAMADO_ID), chamadoNumero: Ast_s_(os.CHAMADO_NUMERO), situacao: s, situacaoNome: AST_OS_SITUACOES[s] || s,
     ordem: Number(os.ORDEM_DIA) || 0, agendadoPara: Ast_iso_(os.AGENDADO_PARA), duracaoMin: Number(os.DURACAO_MIN) || 0,
     prioridade: Ast_up_(c.PRIORIDADE), prioridadeNome: AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || '', prazoAtendimento: { ate: sla.ate || '', estado: sla.estado },
-    tipo: { codigo: tipo.codigo, nome: tipo.nome, grupo: tipo.grupo || '', exige: Object.assign(AstApp_exige_(tipo), { assinaturaColaborador: AstO_exigeAssColab_(os, tipo) && !Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) }), logistica: AstApp_logistica_(tipo) },
+    tipo: { codigo: tipo.codigo, nome: tipo.nome, grupo: tipo.grupo || '', exige: Object.assign(AstApp_exige_(tipo), { assinaturaColaborador: AstO_exigeAssColab_(os, tipo) && !Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) }), logistica: AstApp_logistica_(tipo), ronda: !!tipo.ronda },
     abertaEmCampo: Ast_sim_(os.ABERTA_EM_CAMPO),
     sintoma: Ast_s_(c.SINTOMA), orientacao: Ast_s_(os.ORIENTACAO),
     cliente: { id: Ast_s_(os.CLIENTE_ID), nome: Ast_s_(os.CLIENTE_NOME) || Ast_clienteNome_(cli), cnpj: Ast_s_(cli.CNPJ), telefone: Ast_s_(cli.TELEFONE) },
@@ -84,6 +84,8 @@ function AstApp_os_(os, eu, opcoes) {
       logistica: AstO_logistica_(os),
       assinaturaColaborador: Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.COLAB_ASSINATURA_NOME), em: Ast_iso_(os.COLAB_ASSINATURA_EM) } : null },
     historicoEquipamento: hist,
+    // 03/11/2026: ronda de engenharia clínica (setores, equipamentos, perguntas fixas e o que já foi registrado); null nas demais
+    ronda: tipo.ronda && typeof AstRd_paraApp_ === 'function' ? AstRd_paraApp_(os) : null,
     pendencias: AST_OS_ABERTAS.indexOf(s) >= 0 ? AstO_faltas_(os, fotos).map(function (x) { return 'falta ' + x; }) : [],
     relatorioUrl: Ast_s_(os.RELATORIO_PDF_URL),
     // 22/10/2026 (etapa 2): estado do documento e do envio ao cliente (só acrescentado; o aplicativo antigo continua valendo)
@@ -143,7 +145,8 @@ function AstApp_logistica_(tipo) {
 }
 /** Tipos de serviço que o técnico pode escolher ao abrir a O.S. em campo (ativos, com visita), com o checklist para o aparelho montar a O.S. sem internet. */
 function AstApp_tipos_() {
-  return Ast_tipos_(false).filter(function (t) { return !t.semVisita; }).map(function (t) {
+  // 03/11/2026: a ronda não é aberta em campo (a gestão agenda, avulsa ou pelo contrato de ronda)
+  return Ast_tipos_(false).filter(function (t) { return !t.semVisita && !t.ronda; }).map(function (t) {
     var m = t.modeloCodigo ? Ast_modelo_(t.modeloCodigo) : null;
     return { codigo: t.codigo, nome: t.nome, grupo: t.grupo, descricao: t.descricao, exige: AstApp_exige_(t), logistica: AstApp_logistica_(t),
       checklist: { modeloId: m ? m.codigo : '', versao: m ? m.versao : 0, nome: m ? m.nome : '', perguntas: m ? m.perguntas : [] } };
@@ -563,6 +566,7 @@ function Ast_appAbrirOS(sessionId, payload) {
     var tipo = Ast_tipo_(p.tipoCodigo);
     if (!tipo || !tipo.ativo) throw new Error('Não foi possível abrir a O.S.: escolha o tipo de serviço (define o checklist, as fotos e o que o relatório exige). Atualize o Meu dia se a lista estiver vazia');
     if (tipo.semVisita) throw new Error('Não foi possível abrir a O.S.: o tipo "' + tipo.nome + '" não tem visita; em campo, escolha um tipo de atendimento no cliente');
+    if (tipo.ronda) throw new Error('Não foi possível abrir a O.S.: a ronda de engenharia clínica é agendada pela gestão (Assistência técnica > Rondas) e aparece no seu Meu dia; em campo, escolha outro tipo de atendimento');
     return Ast_comTrava_(function () {
       var ja = AstApp_syncAceito_('NOVA_OS', idLocal);
       if (ja) { var osJa = Ast_porId_(AST_ABAS.OS, ja.REF_ID); if (osJa) return { duplicado: true, existente: /existente/.test(Ast_s_(ja.MOTIVO)), os: AstApp_os_(osJa, eu), chamado: { id: Ast_s_(osJa.CHAMADO_ID), numero: Ast_s_(osJa.CHAMADO_NUMERO) }, message: 'Esta O.S. já tinha sido recebida: ' + osJa.NUMERO + '.' }; }

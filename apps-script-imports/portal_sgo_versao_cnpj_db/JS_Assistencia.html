@@ -111,7 +111,7 @@
   // ==========================================================
   var AT = { ini: null, mod: "", filtro: { grupo: "ABERTOS", busca: "", prioridade: "" }, osFiltro: "ABERTAS", agenda: { inicio: "", dias: 1 }, comp: "" };
   var AT_MODS = { assistencia: "Chamados", assistencia_abrir: "Abrir chamado", assistencia_os: "Ordens de serviço", assistencia_agenda: "Agenda dos técnicos", assistencia_solicitacoes: "Solicitações dos clientes",
-    assistencia_casos: "Reclamações", assistencia_indicadores: "Indicadores da assistência", assistencia_regras: "Regras da assistência", assistencia_transicao: "Transição do Auvo", assistencia_portal: "Meus chamados" };
+    assistencia_casos: "Reclamações", assistencia_indicadores: "Indicadores da assistência", assistencia_regras: "Regras da assistência", assistencia_transicao: "Transição do Auvo", assistencia_portal: "Meus chamados", assistencia_rondas: "Rondas de engenharia clínica" };
   var AT_COR_SIT = { ABERTO: "azul", EM_TRIAGEM: "azul", RESOLVIDO_REMOTO: "verde", AGUARDANDO_ORCAMENTO: "laranja", AGUARDANDO_PECA: "laranja", PLANEJADO: "laranja", AGENDADO: "azul", EM_DESLOCAMENTO: "azul",
     NO_LOCAL: "azul", EM_EXECUCAO: "azul", PAUSADO: "laranja", AGUARDANDO_CLIENTE: "laranja", DOC_PENDENTE: "vermelho", ENCERRADO: "cinza", CANCELADO: "cinza",
     AGENDADA: "azul", PAUSADA: "laranja", ENCERRADA: "cinza", CANCELADA: "cinza" };
@@ -346,7 +346,7 @@
     Assistencia_garantirInicio_(function (ini) {
       if (ini.cliente && mod !== "assistencia_portal") mod = "assistencia_portal";
       var mapa = { assistencia: At_renderChamados_, assistencia_abrir: At_renderAbrir_, assistencia_os: At_renderOs_, assistencia_agenda: At_renderAgenda_, assistencia_solicitacoes: At_renderSolicitacoes_,
-        assistencia_casos: At_renderCasos_, assistencia_indicadores: At_renderIndicadores_, assistencia_regras: At_renderRegras_, assistencia_transicao: At_renderTransicao_, assistencia_portal: At_renderPortal_ };
+        assistencia_casos: At_renderCasos_, assistencia_indicadores: At_renderIndicadores_, assistencia_regras: At_renderRegras_, assistencia_transicao: At_renderTransicao_, assistencia_portal: At_renderPortal_, assistencia_rondas: At_renderRondas_ };
       var fn = mapa[mod] || At_renderChamados_;
       fn(div, alvo || {});
       if (ini.avisos && ini.avisos.some(function (a) { return a.novo; })) At_chamar_("avisosLidos", {}, function () { ini.avisos.forEach(function (a) { a.novo = false; }); }, function () {});
@@ -928,6 +928,8 @@
     return t.itens.some(function (i, k) { var a = g.itens[k] || {}; return ["descricao", "identificacao", "estado", "avaria", "acessorios"].some(function (c) { return n(i[c]) !== n(a[c]); }) || Number(i.quantidade) !== Number(a.quantidade); });
   }
   function At_desenharOs_(o, msg, tipo) {
+    // 03/11/2026: ronda de engenharia clínica tem a ficha própria (feita no SGO+ Campo)
+    if (o.ronda) { At_desenharRonda_(o, msg, tipo); return; }
     var ini = AT.ini, campo = o.podeCampo, s = o.situacao;
     var dl = function (pares) { return '<dl class="at-det">' + pares.filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>'; };
     var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') + '<div>' + At_selo_(AT_COR_SIT[s], o.situacaoNome) + (o.serieDivergente ? At_selo_("vermelho", "Série divergente") : "") + (o.aguardandoPeca ? At_selo_("laranja", "Aguardando peça") : "") + (o.abertaEmCampo ? At_selo_("verde", "Aberta em campo") : "") + '</div>' +
@@ -1260,8 +1262,216 @@
         '<div class="at-sec">O.S. por técnico</div>' + tab(["Técnico", "Encerradas", "Doc. pendente", "Tempo médio no local", "Sem assinatura", "Série divergente"], i.tecnicos.map(function (t) { return [t.nome, t.encerradas, t.docPendente, t.mediaLocalMin ? t.mediaLocalMin + " min" : "—", t.semAssinatura, t.divergencias]; }), "Nenhuma O.S. no mês.") +
         '<div class="at-sec">Reincidência por equipamento (90 dias)</div>' + tab(["Equipamento", "Cliente", "Chamados"], i.equipamentosReincidentes.map(function (e) { return [e.equipamento, e.cliente, e.qtd]; }), "Nenhum equipamento com reincidência.") +
         '<div class="at-sec">Prazos estourados agora</div>' + tab(["Chamado", "Cliente", "Prioridade", "Situação"], i.estouradosAgora.map(function (e) { return [e.numero, e.cliente, e.prioridade, e.situacao]; }), "Nenhum.") +
-        '<p class="at-meta">Uso em paralelo: ' + At_esc_(i.osSgoMes) + ' O.S. no SGO+ e ' + At_esc_(i.tarefasAuvoMes) + ' tarefa(s) no Auvo no mês.</p>';
+        '<div id="atIndRonda"></div><p class="at-meta">Uso em paralelo: ' + At_esc_(i.osSgoMes) + ' O.S. no SGO+ e ' + At_esc_(i.tarefasAuvoMes) + ' tarefa(s) no Auvo no mês.</p>';
+      At_rondaIndicadores_(At_$_("atIndRonda"));
     }, function (m) { At_msg_("atIndCorpo", m); });
+  }
+
+  // =========================================================
+  // RONDAS DE ENGENHARIA CLÍNICA (03/11/2026; servidor: SGO_Assistencia_Ronda.js). A ronda é feita no SGO+ Campo; aqui a gestão
+  // programa (avulsa ou contrato recorrente), cadastra setores, acompanha, libera fotos e o Comercial decide as sugestões.
+  // =========================================================
+  var AT_COR_RONDA = { PROGRAMADA: "azul", ANDAMENTO: "azul", DOC: "vermelho", ATRASADA: "laranja", REALIZADA: "verde", CANCELADA: "cinza" };
+  function At_escolherClienteUnidade_(raiz, prefixo, aoEscolher) {
+    var t = null, inp = raiz.querySelector("#" + prefixo + "Cli"), lista = raiz.querySelector("#" + prefixo + "CliLista");
+    inp.oninput = function () {
+      clearTimeout(t); var termo = inp.value;
+      t = setTimeout(function () {
+        At_chamar_("buscarCadastro", { termo: termo }, function (r) {
+          lista.innerHTML = (r.clientes || []).map(function (c) { return '<button type="button" class="btn-secondary" style="margin:4px 4px 0 0" data-cli="' + At_esc_(c.id) + '">' + At_esc_(c.nome) + '</button>'; }).join("");
+          lista.querySelectorAll("[data-cli]").forEach(function (b) { b.onclick = function () {
+            raiz.querySelector("#" + prefixo + "CliId").value = b.getAttribute("data-cli"); inp.value = b.textContent; lista.innerHTML = "";
+            At_chamar_("buscarCadastro", { clienteId: b.getAttribute("data-cli") }, function (u) {
+              var sel = raiz.querySelector("#" + prefixo + "Un");
+              sel.innerHTML = At_opcoes_(u.unidades.map(function (x) { return { v: x.id, t: x.nome }; }), u.unidades.length === 1 ? u.unidades[0].id : "", "Escolha a unidade");
+              sel.onchange = function () { if (aoEscolher) aoEscolher(raiz.querySelector("#" + prefixo + "CliId").value, sel.value); };
+              if (u.unidades.length === 1 && aoEscolher) aoEscolher(b.getAttribute("data-cli"), u.unidades[0].id);
+            });
+          }; });
+        }, function () {});
+      }, 350);
+    };
+  }
+  function At_setoresMarcaveis_(el, cid, uid, marcados) {
+    if (!el) return;
+    if (!cid || !uid) { el.innerHTML = '<p class="at-meta">Escolha o cliente e a unidade para ver os setores.</p>'; return; }
+    el.innerHTML = '<p class="at-meta">Carregando os setores…</p>';
+    At_chamar_("rondaEscopoUnidade", { clienteId: cid, unidadeId: uid }, function (r) {
+      el.innerHTML = r.setores.length ? '<p class="at-meta">Marque os setores da ronda (nenhum marcado = todos os setores da unidade).</p>' + r.setores.map(function (s) {
+        return '<label class="at-check"><input type="checkbox" data-setor="' + At_esc_(s.nome) + '"' + ((marcados || []).indexOf(s.nome) >= 0 ? " checked" : "") + '> ' + At_esc_(s.nome) + ' <span class="at-meta">(' + s.equipamentos + ' equipamento(s)' + (s.cadastrado ? '' : ', do campo Setor') + ')</span></label>';
+      }).join("") : '<p class="at-meta">A unidade ainda não tem setor nem equipamento no cadastro. O técnico cadastra em campo durante a ronda.</p>';
+    }, function (m) { At_msg_(el, m); });
+  }
+  function At_lerSetores_(el) { return Array.prototype.map.call(el.querySelectorAll("[data-setor]:checked"), function (x) { return x.getAttribute("data-setor"); }); }
+  function At_formRonda_(titulo, p, depois) {
+    var ini = AT.ini, ehPlano = !!p, x = p && p.id ? p : {};
+    var ov = At_modal_(titulo,
+      At_campo_("Cliente (nome ou CNPJ)", '<input id="atRdCli" type="search" autocomplete="off" value="' + At_esc_(x.clienteNome || "") + '" placeholder="Digite pelo menos 2 letras"><div id="atRdCliLista"></div>') + '<input type="hidden" id="atRdCliId" value="' + At_esc_(x.clienteId || "") + '">' +
+      At_campo_("Unidade", '<select id="atRdUn">' + (x.unidadeId ? '<option value="' + At_esc_(x.unidadeId) + '">' + At_esc_(x.unidadeNome) + '</option>' : '<option value="">Escolha o cliente primeiro</option>') + '</select>') +
+      '<div id="atRdSetores"></div>' +
+      (ehPlano ? '<div class="at-grade3">' + At_campo_("Periodicidade", '<select id="atRdPer">' + At_opcoes_(AT.ronda.periodicidades, x.periodicidade || "MENSAL") + '</select>') + At_campo_("Primeira ronda", '<input id="atRdIni" type="date" value="' + At_esc_(x.inicio || "") + '">') +
+        At_campo_("Hora", '<input id="atRdHora" type="time" value="' + At_esc_(x.hora || "08:00") + '">') + '</div>' :
+        At_campo_("Data e hora", '<input id="atRdQuando" type="datetime-local">')) +
+      '<div class="at-grade3">' + At_campo_("Responsável (técnico ou engenheiro)", '<select id="atRdTec">' + At_opcoes_(AT.ronda.tecnicos.map(function (t) { return { v: t.id, t: t.nome }; }), x.tecnicoId || "", "Escolha") + '</select>') +
+      At_campo_("Duração estimada (min)", '<input id="atRdDur" type="number" min="30" max="720" step="15" value="' + At_esc_(x.duracaoMin || 180) + '">') +
+      (ehPlano ? At_campo_("Janela (dias de tolerância)", '<input id="atRdJan" type="number" min="0" max="10" value="' + At_esc_(x.janelaDias === undefined ? 2 : x.janelaDias) + '">', "Depois do último dia, a ronda vira pendência da gestão.") : '') + '</div>' +
+      At_campo_("Orientação ao técnico (opcional)", '<textarea id="atRdOri" maxlength="1500">' + At_esc_(x.orientacao || "") + '</textarea>') +
+      (ehPlano ? '<div class="at-grade2">' + At_campo_("Preço fechado por ronda (opcional, cobrança preparada)", '<input id="atRdPreco" inputmode="decimal" value="' + At_esc_(x.precoRonda === "" || x.precoRonda === undefined ? "" : String(x.precoRonda).replace(".", ",")) + '" placeholder="Ex.: 1.200,00">', "Fica no contrato; não fatura sozinho (item " + AT.ronda.catalogo.codigo + " do catálogo).") +
+        At_campo_("Referência do contrato (opcional)", '<input id="atRdRef" maxlength="120" value="' + At_esc_(x.contratoRef || "") + '">') + '</div>' + (x.id ? At_campo_("O que mudou e por quê", '<input id="atRdMot" maxlength="300">') : '') :
+        '<label class="at-check"><input type="checkbox" id="atRdAvisar" checked> Avisar o cliente por e-mail (data e responsável)</label>') +
+      '<div id="atRdConf"></div><div id="atRdMsg"></div>',
+      '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>' + (ehPlano ? "Salvar o contrato e gerar as rondas" : "Agendar a ronda") + '</button>', 760);
+    var setoresEl = ov.querySelector("#atRdSetores");
+    At_escolherClienteUnidade_(ov, "atRd", function (cid, uid) { At_setoresMarcaveis_(setoresEl, cid, uid, x.setores); });
+    if (x.clienteId) At_setoresMarcaveis_(setoresEl, x.clienteId, x.unidadeId, x.setores); else At_setoresMarcaveis_(setoresEl, "", "", []);
+    ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+    var enviar = function (confirmar) {
+      var v = function (id) { var el = ov.querySelector("#" + id); return el ? el.value : ""; };
+      var d = { clienteId: v("atRdCliId"), unidadeId: v("atRdUn"), tecnicoId: v("atRdTec"), duracaoMin: v("atRdDur"), orientacao: v("atRdOri"), setores: At_lerSetores_(setoresEl) };
+      if (ehPlano) Object.assign(d, { id: x.id || "", periodicidade: v("atRdPer"), inicio: v("atRdIni"), hora: v("atRdHora"), janelaDias: v("atRdJan"), precoRonda: v("atRdPreco"), contratoRef: v("atRdRef"), motivo: v("atRdMot") });
+      else Object.assign(d, { inicio: v("atRdQuando"), avisarCliente: ov.querySelector("#atRdAvisar").checked, confirmarConflito: !!confirmar, motivoConflito: v("atRdMotConf") });
+      At_chamar_(ehPlano ? "rondaPlanoSalvar" : "rondaAgendar", d, function (r) {
+        if (r.conflito) {
+          At_$_("atRdConf").innerHTML = '<div class="at-faixa aviso">' + At_esc_(r.message) + '</div>' + At_campo_("Motivo para agendar mesmo assim", '<input id="atRdMotConf" maxlength="300">') + '<div class="at-acoes"><button type="button" class="btn-secondary" id="atRdConfOk">Agendar mesmo assim</button></div>';
+          At_$_("atRdConfOk").onclick = function () { enviar(true); }; return;
+        }
+        ov.remove(); if (depois) depois(r.message);
+      }, function (m) { At_msg_("atRdMsg", m); }, { carregando: ehPlano ? "Salvando o contrato…" : "Agendando a ronda…" });
+    };
+    ov.querySelector("[data-ok]").onclick = function () { enviar(false); };
+  }
+  function At_renderRondas_(div) {
+    var ini = AT.ini; AT.rondaFiltro = AT.rondaFiltro || "PROXIMAS";
+    div.innerHTML = '<div class="module-shell">' + At_cabecalho_("Rondas de engenharia clínica", "Inspeção periódica dos equipamentos da unidade, setor a setor, feita no SGO+ Campo. Avulsa ou pelo contrato de ronda (semanal, quinzenal ou mensal).",
+      '<button type="button" class="btn-secondary" id="atRdAtualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' + (ini.gestao ? '<button type="button" class="btn-secondary" id="atRdAvulsa">Agendar ronda avulsa</button><button type="button" class="btn-primary" id="atRdPlano">Novo contrato de ronda</button>' : '')) +
+      '<div id="atRdMsgTopo"></div><div class="at-tabs" id="atRdGrupos">' + [["PROXIMAS", "Próximas e em andamento"], ["REALIZADAS", "Realizadas"], ["TODAS", "Todas"]].map(function (g) { return '<button type="button" class="at-tab' + (AT.rondaFiltro === g[0] ? " active" : "") + '" data-g="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</div>' +
+      '<div id="atRdLista"><div class="at-vazio">Carregando…</div></div><div id="atRdPlanos"></div><div id="atRdSug"></div><div id="atRdSet"></div><div id="atRdInd"></div></div>';
+    var msg = function (m) { At_msg_("atRdMsgTopo", m, "ok"); };
+    var recarregar = function (m) { At_renderRondas_(div); if (m) setTimeout(function () { msg(m); }, 400); };
+    At_$_("atRdAtualizar").onclick = function () { recarregar(); };
+    div.querySelectorAll("#atRdGrupos .at-tab").forEach(function (b) { b.onclick = function () { AT.rondaFiltro = b.getAttribute("data-g"); At_renderRondas_(div); }; });
+    At_chamar_("rondaTela", { filtro: AT.rondaFiltro }, function (r) {
+      AT.ronda = r;
+      if (At_$_("atRdAvulsa")) At_$_("atRdAvulsa").onclick = function () { At_formRonda_("Agendar ronda avulsa", null, recarregar); };
+      if (At_$_("atRdPlano")) At_$_("atRdPlano").onclick = function () { At_formRonda_("Novo contrato de ronda", {}, recarregar); };
+      var l = At_$_("atRdLista"); if (!l) return;
+      l.innerHTML = r.rondas.length ? '<div class="at-lista">' + r.rondas.map(function (o) {
+        return '<div class="at-card clicavel' + (o.situacao === "REALIZADA" || o.situacao === "CANCELADA" ? " fim" : "") + '" data-rd="' + At_esc_(o.id) + '"><p class="at-card-tit">' + At_esc_(o.numero) + ' · ' + At_esc_(o.clienteNome) + ' · ' + At_esc_(o.unidadeNome) + '</p>' +
+          '<p class="at-meta">' + At_esc_(o.agendadoPara) + ' · ' + At_esc_(o.tecnicoNome) + (o.plano ? ' · contrato' : ' · avulsa') + (o.janelaAte ? ' · janela até ' + At_esc_(o.janelaAte) : '') + '</p>' +
+          '<div>' + At_selo_(AT_COR_RONDA[o.situacao] || "cinza", o.situacaoNome) + (o.problemas ? At_selo_("laranja", o.problemas + " com problema") : "") + (o.equipamentos !== null ? At_selo_("cinza", o.equipamentos + " equipamento(s)") : "") + '</div>' +
+          (o.faltas ? '<p class="at-meta" style="color:var(--danger)">Falta: ' + At_esc_(o.faltas) + '</p>' : '') +
+          (r.gestao && !o.comecou && o.situacaoOs === "AGENDADA" ? '<div class="at-acoes"><button type="button" class="btn-secondary" data-rd-reag="' + At_esc_(o.id) + '">Reagendar</button><button type="button" class="btn-secondary" data-rd-canc="' + At_esc_(o.id) + '">Cancelar</button></div>' : '') + '</div>';
+      }).join("") + '</div>' : '<div class="at-vazio">Nenhuma ronda neste filtro.' + (r.gestao ? ' Use "Agendar ronda avulsa" ou "Novo contrato de ronda".' : '') + '</div>';
+      l.querySelectorAll("[data-rd]").forEach(function (c) { c.onclick = function (e) { if (e.target.closest("button")) return; At_abrirOs_(c.getAttribute("data-rd")); }; });
+      l.querySelectorAll("[data-rd-canc]").forEach(function (b) { b.onclick = function () { At_pedirTexto_("Cancelar a ronda", "Só ronda que ainda não começou. O técnico é avisado; ronda cancelada não volta a ser gerada pelo contrato.", "Motivo", 10, function (t, ov) { At_chamar_("rondaCancelar", { osId: b.getAttribute("data-rd-canc"), motivo: t }, function (x) { ov.remove(); recarregar(x.message); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Cancelar a ronda"); }; });
+      l.querySelectorAll("[data-rd-reag]").forEach(function (b) { b.onclick = function () {
+        var o = r.rondas.filter(function (x) { return x.id === b.getAttribute("data-rd-reag"); })[0];
+        var ov = At_modal_("Reagendar a ronda " + o.numero, '<div class="at-grade2">' + At_campo_("Nova data e hora", '<input id="atRdReQ" type="datetime-local" value="' + At_esc_(String(o.agendadoIso || "").slice(0, 16)) + '">') + At_campo_("Responsável", '<select id="atRdReT">' + At_opcoes_(r.tecnicos.map(function (t) { return { v: t.id, t: t.nome }; }), "", "O mesmo") + '</select>') + '</div>' +
+          At_campo_("Motivo", '<input id="atRdReM" maxlength="300">') + '<div id="atRdReMsg"></div>', '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Reagendar</button>');
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-ok]").onclick = function () { At_chamar_("rondaReagendar", { osId: o.id, inicio: At_$_("atRdReQ").value, tecnicoId: At_$_("atRdReT").value, motivo: At_$_("atRdReM").value }, function (x) { ov.remove(); recarregar(x.message); }, function (m) { At_msg_("atRdReMsg", m); }); };
+      }; });
+      // contratos de ronda (gestão)
+      if (r.gestao) {
+        var pl = At_$_("atRdPlanos");
+        pl.innerHTML = '<div class="at-sec">Contratos de ronda (recorrentes)</div>' + ((r.planos || []).length ? '<div class="at-lista">' + r.planos.map(function (p) {
+          return '<div class="at-card' + (p.situacao === "ENCERRADA" ? " fim" : "") + '"><p class="at-card-tit">' + At_esc_(p.codigo) + ' · ' + At_esc_(p.clienteNome) + ' · ' + At_esc_(p.unidadeNome) + '</p><p class="at-meta">' + At_esc_(p.periodicidadeNome) + ' a partir de ' + At_esc_(p.inicio.split("-").reverse().join("/")) + ' às ' + At_esc_(p.hora) + ' · ' + At_esc_(p.tecnicoNome) +
+            ' · janela de ' + At_esc_(p.janelaDias) + ' dia(s)' + (p.setores.length ? ' · setores: ' + At_esc_(p.setores.join(", ")) : ' · todos os setores') + (p.precoRonda !== "" && ini.valores ? ' · ' + At_esc_("R$ " + Number(p.precoRonda).toFixed(2).replace(".", ",")) + ' por ronda' : '') + '</p>' +
+            '<div>' + At_selo_(p.situacao === "ATIVA" ? "verde" : p.situacao === "PAUSADA" ? "laranja" : "cinza", p.situacaoNome) + (p.motivo && p.situacao !== "ATIVA" ? '<span class="at-meta"> ' + At_esc_(p.motivo) + '</span>' : '') + '</div>' +
+            (p.situacao === "ENCERRADA" ? '' : '<div class="at-acoes"><button type="button" class="btn-secondary" data-pl-ed="' + At_esc_(p.id) + '">Editar</button>' + (p.situacao === "ATIVA" ? '<button type="button" class="btn-secondary" data-pl-ac="PAUSAR" data-pl="' + At_esc_(p.id) + '">Pausar</button>' : '<button type="button" class="btn-secondary" data-pl-ac="RETOMAR" data-pl="' + At_esc_(p.id) + '">Retomar</button>') +
+              '<button type="button" class="btn-secondary" data-pl-ac="ENCERRAR" data-pl="' + At_esc_(p.id) + '">Encerrar</button></div>') + '</div>';
+        }).join("") + '</div>' : '<div class="at-vazio">Nenhum contrato de ronda ainda.</div>');
+        pl.querySelectorAll("[data-pl-ed]").forEach(function (b) { b.onclick = function () { At_formRonda_("Editar contrato de ronda", r.planos.filter(function (p) { return p.id === b.getAttribute("data-pl-ed"); })[0], recarregar); }; });
+        pl.querySelectorAll("[data-pl-ac]").forEach(function (b) { b.onclick = function () {
+          var ac = b.getAttribute("data-pl-ac"), nome = { PAUSAR: "Pausar a recorrência", RETOMAR: "Retomar a recorrência", ENCERRAR: "Encerrar o contrato" }[ac];
+          At_pedirTexto_(nome, ac === "RETOMAR" ? "As rondas das próximas datas voltam para a agenda." : "As rondas futuras que ainda não começaram são canceladas (o técnico é avisado); as já começadas continuam.", "Motivo", 10, function (t, ov) {
+            At_chamar_({ PAUSAR: "rondaPlanoPausar", RETOMAR: "rondaPlanoRetomar", ENCERRAR: "rondaPlanoEncerrar" }[ac], { id: b.getAttribute("data-pl"), motivo: t }, function (x) { ov.remove(); recarregar(x.message); }, function (m) { At_msg_("atTxtMsg", m); });
+          }, nome);
+        }; });
+        // setores da unidade
+        var st = At_$_("atRdSet");
+        st.innerHTML = '<div class="at-sec">Setores da unidade</div><div class="at-caixa">' + At_campo_("Cliente", '<input id="atStCli" type="search" autocomplete="off" placeholder="Digite pelo menos 2 letras"><div id="atStCliLista"></div>') + '<input type="hidden" id="atStCliId">' +
+          At_campo_("Unidade", '<select id="atStUn"><option value="">Escolha o cliente primeiro</option></select>') + '<div id="atStLista"></div><div class="at-grade2">' + At_campo_("Setor novo", '<input id="atStNome" maxlength="120" placeholder="Ex.: CME, UTI adulto">') + '<div class="at-acoes" style="align-items:flex-end"><button type="button" class="btn-secondary" id="atStOk">Cadastrar o setor</button></div></div><div id="atStMsg"></div></div>';
+        var listarSet = function (cid, uid) { At_chamar_("rondaEscopoUnidade", { clienteId: cid, unidadeId: uid }, function (x) { At_$_("atStLista").innerHTML = x.setores.length ? '<p class="at-txt">' + x.setores.map(function (s) { return At_esc_(s.nome) + ' <span class="at-meta">(' + s.equipamentos + (s.cadastrado ? '' : ', do campo Setor') + ')</span>'; }).join(" · ") + '</p>' : '<p class="at-meta">Nenhum setor ainda.</p>'; }, function (m) { At_msg_("atStMsg", m); }); };
+        At_escolherClienteUnidade_(st, "atSt", listarSet);
+        At_$_("atStOk").onclick = function () { At_chamar_("rondaSetorSalvar", { clienteId: At_$_("atStCliId").value, unidadeId: At_$_("atStUn").value, nome: At_$_("atStNome").value }, function (x) { At_msg_("atStMsg", x.message, "ok"); At_$_("atStNome").value = ""; listarSet(At_$_("atStCliId").value, At_$_("atStUn").value); }, function (m) { At_msg_("atStMsg", m); }); };
+      }
+      if (r.podeSugestao) At_rondaSugestoes_(At_$_("atRdSug"));
+      At_rondaIndicadores_(At_$_("atRdInd"));
+    }, function (m) { At_msg_("atRdLista", m); });
+  }
+  function At_rondaSugestoes_(el) {
+    if (!el) return;
+    At_chamar_("rondaSugestoes", {}, function (r) {
+      el.innerHTML = '<div class="at-sec">Sugestões ao Comercial (calibração ou qualificação vencida)</div><p class="at-meta">A ronda nunca cria orçamento: só a sugestão. O Comercial ou a Diretoria aceita (cria a oportunidade) ou descarta com o motivo.</p>' +
+        (r.sugestoes.length ? '<div class="at-lista">' + r.sugestoes.map(function (s) {
+          return '<div class="at-card' + (s.decisao ? " fim" : "") + '"><p class="at-card-tit">' + At_esc_(s.titulo) + '</p><p class="at-meta">Ronda ' + At_esc_(s.osNumero) + ' · ' + At_esc_(s.em) + '</p><ul class="at-faltas" style="color:inherit">' + s.itens.map(function (i) { return '<li>' + At_esc_(i.texto + " (" + i.setor + "): " + i.motivo) + '</li>'; }).join("") + '</ul>' +
+            '<div>' + At_selo_(s.decisao === "ACEITA" ? "verde" : s.decisao ? "cinza" : "laranja", s.decisaoNome) + (s.decisaoMotivo ? '<span class="at-meta"> ' + At_esc_(s.decisaoMotivo) + '</span>' : '') + '</div>' +
+            (!s.decisao && r.podeDecidir ? '<div class="at-acoes"><button type="button" class="btn-primary" data-sg-ok="' + At_esc_(s.id) + '">Aceitar (criar a oportunidade)</button><button type="button" class="btn-secondary" data-sg-no="' + At_esc_(s.id) + '">Descartar</button></div>' : '') + '</div>';
+        }).join("") + '</div>' : '<div class="at-vazio">Nenhuma sugestão.</div>');
+      el.querySelectorAll("[data-sg-no]").forEach(function (b) { b.onclick = function () { At_pedirTexto_("Descartar a sugestão", "O motivo fica registrado na sugestão e no histórico da ronda.", "Motivo", 10, function (t, ov) { At_chamar_("rondaSugestaoDecidir", { id: b.getAttribute("data-sg-no"), decisao: "DESCARTAR", motivo: t }, function () { ov.remove(); At_rondaSugestoes_(el); }, function (m) { At_msg_("atTxtMsg", m); }); }, "Descartar"); }; });
+      el.querySelectorAll("[data-sg-ok]").forEach(function (b) { b.onclick = function () {
+        var s = r.sugestoes.filter(function (x) { return x.id === b.getAttribute("data-sg-ok"); })[0];
+        var ov = At_modal_("Criar a oportunidade", At_campo_("Título", '<input id="atSgTit" maxlength="200" value="' + At_esc_(s.titulo) + '">') + At_campo_("Contato principal do cliente", '<select id="atSgCont">' + At_opcoes_(s.contatos.map(function (k) { return { v: k.id, t: k.nome }; }), "", s.contatos.length ? "Escolha" : "Cadastre o contato no Comercial primeiro") + '</select>') +
+          '<div class="at-grade2">' + At_campo_("Valor estimado (R$)", '<input id="atSgVal" inputmode="decimal" placeholder="Ex.: 2.400,00">') + At_campo_("Data da próxima ação", '<input id="atSgData" type="date">') + '</div>' + At_campo_("Próxima ação", '<input id="atSgAcao" maxlength="300" placeholder="Ex.: Ligar para propor a calibração">') + '<div id="atSgMsg"></div>',
+          '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Criar a oportunidade</button>', 640);
+        ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+        ov.querySelector("[data-ok]").onclick = function () { At_chamar_("rondaSugestaoDecidir", { id: s.id, decisao: "ACEITAR", titulo: At_$_("atSgTit").value, contatoId: At_$_("atSgCont").value, valor: At_$_("atSgVal").value, proximaData: At_$_("atSgData").value, proximaAcao: At_$_("atSgAcao").value }, function (x) { ov.remove(); alert(x.message); At_rondaSugestoes_(el); }, function (m) { At_msg_("atSgMsg", m); }); };
+      }; });
+    }, function () { el.innerHTML = ""; });
+  }
+  function At_rondaIndicadores_(el) {
+    if (!el) return;
+    At_chamar_("rondaIndicadores", { dias: 90 }, function (r) {
+      var i = r.indicadores, tab = function (cols, linhas, vazio) { return linhas.length ? '<table class="at-tabela"><thead><tr>' + cols.map(function (x) { return '<th>' + At_esc_(x) + '</th>'; }).join("") + '</tr></thead><tbody>' + linhas.map(function (l) { return '<tr>' + l.map(function (v, k) { return '<td data-r="' + At_esc_(cols[k]) + '">' + At_esc_(v) + '</td>'; }).join("") + '</tr>'; }).join("") + '</tbody></table>' : '<p class="at-meta">' + At_esc_(vazio) + '</p>'; };
+      el.innerHTML = '<div class="at-sec">Indicadores das rondas (' + At_esc_(i.de) + ' a ' + At_esc_(i.ate) + ')</div><div class="at-kpis">' + [[i.realizadas + " de " + i.programadas, "Rondas realizadas / programadas", i.programadas && i.realizadas < i.programadas ? "aviso" : "ok"],
+        [i.problemasPorSetor.reduce(function (s, x) { return s + x.total; }, 0), "Equipamentos com problema", ""], [i.recorrentes.length, "Problemas que se repetem", i.recorrentes.length ? "aviso" : "ok"],
+        [i.achadoSolucao.mediaDias === null ? "—" : String(i.achadoSolucao.mediaDias).replace(".", ",") + " dias", "Do achado à solução (" + i.achadoSolucao.resolvidos + " resolvidos, " + i.achadoSolucao.pendentes + " pendentes)", ""]].map(function (x) { return '<div class="at-kpi ' + x[2] + '"><span class="v">' + At_esc_(x[0]) + '</span><span class="r">' + At_esc_(x[1]) + '</span></div>'; }).join("") + '</div>' +
+        tab(["Cliente", "Programadas", "Realizadas", "%", "Fora da janela"], i.porCliente.map(function (c) { return [c.cliente, c.programadas, c.realizadas, c.pct === null ? "—" : c.pct + "%", c.foraJanela]; }), "Nenhuma ronda no período.") +
+        '<div class="at-sec">Equipamentos com problema por setor</div>' + tab(["Cliente", "Unidade", "Setor", "Com observação", "Fora de uso", "Não localizados"], i.problemasPorSetor.map(function (x) { return [x.cliente, x.unidade, x.setor, x.observacao, x.foraUso, x.naoLocalizado]; }), "Nenhum problema registrado.") +
+        '<div class="at-sec">Problemas recorrentes (2 ou mais rondas)</div>' + tab(["Equipamento", "Cliente", "Setor", "Vezes", "Rondas"], i.recorrentes.map(function (x) { return [x.equipamento, x.cliente, x.setor, x.vezes, x.rondas.join(", ")]; }), "Nenhum.");
+    }, function () { el.innerHTML = ""; });
+  }
+  /** Ficha da ronda (a ronda é feita no SGO+ Campo; aqui: resumo setor a setor, fotos, chamados, relatórios e assinatura). */
+  function At_desenharRonda_(o, msg, tipo) {
+    var ini = AT.ini, rd = o.ronda, rs = rd.resumo;
+    var h = (msg ? '<div class="at-faixa ' + (tipo || "ok") + '">' + At_esc_(msg) + '</div>' : '') + '<div>' + At_selo_(AT_COR_SIT[o.situacao], o.situacaoNome) + At_selo_("azul", "Ronda de engenharia clínica") + '</div>' +
+      (o.faltas && o.faltas.length ? '<div class="at-faixa erro"><b>Para fechar a ronda falta:</b><ul class="at-faltas">' + o.faltas.map(function (f) { return '<li>' + At_esc_(f) + '</li>'; }).join("") + '</ul>A ronda é feita no SGO+ Campo; o técnico completa por lá.</div>' : '') +
+      '<dl class="at-det">' + [["Cliente", o.clienteNome + (o.unidadeNome ? " · " + o.unidadeNome : "")], ["Endereço", o.endereco], ["Responsável", o.tecnicoNome], ["Agendada", o.agendadoPara + " (" + o.duracaoMin + " min)"], ["Data prevista", rd.prevista], ["Janela até", rd.janelaAte],
+        ["Chegada", o.chegouEm], ["Conclusão", o.concluiuEm], ["Preço do contrato", rd.preco]].filter(function (p) { return p[1]; }).map(function (p) { return '<dt>' + At_esc_(p[0]) + '</dt><dd>' + At_esc_(p[1]) + '</dd>'; }).join("") + '</dl>' +
+      '<div class="at-kpis">' + [[rs.equipamentos, "Equipamentos"], [rs.porSituacao.FUNCIONANDO, "Em funcionamento", "ok"], [rs.porSituacao.OBSERVACAO, "Com observação", rs.porSituacao.OBSERVACAO ? "aviso" : ""], [rs.porSituacao.FORA_USO, "Fora de uso", rs.porSituacao.FORA_USO ? "critico" : ""],
+        [rs.porSituacao.NAO_LOCALIZADO, "Não localizados", ""], [rs.porSituacao.NAO_VERIFICADO, "Não verificados", ""], [rs.semSituacao, "Sem situação", rs.semSituacao ? "aviso" : "ok"], [rd.chamados.length, "Chamados da ronda", ""]].map(function (x) { return '<div class="at-kpi ' + (x[2] || "") + '"><span class="v">' + At_esc_(x[0]) + '</span><span class="r">' + At_esc_(x[1]) + '</span></div>'; }).join("") + '</div>';
+    var foto = function (f) { return (f.url ? '<a href="' + At_esc_(f.url) + '" target="_blank" rel="noopener">' + At_esc_(f.legenda || "Foto") + '</a>' : '<span>' + At_esc_(f.legenda || "Foto") + '</span>') + (rd.podeLiberarFoto ? ' <button type="button" class="btn-secondary" data-rd-foto="' + At_esc_(f.id) + '" data-pub="' + (f.publico ? "" : "SIM") + '">' + (f.publico ? "Recolher do cliente" : "Liberar ao cliente") + '</button>' : (f.publico ? ' <span class="at-meta">(liberada)</span>' : '')); };
+    rd.setores.forEach(function (s) {
+      h += '<div class="at-sec">Setor: ' + At_esc_(s.nome) + (s.extra ? ' (acrescentado em campo)' : '') + '</div>' + (s.achados ? '<p class="at-txt"><b>Achados do setor:</b> ' + At_esc_(s.achados) + '</p>' : '') +
+        (s.fotosSetor.length ? '<div class="at-fotos">' + s.fotosSetor.map(foto).join("") + '</div>' : '') +
+        '<table class="at-tabela"><thead><tr><th>Equipamento</th><th>Situação</th><th>Observações</th></tr></thead><tbody>' + s.itens.map(function (it) {
+          return '<tr><td data-r="Equipamento">' + At_esc_(it.texto) + (it.novo ? ' ' + At_selo_("verde", "Cadastrado na ronda") : '') + '</td><td data-r="Situação">' + At_selo_({ FUNCIONANDO: "verde", OBSERVACAO: "laranja", FORA_USO: "vermelho", NAO_LOCALIZADO: "laranja", NAO_VERIFICADO: "cinza" }[it.situacao] || "cinza", it.situacaoNome) + '</td>' +
+            '<td data-r="Observações">' + At_esc_([it.descricao, it.motivo ? "Motivo: " + it.motivo : "", it.vencimentos.join("; ")].filter(Boolean).join(". ")) + (it.chamado ? ' <b>Chamado ' + At_esc_(it.chamado.numero) + '</b>' : '') + (it.faltas.length ? '<br><span style="color:var(--danger)">Falta: ' + At_esc_(it.faltas.join("; ")) + '</span>' : '') +
+            (it.fotos.length ? '<div class="at-fotos">' + it.fotos.map(foto).join("") + '</div>' : '') + '</td></tr>';
+        }).join("") + '</tbody></table>';
+    });
+    h += '<div class="at-sec">Orientações e pedidos do cliente</div><p class="at-txt">' + At_esc_(rd.registro.orientacoes || "Nenhuma orientação registrada.") + '</p>' + (rd.registro.pedidosCliente ? '<p class="at-txt"><b>Pedidos do cliente:</b> ' + At_esc_(rd.registro.pedidosCliente) + '</p>' : '');
+    h += '<div class="at-sec">Assinaturas</div><p class="at-txt">Responsável do cliente: ' + At_esc_(o.assinatura ? o.assinatura.nome + " em " + o.assinatura.em : o.semAssinatura ? "sem assinatura (" + o.semAssinatura.recebidoPor + ")" : "ainda não") + '<br>Técnico: ' + At_esc_(o.assinaturaColaborador ? o.assinaturaColaborador.nome + " em " + o.assinaturaColaborador.em : o.dispensaColaborador ? "dispensada pela gestão" : "ainda não") + '</p>' +
+      (o.podeDispensarColaborador ? '<div class="at-acoes"><button type="button" class="btn-secondary" id="atOsSemTec">Encerrar sem a assinatura do técnico (justificar)</button></div>' : '');
+    if (o.podeCampo && o.podeEncerrar) h += '<div id="atOsMsg"></div><div class="at-acoes"><button type="button" class="btn-primary" id="atOsEncerrar">Encerrar a ronda</button></div>'; else h += '<div id="atOsMsg"></div>';
+    h += At_blocoDocumentoEnvio_(o, ini) + '<div class="at-acoes">' + (rd.internoUrl ? '<a class="btn-secondary" href="' + At_esc_(rd.internoUrl) + '" target="_blank" rel="noopener">Abrir a versão interna (Metrolabs)</a>' : '') +
+      (o.situacao !== "ENCERRADA" ? '<button type="button" class="btn-secondary" data-rd-prev="INTERNO">Prévia (versão interna)</button><button type="button" class="btn-secondary" data-rd-prev="CLIENTE">Prévia (versão do cliente)</button>' : '') + '</div>';
+    h += '<div class="at-sec">Histórico da ronda</div><div class="at-hist">' + (o.eventos || []).map(function (e) { return '<div><span class="q">' + At_esc_(e.em) + ' · ' + At_esc_(e.por || "sistema") + '</span><br>' + At_esc_(e.texto) + '</div>'; }).join("") + '</div>';
+    var g = At_gaveta_("Ronda " + o.numero, h), corpo = g.querySelector("#atGavetaCorpo");
+    var reabrir = function (m, t) { At_abrirOs_(o.id, m, t); };
+    At_ligarOsComuns_(o, corpo, reabrir);
+    var b = corpo.querySelector("#atOsCorrigir");
+    if (b) b.onclick = function () {
+      var ov = At_modal_("Abrir para corrigir: relatório da ronda " + o.numero, '<p class="at-txt">Sai a revisão seguinte das duas versões (cliente e interna); a anterior fica guardada. Use também para tirar do documento do cliente a foto que foi recolhida.</p>' +
+        At_campo_("Orientações dadas", '<textarea id="atRdCoO" maxlength="4000">' + At_esc_(rd.registro.orientacoes || "") + '</textarea>') + At_campo_("Pedidos do cliente", '<textarea id="atRdCoP" maxlength="4000">' + At_esc_(rd.registro.pedidosCliente || "") + '</textarea>') +
+        At_campo_("Motivo da revisão", '<textarea id="atRdCoM" maxlength="500"></textarea>', "Pelo menos 10 letras.") + '<div id="atRdCoMsg"></div>', '<button type="button" class="btn-secondary" data-x>Voltar</button><button type="button" class="btn-primary" data-ok>Emitir a revisão</button>', 720);
+      ov.querySelector("[data-x]").onclick = function () { ov.remove(); };
+      ov.querySelector("[data-ok]").onclick = function () { At_chamar_("corrigirRelatorio", { osId: o.id, motivo: At_$_("atRdCoM").value, ronda: { orientacoes: At_$_("atRdCoO").value, pedidosCliente: At_$_("atRdCoP").value } }, function (x) { ov.remove(); reabrir(x.message); }, function (m) { At_msg_("atRdCoMsg", m); }, { carregando: "Emitindo a revisão…" }); };
+    };
+    if ((b = corpo.querySelector("#atOsEncerrar"))) b.onclick = function () { At_chamar_("osEncerrar", { osId: o.id }, function (x) { reabrir(x.message); }, function (m) { At_msg_("atOsMsg", m); }, { carregando: "Encerrando…" }); };
+    corpo.querySelectorAll("[data-rd-foto]").forEach(function (x) { x.onclick = function () { At_chamar_("rondaFotoLiberar", { fotoId: x.getAttribute("data-rd-foto"), publico: x.getAttribute("data-pub") }, function (y) { reabrir(y.message); }, function (m) { At_msg_("atOsMsg", m); }); }; });
+    corpo.querySelectorAll("[data-rd-prev]").forEach(function (x) { x.onclick = function () { At_chamar_("rondaRelatorio", { osId: o.id, publico: x.getAttribute("data-rd-prev") }, function (y) { if (y.html) At_abrirHtml_(y.html); else if (y.pdfUrl) window.open(y.pdfUrl, "_blank"); }, function (m) { At_msg_("atOsMsg", m); }, { carregando: "Gerando a prévia…" }); }; });
   }
 
   // =========================================================
@@ -1520,6 +1730,8 @@
             // 29/10/2026: relatório A4 do atendimento (versão do cliente: etapas, linha do tempo, visita, serviço, fotos liberadas e recomendações)
             (ch.cancelado ? '' : '<div class="at-acoes"><button type="button" class="btn-secondary" data-po-rel="' + At_esc_(ch.id) + '">Gerar relatório do atendimento</button></div>') + '</div>';
         }).join("") + '</div>' : '<div class="at-vazio">Nenhum chamado ainda.</div>') +
+        // 03/11/2026: rondas de engenharia clínica do cliente (só a versão do cliente do relatório)
+        ((r.rondas || []).length ? '<div class="at-sec">Rondas de engenharia clínica</div><div class="at-lista">' + r.rondas.map(function (x) { return '<div class="at-card' + (x.url ? ' fim' : '') + '"><p class="at-card-tit">' + At_esc_(x.numero) + ' · ' + At_esc_(x.unidadeNome) + ' · ' + At_esc_(x.data) + '</p><p class="at-meta">' + At_esc_(x.situacao) + (x.resumo ? ' · ' + At_esc_(x.resumo) : '') + '</p>' + (x.url ? '<a href="' + At_esc_(x.url) + '" target="_blank" rel="noopener">Baixar o relatório da ronda</a>' : '') + '</div>'; }).join('') + '</div>' : '') +
         '<div class="at-sec">Relatórios gerados</div><div class="at-acoes"><button type="button" class="btn-primary" id="atPoRelPer">Relatório do período (últimos 90 dias)</button></div><div id="atPoRelMsg"></div><div id="atPoDocs"><p class="at-meta">Carregando…</p></div>' +
         '<div class="at-sec">Relatórios das ordens de serviço</div>' + (r.relatorios.length ? '<div class="at-lista">' + r.relatorios.map(function (x) { return '<div class="at-card fim"><p class="at-txt"><a href="' + At_esc_(x.url) + '" target="_blank" rel="noopener">' + At_esc_(x.numero) + ' · ' + At_esc_(x.tipo) + ' · ' + At_esc_(x.equipamentoTexto) + ' · ' + At_esc_(x.encerradaEm) + '</a></p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhum relatório emitido ainda.</p>');
       if (!temPainel) { c.innerHTML = At_portalOrcamentos_(r.orcamentos || []) + lista; At_portalDocs_(c); }

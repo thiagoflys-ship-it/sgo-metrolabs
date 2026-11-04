@@ -16,6 +16,7 @@
  *   SGO_Assistencia_Relatorio.js   relatório da O.S. A4, orçamento do chamado A4, indicadores e relatório mensal
  *   SGO_Assistencia_Fonte.js       fonte única de atendimentos (Auvo + acervo + O.S. do SGO+), questionários do acervo
  *   SGO_Assistencia_Painel.js      pendências, rotina, transição do Auvo e a chamada única da tela (Assistencia_api)
+ *   SGO_Assistencia_Ronda.js       ronda de engenharia clínica (contrato recorrente, registro em campo, chamados, relatório)
  *   SGO_Pendencias_Assistencia.js  registra os tipos na central, na Caixa de decisões e na matriz de avisos
  *   SGO_Ajuda_Assistencia.js       ajuda "Como usar esta tela"
  *   JS_Assistencia.html            telas (gestão, técnico no computador e portal do cliente)
@@ -33,7 +34,9 @@ var AST_ABAS = {
   FOTOS: 'ATEC_FOTOS', PECAS: 'ATEC_PECAS', SYNC: 'ATEC_SYNC', SOLICITACOES: 'ATEC_SOLICITACOES', CASOS: 'ATEC_CASOS',
   ORCAMENTOS: 'ATEC_ORCAMENTOS', RELATORIOS: 'ATEC_RELATORIOS', AVISOS: 'ATEC_AVISOS', ACERVO_EQUIP: 'ATEC_ACERVO_EQUIP',
   // 22/10/2026 (etapa 4): link de aceite do orçamento (só o resumo do token) e a trilha só-inclusão das respostas do cliente
-  ORC_LINKS: 'ATEC_ORC_LINKS', ORC_ACEITES: 'ATEC_ORC_ACEITES'
+  ORC_LINKS: 'ATEC_ORC_LINKS', ORC_ACEITES: 'ATEC_ORC_ACEITES',
+  // 03/11/2026 (ronda de engenharia clínica, SGO_Assistencia_Ronda.js): contratos de ronda recorrente e setores cadastrados da unidade
+  RONDA_PLANOS: 'ATEC_RONDA_PLANOS', SETORES: 'ATEC_SETORES'
 };
 var AST_COLUNAS = {
   ATEC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
@@ -71,9 +74,16 @@ var AST_COLUNAS = {
     // 03/11/2026 (logística): termo de entrega ou retirada (itens, de quem/para quem, motivo e destino) e a assinatura do colaborador da Metrolabs
     'LOGISTICA_JSON', 'COLAB_ASSINATURA_ARQUIVO_ID', 'COLAB_ASSINATURA_NOME', 'COLAB_ASSINATURA_DOCUMENTO', 'COLAB_ASSINATURA_EM',
     // 03/11/2026 (decisão do dono): a gestão encerra sem a assinatura do técnico só com justificativa (fica no histórico)
-    'COLAB_DISPENSA_JUSTIFICATIVA', 'COLAB_DISPENSA_POR_NOME', 'COLAB_DISPENSA_EM'],
+    'COLAB_DISPENSA_JUSTIFICATIVA', 'COLAB_DISPENSA_POR_NOME', 'COLAB_DISPENSA_EM',
+    // 03/11/2026 (ronda de engenharia clínica): o registro da ronda (itens por equipamento, setores, orientações), o escopo
+    // congelado no Cheguei, o contrato e a chave da recorrência (plano|data prevista: nunca gera em dobro), a janela, o preço
+    // fechado do contrato (cobrança só preparada), o pós-processamento (chamados e sugestões) e a versão interna do relatório
+    'RONDA_JSON', 'RONDA_ESCOPO_JSON', 'RONDA_PLANO_ID', 'RONDA_CHAVE', 'RONDA_PREVISTA', 'RONDA_JANELA_ATE', 'RONDA_PRECO', 'RONDA_POS_EM', 'RONDA_POS_JSON',
+    'RONDA_INTERNO_PDF_ID', 'RONDA_INTERNO_PDF_URL', 'RONDA_INTERNO_HTML_ID'],
   ATEC_EVENTOS: ['ID', 'ENTIDADE', 'ENTIDADE_ID', 'NUMERO', 'TIPO', 'DE', 'PARA', 'TEXTO', 'PUBLICO', 'USUARIO_ID', 'USUARIO_NOME', 'EM', 'EM_APARELHO', 'ID_LOCAL', 'CRIADO_EM'],
-  ATEC_FOTOS: ['ID', 'OS_ID', 'ID_LOCAL', 'PERGUNTA_ID', 'LEGENDA', 'NOME', 'ARQUIVO_ID', 'URL', 'TAMANHO', 'SHA256', 'TIRADA_EM', 'RECEBIDA_EM', 'POR_ID', 'POR_NOME', 'ATIVA', 'CRIADO_EM'],
+  ATEC_FOTOS: ['ID', 'OS_ID', 'ID_LOCAL', 'PERGUNTA_ID', 'LEGENDA', 'NOME', 'ARQUIVO_ID', 'URL', 'TAMANHO', 'SHA256', 'TIRADA_EM', 'RECEBIDA_EM', 'POR_ID', 'POR_NOME', 'ATIVA', 'CRIADO_EM',
+    // 03/11/2026: liberação para os documentos externos (as mesmas colunas da Representação; a ronda usa para o relatório do cliente)
+    'PUBLICO', 'LIBERADA_POR_NOME', 'LIBERADA_EM', 'RELATORIO_ARQUIVO_ID'],
   ATEC_PECAS: ['ID', 'OS_ID', 'ID_LOCAL', 'DESCRICAO', 'CODIGO', 'QUANTIDADE', 'UNIDADE', 'SITUACAO', 'URGENCIA', 'REQUISICAO_ID', 'REQUISICAO_NUMERO', 'ATIVA', 'REMOVIDA_EM',
     'POR_ID', 'POR_NOME', 'CRIADO_EM'],
   // 22/10/2026 (etapa 1): REF_ID = registro criado por um idLocal do aparelho (cadastro em campo ou O.S. aberta em campo)
@@ -93,14 +103,21 @@ var AST_COLUNAS = {
   ATEC_RELATORIOS: ['ID', 'OS_ID', 'OS_NUMERO', 'VERSAO', 'REVISAO', 'MOTIVO', 'RASCUNHO', 'PDF_ID', 'PDF_URL', 'HTML_ID', 'PASTA_URL', 'MARCA', 'EMITIDO_EM', 'EMITIDO_POR_NOME', 'DOC_REGISTRADO', 'DOCREV_ID', 'CRIADO_EM'],
   ATEC_AVISOS: ['ID', 'DESTINATARIO_ID', 'TIPO', 'TITULO', 'TEXTO', 'REF_ID', 'DATA', 'LIDO_EM', 'CRIADO_EM'],
   ATEC_ACERVO_EQUIP: ['ID', 'AUVO_TASK_ID', 'DATA_TAREFA', 'TIPO_TAREFA', 'TECNICO_NOME', 'FINALIZADA', 'CLIENTE_AUVO_ID', 'CLIENTE_ID_SGO', 'EQUIP_AUVO_ID',
-    'EQUIPAMENTO_ID_SGO', 'RESUMO', 'QTD_ARQUIVOS', 'CRIADO_EM']
+    'EQUIPAMENTO_ID_SGO', 'RESUMO', 'QTD_ARQUIVOS', 'CRIADO_EM'],
+  // 03/11/2026 (ronda): contrato de ronda recorrente por cliente e unidade (semanal, quinzenal, mensal) e setores da unidade
+  ATEC_RONDA_PLANOS: ['ID', 'CODIGO', 'SITUACAO', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME', 'PERIODICIDADE', 'INICIO', 'HORA', 'DURACAO_MIN', 'JANELA_DIAS',
+    'TECNICO_ID', 'TECNICO_NOME', 'SETORES_JSON', 'ORIENTACAO', 'PRECO_RONDA', 'CONTRATO_REF', 'HORIZONTE_DIAS', 'GERADO_ATE', 'MOTIVO', 'PAUSADO_EM', 'ENCERRADO_EM',
+    'POR_ID', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+  ATEC_SETORES: ['ID', 'CLIENTE_ID', 'UNIDADE_ID', 'NOME', 'ORDEM', 'ATIVO', 'ORIGEM', 'POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM']
 };
 var AST_COLUNAS_TEXTO = {
   ATEC_CHAMADOS: ['NUMERO', 'ABERTO_EM', 'PAUSA_DESDE', 'PRAZO_TRIAGEM_EM', 'PRAZO_ATENDIMENTO_EM', 'TRIAGEM_INICIO_EM', 'TRIAGEM_FIM_EM', 'RETORNO_PREVISTO', 'AGENDADO_PARA',
     'ATENDIDO_EM', 'ENCERRADO_EM', 'CANCELADO_EM', 'ATUALIZADO_EM', 'CONTATO', 'PECA_DISPONIVEL_EM', 'PRAZO_CHEGADA_EM', 'P1_ALERTA_EM', 'ASSUMIDO_EM', 'FILA_LIVRE_EM',
     'EXCLUIDO_EM', 'RESTAURADO_EM'],
   ATEC_OS: ['NUMERO', 'AGENDADO_PARA', 'SAIU_EM', 'CHEGOU_EM', 'CHEGOU_EM_APARELHO', 'INICIO_EM', 'CONCLUIU_EM', 'CONCLUIU_EM_APARELHO', 'ASSINATURA_EM', 'RELATORIO_EM',
-    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM', 'COLAB_ASSINATURA_EM', 'COLAB_DISPENSA_EM'],
+    'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM', 'COLAB_ASSINATURA_EM', 'COLAB_DISPENSA_EM',
+    'RONDA_CHAVE', 'RONDA_PREVISTA', 'RONDA_JANELA_ATE', 'RONDA_POS_EM'],
+  ATEC_RONDA_PLANOS: ['CODIGO', 'INICIO', 'HORA', 'GERADO_ATE', 'PAUSADO_EM', 'ENCERRADO_EM', 'ATUALIZADO_EM'], ATEC_SETORES: ['NOME', 'ATUALIZADO_EM'],
   ATEC_EVENTOS: ['EM', 'EM_APARELHO'], ATEC_FOTOS: ['TIRADA_EM', 'RECEBIDA_EM'], ATEC_SYNC: ['EM_APARELHO', 'RECEBIDO_EM', 'ID_LOCAL'],
   ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM', 'EXCLUIDO_EM'],
   ATEC_RELATORIOS: ['EMITIDO_EM'], ATEC_AVISOS: ['DATA', 'LIDO_EM'], ATEC_CONFIG: ['ATUALIZADO_EM'], ATEC_TIPOS: ['ATUALIZADO_EM'], ATEC_MODELOS: ['ATUALIZADO_EM'],
@@ -166,7 +183,9 @@ var AST_PARADA = { TOTAL: 'Parada total', PARCIAL: 'Parada parcial', NAO: 'Sem p
 var AST_CANAIS = { INTERNO: 'Tela interna', TELEFONE: 'Telefone', EMAIL: 'E-mail recebido', PORTAL: 'Portal do cliente', QR: 'QR do equipamento',
   COMERCIAL: 'Pedido aprovado do Comercial', PRESENCIAL: 'Presencial', CONTRATO: 'Preventiva do contrato',
   // 29/10/2026: pedido aberto pela representada no módulo Representação (SGO_Representacao.js)
-  REPRESENTACAO: 'Representação' };
+  REPRESENTACAO: 'Representação',
+  // 03/11/2026: chamado aberto sozinho pela ronda de engenharia clínica (equipamento fora de uso ou com defeito encontrado na ronda)
+  RONDA: 'Ronda de engenharia clínica' };
 var AST_ACOES_TRIAGEM = { RESOLVIDO_REMOTO: 'Resolvido remotamente', AGUARDANDO_ORCAMENTO: 'Precisa de orçamento', AGUARDANDO_PECA: 'Precisa de peça', PLANEJADO: 'Planejar visita',
   // 03/11/2026 (pedido do dono, caso CH-2026-0008): logística e "outro" como caminhos da triagem
   ENTREGA: 'Entrega de equipamento ou material', RETIRADA: 'Retirada de equipamento', ENVIO: 'Envio por transportadora',
@@ -343,7 +362,10 @@ var AST_TIPOS_PADRAO = [
   ['RETIRADA_SENSORES', 'Retirada dos sensores', 'LOGISTICA', 'Retirada de registrador ou sensor instalado.', 1, 1, 1, 0, 'MOD_LOGISTICA', '', 0, '174802'],
   ['TREINAMENTO', 'Treinamento', 'OUTROS', 'Capacitação ao cliente (sem foto obrigatória).', 1, 1, 0, 0, 'MOD_TREINAMENTO', '', 0, '168339'],
   ['CORRECAO_OS', 'Correção de O.S. (administrativa)', 'OUTROS', 'Ajuste administrativo em O.S. já feita, sem visita nova.', 1, 0, 0, 0, '', '', 1, '237387'],
-  ['ENVIO_ORCAMENTO', 'Envio de orçamento', 'OUTROS', 'Envio de orçamento, sem visita.', 0, 0, 0, 0, '', '', 1, '203834']
+  ['ENVIO_ORCAMENTO', 'Envio de orçamento', 'OUTROS', 'Envio de orçamento, sem visita.', 0, 0, 0, 0, '', '', 1, '203834'],
+  // 03/11/2026: ronda de engenharia clínica (grupo RONDA): setores e equipamentos da unidade, situação de cada um, perguntas fixas por tipo
+  // de equipamento, achados, orientações e duas assinaturas (SGO_Assistencia_Ronda.js). Agendada em Assistência técnica > Rondas.
+  ['RONDA_EC', 'Ronda de engenharia clínica', 'RONDA', 'Inspeção periódica dos equipamentos da unidade, setor a setor, com registro e relatório.', 0, 1, 0, 0, '', '', 0, '']
 ];
 
 /** Modelos de checklist de partida. Os 13 questionários do Auvo entram ao lado, pela importação do acervo (SGO_Assistencia_Fonte.js). */
@@ -398,6 +420,37 @@ var AST_MODELOS_PADRAO = [
     { id: 'participantes', texto: 'Número de participantes', tipo: 'NUMERO', obrigatoria: true },
     { id: 'lista', texto: 'Lista de presença assinada?', tipo: 'SIM_NAO', obrigatoria: true },
     { id: 'foto', texto: 'Foto da lista de presença ou do treinamento', tipo: 'FOTO', obrigatoria: false }
+  ] },
+  // 03/11/2026 (ronda de engenharia clínica): perguntas fixas por tipo de equipamento, respondidas em cada equipamento na ronda.
+  // A Qualidade edita como os demais checklists (Regras da assistência > Checklists); a pergunta "etiqueta" com "Não" vira
+  // sugestão ao Comercial (calibração ou qualificação vencida encontrada na ronda).
+  { codigo: 'MOD_RONDA_AUTOCLAVE', nome: 'Ronda: autoclave', perguntas: [
+    { id: 'porta', texto: 'A porta veda bem (sem vazamento de vapor na guarnição)?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'registro', texto: 'O registro dos ciclos está em dia (impressão ou planilha do setor)?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'testes', texto: 'Os testes de rotina (Bowie-Dick e indicadores) estão registrados?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'etiqueta', texto: 'A etiqueta de calibração ou qualificação está válida?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'alarme', texto: 'Os alarmes e indicadores do painel funcionam?', tipo: 'SIM_NAO', obrigatoria: true }
+  ] },
+  { codigo: 'MOD_RONDA_LAVADORA', nome: 'Ronda: lavadora ultrassônica ou termodesinfectora', perguntas: [
+    { id: 'registro', texto: 'O registro dos ciclos está em dia?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'vazamento', texto: 'Sem vazamento de água ou de produto químico?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'limpeza', texto: 'Cesto, braços ou cuba limpos e sem obstrução?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'etiqueta', texto: 'A etiqueta de calibração ou qualificação está válida?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'alarme', texto: 'Os alarmes e indicadores do painel funcionam?', tipo: 'SIM_NAO', obrigatoria: true }
+  ] },
+  { codigo: 'MOD_RONDA_FRIO', nome: 'Ronda: câmara fria ou refrigerador', perguntas: [
+    { id: 'temperatura', texto: 'Temperatura no display agora (°C)', tipo: 'NUMERO', obrigatoria: true },
+    { id: 'faixa', texto: 'A temperatura está dentro da faixa de trabalho do setor?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'registro', texto: 'O registro de temperatura (mínima e máxima) está em dia?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'porta', texto: 'A porta veda e fecha sozinha?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'alarme', texto: 'O alarme de temperatura funciona?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'etiqueta', texto: 'A etiqueta de calibração do termômetro ou do sensor está válida?', tipo: 'SIM_NAO', obrigatoria: true }
+  ] },
+  { codigo: 'MOD_RONDA_SELADORA', nome: 'Ronda: seladora', perguntas: [
+    { id: 'temperatura', texto: 'A temperatura de selagem confere com o ajuste do setor?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'teste', texto: 'O teste de selagem está registrado?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'barra', texto: 'A barra e a resistência estão sem desgaste?', tipo: 'SIM_NAO', obrigatoria: true },
+    { id: 'etiqueta', texto: 'A etiqueta de calibração está válida?', tipo: 'SIM_NAO', obrigatoria: true }
   ] }
 ];
 
@@ -529,13 +582,13 @@ var AST_MEMO = {};
 function Ast_memoLimpar_() { AST_MEMO = {}; }
 function Ast_garantirAbas_() {
   var cache = null;
-  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V7')) return; } catch (e) {}
+  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V8')) return; } catch (e) {}
   Object.keys(AST_COLUNAS).forEach(function (aba) {
     CertCal_garantirTabela_(aba, AST_COLUNAS[aba]);
     AST_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
     (AST_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
   });
-  try { if (cache) cache.put('ATEC_ABAS_OK_V7', '1', 21600); } catch (e) {}
+  try { if (cache) cache.put('ATEC_ABAS_OK_V8', '1', 21600); } catch (e) {}
 }
 /**
  * 27/10/2026: chamado de teste ou simulação excluído pela gestão (EXCLUIDO_EM preenchido) e as O.S. e orçamentos que saíram
@@ -783,7 +836,9 @@ function Ast_tipoPublico_(t) {
     modeloCodigo: Ast_up_(t.MODELO_CODIGO), documentoTecnico: Ast_up_(t.DOCUMENTO_TECNICO), semVisita: Ast_sim_(t.SEM_VISITA), auvoTipos: Ast_s_(t.AUVO_TIPOS), ativo: Ast_up_(t.ATIVO || 'SIM') === 'SIM',
     ordem: Number(t.ORDEM) || 99,
     // 03/11/2026: tipo de logística (termo de entrega, retirada ou envio); null nos demais
-    logistica: Ast_up_(t.GRUPO) === 'LOGISTICA' ? { sentido: Ast_sentidoLogistica_(t.CODIGO, t.NOME), colaborador: !Ast_sim_(t.SEM_VISITA) } : null };
+    logistica: Ast_up_(t.GRUPO) === 'LOGISTICA' ? { sentido: Ast_sentidoLogistica_(t.CODIGO, t.NOME), colaborador: !Ast_sim_(t.SEM_VISITA) } : null,
+    // 03/11/2026: ronda de engenharia clínica (setores, equipamentos e situação de cada um); null nos demais
+    ronda: Ast_up_(t.GRUPO) === 'RONDA' ? { colaborador: true } : null };
 }
 function Ast_tipos_(todos) {
   return Ast_ler_(AST_ABAS.TIPOS).map(Ast_tipoPublico_).filter(function (t) { return todos || t.ativo; }).sort(function (a, b) { return a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'); });
