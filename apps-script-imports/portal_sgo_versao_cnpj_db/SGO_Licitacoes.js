@@ -277,7 +277,7 @@ function Lic_cartao_(l, portais, ctx) {
   var p = portais[Lic_up_(l.PORTAL_SESSAO)];
   // 03/11/2026, filtro do ramo: tipo de serviço, o termo que fez entrar e onde a candidata aparece no Radar (segundo filtro pela IA)
   var tipo = typeof Lic_tipoDe_ === 'function' ? Lic_tipoDe_(l) : { codigo: '', nome: '', origem: '' };
-  var radar = typeof Lic_radarEstado_ === 'function' && ctx ? Lic_radarEstado_(l, ctx) : null;
+  var radar = typeof Lic_radarFiltroEstado_ === 'function' && ctx ? Lic_radarFiltroEstado_(l, ctx) : null;
   return {
     tipoServico: tipo.codigo, tipoNome: tipo.nome, tipoOrigem: tipo.origem, razao: typeof Lic_ramoRazao_ === 'function' ? Lic_ramoRazao_(l) : null, radar: radar,
     descarteMotivoPadrao: Lic_s_(l.DESCARTE_MOTIVO_PADRAO),

@@ -304,7 +304,7 @@ function Lic_opSemAlerta_(l, cfg) {
   var s = Lic_s_(l.SITUACAO);
   if (s === 'DESCARTADA') return Lic_s_(l.DESCARTE_ORIGEM) === 'REGRA' ? 'descartada pela regra do radar' : 'descartada pela Diretoria';
   if (s === 'RADAR') {
-    if (Lic_s_(l.TRIAGEM) === 'CANDIDATA') return '';
+    if (Lic_s_(l.TRIAGEM) === 'CANDIDATA') return typeof Lic_radarSemAlerta_ === 'function' ? Lic_radarSemAlerta_(l) : '';
     if (Lic_s_(l.TRIAGEM) === 'TRAVADA') return cfg.alertarTravadas ? '' : 'travada (alertas das travadas desligados nas regras)';
     return 'sem termo de interesse';
   }

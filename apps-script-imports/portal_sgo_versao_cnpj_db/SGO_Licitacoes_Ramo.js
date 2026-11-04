@@ -202,7 +202,7 @@ function Lic_ramoCtx_(todas) {
  *   AGUARDANDO     a análise automática ainda não concluiu (com o porquê)
  *   DESCARTADA_IA  a análise concluiu com nota abaixo do mínimo ou fora do ramo (com a nota e o motivo); reversível
  */
-function Lic_radarEstado_(l, ctx) {
+function Lic_radarFiltroEstado_(l, ctx) {
   if (Lic_s_(l.SITUACAO) !== 'RADAR' || Lic_s_(l.TRIAGEM) !== 'CANDIDATA') return null;
   ctx = ctx || Lic_ramoCtx_();
   if (!ctx.ativo) return { estado: 'PRINCIPAL', selo: '', texto: '' };
@@ -227,13 +227,13 @@ function Lic_radarEstado_(l, ctx) {
 }
 /** Para os alertas e o resumo (SGO_Licitacoes_Alertas.js): '' = aparece no Radar; senão o porquê de não alertar ainda. */
 function Lic_radarSemAlerta_(l, ctx) {
-  var e = Lic_radarEstado_(l, ctx);
+  var e = Lic_radarFiltroEstado_(l, ctx);
   if (!e || e.estado === 'PRINCIPAL') return '';
   return e.estado === 'AGUARDANDO' ? 'aguardando a análise da IA (segundo filtro do ramo)' : 'descartada pela IA no segundo filtro do ramo (' + e.motivo + ')';
 }
 /** Aba da lista para uma candidata do Radar ('analisar', 'aguardando' ou 'descartadas_ia'). */
 function Lic_radarAba_(l, ctx) {
-  var e = Lic_radarEstado_(l, ctx);
+  var e = Lic_radarFiltroEstado_(l, ctx);
   return !e || e.estado === 'PRINCIPAL' ? 'analisar' : e.estado === 'AGUARDANDO' ? 'aguardando' : 'descartadas_ia';
 }
 /** "Trazer de volta" (Descartadas pela IA ou Aguardando a análise): motivo obrigatório, histórico; a análise não muda. */
@@ -241,7 +241,7 @@ function Lic_trazerDeVolta_(eu, d) {
   var motivo = Lic_texto_(d.motivo, 1000);
   if (motivo.length < 10) throw new Error('Escreva por que a oportunidade volta para a lista principal (pelo menos 10 letras). Nada foi alterado');
   return Lic_comTrava_(function () {
-    var l = Lic_acharOp_(d.id), e = Lic_radarEstado_(l, Lic_ramoCtx_());
+    var l = Lic_acharOp_(d.id), e = Lic_radarFiltroEstado_(l, Lic_ramoCtx_());
     if (!e || e.estado === 'PRINCIPAL') throw new Error('Não foi possível trazer de volta: a oportunidade já está na lista principal do Radar (ou não está mais no Radar). Atualize a lista; nada foi alterado');
     var agora = Lic_agora_();
     SGO_DATA.update(LIC_ABAS.OPORTUNIDADES, l.ID, { IA_TRAZIDA_EM: agora, IA_TRAZIDA_POR_ID: Lic_s_(eu.id), IA_TRAZIDA_POR_NOME: Lic_s_(eu.nome), IA_TRAZIDA_MOTIVO: motivo, ATUALIZADO_EM: agora });
@@ -390,7 +390,7 @@ function Lic_ramoTela_(eu, d) {
   try { rec = Lic_ramoReconstruir_(eu, todas); if (rec.pedidas) todas = Lic_ativas_(); } catch (e) { rec = { erro: 'A razão da triagem das candidatas antigas não pôde ser refeita agora (' + Lic_s_(e && e.message) + '); a tela mostra a razão lida do motivo.' }; }
   var ctx = Lic_ramoCtx_(todas), cfg = Lic_ramoCfg_(), grupos = {};
   var cand = todas.filter(function (l) { return Lic_s_(l.SITUACAO) === 'RADAR' && Lic_s_(l.TRIAGEM) === 'CANDIDATA'; }).map(function (l) {
-    var razao = Lic_ramoRazao_(l), k = razao ? razao.rotulo : '(sem a razão)', e = Lic_radarEstado_(l, ctx), tipo = Lic_tipoDe_(l);
+    var razao = Lic_ramoRazao_(l), k = razao ? razao.rotulo : '(sem a razão)', e = Lic_radarFiltroEstado_(l, ctx), tipo = Lic_tipoDe_(l);
     grupos[k] = (grupos[k] || 0) + 1;
     return { id: Lic_s_(l.ID), codigo: Lic_s_(l.CODIGO), orgao: Lic_s_(l.ORGAO_NOME), uf: Lic_s_(l.UF), municipio: Lic_s_(l.MUNICIPIO), objeto: Lic_texto_(l.OBJETO, 1200), encerramentoIso: Lic_s_(l.ENCERRAMENTO_ISO),
       razao: razao, expressoes: Lic_ramoExpressoes_(l.OBJETO, cfg.positivas), tipo: tipo, nota: Lic_s_(l.NOTA) === '' ? null : Number(l.NOTA), radar: e ? e.estado : '', radarTexto: e ? (e.motivo || e.texto || '') : '', linkPncp: Lic_url_(l.LINK_PNCP) };
@@ -403,7 +403,7 @@ function Lic_ramoTela_(eu, d) {
       objeto: Lic_s_(s.OBJETO), orgaoUf: Lic_s_(s.ORGAO_UF), motivo: Lic_s_(s.MOTIVO), situacao: Lic_up_(s.SITUACAO), por: Lic_s_(s.CRIADO_POR_NOME), em: Lic_s_(s.CRIADO_EM), decididoPor: Lic_s_(s.DECIDIDO_POR_NOME), decididoEm: Lic_s_(s.DECIDIDO_EM), versao: Lic_s_(s.VERSAO_APLICADA) };
   }).sort(function (a, b) { return (a.situacao === 'PENDENTE') !== (b.situacao === 'PENDENTE') ? (a.situacao === 'PENDENTE' ? -1 : 1) : (b.em < a.em ? -1 : 1); }).slice(0, 80);
   var cont = { analisar: 0, aguardando: 0, descartadas_ia: 0 };
-  todas.forEach(function (l) { var e = Lic_radarEstado_(l, ctx); if (e) cont[Lic_radarAba_(l, ctx)]++; });
+  todas.forEach(function (l) { var e = Lic_radarFiltroEstado_(l, ctx); if (e) cont[Lic_radarAba_(l, ctx)]++; });
   return { cfg: cfg, filtroIA: Object.assign(ctx.cfg, { ativo: ctx.ativo, iaDisponivel: ctx.iaDisponivel }), padroes: LIC_TERMOS_PADRAO, candidatas: cand, grupos: Object.keys(grupos).map(function (k) { return { rotulo: k, n: grupos[k] }; }).sort(function (a, b) { return b.n - a.n || (a.rotulo < b.rotulo ? -1 : 1); }),
     historico: hist, sugestoes: sug, pendentes: sug.filter(function (s) { return s.situacao === 'PENDENTE'; }).length, radar: cont, reconstrucao: rec, coletorNoServidor: Lic_temColetor_(), tipos: LIC_TIPOS_SERVICO, motivosDescarte: LIC_MOTIVOS_DESCARTE };
 }
