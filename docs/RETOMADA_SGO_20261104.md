@@ -39,6 +39,8 @@ Primeiro ensaio da gestão falhou por reenviar ronda encerrada; primeira imagem 
 
 ## Evidências e pendências
 
-Índice e 12 provas pequenas em `docs/evidencias_sgo_20261104/`. Capturas, relatórios completos e dados sintéticos locais em `C:/Users/venda/projetos/wt_srv_retomada_20261104/ensaios_locais/retomada_combinada_20261104`. Provas anteriores em `C:/Users/venda/projetos/wt_srv_ronda/ensaios_locais/retomada_ronda_20261104`.
+Índice de provas brutas em `docs/evidencias_sgo_20261104/`. Capturas, relatórios completos e dados sintéticos locais em `C:/Users/venda/projetos/wt_srv_retomada_20261104/ensaios_locais/retomada_combinada_20261104`. Provas anteriores em `C:/Users/venda/projetos/wt_srv_ronda/ensaios_locais/retomada_ronda_20261104`.
 
 Próxima frente: outras plataformas — leitor dos e-mails de aviso, cadastro manual por PDF/texto e selo cotação privada. Pergunta assíncrona sobre criação da caixa licitacoes@metrolabs.com.br permanece pendente; não foi criada conta nem configurada credencial. Não enviar pedidos a plataformas ou mensagens a Matheus sem instrução explícita. RH360 segue pausado; lavadora e demais projetos preservados.
+
+Backups dos repositórios: GitHub master sincronizado; bundles Git verificados em `C:/Users/venda/projetos/_BACKUP_SGO_20261104` e cópias locais do Drive em `G:/Meu Drive/SGO_BACKUP_SOFTWARE`, com SHA256 no manifesto. A sincronização remota do cliente Drive não foi auditada. Worktrees originais preservados; o legado não commitado de wt_srv_ramo é histórico e não deve ser reimportado sobre o master publicado.
