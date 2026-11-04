@@ -687,7 +687,8 @@ function AstRd_criarSugestao_(os, itens) {
     TITULO: servicos.join(' e ') + ' vencida na ronda: ' + Ast_s_(os.CLIENTE_NOME) + ' (' + Ast_s_(os.UNIDADE_NOME) + ')',
     CONTEUDO_JSON: JSON.stringify({ osId: os.ID, osNumero: os.NUMERO, clienteId: os.CLIENTE_ID, clienteNome: os.CLIENTE_NOME, unidadeId: os.UNIDADE_ID, unidadeNome: os.UNIDADE_NOME, em: Ast_agora_(), itens: itens }),
     VERIFICACAO: '', DECISAO: '', DECISAO_EM: '', DECISAO_MOTIVO: '', DIA: Ast_hoje_(), CRIADO_EM: Ast_agora_() });
-  var para = (typeof AstR_comercialPara_ === 'function' ? AstR_comercialPara_() : []).concat(Ast_diretoria_());
+  var comercial = typeof AstR_comercialPara_ === 'function' ? AstR_comercialPara_() : null;
+  var para = (comercial && comercial.id ? [comercial.id] : []).concat(Ast_diretoria_());
   Ast_avisar_(para, 'RONDA_SUGESTAO', 'Sugestão da ronda ' + os.NUMERO + ': ' + servicos.join(' e ').toLowerCase() + ' vencida', Ast_s_(os.CLIENTE_NOME) + ' · ' + Ast_s_(os.UNIDADE_NOME) + ': ' + itens.length + ' equipamento(s) (' +
     itens.slice(0, 4).map(function (i) { return i.texto + ', ' + i.motivo; }).join('; ') + (itens.length > 4 ? '; ...' : '') + '). Aceite para criar a oportunidade ou descarte com o motivo em Assistência técnica > Rondas > Sugestões ao Comercial. Nenhum orçamento é criado sozinho.', r.ID, { evento: 'AT21' });
   return Ast_s_(r.ID);

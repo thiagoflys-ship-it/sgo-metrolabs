@@ -16,6 +16,21 @@ const jeq = (a, b, m) => assert.deepEqual(JSON.parse(JSON.stringify(a)), b, m);
 const htmlDe = (amb, rx) => Object.values(amb.arquivos).filter((x) => rx.test(x.nome) && /\.html$/.test(x.nome)).map((x) => Buffer.from(x.bytes).toString('utf8'));
 const LAV = { registro: 'SIM', vazamento: 'NAO', limpeza: 'SIM', etiqueta: 'SIM', alarme: 'SIM' };
 
+test('sugestão da ronda usa o ID do responsável comercial e aparece nas pendências sem erro de concat', () => {
+  const amb = ambRonda(), os = agendar(amb);
+  const comercial = amb.ctx.AstR_comercialPara_();
+  assert.ok(comercial && comercial.id);
+  const destinatarios = [];
+  amb.ctx.Ast_avisar_ = (ids) => destinatarios.push(Array.from(ids));
+  const id = amb.ctx.AstRd_criarSugestao_(linhaOs(amb, os.id), [{ servico: 'Calibração', texto: 'Monitor de teste', motivo: 'Vencida', chave: 'e:eq5' }]);
+  assert.ok(id);
+  assert.ok(destinatarios[0].includes(comercial.id));
+  assert.ok(destinatarios[0].every((x) => typeof x === 'string'));
+  const pendencias = [];
+  assert.doesNotThrow(() => amb.ctx.Assistencia_fontePendencias_((item) => pendencias.push(item), { cliente: false }));
+  assert.ok(pendencias.some((p) => p.id === 'AST:RONDASUG:' + id));
+});
+
 function ambRonda() {
   const amb = ambiente({ extras: ['SGO_Comercial_Config.js'], assColabDesde: '2026-10-01T00:00:00' });
   const E = amb.tabelas.CAD_EQUIPAMENTOS;

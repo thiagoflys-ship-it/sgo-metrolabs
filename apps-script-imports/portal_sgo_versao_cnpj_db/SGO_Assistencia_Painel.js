@@ -187,7 +187,8 @@ function Assistencia_fontePendencias_(add, ctx) {
         oQueFazer: 'Abra Assistência técnica > Rondas: reagende com o motivo (ou cancele, com o motivo, se não vai acontecer) e combine com o técnico.', tela: AST_PEND_TELA('assistencia_rondas', o.ID), extra: { area: 'TECNICA' } }));
     });
     if (typeof COM_ABAS !== 'undefined' && COM_ABAS.SUGESTOES) {
-      var paraCom = (typeof AstR_comercialPara_ === 'function' ? AstR_comercialPara_() : []).concat(Ast_diretoria_(us));
+      var comercialRonda = typeof AstR_comercialPara_ === 'function' ? AstR_comercialPara_() : null;
+      var paraCom = (comercialRonda && comercialRonda.id ? [comercialRonda.id] : []).concat(Ast_diretoria_(us));
       try {
         Ast_lerCru_(COM_ABAS.SUGESTOES).forEach(function (sg) {
           if (Ast_up_(sg.TIPO) !== 'RONDA_OPORTUNIDADE' || Ast_s_(sg.DECISAO)) return;
