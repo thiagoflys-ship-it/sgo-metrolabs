@@ -178,6 +178,26 @@ function Assistencia_fontePendencias_(add, ctx) {
       titulo: (AST_CASO_TIPOS[Ast_up_(k.TIPO)] || 'Caso') + ' ' + Ast_s_(k.NUMERO) + ' de ' + Ast_s_(k.CLIENTE_NOME).slice(0, 50) + (atrasado ? ' com prazo vencido' : ''), detalhe: Ast_s_(k.DESCRICAO).slice(0, 220) + ' Prazo: ' + Ast_brDia_(k.PRAZO) + '.',
       oQueFazer: 'Abra Assistência técnica > Reclamações, registre a causa, a ação e a resposta ao cliente e marque "Resolvido".', tela: AST_PEND_TELA('assistencia_casos', k.ID), extra: { area: 'TECNICA', prazo: Ast_dia_(k.PRAZO) } }));
   });
+  // 03/11/2026 (ronda de engenharia clínica): ronda que passou da janela sem concluir (gestão) e sugestão ao Comercial sem decisão
+  if (typeof AstRd_situacaoRonda_ === 'function' && PEND_TIPOS.ast_ronda_atrasada) {
+    Ast_ler_(AST_ABAS.OS).forEach(function (o) {
+      if (!AstRd_ehRonda_(o) || AstRd_situacaoRonda_(o).cod !== 'ATRASADA') return;
+      add(Pend_item_('ast_ronda_atrasada', { id: 'AST:RONDA:' + o.ID, nome: Ast_s_(o.NUMERO), publico: 'GESTAO', paraUsuarios: Ast_gestoresTecnica_(us), responsavel: 'Gestão da área Técnica', gravidade: 'ATENCAO', dias: null, clienteId: Ast_s_(o.CLIENTE_ID),
+        titulo: 'Ronda fora da janela: ' + Ast_s_(o.NUMERO) + ' (' + Ast_s_(o.CLIENTE_NOME).slice(0, 50) + ', ' + Ast_s_(o.UNIDADE_NOME).slice(0, 40) + ')', detalhe: 'Agendada para ' + Ast_br_(o.AGENDADO_PARA) + ' com ' + Ast_s_(o.TECNICO_NOME) + '; a janela do contrato terminou em ' + Ast_brDia_(Ast_s_(o.RONDA_JANELA_ATE) + 'T00:00:00') + ' sem a ronda concluída.',
+        oQueFazer: 'Abra Assistência técnica > Rondas: reagende com o motivo (ou cancele, com o motivo, se não vai acontecer) e combine com o técnico.', tela: AST_PEND_TELA('assistencia_rondas', o.ID), extra: { area: 'TECNICA' } }));
+    });
+    if (typeof COM_ABAS !== 'undefined' && COM_ABAS.SUGESTOES) {
+      var paraCom = (typeof AstR_comercialPara_ === 'function' ? AstR_comercialPara_() : []).concat(Ast_diretoria_(us));
+      try {
+        Ast_lerCru_(COM_ABAS.SUGESTOES).forEach(function (sg) {
+          if (Ast_up_(sg.TIPO) !== 'RONDA_OPORTUNIDADE' || Ast_s_(sg.DECISAO)) return;
+          add(Pend_item_('ast_ronda_sugestao', { id: 'AST:RONDASUG:' + sg.ID, nome: Ast_s_(sg.TITULO).slice(0, 40), publico: 'GESTAO', paraUsuarios: paraCom, responsavel: 'Comercial', gravidade: 'ATENCAO', dias: null,
+            titulo: 'Sugestão da ronda ao Comercial: ' + Ast_s_(sg.TITULO).slice(0, 120), detalhe: 'Calibração ou qualificação vencida encontrada na ronda de engenharia clínica. Nenhum orçamento foi criado: o Comercial ou a Diretoria aceita (cria a oportunidade) ou descarta com o motivo.',
+            oQueFazer: 'Abra Assistência técnica > Rondas > Sugestões ao Comercial e toque em "Aceitar" ou "Descartar".', tela: AST_PEND_TELA('assistencia_rondas', Ast_s_(sg.ID)), extra: { area: 'COMERCIAL' } }));
+        });
+      } catch (eSug) {}
+    }
+  }
   if (ctx.userId && !ctx.interno) {
     Ast_ler_(AST_ABAS.AVISOS).forEach(function (v) {
       if (Ast_s_(v.DESTINATARIO_ID) !== ctx.userId || Ast_s_(v.LIDO_EM)) return;
@@ -220,6 +240,13 @@ function Assistencia_rotina_(quando, forcar) {
     var qd = Ast_cfgChave_('QUEST_DERIVA', null);
     if (qd && qd.concluido) return { fora: 'checklists das tarefas do Auvo já montados (rascunho)' };
     return typeof AstQ_derivar_ === 'function' ? AstQ_derivar_(sis, { sistema: true, lote: 60, orcamentoMs: 60000 }).situacao : { fora: 'derivação indisponível' };
+  });
+  // 03/11/2026: rondas dos contratos (sem duplicar) e o pós-processamento das rondas encerradas que ficou para trás
+  passo('rondas', function () {
+    if (typeof AstRd_gerarTodos_ !== 'function') return { fora: 'sem o módulo da ronda' };
+    var g = AstRd_gerarTodos_(), n = 0;
+    Ast_ler_(AST_ABAS.OS).forEach(function (o) { if (n < 3 && Ast_up_(o.SITUACAO) === 'ENCERRADA' && !Ast_s_(o.RONDA_POS_EM) && AstRd_ehRonda_(o)) { AstRd_posConclusao_(sis, o.ID); n++; } });
+    return { geradas: g.geradas, posProcessadas: n };
   });
   passo('acervo', function () { var e = Ast_cfgChave_('ACERVO_INDICE', null); if (e && e.concluido) return { fora: 'índice concluído' }; return AstF_indexarAcervo_({ lote: 120, orcamentoMs: 90000 }); });
   passo('relatorioMensal', function () { return AstP_relatorioAutomatico_(quando); });
@@ -397,7 +424,7 @@ function AstP_salvarTipo_(eu, d) {
   if (mod && !Ast_modelo_(mod)) throw new Error('Não foi possível salvar: o modelo de checklist escolhido não existe');
   var ex = t.exige || {}, fotos = Math.round(Ast_num_(ex.fotosMin));
   if (!(fotos >= 0 && fotos <= 20)) throw new Error('Não foi possível salvar: o mínimo de fotos vai de 0 a 20');
-  var campos = { NOME: nome, GRUPO: ['TECNICO', 'LOGISTICA', 'OUTROS'].indexOf(Ast_up_(t.grupo)) >= 0 ? Ast_up_(t.grupo) : 'OUTROS', DESCRICAO: Ast_texto_(t.descricao, 300),
+  var campos = { NOME: nome, GRUPO: ['TECNICO', 'LOGISTICA', 'OUTROS', 'RONDA'].indexOf(Ast_up_(t.grupo)) >= 0 ? Ast_up_(t.grupo) : 'OUTROS', DESCRICAO: Ast_texto_(t.descricao, 300),
     EXIGE_RELATO: ex.relato ? 'SIM' : '', EXIGE_ASSINATURA: ex.assinatura ? 'SIM' : '', FOTOS_MIN: fotos, EXIGE_QR_SERIE: ex.qrOuSerie ? 'SIM' : '', EXIGE_CHECKLIST: mod ? 'SIM' : '', MODELO_CODIGO: mod,
     DOCUMENTO_TECNICO: AST_DOCS_TECNICOS[Ast_up_(t.documentoTecnico)] !== undefined ? Ast_up_(t.documentoTecnico) : '', SEM_VISITA: t.semVisita ? 'SIM' : '', ATIVO: t.ativo === false ? 'NAO' : 'SIM',
     ATUALIZADO_POR_NOME: eu.nome, ATUALIZADO_EM: Ast_agora_() };
@@ -453,14 +480,15 @@ function AstP_portal_(eu) {
     .map(function (c) { return AstC_publicoCliente_(c, osPorId[Ast_s_(c.OS_ID)]); });
   var pedidos = Ast_ler_(AST_ABAS.SOLICITACOES).filter(function (s) { return Ast_s_(s.CLIENTE_ID) === cid && Ast_up_(s.SITUACAO) === 'NOVA'; })
     .map(function (s) { return { numero: s.NUMERO, equipamentoTexto: s.EQUIPAMENTO_TEXTO, descricao: s.DESCRICAO, em: Ast_br_(s.CRIADO_EM) }; });
-  var relatorios = Ast_ler_(AST_ABAS.OS).filter(function (o) { return Ast_s_(o.CLIENTE_ID) === cid && Ast_up_(o.SITUACAO) === 'ENCERRADA' && Ast_s_(o.RELATORIO_PDF_URL); })
+  // 03/11/2026: as rondas têm a seção própria (só a versão do cliente do relatório)
+  var relatorios = Ast_ler_(AST_ABAS.OS).filter(function (o) { return Ast_s_(o.CLIENTE_ID) === cid && Ast_up_(o.SITUACAO) === 'ENCERRADA' && Ast_s_(o.RELATORIO_PDF_URL) && !(typeof AstRd_ehRonda_ === 'function' && AstRd_ehRonda_(o)); })
     .sort(function (a, b) { return String(b.ENCERRADA_EM).localeCompare(String(a.ENCERRADA_EM)); })
     .map(function (o) { return { numero: o.NUMERO, equipamentoTexto: o.EQUIPAMENTO_TEXTO, tipo: o.TIPO_NOME, encerradaEm: Ast_brDia_(o.ENCERRADA_EM), url: o.RELATORIO_PDF_URL }; });
   var equipamentos = Ast_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) { return Ast_s_(e.CLIENTE_ID) === cid && Ast_up_(e.STATUS || 'ATIVO') === 'ATIVO'; })
     .map(function (e) { var un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(e.UNIDADE_ID)] || {}; return { id: e.ID, texto: Ast_equipTexto_(e), unidadeId: Ast_s_(e.UNIDADE_ID), unidade: Ast_s_(un.NOME_UNIDADE) }; })
     .sort(function (a, b) { return a.texto.localeCompare(b.texto, 'pt-BR'); });
   var orcamentos = typeof AstL_portalOrcamentos_ === 'function' ? AstL_portalOrcamentos_(eu) : [];
-  return { chamados: chamados, pedidos: pedidos, relatorios: relatorios, equipamentos: equipamentos, orcamentos: orcamentos, cliente: Ast_clienteNome_(Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[cid]),
+  return { chamados: chamados, pedidos: pedidos, relatorios: relatorios, equipamentos: equipamentos, orcamentos: orcamentos, rondas: typeof AstRd_portal_ === 'function' ? AstRd_portal_(eu) : [], cliente: Ast_clienteNome_(Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[cid]),
     // 29/10/2026: painel do cliente (índices, Kanban das 5 etapas e Gantt), só com os chamados dele
     painel: AstP_painelCliente_(cid, Date.now()), ganttJs: typeof SGOGantt_codigoNavegador_ === 'function' ? SGOGantt_codigoNavegador_() : '' };
 }
@@ -522,7 +550,8 @@ function AstP_inicio_(eu) {
   var us = Ast_usuarios_();
   base.situacoes = AST_SITUACOES; base.osSituacoes = AST_OS_SITUACOES; base.prioridades = AST_PRIORIDADES; base.paradas = AST_PARADA; base.canais = AST_CANAIS; base.acoesTriagem = AST_ACOES_TRIAGEM;
   base.triagemItens = AST_TRIAGEM_ITENS; base.preparo = AST_PREPARO; base.motivosSemAssinatura = AST_MOTIVOS_SEM_ASSINATURA; base.casoTipos = AST_CASO_TIPOS; base.tiposPergunta = AST_TIPOS_PERGUNTA;
-  base.tipos = Ast_tipos_(false).map(function (t) { return { codigo: t.codigo, nome: t.nome, grupo: t.grupo, exige: t.exige, documentoTecnico: t.documentoTecnico, semVisita: t.semVisita }; });
+  // 03/11/2026: a ronda não entra na triagem nem no agendamento do chamado (tem a tela própria, Assistência técnica > Rondas)
+  base.tipos = Ast_tipos_(false).filter(function (t) { return !t.ronda; }).map(function (t) { return { codigo: t.codigo, nome: t.nome, grupo: t.grupo, exige: t.exige, documentoTecnico: t.documentoTecnico, semVisita: t.semVisita }; });
   base.tecnicos = Ast_tecnicos_(us).map(function (t) { return { id: t.id, nome: t.nome }; });
   base.triagem = Ast_triagemPara_(us).nome;
   base.duracaoPadrao = Number(Ast_regras_().agenda.duracaoPadraoMin) || 90;
@@ -684,13 +713,38 @@ var AST_ACOES = {
   relatorioPeriodoCliente: function (eu, d) { return RepDC_relatorioPeriodo_(eu, d); },
   documentosGerados: function (eu, d) { return eu.cliente ? RepDC_documentos_(eu, d) : RepDI_documentos_(eu, d); },
   fotosRelatorio: function (eu, d) { return RepD_fotosDoChamado_(eu, d); },
-  liberarFoto: function (eu, d) { return RepD_liberarFoto_(eu, d); }
+  liberarFoto: function (eu, d) { return RepD_liberarFoto_(eu, d); },
+  // 03/11/2026: ronda de engenharia clínica (SGO_Assistencia_Ronda.js)
+  rondaTela: function (eu, d) { return AstRd_tela_(eu, d); },
+  rondaEscopoUnidade: function (eu, d) { return AstRd_escopoUnidade_(eu, d); },
+  rondaPlanoSalvar: function (eu, d) { return AstRd_salvarPlano_(eu, d); },
+  rondaPlanoPausar: function (eu, d) { return AstRd_mudarPlano_(eu, 'PAUSAR', d); },
+  rondaPlanoRetomar: function (eu, d) { return AstRd_mudarPlano_(eu, 'RETOMAR', d); },
+  rondaPlanoEncerrar: function (eu, d) { return AstRd_mudarPlano_(eu, 'ENCERRAR', d); },
+  rondaAgendar: function (eu, d) { return AstRd_agendar_(eu, d); },
+  rondaReagendar: function (eu, d) { return AstRd_reagendar_(eu, d); },
+  rondaCancelar: function (eu, d) { return AstRd_cancelar_(eu, d); },
+  rondaSetorSalvar: function (eu, d) { return AstRd_salvarSetor_(eu, d); },
+  rondaSugestoes: function (eu, d) { return AstRd_sugestoes_(eu, d); },
+  rondaSugestaoDecidir: function (eu, d) { return AstRd_decidirSugestao_(eu, d); },
+  rondaIndicadores: function (eu, d) { return { indicadores: AstRd_indicadores_(eu, d) }; },
+  rondaFotoLiberar: function (eu, d) { return AstRd_liberarFoto_(eu, d); },
+  rondaCfgSalvar: function (eu, d) { return AstRd_salvarCfg_(eu, d); },
+  rondaRelatorio: function (eu, d) {
+    var os = AstO_obter_(eu, d && d.osId, 'abrir o relatório da ronda');
+    if (!AstRd_ehRonda_(os)) throw new Error('Não foi possível abrir: a O.S. ' + os.NUMERO + ' não é uma ronda');
+    var g = AstRd_emitirRelatorio_(eu, os.ID, { publico: d && d.publico });
+    if (!g.salvo) throw new Error('Não foi possível gerar o relatório da ronda: ' + String(g.aviso || '').replace(/[.\s]+$/, ''));
+    return { html: g.reaproveitado ? '' : g.html, pdfUrl: g.pdfUrl, rascunho: !!g.rascunho, versao: g.versao };
+  }
 };
 var AST_ACOES_CLIENTE = ['acesso', 'iniciar', 'portal', 'solicitar', 'relatorio', 'avisosLidos', 'responderOrcamento', 'relatorioAtendimento', 'relatorioPeriodoCliente', 'documentosGerados'];
 /** Ações que criam trabalho novo e ficam bloqueadas com a Assistência desligada (as de leitura, as regras e o "ligar" continuam). */
-var AST_ACOES_DESLIGADA = ['abrir', 'assumir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'osDispensarAssTecnico', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar'];
+var AST_ACOES_DESLIGADA = ['abrir', 'assumir', 'triagem', 'retomar', 'voltarTriagem', 'encerrarRemoto', 'aguardarPeca', 'converter', 'agendar', 'ordenar', 'reservarVeiculo', 'osEventos', 'osFoto', 'osEncerrar', 'osDispensarAssTecnico', 'salvarOrcamento', 'emitirOrcamento', 'revisarOrcamento', 'decidirOrcamento', 'enviarOrcamento', 'orcLinkCopiar',
+  'rondaPlanoSalvar', 'rondaPlanoRetomar', 'rondaAgendar', 'rondaReagendar'];
 var AST_ACOES_DESLIGADA_NOMES = { abrir: 'abrir o chamado', assumir: 'assumir o chamado', triagem: 'fazer a triagem', retomar: 'liberar o chamado', voltarTriagem: 'voltar o chamado à triagem', encerrarRemoto: 'encerrar o chamado', aguardarPeca: 'marcar aguardando peça', converter: 'converter a solicitação',
   agendar: 'agendar o atendimento', ordenar: 'mudar a ordem do dia', reservarVeiculo: 'reservar o veículo', osEventos: 'registrar o atendimento', osFoto: 'enviar a foto', osEncerrar: 'encerrar a O.S.', osDispensarAssTecnico: 'encerrar sem a assinatura do técnico',
+  rondaPlanoSalvar: 'salvar o contrato de ronda', rondaPlanoRetomar: 'retomar a recorrência', rondaAgendar: 'agendar a ronda', rondaReagendar: 'reagendar a ronda',
   salvarOrcamento: 'preencher o orçamento', emitirOrcamento: 'emitir o orçamento', revisarOrcamento: 'revisar o orçamento', decidirOrcamento: 'registrar a resposta do cliente', enviarOrcamento: 'enviar o orçamento com o link de aceite', orcLinkCopiar: 'gerar o link de aceite' };
 
 /** google.script.run: Assistencia_api(sessionId, acao, dados). Nunca lança. */

@@ -42,7 +42,7 @@ var SGO_AJUDA_NOMES = {
   // 21/10/2026: Assistência técnica nativa (SGO_Ajuda_Assistencia.js)
   assistencia: 'Chamados', assistencia_abrir: 'Abrir chamado', assistencia_os: 'Ordens de serviço', assistencia_agenda: 'Agenda dos técnicos',
   assistencia_solicitacoes: 'Solicitações dos clientes', assistencia_casos: 'Reclamações', assistencia_indicadores: 'Indicadores da assistência',
-  assistencia_regras: 'Regras da assistência', assistencia_transicao: 'Transição do Auvo', assistencia_portal: 'Meus chamados',
+  assistencia_regras: 'Regras da assistência', assistencia_rondas: 'Rondas de engenharia clínica', assistencia_transicao: 'Transição do Auvo', assistencia_portal: 'Meus chamados',
   // 22/10/2026: Segurança e automação predial (SGO_Ajuda_AutomacaoPredial.js)
   automacao_predial: 'Segurança e automação predial',
   // 29/10/2026: módulo Representação (SGO_Ajuda_Representacao.js)

@@ -234,6 +234,70 @@ assunto "Termo de entrega OS-...".
 Calibração e qualificação: emita o documento no módulo (certificado, relatório de qualificação). O documento do mesmo
 equipamento emitido depois da chegada é ligado sozinho à O.S. ao encerrar; também dá para ligar pela ficha da O.S.
 
+## Ronda de engenharia clínica (03/11/2026)
+
+A ronda de engenharia clínica é a inspeção periódica dos equipamentos de uma unidade do cliente, setor a setor, com o registro da situação de cada equipamento, as fotos dos achados, as orientações dadas à equipe e as duas assinaturas. Ela apoia o cumprimento da RDC 509/2021 da Anvisa (gerenciamento de tecnologias em saúde) e da ABNT NBR 15943 (programa de gerenciamento de equipamentos de infraestrutura e de saúde) no que diz respeito à inspeção periódica e ao registro. A ronda não substitui a manutenção preventiva, a calibração nem a qualificação de cada equipamento e, sozinha, não atesta a conformidade da unidade.
+
+Tela: **Assistência técnica > Rondas de engenharia clínica**. A ronda é uma O.S. do tipo "Ronda de engenharia clínica" (grupo Ronda), sem chamado. Ela não aparece na triagem nem no agendamento do chamado e não se abre em campo pelo "Novo atendimento".
+
+### Quem faz o quê
+
+- **Gestão da área Técnica, Diretoria e Administrador:** contratos de ronda, ronda avulsa, setores da unidade, reagendar e cancelar (com motivo), liberar ou recolher fotos para o cliente, revisão do relatório.
+- **Técnico ou engenheiro (perfil Técnico ou área Técnica):** faz a ronda no SGO+ Campo. Outro colaborador não registra ronda, mesmo que a O.S. esteja no nome dele: o servidor recusa.
+- **Comercial e Diretoria:** aceitam ou descartam as sugestões da ronda.
+- **Cliente:** vê no portal ("Meus chamados", seção Rondas de engenharia clínica) só as rondas da própria empresa e só a versão do cliente do relatório.
+
+### Contrato de ronda (recorrente)
+
+1. Toque em **Novo contrato de ronda**: cliente, unidade, periodicidade (semanal, quinzenal ou mensal), data da primeira ronda, hora, duração estimada, janela (dias de tolerância, padrão 2) e responsável (técnico ou engenheiro).
+2. Marque os setores da ronda; sem nenhum marcado, a ronda cobre todos os setores da unidade.
+3. Referência do contrato (opcional). Não há preço por ronda: a ronda está incluída no contrato do cliente (o contrato e o relatório mostram "Ronda incluída no contrato").
+4. Ao salvar, as rondas dos próximos 35 dias entram na agenda do responsável (e em Minhas atividades). As seguintes nascem sozinhas na rotina da Assistência. Cada data prevista gera uma ronda só: rodar de novo, salvar de novo ou a rotina nunca criam ronda em dobro. Data que cai em dia não útil vai para o próximo dia útil.
+5. **Pausar** (com motivo) cancela as rondas futuras que ainda não começaram e para a geração. **Retomar** (com motivo) volta a gerar as próximas datas. **Encerrar** (com motivo) cancela as futuras e encerra o contrato. A ronda cancelada uma a uma pela gestão não volta a ser gerada.
+6. Editar o contrato vale para as rondas geradas dali em diante; as já agendadas continuam como estão (reagende uma a uma, se precisar).
+
+Ronda que passa do último dia da janela sem ser concluída aparece com o selo "Fora da janela" e entra na Caixa de decisões da gestão ("Ronda fora da janela do contrato").
+
+### Ronda avulsa
+
+**Agendar ronda avulsa**: cliente, unidade, setores, responsável, data e hora, duração e orientação. Conflito na agenda do responsável é mostrado; para seguir, marque "Agendar mesmo assim" com o motivo. O cliente recebe o e-mail com a data (pode desmarcar). Na lista, **Reagendar** e **Cancelar** pedem o motivo e só valem para a ronda que ainda não começou.
+
+### Setores
+
+Os setores da unidade são os cadastrados em **Setores da unidade** (nesta tela) mais os que aparecem no campo Setor dos equipamentos ativos. Equipamento sem setor entra em "Sem setor informado". O técnico pode acrescentar um setor durante a ronda; ele entra no cadastro da unidade quando a ronda é encerrada.
+
+### Em campo (SGO+ Campo)
+
+Cheguei (o escopo de setores e equipamentos fica fixo a partir daqui) → setores um a um, com progresso → em cada equipamento um toque na situação:
+
+| Situação | O que pede |
+|---|---|
+| Em funcionamento | As perguntas fixas do tipo de equipamento, quando houver. Uma resposta "Não" não combina com esta situação. |
+| Com observação | Descrição (pelo menos uma frase), foto do problema e as perguntas fixas. |
+| Fora de uso ou com defeito | Se está parado (não pode ser usado) ou funciona com defeito ou limitação, a descrição, a foto do problema e as perguntas fixas. Vira chamado depois do encerramento. |
+| Não localizado | Nada obrigatório (observação opcional). |
+| Não verificado | O motivo (pelo menos 5 letras). |
+
+Perguntas fixas (Regras da assistência > Modelos de checklist, editáveis pela Qualidade): **Ronda: autoclave** (porta veda, registro de ciclos, testes de rotina, etiqueta de calibração ou qualificação, alarmes), **Ronda: lavadora ultrassônica ou termodesinfectora**, **Ronda: câmara fria ou refrigerador** (inclui a temperatura no display, em °C) e **Ronda: seladora**. O tipo do equipamento decide o modelo.
+
+Equipamento que está no setor e não está no cadastro: o técnico cadastra ali (tipo, modelo, série ou TAG, patrimônio, setor), como no Novo atendimento, e o cadastro fica marcado "criado em campo" para a gestão conferir. Depois: achados gerais do setor (texto e foto, opcional), orientações dadas e pedidos do cliente, o resumo em números, as duas assinaturas (responsável do cliente e técnico; nome completo obrigatório, documento opcional) e Concluí. Sem sinal, tudo fica no aparelho e sobe depois, sem registrar duas vezes.
+
+### Depois de encerrada
+
+- **Chamado automático:** cada equipamento "Fora de uso ou com defeito" abre um chamado (canal "Ronda de engenharia clínica"), ligado à ronda, com a descrição e as fotos. A prioridade sai da escolha do técnico: **P2** quando o equipamento está parado e **P3** quando funciona com defeito ou limitação. A gestão muda essas duas prioridades em Rondas > "Chamado aberto pela ronda" (com motivo; vale para as rondas encerradas dali em diante). Se o equipamento já tem chamado aberto, o achado entra no histórico dele. Reenvio do aparelho, rotina ou nova tentativa nunca abrem chamado em dobro.
+- **Sugestão ao Comercial:** calibração ou qualificação vencida (pelo Arquivo de documentos e pelos certificados) ou etiqueta respondida "Não" vira uma sugestão por ronda, com os equipamentos. Nada de orçamento: o Comercial ou a Diretoria, em **Sugestões ao Comercial**, aceita (cria a oportunidade no funil Engenharia, origem "Vencimento de calibração ou qualificação", com o contato, o valor estimado e a próxima ação) ou descarta com o motivo. A sugestão sem decisão aparece na Caixa de decisões do Comercial.
+- **Avisos:** a gestão da área Técnica recebe o resumo da ronda (matriz de avisos AT20); o Comercial e a Diretoria recebem a sugestão (AT21).
+- **Relatório A4** "Relatório de ronda de engenharia clínica", com capa e índice, em duas versões: a **do cliente** (resumo em números, identificação, setor a setor com a situação, as observações e as fotos liberadas, verificações por tipo de equipamento, achados e recomendações com prioridade, chamados abertos a partir da ronda, comparação com a ronda anterior da unidade — melhorou, continua pendente, achado novo —, orientações e pedidos, assinaturas) e a **interna** (o mesmo, mais a sugestão ao Comercial, as fotos não liberadas e a linha do tempo). A do cliente vai para o Arquivo de documentos, o portal do cliente e o e-mail ("Enviar ao cliente", como os demais relatórios). A interna nunca abre para login de cliente.
+- **Fotos:** a foto da ronda entra liberada na versão do cliente; a gestão recolhe (ou libera de novo) na ficha da ronda. Depois do encerramento, a foto recolhida só sai do documento do cliente com a revisão ("Abrir para corrigir", com motivo). Oriente a equipe a fotografar só o equipamento, nunca paciente nem documento de paciente.
+
+### Indicadores
+
+Na tela das rondas e em Indicadores da assistência (últimos 90 dias): rondas realizadas e programadas por cliente (e as concluídas fora da janela), equipamentos com problema por setor, problemas que se repetem em duas ou mais rondas e o tempo do achado (conclusão da ronda) até a solução do chamado aberto a partir dela.
+
+### Cobrança
+
+Decisão do dono (03/11/2026): não há preço por ronda nem item de catálogo. A ronda está incluída no contrato do cliente: o contrato de ronda e o relatório mostram "Ronda incluída no contrato". Nada é cobrado pela ronda no SGO+.
+
 ## Relatório da O.S.
 
 Nos documentos (relatório da O.S., termo e relatório do atendimento), a série e a TAG aparecem só nos campos próprios, nunca ao

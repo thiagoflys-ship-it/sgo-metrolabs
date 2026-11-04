@@ -333,7 +333,7 @@ test('fonte única: Auvo e O.S. do SGO+ na mesma lista, com os campos de sempre;
 test('regras da assistência: Administrador, Diretoria e Gestor; tipo e modelo de checklist com versão; interruptor desliga o aplicativo sem apagar', () => {
   const amb = ambiente();
   const r = ok(amb.api('s_gil', 'regras', {}));
-  assert.equal(r.tipos.length, 29);
+  assert.equal(r.tipos.length, 30); // 03/11/2026: + Ronda de engenharia clínica (RONDA_EC)
   assert.ok(r.modelos.length >= 7);
   assert.match(amb.api('s_tiago', 'salvarTipo', { tipo: { nome: 'X' }, motivo: 'teste de permissão' }).message, /Regras da assistência/);
   ok(amb.api('s_gil', 'salvarTipo', { tipo: { codigo: 'TREINAMENTO', nome: 'Treinamento', grupo: 'OUTROS', exige: { relato: true, assinatura: true, fotosMin: 1 }, modeloCodigo: 'MOD_TREINAMENTO' }, motivo: 'Qualidade pediu uma foto da lista de presença' }));

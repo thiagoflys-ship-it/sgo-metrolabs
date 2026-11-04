@@ -169,6 +169,28 @@ Passo a passo:
    itens com quantidade, identificação e estado, avarias, de quem e para quem, motivo e destino, fotos e as duas
    assinaturas, com a declaração de recebimento. Ele vai ao cliente pelo mesmo "Enviar ao cliente por e-mail".
 
+## 3b. Ronda de engenharia clínica (03/11/2026)
+
+A ronda aparece no Meu dia como as outras O.S. ("Ronda de engenharia clínica"), agendada pela gestão (avulsa ou pelo contrato de ronda). Só técnico ou engenheiro faz a ronda. Ela apoia o cumprimento da RDC 509/2021 e da ABNT NBR 15943 (inspeção periódica e registro), sem prometer conformidade.
+
+1. **Cheguei** na unidade. A partir daqui os setores e os equipamentos do cadastro ficam fixos para esta ronda.
+2. **Setores e equipamentos:** a lista mostra cada setor com a barra de progresso ("3 de 5 equipamento(s) com situação"). Toque no setor.
+3. Em cada equipamento, **um toque** na situação: Em funcionamento, Com observação, Fora de uso ou com defeito, Não localizado ou Não verificado.
+   - **Com observação** e **Fora de uso**: escreva o que encontrou e toque em "Tirar a foto do problema". No **Fora de uso**, toque também em **Parado: não pode ser usado** ou **Funciona com defeito ou limitação** (define a prioridade do chamado que nasce da ronda). A foto é obrigatória só quando há problema. Fotografe só o equipamento, nunca paciente nem documento de paciente.
+   - **Não verificado**: escreva o motivo (ex.: "em uso com paciente").
+   - **Perguntas fixas** (autoclave, lavadora, câmara fria ou refrigerador, seladora): Sim, Não ou Não se aplica; na câmara fria, a temperatura do display em °C (com vírgula). Uma resposta "Não" não combina com "Em funcionamento": marque "Com observação" ou "Fora de uso" e descreva.
+   - O cartão mostra o que falta; completo, ele fica com o sinal de feito. Calibração ou qualificação vencida aparece num selo vermelho.
+4. **Equipamento fora do cadastro**: tipo, modelo, série ou TAG (ao menos um), patrimônio e setor; ele entra na lista do setor para você marcar a situação. **Acrescentar setor**: para o setor que não estava na lista.
+5. **Achados gerais do setor** (opcional): texto e foto do setor.
+6. **Setor concluído**: leva ao próximo setor que ainda falta; com todos completos, segue para as orientações.
+7. **Orientações e resumo**: as orientações dadas à equipe e os pedidos do cliente (opcionais) e o resumo em números.
+8. **Assinatura do responsável do cliente** e **Sua assinatura**: nome completo, documento opcional. Sem quem assine, "Registrar sem assinatura" com o nome de quem acompanhou e a justificativa.
+9. **Concluí**.
+
+Sem sinal: cada toque fica guardado no aparelho na hora e entra na fila (um registro por equipamento, que é atualizado enquanto não foi enviado). O texto que você digita é guardado em menos de um segundo e também ao sair da tela. Quando o sinal volta, tudo sobe em ordem, sem registrar duas vezes.
+
+Depois do encerramento: o equipamento fora de uso vira chamado sozinho (um por equipamento, sem repetir), a calibração ou qualificação vencida vira sugestão ao Comercial, e o relatório da ronda é gerado para a gestão e para o cliente. "Enviar ao cliente por e-mail" funciona como nas outras O.S.
+
 ## 4. Sem sinal (subsolo, centro cirúrgico, estrada)
 
 - Trabalhe normalmente. Tudo o que você faz fica guardado no celular, inclusive fotos e assinatura, mesmo que o app seja

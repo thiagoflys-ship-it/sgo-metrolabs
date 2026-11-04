@@ -126,6 +126,23 @@ function SGO_ajudaTelas_Assistencia_() {
       passos: [{ titulo: 'Ver e gerar o relatório', itens: ['Escolha o mês.', 'Toque em "Relatório mensal A4" para ver, imprimir ou salvar em PDF (fica guardado na pasta dos relatórios da assistência).'] }],
       quemPode: quem
     },
+    // 03/11/2026: ronda de engenharia clínica (SGO_Assistencia_Ronda.js)
+    'assistencia_rondas': {
+      titulo: 'Rondas de engenharia clínica',
+      paraQueServe: 'Programar e acompanhar a ronda de engenharia clínica: a inspeção periódica dos equipamentos de uma unidade, setor a setor, feita pelo técnico ou engenheiro no SGO+ Campo. A ronda pode ser avulsa ou nascer sozinha de um contrato de ronda (semanal, quinzenal ou mensal). Depois de concluída, o equipamento fora de uso vira chamado, a calibração ou qualificação vencida vira sugestão ao Comercial e o relatório A4 sai em duas versões (cliente e interna). A ronda apoia o cumprimento da RDC 509/2021 e da ABNT NBR 15943 no que diz respeito à inspeção periódica e ao registro; não promete conformidade.',
+      passos: [
+        { titulo: 'Contrato de ronda (recorrente)', itens: ['Toque em "Novo contrato de ronda", escolha o cliente, a unidade, a periodicidade, a data da primeira ronda, a hora, a duração, a janela (dias de tolerância) e o responsável.', 'Marque os setores (em branco = todos os setores da unidade). Não há preço por ronda: a ronda está incluída no contrato.', 'Ao salvar, as rondas dos próximos 35 dias entram na agenda do responsável; as seguintes nascem sozinhas na rotina, nunca em dobro (uma por data prevista).', '"Pausar" e "Encerrar" pedem o motivo e cancelam as rondas futuras que ainda não começaram; "Retomar" gera de novo as datas que vierem.'] },
+        { titulo: 'Ronda avulsa', itens: ['Toque em "Agendar ronda avulsa", escolha cliente, unidade, setores, responsável, data e duração.', 'Conflito de agenda é mostrado; para seguir, marque "Agendar mesmo assim" e escreva o motivo.', 'Na lista, "Reagendar" e "Cancelar" pedem o motivo (só a ronda que ainda não começou).'] },
+        { titulo: 'Setores da unidade', itens: ['Em "Setores da unidade", escolha o cliente e a unidade para ver os setores (os cadastrados e os do campo Setor dos equipamentos) e cadastre setores novos.', 'Setor acrescentado pelo técnico durante a ronda entra no cadastro da unidade quando a ronda é encerrada.'] },
+        { titulo: 'Depois da ronda', itens: ['Abra a ronda na lista para ver setor a setor, o que falta, as fotos, os chamados abertos e as duas versões do relatório.', 'A gestão libera ou recolhe cada foto para a versão do cliente. Foto recolhida depois do encerramento só sai do documento do cliente com a revisão do relatório ("Abrir para corrigir", com motivo).', 'O equipamento fora de uso vira chamado: P2 se o técnico marcou "Parado", P3 se "Funciona com defeito ou limitação". Em "Chamado aberto pela ronda", a gestão muda essas prioridades (com motivo).', 'Em "Sugestões ao Comercial", o Comercial ou a Diretoria aceita (cria a oportunidade, com o contato, o valor e a próxima ação) ou descarta com o motivo. Nenhum orçamento é criado sozinho.'] },
+        { titulo: 'Indicadores', itens: ['Rondas realizadas e programadas por cliente, equipamentos com problema por setor, problemas que se repetem e o tempo do achado até a solução do chamado.'] }
+      ],
+      cores: [{ nome: 'Selo "Fora da janela"', significado: 'A ronda passou do último dia da janela sem ser concluída: entra na Caixa de decisões da gestão.' }, { nome: 'Selo "Programada"', significado: 'Ainda não começou.' }],
+      quemPode: [{ perfil: 'Gestão da área Técnica, Diretoria e Administrador', pode: 'Contratos de ronda, ronda avulsa, setores, reagendar, cancelar, liberar fotos e revisão do relatório.' },
+        { perfil: 'Técnico e engenheiro (perfil Técnico ou área Técnica)', pode: 'Vê as próprias rondas e faz a ronda no SGO+ Campo.' }, { perfil: 'Comercial e Diretoria', pode: 'Aceita ou descarta as sugestões da ronda.' }],
+      perguntas: [{ p: 'Quem faz a ronda?', r: 'Só técnico ou engenheiro (perfil Técnico ou área Técnica) ou a gestão. Outro colaborador não registra ronda.' },
+        { p: 'Mudei o contrato. As rondas já agendadas mudam?', r: 'Não: as já agendadas continuam como estão (reagende uma a uma, se precisar). As geradas depois seguem o contrato novo.' }]
+    },
     'assistencia_regras': {
       titulo: 'Regras da assistência',
       paraQueServe: 'Configurar prazos por prioridade, quem faz a triagem e a fila livre, contratos com prazo próprio, avisos, o interruptor "Assistência do SGO+ ligada", os tipos de serviço e os modelos de checklist. Cada mudança vira uma versão com o motivo.',
