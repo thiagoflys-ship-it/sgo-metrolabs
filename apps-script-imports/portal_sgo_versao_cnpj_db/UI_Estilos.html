@@ -4064,4 +4064,13 @@ html.sgo-movel .sgo-nav-janela:not(.sgo-visor) { top: var(--mobile-topbar-h, 64p
 .sgo-nav-aviso { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); z-index: 100690; max-width: min(92vw, 460px); padding: 12px 16px; border-radius: 10px; background: #1c1f1d; color: #FFFFFF; font-size: 14px; line-height: 1.4; box-shadow: 0 6px 20px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
 html.sgo-visor-aberto .asw-botao, html.sgo-visor-aberto .comw-botao { display: none !important; }
 .sgo-nav-aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
+
+/* 03/11/2026 — RÉGUA DO DONO: todo texto corrido de todos os módulos é justificado (com hifenização pt-BR).
+   Vale para parágrafos, itens de lista, descrições, ajudas, avisos e subtítulos explicativos dentro do conteúdo,
+   das janelas e da ajuda. Não vale para títulos, botões, rótulos, números, selos, campos nem células de tabela,
+   nem para telas vazias e blocos centralizados. Componente novo: não sobrescrever com text-align:left em texto corrido. */
+#conteudo :is(p, li, dd, blockquote, .cadx-sub, .cadx-faixa, .at-meta, .at-txt, .atv-sub, .cm-meta, .cm-txt, .cm-ajuda-campo, .cm-modo-dica, .lic-motivo, .aut-pedido, .aut-saude-caixa > div):not(td *, th *, button *, label *, .cm-vazio, .atv-vazio, [class*="vazio"], [class*="vazio"] *, [style*="text-align:center"], [style*="text-align: center"]),
+.modal :is(p, li, dd), [role="dialog"] :is(p, li, dd), .sgo-ajuda :is(p, li, dd) {
+  text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word;
+}
 </style>
