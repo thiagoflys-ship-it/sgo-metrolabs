@@ -289,42 +289,33 @@ test('pedido parado há 2 dias úteis entra na Caixa de decisões (área RH; sem
 });
 
 // ------------------------------------------------------------------ 3º esquecimento
-test('3º esquecimento no mês: resumo ao RH e à gestão (sistema e e-mail, nunca WhatsApp) e UMA sugestão no Programa de conduta', () => {
-  const a = ambiente();
-  // segunda: Ana não confirma nada; terça: pede ajuste da entrada
-  diaInteiro(a, '2026-10-19');
-  a.rodar(D('2026-10-20', '07:55'));
-  const tk = a.tokenDe(a.msgs('u_ana').filter((w) => w.quando === D('2026-10-20', '07:55'))[0]);
-  a.mudar(D('2026-10-20', '08:10'));
-  ok(a.ctx.Ponto_paginaResponderExec_(tk, 'ESQUECI', { horario: '08:00', justificativa: 'Esqueci de bater ao chegar.' }, new a.DataFalsa()));
-  const whatsAntes = a.whats.length;
-  a.rodar(D('2026-10-20', '08:15'));
-  // segunda virou "não confirmado" (4) + 1 esqueci = 5 no mês
-  assert.equal(a.marc('u_ana', '2026-10-19', 'SAIDA').SITUACAO, 'NAO_CONFIRMADO');
-  let res = a.tabelas.PONTO_RESUMOS.filter((r) => r.USUARIO_ID === 'u_ana');
-  assert.equal(res.length, 1, 'no máximo um resumo por pessoa por dia (o 5º esquecimento de hoje fica para o resumo de amanhã)');
-  assert.match(res[0].TEXTO, /^4 no mês: 4 não confirmados \(19\/10 entrada, 19\/10 almoço, 19\/10 volta do almoço, 19\/10 saída\)/);
-  assert.ok(a.tabelas.PONTO_AVISOS.some((v) => v.DESTINATARIO_ID === 'u_rh' && v.TIPO === 'RESUMO'), 'RH no sistema');
-  assert.ok(a.tabelas.PONTO_AVISOS.some((v) => v.DESTINATARIO_ID === 'u_gt' && v.TIPO === 'RESUMO'), 'gestor da área no sistema');
-  assert.ok(!a.tabelas.PONTO_AVISOS.some((v) => v.DESTINATARIO_ID === 'u_ana' && v.TIPO === 'RESUMO'), 'a própria pessoa não recebe o resumo');
-  assert.equal(a.whats.slice(whatsAntes).filter((w) => !/^sgo_ponto_(entrada|almoco|retorno|saida)$/.test(w.corpo.template.name)).length, 0, 'resumo nunca pelo WhatsApp');
-  assert.ok(a.emails.some((e) => e.to === 'rita@exemplo.test' && /esquecimentos/.test(e.subject + e.body)), 'e-mail ao RH no expediente');
-  // sugestão informativa no Programa de conduta, uma por mês
-  let sug = a.tabelas.qual_sugestao.filter((s) => s.COLABORADOR_ID === 'u_ana');
-  assert.equal(sug.length, 1);
-  assert.equal(sug[0].ORIGEM_MODULO, 'PONTO'); assert.equal(sug[0].INFORMATIVA, 'SIM'); assert.equal(sug[0].STATUS, 'PENDENTE'); assert.equal(sug[0].TIPO_CODIGO, '');
-  assert.match(sug[0].DETALHE, /nenhuma medida é automática/);
-  assert.ok(!(a.tabelas.conduta_ocorrencia || []).length, 'nunca ocorrência automática');
-  // quarta de manhã: novo total (5) -> novo resumo, mas a sugestão do mês continua uma só
-  a.rodar(D('2026-10-21', '07:00'));
-  res = a.tabelas.PONTO_RESUMOS.filter((r) => r.USUARIO_ID === 'u_ana');
-  assert.equal(res.length, 2);
-  assert.match(res[1].TEXTO, /^5 no mês: 1 "Esqueci de bater" \(20\/10 entrada\) e 4 não confirmados/);
-  assert.equal(a.whats.slice(whatsAntes).filter((w) => !/^sgo_ponto_(entrada|almoco|retorno|saida)$/.test(w.corpo.template.name)).length, 0);
-  sug = a.tabelas.qual_sugestao.filter((s) => s.COLABORADOR_ID === 'u_ana');
-  assert.equal(sug.length, 1, 'uma sugestão por pessoa por mês');
-  // PJ não conta esquecimento
-  assert.ok(!a.tabelas.PONTO_RESUMOS.some((r) => r.USUARIO_ID === 'u_caio'));
+test('avisos sem confirmação não são esquecimentos nem geram resumo ou sugestão', () => {
+ const a=ambiente();diaInteiro(a,'2026-10-19');a.rodar(D('2026-10-20','07:55'));
+ const l=ok(a.api('s_rita','mes',{mes:'2026-10'})).painel.pessoas.find(p=>p.usuarioId==='u_ana');
+ assert.equal(l.naoConfirmadas,4);assert.equal(l.esqueci,0);assert.equal(l.esquecimentos,0);assert.equal(l.resumo,false);
+ assert.equal(a.tabelas.PONTO_RESUMOS.length,0);assert.equal((a.tabelas.qual_sugestao||[]).length,0);
+ assert.equal(a.marc('u_ana','2026-10-19','SAIDA').SITUACAO,'NAO_CONFIRMADO');
+});
+test('somente três esquecimentos declarados acionam resumo; história antiga não bloqueia regra nova', () => {
+ const a=ambiente();a.ctx.Ponto_garantirAbas_();a.ctx.Conduta_setup_();a.tabelas.PONTO_RESUMOS.push({ID:'old',USUARIO_ID:'u_ana',MES:'2026-10',CHAVE:'RES|u_ana|2026-10|3',QUANTIDADE:3,SUGESTAO:'SIM',DIA:'2026-10-19',TEXTO:'histórico antigo'});
+ a.tabelas.qual_sugestao.push({ID:'oldSug',CHAVE:'PONTO|u_ana|2026-10',COLABORADOR_ID:'u_ana',ORIGEM_MODULO:'PONTO',ORIGEM_TIPO:'PONTO_ESQUECIMENTO',TITULO:'antigo',STATUS:'PENDENTE'});
+ for(const [envio,hora,marc] of [['07:55','08:00','ENTRADA'],['11:00','11:00','ALMOCO'],['12:00','12:00','RETORNO']]){
+  a.rodar(SEG(envio));const w=a.msgs('u_ana').find(w=>w.corpo.template.name==='sgo_ponto_'+marc.toLowerCase());a.mudar(SEG(hora));
+  ok(a.ctx.Ponto_paginaResponderExec_(a.tokenDe(w),'ESQUECI',{horario:hora,justificativa:'Esqueci de registrar no relógio.'},new a.DataFalsa()));
+ }
+ a.rodar(SEG('12:05'));
+ const res=a.tabelas.PONTO_RESUMOS.filter(r=>r.CHAVE.startsWith('RES_DECL|'));
+ assert.equal(res.length,1);assert.equal(res[0].QUANTIDADE,3);assert.doesNotMatch(res[0].TEXTO,/não confirmad/);
+ const sug=a.tabelas.qual_sugestao.filter(s=>s.ORIGEM_TIPO==='PONTO_ESQUECIMENTO_DECLARADO');assert.equal(sug.length,1);assert.match(sug[0].TITULO,/declarados/);
+ assert.equal(a.tabelas.PONTO_RESUMOS.find(r=>r.ID==='old').TEXTO,'histórico antigo');assert.equal(a.tabelas.qual_sugestao.find(s=>s.ID==='oldSug').STATUS,'PENDENTE');
+ a.rodar(SEG('12:10'));assert.equal(a.tabelas.PONTO_RESUMOS.filter(r=>r.CHAVE.startsWith('RES_DECL|')).length,1);
+ assert.ok(!a.tabelas.PONTO_RESUMOS.some(r=>r.USUARIO_ID==='u_beto'));
+ assert.equal((a.tabelas.conduta_ocorrencia||[]).length,0);
+});
+test('resumo antigo não sai da fila de email; registro histórico permanece',()=>{
+ const a=ambiente();a.ctx.Ponto_garantirAbas_();a.tabelas.PONTO_AVISOS.push({ID:'oldEmail',DESTINATARIO_ID:'u_rh',TIPO:'RESUMO',TITULO:'4 esquecimentos',TEXTO:'antigo',DATA:'2026-10-19T08:00:00',EMAIL_SITUACAO:'PENDENTE'});
+ a.mudar(SEG('08:30'));a.ctx.Ponto_enviarEmailsPendentes_(new a.DataFalsa());const r=a.tabelas.PONTO_AVISOS.find(v=>v.ID==='oldEmail');assert.equal(r.EMAIL_SITUACAO,'PULADO');assert.equal(r.TEXTO,'antigo');assert.equal(a.emails.length,0);
+ const aviso=ok(a.api('s_rita','iniciar',{})).avisos.find(v=>v.id==='oldEmail');assert.match(aviso.titulo,/regra anterior/);
 });
 
 // ------------------------------------------------------------------ e-mail como reserva
@@ -449,4 +440,20 @@ test('avisos individuais: salvar não muda jornada; editar jornada preserva avis
  ok(a.api('s_rita','salvarLembretes',{usuarioId:'u_ana',marcacoes:null}));
  p=ok(a.api('s_rita','pessoas',{})).pessoas.find(p=>p.id==='u_ana');
  assert.equal(p.marcacoes.length,4);assert.equal(p.entrada,'09:30');
+});
+
+test('sugestão antiga recebe contexto apenas na leitura, sem alterar decisão nem conteúdo armazenado',()=>{
+ const a=ambiente();a.ctx.Conduta_areaColaborador_=()=>({codigo:'TECNICA',nome:'Técnica'});a.ctx.Conduta_soData_=v=>v||'';
+ const s={ID:'old',CHAVE:'PONTO|u_ana|2026-10',ORIGEM_MODULO:'PONTO',ORIGEM_TIPO:'PONTO_ESQUECIMENTO',COLABORADOR_ID:'u_ana',STATUS:'PENDENTE',TITULO:'4 esquecimentos',DETALHE:'4 não confirmados',INFORMATIVA:'SIM'};const before=JSON.stringify(s);
+ const r=a.ctx.Cndq_sugestaoParaTela_(s,{u_ana:{NOME:'Ana'}},{},true,{userId:'u_rh'});assert.match(r.TITULO,/regra anterior/);assert.match(r.DETALHE,/não comprova falta/);assert.equal(JSON.stringify(s),before);assert.equal(r.STATUS,'PENDENTE');
+ const c=a.ctx.Cndq_sugestaoParaTela_({...s,ORIGEM_MODULO:'COMMAND_PONTO'},{u_ana:{NOME:'Ana'}},{},true,{userId:'u_rh'});assert.equal(c.TITULO,s.TITULO);
+});
+
+test('declarações comprovadamente já resumidas não são reenviadas ou sugeridas de novo',()=>{
+ const a=ambiente();a.ctx.Ponto_garantirAbas_();a.ctx.Conduta_setup_();
+ for(let i=0;i<3;i++)a.tabelas.PONTO_MARCACOES.push({ID:'decl'+i,USUARIO_ID:'u_ana',DIA:'2026-10-16',MARCACAO:['ENTRADA','ALMOCO','RETORNO'][i],SITUACAO:'ESQUECI'});
+ a.tabelas.PONTO_RESUMOS.push({ID:'legit',USUARIO_ID:'u_ana',MES:'2026-10',CHAVE:'RES|u_ana|2026-10|3',QUANTIDADE:3,SUGESTAO:'SIM',DIA:'2026-10-16',TEXTO:'3 no mês: 3 "Esqueci de bater" (16/10 entrada, 16/10 almoço, 16/10 retorno)'});
+ a.rodar(SEG('12:30'));assert.equal(a.tabelas.PONTO_RESUMOS.length,1);
+ a.tabelas.PONTO_MARCACOES.push({ID:'decl4',USUARIO_ID:'u_ana',DIA:'2026-10-16',MARCACAO:'SAIDA',SITUACAO:'ESQUECI'});
+ a.rodar(SEG('12:35'));assert.equal(a.tabelas.PONTO_RESUMOS.length,2);assert.equal(a.tabelas.qual_sugestao.length,0,'sugestão mensal legítima já existia');
 });

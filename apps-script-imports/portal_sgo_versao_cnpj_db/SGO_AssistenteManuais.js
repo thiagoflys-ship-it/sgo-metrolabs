@@ -4,7 +4,7 @@
  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
  */
 var SGO_ASSIST_MANUAIS = {
- "versao": "19eeb541d42a",
+ "versao": "2a47c42bcce7",
  "manuais": [
   {
    "arquivo": "MANUAL_APP_CAMPO.md",
@@ -3960,7 +3960,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "Esquecimentos e Programa de conduta",
-     "texto": "Esquecimento é cada \"Esqueci de bater\" e cada marcação lembrada e não confirmada até o fim do dia (\"não confirmado\").\n\"Não confirmado\" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão.\nA partir do 3º esquecimento no mês (configurável), o RH e a gestão da pessoa recebem um resumo no SGO+ e por e-mail (o e-mail sai dentro do expediente). Nunca pelo WhatsApp.\nO Programa de conduta recebe uma sugestão informativa por pessoa por mês (Programa de conduta > Sugestões). Nada vira ocorrência sozinho: a gestão decide se registra ou descarta, com o motivo.\nPJ e vínculo não informado não contam esquecimento."
+     "texto": "Esquecimento declarado é somente o registro \"Esqueci de bater\". Aviso não confirmado permanece informativo, não comprova falta no ponto e não entra nessa contagem.\n\"Não confirmado\" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão.\nA partir do 3º esquecimento declarado no mês (configurável), o RH e a gestão da pessoa recebem um resumo no SGO+ e por e-mail (o e-mail sai dentro do expediente). Nunca pelo WhatsApp.\nO Programa de conduta recebe uma sugestão informativa por pessoa por mês (Programa de conduta > Sugestões). Nada vira ocorrência sozinho: a gestão decide se registra ou descarta, com o motivo.\nPJ e vínculo não informado não contam esquecimento."
     },
     {
      "titulo": "Configuração (Administrador, Diretoria, Gestor, RH e Financeiro)",
@@ -3992,7 +3992,7 @@ var SGO_ASSIST_MANUAIS = {
     },
     {
      "titulo": "No celular e o voltar (01/11/2026) > Avisos por pessoa",
-     "texto": "Em Pessoas e jornadas, marque Entrada, Saída para almoço, Retorno do almoço e Saída para cada colaborador e use Salvar avisos. É possível deixar almoço e retorno desmarcados para as pessoas da matriz e marcados para as da filial. Nenhuma pessoa é agrupada automaticamente por unidade. Desmarcar todos desliga os avisos dessa pessoa. Usar padrão geral remove a escolha individual.\n\nA seleção não altera a jornada nem os registros anteriores. Ajustar permite editar os horários: entrada e saída avisam cinco minutos antes; almoço na hora; retorno após a pausa, ajustado pela saída confirmada. Continuam valendo as restrições de vínculo, piloto, expediente, folgas e afastamentos."
+     "texto": "Em Pessoas e jornadas, marque Entrada, Saída para almoço, Retorno do almoço e Saída para cada colaborador e use Salvar avisos. É possível deixar almoço e retorno desmarcados para as pessoas da matriz e marcados para as da filial. Nenhuma pessoa é agrupada automaticamente por unidade. Desmarcar todos desliga os avisos dessa pessoa. Usar padrão geral remove a escolha individual.\n\nA seleção não altera a jornada nem os registros anteriores. Ajustar permite editar os horários: entrada e saída avisam cinco minutos antes; almoço na hora; retorno após a pausa, ajustado pela saída confirmada. Continuam valendo as restrições de vínculo, piloto, expediente, folgas e afastamentos.\n\nResumos e sugestões anteriores permanecem no histórico, identificados como regra anterior, pois podiam incluir avisos sem confirmação. Novos resumos e sugestões usam somente esquecimentos declarados. E-mails pendentes da regra antiga não são reenviados. Nenhuma ocorrência ou decisão de gestão é apagada ou alterada automaticamente."
     }
    ]
   },

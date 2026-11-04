@@ -237,7 +237,7 @@ function Ponto_painelMes_(eu, mes) {
   var pessoas = Object.keys(por).map(function (k) {
     var l = por[k];
     if (l.vinculo !== 'CLT') { l.naoContam = l.esqueci + l.naoConfirmadas; }
-    l.esquecimentos = l.vinculo === 'CLT' ? l.esqueci + l.naoConfirmadas : 0;
+    l.esquecimentos = l.vinculo === 'CLT' ? l.esqueci : 0;
     l.pct = l.lembradas ? Math.round(100 * l.confirmadas / l.lembradas) : null;
     l.resumo = l.esquecimentos >= cfg.resumoAPartir;
     return l;
@@ -311,17 +311,17 @@ function Ponto_resumoMesHtml_(eu, mes) {
   var corpo = '';
   corpo += RelA4_secao_('Resumo do mês', RelA4_kpis_([
     [String(t.lembradas), 'Lembretes enviados', ''], [t.pct === null ? '—' : t.pct + '%', 'Confirmados pelo colaborador', t.pct !== null && t.pct >= 90 ? 'ok' : ''],
-    [String(t.esqueci), '"Esqueci de bater" (pedidos ao RH)', t.esqueci ? 'aviso' : ''], [String(t.naoConfirmadas), 'Não confirmados', ''],
+    [String(t.esqueci), '"Esqueci de bater" (pedidos ao RH)', t.esqueci ? 'aviso' : ''], [String(t.naoConfirmadas), 'Avisos não confirmados', ''],
     [String(t.ajPendentes), 'Pedidos de ajuste pendentes', t.ajPendentes ? 'critico' : 'ok'], [String(t.dispensadas), 'Não lembrados (ausência ou atendimento)', '']
   ]));
-  corpo += RelA4_secao_('Por colaborador', RelA4_tabela_([{ t: 'Colaborador' }, { t: 'Lembretes', num: true }, { t: 'Confirmados', num: true }, { t: 'Esqueci de bater', num: true }, { t: 'Não confirmados', num: true },
+  corpo += RelA4_secao_('Por colaborador', RelA4_tabela_([{ t: 'Colaborador' }, { t: 'Lembretes', num: true }, { t: 'Avisos confirmados', num: true }, { t: 'Esqueci de bater', num: true }, { t: 'Avisos não confirmados', num: true },
     { t: 'Não lembrados', num: true }, { t: 'Ajustes lançados', num: true }, { t: 'Ajustes pendentes', num: true }],
     pm.pessoas.map(function (l) { return [l.pessoa + (l.vinculo === 'CLT' ? '' : ' (' + (l.vinculo || 'sem vínculo') + ')'), String(l.lembradas), String(l.confirmadas), String(l.esqueci), String(l.naoConfirmadas), String(l.dispensadas), String(l.ajLancados), String(l.ajPendentes)]; }),
     { legenda: 'Marcações do mês por colaborador', vazio: 'Nenhuma marcação registrada no mês.' }));
   corpo += RelA4_secao_('Pedidos de ajuste do mês', RelA4_tabela_([{ t: 'Código' }, { t: 'Colaborador' }, { t: 'Dia', cen: true }, { t: 'Marcação' }, { t: 'Horário informado', cen: true }, { t: 'Situação' }],
     aj.map(function (a) { return [a.codigo, a.pessoa, a.diaBr, a.rotulo, a.horario, a.situacaoTexto]; }), { legenda: 'Pedidos de ajuste ("Esqueci de bater") do mês', vazio: 'Nenhum pedido de ajuste no mês.' }));
   corpo += RelA4_secao_('Como ler este resumo', RelA4_paragrafos_('O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O assistente só lembra e recebe a confirmação de um toque.\n' +
-    '"Não confirmado" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão. Nenhuma medida é tomada automaticamente; a partir do ' + cfg.resumoAPartir + 'º esquecimento no mês o RH e a gestão recebem um resumo e o Programa de conduta recebe uma sugestão, que a gestão decide.\n' +
+    '"Não confirmado" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão. Nenhuma medida é tomada automaticamente; a partir do ' + cfg.resumoAPartir + 'º esquecimento declarado no mês (somente "Esqueci de bater") o RH e a gestão recebem um resumo e o Programa de conduta recebe uma sugestão, que a gestão decide.\n' +
     'Só colaboradores CLT recebem os lembretes. Este resumo não traz justificativas, evidências nem contatos; os detalhes de cada pedido estão no SGO+, em Assistente do ponto.'));
   return RelA4_documento_({ titulo: 'Resumo mensal do assistente do ponto', subtitulo: Pto_mesNome_(mes), tituloCurto: 'Assistente do ponto', tituloArquivo: 'Resumo do ponto', sigla: 'PTO',
     identificacao: Pto_mesNome_(mes), rotuloIdentificacao: 'Mês', emitidoPor: eu.nome, corpo: corpo, capa: false, sumario: false });
@@ -351,7 +351,7 @@ function Ponto_acao_(eu, acao, d) {
       return { papel: eu.papel, ligado: cfg.ligado, verMenu: cfg.ligado || eu.verTodos || eu.configurar, configurar: eu.configurar, tratar: eu.tratar, pessoas: eu.verTodos, equipe: eu.verTodos || eu.gestor };
     case 'iniciar': {
       var avisos = Pto_ler_(PONTO_ABAS.AVISOS).filter(function (v) { return Pto_s_(v.DESTINATARIO_ID) === eu.id && !Pto_s_(v.LIDO_EM); })
-        .map(function (v) { return { id: Pto_s_(v.ID), titulo: Pto_s_(v.TITULO), texto: Pto_s_(v.TEXTO), data: Pto_s_(v.DATA).replace('T', ' ').slice(0, 16) }; }).reverse().slice(0, 30);
+        .map(function (v) { return { id: Pto_s_(v.ID), titulo: v.TIPO === 'RESUMO' ? 'Resumo histórico do ponto (regra anterior)' : Pto_s_(v.TITULO), texto: (v.TIPO === 'RESUMO' ? 'Este resumo foi gerado antes da separação e pode incluir avisos não confirmados. Não comprova falta no ponto. ' : '') + Pto_s_(v.TEXTO), data: Pto_s_(v.DATA).replace('T', ' ').slice(0, 16) }; }).reverse().slice(0, 30);
       us = Ponto_usuarios_();
       var pend = eu.tratar ? Pto_ler_(PONTO_ABAS.AJUSTES).filter(function (a) { return Pto_up_(a.SITUACAO) === 'PENDENTE'; }).length : 0;
       var exp = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : { ini: '08:00', fim: '17:30', feriados: '' };

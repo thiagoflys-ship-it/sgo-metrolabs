@@ -165,9 +165,9 @@ function Ponto_enviarLembrete_(R, u, marc, prev, rowId, token) {
 // ------------------------------------------------------------
 // ESQUECIMENTOS E RESUMO (3º no mês)
 // ------------------------------------------------------------
-/** Esquecimentos da pessoa no mês: "Esqueci de bater" e não confirmados, em ordem. */
+/** Esquecimentos declarados no mês: somente "Esqueci de bater", em ordem. */
 function Ponto_esquecimentos_(linhas, uid, mes) {
-  return linhas.filter(function (r) { var s = Pto_up_(r.SITUACAO); return Pto_s_(r.USUARIO_ID) === uid && Pto_mes_(Pto_dia_(r.DIA)) === mes && (s === 'ESQUECI' || s === 'NAO_CONFIRMADO'); })
+  return linhas.filter(function (r) { var s = Pto_up_(r.SITUACAO); return Pto_s_(r.USUARIO_ID) === uid && Pto_mes_(Pto_dia_(r.DIA)) === mes && s === 'ESQUECI'; })
     .sort(function (a, b) { return (Pto_dia_(a.DIA) + PONTO_ORDEM.indexOf(Pto_up_(a.MARCACAO))).localeCompare(Pto_dia_(b.DIA) + PONTO_ORDEM.indexOf(Pto_up_(b.MARCACAO))); });
 }
 /** "3 no mês: 1 "Esqueci de bater" (19/10 entrada) e 2 não confirmados (20/10 saída, 21/10 almoço)". */
@@ -181,28 +181,34 @@ function Ponto_textoRegistros_(l) {
 }
 
 /** A partir do Nº esquecimento no mês: um resumo por novo total (no máximo um por pessoa por dia) e uma sugestão no Conduta por mês. */
+function Ponto_declaradosNoResumoAntigo_(r) {
+  var m = /(\d+)\s+"Esqueci de bater"/.exec(Pto_s_(r.TEXTO));
+  return m ? Number(m[1]) : 0;
+}
 function Ponto_resumos_(R) {
   var hoje = R.p.dia, meses = [Pto_mes_(hoje)], ontem = Pto_somarDias_(hoje, -1);
   if (Pto_mes_(ontem) !== meses[0]) meses.push(Pto_mes_(ontem));
   var linhas = Pto_ler_(PONTO_ABAS.MARCACOES), resumos = Pto_ler_(PONTO_ABAS.RESUMOS);
   var uids = {};
-  linhas.forEach(function (r) { var s = Pto_up_(r.SITUACAO); if (s === 'ESQUECI' || s === 'NAO_CONFIRMADO') uids[Pto_s_(r.USUARIO_ID)] = 1; });
+  linhas.forEach(function (r) { var s = Pto_up_(r.SITUACAO); if (s === 'ESQUECI') uids[Pto_s_(r.USUARIO_ID)] = 1; });
   Object.keys(uids).forEach(function (uid) {
     var u = R.us[uid];
     if (!u || u.vinculo !== 'CLT') return;   // PJ e vínculo vazio não contam esquecimento
     meses.forEach(function (mes) {
       var l = Ponto_esquecimentos_(linhas, uid, mes);
       if (l.length < R.cfg.resumoAPartir) return;
-      var chave = 'RES|' + uid + '|' + mes + '|' + l.length, doUid = resumos.filter(function (x) { return Pto_s_(x.USUARIO_ID) === uid; });
+      var antigos = resumos.filter(function (x) { return Pto_s_(x.USUARIO_ID) === uid && Pto_s_(x.MES) === mes && Pto_s_(x.CHAVE).indexOf('RES|') === 0; });
+      if (antigos.some(function (x) { return Ponto_declaradosNoResumoAntigo_(x) >= l.length; })) return; // declaração já informada: não repetir
+      var chave = 'RES_DECL|' + uid + '|' + mes + '|' + l.length, doUid = resumos.filter(function (x) { return Pto_s_(x.USUARIO_ID) === uid && Pto_s_(x.CHAVE).indexOf('RES_DECL|') === 0; });
       if (doUid.some(function (x) { return Pto_s_(x.CHAVE) === chave; })) return;
       if (doUid.some(function (x) { return Pto_dia_(x.DIA) === hoje; })) return;   // no máximo um resumo por pessoa por dia
       var reg = Ponto_textoRegistros_(l), destinos = [];
       Ponto_destinosRh_(R.cfg, R.us).concat(Ponto_gestaoDe_(uid, R.us)).forEach(function (id) { if (id !== uid && destinos.indexOf(id) < 0) destinos.push(id); });
-      var titulo = 'Assistente do ponto: ' + u.nome + ' — ' + l.length + ' esquecimentos em ' + Pto_mesNome_(mes);
+      var titulo = 'Assistente do ponto: ' + u.nome + ' — ' + l.length + ' esquecimentos declarados em ' + Pto_mesNome_(mes);
       var texto = reg + '.\n\n"Não confirmado" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão. Nenhuma medida é tomada automaticamente. ' +
         'Os detalhes estão no SGO+, em Assistente do ponto > Mês. Se for o caso, a gestão decide no Programa de conduta (a sugestão fica em Programa de conduta > Sugestões).';
-      destinos.forEach(function (id) { Ponto_avisar_(id, 'RESUMO', titulo, texto, { tipo: 'MES', id: mes }, true); });
-      var jaSugerido = doUid.some(function (x) { return Pto_s_(x.MES) === mes && /^SIM/.test(Pto_s_(x.SUGESTAO)); });
+      destinos.forEach(function (id) { Ponto_avisar_(id, 'RESUMO_DECLARADO', titulo, texto, { tipo: 'MES', id: mes }, true); });
+      var jaSugerido = doUid.some(function (x) { return Pto_s_(x.MES) === mes && /^SIM/.test(Pto_s_(x.SUGESTAO)); }) || antigos.some(function (x) { return /^SIM/.test(Pto_s_(x.SUGESTAO)) && Ponto_declaradosNoResumoAntigo_(x) >= R.cfg.resumoAPartir; });
       var sug = jaSugerido ? 'SIM (já sugerido neste mês)' : '';
       if (!jaSugerido) {
         try {
@@ -228,6 +234,7 @@ function Ponto_enviarEmailsPendentes_(quando) {
     var porPessoa = {}, limite = Pto_somarDias_(Pto_partes_(quando || new Date()).dia, -5), velhos = [];
     Pto_ler_(PONTO_ABAS.AVISOS).forEach(function (v) {
       if (Pto_s_(v.EMAIL_SITUACAO) !== 'PENDENTE') return;
+      if (Pto_s_(v.TIPO) === 'RESUMO') { SGO_DATA.update(PONTO_ABAS.AVISOS, v.ID, { EMAIL_SITUACAO: 'PULADO', EMAIL_EM: Pto_agoraIso_(quando || new Date()), EMAIL_MOTIVO: 'Resumo da regra anterior; avisos não confirmados não contam como esquecimento declarado.' }); return; }
       if (Pto_dia_(v.DATA) && Pto_dia_(v.DATA) < limite) { velhos.push(v); return; }
       (porPessoa[Pto_s_(v.DESTINATARIO_ID)] = porPessoa[Pto_s_(v.DESTINATARIO_ID)] || []).push(v);
     });

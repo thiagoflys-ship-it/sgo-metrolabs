@@ -47,7 +47,7 @@ function SGO_ajudaTelas_Ponto_() {
       perguntas: [
         { p: 'Posso receber o lembrete duas vezes?', r: 'Não. Cada marcação tem um lembrete só, mesmo sem confirmação. Nada sai antes do seu horário de entrada menos 5 minutos, depois do seu horário de saída, em fim de semana ou feriado.' },
         { p: 'O assistente sabe onde eu estou?', r: 'Não. O SGO+ não usa localização. A única informação extra do pedido de ajuste é o horário do check-in e do check-out do Auvo naquele dia.' },
-        { p: 'Esquecer de confirmar dá punição?', r: 'Não. A partir do 3º esquecimento no mês, o RH e a sua gestão recebem um resumo e o Programa de conduta recebe uma sugestão. Nenhuma medida é automática: quem decide é a gestão.' },
+        { p: 'Esquecer de confirmar dá punição?', r: 'Não. Não confirmar um aviso não conta como esquecimento e não comprova falta. A partir do 3º esquecimento declarado no mês ("Esqueci de bater"), o RH e a sua gestão recebem um resumo e o Programa de conduta recebe uma sugestão. Nenhuma medida é automática: quem decide é a gestão.' },
         { p: 'Estou em atendimento no cliente na hora da saída. Vou receber?', r: 'Não. Com o check-in aberto no Auvo, o assistente não lembra. Bata a saída quando terminar.' }
       ],
       secoesManual: [
@@ -57,7 +57,7 @@ function SGO_ajudaTelas_Ponto_() {
         ] },
         { titulo: 'O que vai para o RH e para a gestão', paragrafos: [
           'O pedido de ajuste aparece para o RH no Início, na aba "Pedidos de ajuste" e, se ligado, como atividade em Minhas atividades. Parado há 2 dias úteis, entra na Caixa de decisões da gestão da área RH (sem gestor, da Diretoria).',
-          'O resumo do 3º esquecimento vai só pelo SGO+ e por e-mail, nunca pelo WhatsApp. O e-mail sai dentro do expediente.'
+          'O resumo do 3º esquecimento declarado vai só pelo SGO+ e por e-mail, nunca pelo WhatsApp. O e-mail sai dentro do expediente.'
         ] }
       ]
     }

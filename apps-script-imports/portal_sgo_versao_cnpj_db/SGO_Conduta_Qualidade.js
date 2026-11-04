@@ -434,7 +434,7 @@ function Cndq_sugestaoParaTela_(s, usuarios, nomesAreas, podeDecidir, sessao) {
     ORIGEM_ID: SGO_UTILS.safe(s.ORIGEM_ID), ORIGEM_ROTULO: SGO_UTILS.safe(s.ORIGEM_ROTULO), ORIGEM_TELA: SGO_UTILS.safe(s.ORIGEM_TELA) || o.tela, ORIGEM_LINK: SGO_UTILS.safe(s.ORIGEM_LINK),
     COLABORADOR_ID: String(s.COLABORADOR_ID), COLABORADOR_NOME: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(s.COLABORADOR_NOME), AREA: ar.codigo, AREA_NOME: ar.nome,
     DATA_FATO: Conduta_soData_(s.DATA_FATO), DETECTADA_EM: Conduta_soData_(s.DETECTADA_EM), TIPO_CODIGO: SGO_UTILS.safeUpper(s.TIPO_CODIGO),
-    TITULO: SGO_UTILS.safe(s.TITULO), DETALHE: SGO_UTILS.safe(s.DETALHE), INFORMATIVA: SGO_UTILS.safeUpper(s.INFORMATIVA) === 'SIM',
+    TITULO: s.ORIGEM_MODULO === 'PONTO' && s.ORIGEM_TIPO === 'PONTO_ESQUECIMENTO' ? 'Resumo histórico do ponto (regra anterior)' : SGO_UTILS.safe(s.TITULO), DETALHE: (s.ORIGEM_MODULO === 'PONTO' && s.ORIGEM_TIPO === 'PONTO_ESQUECIMENTO' ? 'Histórico anterior à separação: a quantidade pode incluir avisos não confirmados. Isso não comprova falta no ponto. Confira os registros antes de decidir. ' : '') + SGO_UTILS.safe(s.DETALHE), INFORMATIVA: SGO_UTILS.safeUpper(s.INFORMATIVA) === 'SIM',
     DECIDIDA_POR_NOME: SGO_UTILS.safe(s.DECIDIDA_POR_NOME), DECIDIDA_EM: SGO_UTILS.safe(s.DECIDIDA_EM).substring(0, 10), MOTIVO: SGO_UTILS.safe(s.MOTIVO), OCORRENCIA_ID: SGO_UTILS.safe(s.OCORRENCIA_ID),
     // A pessoa envolvida não decide a sugestão sobre ela mesma (mesma regra da homologação).
     PODE_DECIDIR: podeDecidir && status === 'PENDENTE' && !envolvido && (SGO_UTILS.safeUpper(s.ORIGEM_MODULO) !== 'GESTAO' || Conduta_ehDiretoriaOuDono_(sessao)),
@@ -550,13 +550,13 @@ function Conduta_sugestaoDoPonto_(dados) {
   var mes = /^\d{4}-\d{2}$/.test(String(dados.mes || '')) ? String(dados.mes) : Conduta_competenciaDe_(Conduta_hojeISO_());
   // 21/10/2026: o assistente nativo do SGO+ (origem PONTO) gera UMA sugestão por pessoa por mês; o do COMMAND segue como era
   var nativo = String(dados.origem || '').toUpperCase() === 'PONTO';
-  var chave = nativo ? 'PONTO|' + uid + '|' + mes : 'COMMAND_PONTO|' + uid + '|' + mes + '|' + (Number(dados.quantidade) || 3);
+  var chave = nativo ? 'PONTO_DECLARADO|' + uid + '|' + mes : 'COMMAND_PONTO|' + uid + '|' + mes + '|' + (Number(dados.quantidade) || 3);
   if (Cndq_ler_(CNDQ_SHEETS.SUGESTAO).some(function (s) { return String(s.CHAVE) === chave; })) return { ok: true, repetida: true };
   var hoje = Conduta_hojeISO_();
-  SGO_DATA.insert(CNDQ_SHEETS.SUGESTAO, { CHAVE: chave, ORIGEM_MODULO: nativo ? 'PONTO' : 'COMMAND_PONTO', ORIGEM_TIPO: 'PONTO_ESQUECIMENTO', ORIGEM_ID: SGO_UTILS.safe(dados.chave) || (uid + '|' + mes),
+  SGO_DATA.insert(CNDQ_SHEETS.SUGESTAO, { CHAVE: chave, ORIGEM_MODULO: nativo ? 'PONTO' : 'COMMAND_PONTO', ORIGEM_TIPO: nativo ? 'PONTO_ESQUECIMENTO_DECLARADO' : 'PONTO_ESQUECIMENTO', ORIGEM_ID: SGO_UTILS.safe(dados.chave) || (uid + '|' + mes),
     ORIGEM_ROTULO: 'Resumo do ponto de ' + Conduta_nomeCompetencia_(mes), ORIGEM_TELA: nativo ? 'ponto' : '', ORIGEM_LINK: '',
     COLABORADOR_ID: uid, COLABORADOR_NOME: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), DATA_FATO: hoje, TIPO_CODIGO: '',
-    TITULO: (Number(dados.quantidade) || 3) + ' esquecimentos de ponto em ' + Conduta_nomeCompetencia_(mes) + ' (informativo)',
+    TITULO: (Number(dados.quantidade) || 3) + (nativo ? ' esquecimentos declarados de ponto em ' : ' esquecimentos de ponto em ') + Conduta_nomeCompetencia_(mes) + ' (informativo)',
     DETALHE: String(dados.texto || '').slice(0, 1200) + ' Informativo do Assistente do ponto: nenhuma medida é automática. Se houver falta de comunicação (RH-01) ou atraso recorrente (RH-02), registre; senão, descarte com o motivo.',
     INFORMATIVA: 'SIM', STATUS: 'PENDENTE', DETECTADA_EM: hoje });
   try { if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_(); } catch (e) {}
