@@ -703,7 +703,8 @@
         LIC.fichaAcao = "";
         var op = d.op || {};
         if (["RADAR", "ANALISE", "DECISAO"].indexOf(op.situacao) >= 0) Lic_janelaMotivo_("descartar", id, null, true);
-        else Lic_toast_("Esta oportunidade está \"" + (op.situacaoNome || op.situacao || "") + "\": o descarte vale só no Radar, em análise ou em decisão. Nada foi alterado.", "erro");
+        else if (op.situacao === "DESCARTADA") Lic_toast_("Esta oportunidade já foi descartada" + (op.descartePor ? " por " + op.descartePor : "") + (op.descarteEm ? " em " + Lic_dataHora_(op.descarteEm) : "") + (op.descarteMotivo ? " (motivo: " + op.descarteMotivo + ")" : "") + ". Os alertas pendentes dela já foram cancelados; nada mais a fazer.", "erro");
+        else Lic_toast_("Esta oportunidade está \"" + (op.situacaoNome || op.situacao || "") + "\": o descarte vale só no Radar, em análise ou em decisão, e nada foi alterado. Registre a decisão na etapa em que ela está.", "erro");
       }
     }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, function () { Lic_renderFicha_(id); }); });
   }

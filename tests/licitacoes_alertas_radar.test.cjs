@@ -17,7 +17,8 @@ const C0232 = (extra) => OP('op_0232', Object.assign({ CODIGO: 'LIC-2026-0232', 
 // candidata do Radar com o fim das propostas daqui a 10 dias: fora da janela de 72 h do resumo
 const LONGE = () => OP('op_0300', { CODIGO: 'LIC-2026-0300', ORGAO_NOME: 'PREFEITURA MUNICIPAL DE TESTE', UF: 'GO', MUNICIPIO: 'Anápolis', NUMERO_CONTROLE_PNCP: '22222222000122-1-000300/2026',
   ENCERRAMENTO_PROPOSTAS: '2026-11-13T09:00:00', ENCERRAMENTO_ISO: '2026-11-13T12:00:00.000Z' });
-const resumos = (a, de) => a.emails.slice(de || 0).filter((m) => /candidatas? do Radar com prazo/.test(m.subject));
+const resumos = (a, de) => a.emails.slice(de || 0).filter((m) => /candidatas? do Radar com prazo até/.test(m.subject));
+const novas = (a, de) => a.emails.slice(de || 0).filter((m) => /nova candidata do Radar com prazo antes do próximo resumo/.test(m.subject));
 const individuais = (a, codigo, de) => a.emails.slice(de || 0).filter((m) => m.subject.includes('Licitação ' + codigo));
 const salvar = (a, campos, motivo) => a.api('s_thi', 'alertasCfgSalvar', { campos: campos, motivo: motivo || 'teste das candidatas do Radar' });
 
@@ -31,7 +32,7 @@ test('caso LIC-2026-0232: candidata do Radar não gera aviso individual (nem 1 d
   const rs = resumos(a);
   assert.deepEqual(rs.map((m) => m.to).sort(), ['charles@exemplo.test', 'thiago@exemplo.test'], 'para os destinatários dos alertas');
   const m = rs[0];
-  assert.match(m.subject, /^(SGO\+ \| )?Licitações: 1 candidata do Radar com prazo nas próximas 72 h \(resumo de /);
+  assert.match(m.subject, /^(SGO\+ \| )?Licitações: 1 candidata do Radar com prazo até sáb 07\/11\/2026 08:00 \(resumo de ter 03\/11\/2026\)$/, 'até o próximo resumo (quarta 08:00) e mais 72 h');
   assert.match(m.body, /LIC-2026-0232 · FUNDACAO ESTATAL DE SAUDE DO PANTANAL \(Campo Grande\/MS\)/, 'órgão e UF');
   assert.match(m.body, /Objeto: Aquisição de material de escritório/);
   assert.match(m.body, /Fim das propostas: .*04\/11\/2026.*faltam 1 dia/);
@@ -66,7 +67,7 @@ test('resumo: vazio não sai; fim de semana fica para o próximo dia útil; a ho
   a.rodada('2026-10-26T09:00:00-03:00');
   assert.equal(a.hist('RESUMO_RADAR_VAZIO').length, 1, 'o dia fica conferido uma vez');
   // sábado e domingo: nada; segunda às 08:00: sai
-  const b = ambiente({ ops: [C0232({ ENCERRAMENTO_PROPOSTAS: '2026-10-27T12:00:00', ENCERRAMENTO_ISO: '2026-10-27T15:00:00.000Z' })], agora: '2026-10-23T20:00:00-03:00' });
+  const b = ambiente({ ops: [C0232({ ENCERRAMENTO_PROPOSTAS: '2026-10-27T12:00:00', ENCERRAMENTO_ISO: '2026-10-27T15:00:00.000Z' })], agora: '2026-10-24T00:30:00-03:00' });
   b.rodada();
   const sab = b.rodada('2026-10-24T08:00:30-03:00'); b.rodada('2026-10-25T08:00:30-03:00');
   assert.equal(resumos(b).length, 0); assert.match(sab.resumoRadar.motivo, /não é dia útil.*próximo dia útil, às 08:00/);
@@ -150,7 +151,8 @@ test('descartar cancela na hora todos os alertas pendentes; "Não vou participar
   assert.equal(a.zap().slice(z0).filter((w) => JSON.stringify(w.corpo).includes('IMBEL')).length, 0, 'nada sai da descartada'); assert.equal(individuais(a, 'LIC-2026-imbe', e0).length, 0);
   // o mesmo link depois do descarte: abre a ficha e diz que já foi descartada (nada a fazer)
   const de = a.ctx.SGO_AvisosGestao_api('s_cha', 'abrir', { aviso: nao });
-  assert.equal(de.ok, true); assert.equal(de.tela.acao, undefined); assert.match(de.message, /já foi descartada por CHARLES DIRETOR TESTE.*nada mais a fazer/);
+  // revisão de bec32d3: uma mensagem só, a da ficha (ela confere a situação e diz por quem e quando foi descartada)
+  assert.equal(de.ok, true); assert.equal(de.tela.acao, 'descartar'); assert.equal(de.message, '');
   // pelo código da oportunidade (link do resumo do Radar)
   const p = a.ctx.SGO_AvisosGestao_api('s_cha', 'abrir', { aviso: 'LIC-2026-0232-NAO' });
   assert.deepEqual([p.tela.id, p.tela.acao], ['op_0232', 'descartar']);
@@ -160,7 +162,9 @@ test('descartar cancela na hora todos os alertas pendentes; "Não vou participar
   // fora do Radar, da análise e da decisão: abre a ficha e diz por quê (nada é alterado)
   a.tabelas.LIC_OPORTUNIDADES.find((l) => l.ID === 'op_0232').SITUACAO = 'PROPOSTA';
   const pr = a.ctx.SGO_AvisosGestao_api('s_cha', 'abrir', { aviso: 'LIC-2026-0232-NAO' });
-  assert.equal(pr.tela.acao, undefined); assert.match(pr.message, /o descarte vale só no Radar, em análise ou em decisão, e nada foi alterado/);
+  assert.equal(pr.tela.acao, 'descartar'); assert.equal(pr.message, '');
+  const telaJs = ler('JS_Licitacoes.html');
+  assert.ok(telaJs.includes('Esta oportunidade já foi descartada" + (op.descartePor')); assert.ok(telaJs.includes('o descarte vale só no Radar, em análise ou em decisão, e nada foi alterado'));
 });
 
 test('regras dos alertas: "alertas individuais para candidatas do Radar" (padrão desligado) e a hora do resumo (padrão 08:00), com versão, motivo e histórico', () => {
@@ -198,4 +202,68 @@ test('regras dos alertas: "alertas individuais para candidatas do Radar" (padrã
   for (const t of ['licARadInd', 'licARadHora', 'Alertas individuais para candidatas do Radar', 'Não vou participar']) assert.ok(tela.includes(t), t);
   const docs = [ler('SGO_Ajuda_Licitacoes.js'), fs.readFileSync(path.join(__dirname, '../docs/MANUAL_MODULO_LICITACOES.md'), 'utf8'), ler('SGO_AssistenteManuais.js')];
   for (const d of docs) { assert.match(d, /resumo diário/); assert.match(d, /Não vou participar/); }
+});
+
+test('revisão de bec32d3, 1: falha depois do envio (ou execução que caiu com a pessoa "Enviando") nunca gera segundo resumo no dia', () => {
+  const a = ambiente({ ops: [C0232()], agora: '2026-11-02T20:00:00-03:00' });
+  a.rodada();
+  // o e-mail sai e a execução cai logo depois (o notificador lança depois de registrar o envio)
+  const orig = a.ctx.SGO_notificar_;
+  a.ctx.SGO_notificar_ = function () { orig.apply(this, arguments); throw new Error('a execução caiu depois do envio'); };
+  a.rodada('2026-11-03T08:00:30-03:00');
+  a.ctx.SGO_notificar_ = orig;
+  assert.equal(resumos(a).length, 2, 'saiu uma vez para cada um');
+  a.rodada('2026-11-03T08:05:00-03:00'); a.rodada('2026-11-03T08:20:00-03:00'); a.rodada('2026-11-03T09:00:00-03:00');
+  assert.equal(resumos(a).length, 2, 'antes: a nova tentativa mandava o mesmo resumo de novo');
+  const st = JSON.parse(a.props.LIC_RESUMO_RADAR);
+  assert.ok(['u_cha', 'u_thi'].every((u) => st.pessoas[u].s === 'ENVIADO' && st.pessoas[u].recuperado), JSON.stringify(st));
+  assert.equal(a.hist('RESUMO_RADAR_RECUPERADO').length, 2);
+  // pessoa parada em "Enviando" (a execução caiu antes de gravar): espera 10 minutos, confere o registro e não repete
+  const b = ambiente({ ops: [C0232()], agora: '2026-11-02T20:00:00-03:00' });
+  b.rodada(); b.rodada('2026-11-03T08:00:30-03:00');
+  assert.equal(resumos(b).length, 2);
+  const sb = JSON.parse(b.props.LIC_RESUMO_RADAR); sb.pessoas.u_cha = { s: 'ENVIANDO', em: '2026-11-03T11:00:30.000Z', t: 1 }; b.props.LIC_RESUMO_RADAR = JSON.stringify(sb);
+  b.rodada('2026-11-03T08:05:00-03:00');
+  assert.equal(resumos(b).length, 2, 'ENVIANDO recente: espera');
+  b.rodada('2026-11-03T08:20:00-03:00');
+  assert.equal(resumos(b).length, 2, 'ENVIANDO parado: o registro mostra que saiu');
+  assert.equal(JSON.parse(b.props.LIC_RESUMO_RADAR).pessoas.u_cha.s, 'ENVIADO');
+  // falha de verdade (nada saiu): tenta de novo e sai uma vez
+  const c = ambiente({ ops: [C0232()], agora: '2026-11-02T20:00:00-03:00' });
+  c.rodada();
+  const oc = c.ctx.SGO_notificar_;
+  c.ctx.SGO_notificar_ = () => ({ ok: false, motivo: 'serviço de e-mail fora do ar' });
+  c.rodada('2026-11-03T08:00:30-03:00');
+  c.ctx.SGO_notificar_ = oc;
+  assert.equal(resumos(c).length, 0); assert.equal(c.hist('RESUMO_RADAR_FALHOU').length, 2);
+  c.rodada('2026-11-03T08:05:00-03:00'); c.rodada('2026-11-03T08:10:00-03:00');
+  assert.equal(resumos(c).length, 2, 'a nova tentativa sai uma vez');
+});
+
+test('revisão de bec32d3, 2: o resumo cobre até o próximo resumo mais 72 h (na sexta, o fim de semana e a segunda); nova candidata com prazo antes do próximo resumo recebe UM e-mail', () => {
+  const SEG = C0232({ ENCERRAMENTO_PROPOSTAS: '2026-11-02T15:00:00', ENCERRAMENTO_ISO: '2026-11-02T18:00:00.000Z' });
+  const SAB = OP('op_0240', { CODIGO: 'LIC-2026-0240', ORGAO_NOME: 'HOSPITAL REGIONAL DE TESTE', UF: 'GO', MUNICIPIO: 'Rio Verde', NUMERO_CONTROLE_PNCP: '33333333000133-1-000240/2026', ENCERRAMENTO_PROPOSTAS: '2026-10-31T15:00:00', ENCERRAMENTO_ISO: '2026-10-31T18:00:00.000Z' });
+  const a = ambiente({ ops: [SEG, SAB], agora: '2026-10-30T06:00:00-03:00' });
+  a.rodada();
+  a.rodada('2026-10-30T08:00:30-03:00');
+  const sx = resumos(a);
+  assert.equal(sx.length, 2);
+  assert.ok(sx[0].body.includes('LIC-2026-0232'), 'segunda 15:00: antes ficava fora das 72 h da sexta 08:00');
+  assert.ok(sx[0].body.includes('LIC-2026-0240'));
+  assert.match(sx[0].body, /até .* \(o próximo resumo, .* e mais 72 horas\)/);
+  // sábado: chega uma candidata com o fim no domingo (antes do próximo resumo) e outra com o fim na quarta
+  const DOM = OP('op_0250', { CODIGO: 'LIC-2026-0250', ORGAO_NOME: 'SECRETARIA DE SAUDE DE TESTE', UF: 'DF', MUNICIPIO: 'Brasília', NUMERO_CONTROLE_PNCP: '44444444000144-1-000250/2026', ENCERRAMENTO_PROPOSTAS: '2026-11-01T18:00:00', ENCERRAMENTO_ISO: '2026-11-01T21:00:00.000Z' });
+  const QUA = OP('op_0260', { CODIGO: 'LIC-2026-0260', ORGAO_NOME: 'UNIVERSIDADE DE TESTE', UF: 'MG', MUNICIPIO: 'Uberlândia', NUMERO_CONTROLE_PNCP: '55555555000155-1-000260/2026', ENCERRAMENTO_PROPOSTAS: '2026-11-04T18:00:00', ENCERRAMENTO_ISO: '2026-11-04T21:00:00.000Z' });
+  a.tabelas.LIC_OPORTUNIDADES.push(DOM, QUA);
+  const z0 = a.zap().length;
+  a.rodada('2026-10-31T10:00:00-03:00');
+  const nv = novas(a);
+  assert.deepEqual(nv.map((m) => m.to).sort(), ['charles@exemplo.test', 'thiago@exemplo.test'], 'um e-mail por pessoa');
+  assert.ok(nv.every((m) => m.subject.includes('LIC-2026-0250') && /Não vou participar/.test(m.body) && /uma vez só: sem WhatsApp, sem lembrete e sem escalonamento/.test(m.body)));
+  assert.equal(a.zap().length, z0, 'sem WhatsApp');
+  a.rodada('2026-10-31T10:05:00-03:00'); a.rodada('2026-10-31T16:00:00-03:00'); a.rodada('2026-11-01T09:00:00-03:00');
+  assert.equal(novas(a).length, 2, 'uma vez por oportunidade e pessoa');
+  assert.ok(!novas(a).some((m) => /LIC-2026-0260|LIC-2026-0240|LIC-2026-0232/.test(m.subject)), 'a da quarta vai no próximo resumo; as que estavam no resumo de sexta não repetem');
+  assert.equal(a.hist('RADAR_NOVA_CANDIDATA').length, 2);
+  assert.equal(a.al({ OPORTUNIDADE_ID: 'op_0250' }).length, 0, 'sem linha de alerta (nada para lembrar ou escalonar)');
 });

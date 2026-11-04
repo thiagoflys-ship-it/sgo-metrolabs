@@ -104,6 +104,8 @@ var LIC_ALERTAS_PADRAO = {
 };
 /** Resumo diário das candidatas do Radar: prazo nas próximas 72 h; até 3 tentativas por pessoa no dia (e-mail que falhou). */
 var LIC_RADAR_JANELA_MS = 72 * 3600e3, LIC_RADAR_PROP = 'LIC_RESUMO_RADAR', LIC_RADAR_TENTATIVAS = 3;
+// revisão de bec32d3: referência da "nova candidata" (primeira conferência do resumo do dia) e o estado dos avisos únicos
+var LIC_RADAR_ULTIMO_PROP = 'LIC_RESUMO_RADAR_ULTIMO', LIC_RADAR_NOVAS_PROP = 'LIC_RADAR_NOVAS';
 var LIC_RADAR_HORA_MIN = '06:00', LIC_RADAR_HORA_MAX = '20:00';
 /** Situações em que a Diretoria ainda pode descartar (e o link "Não vou participar" vale). */
 var LIC_SITUACOES_DESCARTE = ['RADAR', 'ANALISE', 'DECISAO'];
@@ -1469,13 +1471,23 @@ function Lic_partesSp_(ms) {
   var t = new Date(ms - 3 * 3600e3), s = t.getUTCDay();
   return { dia: t.toISOString().slice(0, 10), hora: t.toISOString().slice(11, 16), motivoDia: s === 0 ? 'domingo' : s === 6 ? 'sábado' : '' };
 }
+/** Primeiro instante do resumo (hora das regras, dia útil) depois de ms. */
+function Lic_radarProximoResumoMs_(ms, cfg) {
+  var hora = Lic_radarResumoHora_(cfg), dia = Lic_diaSp_(new Date(ms).toISOString());
+  for (var i = 0; i < 30; i++) {
+    var ini = Date.parse(dia + 'T' + hora + ':00-03:00');
+    if (ini > ms && !Lic_partesSp_(ini).motivoDia) return ini;
+    dia = new Date(Date.parse(dia + 'T12:00:00Z') + 864e5).toISOString().slice(0, 10);
+  }
+  return ms + 864e5;
+}
 /**
- * Candidatas do Radar (que podem ter alerta) com prazo nas próximas 72 h: o fim das propostas (a versão ativa na agenda; sem ela,
- * o da fonte) ou outro prazo confirmado ou calculado da licitação (pendente de confirmação não conta). Fim das propostas que já
- * passou tira a oportunidade da lista. Ordem: o fim das propostas mais próximo primeiro.
+ * Candidatas do Radar (que podem ter alerta) com prazo até ateMs: o fim das propostas (a versão ativa na agenda; sem ela, o da
+ * fonte) ou outro prazo confirmado ou calculado da licitação (pendente de confirmação não conta). Fim das propostas que já passou
+ * tira a oportunidade da lista. Ordem: o fim das propostas mais próximo primeiro.
  */
-function Lic_radarCandidatas_(quando, cfg) {
-  var agoraMs = quando.getTime(), ate = agoraMs + LIC_RADAR_JANELA_MS, porOp = {};
+function Lic_radarCandidatas_(quando, cfg, ateMs) {
+  var agoraMs = quando.getTime(), ate = isFinite(ateMs) ? ateMs : agoraMs + LIC_RADAR_JANELA_MS, porOp = {};
   Lic_ler_(LIC_ABAS.EVENTOS).forEach(function (e) {
     if (Lic_up_(e.SITUACAO) !== 'ATIVO' || /^CONTRATO_/.test(Lic_s_(e.TIPO))) return;
     (porOp[Lic_s_(e.OPORTUNIDADE_ID)] = porOp[Lic_s_(e.OPORTUNIDADE_ID)] || []).push(e);
@@ -1499,22 +1511,23 @@ function Lic_radarCandidatas_(quando, cfg) {
   });
   return itens.sort(function (a, b) { return a.fimMs - b.fimMs || (a.proximo ? a.proximo.ms : Infinity) - (b.proximo ? b.proximo.ms : Infinity); });
 }
-/** Texto do e-mail do resumo diário: { titulo, texto }. */
-function Lic_radarResumoTexto_(itens, quando, cfg) {
-  var agoraMs = quando.getTime(), n = itens.length, diaTxt = Lic_brDia_(Lic_diaSp_(quando.toISOString()));
-  var linhas = itens.map(function (it, i) {
-    var l = it.l, cb = Lic_alertaCabecalho_({ CODIGO: l.CODIGO }, l), nota = Lic_s_(l.NOTA) !== '' && isFinite(Number(l.NOTA)) ? Lic_altaNumTxt_(l.NOTA) + ' de 100 · ' + Lic_altaClasse_(l) : 'sem nota (a análise ainda não foi feita)';
-    var fimTxt = it.fimIso ? (it.fimEv ? Lic_eventoQuandoTxt_(it.fimEv) : Lic_brDiaHora_(it.fimIso)) + ' (horário de Brasília; faltam ' + Lic_tempoRestante_(it.fimMs - agoraMs) + ')' : 'não informado na fonte (confira o edital)';
-    var ficha = Lic_linkAviso_(Lic_s_(l.CODIGO)), nao = Lic_linkNaoParticipar_(Lic_s_(l.CODIGO));
-    return [(i + 1) + '. ' + Lic_s_(l.CODIGO) + ' · ' + cb.orgao + (cb.local ? ' (' + cb.local + ')' : ''), '   Objeto: ' + Lic_altaCorta_(l.OBJETO, 140), '   Fim das propostas: ' + fimTxt]
-      .concat(it.proximo ? ['   Antes disso: ' + it.proximo.nome + ', ' + Lic_brDiaHora_(it.proximo.iso) + ' (faltam ' + Lic_tempoRestante_(it.proximo.ms - agoraMs) + ')'] : [])
-      .concat(['   Nota: ' + nota, '   Abrir a ficha: ' + (ficha || 'SGO+ › Licitações › Oportunidades › ' + Lic_s_(l.CODIGO)),
-        '   Não vou participar (abre a ficha já no descarte, com o motivo obrigatório): ' + (nao || 'abra a ficha no SGO+ e use "Descartar"')]).join('\n');
-  });
-  var titulo = 'Licitações: ' + n + (n === 1 ? ' candidata do Radar' : ' candidatas do Radar') + ' com prazo nas próximas 72 h (resumo de ' + diaTxt + ')';
+/** Bloco de uma candidata no e-mail (resumo ou aviso da nova candidata). */
+function Lic_radarItemTexto_(it, i, agoraMs) {
+  var l = it.l, cb = Lic_alertaCabecalho_({ CODIGO: l.CODIGO }, l), nota = Lic_s_(l.NOTA) !== '' && isFinite(Number(l.NOTA)) ? Lic_altaNumTxt_(l.NOTA) + ' de 100 · ' + Lic_altaClasse_(l) : 'sem nota (a análise ainda não foi feita)';
+  var fimTxt = it.fimIso ? (it.fimEv ? Lic_eventoQuandoTxt_(it.fimEv) : Lic_brDiaHora_(it.fimIso)) + ' (horário de Brasília; faltam ' + Lic_tempoRestante_(it.fimMs - agoraMs) + ')' : 'não informado na fonte (confira o edital)';
+  var ficha = Lic_linkAviso_(Lic_s_(l.CODIGO)), nao = Lic_linkNaoParticipar_(Lic_s_(l.CODIGO));
+  return [(i + 1) + '. ' + Lic_s_(l.CODIGO) + ' · ' + cb.orgao + (cb.local ? ' (' + cb.local + ')' : ''), '   Objeto: ' + Lic_altaCorta_(l.OBJETO, 140), '   Fim das propostas: ' + fimTxt]
+    .concat(it.proximo ? ['   Antes disso: ' + it.proximo.nome + ', ' + Lic_brDiaHora_(it.proximo.iso) + ' (faltam ' + Lic_tempoRestante_(it.proximo.ms - agoraMs) + ')'] : [])
+    .concat(['   Nota: ' + nota, '   Abrir a ficha: ' + (ficha || 'SGO+ › Licitações › Oportunidades › ' + Lic_s_(l.CODIGO)),
+      '   Não vou participar (abre a ficha já no descarte, com o motivo obrigatório): ' + (nao || 'abra a ficha no SGO+ e use "Descartar"')]).join('\n');
+}
+/** Texto do e-mail do resumo diário: { titulo, texto }. ateMs = o próximo resumo (proxMs) mais 72 h, o fim da janela. */
+function Lic_radarResumoTexto_(itens, quando, cfg, ateMs, proxMs) {
+  var agoraMs = quando.getTime(), n = itens.length, diaTxt = Lic_brDia_(Lic_diaSp_(quando.toISOString())), ateTxt = Lic_brDiaHora_(new Date(ateMs).toISOString());
+  var titulo = 'Licitações: ' + n + (n === 1 ? ' candidata do Radar' : ' candidatas do Radar') + ' com prazo até ' + ateTxt + ' (resumo de ' + diaTxt + ')';
   var texto = ['METROLABS · RESUMO DIÁRIO DAS CANDIDATAS DO RADAR (' + diaTxt + ')', '',
-    (n === 1 ? 'Uma candidata do Radar tem prazo' : n + ' candidatas do Radar têm prazo') + ' nas próximas 72 horas. Candidata do Radar não gera alerta individual de prazo: vem só neste resumo, uma vez por dia útil, sem WhatsApp, sem lembrete e sem escalonamento. Para receber a sequência completa de alertas (antecedências, lembrete, escalonamento e ciência), envie a oportunidade para análise; se não vai participar, descarte com o motivo pelo link de cada uma.', '']
-    .concat(linhas.join('\n\n')).concat(['', 'Regra em vigor: alertas individuais para candidatas do Radar desligados, resumo às ' + Lic_radarResumoHora_(cfg) + ' (Portais e configurações › Regras dos alertas' + (cfg.versao ? ', versão ' + cfg.versao : '') + '). O alerta de nova oportunidade de alta aderência continua saindo à parte.']).join('\n');
+    (n === 1 ? 'Uma candidata do Radar tem prazo' : n + ' candidatas do Radar têm prazo') + ' até ' + ateTxt + ' (o próximo resumo, ' + Lic_brDiaHora_(new Date(proxMs).toISOString()) + ', e mais 72 horas). Candidata do Radar não gera alerta individual de prazo: vem só neste resumo, uma vez por dia útil, sem WhatsApp, sem lembrete e sem escalonamento. Para receber a sequência completa de alertas (antecedências, lembrete, escalonamento e ciência), envie a oportunidade para análise; se não vai participar, descarte com o motivo pelo link de cada uma.', '']
+    .concat(itens.map(function (it, i) { return Lic_radarItemTexto_(it, i, agoraMs); }).join('\n\n')).concat(['', 'Regra em vigor: alertas individuais para candidatas do Radar desligados, resumo às ' + Lic_radarResumoHora_(cfg) + ' (Portais e configurações › Regras dos alertas' + (cfg.versao ? ', versão ' + cfg.versao : '') + '). Candidata que chegar depois deste resumo com o fim das propostas antes do próximo recebe um e-mail só. O alerta de nova oportunidade de alta aderência continua saindo à parte.']).join('\n');
   return { titulo: titulo, texto: texto };
 }
 /** Estado do resumo de hoje (propriedade LIC_RESUMO_RADAR): { dia, pessoas: { uid: { s, em, t, n } }, vazio }. */
@@ -1522,11 +1535,45 @@ function Lic_radarEstado_(dia) {
   var st = Lic_json_(PropertiesService.getScriptProperties().getProperty(LIC_RADAR_PROP), null);
   return st && st.dia === dia && st.pessoas ? st : { dia: dia, pessoas: {} };
 }
+/** REF_ID dos e-mails de Licitações que o notificador registrou como enviados (prova do envio se a execução caiu depois). */
+function Lic_radarEnviosOk_() {
+  var ok = {};
+  try { Lic_ler_(typeof Notificar_aba_ === 'function' ? Notificar_aba_() : 'NTF_ENVIOS').forEach(function (n) { if (Lic_up_(n.SITUACAO) === 'OK' && Lic_up_(n.ORIGEM) === 'LICITACOES') ok[Lic_s_(n.REF_ID)] = true; }); } catch (e) {}
+  return ok;
+}
+/**
+ * Envio único por chave (resumo do dia por pessoa; aviso da nova candidata por oportunidade e pessoa), com o estado numa
+ * propriedade: a escolha fica sob a trava e cada pessoa é marcada ENVIANDO antes de sair; o resultado de cada uma é gravado logo
+ * depois do envio DELA (trava curta, Lic_radarGravarUm_). Antes de tentar de novo (falha, ou ENVIANDO parado há mais de 10 minutos)
+ * confere o registro do notificador (REF_ID): se já saiu, só fecha como enviado, nunca repete. Até 3 tentativas.
+ * pedidos: [{ chave, refId, u, semCanal }]; ler/gravar mexem no mapa { chave: { s, em, t } }. Devolve { vez, recuperados }.
+ */
+function Lic_radarMarcar_(pedidos, agora, velho, ler, gravar) {
+  var vez = [], recuperados = [];
+  Lic_comTrava_(function () {
+    var st = ler(), ok = null;
+    pedidos.forEach(function (pd) {
+      var x = st[pd.chave] || {};
+      if (['ENVIADO', 'SEM_CANAL', 'SEM_EMAIL'].indexOf(x.s) >= 0 || (x.t || 0) >= LIC_RADAR_TENTATIVAS) return;
+      if (x.s === 'ENVIANDO' && Lic_s_(x.em) >= velho) return;
+      if (x.s) { if (ok === null) ok = Lic_radarEnviosOk_(); if (ok[pd.refId]) { st[pd.chave] = { s: 'ENVIADO', em: x.em || agora, t: x.t || 1, recuperado: agora }; recuperados.push(pd); return; } }
+      if (pd.semCanal) { st[pd.chave] = { s: 'SEM_CANAL', em: agora, t: x.t || 0 }; return; }
+      st[pd.chave] = { s: 'ENVIANDO', em: agora, t: (x.t || 0) + 1 }; vez.push(pd);
+    });
+    gravar(st);
+  });
+  return { vez: vez, recuperados: recuperados };
+}
+function Lic_radarGravarUm_(chave, s, agora, extra, ler, gravar) {
+  try { Lic_comTrava_(function () { var st = ler(), x = st[chave] || {}; st[chave] = Object.assign({ s: s, em: agora, t: x.t || 1 }, extra || {}); gravar(st); }); }
+  catch (e) { console.error('Licitações, estado do resumo do Radar: ' + ((e && e.message) || e)); }
+}
+function Lic_radarSemCanal_(cfg, uid) { var pp = cfg.pessoas[uid] || {}; return cfg.canais.email === false || pp.email === false; }
 /**
  * Resumo diário das candidatas do Radar (rodada dos alertas). Sai uma vez por pessoa por dia útil, a partir da hora das regras
- * (padrão 08:00; fim de semana e feriado: no próximo dia útil). Só e-mail; lista vazia não manda nada (o dia fica marcado como
- * conferido). A escolha de quem recebe fica sob a trava e cada pessoa é marcada antes de sair (duas rodadas juntas não mandam
- * em dobro); e-mail que falhou é tentado de novo na rodada seguinte, até 3 vezes no dia. Nunca lança para quem chama.
+ * (padrão 08:00; fim de semana e feriado: no próximo dia útil). Cobre até o PRÓXIMO resumo mais 72 h (revisão de bec32d3: na sexta
+ * cobre o fim de semana e a segunda). Só e-mail; lista vazia não manda nada (o dia fica conferido). Nunca repete no mesmo dia
+ * (Lic_radarMarcar_). Nunca lança para quem chama.
  */
 function Lic_radarResumo_(quando) {
   quando = quando instanceof Date ? quando : new Date(quando || Date.now());
@@ -1537,51 +1584,77 @@ function Lic_radarResumo_(quando) {
   if (p.motivoDia) return { enviados: 0, motivo: 'hoje não é dia útil (' + p.motivoDia + '): o resumo sai no próximo dia útil, às ' + hora };
   if (p.hora < hora) return { enviados: 0, motivo: 'o resumo de hoje sai às ' + hora };
   var dia = Lic_diaSp_(agora), props = PropertiesService.getScriptProperties(), sis = { id: '', nome: 'Alertas de licitação (sistema)' };
-  var integ = Lic_integrantes_(cfg), velho = Lic_menosMin_(quando, LIC_ENVIANDO_MAX_MIN), itens = null, vez = [];
+  if (Lic_radarEstado_(dia).vazio) return { enviados: 0, vazio: true, motivo: 'nenhuma candidata do Radar no resumo de hoje: nenhum e-mail' };
+  var integ = Lic_integrantes_(cfg), velho = Lic_menosMin_(quando, LIC_ENVIANDO_MAX_MIN);
+  var proxMs = Lic_radarProximoResumoMs_(agoraMs, cfg), ateMs = proxMs + LIC_RADAR_JANELA_MS, ateTxt = Lic_brDiaHora_(new Date(ateMs).toISOString());
+  var itens = Lic_radarCandidatas_(quando, cfg, ateMs);
   Lic_comTrava_(function () {
+    // referência da "nova candidata" (Lic_radarNovas_): a primeira conferência do resumo do dia
+    var ult = Lic_json_(props.getProperty(LIC_RADAR_ULTIMO_PROP), {});
+    if (ult.dia !== dia) props.setProperty(LIC_RADAR_ULTIMO_PROP, JSON.stringify({ dia: dia, em: agora }));
+    if (itens.length) return;
     var st = Lic_radarEstado_(dia);
-    if (st.vazio) { itens = []; return; }
-    var faltam = integ.filter(function (u) {
-      var x = st.pessoas[u.id] || {};
-      if (['ENVIADO', 'SEM_CANAL', 'SEM_EMAIL'].indexOf(x.s) >= 0 || (x.t || 0) >= LIC_RADAR_TENTATIVAS) return false;
-      return !(x.s === 'ENVIANDO' && Lic_s_(x.em) >= velho);
-    });
-    if (!faltam.length) return;
-    itens = Lic_radarCandidatas_(quando, cfg);
-    if (!itens.length) {
-      st.vazio = agora; props.setProperty(LIC_RADAR_PROP, JSON.stringify(st));
-      Lic_historico_('CONFIG', 'RESUMO_RADAR', '', 'RESUMO_RADAR_VAZIO', sis, { texto: 'Resumo diário das candidatas do Radar de ' + Lic_brDia_(dia) + ': nenhuma candidata com prazo nas próximas 72 h. Nenhum e-mail enviado.', versao: cfg.versao, fonte: 'Alertas de licitação (resumo diário do Radar)' });
-      return;
-    }
-    faltam.forEach(function (u) {
-      var x = st.pessoas[u.id] || {}, pp = cfg.pessoas[u.id] || {};
-      if (cfg.canais.email === false || pp.email === false) { st.pessoas[u.id] = { s: 'SEM_CANAL', em: agora, t: x.t || 0 }; return; }
-      st.pessoas[u.id] = { s: 'ENVIANDO', em: agora, t: (x.t || 0) + 1 }; vez.push(u);
-    });
-    props.setProperty(LIC_RADAR_PROP, JSON.stringify(st));
+    if (st.vazio || Object.keys(st.pessoas).length) return;
+    st.vazio = agora; props.setProperty(LIC_RADAR_PROP, JSON.stringify(st));
+    Lic_historico_('CONFIG', 'RESUMO_RADAR', '', 'RESUMO_RADAR_VAZIO', sis, { texto: 'Resumo diário das candidatas do Radar de ' + Lic_brDia_(dia) + ': nenhuma candidata com prazo até ' + ateTxt + ' (o próximo resumo e mais 72 h). Nenhum e-mail enviado.', versao: cfg.versao, fonte: 'Alertas de licitação (resumo diário do Radar)' });
   });
-  if (!itens) return { enviados: 0, motivo: 'o resumo de hoje já saiu (ou está saindo)' };
-  if (!itens.length) return { enviados: 0, vazio: true, motivo: 'nenhuma candidata do Radar com prazo nas próximas 72 h no resumo de hoje: nenhum e-mail' };
-  var ct = Lic_radarResumoTexto_(itens, quando, cfg), res = { enviados: 0, falhas: 0, candidatas: itens.length };
-  var link = (typeof Notificar_linkSgo_ === 'function' ? Notificar_linkSgo_() : '') || undefined, saida = {};
-  vez.forEach(function (u) {
-    var r = {};
-    try { r = SGO_notificar_({ usuarios: [u.id], canais: ['email'], origem: 'LICITACOES', refId: 'LRR-' + dia + '-' + u.id, titulo: ct.titulo, texto: ct.texto, link: link, rotuloLink: 'Abrir Licitações no SGO+' }) || {}; }
+  if (!itens.length) return { enviados: 0, vazio: true, motivo: 'nenhuma candidata do Radar com prazo até ' + ateTxt + ': nenhum e-mail' };
+  var ler = function () { return Lic_radarEstado_(dia).pessoas; };
+  var gravar = function (pes) { var st = Lic_radarEstado_(dia); st.pessoas = pes; props.setProperty(LIC_RADAR_PROP, JSON.stringify(st)); };
+  var m = Lic_radarMarcar_(integ.map(function (u) { return { chave: u.id, refId: 'LRR-' + dia + '-' + u.id, u: u, semCanal: Lic_radarSemCanal_(cfg, u.id) }; }), agora, velho, ler, gravar);
+  m.recuperados.forEach(function (pd) { Lic_historico_('CONFIG', 'RESUMO_RADAR', '', 'RESUMO_RADAR_RECUPERADO', sis, { para: pd.u.nome, texto: 'Resumo diário das candidatas do Radar de ' + Lic_brDia_(dia) + ' para ' + pd.u.nome + ': o registro do notificador mostra que o e-mail já tinha saído (a execução caiu depois do envio); não foi repetido.', versao: cfg.versao, fonte: 'Alertas de licitação (resumo diário do Radar)' }); });
+  if (!m.vez.length) return { enviados: 0, recuperados: m.recuperados.length, motivo: 'o resumo de hoje já saiu (ou está saindo)' };
+  var ct = Lic_radarResumoTexto_(itens, quando, cfg, ateMs, proxMs), res = { enviados: 0, falhas: 0, candidatas: itens.length }, quem = [];
+  var link = (typeof Notificar_linkSgo_ === 'function' ? Notificar_linkSgo_() : '') || undefined;
+  m.vez.forEach(function (pd) {
+    var u = pd.u, r = {};
+    try { r = SGO_notificar_({ usuarios: [u.id], canais: ['email'], origem: 'LICITACOES', refId: pd.refId, titulo: ct.titulo, texto: ct.texto, link: link, rotuloLink: 'Abrir Licitações no SGO+' }) || {}; }
     catch (e) { r = { ok: false, motivo: Lic_s_(e && e.message) }; }
-    saida[u.id] = r.ok ? 'ENVIADO' : /Sem e-mail no cadastro/i.test(Lic_s_(r.motivo)) ? 'SEM_EMAIL' : 'FALHOU';
-    if (r.ok) res.enviados++; else res.falhas++;
-    Lic_historico_('CONFIG', 'RESUMO_RADAR', '', r.ok ? 'RESUMO_RADAR_ENVIADO' : 'RESUMO_RADAR_FALHOU', sis, { para: u.nome, texto: 'Resumo diário das candidatas do Radar de ' + Lic_brDia_(dia) + ' para ' + u.nome + ': ' + itens.length + (itens.length === 1 ? ' candidata' : ' candidatas') + ' (' + itens.map(function (it) { return Lic_s_(it.l.CODIGO); }).join(', ') + '). E-mail: ' + (r.ok ? 'entregue ao serviço de e-mail' : Lic_texto_(r.motivo || 'não saiu', 300) + (saida[u.id] === 'FALHOU' ? ' (nova tentativa na próxima rodada, até ' + LIC_RADAR_TENTATIVAS + ' no dia)' : '')) + '.', versao: cfg.versao, fonte: 'Alertas de licitação (resumo diário do Radar)' });
+    var s = r.ok ? 'ENVIADO' : /Sem e-mail no cadastro/i.test(Lic_s_(r.motivo)) ? 'SEM_EMAIL' : 'FALHOU';
+    Lic_radarGravarUm_(u.id, s, agora, { n: itens.length }, ler, gravar);   // logo depois do envio desta pessoa
+    if (r.ok) { res.enviados++; quem.push(u.nome); } else res.falhas++;
+    Lic_historico_('CONFIG', 'RESUMO_RADAR', '', r.ok ? 'RESUMO_RADAR_ENVIADO' : 'RESUMO_RADAR_FALHOU', sis, { para: u.nome, texto: 'Resumo diário das candidatas do Radar de ' + Lic_brDia_(dia) + ' para ' + u.nome + ': ' + itens.length + (itens.length === 1 ? ' candidata' : ' candidatas') + ' (' + itens.map(function (it) { return Lic_s_(it.l.CODIGO); }).join(', ') + '). E-mail: ' + (r.ok ? 'entregue ao serviço de e-mail' : Lic_texto_(r.motivo || 'não saiu', 300) + (s === 'FALHOU' ? ' (nova tentativa na próxima rodada, até ' + LIC_RADAR_TENTATIVAS + ' no dia, conferindo antes se já saiu)' : '')) + '.', versao: cfg.versao, fonte: 'Alertas de licitação (resumo diário do Radar)' });
   });
-  try {
-    Lic_comTrava_(function () {
-      var st = Lic_radarEstado_(dia);
-      Object.keys(saida).forEach(function (uid) { var x = st.pessoas[uid] || {}; st.pessoas[uid] = { s: saida[uid], em: agora, t: x.t || 1, n: itens.length }; });
-      props.setProperty(LIC_RADAR_PROP, JSON.stringify(st));
-    });
-  } catch (e) { console.error('Licitações, resumo do Radar (estado): ' + ((e && e.message) || e)); }
   // na ficha de cada candidata: foi no resumo do dia (uma linha por oportunidade, com quem recebeu)
-  var quem = vez.filter(function (u) { return saida[u.id] === 'ENVIADO'; }).map(function (u) { return u.nome; });
   if (quem.length) itens.forEach(function (it) { Lic_historico_('OPORTUNIDADE', it.l.ID, it.l.CODIGO, 'RESUMO_RADAR', sis, { para: quem.join(' e '), texto: 'Foi no resumo diário das candidatas do Radar de ' + Lic_brDia_(dia) + ' (e-mail para ' + quem.join(' e ') + '), sem alerta individual de prazo.', fonte: 'Alertas de licitação (resumo diário do Radar)' }); });
+  return res;
+}
+/**
+ * Revisão de bec32d3: candidata que entra no Radar DEPOIS do resumo do dia (ALERTAVEL_DESDE depois da primeira conferência do
+ * último resumo) com o fim das propostas ANTES do próximo resumo recebe UM e-mail só ("Nova candidata com prazo antes do próximo
+ * resumo"), uma vez por oportunidade e pessoa: sem WhatsApp, sem lembrete, sem escalonamento. A primeira rodada depois da
+ * implantação só marca a referência (nada antigo sai). Estado na propriedade LIC_RADAR_NOVAS (limpo depois de 15 dias).
+ */
+function Lic_radarNovas_(quando) {
+  quando = quando instanceof Date ? quando : new Date(quando || Date.now());
+  var cfg = Lic_alertasCfg_(), agora = quando.toISOString(), agoraMs = quando.getTime();
+  if (!cfg.ligado || (cfg.radar || {}).individuais === true) return { enviados: 0 };
+  var props = PropertiesService.getScriptProperties(), ult = Lic_json_(props.getProperty(LIC_RADAR_ULTIMO_PROP), null);
+  if (!ult || !ult.em) { Lic_comTrava_(function () { if (!props.getProperty(LIC_RADAR_ULTIMO_PROP)) props.setProperty(LIC_RADAR_ULTIMO_PROP, JSON.stringify({ dia: '', em: agora })); }); return { enviados: 0, motivo: 'referência marcada (implantação)' }; }
+  var proxMs = Lic_radarProximoResumoMs_(agoraMs, cfg);
+  var itens = Lic_radarCandidatas_(quando, cfg, proxMs).filter(function (it) { return it.fimMs <= proxMs && Lic_s_(it.l.ALERTAVEL_DESDE) > Lic_s_(ult.em); });
+  if (!itens.length) return { enviados: 0 };
+  var integ = Lic_integrantes_(cfg), velho = Lic_menosMin_(quando, LIC_ENVIANDO_MAX_MIN), sis = { id: '', nome: 'Alertas de licitação (sistema)' };
+  var limite = new Date(agoraMs - 15 * 864e5).toISOString();
+  var ler = function () { return Lic_json_(props.getProperty(LIC_RADAR_NOVAS_PROP), {}); };
+  var gravar = function (st) { Object.keys(st).forEach(function (k) { if (Lic_s_(st[k].em) < limite) delete st[k]; }); props.setProperty(LIC_RADAR_NOVAS_PROP, JSON.stringify(st)); };
+  var pedidos = [];
+  itens.forEach(function (it) { integ.forEach(function (u) { pedidos.push({ chave: Lic_s_(it.l.ID) + '|' + u.id, refId: 'LRN-' + Lic_s_(it.l.ID) + '-' + u.id, u: u, it: it, semCanal: Lic_radarSemCanal_(cfg, u.id) }); }); });
+  var m = Lic_radarMarcar_(pedidos, agora, velho, ler, gravar), res = { enviados: 0, falhas: 0, recuperados: m.recuperados.length };
+  var link = (typeof Notificar_linkSgo_ === 'function' ? Notificar_linkSgo_() : '') || undefined, proxTxt = Lic_brDiaHora_(new Date(proxMs).toISOString());
+  m.vez.forEach(function (pd) {
+    var l = pd.it.l, cb = Lic_alertaCabecalho_({ CODIGO: l.CODIGO }, l), r = {};
+    var titulo = 'Licitações: nova candidata do Radar com prazo antes do próximo resumo · ' + Lic_s_(l.CODIGO) + ' · ' + Lic_texto_(cb.orgao, 60);
+    var texto = ['METROLABS · NOVA CANDIDATA DO RADAR COM PRAZO ANTES DO PRÓXIMO RESUMO', '',
+      'Esta candidata entrou no Radar depois do resumo diário e o fim das propostas é antes do próximo resumo (' + proxTxt + '). Por isso vem neste e-mail, uma vez só: sem WhatsApp, sem lembrete e sem escalonamento. Para a sequência completa de alertas, envie para análise; se não vai participar, descarte com o motivo.', '',
+      Lic_radarItemTexto_(pd.it, 0, agoraMs)].join('\n');
+    try { r = SGO_notificar_({ usuarios: [pd.u.id], canais: ['email'], origem: 'LICITACOES', refId: pd.refId, titulo: titulo, texto: texto, link: link, rotuloLink: 'Abrir Licitações no SGO+' }) || {}; }
+    catch (e) { r = { ok: false, motivo: Lic_s_(e && e.message) }; }
+    var s = r.ok ? 'ENVIADO' : /Sem e-mail no cadastro/i.test(Lic_s_(r.motivo)) ? 'SEM_EMAIL' : 'FALHOU';
+    Lic_radarGravarUm_(pd.chave, s, agora, null, ler, gravar);
+    if (r.ok) res.enviados++; else res.falhas++;
+    Lic_historico_('OPORTUNIDADE', l.ID, l.CODIGO, r.ok ? 'RADAR_NOVA_CANDIDATA' : 'RADAR_NOVA_CANDIDATA_FALHOU', sis, { para: pd.u.nome, texto: 'Nova candidata do Radar com o fim das propostas antes do próximo resumo (' + proxTxt + '): e-mail único para ' + pd.u.nome + (r.ok ? ', entregue ao serviço de e-mail.' : ', não saiu (' + Lic_texto_(r.motivo || 'sem motivo', 300) + ').'), fonte: 'Alertas de licitação (candidatas do Radar)' });
+  });
   return res;
 }
 /** Texto do último resumo para a tela das regras (operador nunca no limbo). */
@@ -1646,6 +1719,8 @@ function Lic_alertasRodada_(quando) {
   passo('concluir', function () { return Lic_alertasConcluir_(quando); });
   // 03/11/2026: resumo diário das candidatas do Radar (uma vez por pessoa por dia útil, na hora das regras; só e-mail)
   passo('resumoRadar', function () { return Lic_radarResumo_(quando); });
+  // revisão de bec32d3: candidata que chegou depois do resumo com o fim das propostas antes do próximo: um e-mail só
+  passo('radarNovas', function () { return Lic_radarNovas_(quando); });
   try { PropertiesService.getScriptProperties().setProperty('LIC_ALERTAS_ULTIMA_RODADA', JSON.stringify({ em: quando.toISOString(), r: r })); } catch (e) {}
   return r;
 }
@@ -1781,7 +1856,7 @@ function Lic_avisoAbrir_(s, avisoId) {
 /**
  * 03/11/2026: link "Não vou participar" (nao = true) ou "Abrir a ficha" do resumo do Radar. ref = código do aviso (LA...) ou da
  * oportunidade (LIC-...). Com o descarte possível (Radar, em análise ou em decisão), a ficha abre já na janela do descarte, com o
- * motivo obrigatório; senão abre a ficha e diz por que não há o que descartar. Só a Diretoria chega aqui (Lic_avisoAbrir_).
+ * motivo obrigatório; senão a própria ficha diz por que não há o que descartar (uma mensagem só). Só a Diretoria chega aqui.
  */
 function Lic_avisoOpAbrir_(eu, ref, nao) {
   var a = /^LA[0-9a-f]{10}$/.test(ref) ? Lic_ler_(LIC_ABAS.ALERTAS).filter(function (x) { return Lic_s_(x.AVISO_ID) === ref; })[0] : null;
@@ -1791,8 +1866,7 @@ function Lic_avisoOpAbrir_(eu, ref, nao) {
   var tela = { tipo: 'licitacao', id: Lic_s_(l.ID), aba: 'resumo' };
   if (a) tela.alerta = Lic_s_(a.ID);
   if (!nao) return { ok: true, tela: tela, message: '' };
-  if (Lic_podeDescartar_(l)) { tela.acao = 'descartar'; return { ok: true, tela: tela, message: '' }; }
-  var sit = Lic_s_(l.SITUACAO), nome = (typeof LIC_SITUACAO_NOMES !== 'undefined' && LIC_SITUACAO_NOMES[sit]) || sit;
-  if (sit === 'DESCARTADA') return { ok: true, tela: tela, message: 'Esta oportunidade já foi descartada' + (Lic_s_(l.DESCARTE_POR_NOME) ? ' por ' + Lic_s_(l.DESCARTE_POR_NOME) : '') + (Lic_s_(l.DESCARTE_EM) ? ' em ' + Lic_brDiaHora_(l.DESCARTE_EM) : '') + (Lic_s_(l.DESCARTE_MOTIVO) ? ' (motivo: ' + Lic_texto_(l.DESCARTE_MOTIVO, 200) + ')' : '') + '. Os alertas pendentes dela já foram cancelados; nada mais a fazer. A ficha abre para você conferir.' };
-  return { ok: true, tela: tela, message: 'Esta oportunidade está em "' + nome + '": o descarte vale só no Radar, em análise ou em decisão, e nada foi alterado. A ficha abre para você conferir e registrar a decisão na etapa em que ela está.' };
+  // revisão de bec32d3: sempre a ação; a ficha confere a situação e dá a única mensagem (descartada, por quem, ou fora da etapa)
+  tela.acao = 'descartar';
+  return { ok: true, tela: tela, message: '' };
 }
