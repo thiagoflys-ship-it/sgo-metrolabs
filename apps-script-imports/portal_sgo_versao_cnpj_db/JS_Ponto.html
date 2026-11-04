@@ -45,6 +45,121 @@
     .pt-filtros > div { flex: 1 1 140px; }
     .pt-tab { flex: 1 1 auto; }
   }
+  /* Pessoas: lista compacta e editor individual, com a mesma hierarquia no computador e no celular. */
+  .pt-pessoas { --pt-accent: var(--success, #26745c); color: var(--text, #25312c); }
+  .pt-pessoas-cab { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:6px 0 20px; }
+  .pt-eyebrow { color:var(--muted, #68746d); font-size:10px; font-weight:800; letter-spacing:.1em; margin:0 0 7px; }
+  .pt-pessoas-cab h3 { font-size:23px; line-height:1.2; margin:0 0 7px; letter-spacing:-.02em; }
+  .pt-pessoas-cab p { color:var(--muted, #68746d); font-size:13px; margin:0; }
+  .pt-pessoas-total { display:flex; flex-direction:column; gap:3px; text-align:right; flex-shrink:0; }
+  .pt-pessoas-total strong { font-size:28px; line-height:1; color:var(--pt-accent); font-variant-numeric:tabular-nums; }
+  .pt-pessoas-total span { color:var(--muted, #68746d); font-size:11px; }
+  .pt-pessoas-layout { display:grid; grid-template-columns:minmax(260px,.85fr) minmax(0,1.4fr); gap:18px; align-items:start; }
+  .pt-pessoas-lista-painel, .pt-pessoa-editor { min-width:0; border:1px solid var(--border, #dce4df); background:var(--card, #fff); border-radius:16px; }
+  .pt-pessoas-lista-painel { padding:14px; }
+  .pt-pessoas-filtros { display:grid; gap:8px; }
+  .pt-pessoas-filtros .pt-campo { margin:0; }
+  .pt-pessoas-filtros input, .pt-pessoas-filtros select { font-size:13px; min-height:44px; border-radius:8px; }
+  .pt-pessoas-lista { display:grid; gap:7px; max-height:660px; overflow-y:auto; margin-top:14px; padding:1px; }
+  .pt-pessoa-item { display:flex; align-items:center; gap:10px; width:100%; min-width:0; text-align:left; font:inherit; background:var(--card, #fff); color:var(--text, #25312c); border:1px solid var(--border, #dce4df); padding:12px; border-radius:10px; cursor:pointer; }
+  .pt-pessoa-item:hover { background:var(--bg, #f3f6f4); }
+  .pt-pessoa-item.ativo { border-color:var(--pt-accent); box-shadow:inset 3px 0 var(--pt-accent); background:color-mix(in srgb, var(--pt-accent) 5%, var(--card, #fff)); }
+  .pt-pessoa-avatar { width:33px; height:33px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; background:var(--bg, #f1f5f2); color:var(--muted, #68746d); font-size:11px; font-weight:700; }
+  .pt-pessoa-textos { flex:1; min-width:0; display:grid; gap:3px; }
+  .pt-pessoa-textos strong { font-size:13px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
+  .pt-pessoa-area { font-size:11px; color:var(--muted, #68746d); }
+  .pt-pessoa-resumo { font-size:11px; line-height:1.35; }
+  .pt-pessoa-estado { font-size:10px; color:var(--muted, #68746d); }
+  .pt-pessoa-estado.pendente { color:var(--warning, #9c6209); font-weight:700; }
+  .pt-pessoa-seta { font-size:24px; font-weight:400; color:var(--muted, #68746d); }
+  .pt-pessoa-editor { padding:22px; }
+  .pt-pessoa-escolher { min-height:340px; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px; }
+  .pt-pessoa-escolher > span { background:var(--bg, #f1f5f2); border:1px solid var(--border, #dce4df); border-radius:16px; width:55px; height:55px; display:grid; place-items:center; color:var(--pt-accent); font-size:24px; }
+  .pt-pessoa-escolher h4 { font-size:18px; margin:18px 0 8px; }
+  .pt-pessoa-escolher p { max-width:300px; font-size:13px; line-height:1.6; color:var(--muted, #68746d); }
+  .pt-pessoa-voltar { display:none; }
+  .pt-pessoa-editor-cab { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding-bottom:20px; border-bottom:1px solid var(--border, #dce4df); margin-bottom:20px; }
+  .pt-pessoa-editor-cab > div { min-width:0; }
+  .pt-pessoa-editor-cab h4 { font-size:19px; line-height:1.35; margin:0 0 5px; overflow-wrap:anywhere; }
+  .pt-pessoa-editor-cab p:not(.pt-eyebrow) { font-size:12px; color:var(--muted, #68746d); margin:0; }
+  .pt-pessoa-editor-cab .pt-selo { flex-shrink:0; margin:0; font-size:10px; }
+  .pt-pessoa-impedimento { border-left:3px solid var(--warning, #b57a20); background:var(--warning-bg, #fff7e9); border-radius:8px; padding:12px; font-size:12px; line-height:1.5; margin-bottom:18px; }
+  .pt-pessoa-impedimento p { margin:4px 0 0; }
+  .pt-aviso-fieldset { min-width:0; padding:0; margin:0; border:0; }
+  .pt-aviso-fieldset legend { font-weight:700; font-size:16px; padding:0; }
+  .pt-pessoa-lead { margin:6px 0 16px; font-size:12px; color:var(--muted, #68746d); }
+  .pt-aviso-tiles { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .pt-aviso-tile { display:flex; flex-direction:column; min-width:0; min-height:114px; padding:13px; box-sizing:border-box; border:1px solid var(--border, #dce4df); background:var(--card, #fff); border-radius:12px; cursor:pointer; }
+  .pt-aviso-tile.selecionado { border-color:var(--pt-accent); background:color-mix(in srgb, var(--pt-accent) 5%, var(--card, #fff)); }
+  .pt-aviso-tile-topo { display:flex; align-items:center; justify-content:space-between; gap:4px; font-size:12px; font-weight:700; }
+  .pt-aviso-tile-topo { position:relative; }
+  .pt-aviso-tile input[type=checkbox] { position:absolute; opacity:0; width:1px !important; height:1px !important; min-width:0 !important; min-height:0 !important; max-width:1px !important; max-height:1px !important; padding:0; margin:0; }
+  .pt-aviso-chave { display:inline-block; position:relative; width:34px; height:22px; border-radius:20px; border:1px solid var(--border, #cfd9d2); background:var(--border, #cfd9d2); flex-shrink:0; box-sizing:border-box; }
+  .pt-aviso-chave::before { content:""; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 2px #0002; transition:transform .15s ease; }
+  .pt-aviso-tile input:checked + .pt-aviso-chave { background:var(--pt-accent); border-color:var(--pt-accent); }
+  .pt-aviso-tile input:checked + .pt-aviso-chave::before { transform:translateX(12px); }
+  .pt-aviso-tile input:focus-visible + .pt-aviso-chave { outline:3px solid var(--info, #1f5fa8); outline-offset:3px; }
+  .pt-aviso-hora { display:block; margin-top:12px; font-size:21px; line-height:1.1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .pt-aviso-tile-estado { color:var(--muted, #68746d); font-size:10px; margin-top:5px; }
+  .pt-aviso-tile.indisponivel { opacity:.65; cursor:default; background:var(--bg, #f1f5f2); }
+  .pt-aviso-tile.indisponivel .pt-aviso-hora { font-size:14px; }
+  .pt-aviso-nota { color:var(--muted, #68746d); font-size:11px; line-height:1.55; margin:12px 0 16px; }
+  .pt-aviso-presets { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:11px; }
+  .pt-aviso-presets > span { color:var(--muted, #68746d); }
+  .pt-aviso-presets button, .pt-aviso-origem button { font:inherit; font-size:11px; color:var(--text, #25312c); background:var(--bg, #f1f5f2); border:1px solid var(--border, #dce4df); border-radius:7px; padding:7px 9px; min-height:40px; cursor:pointer; }
+  .pt-aviso-origem { display:flex; justify-content:space-between; align-items:center; gap:8px; border-top:1px solid var(--border, #dce4df); margin-top:18px; padding-top:14px; font-size:12px; font-weight:600; }
+  .pt-aviso-origem button { background:transparent; color:var(--pt-accent); }
+  .pt-aviso-rodape { display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border, #dce4df); padding-top:16px; margin-top:16px; background:var(--card, #fff); }
+  .pt-aviso-rodape > div { display:flex; justify-content:flex-end; gap:8px; }
+  .pt-aviso-rodape button { min-height:44px; font-size:12px; }
+  .pt-pessoa-detalhes, .pt-pessoas-ajuda, .pt-pessoas-dispensas { margin-top:18px; border-top:1px solid var(--border, #dce4df); padding-top:14px; font-size:12px; line-height:1.6; }
+  .pt-pessoa-detalhes summary, .pt-pessoas-ajuda summary, .pt-pessoas-dispensas > summary { cursor:pointer; min-height:44px; font-weight:600; }
+  .pt-pessoa-detalhes p, .pt-pessoas-ajuda p { margin:10px 0; color:var(--muted, #68746d); }
+  .pt-pessoas-dispensas > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .pt-pessoas-dispensas .pt-caixa { margin-top:8px; }
+  .pt-pessoas button:focus-visible, .pt-pessoas input:focus-visible, .pt-pessoas select:focus-visible, .pt-pessoas summary:focus-visible { outline:3px solid var(--info, #1f5fa8); outline-offset:3px; }
+  .pt-pessoas button:disabled { opacity:.5; cursor:not-allowed; }
+  @media (max-width:899px) {
+    .pt-pessoas-cab { align-items:flex-start; gap:10px; margin-bottom:16px; }
+    .pt-pessoas-cab h3 { font-size:21px; }
+    .pt-pessoas-cab p { max-width:240px; font-size:12px; line-height:1.5; }
+    .pt-pessoas-total { padding-top:3px; }
+    .pt-pessoas-total strong { font-size:24px; }
+    .pt-pessoas-total span { max-width:70px; line-height:1.35; }
+    .pt-shell-pessoas > .pt-tabs { flex-wrap:nowrap; overflow-x:auto; gap:6px; padding:3px 2px 7px; margin-bottom:0; }
+    .pt-shell-pessoas > .pt-tabs .pt-tab { flex:0 0 auto; white-space:nowrap; min-height:44px; }
+    .pt-shell-pessoas > .module-header { margin-bottom:0; }
+    .pt-pessoas:has(.editando) > .pt-pessoas-cab { display:none; }
+    .pt-pessoas-layout { display:block; }
+    .pt-pessoas-lista-painel { padding:12px; }
+    .pt-pessoas-lista { max-height:none; }
+    .pt-pessoas-filtros { grid-template-columns:minmax(0,1fr); }
+    .pt-pessoa-editor { display:none; padding:16px 16px 120px; scroll-margin-top:76px; }
+    #ptAvisoBusca { scroll-margin-top:76px; }
+    .pt-pessoas-layout.editando .pt-pessoas-lista-painel { display:none; }
+    .pt-pessoas-layout.editando .pt-pessoa-editor { display:block; }
+    .pt-pessoa-voltar { display:inline-flex; align-items:center; min-height:44px; color:var(--pt-accent); background:transparent; border:0; padding:0; margin-bottom:10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+    .pt-pessoa-editor-cab { display:block; margin-bottom:18px; padding-bottom:16px; }
+    .pt-pessoa-editor-cab h4 { font-size:18px; }
+    .pt-pessoa-editor-cab .pt-selo { margin-top:9px; }
+    .pt-aviso-rodape { position:fixed; left:0; right:0; bottom:0; z-index:40; margin:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -6px 18px #00000008; box-sizing:border-box; }
+    .pt-aviso-rodape > div { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); }
+    .pt-aviso-rodape button { width:100%; padding-left:8px; padding-right:8px; }
+    .pt-pessoas-dispensas > summary { display:block; }
+    .pt-pessoas-dispensas > summary span { display:block; }
+  }
+  @media (max-width:360px) {
+    .pt-pessoa-editor { padding:12px 12px 120px; }
+    .pt-aviso-tiles { gap:8px; }
+    .pt-aviso-tile { padding:10px; min-height:110px; }
+    .pt-aviso-tile-topo { font-size:11px; }
+    .pt-aviso-chave { width:30px; height:20px; }
+    .pt-aviso-chave::before { width:12px; height:12px; }
+    .pt-aviso-tile input:checked + .pt-aviso-chave::before { transform:translateX(10px); }
+    .pt-aviso-rodape { padding-left:12px; padding-right:12px; }
+    .pt-aviso-origem { align-items:flex-start; }
+    .pt-aviso-origem button { max-width:120px; }
+  }
 </style>
 
 <script>
@@ -90,7 +205,7 @@
       if (r.verMenu && window.SGO_MODULO_ATUAL === "mobile_home" && typeof renderMobileHome_ === "function") { try { renderMobileHome_(); } catch (e) {} }
     }, function () { if (btn) btn.style.display = "none"; });
   }
-  function Ponto_parar_() { PT.ini = null; PT.acesso = null; PT.aba = ""; var b = Pto_$_("menu-btn-ponto"); if (b) b.style.display = "none"; }
+  function Ponto_parar_() { if (typeof PT_AVISOS !== "undefined") PT_AVISOS = { selecionado: null, busca: "", filtro: "TODOS", rascunhos: {}, enviando: false }; PT.ini = null; PT.acesso = null; PT.aba = ""; var b = Pto_$_("menu-btn-ponto"); if (b) b.style.display = "none"; }
 
   function Ponto_cabecalho_(sub) {
     return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Assistente do ponto</h2><p class="content-subtitle">' + Pto_esc_(sub) + "</p></div>" +
@@ -110,6 +225,7 @@
 
   /** Ponto de entrada de abrir('ponto'). */
   function Ponto_render_() {
+    if (typeof PT_AVISOS !== "undefined" && PT_AVISOS.enviando) return;
     var div = Pto_$_("conteudo");
     if (!div) return;
     if (typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Assistente do ponto");
@@ -119,9 +235,11 @@
       var abas = Ponto_abas_(ini);
       if (!PT.aba || !abas.some(function (a) { return a[0] === PT.aba; })) PT.aba = ini.tratar && ini.pendentes ? "pedidos" : ini.equipe ? "hoje" : "meus";
       var sub = ini.ligado ? "Ligado: um lembrete por marcação (" + ini.marcacoes.join(", ").toLowerCase() + "), só em dia útil e no horário da pessoa." : "Desligado: nenhum lembrete sai.";
-      var h = '<div class="module-shell">' + Ponto_cabecalho_(sub);
-      if (!ini.ligado) h += '<div class="pt-faixa aviso"><b>O assistente está desligado.</b> Nenhuma mensagem sai e ninguém recebe lembrete. ' + (ini.configurar ? "Para ligar, abra a aba Configuração, confira a jornada e o RH, marque «Assistente ligado» e toque em «Salvar configuração»." : "Quem liga é o Administrador ou a Diretoria.") + "</div>";
-      h += '<div class="pt-faixa">O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O assistente só lembra, recebe a confirmação de um toque e leva o "Esqueci de bater" ao RH. "Não confirmado" não é prova de falta.</div>';
+      if (PT.aba === "pessoas") sub = ini.ligado ? "Avisos ativos. Ajuste os lembretes de cada pessoa." : "Avisos pausados. Você pode preparar as escolhas por pessoa.";
+      var h = '<div class="module-shell' + (PT.aba === 'pessoas' ? ' pt-shell-pessoas' : '') + '">' + Ponto_cabecalho_(sub);
+      if (!ini.ligado && PT.aba === "pessoas") h += '<div class="pt-faixa aviso"><b>Assistente desligado.</b> As escolhas podem ser salvas, mas nenhum aviso é enviado.</div>';
+      else if (!ini.ligado) h += '<div class="pt-faixa aviso"><b>O assistente está desligado.</b> Nenhuma mensagem sai e ninguém recebe lembrete. ' + (ini.configurar ? "Para ligar, abra a aba Configuração, confira a jornada e o RH, marque «Assistente ligado» e toque em «Salvar configuração»." : "Quem liga é o Administrador ou a Diretoria.") + "</div>";
+      if (PT.aba !== "pessoas") h += '<div class="pt-faixa">O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O assistente só lembra, recebe a confirmação de um toque e leva o "Esqueci de bater" ao RH. "Não confirmado" não é prova de falta.</div>';
       if (ini.avisos && ini.avisos.length) {
         h += '<div class="pt-caixa"><h3>Avisos para você (' + ini.avisos.length + ")</h3>" + ini.avisos.slice(0, 3).map(function (a) {
           return '<div style="border-top:1px solid var(--border);padding:8px 0"><b>' + Pto_esc_(a.titulo) + '</b> <span class="pt-mini">' + Pto_esc_(a.data) + '</span><div style="white-space:pre-wrap;font-size:13px;margin:4px 0">' + Pto_esc_(a.texto) + '</div><button type="button" class="btn-secondary" onclick="Ponto_ciente_(\'' + Pto_esc_(a.id) + '\')">Ciente</button></div>';
@@ -138,6 +256,7 @@
   }
   // Etapa 3 (01/11/2026): trocar de aba é um passo do voltar (volta à aba de antes, em vez de sair do módulo)
   function Ponto_aba_(a) {
+    if (typeof PT_AVISOS !== "undefined" && PT_AVISOS.enviando) return;
     var de = PT.aba;
     if (de && de !== a && window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Ponto: " + a, function () { if (Pto_$_("ptCorpo")) Ponto_aba_(de); });
     PT.aba = a; document.querySelectorAll(".pt-tab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("onclick").indexOf("'" + a + "'") > 0); b.setAttribute("aria-selected", b.classList.contains("active")); }); Pto_msg_("ptMsg", ""); Ponto_desenharAba_(); }
@@ -278,18 +397,139 @@
   function Ponto_confirmarMeu_(id) { Pto_chamar_("confirmarMeu", { id: id }, function (r) { Pto_msg_("ptMsg", r.message, "ok"); Ponto_desenharAba_(); }, function (m) { Pto_msg_("ptMsg", m); }); }
 
   // ---------------- Pessoas e jornadas ----------------
+  var PT_AVISOS = { selecionado: null, busca: "", filtro: "TODOS", rascunhos: {}, enviando: false };
+  var PT_AVISOS_TIPOS = ["ENTRADA", "ALMOCO", "RETORNO", "SAIDA"];
+  var PT_AVISOS_NOMES = ["Entrada", "Almoço", "Retorno", "Saída"];
+  function Ponto_avisosPessoa_(id) { return (PT.cache.pessoas ? PT.cache.pessoas.pessoas : []).filter(function (p) { return p.id === id; })[0]; }
+  function Ponto_avisosRascunho_(p) {
+    return PT_AVISOS.rascunhos[p.id] || (PT_AVISOS.rascunhos[p.id] = { marcacoes: p.marcacoes.slice(), padrao: !p.avisosProprios });
+  }
+  function Ponto_avisosSujo_(p) {
+    var d = PT_AVISOS.rascunhos[p.id];
+    return !!d && (d.padrao !== !p.avisosProprios || (!d.padrao && PT_AVISOS_TIPOS.some(function (m) { return (d.marcacoes.indexOf(m) >= 0) !== (p.marcacoes.indexOf(m) >= 0); })));
+  }
+  function Ponto_avisosTemRascunhos_() { return !!PT.cache.pessoas && PT.cache.pessoas.pessoas.some(Ponto_avisosSujo_); }
+  window.addEventListener("beforeunload", function (e) { if (Ponto_avisosTemRascunhos_()) { e.preventDefault(); e.returnValue = ""; } });
+  function Ponto_avisosResumo_(marcacoes) {
+    if (!marcacoes.length) return "Nenhum aviso";
+    if (marcacoes.length === 4) return "Os quatro avisos";
+    return PT_AVISOS_TIPOS.filter(function (m) { return marcacoes.indexOf(m) >= 0; }).map(function (m) { return PT_AVISOS_NOMES[PT_AVISOS_TIPOS.indexOf(m)]; }).join(" · ");
+  }
+  function Ponto_avisosNormalizar_(s) { return String(s || "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
   function Ponto_abaPessoas_(alvo) {
+    if (PT_AVISOS.enviando) { PT_AVISOS.recarregar = alvo; return; }
     Pto_chamar_("pessoas", {}, function (r) {
+      if (PT_AVISOS.enviando) { PT_AVISOS.recarregar = alvo; return; }
       PT.cache.pessoas = r;
-      var h = '<div class="pt-faixa"><span id="ptAvisoContagem">' + r.aptos + '</span>' + " de " + r.pessoas.length + " colaboradores ativos recebem os lembretes. Só CLT recebe" + (r.piloto.ligado ? "; com o piloto do WhatsApp ligado, só quem está na lista do piloto (Administração > Piloto do WhatsApp)" : "") +
-        ". Jornada geral: " + Pto_esc_(r.jornadaGeral) + '. Marque os avisos de cada pessoa e toque em Salvar avisos. Para a matriz, você pode desmarcar almoço e retorno; para a filial, mantê-los. Os horários seguem a jornada exibida: entrada e saída avisam 5 minutos antes; almoço na hora e retorno após a pausa. Ajustar permite mudar a jornada. Campos vazios seguem a geral.</div>';
-      h += '<div class="pt-caixa"><div class="pt-campo"><label for="ptAvisoBusca">Buscar pessoa ou área</label><input type="search" id="ptAvisoBusca"></div><table class="pt-tabela" id="ptAvisoTabela"><thead><tr><th>Colaborador</th><th>Vínculo</th><th>Contato</th><th>Jornada</th><th>Situação</th><th>Avisos por pessoa</th><th></th></tr></thead><tbody>' +
-        r.pessoas.map(function (p, k) {
-          return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(p.nome) + '</b><div class="pt-mini">' + Pto_esc_(p.area) + '</div></td><td data-r="Vínculo">' + Pto_esc_(Pto_vinculo_(p.vinculo, "não informado")) + "</td>" +
-            '<td data-r="Contato">' + (p.celular ? "celular " + Pto_esc_(p.celular) : "sem celular") + (p.temEmail ? " · e-mail" : " · sem e-mail") + '</td><td data-r="Jornada">' + Pto_esc_(p.jornada) + (p.observacao ? '<div class="pt-mini">' + Pto_esc_(p.observacao) + "</div>" : "") + "</td>" +
-            '<td data-r="Situação" id="ptAvisoSituacao' + k + '">' + (p.apto ? Pto_selo_("Recebe", "verde") : Pto_selo_("Não recebe", "cinza") + '<div class="pt-mini">' + Pto_esc_(p.foraTexto) + "</div>") + '</td><td data-r="Avisos por pessoa">' + Ponto_controlesAvisos_(p, k) + '</td><td><button type="button" class="btn-secondary" onclick="Ponto_editarPessoa_(' + k + ')">Ajustar</button></td></tr>';
-        }).join("") + "</tbody></table></div>";
-      h += '<div class="pt-caixa"><h3>Folgas e dispensas (não lembrar nestes dias)</h3><p class="pt-mini">Férias e afastamentos lançados no Programa de conduta já valem sozinhos. Aqui o RH lança folga, atestado, consulta ou viagem sem marcação de ponto. Nada é apagado: "Retirar" só marca a dispensa como retirada.</p>' +
+      var h = '<section class="pt-pessoas" aria-labelledby="ptPessoasTitulo"><header class="pt-pessoas-cab"><div><span class="pt-eyebrow">AVISOS DO PONTO</span><h3 id="ptPessoasTitulo">Cada pessoa, os avisos certos</h3><p>Escolha uma pessoa e ative só os avisos necessários.</p></div><div class="pt-pessoas-total"><strong id="ptAvisoContagem">' + r.aptos + '</strong><span>habilitados de ' + r.pessoas.length + '</span></div></header>';
+      h += '<div class="pt-pessoas-layout" id="ptPessoasLayout"><section class="pt-pessoas-lista-painel" aria-label="Pessoas"><div class="pt-pessoas-filtros"><div class="pt-campo"><label for="ptAvisoBusca">Buscar pessoa ou área</label><input type="search" id="ptAvisoBusca" placeholder="Digite um nome ou área" autocomplete="off" value="' + Pto_esc_(PT_AVISOS.busca) + '"></div><div class="pt-campo"><label for="ptAvisoFiltro">Mostrar</label><select id="ptAvisoFiltro">' + Pto_opcoes_([["TODOS","Todas as pessoas"],["HABILITADOS","Habilitados para avisos"],["NAO_HABILITADOS","Não habilitados"],["INDIVIDUAL","Escolha individual"],["RASCUNHOS","Alterações não salvas"]], PT_AVISOS.filtro) + '</select></div></div><div id="ptAvisoLista" class="pt-pessoas-lista"></div><p id="ptAvisoResultados" class="pt-mini" role="status"></p></section><section id="ptAvisoEditor" class="pt-pessoa-editor" aria-label="Configurar avisos da pessoa"></section></div>';
+      h += '<details class="pt-pessoas-ajuda"><summary>Como os avisos funcionam</summary><div><p>O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O assistente só lembra; “não confirmado” não é prova de falta. As escolhas mudam os avisos, sem alterar a jornada. Entrada e saída são lembradas 5 minutos antes. Almoço é lembrado na hora; o retorno se ajusta pela saída confirmada para o intervalo.</p><p>Habilitado significa que a pessoa atende às regras do cadastro. O envio ainda depende de o assistente estar ligado, do expediente, de feriados, folgas, afastamentos e atendimentos. Só CLT recebe' + (r.piloto.ligado ? ', respeitando a lista do piloto do WhatsApp' : '') + '.</p><p>Desmarcar todos desliga os avisos dessa pessoa. Usar o padrão geral acompanha a escolha feita em Configuração. Jornada geral: ' + Pto_esc_(r.jornadaGeral) + '.</p></div></details></section>';
+      h += '<details class="pt-pessoas-dispensas"><summary><span>Folgas e dispensas</span><span class="pt-mini">Dias em que não é preciso lembrar</span></summary>' + Ponto_dispensasHtml_(r) + '</details>';
+      alvo.innerHTML = h;
+      Pto_$_("ptAvisoBusca").oninput = function () { PT_AVISOS.busca = this.value; Ponto_avisosLista_(); };
+      Pto_$_("ptAvisoFiltro").onchange = function () { PT_AVISOS.filtro = this.value; Ponto_avisosLista_(); };
+      Ponto_avisosLista_();
+      if (PT_AVISOS.selecionado && Ponto_avisosPessoa_(PT_AVISOS.selecionado)) Ponto_abrirAvisos_(PT_AVISOS.selecionado, false); else Ponto_avisosVazio_();
+      Pto_$_("ptDsSalvar").onclick = function () {
+        if (PT_AVISOS.enviando) return;
+        var b = this; b.disabled = true;
+        Pto_chamar_("salvarDispensa", { usuarioId: Pto_$_("ptDsPessoa").value, de: Pto_$_("ptDsDe").value, ate: Pto_$_("ptDsAte").value, motivo: Pto_$_("ptDsMot").value, observacao: Pto_$_("ptDsObs").value },
+          function (x) { Pto_msg_("ptMsg", x.message, "ok"); Ponto_abaPessoas_(alvo); }, function (m) { b.disabled = false; Pto_msg_("ptDsMsg", m); });
+      };
+    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + '</div>'; });
+  }
+  function Ponto_avisosLista_() {
+    var lista = Pto_$_("ptAvisoLista"); if (!lista) return;
+    var busca = Ponto_avisosNormalizar_(PT_AVISOS.busca), filtro = PT_AVISOS.filtro;
+    var pessoas = PT.cache.pessoas.pessoas.filter(function (p) {
+      return Ponto_avisosNormalizar_(p.nome + " " + p.area).indexOf(busca) >= 0 && (filtro === "TODOS" || filtro === "HABILITADOS" && p.apto || filtro === "NAO_HABILITADOS" && !p.apto || filtro === "INDIVIDUAL" && p.avisosProprios || filtro === "RASCUNHOS" && Ponto_avisosSujo_(p));
+    });
+    lista.innerHTML = pessoas.map(function (p) {
+      var sujo = Ponto_avisosSujo_(p), d = sujo ? Ponto_avisosRascunho_(p) : p;
+      var efetivas = p.sem_almoco ? d.marcacoes.filter(function (m) { return m !== "ALMOCO" && m !== "RETORNO"; }) : d.marcacoes;
+      var iniciais = p.nome.split(/\s+/).filter(Boolean).slice(0, 2).map(function (s) { return s.charAt(0); }).join("");
+      return '<button type="button" class="pt-pessoa-item' + (PT_AVISOS.selecionado === p.id ? ' ativo' : '') + '" data-pessoa="' + Pto_esc_(p.id) + '" aria-label="Configurar avisos de ' + Pto_esc_(p.nome) + '" aria-pressed="' + (PT_AVISOS.selecionado === p.id) + '"><span class="pt-pessoa-avatar" aria-hidden="true">' + Pto_esc_(iniciais) + '</span><span class="pt-pessoa-textos"><strong>' + Pto_esc_(p.nome) + '</strong><span class="pt-pessoa-area">' + Pto_esc_(p.area || "Área não informada") + '</span><span class="pt-pessoa-resumo">' + Pto_esc_(Ponto_avisosResumo_(efetivas)) + '</span><span class="pt-pessoa-estado' + (sujo ? ' pendente' : '') + '">' + (sujo ? 'Alterações não salvas' : p.apto ? 'Habilitado para avisos' : 'Não habilitado') + '</span></span><span class="pt-pessoa-seta" aria-hidden="true">›</span></button>';
+    }).join("") || '<div class="pt-vazio">Nenhuma pessoa encontrada. Tente outro nome ou filtro.</div>';
+    Array.prototype.forEach.call(lista.querySelectorAll("[data-pessoa]"), function (b) { b.onclick = function () { Ponto_abrirAvisos_(this.getAttribute("data-pessoa"), true); }; });
+    Pto_$_("ptAvisoResultados").textContent = pessoas.length + (pessoas.length === 1 ? " pessoa encontrada" : " pessoas encontradas");
+  }
+  function Ponto_avisosVazio_() {
+    Pto_$_("ptAvisoEditor").innerHTML = '<div class="pt-pessoa-escolher"><span aria-hidden="true">✓</span><h4>Comece por uma pessoa</h4><p>Os horários e as opções de aviso aparecem aqui. Você pode deixar almoço e retorno desligados para quem não precisa.</p></div>';
+    Pto_$_("ptPessoasLayout").classList.remove("editando");
+  }
+  function Ponto_avisosPadrao_() {
+    if (!PT.ini || (PT.ini.conjunto !== "PADRAO" && PT.ini.conjunto !== "ENTRADA_SAIDA")) return null;
+    return PT.ini.conjunto === "ENTRADA_SAIDA" ? ["ENTRADA", "SAIDA"] : PT_AVISOS_TIPOS.slice();
+  }
+  function Ponto_abrirAvisos_(id, foco) {
+    if (PT_AVISOS.enviando) return;
+    var p = Ponto_avisosPessoa_(id); if (!p) return;
+    PT_AVISOS.selecionado = id;
+    var d = Ponto_avisosRascunho_(p), editor = Pto_$_("ptAvisoEditor"), padrao = Ponto_avisosPadrao_();
+    var k = PT.cache.pessoas.pessoas.indexOf(p);
+    editor.innerHTML = '<button type="button" class="pt-pessoa-voltar" id="ptAvisoVoltar">‹ Voltar para pessoas</button><div class="pt-pessoa-editor-cab"><div><p class="pt-eyebrow">CONFIGURAR AVISOS</p><h4 id="ptAvisoNome" tabindex="-1">' + Pto_esc_(p.nome) + '</h4><p>' + Pto_esc_(p.area || "Área não informada") + ' · ' + Pto_esc_(Pto_vinculo_(p.vinculo, "Vínculo não informado")) + '</p></div>' + Pto_selo_(p.apto ? "Habilitado" : "Não habilitado", p.apto ? "verde" : "cinza") + '</div>' +
+      (!p.apto ? '<div class="pt-pessoa-impedimento"><b>O envio está bloqueado para esta pessoa.</b><p>' + Pto_esc_(p.foraTexto) + '. As escolhas abaixo não removem esse impedimento.</p></div>' : '') +
+      '<form id="ptAvisoForm"><fieldset class="pt-aviso-fieldset" id="ptAvisoCampos"><legend>Quais avisos enviar?</legend><p class="pt-pessoa-lead">Ative os momentos que fazem sentido para esta pessoa.</p><div class="pt-aviso-tiles">' + PT_AVISOS_TIPOS.map(function (m, i) {
+        var sem = p.sem_almoco && (m === "ALMOCO" || m === "RETORNO"), hora = String(p.horasAvisos[m] || "");
+        var principal = hora.split(" (")[0];
+        return '<label class="pt-aviso-tile' + (d.marcacoes.indexOf(m) >= 0 ? ' selecionado' : '') + (sem ? ' indisponivel' : '') + '"><span class="pt-aviso-tile-topo"><span>' + PT_AVISOS_NOMES[i] + '</span><input type="checkbox" role="switch" id="ptAv' + m + '"' + (d.marcacoes.indexOf(m) >= 0 ? ' checked' : '') + (sem ? ' disabled' : '') + ' aria-label="' + Pto_esc_(PT_AVISOS_NOMES[i] + " — " + p.nome) + '"><span class="pt-aviso-chave" aria-hidden="true"></span></span><strong class="pt-aviso-hora">' + Pto_esc_(sem ? 'Não se aplica' : principal) + '</strong><span class="pt-aviso-tile-estado">' + (sem ? 'Sem intervalo na jornada' : d.marcacoes.indexOf(m) >= 0 ? 'Ativado' : 'Desativado') + '</span></label>';
+      }).join("") + '</div><p class="pt-aviso-nota">Entrada e saída: 5 minutos antes da jornada. Retorno: horário previsto, ajustado após confirmar o almoço.' + (p.horasAvisos.SAIDA.indexOf("(") >= 0 ? ' Saída na ' + Pto_esc_(p.horasAvisos.SAIDA.slice(p.horasAvisos.SAIDA.indexOf('(') + 1).replace(/\)$/, '')) + '.' : '') + '</p><div class="pt-aviso-presets"><span>Preencher:</span><button type="button" data-preset="TODOS">' + (p.sem_almoco ? 'Todos disponíveis' : 'Todos') + '</button><button type="button" data-preset="ENTRADA_SAIDA">Entrada e saída</button><button type="button" data-preset="NENHUM">Nenhum</button></div><div class="pt-aviso-origem"><span id="ptAvisoOrigemTexto">' + (d.padrao ? 'Segue o padrão geral' : 'Escolha individual') + '</span><button type="button" id="ptAvisoPadrao"' + (!padrao ? ' disabled' : '') + '>Usar padrão geral</button></div>' + (padrao ? '<p class="pt-mini">Padrão atual: ' + Pto_esc_(Ponto_avisosResumo_(padrao)) + '. Só é aplicado ao salvar.</p>' : '<p class="pt-mini">Atualize a página para consultar o padrão geral antes de usá-lo.</p>') + '</fieldset><div id="ptAvisosMsg" role="status"></div><footer class="pt-aviso-rodape"><span id="ptAvisoPendente" class="pt-mini"></span><div><button type="button" class="btn-secondary" id="ptAvisoDescartar">Cancelar alterações</button><button type="submit" class="btn-primary" id="ptAvisoSalvar">Salvar avisos</button></div></footer></form><details class="pt-pessoa-detalhes"><summary>Jornada e contato</summary><p>' + Pto_esc_(p.jornada) + '</p><p>' + Pto_esc_(p.celular ? "Celular " + p.celular : "Sem celular no cadastro") + (p.temEmail ? ' · Com e-mail' : ' · Sem e-mail') + '</p>' + (p.observacao ? '<p>' + Pto_esc_(p.observacao) + '</p>' : '') + '<button type="button" class="btn-secondary" id="ptAvisoJornada">Ajustar jornada</button></details>';
+    var rodape = editor.querySelector(".pt-aviso-rodape");
+    editor.appendChild(rodape);
+    Pto_$_("ptAvisoSalvar").setAttribute("form", "ptAvisoForm");
+    Pto_$_("ptPessoasLayout").classList.add("editando");
+    Pto_$_("ptAvisoVoltar").onclick = function () { if (PT_AVISOS.enviando) return; PT_AVISOS.selecionado = null; Ponto_avisosVazio_(); Ponto_avisosLista_(); var item = Array.prototype.filter.call(Pto_$_("ptAvisoLista").querySelectorAll("[data-pessoa]"), function (b) { return b.getAttribute("data-pessoa") === p.id; })[0]; (item || Pto_$_("ptAvisoBusca")).focus(); };
+    PT_AVISOS_TIPOS.forEach(function (m) { Pto_$_("ptAv" + m).onchange = function () { d.marcacoes = PT_AVISOS_TIPOS.filter(function (tipo) { return Pto_$_("ptAv" + tipo).checked; }); d.padrao = false; Ponto_avisosAtualizarEstado_(); }; });
+    Array.prototype.forEach.call(editor.querySelectorAll("[data-preset]"), function (b) { b.onclick = function () { var tipo = this.getAttribute("data-preset"); var escolhidas = tipo === "TODOS" ? PT_AVISOS_TIPOS.slice() : tipo === "ENTRADA_SAIDA" ? ["ENTRADA","SAIDA"] : []; d.marcacoes = escolhidas.filter(function (m) { return !p.sem_almoco || (m !== "ALMOCO" && m !== "RETORNO"); }); d.padrao = false; Ponto_avisosAtualizarEstado_(true); }; });
+    Pto_$_("ptAvisoPadrao").onclick = function () { if (!padrao) return; d.marcacoes = padrao.slice(); d.padrao = true; Ponto_avisosAtualizarEstado_(true); };
+    Pto_$_("ptAvisoDescartar").onclick = function () { delete PT_AVISOS.rascunhos[p.id]; Ponto_abrirAvisos_(p.id, false); Pto_$_("ptAvisoNome").focus({ preventScroll: true }); };
+    Pto_$_("ptAvisoJornada").onclick = function () { if (!PT_AVISOS.enviando) Ponto_editarPessoa_(k); };
+    Pto_$_("ptAvisoForm").onsubmit = function (e) { e.preventDefault(); Ponto_salvarAvisosEditor_(); };
+    Ponto_avisosAtualizarEstado_(); Ponto_avisosLista_();
+    if (foco) { Pto_$_("ptAvisoNome").focus({ preventScroll: true }); if (window.matchMedia("(max-width: 899px)").matches) editor.scrollIntoView({ block: "start", behavior: "auto" }); }
+  }
+  function Ponto_avisosAtualizarEstado_(campos) {
+    var p = Ponto_avisosPessoa_(PT_AVISOS.selecionado); if (!p || !Pto_$_("ptAvisoSalvar")) return;
+    var d = Ponto_avisosRascunho_(p), sujo = Ponto_avisosSujo_(p);
+    PT_AVISOS_TIPOS.forEach(function (m) { var input = Pto_$_("ptAv" + m); if (campos) input.checked = d.marcacoes.indexOf(m) >= 0; var tile = input.closest("label"); tile.classList.toggle("selecionado", input.checked); if (!input.disabled) tile.querySelector(".pt-aviso-tile-estado").textContent = input.checked ? "Ativado" : "Desativado"; });
+    Pto_$_("ptAvisoSalvar").disabled = !sujo || PT_AVISOS.enviando;
+    Pto_$_("ptAvisoDescartar").disabled = !sujo || PT_AVISOS.enviando;
+    Pto_$_("ptAvisoPendente").textContent = PT_AVISOS.enviando ? "Salvando…" : sujo ? "Alterações não salvas" : "Tudo salvo";
+    Pto_$_("ptAvisoOrigemTexto").textContent = d.padrao ? "Segue o padrão geral" : "Escolha individual";
+    Ponto_avisosLista_();
+  }
+  function Ponto_salvarAvisosEditor_() {
+    var p = Ponto_avisosPessoa_(PT_AVISOS.selecionado); if (!p || PT_AVISOS.enviando || !Ponto_avisosSujo_(p)) return;
+    var estado = PT_AVISOS;
+    var d = Ponto_avisosRascunho_(p), enviada = d.padrao ? null : d.marcacoes.slice();
+    PT_AVISOS.enviando = true; Pto_$_("ptAvisoCampos").disabled = true;
+    if (Pto_$_("ptDsSalvar")) Pto_$_("ptDsSalvar").disabled = true;
+    ["ptAvisoVoltar","ptAvisoJornada"].forEach(function (id) { Pto_$_(id).disabled = true; });
+    Ponto_avisosAtualizarEstado_();
+    Pto_chamar_("salvarLembretes", { usuarioId: p.id, marcacoes: enviada }, function (r) {
+      if (PT_AVISOS !== estado) return;
+      p.marcacoes = r.marcacoes; p.avisosProprios = enviada !== null; p.apto = r.apto; p.foraTexto = r.foraTexto;
+      delete PT_AVISOS.rascunhos[p.id]; PT_AVISOS.enviando = false;
+      if (Pto_$_("ptDsSalvar")) Pto_$_("ptDsSalvar").disabled = false;
+      if (PT_AVISOS.recarregar) { var alvo = PT_AVISOS.recarregar; delete PT_AVISOS.recarregar; Ponto_abaPessoas_(alvo); Pto_msg_("ptMsg", "Avisos salvos para " + p.nome + ".", "ok"); return; }
+      if (!Pto_$_("ptAvisoEditor")) return;
+      Ponto_abrirAvisos_(p.id, false);
+      Pto_$_("ptAvisoContagem").textContent = PT.cache.pessoas.pessoas.filter(function (x) { return x.apto; }).length;
+      Pto_msg_("ptAvisosMsg", "Avisos salvos para " + p.nome + ". A jornada foi mantida.", "ok");
+      Pto_$_("ptAvisosMsg").setAttribute("tabindex", "-1"); Pto_$_("ptAvisosMsg").focus({ preventScroll: true });
+    }, function (m) {
+      if (PT_AVISOS !== estado) return;
+      PT_AVISOS.enviando = false;
+      if (Pto_$_("ptDsSalvar")) Pto_$_("ptDsSalvar").disabled = false;
+      if (PT_AVISOS.recarregar) { var alvo = PT_AVISOS.recarregar; delete PT_AVISOS.recarregar; Ponto_abaPessoas_(alvo); Pto_msg_("ptMsg", m + " Suas alterações continuam no editor.", "erro"); return; }
+      if (!Pto_$_("ptAvisoEditor")) return; Pto_$_("ptAvisoCampos").disabled = false;
+      ["ptAvisoVoltar","ptAvisoJornada"].forEach(function (id) { Pto_$_(id).disabled = false; });
+      Ponto_avisosAtualizarEstado_(); Pto_msg_("ptAvisosMsg", m + " Suas alterações continuam aqui.", "erro");
+    });
+  }
+  function Ponto_dispensasHtml_(r) {
+    var h = "";
+    h += '<div class="pt-caixa"><p class="pt-mini">Férias e afastamentos lançados no Programa de conduta já valem sozinhos. Aqui o RH lança folga, atestado, consulta ou viagem sem marcação de ponto. Nada é apagado: "Retirar" só marca a dispensa como retirada.</p>' +
         '<div class="pt-grade3"><div class="pt-campo"><label for="ptDsPessoa">Colaborador</label><select id="ptDsPessoa">' + Pto_opcoes_(r.pessoas.map(function (p) { return [p.id, p.nome]; }), "", "Escolha") + "</select></div>" +
         '<div class="pt-campo"><label for="ptDsDe">De</label><input type="date" id="ptDsDe"></div><div class="pt-campo"><label for="ptDsAte">Até</label><input type="date" id="ptDsAte"></div></div>' +
         '<div class="pt-grade2"><div class="pt-campo"><label for="ptDsMot">Motivo</label><select id="ptDsMot">' + Pto_opcoes_(Object.keys(r.motivosDispensa).map(function (k) { return [k, r.motivosDispensa[k]]; }), "FOLGA") + '</select></div><div class="pt-campo"><label for="ptDsObs">Observação (opcional)</label><input id="ptDsObs" maxlength="200"></div></div>' +
@@ -297,44 +537,18 @@
         (r.dispensas.length ? '<table class="pt-tabela" style="margin-top:10px"><thead><tr><th>Colaborador</th><th>Período</th><th>Motivo</th><th></th></tr></thead><tbody>' + r.dispensas.map(function (x) {
           return '<tr><td data-r="Colaborador">' + Pto_esc_(x.pessoa) + '</td><td data-r="Período">' + Pto_esc_(x.deBr + (x.ateBr !== x.deBr ? " a " + x.ateBr : "")) + '</td><td data-r="Motivo">' + Pto_esc_(x.motivo) + (x.observacao ? '<div class="pt-mini">' + Pto_esc_(x.observacao) + "</div>" : "") + '</td><td><button type="button" class="btn-secondary" onclick="Ponto_removerDispensa_(\'' + Pto_esc_(x.id) + '\')">Retirar</button></td></tr>';
         }).join("") + "</tbody></table>" : "") + "</div>";
-      alvo.innerHTML = h;
-      Pto_$_("ptAvisoBusca").oninput = function () { var busca = this.value.toLocaleLowerCase("pt-BR"); Array.prototype.forEach.call(Pto_$_("ptAvisoTabela").querySelectorAll("tbody tr"), function (tr) { tr.hidden = tr.cells[0].textContent.toLocaleLowerCase("pt-BR").indexOf(busca) < 0; }); };
-      Pto_$_("ptDsSalvar").onclick = function () {
-        var b = this; b.disabled = true;
-        Pto_chamar_("salvarDispensa", { usuarioId: Pto_$_("ptDsPessoa").value, de: Pto_$_("ptDsDe").value, ate: Pto_$_("ptDsAte").value, motivo: Pto_$_("ptDsMot").value, observacao: Pto_$_("ptDsObs").value },
-          function (x) { Pto_msg_("ptMsg", x.message, "ok"); Ponto_abaPessoas_(alvo); }, function (m) { b.disabled = false; Pto_msg_("ptDsMsg", m); });
-      };
-    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div>"; });
+    return h;
   }
-  function Ponto_controlesAvisos_(p, k) {
-    var tipos = ["ENTRADA", "ALMOCO", "RETORNO", "SAIDA"], nomes = ["Entrada", "Saída para almoço", "Retorno do almoço", "Saída"];
-    return '<div class="pt-mini" id="ptAvisoOrigem' + k + '">' + (p.avisosProprios ? "Escolha individual" : "Segue o padrão geral") + '</div>' + tipos.map(function (m, i) {
-      return '<label class="pt-check" style="min-height:44px"><input type="checkbox" id="ptAviso' + k + m + '"' + (p.marcacoes.indexOf(m) >= 0 ? ' checked' : '') + ' aria-label="' + Pto_esc_(nomes[i] + ' — ' + p.nome) + '"> ' + nomes[i] + ' · ' + Pto_esc_(p.horasAvisos[m]) + (m === 'RETORNO' ? ' (ajusta após confirmar almoço)' : '') + '</label>';
-    }).join("") + '<button type="button" class="btn-primary" onclick="Ponto_salvarAvisos_(' + k + ',this,false)">Salvar avisos</button> <button type="button" class="btn-secondary" onclick="Ponto_salvarAvisos_(' + k + ',this,true)">Usar padrão geral</button><div id="ptAvisosMsg' + k + '" role="status"></div>';
-  }
-  function Ponto_salvarAvisos_(k, botao, padrao) {
-    var p = PT.cache.pessoas.pessoas[k], tipos = ["ENTRADA", "ALMOCO", "RETORNO", "SAIDA"];
-    var selecionados = tipos.filter(function (m) { return Pto_$_("ptAviso" + k + m).checked; });
-    botao.disabled = true;
-    Pto_chamar_("salvarLembretes", { usuarioId: p.id, marcacoes: padrao ? null : selecionados }, function (r) {
-      botao.disabled = false;
-      Pto_msg_("ptAvisosMsg" + k, r.message, "ok");
-      p.marcacoes = r.marcacoes; p.avisosProprios = !padrao; p.apto = r.apto;
-      Pto_$_("ptAvisoOrigem" + k).textContent = padrao ? "Segue o padrão geral" : "Escolha individual";
-      Pto_$_("ptAvisoContagem").textContent = PT.cache.pessoas.pessoas.filter(function (x) { return x.apto; }).length;
-      tipos.forEach(function (m) { Pto_$_("ptAviso" + k + m).checked = r.marcacoes.indexOf(m) >= 0; });
-      Pto_$_("ptAvisoSituacao" + k).innerHTML = r.apto ? Pto_selo_("Recebe", "verde") : Pto_selo_("Não recebe", "cinza") + '<div class="pt-mini">' + Pto_esc_(r.foraTexto) + "</div>";
-    }, function (m) { botao.disabled = false; Pto_msg_("ptAvisosMsg" + k, m); });
-  }
-  function Ponto_removerDispensa_(id) { if (!confirm("Retirar esta dispensa? Os lembretes voltam para esses dias.")) return; Pto_chamar_("removerDispensa", { id: id }, function (r) { Pto_msg_("ptMsg", r.message, "ok"); Ponto_desenharAba_(); }); }
+  function Ponto_removerDispensa_(id) { if (PT_AVISOS.enviando) return; if (!confirm("Retirar esta dispensa? Os lembretes voltam para esses dias.")) return; Pto_chamar_("removerDispensa", { id: id }, function (r) { Pto_msg_("ptMsg", r.message, "ok"); Ponto_desenharAba_(); }); }
   function Ponto_editarPessoa_(k) {
+    if (PT_AVISOS.enviando) return;
     var p = PT.cache.pessoas.pessoas[k];
     var ov = document.createElement("div");
     ov.className = "atv-overlay";
     var campo = function (id, rot, val, tipo, ajuda) { return '<div class="pt-campo"><label for="' + id + '">' + rot + '</label><input id="' + id + '" type="' + (tipo || "time") + '" value="' + Pto_esc_(val) + '">' + (ajuda ? '<div class="pt-ajuda-campo">' + ajuda + "</div>" : "") + "</div>"; };
     ov.innerHTML = '<div class="atv-modal" style="max-width:600px"><div class="atv-modal-cab"><h3>' + Pto_esc_(p.nome) + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div><div class="atv-modal-corpo">' +
-      '<label class="pt-check"><input type="checkbox" id="ptPsPart"' + (p.participa ? " checked" : "") + "> Recebe os lembretes do ponto</label>" +
-      (p.apto || p.fora === "NAO_PARTICIPA" ? "" : '<div class="pt-faixa aviso">Hoje esta pessoa não recebe: ' + Pto_esc_(p.foraTexto) + ".</div>") +
+      '<label class="pt-check"><input type="checkbox" id="ptPsPart"' + (p.participa ? " checked" : "") + "> Participa dos avisos do ponto</label>" +
+      (p.apto || p.fora === "NAO_PARTICIPA" ? "" : '<div class="pt-faixa aviso">Esta pessoa não está habilitada: ' + Pto_esc_(p.foraTexto) + ".</div>") +
       '<p class="pt-mini">Deixe vazio para seguir a jornada geral (' + Pto_esc_(PT.cache.pessoas.jornadaGeral) + ").</p>" +
       '<div class="pt-grade2">' + campo("ptPsEnt", "Entrada", p.entrada) + campo("ptPsSai", "Saída (segunda a quinta)", p.saida) + campo("ptPsAlm", "Saída para o almoço", p.almoco) +
       campo("ptPsRet", "Pausa do almoço (minutos)", p.retorno_min, "number", "De 15 a 240. A volta é lembrada na saída + a pausa.") + campo("ptPsSex", "Saída na sexta", p.saida_sexta) + "</div>" +
