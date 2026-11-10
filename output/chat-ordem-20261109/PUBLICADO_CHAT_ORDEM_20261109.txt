@@ -1,0 +1,54 @@
+CHAT (bate-papo) - mensagens antigas misturadas com novas - PUBLICADO 09/11/2026
+
+Relato: Elisa Camargos Rezende, 09/11 10:41-10:42 e 17:43 ("esse chat esta doido,
+enviando msg antiga no meio da cvs").
+
+Diagnostico
+- Banco (COM_MENSAGENS, 375 linhas): 0 inversoes entre ordem de gravacao e
+  data/hora. A conversa Elisa x Bruna esta integra. Dado nao foi alterado.
+- Causa na tela (ComunicacaoWidget.html, abrirConversa): ao reabrir uma conversa,
+  as 50 mais recentes eram juntadas com as ja carregadas SEM ordenar; as antigas
+  trazidas por "Mensagens anteriores" ficavam DEPOIS das novas. A paginacao
+  tambem recomecava, repetindo o botao.
+- Mesmo defeito no SGO+, no COMMAND (mesma imagem) e no RH360 (copia propria).
+
+Correcao
+- ordenarMsgs(): ordem por criado_em, desempate pela linha gravada, estavel.
+  Aplicada ao abrir, ao desenhar a conversa e antes de marcar como lido
+  (cobre novidades, envio, imagem, edicao de grupo e anteriores).
+- Paginacao continua de onde parou quando ja havia mensagens mais velhas.
+- Nada mais alterado: sem mudanca de servidor, banco, CSS ou textos.
+
+Teste (Chrome headless, widget real + servidor simulado de 120 mensagens,
+abrir -> anteriores -> voltar -> reabrir -> anteriores):
+  producao SGO e RH : reabrir FORA_DE_ORDEM (msg 119 -> msg 020), ultima=msg 069
+  corrigido SGO e RH: EM_ORDEM em todas as etapas, ultima=msg 119, 120 de 120
+  Arquivos: harness_head.html, harness_tail.html, patch.py nesta pasta.
+- vitest sgo_servidor: 345 ok, 1 falha + 1 arquivo com falha PRE-EXISTENTES
+  (assistente.test.ts manuais e auvoAvisos.test.ts cadastro), iguais sem a
+  mudanca; nao relacionados ao chat.
+
+Publicacao (imagem em camada sobre a vigente; so o widget trocado)
+- SGO+/COMMAND: metrolabs/sgo:chat-ordem-20261109
+  sha256:53b46f7d1101bca741479fbe49a6159f3701b9af4a5701531f81e8b58eb74707
+  base: metrolabs/sgo:comercial-20261106-melhorias (1f75aab09d93)
+- RH360: metrolabs/rh:chat-ordem-20261109-r6
+  sha256:2bdae25f9f4c80c6a526dc889c1b636ed7dedce68cdef03ab62cbee43764cb0b
+  base: R5 cct-conferencia-portal-20261106-r5 (sha256:23f77de3...) preservada
+- Compose: so a linha image mudou (diff conferido). SGO_ENSAIO=1 do RH e
+  configuracao previa, nao alterada.
+
+Verificacao apos publicar
+- Containers healthy; https sgo e rh respondem 200.
+- Pagina completa servida pelo servidor (nao so o arquivo): ordenarMsgs
+  presente (4), juncao antiga ausente (0), em SGO+ e RH360.
+- NAO verificado: uso real logado pela Elisa. Pedir que ela recarregue a pagina
+  (F5) e confirme; quem ficou com a aba aberta continua com o codigo antigo
+  ate recarregar.
+
+Reversao
+- Backups: /opt/metrolabs/backup/chat-ordem-20261109-{sgo,rh}/
+  (compose.antes.yml, widget.antes.html, ctx/Dockerfile)
+- Tags: metrolabs/sgo:antes-chat-ordem-20261109, metrolabs/rh:antes-chat-ordem-20261109
+- Reverter: cp compose.antes.yml para a pasta do sistema e
+  docker compose up -d --no-build app.

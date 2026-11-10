@@ -1,0 +1,22 @@
+<script>
+function esperar(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function clicar(sel) { var b = document.querySelector(sel); if (!b) throw new Error("sem " + sel); b.click(); }
+function textos() { return Array.prototype.map.call(document.querySelectorAll(".comw-msg .comw-txt"), function (e) { return e.textContent; }); }
+function ordenado(l) { for (var i = 1; i < l.length; i++) if (l[i] < l[i - 1]) return "FORA_DE_ORDEM em " + i + ": " + l[i - 1] + " -> " + l[i]; return "EM_ORDEM"; }
+(async function () {
+  var out = [];
+  try {
+    await esperar(300); window.ComunicacaoWidget.abrir(); await esperar(200);
+    clicar("[data-conv='C1']"); await esperar(200);
+    var t1 = textos(); out.push("abrir: " + t1.length + " " + ordenado(t1));
+    clicar("[data-acao='anteriores']"); await esperar(200);
+    var t2 = textos(); out.push("anteriores: " + t2.length + " " + ordenado(t2));
+    clicar("[data-acao='voltar']"); await esperar(100);
+    clicar("[data-conv='C1']"); await esperar(200);
+    var t3 = textos(); out.push("reabrir: " + t3.length + " " + ordenado(t3) + " ultima=" + t3[t3.length - 1]);
+    clicar("[data-acao='anteriores']"); await esperar(200);
+    var t4 = textos(); out.push("anteriores2: " + t4.length + " " + ordenado(t4) + " primeira=" + t4[0]);
+  } catch (e) { out.push("ERRO " + e.message); }
+  var p = document.createElement("pre"); p.id = "RESULTADO"; p.textContent = out.join("\n"); document.body.appendChild(p);
+})();
+</script></body></html>

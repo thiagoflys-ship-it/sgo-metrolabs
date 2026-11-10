@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><title>harness</title></head><body>
+<script>
+// servidor simulado: 120 mensagens alternando A/B, linhas 2..121, horário crescente
+var MSGS = []; for (var i = 0; i < 120; i++) MSGS.push({ msg_id: "m" + i, conversa_id: "C1", de_pessoa: i % 2 ? "B" : "A", de_nome: i % 2 ? "Bruna" : "Elisa", de_sistema: "SGO", texto: "msg " + String(i).padStart(3, "0"), criado_em: new Date(Date.UTC(2026, 10, 9, 10, 0, i * 10)).toISOString(), _linha: i + 2 });
+var CHAMADAS = [];
+function api(acao, d) {
+  CHAMADAS.push(acao);
+  if (acao === "iniciar") return { ok: true, eu: { pessoa_id: "A", ids: ["A"], nome: "Elisa" }, cursores: { COM_MENSAGENS: 121 }, conversas: [{ conversa_id: "C1", tipo: "DIRETA", titulo: "Bruna", ultima: { de_nome: "Bruna", texto: "x", criado_em: MSGS[119].criado_em }, nao_lidas: 0 }], avisos: [], comunicados: [], contagens: {} };
+  if (acao === "conversa") {
+    var fim = d.antes ? d.antes - 1 : 121, lim = d.limite || 50;
+    var achadas = MSGS.filter(function (m) { return m._linha <= fim; }).slice(-lim);
+    var antes = achadas.length ? achadas[0]._linha : 2;
+    return { ok: true, conversa: { conversa_id: "C1", tipo: "DIRETA", titulo: "Bruna" }, mensagens: achadas, antes: antes, mais: antes > 2, lido_ate: "" };
+  }
+  if (acao === "novidades") return { ok: true, cursores: d.cursores, mensagens: [] };
+  return { ok: true };
+}
+function mkRun(s, f) { var o = { withSuccessHandler: function (fn) { return mkRun(fn, f); }, withFailureHandler: function (fn) { return mkRun(s, fn); } };
+  o.comApi = function (tk, acao, d) { var r = api(acao, JSON.parse(JSON.stringify(d || {}))); setTimeout(function () { s && s(r); }, 5); };
+  o.comImagemApi = function () { setTimeout(function () { s && s({ ok: true }); }, 5); }; return o; }
+window.google = { script: { run: mkRun(null, null) } };
+window.COM_CFG = { token: function () { return "tk"; }, sistema: "SGO", outro: "COMMAND" };
+</script>

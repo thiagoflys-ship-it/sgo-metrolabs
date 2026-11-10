@@ -435,8 +435,12 @@
       ST.conv[id] = ST.conv[id] || r.conversa;
       var ja = ST.msgs[id] || [];
       var ids = {}; r.mensagens.forEach(function (m) { ids[m.msg_id] = 1; });
-      ST.msgs[id] = r.mensagens.concat(ja.filter(function (m) { return !ids[m.msg_id]; }));
-      ST.mais[id] = r.mais; ST.antes[id] = r.antes;
+      var ficam = ja.filter(function (m) { return !ids[m.msg_id]; });
+      ST.msgs[id] = ordenarMsgs(r.mensagens.concat(ficam));
+      // se "Mensagens anteriores" já trouxe mensagens mais velhas, a paginação continua de onde parou
+      var antesJa = ST.antes[id], jaTinhaVelhas = ficam.some(function (m) { return Number(m._linha) && Number(m._linha) < Number(r.antes); });
+      if (jaTinhaVelhas && Number(antesJa) && Number(antesJa) < Number(r.antes)) { ST.antes[id] = antesJa; }
+      else { ST.mais[id] = r.mais; ST.antes[id] = r.antes; }
       if (ST.aberta === id) { desenhar(); lerConversa(id); rolarFim(); }
     }, function (erro) { toastErro(erro); });
   }
@@ -449,8 +453,23 @@
       desenhar();
     }, toastErro);
   }
+  /** Põe as mensagens da conversa em ordem de envio (data e hora; empate pela linha gravada). As listas recebem
+   *  mensagens por vários caminhos (abrir, "Mensagens anteriores", novidades, envio, edição do grupo) e a junção
+   *  podia deixar mensagens antigas depois das novas. Ordenação estável: sem data, mantém a posição de chegada. */
+  function ordenarMsgs(lista) {
+    if (!lista || lista.length < 2) return lista;
+    var dec = lista.map(function (m, i) { return { m: m, i: i, t: String(m.criado_em || ""), l: Number(m._linha) || 0 }; });
+    dec.sort(function (a, b) {
+      if (a.t && b.t && a.t !== b.t) return a.t < b.t ? -1 : 1;
+      if (a.l && b.l && a.l !== b.l) return a.l - b.l;
+      return a.i - b.i;
+    });
+    for (var k = 0; k < dec.length; k++) lista[k] = dec[k].m;
+    return lista;
+  }
   function lerConversa(id) {
     var c = ST.conv[id]; if (!c) return;
+    ordenarMsgs(ST.msgs[id]);
     var lista = ST.msgs[id] || [], ult = lista.length ? lista[lista.length - 1].criado_em : (c.ultima && c.ultima.criado_em);
     var tinha = c.nao_lidas;
     c.nao_lidas = 0;
@@ -461,7 +480,7 @@
   }
   function rascChave(id) { return "comw_rasc_" + (CFG.sistema || "") + "_" + ((ST.d && ST.d.eu.pessoa_id) || "") + "_" + id; }
   function telaConversa() {
-    var id = ST.aberta, c = ST.conv[id] || { titulo: "Conversa" }, eu = ST.d.eu, lista = ST.msgs[id];
+    var id = ST.aberta, c = ST.conv[id] || { titulo: "Conversa" }, eu = ST.d.eu, lista = ordenarMsgs(ST.msgs[id]);
     var temPart = c.tipo && c.tipo !== "DIRETA";
     var html = "<div class='comw-cabconv'><button type='button' class='comw-ico' data-acao='voltar' aria-label='Voltar para a lista de conversas'>←</button>" +
       "<div class='comw-cresce'><div class='comw-tit'>" + h(c.titulo) + "</div>" + (c.com ? "<div>" + tagsPessoa(c.com) + "</div>" : "") + "</div>" +
