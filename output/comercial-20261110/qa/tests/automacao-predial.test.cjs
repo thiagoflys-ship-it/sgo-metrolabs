@@ -1,0 +1,1964 @@
+// Segurança e automação predial (SGO_Automacao_Predial.js + SGO_Automacao_Tuya.js) num contexto isolado, com a nuvem
+// Tuya SIMULADA (nenhum comando real) e dados fictícios (22/10/2026). Confere: quem é diretor (perfil, vínculo ou
+// responsável pelo sistema), porta da Diretoria do responsável pelo sistema, permissões no servidor, confirmação sem
+// digitar (token de uso único da janela), fase de implantação, idempotência, limites, solicitado -> aceito -> confirmado,
+// simulação e registro encadeado.
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const { criarUtilities, criarSession } = require('./_simulacros_gas.cjs');
+const pastaLegado = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
+const ler = (f) => fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n');
+const comSinal = (buf) => Array.from(buf).map((b) => (b > 127 ? b - 256 : b));
+
+// DONO = responsável pelo sistema (SGO_DONOS = admin), perfil ADMIN: é diretor. ADM2 = Administrador que não é diretor.
+const DONO = { userId: 'uA', usuario: 'admin', nome: 'DONO TESTE', perfil: 'ADMIN' };
+const ADM2 = { userId: 'uA2', usuario: 'adm2', nome: 'ADMINISTRADOR DOIS', perfil: 'ADMIN' };
+const DIR = { userId: 'uD', usuario: 'charles', nome: 'DIRETOR TESTE', perfil: 'DIRETORIA' };
+const DIRV = { userId: 'uV', usuario: 'dirvinc', nome: 'DIRETOR POR VINCULO', perfil: 'GESTOR' };
+const GESTOR = { userId: 'uG', usuario: 'gestor', nome: 'GESTOR TESTE', perfil: 'GESTOR' };
+const TEC = { userId: 'uT', usuario: 'tec', nome: 'TECNICO TESTE', perfil: 'TECNICO' };
+const CLIENTE = { userId: 'uC', usuario: 'cli', nome: 'CLIENTE', perfil: 'CLIENTE', clienteId: 'c1' };
+// 03/11/2026: pontos do "Car Refrigerator" (xbx) como a sombra v2.0 responde em produção (códigos 101 a 123)
+const FREEZER_PONTOS = { OnOff: true, Lock: false, Mode: 'ECO', BatteryProtect: 'M', TempUnit: 'C', Error: 0, Switch: true, HeatBox: false, Spdt: false,
+  A_BoxOnOff: true, B_BoxOnOff: true, A_Temp_C: -18, B_Temp_C: 4, A_TempSet_C: -20, B_TempSet_C: 5, HeatTemp_Set_C: 40, A_BatteryVoltage: 124, BatteryPencent: 85 };
+
+function ambiente(o) {
+  o = o || {};
+  const props = Object.assign({ TUYA_ACCESS_ID: 'id-de-teste-0001', TUYA_ACCESS_SECRET: 'segredo-de-teste-0001', TUYA_REGIAO: 'us', TUYA_LIGADO: '1', TUYA_ENDPOINT: 'http://localhost:8199',
+    // 27/10/2026: consulta econômica liberada o dia todo nos testes (a janela real é conferida no teste da cota)
+    AUT_SAUDE_CFG: JSON.stringify({ consultaInicio: '00:00', consultaFim: '23:59', consultaDias: [0, 1, 2, 3, 4, 5, 6] }) }, o.props || {});
+  Object.keys(props).forEach((k) => { if (props[k] === null) delete props[k]; });
+  const cache = {};
+  const tabelas = { CAD_USUARIOS: [
+    { ID: 'uA', USUARIO: 'admin', NOME: 'DONO TESTE', PERFIL: 'ADMIN', STATUS: 'ATIVO', VINCULO_TRABALHO: 'DIRETORIA' },
+    { ID: 'uA2', USUARIO: 'adm2', NOME: 'ADMINISTRADOR DOIS', PERFIL: 'ADMIN', STATUS: 'ATIVO', VINCULO_TRABALHO: 'CLT' },
+    { ID: 'uD', USUARIO: 'charles', NOME: 'DIRETOR TESTE', PERFIL: 'DIRETORIA', STATUS: 'ATIVO', VINCULO_TRABALHO: 'DIRETORIA' },
+    { ID: 'uV', USUARIO: 'dirvinc', NOME: 'DIRETOR POR VINCULO', PERFIL: 'GESTOR', STATUS: 'ATIVO', VINCULO_TRABALHO: 'DIRETORIA' },
+    { ID: 'uG', USUARIO: 'gestor', NOME: 'GESTOR TESTE', PERFIL: 'GESTOR', STATUS: 'ATIVO', VINCULO_TRABALHO: 'CLT' },
+    { ID: 'uT', USUARIO: 'tec', NOME: 'TECNICO TESTE', PERFIL: 'TECNICO', STATUS: 'ATIVO', VINCULO_TRABALHO: 'CLT' },
+    { ID: 'uX', USUARIO: 'inativo', NOME: 'INATIVO', PERFIL: 'TECNICO', STATUS: 'INATIVO' }],
+    CAD_UNIDADES: [{ ID: 'un1', CLIENTE_ID: 'c1', NOME_UNIDADE: 'MATRIZ GOIÂNIA', CIDADE: 'Goiânia', STATUS: 'ATIVO' }], CAD_CLIENTES: [{ ID: 'c1', NOME_FANTASIA: 'METROLABS', STATUS: 'ATIVO' }] };
+  const cabecalhos = {};
+  const api = { pedidos: [], portaoAberto: false, fechaduraAbre: true, recusaComando: null, falhaRede: false, remoto: true, registrosFechadura: 1,
+    freezer: !!o.freezer, frz: Object.assign({}, FREEZER_PONTOS) };
+  const notificacoes = [];
+  const sessao = { atual: o.sessao || DONO };
+  let seq = 0;
+  const resposta = (code, corpo) => ({ getResponseCode: () => code, getContentText: () => JSON.stringify(corpo), getAllHeaders: () => ({}) });
+  // garagem real (22/10/2026): switch_1, door_control_1 (open/close) e o sensor de posição doorcontact_state
+  const estadoGaragem = () => (api.garagem ? [{ code: 'switch_1', value: false }, { code: 'door_control_1', value: api.dc1 || 'close' }, { code: 'doorcontact_state', value: !!api.portaoAberto }] : [{ code: 'switch_1', value: false }]);
+  const ctx = vm.createContext({
+    // 27/10/2026: globais extras do teste (ex.: SGO_PORTOES_LOCAIS, a ponte local dos portões no servidor próprio)
+    ...(o.globais || {}),
+    console,
+    Utilities: criarUtilities({ DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
+      computeDigest: (alg, txt) => comSinal(crypto.createHash('sha256').update(String(txt), 'utf8').digest()),
+      computeHmacSha256Signature: (txt, chave) => comSinal(crypto.createHmac('sha256', String(chave)).update(String(txt), 'utf8').digest()) }),
+    Session: criarSession(),
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in props ? props[k] : null), setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: (k) => { delete props[k]; } }) },
+    CacheService: { getScriptCache: () => ({ get: (k) => (k === 'TUYA_ULTIMA_CHAMADA_MS' ? null : (k in cache ? cache[k] : null)), put: (k, v) => { cache[k] = String(v); }, remove: (k) => { delete cache[k]; } }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {}, hasLock: () => false, tryLock: () => true }) },
+    UrlFetchApp: {
+      fetch(url, op) {
+        const u = new URL(url);
+        api.pedidos.push({ metodo: String(op.method).toUpperCase(), caminho: u.pathname, corpo: op.payload ? JSON.parse(op.payload) : null });
+        if (api.falhaRede) throw new Error('ECONNRESET');
+        if (u.pathname === '/v1.0/token') return resposta(200, { success: true, result: { access_token: 'tok-1', refresh_token: 'ref-1', expire_time: 7200, uid: 'uid-app' } });
+        // 03/11/2026: "Car Refrigerator" real (xbx): /functions 2009, /status 2003; a sombra v2.0 e o modelo respondem
+        if (api.freezer && u.pathname.indexOf('dev-frz-1') >= 0) {
+          if (/\/shadow\/properties$/.test(u.pathname)) return resposta(200, { success: true, result: { properties: Object.keys(api.frz).map((k, i) => ({ code: k, dp_id: 101 + i, value: api.frz[k], time: Date.now() - 60000 })) } });
+          if (/\/model$/.test(u.pathname)) return resposta(200, { success: true, result: { model: JSON.stringify({ modelId: 'm1', services: [{ properties: [{ abilityId: 112, code: 'A_Temp_C', typeSpec: { type: 'value', scale: 0, unit: '℃' } }, { abilityId: 122, code: 'A_BatteryVoltage', typeSpec: { type: 'value', scale: 1, unit: 'V' } }] }] }) } });
+          if (/\/functions$/.test(u.pathname)) return resposta(200, { success: false, code: 2009, msg: 'not support this device' });
+          if (/\/status$/.test(u.pathname)) return resposta(200, { success: false, code: 2003, msg: 'function not support' });
+          if (u.pathname === '/v1.0/devices/dev-frz-1') return resposta(200, { success: true, result: { id: 'dev-frz-1', online: api.frzOnline !== false, status: [] } });
+          return resposta(200, { success: false, code: 2008, msg: 'command or value not support' });
+        }
+        if (u.pathname === '/v1.0/iot-01/associated-users/devices') return resposta(200, { success: true, result: { has_more: false, devices: [
+          { id: 'dev-portao-1', name: 'Portão principal', category: 'ckmkzq', product_name: 'Abridor', online: true, status: estadoGaragem() },
+          { id: 'dev-portao-2', name: 'Portão secundário', category: 'ckmkzq', product_name: 'Abridor', online: true, status: [{ code: 'switch_1', value: false }] },
+          { id: 'dev-fech-1', name: 'Porta da Diretoria', category: 'jtmspro', product_name: 'Fechadura', online: true, status: [{ code: 'residual_electricity', value: 80 }, { code: 'lock_motor_state', value: false }] }
+        ].concat(api.freezer ? [{ id: 'dev-frz-1', name: 'Car Refrigerator', category: 'xbx', product_id: '2bjx1o77', product_name: 'Car Refrigerator', online: true, status: [] }] : []) } });
+        // 22/10/2026: fechadura real em modo pedido (campainha) e garagem com door_control_1 (open/close), como lidos em produção
+        if (api.pedido && /dev-fech-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ms', functions: [{ code: 'reply_unlock_request', type: 'Boolean', values: '{}' }] } });
+        if (api.pedido && /door-lock\/remote-unlocks$/.test(u.pathname)) return resposta(200, { success: true, result: [] });
+        if (/shadow\/properties$/.test(u.pathname)) { api.leiturasSombra = (api.leiturasSombra || 0) + 1; return resposta(200, { success: true, result: { properties: [{ code: 'unlock_request', value: api.pedidoValor || 0, time: api.pedidoEm || Date.now() }, { code: 'doorbell', value: true, time: api.campainhaEm || 0 }, { code: 'closed_opened', value: api.fechAberta ? 'open' : 'closed', time: Date.now() }] } }); }
+        if (api.pedido && /dev-fech-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.respostasPedido = api.respostasPedido || []).push(v); if (!(api.pedidoValor > 0)) return resposta(200, { success: false, code: 2008, msg: 'not in request window' }); if (v.value === true) api.fechAberta = true; api.pedidoValor = 0; return resposta(200, { success: true, result: true, tid: 'tid-r' }); }
+        if (api.garagem && /dev-portao-1\/functions$/.test(u.pathname)) return resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean', values: '{}' }, { code: 'door_control_1', type: 'Enum', values: '{"range":["open","close"]}' }] } });
+        if (api.garagem && /dev-portao-1\/commands$/.test(u.pathname)) { const v = JSON.parse(op.payload).commands[0]; (api.cmdGaragem = api.cmdGaragem || []).push(v); if (v.code === 'door_control_1') api.dc1 = v.value; else if (v.code === 'switch_1' && typeof v.value === 'boolean' && !api.sensorLento) api.portaoAberto = v.value; return resposta(200, { success: true, result: true, tid: 'tid-g' }); }
+        if (api.garagem && u.pathname === '/v1.0/devices/dev-portao-1') { api.leiturasGaragem = (api.leiturasGaragem || 0) + 1; return resposta(200, { success: true, result: { id: 'dev-portao-1', online: true, status: estadoGaragem() } }); }
+        if (/\/functions$/.test(u.pathname)) return u.pathname.includes('fech') ? resposta(200, { success: true, result: { category: 'jtmspro', functions: api.remoto ? [{ code: 'remote_no_dp_key', type: 'Raw' }] : [{ code: 'unlock_temporary', type: 'Integer' }] } })
+          : resposta(200, { success: true, result: { category: 'ckmkzq', functions: [{ code: 'switch_1', type: 'Boolean' }] } });
+        if (/door-lock\/remote-unlocks$/.test(u.pathname)) return resposta(200, { success: true, result: api.remoto ? [{ remote_unlock_type: 'remoteUnlockWithoutPwd', open: true }] : [] });
+        if (/door-lock\/password-ticket$/.test(u.pathname)) return resposta(200, { success: true, result: { ticket_id: 'tk-abc', ticket_key: 'xx' } });
+        if (/password-free\/open-door$/.test(u.pathname)) { if (api.fechaduraAbre) api.fechAberta = true; return resposta(200, { success: true, result: true, tid: 'tid-f' }); }
+        if (/door-lock\/open-logs$/.test(u.pathname)) return resposta(200, { success: true, result: { records: Array.from({ length: api.fechAberta ? api.registrosFechadura : 0 }, () => (api.pedido ? { status: { code: 'unlock_app', value: '0' }, unlock_name: '' } : { unlock_name: 'remote' })) } });
+        if (/\/commands$/.test(u.pathname)) { if (api.recusaComando) return resposta(200, api.recusaComando); api.portaoAberto = true; return resposta(200, { success: true, result: true, tid: 'tid-p' }); }
+        if (/\/status$/.test(u.pathname)) return resposta(200, { success: true, result: [{ code: 'switch_1', value: api.portaoAberto }] });
+        if (u.pathname === '/v1.0/devices/dev-fech-1') return resposta(200, { success: true, result: { id: 'dev-fech-1', online: true, status: [{ code: 'residual_electricity', value: 80 }, { code: 'lock_motor_state', value: !!api.fechAberta }] } });
+        if (/^\/v1\.0\/devices\/dev-portao/.test(u.pathname)) return resposta(200, { success: true, result: { id: u.pathname.split('/')[3], online: true, status: [{ code: 'switch_1', value: api.portaoAberto }] } });
+        return resposta(200, { success: false, code: 2010, msg: 'device not exist' });
+      }
+    },
+    CertCal_garantirColuna_: (t, c) => { if (cabecalhos[t] && cabecalhos[t].indexOf(c) < 0) cabecalhos[t].push(c); },
+    CertCal_garantirTabela_: (t, cols) => { if (!tabelas[t]) { tabelas[t] = []; cabecalhos[t] = (cols || []).slice(); } },
+    SGO_DATA: {
+      getDB: () => ({ getSheetByName: (n) => (tabelas[n] ? {} : null) }),
+      getAll: (t) => (tabelas[t] || []).map((r) => Object.assign({}, r)),
+      getById: (t, id) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); return r ? Object.assign({}, r) : null; },
+      update: (t, id, d) => { const r = (tabelas[t] || []).find((x) => String(x.ID) === String(id)); if (!r) return false; Object.keys(d).forEach((k) => { if (!cabecalhos[t] || cabecalhos[t].indexOf(k) >= 0) r[k] = d[k]; }); return true; },
+      insert: (t, d) => { const r = Object.assign({ ID: 'id' + (++seq) }, d); (tabelas[t] = tabelas[t] || []).push(r); return Object.assign({}, r); },
+      remove: () => { throw new Error('apagar é proibido'); },
+      gerarRegistroBase: (x) => Object.assign({ ID: 'g' + (++seq), CRIADO_EM: new Date().toISOString() }, x),
+      normalizarObjetoParaSheet: (t, x) => x, log() {}
+    },
+    SGO_UTILS: { nowIso: () => new Date().toISOString(), safe: (v) => (v === null || v === undefined ? '' : String(v).trim()), safeUpper: (v) => String(v || '').trim().toUpperCase() },
+    SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS', CAD_UNIDADES: 'CAD_UNIDADES', CAD_CLIENTES: 'CAD_CLIENTES' } },
+    // como SGO_Chaves.js: SGO_DONOS = ['admin']
+    Chaves_ehDonoUsuario_: (u) => String(u || '').trim().toLowerCase() === 'admin',
+    exigirSessao: () => Object.assign({}, sessao.atual),
+    SGO_notificar_: (x) => { notificacoes.push(x); return { ok: 1, erro: 0, pulado: 0 }; },
+    Pend_item_: (tipo, o) => Object.assign({ tipo }, o)
+  });
+  for (const f of ['SGO_Automacao_Tuya.js', 'SGO_Automacao_Predial.js', 'SGO_Automacao_Saude.js']) vm.runInContext(ler(f), ctx);
+  const como = (s) => { sessao.atual = s; };
+  const api_ = (acao, dados) => JSON.parse(JSON.stringify(ctx.AutPred_api('sess', acao, dados || {})));
+  /** O que a tela faz: toque no botão (preparar -> token) e "Sim, abrir agora" (comando com o token). */
+  const abrir = (dispositivoId, operacaoId) => {
+    const p = api_('preparar', { dispositivoId, operacaoId });
+    if (!p.ok) return p;
+    return api_('comando', { dispositivoId, operacaoId, confirmacaoToken: p.confirmacaoToken });
+  };
+  const disp = (nome) => (tabelas.AUT_DISPOSITIVOS || []).find((d) => d.NOME === nome);
+  const comandosApi = () => api.pedidos.filter((p) => p.metodo === 'POST');
+  const homologar = (nome) => { const anterior = sessao.atual; como(DIR); const r = api_('homologar', { id: disp(nome).ID, homologado: true, motivo: 'teste presencial acompanhado' }); assert.equal(r.ok, true, r.message); como(anterior); };
+  const envelhecer = () => { (tabelas.AUT_COMANDOS || []).forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 120000).toISOString(); }); (tabelas.AUT_DISPOSITIVOS || []).forEach((d) => { if (d.ULT_CMD_EM) d.ULT_CMD_EM = new Date(Date.now() - 120000).toISOString(); }); };
+  return { ctx, props, tabelas, api, notificacoes, como, api_, abrir, disp, comandosApi, cache, homologar, envelhecer, cabecalhos };
+}
+
+function sincronizar(amb) { amb.como(DONO); const r = amb.api_('sincronizar'); assert.equal(r.ok, true, r.message); return r; }
+const nomes = (p) => p.unidades.flatMap((u) => u.dispositivos.map((d) => d.nome));
+
+test('garagem: preparar fechar relê a posição real quando a posição guardada está velha', () => {
+  const amb=ambiente();amb.api.garagem=true;sincronizar(amb);amb.homologar('Portão principal');
+  const g=amb.disp('Portão principal');
+  assert.equal(JSON.parse(g.ESTADO_JSON).find(x=>x.code==='doorcontact_state').value,false);
+  amb.api.portaoAberto=true; // abriu por controle físico/Smart Life, sem reler a tela
+  const p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-sensor-velho-001',acao:'FECHAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'FECHAR');assert.equal(amb.comandosApi().length,0);
+});
+
+test('garagem: botão alternado resolve abrir e fechar no servidor, usa true para abrir e false para fechar e não muda o pedestre', () => {
+  const amb=ambiente();amb.api.garagem=true;sincronizar(amb);amb.homologar('Portão principal');
+  const g=amb.disp('Portão principal');
+  let p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-alternar-abrir-001',acao:'ALTERNAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'ABRIR');
+  let r=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-alternar-abrir-001',acao:p.acao,confirmacaoToken:p.confirmacaoToken});
+  assert.equal(r.ok,true,r.message);amb.envelhecer();
+  p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-alternar-fechar-001',acao:'ALTERNAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'FECHAR');
+  r=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-alternar-fechar-001',acao:p.acao,confirmacaoToken:p.confirmacaoToken});
+  assert.equal(r.ok,true,r.message);assert.deepEqual(amb.api.cmdGaragem,[{code:'switch_1',value:true},{code:'switch_1',value:false}]);
+  const ped=amb.disp('Portão secundário');
+  assert.equal(amb.api_('preparar',{dispositivoId:ped.ID,operacaoId:'op-pedestre-alternar-001',acao:'ALTERNAR'}).ok,false);
+});
+
+test('garagem: leitura falha ou posição muda durante confirmação não envia pulso contrário', () => {
+  const amb=ambiente();amb.api.garagem=true;sincronizar(amb);amb.homologar('Portão principal');
+  const g=amb.disp('Portão principal');
+  amb.api.portaoAberto=true;
+  const p=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-mudou-sensor-001',acao:'ALTERNAR'});
+  assert.equal(p.ok,true,p.message);assert.equal(p.acao,'FECHAR');
+  amb.api.portaoAberto=false;
+  const r=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-mudou-sensor-001',acao:p.acao,confirmacaoToken:p.confirmacaoToken});
+  assert.equal(r.ok,false);assert.match(r.message,/já está fechado/);assert.equal(amb.api.cmdGaragem,undefined);
+  amb.api.falhaRede=true;
+  const erro=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-rede-falha-001',acao:'ALTERNAR'});
+  assert.equal(erro.ok,false);assert.match(erro.message,/posição atual/);assert.equal(amb.api.cmdGaragem,undefined);
+  amb.api.falhaRede=false;amb.api.portaoAberto=true;
+  const p2=amb.api_('preparar',{dispositivoId:g.ID,operacaoId:'op-rede-cai-confirmacao-001',acao:'ALTERNAR'});
+  assert.equal(p2.ok,true,p2.message);amb.api.falhaRede=true;
+  const r2=amb.api_('comando',{dispositivoId:g.ID,operacaoId:'op-rede-cai-confirmacao-001',acao:p2.acao,confirmacaoToken:p2.confirmacaoToken});
+  assert.equal(r2.ok,false);assert.match(r2.message,/posição atual/);assert.equal(amb.api.cmdGaragem,undefined);
+});
+
+test('quem é diretor: perfil Diretoria, vínculo Diretoria ou responsável pelo sistema; Administrador comum e Gestor não', () => {
+  const amb = ambiente();
+  const e = (s) => amb.ctx.AutPred_ehDiretor_(Object.assign({}, s));
+  assert.equal(e(DONO), true, 'dono (perfil ADMIN) é diretor');
+  assert.equal(e(DIR), true, 'perfil Diretoria');
+  assert.equal(e(DIRV), true, 'vínculo de trabalho Diretoria no cadastro');
+  assert.equal(e(ADM2), false);
+  assert.equal(e(GESTOR), false);
+  assert.equal(e(TEC), false);
+  assert.equal(amb.ctx.AutPred_usuarioEhDiretor_({ USUARIO: 'admin', PERFIL: 'ADMIN' }), true);
+  // uma regra só no módulo: nenhuma comparação solta com 'DIRETORIA' fora dos helpers
+  const fonte = ler('SGO_Automacao_Predial.js');
+  const soltas = fonte.split('\n').filter((l) => /=== 'DIRETORIA'/.test(l) && !/function AutPred_(ehDiretor_|usuarioEhDiretor_)|AutPred_perfil_\(s\) === 'DIRETORIA'|u\.PERFIL|u\.VINCULO_TRABALHO/.test(l));
+  assert.deepEqual(soltas, []);
+});
+
+test('sincronização: lê os 3 dispositivos, portão com switch_1, fechadura restrita à Diretoria; nenhum comando sai', () => {
+  const amb = ambiente();
+  const r = sincronizar(amb);
+  assert.match(r.mensagem, /3 dispositivo/);
+  assert.equal(amb.tabelas.AUT_DISPOSITIVOS.length, 3);
+  const p = amb.disp('Portão principal'), f = amb.disp('Porta da Diretoria');
+  assert.equal(p.TIPO, 'PORTAO'); assert.equal(p.COMPAT_OK, 'SIM'); assert.equal(p.RESTRITO_DIRETORIA, 'NAO'); assert.equal(p.HOMOLOGADO, 'NAO');
+  assert.equal(f.TIPO, 'FECHADURA'); assert.equal(f.RESTRITO_DIRETORIA, 'SIM'); assert.equal(f.REMOTO_FECHADURA, 'BILHETE');
+  assert.equal(amb.comandosApi().length, 0, 'sincronizar só lê');
+  sincronizar(amb);
+  assert.equal(amb.tabelas.AUT_DISPOSITIVOS.length, 3, 'não duplica');
+});
+
+test('porta da Diretoria: invisível para quem não é diretor (Gestor, Técnico, Administrador comum); diretores a veem', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  amb.homologar('Portão principal'); // em uso: toda a equipe entra
+  const f = amb.disp('Porta da Diretoria');
+  amb.como(GESTOR);
+  let p = amb.api_('painel');
+  assert.equal(p.ok, true, p.message);
+  assert.deepEqual(nomes(p).sort(), ['Portão principal', 'Portão secundário'], 'portões de toda a equipe; a porta não');
+  assert.ok(!JSON.stringify(p).includes('Porta da Diretoria') && !JSON.stringify(p).includes('dev-fech-1'));
+  assert.equal(p.restritosOcultos, 0, 'nem a contagem');
+  for (const a of ['historico', 'estado', 'preparar']) assert.equal(amb.api_(a, { dispositivoId: f.ID, operacaoId: 'op-gestor-fech-1' }).ok, false, a);
+  amb.como(ADM2);
+  p = amb.api_('painel');
+  assert.ok(!nomes(p).includes('Porta da Diretoria'));
+  assert.equal(p.restritosOcultos, 1, 'Administrador comum só vê a contagem');
+  assert.ok(!JSON.stringify(p).includes('dev-fech-1'));
+  assert.equal(amb.api_('dispositivoSalvar', { id: f.ID, nome: 'x' }).ok, false);
+  assert.ok(!amb.api_('permissoes').dispositivos.some((d) => d.restrito));
+  assert.ok(!amb.api_('auditoria').itens.some((a) => a.dispositivo === 'Porta da Diretoria'));
+  for (const s of [DONO, DIR, DIRV]) {
+    amb.como(s);
+    p = amb.api_('painel');
+    assert.ok(nomes(p).includes('Porta da Diretoria'), s.usuario + ' vê a porta');
+    assert.equal(p.restritosOcultos, 0);
+  }
+  amb.como(CLIENTE);
+  assert.equal(amb.api_('painel').ok, false);
+});
+
+test('porta da Diretoria: o responsável pelo sistema destrava por padrão; outro diretor só com a permissão que ele concede; bilhete + abertura e confirmação', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  amb.homologar('Porta da Diretoria');
+  // Charles (perfil Diretoria) vê e não destrava; não concede a porta a si nem a outros
+  amb.como(DIR);
+  let r = amb.abrir(f.ID, 'op-charles-00001');
+  assert.equal(r.ok, false); assert.match(r.message, /responsável pelo sistema/);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'quero abrir' }).ok, false, 'só o dono concede a porta');
+  // dono: padrão, sem permissão gravada
+  amb.como(DONO);
+  r = amb.abrir(f.ID, 'op-dono-porta-0001');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.modo, 'REAL');
+  assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.match(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-dono-porta-0001').AUTORIZACAO_MOTIVO, /padrão/);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uA', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'eu mesmo' }).ok, false, 'dono já tem por padrão');
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uG', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'gestor' }).ok, false, 'só para diretor');
+  // dono concede ao Charles, com vigência e auditoria
+  r = amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'diretor de operações', vigenciaFim: '2099-12-31' });
+  assert.equal(r.ok, true, r.message);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'PERMISSAO_CONCEDIDA' && a.RESTRITO === 'SIM'));
+  amb.envelhecer();
+  amb.como(DIR);
+  r = amb.abrir(f.ID, 'op-charles-00002');
+  assert.equal(r.ok, true, r.message);
+  const posts = amb.comandosApi().map((p) => p.caminho);
+  assert.ok(posts.some((c) => /password-ticket$/.test(c)) && posts.some((c) => /password-free\/open-door$/.test(c)));
+  assert.ok(!posts.some((c) => /\/commands$/.test(c)), 'fechadura não vai por /commands');
+  assert.ok(!JSON.stringify(amb.tabelas).includes('tk-abc'), 'bilhete nunca gravado');
+  const eventos = amb.tabelas.AUT_AUDITORIA.filter((a) => a.OPERACAO_ID === 'op-dono-porta-0001').map((a) => a.EVENTO);
+  assert.deepEqual(eventos, ['COMANDO_SOLICITADO', 'COMANDO_ACEITO', 'EXECUCAO_CONFIRMADA']);
+  // revogar a porta: só o dono
+  const perm = amb.tabelas.AUT_PERMISSOES.find((p) => p.USUARIO_ID === 'uD' && p.STATUS === 'ATIVA');
+  assert.equal(amb.api_('permissaoRevogar', { id: perm.ID, motivo: 'tentativa do próprio' }).ok, false);
+  amb.como(DONO);
+  assert.equal(amb.api_('permissaoRevogar', { id: perm.ID, motivo: 'fim do projeto' }).ok, true);
+});
+
+test('confirmação sem digitar: só com o token da janela (uso único, 60 s, do mesmo usuário, dispositivo e operação); chamada direta é recusada', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal');
+  amb.como(DONO);
+  // chamada direta sem passar pela janela
+  let r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-direta-000001' });
+  assert.equal(r.ok, false); assert.match(r.message, /confirmação na janela/);
+  assert.equal(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-direta-000001').SITUACAO, 'NEGADO');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'COMANDO_SEM_CONFIRMACAO'));
+  // token de outra operação, de outro usuário e vencido
+  let p = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000001' });
+  assert.equal(p.ok, true, p.message); assert.equal(p.validadeS, 60); assert.equal(p.dispositivo.nome, 'Portão principal');
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000002', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false); assert.match(r.message, /não é deste usuário, deste dispositivo ou desta solicitação/);
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000001', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false, 'uso único: o token já foi consumido pela tentativa anterior');
+  p = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000003' });
+  amb.como(DIR);
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000003', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false, 'token de outro usuário');
+  amb.como(DONO);
+  p = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000004' });
+  const k = Object.keys(amb.cache).find((x) => x.endsWith(p.confirmacaoToken));
+  const j = JSON.parse(amb.cache[k]); j.ate = Date.now() - 1; amb.cache[k] = JSON.stringify(j);
+  r = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000004', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false); assert.match(r.message, /venceu/);
+  // caminho certo (simulação: não homologado)
+  r = amb.abrir(p1.ID, 'op-tok-000000005');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'SIMULADO');
+  assert.equal(amb.comandosApi().length, 0);
+  // preparar recusa antes da janela: sem permissão, limite
+  assert.match(amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000006' }).message, /intervalo mínimo de 10 s/);
+  assert.equal(amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-tok-000000005' }).ok, false, 'operação já processada');
+  // nenhuma palavra digitada no código da tela
+  const tela = ler('JS_AutomacaoPredial.html');
+  assert.ok(!/Digite ABRIR|HOMOLOGAR|autConfirmacao|autHomConf/.test(tela), 'nada para digitar');
+  assert.match(tela, /Sim, abrir agora/);
+});
+
+test('fase de implantação: desligado ou nada homologado = só Administrador e diretores (menu, atalho e servidor); depois, toda a equipe interna', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal');
+  amb.como(TEC);
+  let i = amb.api_('iniciar');
+  assert.equal(i.mostrarMenu, false); assert.equal(i.podeAcionar, false); assert.equal(i.emUso, false);
+  assert.match(amb.api_('painel').message, /em implantação/);
+  assert.equal(amb.abrir(p1.ID, 'op-tec-fase-00001').ok, false);
+  for (const s of [DONO, DIR, ADM2]) { amb.como(s); i = amb.api_('iniciar'); assert.equal(i.mostrarMenu, true, s.usuario); assert.equal(i.podeAcionar, true, s.usuario); }
+  amb.como(GESTOR);
+  assert.equal(amb.api_('iniciar').mostrarMenu, false);
+  amb.homologar('Portão principal');
+  // 23/10/2026 (dono): "os colaboradores no celular não estão vendo Portões" — em uso, todos os perfis internos recebem o atalho
+  for (const s of [TEC, GESTOR]) {
+    amb.como(s);
+    i = amb.api_('iniciar');
+    assert.equal(i.mostrarMenu, true, s.usuario); assert.equal(i.podeAcionar, true, s.usuario); assert.equal(i.emUso, true);
+    assert.deepEqual(amb.api_('rapido').itens.map((d) => d.nome), ['Portão principal', 'Portão secundário'], s.usuario + ': os dois portões, sem a porta');
+  }
+  amb.como(TEC);
+  const r = amb.abrir(p1.ID, 'op-tec-fase-00002');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO');
+  assert.match(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-tec-fase-00002').AUTORIZACAO_MOTIVO, /perfil TECNICO/);
+  amb.como(CLIENTE);
+  assert.equal(amb.api_('iniciar').ok, false, 'cliente fora');
+  // desligar volta tudo à implantação
+  amb.props.TUYA_LIGADO = '0';
+  amb.como(TEC);
+  assert.equal(amb.api_('iniciar').mostrarMenu, false);
+  // rápidos: portões primeiro, porta só para quem pode destravar
+  amb.props.TUYA_LIGADO = '1';
+  amb.como(DONO);
+  assert.deepEqual(amb.api_('rapido').itens.map((d) => d.tipo), ['PORTAO', 'PORTAO', 'FECHADURA']);
+  amb.como(DIR);
+  assert.ok(!amb.api_('rapido').itens.some((d) => d.tipo === 'FECHADURA'), 'Charles sem permissão: porta fora dos botões');
+});
+
+test('portões de toda a equipe (23/10/2026): colaborador abre e fecha sem permissão; permissão individual só na porta (vigência vale); no registro o colaborador vê só os próprios comandos', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  amb.homologar('Portão secundário');
+  const p1 = amb.disp('Portão principal'), p2 = amb.disp('Portão secundário'), f = amb.disp('Porta da Diretoria');
+  amb.como(TEC);
+  const painel = amb.api_('painel');
+  assert.ok(painel.unidades[0].dispositivos.every((d) => d.podeAcionar), 'colaborador aciona os portões');
+  assert.ok(!nomes(painel).includes('Porta da Diretoria'));
+  let r = amb.abrir(p2.ID, 'op-tec-0000002');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO');
+  amb.como(GESTOR);
+  assert.equal(amb.abrir(p1.ID, 'op-ges-0000001').comando.situacao, 'SIMULADO', 'portão principal não homologado');
+  // registro e histórico: o colaborador vê só os dele; Administrador e diretores veem todos
+  amb.como(TEC);
+  assert.deepEqual(amb.api_('registro', {}).itens.map((c) => c.operacaoId), ['op-tec-0000002']);
+  assert.deepEqual(amb.api_('historico', { dispositivoId: p1.ID }).comandos.map((c) => c.operacaoId), []);
+  assert.ok(amb.api_('painel').ultimosComandos.every((c) => c.solicitanteId === 'uT'));
+  for (const s of [ADM2, DIR]) { amb.como(s); assert.deepEqual(amb.api_('registro', {}).itens.map((c) => c.operacaoId).sort(), ['op-ges-0000001', 'op-tec-0000002'], s.usuario); }
+  // permissão individual em portão: não existe mais
+  amb.como(DONO);
+  r = amb.api_('permissaoConceder', { usuarioId: 'uT', dispositivoId: p1.ID, permissao: 'VER', motivo: 'recebe entregas' });
+  assert.equal(r.ok, false); assert.match(r.message, /liberados para toda a equipe interna/);
+  assert.deepEqual(amb.api_('permissoes').dispositivos.map((d) => d.nome), ['Porta da Diretoria'], 'só a porta na lista');
+  amb.como(ADM2);
+  assert.deepEqual(amb.api_('permissoes').dispositivos, [], 'Administrador comum: nada a conceder');
+  // porta: vigência vencida não vale
+  amb.homologar('Porta da Diretoria');
+  amb.como(DONO);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'diretor de operações' }).ok, true);
+  assert.equal(amb.api_('permissaoConceder', { usuarioId: 'uD', dispositivoId: f.ID, permissao: 'ACIONAR', motivo: 'xxxxx', vigenciaFim: '2020-01-01' }).ok, false, 'já passou');
+  amb.tabelas.AUT_PERMISSOES.filter((p) => p.STATUS === 'ATIVA').forEach((p) => { p.VIGENCIA_FIM = new Date(Date.now() - 1000).toISOString(); });
+  amb.como(DIR);
+  assert.equal(amb.abrir(f.ID, 'op-dir-venc-00001').ok, false, 'vigência vencida');
+});
+
+test('fechadura sem abertura remota pela API: "não disponível pela API" com o porquê; recusa antes da janela', () => {
+  const amb = ambiente();
+  amb.api.remoto = false;
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  assert.equal(f.COMPAT_OK, 'NAO'); assert.match(f.COMPAT_MOTIVO, /Não disponível pela API/);
+  amb.como(DONO);
+  const d = amb.api_('painel').unidades[0].dispositivos.find((x) => x.nome === 'Porta da Diretoria');
+  assert.equal(d.compatOk, false);
+  assert.ok(!amb.api_('rapido').itens.some((x) => x.tipo === 'FECHADURA'));
+  const r = amb.abrir(f.ID, 'op-dir-sem-api-01');
+  assert.equal(r.ok, false); assert.match(r.message, /não disponível pela API/);
+  assert.equal(amb.comandosApi().length, 0);
+});
+
+test('portão: solicitado -> aceito -> confirmado; estado relido antes; aceito sem confirmação avisa diretores e Administradores (S66) e "Conferir agora" confirma', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal');
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  let r = amb.abrir(p1.ID, 'op-adm-0000001');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.situacao, 'CONFIRMADO');
+  assert.equal(r.comando.apiTid, 'tid-p');
+  const cmdApi = amb.comandosApi().find((p) => /\/commands$/.test(p.caminho));
+  assert.equal(JSON.stringify(cmdApi.corpo), JSON.stringify({ commands: [{ code: 'switch_1', value: true }] }));
+  const reg = amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-adm-0000001');
+  assert.equal(reg.MODO, 'REAL'); assert.equal(reg.API_HTTP, '200'); assert.ok(reg.CONFIRMADO_EM);
+  // pulso: o acionador voltou e o estado guardado ainda diz true; o próximo comando relê antes e confirma
+  amb.api.portaoAberto = false; amb.envelhecer();
+  r = amb.abrir(p1.ID, 'op-adm-0000002');
+  assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(amb.notificacoes.length, 0);
+  // aceito, estado não muda
+  const amb2 = ambiente();
+  sincronizar(amb2);
+  const p2 = amb2.disp('Portão secundário');
+  amb2.homologar('Portão secundário');
+  const orig = amb2.ctx.UrlFetchApp.fetch;
+  amb2.ctx.UrlFetchApp.fetch = function (url, op) { const x = orig(url, op); if (/\/commands$/.test(new URL(url).pathname)) amb2.api.portaoAberto = false; return x; };
+  amb2.como(DIR);
+  const r2 = amb2.abrir(p2.ID, 'op-dir-sec-000001');
+  assert.equal(r2.ok, true, r2.message);
+  assert.equal(r2.comando.situacao, 'ACEITO');
+  assert.match(r2.texto, /não foi confirmada/);
+  assert.equal(amb2.notificacoes.length, 1);
+  assert.equal(amb2.notificacoes[0].evento, 'S66');
+  assert.equal(Array.from(amb2.notificacoes[0].usuarios).sort().join(','), 'uA,uA2,uD,uV', 'diretores (perfil, vínculo, dono) e Administradores');
+  amb2.api.portaoAberto = true;
+  const c = amb2.api_('conferir', { comandoId: r2.comando.id });
+  assert.equal(c.ok, true, c.message); assert.equal(c.comando.situacao, 'CONFIRMADO');
+  const itens = [];
+  amb2.tabelas.AUT_COMANDOS.push({ ID: 'cx', OPERACAO_ID: 'op-velho', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 600000).toISOString(), SITUACAO: 'ACEITO', TIPO: 'FECHADURA', DISPOSITIVO_NOME: 'Porta da Diretoria', SOLICITANTE: 'X', COMANDO: 'DESTRAVAR', AUTORIZACAO: 'AUTORIZADO' });
+  amb2.ctx.AutPred_fontePendencias_((x) => itens.push(x), { cliente: false, gestao: true });
+  assert.equal(itens.length, 1); assert.equal(itens[0].publico, 'DIRETORIA');
+  assert.equal(Array.from(itens[0].paraUsuarios).sort().join(','), 'uA,uD,uV', 'porta: só diretores');
+});
+
+test('idempotência e limites: o mesmo identificador não executa de novo; 10 s por dispositivo; 5 por pessoa por minuto; sem resultado não repete', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal'), p2 = amb.disp('Portão secundário');
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  const r1 = amb.abrir(p1.ID, 'op-rep-00000001');
+  assert.equal(r1.ok, true);
+  const n = amb.comandosApi().length;
+  const r2 = amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rep-00000001' });
+  assert.equal(r2.ok, true); assert.equal(r2.repetido, true); assert.match(r2.texto, /já foi processada/);
+  assert.equal(amb.comandosApi().length, n, 'nada reenviado');
+  const r3 = amb.abrir(p1.ID, 'op-rep-00000002');
+  assert.equal(r3.ok, false); assert.match(r3.message, /intervalo mínimo de 10 s/);
+  assert.equal(amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'curto' }).ok, false, 'identificador curto');
+  for (let i = 0; i < 6; i++) amb.tabelas.AUT_COMANDOS.push({ ID: 'lim' + i, OPERACAO_ID: 'op-lim-' + i, QUANDO_EM: new Date(Date.now() - 1000 * (i + 1)).toISOString(), SOLICITANTE_ID: 'uA', DISPOSITIVO_ID: 'outro' + i, AUTORIZACAO: 'AUTORIZADO', SITUACAO: 'SIMULADO' });
+  const r4 = amb.abrir(p2.ID, 'op-rep-00000003');
+  assert.equal(r4.ok, false); assert.match(r4.message, /comandos no último minuto/);
+  const amb2 = ambiente();
+  sincronizar(amb2);
+  // 23/10/2026: a espera pelo resultado ficou só na fechadura (no portão de pulso o resultado nunca vem); no portão, só os 10 s
+  const q = amb2.disp('Porta da Diretoria'), qp = amb2.disp('Portão principal');
+  amb2.tabelas.AUT_COMANDOS.push({ ID: 'acp', OPERACAO_ID: 'op-aceito-p', COMANDO: 'ABRIR', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 30000).toISOString(), SOLICITANTE_ID: 'uD', DISPOSITIVO_ID: qp.ID, AUTORIZACAO: 'AUTORIZADO', SITUACAO: 'ACEITO' });
+  amb2.tabelas.AUT_COMANDOS.push({ ID: 'ac', OPERACAO_ID: 'op-aceito-1', COMANDO: 'DESTRAVAR', QUANDO: '22/10/2026 10:00', QUANDO_EM: new Date(Date.now() - 30000).toISOString(), SOLICITANTE_ID: 'uD', DISPOSITIVO_ID: q.ID, AUTORIZACAO: 'AUTORIZADO', SITUACAO: 'ACEITO' });
+  amb2.como(DONO);
+  const r5 = amb2.abrir(q.ID, 'op-rep-00000009');
+  assert.equal(r5.ok, false); assert.match(r5.message, /ainda está sem resultado/);
+  assert.equal(amb2.abrir(qp.ID, 'op-rep-00000010').ok, true, 'portão: sem a espera do resultado');
+});
+
+test('simulação e falhas: desligado não lê; API recusa (2008) e sem resposta ficam registrados sem lançar; segredo nunca em tabela', () => {
+  const amb = ambiente({ props: { TUYA_LIGADO: '0' } });
+  amb.como(DONO);
+  assert.equal(amb.api_('sincronizar').ok, false, 'desligado não lê');
+  const amb2 = ambiente();
+  sincronizar(amb2);
+  const p1 = amb2.disp('Portão principal');
+  amb2.props.TUYA_LIGADO = '0';
+  amb2.como(DONO);
+  const antes = amb2.api.pedidos.length;
+  let r = amb2.abrir(p1.ID, 'op-sim-00000001');
+  assert.equal(r.ok, true); assert.equal(r.comando.situacao, 'SIMULADO'); assert.equal(r.comando.modo, 'SIMULACAO');
+  assert.equal(amb2.api.pedidos.length, antes, 'nenhuma chamada');
+  amb2.props.TUYA_LIGADO = '1';
+  amb2.envelhecer();
+  amb2.homologar('Portão principal');
+  amb2.api.recusaComando = { success: false, code: 2008, msg: 'not supported' };
+  amb2.como(DONO);
+  r = amb2.abrir(p1.ID, 'op-rec-00000001');
+  assert.equal(r.ok, true); assert.equal(r.comando.situacao, 'RECUSADO'); assert.match(r.comando.detalhe, /2008/);
+  amb2.envelhecer();
+  amb2.api.recusaComando = null;
+  const p = amb2.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-rede-0000001' });
+  amb2.api.falhaRede = true;
+  r = amb2.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-rede-0000001', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, true); assert.equal(r.comando.situacao, 'INCERTO'); assert.equal(r.comando.podeConferir, true);
+  assert.ok(!JSON.stringify(amb2.tabelas).includes('segredo-de-teste-0001'));
+});
+
+test('registro inviolável: corrente íntegra; linha alterada ou apagada é detectada', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  amb.como(DONO);
+  assert.equal(amb.api_('dispositivoSalvar', { id: amb.disp('Portão principal').ID, localizacao: 'teste do registro' }).ok, true);
+  let r = amb.api_('integridade');
+  assert.equal(r.ok, true); assert.equal(r.problemas.length, 0); assert.ok(r.total >= 4);
+  const aud = amb.tabelas.AUT_AUDITORIA;
+  for (let i = 1; i < aud.length; i++) assert.equal(aud[i].HASH_ANTERIOR, aud[i - 1].HASH);
+  aud[1].DETALHE = 'alterado à mão';
+  r = amb.api_('integridade');
+  assert.match(r.texto, /alterada depois de registrada/);
+  aud.splice(2, 1);
+  r = amb.api_('integridade');
+  assert.ok(r.problemas.some((p) => /fora da corrente/.test(p)));
+});
+
+test('administração e homologação: unidade do cadastro, comando conferido contra as funções, restrito e homologação só por diretor (sem palavra digitada)', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal');
+  amb.como(ADM2);
+  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, nome: 'Portão da frente', unidadeId: 'un1', localizacao: 'Entrada principal', ativo: true, comandoAbrir: '{"code":"switch_1","value":true}' }).ok, true);
+  assert.equal(amb.disp('Portão da frente').UNIDADE_NOME, 'MATRIZ GOIÂNIA');
+  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, comandoAbrir: '{"code":"nao_existe","value":true}' }).ok, false);
+  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, restrito: true }).ok, false, 'Administrador comum não marca restrito');
+  assert.equal(amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'teste presencial feito' }).ok, false, 'Administrador comum não homologa');
+  amb.como(DIRV);
+  assert.equal(amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'curto' }).ok, false, 'descrição do teste obrigatória');
+  assert.equal(amb.api_('homologar', { id: p1.ID, homologado: true, motivo: 'teste presencial feito com o diretor' }).ok, true, 'diretor por vínculo homologa, sem digitar palavra');
+  assert.equal(amb.api_('dispositivoSalvar', { id: p1.ID, restrito: true }).ok, true);
+  amb.como(ADM2);
+  assert.equal(amb.api_('painel').restritosOcultos, 2);
+  assert.equal(amb.api_('unidades').unidades[0].cliente, 'METROLABS');
+});
+
+// ---------------------------------------------------------------- campainha (fechadura real: unlock_request + reply_unlock_request)
+const limparPedido = (amb) => Object.keys(amb.cache).filter((k) => k.includes('AUT_PEDIDO_')).forEach((k) => { delete amb.cache[k]; });
+const tocar = (amb, segundos) => { amb.api.pedidoValor = segundos; amb.api.pedidoEm = Date.now(); amb.api.campainhaEm = Date.now() - 1000; limparPedido(amb); };
+
+test('campainha: modo pedido detectado; sem pedido não há botão nem janela; com pedido a resposta abre pelo reply_unlock_request e confirma pelo registro', () => {
+  const amb = ambiente();
+  amb.api.pedido = true;
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  assert.equal(f.REMOTO_FECHADURA, 'PEDIDO'); assert.equal(f.COMPAT_OK, 'SIM'); assert.match(f.COMPAT_MOTIVO, /só quando tocam a campainha/);
+  amb.homologar('Porta da Diretoria');
+  amb.como(DONO);
+  assert.ok(amb.api_('rapido').itens.some((d) => d.remotoFechadura === 'PEDIDO'), 'a porta aparece nos botões rápidos (o botão só durante o pedido)');
+  let p = amb.api_('pedido');
+  assert.equal(p.itens.length, 1); assert.equal(p.itens[0].ativo, false);
+  let r = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-000001' });
+  assert.equal(r.ok, false); assert.match(r.message, /não há pedido de abertura ativo.*campainha/);
+  tocar(amb, 40);
+  p = amb.api_('pedido');
+  assert.equal(p.itens[0].ativo, true); assert.ok(p.itens[0].restanteS >= 39 && p.itens[0].restanteS <= 40); assert.match(p.itens[0].campainhaTexto, /^\d\d:\d\d:\d\d$/);
+  // a leitura é compartilhada: várias telas dentro de 2,5 s = uma chamada à nuvem
+  const n0 = amb.api.leiturasSombra; amb.api_('pedido'); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, n0, 'cache de 2,5 s');
+  r = amb.abrir(f.ID, 'op-camp-000002');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  const reg = amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-camp-000002');
+  assert.equal(reg.COMANDO, 'DESTRAVAR'); assert.match(reg.CORRELACAO, /^P\d+/); assert.match(reg.CONFIRMACAO_DETALHE, /abertura remota|destravada|closed_opened/);
+  assert.ok(!amb.comandosApi().some((x) => /password-ticket|open-door/.test(x.caminho)), 'não usa o bilhete');
+  // o mesmo pedido não é respondido de novo
+  amb.api.pedidoValor = 30; amb.api.pedidoEm = Date.now(); limparPedido(amb); amb.envelhecer();
+  r = amb.abrir(f.ID, 'op-camp-000003');
+  assert.equal(r.ok, false); assert.match(r.message, /já foi respondido/);
+});
+
+test('campainha: pedido que termina entre o toque e o "Sim" é recusado com a explicação; recusar responde false; token de abrir não serve para recusar; rotina avisa uma vez', () => {
+  const amb = ambiente();
+  amb.api.pedido = true;
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  amb.homologar('Porta da Diretoria');
+  amb.como(DONO);
+  tocar(amb, 20);
+  const p = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-exp-001' });
+  assert.equal(p.ok, true, p.message);
+  amb.api.pedidoValor = 0; limparPedido(amb);
+  let r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-camp-exp-001', confirmacaoToken: p.confirmacaoToken });
+  assert.equal(r.ok, false); assert.match(r.message, /não há pedido de abertura ativo/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'PEDIDO_EXPIRADO'));
+  assert.equal((amb.api.respostasPedido || []).length, 0, 'nada enviado');
+  // recusar
+  amb.envelhecer(); tocar(amb, 50); amb.api.campainhaEm = Date.now() - 500;
+  const pa = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-001' });
+  r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-001', confirmacaoToken: pa.confirmacaoToken, resposta: 'RECUSAR' });
+  assert.equal(r.ok, false, 'token emitido para abrir não serve para recusar');
+  const pr = amb.api_('preparar', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-002', resposta: 'RECUSAR' });
+  r = amb.api_('comando', { dispositivoId: f.ID, operacaoId: 'op-camp-rec-002', confirmacaoToken: pr.confirmacaoToken, resposta: 'RECUSAR' });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.comando, 'RECUSAR'); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.respostasPedido.slice(-1)), JSON.stringify([{ code: 'reply_unlock_request', value: false }]));
+  assert.equal(amb.api.fechAberta, undefined, 'recusa não abre');
+  // rotina de 1 minuto: avisa quem pode destravar, uma vez por toque
+  amb.envelhecer(); tocar(amb, 60); amb.api.campainhaEm = Date.now() - 300;
+  amb.ctx.AutPred_rotinaPedidos(); amb.ctx.AutPred_rotinaPedidos();
+  const avisos = amb.notificacoes.filter((x) => x.evento === 'S67');
+  assert.equal(avisos.length, 1);
+  assert.equal(Array.from(avisos[0].usuarios).join(','), 'uA', 'só quem pode destravar (o responsável pelo sistema)');
+  assert.match(avisos[0].texto, /campainha.*Abrir agora/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'PEDIDO_CAMPAINHA'));
+});
+
+test('abertura automática pela campainha (23/10/2026): só quem destrava liga; a rotina rápida abre uma vez por pedido, avisa (S68) e registra; desmarcada volta ao "Abrir agora"', () => {
+  const amb = ambiente();
+  amb.api.pedido = true;
+  sincronizar(amb);
+  const f = amb.disp('Porta da Diretoria');
+  amb.homologar('Porta da Diretoria');
+  // sem a opção, a rotina rápida não lê nada
+  const n0 = amb.api.leiturasSombra || 0;
+  tocar(amb, 40);
+  assert.equal(amb.ctx.AutPred_rotinaRapida().texto, 'abertura automática desligada');
+  assert.equal(amb.api.leiturasSombra || 0, n0, 'nada lido');
+  // quem não destrava não liga: Charles (diretor sem "Acionar"), Gestor e Administrador comum
+  for (const s of [DIR, GESTOR, ADM2]) { amb.como(s); assert.equal(amb.api_('autoAbrir', { id: f.ID, ligado: true }).ok, false, s.usuario); }
+  amb.como(DONO);
+  assert.equal(amb.api_('autoAbrir', { id: amb.disp('Portão principal').ID, ligado: true }).ok, false, 'só na fechadura da campainha');
+  let r = amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  assert.equal(r.ok, true, r.message); assert.match(r.mensagem, /abre a porta sozinho/);
+  assert.equal(amb.props.AUT_AUTO_ABRIR_LIGADO, '1', 'sinal para a rotina rápida do servidor');
+  assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR, 'SIM'); assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR_POR, 'DONO TESTE');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'AUTO_ABRIR_LIGADA'));
+  const lock = amb.api_('rapido').itens.find((d) => d.tipo === 'FECHADURA');
+  assert.equal(lock.autoAbrir, true); assert.equal(lock.podeAutoAbrir, true);
+  // a campainha toca: a rotina rápida responde "abrir" sozinha, uma vez
+  tocar(amb, 40);
+  r = amb.ctx.AutPred_rotinaRapida();
+  assert.equal(r.abertas, 1);
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  const cmd = amb.tabelas.AUT_COMANDOS.find((c) => c.ORIGEM === 'AUTOMATICO');
+  assert.equal(cmd.SOLICITANTE, 'Abertura automática'); assert.equal(cmd.COMANDO, 'DESTRAVAR'); assert.equal(cmd.SITUACAO, 'CONFIRMADO', cmd.CONFIRMACAO_DETALHE);
+  assert.match(cmd.AUTORIZACAO_MOTIVO, /ligada por DONO TESTE/);
+  const aviso = amb.notificacoes.filter((x) => x.evento === 'S68' && /aberta automaticamente/.test(x.titulo));
+  assert.equal(aviso.length, 1); assert.equal(Array.from(aviso[0].usuarios).join(','), 'uA'); assert.match(aviso[0].texto, /confirmou a abertura/);
+  // mesmo pedido: nem a rotina rápida nem a de 1 minuto respondem de novo; a tela mostra "aberto automaticamente"
+  amb.api.pedidoValor = 30; amb.api.pedidoEm = Date.now(); limparPedido(amb);
+  assert.equal(amb.ctx.AutPred_rotinaRapida().abertas, 0);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.respostasPedido.length, 1, 'uma resposta por pedido');
+  assert.ok(!amb.notificacoes.some((x) => x.evento === 'S67'), 'com a opção ligada, não pede "Abrir agora"');
+  limparPedido(amb);
+  assert.match(amb.api_('pedido').itens[0].respondido, /^aberto automaticamente às/);
+  // registro legível
+  const reg = amb.api_('registro', {}).itens.find((c) => c.origemTexto === 'Abertura automática (campainha)');
+  assert.ok(reg); assert.match(reg.resultadoTexto, /^Destravado — confirmado pela fechadura/);
+  // desmarcar: volta ao fluxo manual (a rotina não lê nada; a de 1 minuto avisa S67)
+  r = amb.api_('autoAbrir', { id: f.ID, ligado: false });
+  assert.equal(r.ok, true, r.message);
+  assert.equal(amb.props.AUT_AUTO_ABRIR_LIGADO, undefined);
+  amb.envelhecer(); tocar(amb, 50); amb.api.campainhaEm = Date.now() - 200;
+  assert.equal(amb.ctx.AutPred_rotinaRapida().texto, 'abertura automática desligada');
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.respostasPedido.length, 1, 'nada respondido sozinho');
+  assert.equal(amb.notificacoes.filter((x) => x.evento === 'S67').length, 1);
+  // falha na nuvem: avisa e tenta no máximo 2 vezes por pedido
+  amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  amb.envelhecer(); tocar(amb, 60); amb.api.campainhaEm = Date.now() - 100;
+  const orig = amb.ctx.UrlFetchApp.fetch;
+  amb.ctx.UrlFetchApp.fetch = function (url, op) { if (/dev-fech-1\/commands$/.test(new URL(url).pathname)) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ success: false, code: 2001, msg: 'device is offline' }), getAllHeaders: () => ({}) }; return orig(url, op); };
+  for (let i = 0; i < 4; i++) { limparPedido(amb); amb.ctx.AutPred_rotinaRapida(); }
+  assert.equal(amb.tabelas.AUT_COMANDOS.filter((c) => c.ORIGEM === 'AUTOMATICO' && c.SITUACAO === 'RECUSADO').length, 2);
+  assert.ok(amb.notificacoes.some((x) => x.evento === 'S68' && /não abriu sozinha/.test(x.titulo) && /Abrir agora/.test(x.texto)));
+  // Configuração concentrada em Chaves e senhas; não aparece na tela operacional.
+  const tela = ler('JS_Chaves.html');
+  assert.match(tela, /Ligar abertura automática/);
+  assert.match(tela, /AutPred_chamar_\('autoAbrir'/);
+  assert.doesNotMatch(ler('JS_AutomacaoPredial.html'), /id="autAuto_/);
+});
+
+test('payload público omite configuração técnica sem mudar capacidades, posição ou comandos', () => {
+  const amb = ambiente(); amb.api.garagem = true; sincronizar(amb); amb.homologar('Portão principal');
+  const g = amb.disp('Portão principal');
+  const privados = ['deviceId', 'nomeProvedor', 'categoria', 'categoriaNome', 'produto', 'unidadeId', 'homologadoPor', 'homologadoEm', 'comandoAbrir', 'acionamentoSugerido', 'temFecharNaNuvem', 'percursoGravado', 'autoAbrirPor', 'autoAbrirEm', 'sincronizadoEm', 'modoMotivo'];
+  const publicos = ['id', 'nome', 'tipo', 'online', 'ativo', 'compatOk', 'podeAcionar', 'podeFechar', 'podeParar', 'pulsoAlternado', 'estadoPortao', 'liberaEmS', 'percursoS', 'acionamento'];
+  amb.como(DONO);
+  const referencia = amb.api_('painel').unidades.flatMap(u => u.dispositivos).find(d => d.id === g.ID);
+  for (const usuario of [DONO, ADM2, DIR, DIRV]) {
+    amb.como(usuario);
+    const p = amb.api_('painel');
+    assert.equal(p.ok, true, p.message);
+    assert.ok(Object.hasOwn(p.config, 'faltas'));
+    assert.ok(Object.hasOwn(p.config, 'regiao'));
+    const d = p.unidades.flatMap(u => u.dispositivos).find(d => d.id === g.ID);
+    for (const k of privados) assert.ok(Object.hasOwn(d, k), `${usuario.usuario}: ${k}`);
+  }
+  for (const usuario of [TEC, GESTOR]) {
+    amb.como(usuario);
+    const p = amb.api_('painel');
+    assert.equal(p.ok, true, p.message);
+    assert.deepEqual(Object.keys(p.config).sort(), ['ligado', 'podeLer']);
+    const dispositivos = [p.unidades.flatMap(u => u.dispositivos).find(d => d.id === g.ID), amb.api_('rapido').itens.find(d => d.id === g.ID), amb.api_('estado', { dispositivoId: g.ID }).dispositivo];
+    for (const d of dispositivos) {
+      for (const k of privados) assert.ok(!Object.hasOwn(d, k), `${usuario.usuario}: ${k} oculto`);
+      for (const k of publicos) assert.deepEqual(d[k], referencia[k], `${usuario.usuario}: ${k} operacional preservado`);
+    }
+    const posicao = amb.api_('portoes');
+    assert.equal(posicao.ok, true, posicao.message);
+    assert.ok(posicao.itens.some(d => d.id === g.ID));
+    assert.ok(!posicao.itens.some(d => d.id === amb.disp('Porta da Diretoria').ID));
+  }
+  amb.como(TEC);
+  const r = amb.abrir(g.ID, 'op-payload-publico-001');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.comando.situacao, 'CONFIRMADO');
+  for (const k of privados) assert.ok(!Object.hasOwn(r.dispositivo, k));
+  assert.equal(amb.comandosApi().at(-1).corpo.commands[0].value, true);
+});
+
+// ---------------------------------------------------------------- abrir e fechar (garagem) x pulso (pedestre)
+test('portões: garagem usa switch_1 true para abrir e false para fechar como no Smart Life; confirmação pelo sensor; pedestre só abrir', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  const g = amb.disp('Portão principal'), ped = amb.disp('Portão secundário');
+  amb.como(DONO);
+  let d = amb.api_('painel').unidades[0].dispositivos.find((x) => x.nome === 'Portão principal');
+  assert.equal(d.acionamento, 'ABRIR_FECHAR', 'pulso + sensor = abrir e fechar'); assert.equal(d.temSensor, true); assert.equal(d.podeFechar, true);
+  assert.equal(d.estadoPortao.codigo, 'FECHADO');
+  assert.equal(amb.api_('dispositivoSalvar', { id: ped.ID, acionamento: 'ABRIR_FECHAR' }).ok, false, 'pedestre sem fechar na nuvem');
+  // fechado: "Fechar" é recusado antes da janela (um pulso abriria o portão)
+  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000001', acao: 'FECHAR' }).message, /já está fechado pelo sensor; um pulso agora o abriria/);
+  amb.homologar('Portão principal');
+  let r = amb.abrir(g.ID, 'op-fech-0000002');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'switch_1', value: true }]), 'abrir = pulso, como o aplicativo');
+  // no percurso (padrão 60 s; a garagem real leva ~55 s): nenhum pulso novo; aos 29 s (o caso real das 14:19) também não
+  amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 29000).toISOString(); });
+  amb.tabelas.AUT_DISPOSITIVOS.forEach((x) => { if (x.ULT_CMD_EM) x.ULT_CMD_EM = new Date(Date.now() - 29000).toISOString(); });
+  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000029', acao: 'FECHAR' }).message, /ainda está em movimento.*Aguarde 3[0-9] s/);
+  amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 15000).toISOString(); });
+  amb.tabelas.AUT_DISPOSITIVOS.forEach((x) => { if (x.ULT_CMD_EM) x.ULT_CMD_EM = new Date(Date.now() - 15000).toISOString(); });
+  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000003', acao: 'FECHAR' }).message, /ainda está em movimento.*Aguarde \d+ s/);
+  // a tela recebe quanto falta para liberar o próximo pulso e conta no botão
+  const lib = amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').liberaEmS;
+  assert.ok(lib >= 46 && lib <= 48, 'liberaEmS ' + lib); // último comando há 15 s: 60 + 2 - 15
+  assert.match(ler('JS_AutomacaoPredial.html'), /"Aguarde " \+ falta \+ " s"/);
+  amb.envelhecer();
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').liberaEmS, 0);
+  // aberto: "Abrir" é recusado (o pulso fecharia)
+  assert.match(amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000004' }).message, /já está aberto pelo sensor; um pulso agora o fecharia/);
+  // token de abrir não serve para fechar
+  const pa = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000005', acao: 'FECHAR' });
+  assert.equal(amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000005', confirmacaoToken: pa.confirmacaoToken }).ok, false);
+  amb.envelhecer();
+  // colaborador fecha: pulso, confirmado pelo sensor
+  amb.como(TEC);
+  const pf = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-fech-0000006', acao: 'FECHAR' });
+  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-fech-0000006', confirmacaoToken: pf.confirmacaoToken, acao: 'FECHAR' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.comando, 'FECHAR'); assert.equal(r.comando.modo, 'REAL'); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.equal(JSON.stringify(amb.api.cmdGaragem), JSON.stringify([{ code: 'switch_1', value: true }, { code: 'switch_1', value: false }]), 'door_control_1 nunca é enviado');
+  assert.equal(amb.api.portaoAberto, false);
+  // a posição "em movimento" depois de fechar segue o comando do SGO+, não o door_control_1 guardado na nuvem
+  assert.equal(amb.disp('Portão principal').ULT_CMD_COMANDO, 'FECHAR');
+  // sensor que acabou de mudar (o portão passando por ele): recusa e pede alguns segundos
+  amb.envelhecer();
+  const origS = amb.ctx.UrlFetchApp.fetch;
+  amb.ctx.UrlFetchApp.fetch = function (url, op) { const u = new URL(url); if (/dev-portao-1\/shadow\/properties$/.test(u.pathname)) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ success: true, result: { properties: [{ code: 'doorcontact_state', value: false, time: Date.now() - 1000 }] } }), getAllHeaders: () => ({}) }; return origS(url, op); };
+  amb.como(DONO);
+  r = amb.abrir(g.ID, 'op-fech-0000007');
+  assert.equal(r.ok, false); assert.match(r.message, /sensor do portão acabou de mudar.*Aguarde \d s/);
+  assert.equal(amb.api.cmdGaragem.length, 2, 'nenhum pulso saiu');
+  amb.ctx.UrlFetchApp.fetch = origS;
+  // tempo de percurso gravado em Administrar (5 a 180 s)
+  amb.como(ADM2);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, percursoS: '2' }).ok, false);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, percursoS: '40' }).ok, true);
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').percursoS, 40);
+  assert.match(ler('JS_AutomacaoPredial.html'), /Tempo de percurso do portão \(segundos\)/);
+  // escolha gravada vence a sugestão: "Pulso" volta a só abrir, sem trava de posição
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'PULSO' }).ok, true);
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').podeFechar, false);
+  assert.equal(amb.api_('dispositivoSalvar', { id: g.ID, acionamento: 'ABRIR_FECHAR' }).ok, true);
+  // pedestre continua só abrir (switch_1 pulso), sem fechar; dois toques seguidos depois de 10 s não ficam presos ao resultado
+  d = amb.api_('rapido').itens.find((x) => x.nome === 'Portão secundário');
+  assert.equal(d.podeFechar, false); assert.equal(d.acionamento, 'PULSO');
+  amb.homologar('Portão secundário');
+  amb.como(DONO);
+  const orig = amb.ctx.UrlFetchApp.fetch;
+  amb.ctx.UrlFetchApp.fetch = function (url, op) { const x = orig(url, op); if (/dev-portao-2\/commands$/.test(new URL(url).pathname)) amb.api.portaoAberto = false; return x; };
+  assert.equal(amb.abrir(ped.ID, 'op-ped-00000001').comando.situacao, 'ACEITO', 'pulso sem sensor: sem confirmação');
+  amb.tabelas.AUT_COMANDOS.forEach((c) => { c.QUANDO_EM = new Date(Date.now() - 12000).toISOString(); });
+  const r2 = amb.abrir(ped.ID, 'op-ped-00000002');
+  assert.equal(r2.ok, true, r2.message);
+  amb.ctx.UrlFetchApp.fetch = orig;
+  assert.match(ler('JS_AutomacaoPredial.html'), /Pulso: fecha manualmente/);
+  assert.ok(!/Homologar o fechar/.test(ler('JS_AutomacaoPredial.html')), 'sem homologação separada do fechar na tela');
+  // 23/10/2026 (dono): pedestre real tem sensor e door_control_1 como a garagem, mas é só abrir; o nome decide sem escolha gravada
+  const igualGaragem = { FUNCOES_JSON: amb.disp('Portão principal').FUNCOES_JSON, ESTADO_JSON: amb.disp('Portão principal').ESTADO_JSON };
+  assert.equal(amb.ctx.AutPred_acionamento_(Object.assign({ NOME: 'PORTÃO PEDESTRE' }, igualGaragem)), 'PULSO');
+  assert.equal(amb.ctx.AutPred_acionamento_(Object.assign({ NOME: 'PORTÃO GARAGEM' }, igualGaragem)), 'ABRIR_FECHAR');
+  assert.equal(amb.ctx.AutPred_acionamento_(Object.assign({ NOME: 'PORTÃO PEDESTRE', ACIONAMENTO: 'ABRIR_FECHAR' }, igualGaragem)), 'ABRIR_FECHAR', 'a escolha gravada vence');
+  // a situação antiga do último comando não fica na tela depois dos 15 minutos
+  const g2 = amb.tabelas.AUT_DISPOSITIVOS.find((x) => x.NOME === 'Portão principal'); g2.ULT_CMD_EM = new Date(Date.now() - 3600000).toISOString();
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').ultComandoRecente, false);
+  assert.match(ler('JS_AutomacaoPredial.html'), /d\.ultComandoCodigo && d\.ultComandoRecente/);
+  // registro: recusa por posição em frase curta
+  const neg = amb.tabelas.AUT_COMANDOS.filter((c) => c.SITUACAO === 'NEGADO');
+  assert.ok(neg.every((c) => !/switch_1|door_control/.test(amb.ctx.AutPred_resultadoLegivel_(c).texto)));
+});
+
+test('garagem real (23/10/2026, 13:08): sensor lento; no percurso responde "abrindo/fechando" sem alarme; a confirmação vem depois pelo sensor (tela e rotina de 1 minuto)', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  amb.homologar('Portão principal');
+  const g = amb.disp('Portão principal');
+  amb.api.sensorLento = true; // a nuvem aceita, mas o sensor não muda dentro da espera do comando
+  amb.como(DONO);
+  let r = amb.abrir(g.ID, 'op-lento-00000001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'ACEITO');
+  assert.match(r.texto, /o portão está abrindo/); assert.ok(!/trate como não executado/.test(r.texto));
+  assert.equal(amb.notificacoes.filter((x) => x.evento === 'S66').length, 0, 'portão no percurso não vira alarme para a gestão');
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').estadoPortao.codigo, 'ABRINDO');
+  // o portão chega: a tela confirma pela leitura de posição
+  amb.api.portaoAberto = true;
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  const t = amb.api_('portoes');
+  assert.equal(t.itens.find((x) => x.id === g.ID).ultComandoCodigo, 'CONFIRMADO');
+  const c1 = amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-lento-00000001');
+  assert.equal(c1.SITUACAO, 'CONFIRMADO'); assert.match(c1.CONFIRMACAO_DETALHE, /sensor do portão informa aberto.*Confirmado pelo sensor às/);
+  // fechar depois do percurso: "fechando"; a rotina de 1 minuto confirma quando o sensor fechar, sem tela aberta
+  amb.envelhecer();
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-lento-00000002', acao: 'FECHAR' });
+  assert.equal(p.ok, true, p.message);
+  r = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-lento-00000002', confirmacaoToken: p.confirmacaoToken, acao: 'FECHAR' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'ACEITO'); assert.match(r.texto, /o portão está fechando/);
+  assert.equal(amb.api_('rapido').itens.find((x) => x.nome === 'Portão principal').estadoPortao.codigo, 'FECHANDO');
+  amb.api.portaoAberto = false;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_COMANDOS.find((c) => c.OPERACAO_ID === 'op-lento-00000002').SITUACAO, 'CONFIRMADO');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.filter((a) => a.EVENTO === 'EXECUCAO_CONFIRMADA').length >= 2);
+  // regra pura: só o sensor confirma
+  const d = { TIPO: 'PORTAO', ACIONAMENTO: 'ABRIR_FECHAR' };
+  assert.equal(amb.ctx.AutPred_confirmarPeloSensor_(d, 'FECHAR', [{ code: 'door_control_1', value: 'close' }, { code: 'doorcontact_state', value: true }]).confirmado, false);
+  assert.equal(amb.ctx.AutPred_confirmarPeloSensor_(d, 'FECHAR', [{ code: 'doorcontact_state', value: false }]).confirmado, true);
+  assert.equal(amb.ctx.AutPred_confirmarPeloSensor_({ TIPO: 'PORTAO', ACIONAMENTO: 'PULSO' }, 'ABRIR', [{ code: 'doorcontact_state', value: false }]), null, 'pulso: regra antiga');
+});
+
+test('posição do portão: Aberto/Fechado pelo sensor, Abrindo…/Fechando… no percurso do comando do SGO+; a tela relê com leitura compartilhada e cede a vez quando o minuto está cheio', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  const e = (estado, extra) => amb.ctx.AutPred_estadoPortao_(Object.assign({ ACIONAMENTO: 'ABRIR_FECHAR', ESTADO_JSON: JSON.stringify(estado) }, extra || {}), Date.now());
+  const recente = (cmd) => ({ ULT_CMD_EM: new Date(Date.now() - 5000).toISOString(), ULT_CMD_SITUACAO: 'CONFIRMADO', ULT_CMD_COMANDO: cmd });
+  const velho = (cmd) => ({ ULT_CMD_EM: new Date(Date.now() - 120000).toISOString(), ULT_CMD_SITUACAO: 'CONFIRMADO', ULT_CMD_COMANDO: cmd });
+  assert.equal(e([{ code: 'doorcontact_state', value: true }]).codigo, 'ABERTO');
+  assert.equal(e([{ code: 'doorcontact_state', value: false }]).codigo, 'FECHADO');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }], recente('ABRIR')).codigo, 'ABRINDO');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }], recente('FECHAR')).codigo, 'FECHANDO');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }, { code: 'door_control_1', value: 'open' }], recente('FECHAR')).codigo, 'FECHANDO', 'o door_control_1 da nuvem não manda');
+  assert.equal(e([{ code: 'doorcontact_state', value: false }], recente('FECHAR')).codigo, 'FECHADO', 'fechou: o sensor manda');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }], velho('FECHAR')).codigo, 'ABERTO', 'passou o percurso: o sensor manda');
+  assert.equal(e([{ code: 'doorcontact_state', value: true }], Object.assign({ PERCURSO_S: 2 }, recente('ABRIR'))).codigo, 'ABERTO', 'percurso gravado em Administrar');
+  // 23/10/2026: o módulo informa door_time_1 = 20, mas a garagem leva ~40 s; sem tempo gravado vale o maior entre o módulo e 45 s
+  assert.equal(amb.ctx.AutPred_percursoS_({ ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 20 }]) }), 60);
+  assert.equal(amb.ctx.AutPred_percursoS_({ ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 60 }]) }), 60);
+  assert.equal(amb.ctx.AutPred_percursoS_({ PERCURSO_S: 38, ESTADO_JSON: JSON.stringify([{ code: 'door_time_1', value: 20 }]) }), 38);
+  assert.equal(e([{ code: 'switch_1', value: false }], Object.assign({ ACIONAMENTO: 'PULSO' }, recente('ABRIR'))).codigo, '', 'pedestre sem sensor');
+  // consulta da tela: lê a garagem (sensor) e não o pedestre; várias telas em 4,5 s = uma leitura
+  amb.homologar('Portão principal');
+  amb.como(TEC);
+  amb.api.portaoAberto = true;
+  let r = amb.api_('portoes');
+  assert.equal(r.ok, true, r.message);
+  const gar = r.itens.find((x) => x.id === amb.disp('Portão principal').ID);
+  assert.equal(gar.estadoPortao.codigo, 'ABERTO');
+  assert.equal(amb.disp('Portão principal').ESTADO_JSON.includes('"doorcontact_state","value":true'), true, 'mudança gravada');
+  const n0 = amb.api.leiturasGaragem;
+  amb.api_('portoes'); amb.api_('portoes');
+  assert.equal(amb.api.leiturasGaragem, n0, 'leitura compartilhada');
+  assert.ok(!r.itens.some((x) => x.id === amb.disp('Porta da Diretoria').ID), 'sem a porta');
+  // minuto cheio: a tela não lê (a folga fica para os comandos e a abertura automática)
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  amb.cache['TUYA_CHAMADAS_MIN_' + Math.floor(Date.now() / 60000)] = '75';
+  amb.api_('portoes');
+  assert.equal(amb.api.leiturasGaragem, n0, 'cedeu a vez');
+  // a tela troca só os selos no lugar e avisa quando a posição muda
+  const tela = ler('JS_AutomacaoPredial.html');
+  assert.match(tela, /AutPred_chamar_\("portoes"/);
+  assert.match(tela, /abriu" : " fechou"/);
+});
+
+// ---------------------------------------------------------------- registro de rastreabilidade legível
+test('registro legível: frase curta por resultado, sem JSON nem códigos fora dos detalhes técnicos; filtros por dispositivo e pessoa; origem; auditoria em frase', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const p1 = amb.disp('Portão principal'), p2 = amb.disp('Portão secundário');
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  const ab = (id, op, origem) => { const p = amb.api_('preparar', { dispositivoId: id, operacaoId: op }); return amb.api_('comando', { dispositivoId: id, operacaoId: op, confirmacaoToken: p.confirmacaoToken, origem }); };
+  const p3 = amb.api_('preparar', { dispositivoId: p1.ID, operacaoId: 'op-reg-00000003' }); // janela aberta antes do primeiro comando
+  assert.equal(ab(p1.ID, 'op-reg-00000001', 'CELULAR').comando.situacao, 'CONFIRMADO');
+  assert.equal(ab(p2.ID, 'op-reg-00000002', 'COMPUTADOR').comando.situacao, 'SIMULADO');
+  assert.equal(amb.api_('comando', { dispositivoId: p1.ID, operacaoId: 'op-reg-00000003', confirmacaoToken: p3.confirmacaoToken, origem: 'ATALHO_INICIO' }).ok, false, 'intervalo de 10 s');
+  amb.como(DIR); amb.envelhecer();
+  assert.equal(ab(p2.ID, 'op-reg-00000004', 'COMPUTADOR').comando.situacao, 'SIMULADO');
+  amb.como(DONO);
+  const r = amb.api_('registro', {});
+  assert.equal(r.ok, true, r.message);
+  const por = Object.fromEntries(r.itens.map((c) => [c.operacaoId, c]));
+  assert.match(por['op-reg-00000001'].resultadoTexto, /^Aberto — confirmado pelo portão às \d\d:\d\d:\d\d$/);
+  assert.equal(por['op-reg-00000001'].resultadoTom, 'ok');
+  assert.equal(por['op-reg-00000001'].origemTexto, 'Celular');
+  assert.equal(por['op-reg-00000001'].acaoTexto, 'Abrir');
+  assert.match(por['op-reg-00000001'].quandoCompleto, /^\d\d\/\d\d\/\d{4} \d\d:\d\d:\d\d$/);
+  assert.equal(por['op-reg-00000002'].resultadoTexto, 'Teste — nada enviado (portão ainda não homologado)');
+  assert.equal(por['op-reg-00000003'].resultadoTexto, 'Recusado — aguarde 10 s entre comandos');
+  assert.equal(por['op-reg-00000003'].origemTexto, 'Atalho no Início');
+  // nada técnico nos campos que a tabela mostra
+  const visiveis = r.itens.map((c) => [c.quandoCompleto, c.dispositivo, c.local, c.solicitante, c.acaoTexto, c.resultadoTexto, c.origemTexto].join(' ')).join(' ');
+  assert.ok(!/switch_1|code|\{|dev-|op-reg|tid/.test(visiveis), visiveis);
+  assert.match(por['op-reg-00000001'].tecnico.comando, /switch_1/, 'o técnico fica guardado');
+  // filtros
+  assert.deepEqual(amb.api_('registro', { dispositivoId: p2.ID }).itens.map((c) => c.operacaoId).sort(), ['op-reg-00000002', 'op-reg-00000004']);
+  assert.deepEqual(amb.api_('registro', { pessoaId: 'uD' }).itens.map((c) => c.operacaoId), ['op-reg-00000004']);
+  assert.ok(r.pessoas.some((x) => x.id === 'uD') && r.dispositivos.length === 3);
+  assert.equal(amb.api_('registro', { de: '2020-01-01', ate: '2020-01-31' }).itens.length, 0);
+  // quem não vê a porta não vê os comandos dela no registro; auditoria em frase
+  const aud = amb.api_('auditoria');
+  assert.ok(aud.itens.some((a) => a.frase === 'O dispositivo confirmou a execução'));
+  assert.ok(aud.itens.some((a) => a.frase === 'Recusado: aguarde 10 s entre comandos'));
+  assert.ok(aud.itens.every((a) => !/^[A-Z_]+$/.test(a.frase)), 'nenhum código de evento cru');
+  // duplo toque: conferir e gravar sob a trava do script; a tela trava o preparo e a janela
+  const fonte = ler('SGO_Automacao_Predial.js');
+  assert.match(fonte, /function AutPred_executar_\(sessao, dados\) \{\s*var trava = null;\s*try \{ trava = LockService\.getScriptLock\(\); trava\.waitLock/);
+  assert.match(ler('JS_AutomacaoPredial.html'), /if \(AUTP\.preparando \|\| document\.getElementById\("autJanela"\)\) return;/);
+});
+
+// ---------------------------------------------------------------- cota da Tuya, eventos e sentinela (27/10/2026)
+// Caso real: desde as 07:45 de 27/10/2026 toda chamada voltava {"code":28841004,"msg":"No permissions. Your quota of Trial
+// Edition is used up.","success":false} com HTTP 200; a abertura automática lia a fechadura a cada 3 s o dia todo.
+const COTA_REAL = { code: 28841004, msg: 'No permissions. Your quota of Trial Edition is used up.', success: false, t: 1793000000000, tid: 'tid-cota' };
+const cotaEsgotada = (amb) => {
+  const orig = amb.ctx.UrlFetchApp.fetch;
+  amb.ctx.UrlFetchApp.fetch = function (url, op) { amb.api.pedidos.push({ metodo: String(op.method).toUpperCase(), caminho: new URL(url).pathname, corpo: null }); if (new URL(url).pathname === '/v1.0/token') return orig(url, op); return { getResponseCode: () => 200, getContentText: () => JSON.stringify(COTA_REAL), getAllHeaders: () => ({}) }; };
+  return () => { amb.ctx.UrlFetchApp.fetch = orig; };
+};
+const uso = (amb) => JSON.parse(amb.props.TUYA_USO_V1 || '{}');
+const s74 = (amb) => amb.notificacoes.filter((x) => x.evento === 'S74');
+
+test('cota esgotada (caso real 28841004): equipe vê "fora do ar" e usa o controle; gestão avisada uma vez (S74, WhatsApp); leituras automáticas param; sentinela vê a volta e avisa a normalização', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb);
+  amb.homologar('Portão secundário'); amb.homologar('Portão principal');
+  const ped = amb.disp('Portão secundário');
+  // contador por origem: sincronização, token e comandos contam
+  assert.ok(uso(amb).diaPor.SINCRONIZAR >= 1 && uso(amb).diaPor.TOKEN >= 1, JSON.stringify(uso(amb).diaPor));
+  const voltar = cotaEsgotada(amb);
+  amb.como(TEC);
+  let r = amb.abrir(ped.ID, 'op-cota-0000001');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.texto, 'Portões pelo SGO+ fora do ar no momento: use o controle ou o aplicativo Smart Life. A gestão já foi avisada.');
+  assert.equal(r.foraDoAr, true); assert.equal(r.comando.situacao, 'RECUSADO');
+  assert.ok(!/28841004|Trial|quota/i.test(r.texto), 'nada técnico para o colaborador');
+  let avisos = s74(amb);
+  assert.equal(avisos.length, 1);
+  assert.deepEqual(Array.from(avisos[0].usuarios).sort(), ['uA', 'uD', 'uV'], 'responsável pelo sistema e Diretoria');
+  assert.deepEqual(Array.from(avisos[0].canais), ['sgo', 'email', 'whatsapp']);
+  assert.match(avisos[0].texto, /^O quê: Cota da Tuya esgotada.*Por quê: .*28841004.*O que fazer: Renove em iot\.tuya\.com › Cloud › Cloud Services › IoT Core/);
+  assert.equal(uso(amb).bloqueio.tipo, 'COTA'); assert.equal(uso(amb).ultimoErro.codigo, 28841004);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'ABERTO' && x.CHAVE === 'tuya_nuvem'));
+  // 27/10/2026: o comando do TEC foi a sonda de pessoa (a recusa conta no consumo); o seguinte nem sai (registro e auditoria)
+  assert.ok(uso(amb).bloqueio.sondas >= 1, 'sonda de pessoa recusada dobra o recuo');
+  assert.equal(uso(amb).bloqueio.recuoMs, 1800000);
+  amb.envelhecer(); amb.como(DONO);
+  const n00 = amb.api.pedidos.length;
+  r = amb.abrir(ped.ID, 'op-cota-0000002');
+  assert.equal(r.ok, false);
+  assert.match(r.message, /fora do ar.*Nada foi enviado.*Detalhe para a gestão: .*28841004/);
+  assert.equal(amb.api.pedidos.length, n00, 'bloqueado: nenhuma chamada sai');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'COMANDO_BLOQUEADO' && x.USUARIO === 'DONO TESTE' && x.OPERACAO_ID === 'op-cota-0000002'));
+  assert.equal(s74(amb).length, 1, 'um aviso por incidente');
+  // telas: faixa para a equipe; nenhuma leitura automática sai com a cota esgotada
+  amb.como(TEC);
+  const rap = amb.api_('rapido');
+  assert.equal(rap.infra.portoesForaDoAr, true); assert.match(rap.infra.alarmeTexto, /alarme não depende/);
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  const n0 = amb.api.pedidos.length;
+  const pt = amb.api_('portoes');
+  assert.equal(pt.ok, true, pt.message);
+  assert.equal(amb.api.pedidos.length, n0, 'tela não relê com a cota esgotada');
+  // a cota volta: antes do horário do recuo a sentinela não chama; no horário, UMA chamada (sonda) e avisa a normalização
+  voltar();
+  const nS = amb.api.pedidos.length;
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, nS, 'sem sonda antes do recuo');
+  const ub = uso(amb); ub.bloqueio.proximaSondaEm = Date.now() - 1; amb.props.TUYA_USO_V1 = JSON.stringify(ub);
+  const s = amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, nS + 1, 'sonda com uma chamada');
+  assert.equal(amb.api.pedidos.at(-1).metodo, 'GET', 'a sonda só lê; sentinela nunca envia comando');
+  assert.ok(uso(amb).recuperacao && uso(amb).recuperacao.ate > Date.now(), 'recuperação gradual de 60 min');
+  assert.ok(s.itens >= 4);
+  assert.equal(uso(amb).bloqueio, null);
+  const norm = s74(amb).filter((x) => /normalizado/.test(x.titulo));
+  assert.equal(norm.length, 1); assert.match(norm[0].texto, /Antes: Cota da Tuya esgotada/);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'NORMALIZADO' && x.CHAVE === 'tuya_nuvem'));
+  // a conferência não se repete na mesma hora (sentinela não gasta chamada à toa)
+  const n1 = amb.api.pedidos.length;
+  amb.ctx.AutPred_sentinela({ itens: [] }); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, n1, 'sem chamada nas rodadas seguintes');
+});
+
+test('orçamento da cota: 70% avisa (sem WhatsApp); 90% liga o modo econômico (leituras automáticas param, comando de pessoa sai); Diretoria sai com motivo; virada do mês desliga', () => {
+  const amb = ambiente();
+  amb.api.garagem = true; amb.api.pedido = true;
+  sincronizar(amb);
+  amb.homologar('Portão principal'); amb.homologar('Porta da Diretoria');
+  const mes = amb.ctx.Tuya_diaDe_().slice(0, 7);
+  // 27/10/2026: orçamento confirmado pela gestão (mensal, 26.000 de um pacote de 53.900)
+  amb.como(DIR);
+  const oc = amb.api_('saudeOrcamento', { limitePacote: '53.900', periodo: 'MENSAL', orcamento: '26.000', motivo: 'conferido no painel' });
+  assert.equal(oc.ok, true, oc.message); assert.equal(oc.orcamento.confirmado, true); assert.equal(oc.orcamento.valor, 26000);
+  const fixarUso = (n) => { const u = uso(amb); u.mes = mes; u.mesTotal = n; amb.props.TUYA_USO_V1 = JSON.stringify(u); };
+  fixarUso(18300); // 70,3% de 26.000
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  let a = s74(amb);
+  assert.equal(a.length, 1); assert.match(a[0].titulo, /Consumo da cota da Tuya em 70\.3%/); assert.deepEqual(Array.from(a[0].canais), ['sgo', 'email']);
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  fixarUso(23500); // 90,3%
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  const eco = JSON.parse(amb.props.AUT_ECONOMICO);
+  assert.equal(eco.mes, mes); assert.match(eco.motivo, /23\.500 de 26\.000/);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'ACAO_AUTOMATICA' && /Modo econômico ligado automaticamente/.test(x.TEXTO)));
+  // modo econômico: a tela não relê a garagem nem a campainha; a pessoa ainda pode verificar e comandar
+  amb.como(DONO);
+  Object.keys(amb.cache).forEach((k) => { if (/AUT_ESTADO_|AUT_PEDIDO_/.test(k)) delete amb.cache[k]; });
+  const n0 = amb.api.pedidos.length;
+  assert.equal(amb.api_('portoes').infra.economico, true);
+  const pe = amb.api_('pedido');
+  assert.equal(pe.itens[0].pausada, true); assert.match(pe.itens[0].aviso, /Verificar campainha agora/);
+  assert.equal(amb.ctx.AutPred_rotinaPedidos().avisos, 0);
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma leitura automática no modo econômico');
+  tocar(amb, 40);
+  const pa = amb.api_('pedidoAgora');
+  assert.equal(pa.itens[0].ativo, true, 'verificação pedida pela pessoa sai');
+  amb.envelhecer();
+  const g = amb.disp('Portão principal');
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-eco-00000001', acao: 'ALTERNAR' });
+  assert.equal(p.ok, true, p.message);
+  assert.equal(amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-eco-00000001', confirmacaoToken: p.confirmacaoToken, acao: 'ALTERNAR' }).ok, true, 'comando de pessoa continua');
+  // tela da saúde: Diretoria e Administrador; só diretor sai do modo econômico
+  amb.como(GESTOR); assert.match(amb.api_('saude').message, /Diretoria e do Administrador/);
+  amb.como(ADM2);
+  let sd = amb.api_('saude');
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.economico.ligado, true); assert.equal(sd.podeSairEconomico, false);
+  assert.ok(sd.itens.some((i) => i.chave === 'tuya_economico' && i.tom === 'amarelo'));
+  assert.equal(sd.uso.mes, uso(amb).mesTotal); assert.equal(sd.uso.orcamento, 26000);
+  assert.match(amb.api_('saudeSairEconomico', { motivo: 'teste do administrador' }).message, /só um diretor/);
+  amb.como(DIR);
+  assert.match(amb.api_('saudeSairEconomico', { motivo: 'x' }).message, /motivo/);
+  sd = amb.api_('saudeSairEconomico', { motivo: 'visita de cliente hoje' });
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.economico.ligado, false);
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined, 'neste mês não religa sozinho');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'MODO_ECONOMICO_DESLIGADO'));
+  // virada do mês: modo econômico de um mês anterior não vale e é desligado com registro
+  amb.props.AUT_ECONOMICO = JSON.stringify({ mes: '2026-09', desde: 1, motivo: 'automático', por: 'Sentinela' });
+  assert.equal(amb.ctx.Tuya_economico_(), null);
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => /virada do mês/.test(x.TEXTO)));
+  // configuração (diretor): orçamento maior tira do modo econômico
+  amb.props.AUT_ECONOMICO = JSON.stringify({ mes, desde: Date.now(), motivo: 'automático', por: 'Sentinela' });
+  sd = amb.api_('saudeOrcamento', { limitePacote: '200.000', periodo: 'MENSAL', orcamento: '100.000', motivo: 'plano pago assinado' });
+  assert.equal(sd.ok, true, sd.message); assert.match(sd.mensagem, /modo econômico foi desligado/); assert.equal(sd.uso.orcamento, 100000);
+  sd = amb.api_('saudeCfg', { consultaInicio: '00:00', consultaFim: '23:59', consultaIntervaloS: 60, portaoParadoS: 20, consultaDias: [0, 1, 2, 3, 4, 5, 6], motivo: 'consulta 24 horas' });
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.cfg.consultaIntervaloS, 60); assert.equal(sd.orcamento.valor, 100000, 'a consulta não mexe no orçamento');
+  assert.match(amb.api_('saudeCfg', { consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 120, consultaDias: [1], motivo: 'intervalo maior que a janela' }).message, /30 a 85 segundos/);
+  amb.como(ADM2); assert.match(amb.api_('saudeCfg', { consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 60, consultaDias: [1], motivo: 'teste adm' }).message, /só um diretor/);
+});
+
+test('eventos da Tuya: a campainha abre pela abertura automática sem ler a nuvem; portão pelo evento; sem eventos, consulta econômica compartilhada (nunca a cada 3 s) e só na janela', () => {
+  const amb = ambiente();
+  amb.api.pedido = true; amb.api.garagem = true;
+  sincronizar(amb);
+  amb.homologar('Porta da Diretoria'); amb.homologar('Portão principal');
+  const f = amb.disp('Porta da Diretoria');
+  amb.como(DONO);
+  assert.equal(amb.api_('autoAbrir', { id: f.ID, ligado: true }).ok, true);
+  // servidor conectado ao serviço de mensagens e evento da fechadura recebido
+  amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: Date.now(), desde: Date.now() - 60000, mensagensDia: 3, mensagensMes: 40 });
+  const evFech = (seg) => { amb.props['TUYA_EVT_dev-fech-1'] = JSON.stringify({ props: { unlock_request: { value: seg, time: Date.now() }, doorbell: { value: true, time: Date.now() - 500 } }, recebidoEm: Date.now(), primeiroEm: Date.now() }); };
+  evFech(40); amb.api.pedidoValor = 40; amb.api.pedidoEm = Date.now();
+  const sombra0 = amb.api.leiturasSombra || 0;
+  const r = amb.ctx.AutPred_aoEventoTuya('dev-fech-1');
+  assert.equal(r.tratado, true);
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  assert.equal(amb.api.leiturasSombra || 0, sombra0, 'o pedido veio do evento, sem ler a sombra');
+  assert.equal(amb.ctx.AutPred_rotinaRapida().abertas, 0, 'uma resposta por pedido');
+  assert.equal(amb.api.leiturasSombra || 0, sombra0, 'rotina rápida com eventos não lê a nuvem');
+  assert.equal(amb.api_('pedido').fonte, 'eventos');
+  // portão pelo evento: posição sem chamada
+  amb.props['TUYA_EVT_dev-portao-1'] = JSON.stringify({ props: { doorcontact_state: { value: true, time: Date.now() } }, online: true, recebidoEm: Date.now() });
+  const gar0 = amb.api.leiturasGaragem || 0;
+  const pt = amb.api_('portoes');
+  const gar = pt.itens.find((x) => x.id === amb.disp('Portão principal').ID);
+  assert.equal(gar.estadoPortao.codigo, 'ABERTO'); assert.equal(gar.fonte, 'eventos'); assert.equal(pt.proximaS, 10);
+  assert.equal(amb.api.leiturasGaragem || 0, gar0, 'posição pelo evento, sem chamada');
+  // conexão parada há mais de 3 min: volta à consulta econômica, compartilhada por 120 s
+  amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: Date.now() - 600000 });
+  amb.envelhecer(); tocar(amb, 60); amb.api.campainhaEm = Date.now() - 200;
+  amb.ctx.AutPred_rotinaRapida();
+  const s1 = amb.api.leiturasSombra;
+  for (let i = 0; i < 20; i++) amb.ctx.AutPred_rotinaRapida(); // um minuto de rotina rápida (3 s)
+  amb.ctx.AutPred_rotinaPedidos(); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, s1, 'a leitura vale por 120 s para todos');
+  // janela da consulta econômica (padrão: dias úteis, 08:00 às 18:00, horário de Brasília)
+  const cfg = JSON.parse(JSON.stringify(amb.ctx.AUT_SAUDE_PADRAO));
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-26T10:00:00-03:00')), true, 'segunda 10:00');
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-26T07:59:00-03:00')), false, 'segunda 07:59');
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-26T18:00:00-03:00')), false, 'segunda 18:00');
+  assert.equal(amb.ctx.AutPred_naJanela_(cfg, Date.parse('2026-10-24T10:00:00-03:00')), false, 'sábado');
+  // fora da janela, as rotinas não consultam
+  amb.props.AUT_SAUDE_CFG = JSON.stringify({ consultaInicio: '00:00', consultaFim: '00:01', consultaDias: [] });
+  limparPedido(amb);
+  const s2 = amb.api.leiturasSombra;
+  amb.ctx.AutPred_rotinaPedidos();
+  const rr = amb.ctx.AutPred_rotinaRapida();
+  assert.equal(amb.api.leiturasSombra, s2, 'fora da janela nada é lido');
+  assert.match(rr.consulta, /^fora da janela/);
+});
+
+test('sentinela: item do servidor só vira incidente depois das rodadas pedidas; aviso uma vez; normalização avisada; ação automática registrada; chave desconhecida ignorada', () => {
+  const amb = ambiente();
+  sincronizar(amb);
+  const alarmeFalha = { chave: 'alarme', situacao: 'falha', texto: 'Central de alarme sem resposta', porque: 'Duas tentativas sem resposta.', oQueFazer: 'Confira a energia e a internet da central.', confirmar: 2, critico: true };
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [alarmeFalha, { chave: 'qualquer', situacao: 'falha', texto: 'x' }] });
+  assert.equal(s74(amb).length, 0, 'primeira rodada: ainda não');
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [alarmeFalha] });
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [alarmeFalha] });
+  let a = s74(amb);
+  assert.equal(a.length, 1); assert.match(a[0].titulo, /Central de alarme sem resposta/); assert.deepEqual(Array.from(a[0].canais), ['sgo', 'email', 'whatsapp']);
+  amb.ctx.AutPred_sentinela({ em: Date.now(), itens: [{ chave: 'rotina_minuto', situacao: 'ok', texto: 'Instalada', acoes: [{ texto: 'Rotina de 1 minuto da automação reinstalada.', ok: true }] }, { chave: 'alarme', situacao: 'ok', texto: 'Central respondeu: desarmada' }] });
+  a = s74(amb);
+  assert.equal(a.length, 2); assert.match(a[1].titulo, /normalizado: Central de alarme Intelbras/);
+  assert.ok(amb.tabelas.AUT_INCIDENTES.some((x) => x.EVENTO === 'ACAO_AUTOMATICA' && /reinstalada/.test(x.TEXTO)));
+  assert.ok(!amb.tabelas.AUT_INCIDENTES.some((x) => x.CHAVE === 'qualquer'));
+  amb.como(DONO);
+  const sd = amb.api_('saude');
+  assert.ok(sd.itens.some((i) => i.chave === 'alarme' && i.tom === 'verde'));
+  assert.ok(sd.incidentes.some((x) => x.evento === 'Incidente aberto' && x.item === 'Central de alarme Intelbras'));
+  // nenhum segredo nos incidentes nem no consumo
+  const tudo = JSON.stringify(amb.tabelas.AUT_INCIDENTES) + amb.props.TUYA_USO_V1 + (amb.props.AUT_SAUDE_ESTADO || '');
+  assert.ok(!tudo.includes('segredo-de-teste-0001') && !tudo.includes('tok-1'));
+  // tela: aba, ritmo dado pelo servidor e aba oculta
+  const tela = ler('JS_AutomacaoPredial.html');
+  assert.match(tela, /\["saude", "Saúde da infraestrutura"\]/);
+  assert.match(tela, /document\.visibilityState === "hidden"/);
+  assert.match(tela, /agendar\(r\.proximaS\)/);
+  assert.doesNotMatch(tela, /setInterval\(tickPortoes|setInterval\(tick, 3000\)/, 'sem consulta fixa a cada 3 ou 5 s');
+});
+
+// ---------------------------------------------------------------- 27/10/2026, decisões do dono (segunda rodada): preservar tudo,
+// otimizar o consumo. Sem eventos, a fechadura é consultada a cada 60 s (menor que a janela de ~90 s do pedido), numa leitura
+// compartilhada pela abertura automática, pelo aviso S67 e pelas telas; com eventos, zero consulta. Validação por eventos é só
+// informativa. Bloqueio: sonda com recuo, recuperação gradual e disjuntor. Orçamento provisório não degrada nada.
+const eventosVivos = (amb) => { amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: Date.now(), desde: Date.now() - 60000 }); };
+const evFechadura = (amb, seg, t) => { const em = t || Date.now(); amb.props['TUYA_EVT_dev-fech-1'] = JSON.stringify({ props: { unlock_request: { value: seg, time: em }, doorbell: { value: true, time: em - 300 } }, recebidoEm: Date.now(), primeiroEm: Date.now(), pedidoEm: seg > 0 ? em : 0 }); };
+const prepararPorta = (amb) => { amb.api.pedido = true; sincronizar(amb); amb.homologar('Porta da Diretoria'); amb.como(DONO); return amb.disp('Porta da Diretoria'); };
+const bloquear = (amb, extra) => { const u = uso(amb); u.bloqueio = Object.assign({ tipo: 'COTA', codigo: 28841004, desde: Date.now(), ultimaFalhaEm: Date.now(), recuoMs: 900000, proximaSondaEm: Date.now() + 900000 }, extra || {}); amb.props.TUYA_USO_V1 = JSON.stringify(u); };
+
+test('sem eventos: abertura automática pela consulta da fechadura a cada 60 s (uma leitura compartilhada), sem trava de validação; com eventos, zero consulta', () => {
+  const amb = ambiente();
+  const f = prepararPorta(amb);
+  // ligar não depende de validação por eventos (a preferência é da Diretoria)
+  const lg = amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  assert.equal(lg.ok, true, lg.message); assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR_POR_ID, 'uA');
+  assert.equal(amb.ctx.AutPred_caminhoFechadura_(amb.disp('Porta da Diretoria')).via, 'CONSULTA');
+  assert.equal(amb.ctx.AutPred_saudeCfg_().consultaIntervaloS, 60, 'menor que a janela de ~90 s do pedido');
+  tocar(amb, 80);
+  const s0 = amb.api.leiturasSombra || 0;
+  const r = amb.ctx.AutPred_rotinaRapida();
+  assert.equal(r.abertas, 1, 'abriu sem eventos');
+  const cmd = amb.tabelas.AUT_COMANDOS.find((c) => c.ORIGEM === 'AUTOMATICO');
+  assert.match(cmd.AUTORIZACAO_MOTIVO, /consulta da fechadura, sem eventos/); assert.equal(cmd.SITUACAO, 'CONFIRMADO', 'confirmado pela fechadura, não só aceito');
+  assert.equal(JSON.stringify(amb.api.respostasPedido), JSON.stringify([{ code: 'reply_unlock_request', value: true }]));
+  const s1 = amb.api.leiturasSombra;
+  assert.equal(s1 - s0, 1, 'uma leitura do pedido');
+  for (let i = 0; i < 20; i++) amb.ctx.AutPred_rotinaRapida(); // um minuto de rotina rápida (3 s)
+  amb.ctx.AutPred_rotinaPedidos(); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, s1, 'rotina rápida, rotina de 1 minuto e tela usam a mesma leitura');
+  assert.equal(amb.api.respostasPedido.length, 1, 'uma resposta por pedido');
+  // com eventos chegando: nenhuma consulta da fechadura
+  eventosVivos(amb); evFechadura(amb, 0);
+  limparPedido(amb);
+  for (let i = 0; i < 20; i++) amb.ctx.AutPred_rotinaRapida();
+  amb.ctx.AutPred_rotinaPedidos(); amb.api_('pedido');
+  assert.equal(amb.api.leiturasSombra, s1, 'com eventos, zero consulta');
+  assert.equal(amb.ctx.AutPred_caminhoFechadura_(amb.disp('Porta da Diretoria')).via, 'EVENTOS');
+  // fora do horário configurado e sem eventos: nada é lido sozinho; a preferência continua ligada
+  delete amb.props.TUYA_MSG_ESTADO;
+  amb.props.AUT_SAUDE_CFG = JSON.stringify({ consultaInicio: '00:00', consultaFim: '00:01', consultaDias: [] });
+  amb.envelhecer(); tocar(amb, 60);
+  amb.ctx.AutPred_rotinaRapida(); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.leiturasSombra, s1, 'fora do horário nada é lido');
+  assert.equal(amb.disp('Porta da Diretoria').AUTO_ABRIR, 'SIM', 'a preferência nunca é apagada');
+  const it = amb.ctx.AutPred_itemAutoAbertura_(Date.now());
+  assert.equal(it.situacao, 'atencao'); assert.match(it.texto, /sem eventos e sem consulta agora \(fora do horário/);
+  assert.ok(!/Porta da Diretoria/.test(JSON.stringify(it)), 'sem o nome da porta (o Administrador vê a Saúde)');
+});
+
+test('sem eventos e sem abertura automática: o aviso S67 sai da mesma leitura compartilhada (sem chamada extra), uma vez por toque', () => {
+  const amb = ambiente();
+  prepararPorta(amb);
+  tocar(amb, 70);
+  const s0 = amb.api.leiturasSombra || 0;
+  amb.ctx.AutPred_rotinaPedidos();
+  amb.api_('pedido'); amb.api_('pedido'); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.api.leiturasSombra - s0, 1, 'uma leitura para aviso e telas');
+  const s67 = amb.notificacoes.filter((x) => x.evento === 'S67');
+  assert.equal(s67.length, 1); assert.match(s67[0].texto, /Abrir agora/);
+  const p = amb.api_('pedido');
+  assert.equal(p.itens[0].ativo, true); assert.equal(p.proximaS, 10);
+  // "Verificar campainha agora": usa a leitura dos últimos 10 s; teto de 30 por hora por fechadura
+  const s1 = amb.api.leiturasSombra;
+  amb.api_('pedidoAgora'); amb.api_('pedidoAgora');
+  assert.equal(amb.api.leiturasSombra, s1, 'leitura recente vale para todos');
+  const hora = Math.floor(Date.now() / 3600000);
+  amb.cache['AUT_VERIF_H_dev-fech-1_' + hora] = '30'; limparPedido(amb);
+  const lim = amb.api_('pedidoAgora');
+  assert.match(lim.itens[0].aviso, /Limite de 30 verificações por hora/); assert.equal(amb.api.leiturasSombra, s1);
+});
+
+test('eventos antigos, reentregues, sem hora ou com hora no futuro não abrem; o prazo do pedido nunca passa de 90 s', () => {
+  const amb = ambiente();
+  const f = prepararPorta(amb);
+  amb.api_('autoAbrir', { id: f.ID, ligado: true });
+  eventosVivos(amb);
+  const casos = [[40, Date.now() - 300000, 'reentregue de 5 min atrás'], [40, Date.now() + 120000, 'hora no futuro'], [9999, Date.now() - 100000, 'valor fora do normal']];
+  for (const [seg, t, nome] of casos) {
+    evFechadura(amb, seg, t);
+    assert.equal(amb.ctx.AutPred_pedidoDoEvento_(JSON.parse(amb.props['TUYA_EVT_dev-fech-1'])).ativo, false, nome);
+    amb.ctx.AutPred_aoEventoTuya('dev-fech-1'); amb.ctx.AutPred_rotinaRapida();
+  }
+  amb.props['TUYA_EVT_dev-fech-1'] = JSON.stringify({ props: { unlock_request: { value: 40 } }, recebidoEm: Date.now() });
+  assert.equal(amb.ctx.AutPred_pedidoDoEvento_(JSON.parse(amb.props['TUYA_EVT_dev-fech-1'])).ativo, false, 'sem a hora do ponto, a hora de recebimento não vale');
+  amb.ctx.AutPred_aoEventoTuya('dev-fech-1');
+  assert.equal((amb.api.respostasPedido || []).length, 0, 'nada respondido');
+  assert.ok(!(amb.tabelas.AUT_COMANDOS || []).some((c) => c.ORIGEM === 'AUTOMATICO'));
+  // pedido verdadeiro por evento: abre uma vez; o mesmo evento reentregue não abre de novo
+  evFechadura(amb, 40); amb.api.pedidoValor = 40; amb.api.pedidoEm = Date.now();
+  assert.equal(amb.ctx.AutPred_aoEventoTuya('dev-fech-1').tratado, true);
+  amb.ctx.AutPred_aoEventoTuya('dev-fech-1'); amb.ctx.AutPred_rotinaRapida();
+  assert.equal(amb.api.respostasPedido.length, 1);
+  // o relógio é lido de novo dentro da função: na virada de 1 s o restante cai para 89 (o que importa é nunca passar de 90)
+  const restante = amb.ctx.AutPred_pedidoAgora_({ valor: 500, valorEm: Date.now() }).restanteS;
+  assert.ok(restante <= 90 && restante >= 89, 'prazo limitado a 90 s (veio ' + restante + ')');
+});
+
+test('validação por eventos é informativa: gravada quando o pedido chegou por evento e o "Abrir agora" foi confirmado; aparece na Saúde só para diretores', () => {
+  const amb = ambiente();
+  const f = prepararPorta(amb);
+  eventosVivos(amb); evFechadura(amb, 50); tocar(amb, 50);
+  const r = amb.abrir(f.ID, 'op-valida-00001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO');
+  const d = amb.disp('Porta da Diretoria');
+  assert.equal(d.EVENTOS_VALIDADO, 'SIM'); assert.equal(d.EVENTOS_VALIDADO_POR, 'DONO TESTE'); assert.match(d.EVENTOS_VALIDADO_DETALHE, /recebido por evento/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'EVENTOS_VALIDADOS'));
+  const sd = amb.api_('saude');
+  assert.equal(sd.fechaduras.length, 1); assert.equal(sd.fechaduras[0].validado, true); assert.equal(sd.fechaduras[0].caminho, 'EVENTOS');
+  amb.como(ADM2);
+  const sa = amb.api_('saude');
+  assert.equal(sa.ok, true, sa.message); assert.equal(sa.fechaduras.length, 0, 'o Administrador não vê a porta da Diretoria');
+  // sem evento do pedido (só a consulta), a abertura manual não valida
+  const amb2 = ambiente();
+  const f2 = prepararPorta(amb2);
+  tocar(amb2, 50);
+  assert.equal(amb2.abrir(f2.ID, 'op-valida-00002').comando.situacao, 'CONFIRMADO');
+  assert.notEqual(amb2.disp('Porta da Diretoria').EVENTOS_VALIDADO, 'SIM', 'conexão ou consulta sozinhas não validam');
+});
+
+test('bloqueio: sonda com recuo 15 -> 30 -> 60 -> 60 min; volta com recuperação gradual (30 min sem leituras automáticas, depois teto de 20 por minuto); disjuntor dobra o recuo; recusas contadas', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal');
+  const voltar = cotaEsgotada(amb);
+  amb.como(DONO);
+  const g = amb.disp('Portão principal');
+  const d0 = uso(amb).diaTotal;
+  amb.api_('estado', { dispositivoId: g.ID }); // a chamada recusada marca o bloqueio
+  let u = uso(amb);
+  assert.equal(u.bloqueio.recuoMs, 900000); assert.ok(u.bloqueio.proximaSondaEm - Date.now() > 890000);
+  assert.ok(u.diaTotal > d0 && u.ultimoErro.codigo === 28841004, 'a recusa da Tuya conta no consumo');
+  // nada automático sai: telas, rotinas, eventos, sentinela antes do horário
+  const n0 = amb.api.pedidos.length;
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  amb.api_('portoes'); amb.ctx.AutPred_rotinaPedidos(); amb.ctx.AutPred_rotinaRapida(); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.api.pedidos.length, n0, 'bloqueado: nenhuma chamada automática');
+  // sondas da sentinela recusadas: o recuo dobra até 1 h e fica de hora em hora
+  const forcarSonda = () => { const x = uso(amb); if (x.bloqueio) { x.bloqueio.proximaSondaEm = Date.now() - 1; amb.props.TUYA_USO_V1 = JSON.stringify(x); } amb.ctx.AutPred_sentinela({ itens: [] }); return (uso(amb).bloqueio || {}).recuoMs; };
+  assert.deepEqual([forcarSonda(), forcarSonda(), forcarSonda()], [1800000, 3600000, 3600000]);
+  assert.equal(amb.api.pedidos.length, n0 + 3, 'uma chamada por sonda, nunca repetida');
+  // volta: recuperação; nos primeiros 30 min a tela não lê sozinha, comando de pessoa sai
+  voltar(); forcarSonda();
+  u = uso(amb);
+  assert.equal(u.bloqueio, null); assert.equal(amb.ctx.Tuya_fase_(u), 'RECUPERACAO_1');
+  assert.match(amb.ctx.Tuya_motivoPausa_('TELA'), /retoma aos poucos/);
+  assert.equal(amb.ctx.Tuya_motivoPausa_('COMANDO'), '');
+  // 30 a 60 min: leituras automáticas voltam com teto de 20 por minuto
+  u.recuperacao.desde = Date.now() - 31 * 60000; amb.props.TUYA_USO_V1 = JSON.stringify(u);
+  assert.equal(amb.ctx.Tuya_fase_(uso(amb)), 'RECUPERACAO_2'); assert.equal(amb.ctx.Tuya_motivoPausa_('TELA'), '');
+  assert.equal(amb.ctx.Tuya_limiteMinuto_('RECUPERACAO_2'), 20); assert.equal(amb.ctx.AutPred_reservaMinuto_(), 10);
+  // disjuntor: recusa de novo na recuperação = bloqueio na hora com o primeiro recuo dobrado
+  const voltar2 = cotaEsgotada(amb);
+  Object.keys(amb.cache).forEach((k) => { if (k.startsWith('TUYA_CHAMADAS_MIN_')) delete amb.cache[k]; });
+  amb.api_('estado', { dispositivoId: g.ID });
+  u = uso(amb);
+  assert.equal(u.bloqueio.rebloqueio, true); assert.equal(u.bloqueio.recuoMs, 1800000);
+  voltar2();
+});
+
+test('comando de pessoa recusado por bloqueio: registro NEGADO em AUT_COMANDOS e COMANDO_BLOQUEADO na auditoria (usuário, dispositivo, operação, origem), nada enviado; abertura automática bloqueada registra uma vez e mantém a preferência', () => {
+  const amb = ambiente();
+  sincronizar(amb); amb.homologar('Portão secundário');
+  const ped = amb.disp('Portão secundário');
+  amb.como(TEC);
+  const p = amb.api_('preparar', { dispositivoId: ped.ID, operacaoId: 'op-bloq-0000001', origem: 'CELULAR' });
+  assert.equal(p.ok, true, p.message);
+  // a nuvem bloqueia entre o toque e o "Sim" (sonda de pessoa já usada há pouco)
+  bloquear(amb, { ultimaSondaPessoaEm: Date.now() });
+  const n0 = amb.api.pedidos.length;
+  const r = amb.api_('comando', { dispositivoId: ped.ID, operacaoId: 'op-bloq-0000001', confirmacaoToken: p.confirmacaoToken, origem: 'CELULAR' });
+  assert.equal(r.ok, true, r.message); assert.equal(r.foraDoAr, true);
+  assert.equal(r.texto.indexOf('Portões pelo SGO+ fora do ar no momento'), 0); assert.ok(!/28841004/.test(r.texto), 'colaborador não vê código');
+  assert.equal(amb.api.pedidos.length, n0, 'nada enviado');
+  const c = amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-bloq-0000001');
+  assert.equal(c.SITUACAO, 'NEGADO'); assert.equal(c.SOLICITANTE, 'TECNICO TESTE'); assert.equal(c.ORIGEM, 'CELULAR'); assert.match(c.AUTORIZACAO_MOTIVO, /nuvem da Tuya bloqueada/);
+  const a = amb.tabelas.AUT_AUDITORIA.find((x) => x.EVENTO === 'COMANDO_BLOQUEADO');
+  assert.equal(a.USUARIO, 'TECNICO TESTE'); assert.equal(a.DISPOSITIVO_ID, ped.ID); assert.equal(a.OPERACAO_ID, 'op-bloq-0000001'); assert.match(a.DADOS_JSON, /CELULAR/);
+  assert.equal(amb.api_('registro', {}).itens.find((x) => x.operacaoId === 'op-bloq-0000001').resultadoTexto, 'Recusado — nuvem bloqueada (cota ou plano), nada enviado');
+  // abertura automática por evento com a nuvem bloqueada: uma linha NEGADO por pedido, aviso S68, nenhuma chamada, preferência mantida
+  const amb2 = ambiente();
+  const f = prepararPorta(amb2);
+  amb2.api_('autoAbrir', { id: f.ID, ligado: true });
+  eventosVivos(amb2); evFechadura(amb2, 60);
+  bloquear(amb2);
+  const m0 = amb2.api.pedidos.length;
+  amb2.ctx.AutPred_aoEventoTuya('dev-fech-1'); amb2.ctx.AutPred_rotinaRapida(); amb2.ctx.AutPred_aoEventoTuya('dev-fech-1');
+  assert.equal(amb2.api.pedidos.length, m0, 'nenhuma chamada');
+  const auto = amb2.tabelas.AUT_COMANDOS.filter((x) => x.ORIGEM === 'AUTOMATICO');
+  assert.equal(auto.length, 1); assert.equal(auto[0].SITUACAO, 'NEGADO');
+  assert.ok(amb2.notificacoes.some((x) => x.evento === 'S68' && /não abriu sozinha/.test(x.titulo) && /Smart Life/.test(x.texto)));
+  assert.equal(amb2.disp('Porta da Diretoria').AUTO_ABRIR, 'SIM');
+});
+
+test('orçamento: sem confirmação vale a referência provisória (53.900 por mês, orçamento 26.950) sem modo econômico; pacote único com início e fim; teto do dia espaça só os portões parados', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal');
+  amb.como(DONO);
+  let sd = amb.api_('saude');
+  assert.equal(sd.orcamento.confirmado, false); assert.equal(sd.orcamento.provisorio, true); assert.equal(sd.orcamento.valor, 26950); assert.equal(sd.orcamento.sugestao, 26950);
+  assert.match(sd.orcamento.avisoProvisorio, /provisório — confirmar no painel/);
+  assert.equal(amb.ctx.Tuya_economico_(), null, 'sem confirmação não entra em modo econômico');
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined);
+  const cota = JSON.parse(amb.props.AUT_SAUDE_ESTADO).itens.find((i) => i.chave === 'tuya_cota');
+  assert.equal(cota.situacao, 'atencao'); assert.match(cota.texto, /provisório/); assert.equal(s74(amb).length, 0, 'provisório não avisa como incidente');
+  // portão parado: leitura compartilhada a cada 20 s (tela visível); várias telas = uma leitura
+  Object.keys(amb.cache).filter((k) => k.startsWith('AUT_ESTADO_')).forEach((k) => { delete amb.cache[k]; });
+  const l0 = amb.api.leiturasGaragem || 0;
+  amb.api_('portoes'); amb.como(TEC); amb.api_('portoes'); amb.como(DONO); amb.api_('portoes');
+  assert.equal((amb.api.leiturasGaragem || 0) - l0, 1, 'uma leitura central');
+  assert.equal(amb.ctx.AutPred_portaoParadoMs_(), 20000);
+  // emergência: 90% do LIMITE de referência liga o modo econômico (não 90% do orçamento provisório)
+  const mes = amb.ctx.Tuya_diaDe_().slice(0, 7);
+  const fixar = (n) => { const u = uso(amb); u.mes = mes; u.mesTotal = n; amb.props.TUYA_USO_V1 = JSON.stringify(u); };
+  fixar(30000); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.equal(amb.props.AUT_ECONOMICO, undefined, '30.000 é 111% do provisório, mas 56% do limite');
+  fixar(48600); amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.ok(amb.props.AUT_ECONOMICO, '90% do limite de referência');
+  delete amb.props.AUT_ECONOMICO; fixar(10);
+  // pacote único: datas obrigatórias, "já usado" do painel e soma a partir da confirmação
+  assert.match(amb.api_('saudeOrcamento', { limitePacote: '53900', periodo: 'UNICO', orcamento: '27000', motivo: 'pacote único' }).message, /data de início e a de fim/);
+  assert.match(amb.api_('saudeOrcamento', { limitePacote: '53900', periodo: 'MENSAL', orcamento: '60000', motivo: 'acima do limite' }).message, /Sugestão: 26\.950/);
+  const hoje = amb.ctx.Tuya_diaDe_(), fim = amb.ctx.Tuya_diaDe_(Date.now() + 29 * 86400000);
+  sd = amb.api_('saudeOrcamento', { limitePacote: '53.900', periodo: 'UNICO', inicio: hoje, fim, orcamento: '27.000', jaUsado: '1.000', motivo: 'pacote único conferido' });
+  assert.equal(sd.ok, true, sd.message); assert.equal(sd.orcamento.periodo, 'UNICO'); assert.equal(sd.orcamento.usado, 1000);
+  assert.equal(sd.orcamento.tetoDia, Math.ceil(27000 / 30 * 2));
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((a) => a.EVENTO === 'ORCAMENTO_CONFIRMADO'));
+  const g = amb.disp('Portão principal');
+  amb.api_('estado', { dispositivoId: g.ID });
+  assert.ok(amb.ctx.AutPred_orcamentoAgora_().usado > 1000, 'consumo do pacote somado desde a confirmação');
+  // o Administrador também confirma; o Gestor não
+  amb.como(GESTOR); assert.equal(amb.api_('saudeOrcamento', { limitePacote: '53900', periodo: 'MENSAL', orcamento: '20000', motivo: 'gestor tenta' }).ok, false);
+  // pacote vencido: volta à referência provisória (sem degradar)
+  const cfgv = JSON.parse(amb.props.AUT_SAUDE_CFG); cfgv.orcamento.inicio = '2026-01-01'; cfgv.orcamento.fim = '2026-01-31'; amb.props.AUT_SAUDE_CFG = JSON.stringify(cfgv);
+  const ov = amb.ctx.AutPred_orcamentoAgora_();
+  assert.equal(ov.provisorio, true); assert.match(ov.avisoProvisorio, /terminou em 31\/01\/2026/); assert.equal(amb.ctx.Tuya_economico_(), null);
+  // acima da média diária: portões parados a cada 60 s; acima do teto do dia: 120 s; comando e telas não são bloqueados
+  const u = uso(amb); u.diaTotal = Math.ceil(ov.valor / ov.diasPeriodo) + 1; amb.props.TUYA_USO_V1 = JSON.stringify(u);
+  assert.equal(amb.ctx.AutPred_portaoParadoMs_(), 60000);
+  u.diaTotal = ov.tetoDia + 1; amb.props.TUYA_USO_V1 = JSON.stringify(u);
+  assert.equal(amb.ctx.AutPred_portaoParadoMs_(), 120000);
+  assert.equal(amb.ctx.Tuya_motivoPausa_('COMANDO'), ''); assert.equal(amb.ctx.Tuya_motivoPausa_('TELA'), '');
+});
+
+test('portão em movimento depois de um comando: leitura compartilhada a cada 4 s durante o percurso; a tela pede a cada 3 s', () => {
+  const amb = ambiente();
+  amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal');
+  amb.como(DONO);
+  const g = amb.disp('Portão principal');
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-mov-00000001', acao: 'ALTERNAR' });
+  assert.equal(amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-mov-00000001', confirmacaoToken: p.confirmacaoToken, acao: 'ALTERNAR' }).ok, true);
+  const pt = amb.api_('portoes');
+  assert.equal(pt.proximaS, 3);
+  assert.equal(amb.ctx.AUT_ESTADO_CACHE_MS, 4000);
+  amb.cache['AUT_ESTADO_dev-portao-1'] = String(Date.now() - 4500);
+  const l0 = amb.api.leiturasGaragem;
+  amb.api_('portoes'); amb.api_('portoes');
+  assert.equal(amb.api.leiturasGaragem - l0, 1, 'passados 4 s, uma leitura para todas as telas');
+});
+
+// ---------------------------------------------------------------- ponte local dos portões (27/10/2026)
+// Simulacro de SGO_PORTOES_LOCAIS (servidor próprio): os módulos respondem na rede local; a ponte grava
+// PORTOES_LOCAL_ESTADO e TUYA_EVT_<devId> como o serviço do servidor (src/servicos/portoesLocais.ts).
+function ponteSimulada() {
+  const pt = { amb: null, comandos: [], incerto: false, recusa: null, vivo: true, online: { 'dev-portao-1': true, 'dev-portao-2': true },
+    props: { 'dev-portao-1': { switch_1: false, door_control_1: 'close', doorcontact_state: false }, 'dev-portao-2': { switch_1: false } }, tempos: {} };
+  // hora de cada ponto = hora da última MUDANÇA (como o servidor guarda); começa há 1 min
+  pt.hora = (id, k) => (pt.tempos[id + '.' + k] = pt.tempos[id + '.' + k] || Date.now() - 60000);
+  pt.mudar = (id, k, v) => { if (pt.props[id][k] !== v) { pt.props[id][k] = v; pt.tempos[id + '.' + k] = Date.now(); } };
+  pt.gravar = () => {
+    const agora = Date.now(), disp = {};
+    Object.keys(pt.online).forEach((id) => {
+      disp[id] = { online: pt.online[id] };
+      const props = {}; Object.keys(pt.props[id]).forEach((k) => { props[k] = { value: pt.props[id][k], time: pt.hora(id, k) }; });
+      pt.amb.props['TUYA_EVT_' + id] = JSON.stringify({ props, online: pt.online[id], recebidoEm: agora, primeiroEm: agora });
+    });
+    // como o servidor (03/11/2026): vivoEm = 0 com a ponte calada; ultimoEm = última notícia do celular
+    if (pt.vivo) pt.ultimoEm = agora;
+    pt.amb.props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: pt.vivo ? agora : 0, ultimoEm: pt.ultimoEm || agora - 120000, dispositivos: disp });
+  };
+  pt.api = {
+    chamar(acao, d) {
+      const p = pt.props[d.devId];
+      pt.chamadas = (pt.chamadas || 0) + 1;
+      if (acao === 'estado') {
+        if (!p || !pt.vivo) return { ok: false };
+        const props = {}; Object.keys(p).forEach((k) => { props[k] = { value: p[k], time: pt.hora(d.devId, k) }; });
+        return { ok: true, online: pt.online[d.devId] === true, props };
+      }
+      if (acao === 'comando') {
+        pt.comandos.push(JSON.parse(JSON.stringify(d)));
+        if (pt.incerto) return { aceito: false, incerto: true, msg: 'sem resposta do módulo do portão em 10 s' };
+        if (pt.recusa) return { aceito: false, codigo: 2001, msg: pt.recusa };
+        d.comandos.forEach((c) => { pt.mudar(d.devId, c.code, c.value); if (c.code === 'switch_1' && 'doorcontact_state' in p) pt.mudar(d.devId, 'doorcontact_state', c.value === true); });
+        pt.gravar();
+        return { aceito: true, id: 'c' + pt.comandos.length };
+      }
+      throw new Error('ação desconhecida: ' + acao);
+    }
+  };
+  return pt;
+}
+function comPonte(o) {
+  const pt = ponteSimulada();
+  const amb = ambiente(Object.assign({}, o, { globais: { SGO_PORTOES_LOCAIS: pt.api } }));
+  pt.amb = amb; amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal'); amb.homologar('Portão secundário');
+  pt.gravar();
+  return { amb, pt };
+}
+
+test('ponte local: com a nuvem bloqueada, portão da ponte abre e confirma pelo sensor sem chamar a nuvem; faixa "fora do ar" some; registro e auditoria preservados', () => {
+  const { amb, pt } = comPonte();
+  bloquear(amb, { ultimaSondaPessoaEm: Date.now() });
+  const g = amb.disp('Portão principal');
+  amb.como(TEC);
+  const n0 = amb.api.pedidos.length;
+  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, false, 'todos os portões na ponte: sem faixa de fora do ar');
+  const r = amb.abrir(g.ID, 'op-local-0000001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'CONFIRMADO', r.texto);
+  assert.deepEqual(pt.comandos, [{ devId: 'dev-portao-1', comandos: [{ code: 'switch_1', value: true }] }]);
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada à nuvem (nem token)');
+  const c = amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-local-0000001');
+  assert.equal(c.SOLICITANTE, 'TECNICO TESTE'); assert.match(String(c.API_TID), /^local-/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'COMANDO_ACEITO' && x.OPERACAO_ID === 'op-local-0000001'));
+  // pedestre também pela ponte (só abrir)
+  const ped = amb.disp('Portão secundário'); amb.envelhecer();
+  const r2 = amb.abrir(ped.ID, 'op-local-0000002');
+  assert.equal(r2.ok, true, r2.message);
+  assert.deepEqual(pt.comandos[1], { devId: 'dev-portao-2', comandos: [{ code: 'switch_1', value: true }] });
+  assert.equal(amb.api.pedidos.length, n0);
+});
+
+test('ponte local (03/11/2026): portão do canal Ponte com a ponte fora do ar NUNCA cai para a nuvem (comando, tela, rotina, estado); a tela diz desde quando; INCERTO e RECUSADO sem nuvem', () => {
+  let { amb, pt } = comPonte();
+  const g = amb.disp('Portão principal');
+  amb.como(DONO);
+  // padrão: portões cadastrados na ponte = Ponte; fechadura = Nuvem Tuya
+  const painel = amb.api_('painel');
+  const cartoes = Object.fromEntries(painel.unidades.flatMap((u) => u.dispositivos).map((d) => [d.nome, d]));
+  assert.equal(cartoes['Portão principal'].canal, 'PONTE'); assert.equal(cartoes['Portão secundário'].canal, 'PONTE');
+  assert.equal(cartoes['Porta da Diretoria'].canal, 'TUYA'); assert.equal(cartoes['Portão principal'].canalNome, 'Ponte local (celular)');
+  // um token preparado com a ponte no ar, para conferir a recusa também no envio
+  const tk = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-local-tokenvivo1' });
+  assert.equal(tk.ok, true, tk.message);
+  // a ponte cala há 2 minutos (nuvem normal): nada vai à nuvem, nem token
+  pt.vivo = false; pt.ultimoEm = Date.now() - 120000; pt.gravar();
+  const n0 = amb.api.pedidos.length, c0 = pt.comandos.length;
+  const p = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-local-semponte1' });
+  assert.equal(p.ok, false); assert.match(p.message, /ponte local está fora do ar desde \d{2}:\d{2}/); assert.match(p.message, /Nada foi enviado: o SGO\+ não troca sozinho para a nuvem/);
+  assert.match(p.message, /Trabalhar pela Nuvem Tuya/, 'a gestão vê o que fazer');
+  const e = amb.api_('comando', { dispositivoId: g.ID, operacaoId: 'op-local-tokenvivo1', confirmacaoToken: tk.confirmacaoToken });
+  assert.equal(e.ok, false); assert.match(e.message, /ponte local/);
+  const neg = amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-local-tokenvivo1');
+  assert.equal(neg.SITUACAO, 'NEGADO'); assert.match(amb.ctx.AutPred_comandoParaTela_(neg).resultadoTexto, /ponte local fora do ar, nada enviado/);
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'COMANDO_PONTE_FORA'));
+  // tela, estado e rotina: nenhuma leitura na nuvem
+  const port = amb.api_('portoes');
+  assert.match(port.itens.find((x) => x.id === g.ID).erro, /fora do ar desde/);
+  const est = amb.api_('estado', { dispositivoId: g.ID });
+  assert.equal(est.ok, true, est.message); assert.match(est.mensagem, /Estado não relido: .*fora do ar desde/);
+  amb.ctx.AutPred_rotinaPedidos(); amb.ctx.AutPred_rotinaRapida();
+  const infra = amb.api_('rapido', {}).infra;
+  assert.equal(infra.ponteForaDoAr, true); assert.match(infra.ponteTexto, /ponte local sem resposta: a ponte local está fora do ar desde/);
+  assert.equal(infra.portoesForaDoAr, false, 'a nuvem não está fora');
+  // nuvem bloqueada E ponte calada: continua a mensagem da ponte (não a da nuvem) e nada sai
+  bloquear(amb, { ultimaSondaPessoaEm: 0 });
+  const p2 = amb.api_('preparar', { dispositivoId: g.ID, operacaoId: 'op-local-semponte2' });
+  assert.equal(p2.ok, false); assert.match(p2.message, /ponte local está fora do ar/);
+  assert.equal(amb.api_('rapido', {}).infra.portoesForaDoAr, false, 'portões da ponte não dependem da nuvem');
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada à nuvem com a ponte fora'); assert.equal(pt.comandos.length, c0);
+  // ponte viva, mas o pedestre sem resposta na rede local: só ele fica sem SGO+, com o motivo
+  pt.vivo = true; pt.online['dev-portao-2'] = false; pt.gravar();
+  const ped = amb.disp('Portão secundário');
+  const p3 = amb.api_('preparar', { dispositivoId: ped.ID, operacaoId: 'op-local-pedoff01' });
+  assert.equal(p3.ok, false); assert.match(p3.message, /não alcança este dispositivo na rede local/);
+  assert.equal(amb.api.pedidos.length, n0);
+  // INCERTO: entregue ao celular e o módulo não respondeu; nada pela nuvem
+  ({ amb, pt } = comPonte());
+  const g2 = amb.disp('Portão principal'); amb.como(DONO);
+  const n1 = amb.comandosApi().length;
+  pt.incerto = true;
+  let r = amb.abrir(g2.ID, 'op-local-incerto01');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'INCERTO');
+  assert.equal(amb.comandosApi().length, n1, 'comando nunca cai para a nuvem'); assert.equal(pt.comandos.length, 1, 'não repete sozinho');
+  // recusa do módulo
+  pt.incerto = false; pt.recusa = 'o módulo não respondeu na rede local'; amb.envelhecer();
+  r = amb.abrir(g2.ID, 'op-local-recusa001');
+  assert.equal(r.ok, true, r.message); assert.equal(r.comando.situacao, 'RECUSADO'); assert.match(r.texto, /ponte local/);
+  assert.equal(amb.comandosApi().length, n1);
+});
+
+test('ponte local: posição pela ponte sem leitura da nuvem; sem SGO_PORTOES_LOCAIS (Google) nada muda', () => {
+  const { amb, pt } = comPonte();
+  const g = amb.disp('Portão principal'); amb.como(DONO);
+  const n0 = amb.api.pedidos.length;
+  pt.mudar('dev-portao-1', 'doorcontact_state', true); pt.tempos['dev-portao-1.doorcontact_state'] -= 30000; pt.gravar();
+  const r = amb.api_('portoes');
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.itens.find((x) => x.id === g.ID).estadoPortao.codigo, 'ABERTO');
+  assert.ok(amb.disp('Portão principal').ESTADO_JSON.includes('"doorcontact_state","value":true'), 'mudança gravada');
+  amb.api_('portoes'); amb.api_('portoes');
+  assert.equal(amb.api.pedidos.length, n0, 'posição veio da ponte (nenhuma leitura da nuvem)');
+  // ambiente do Google (sem a global): Tuya_localAtende_ é sempre falso, mesmo com a propriedade gravada
+  const amb2 = ambiente(); amb2.props.PORTOES_LOCAL_ESTADO = JSON.stringify({ vivoEm: Date.now(), dispositivos: { 'dev-portao-1': { online: true } } });
+  assert.equal(amb2.ctx.Tuya_localAtende_('dev-portao-1'), false);
+  assert.equal(amb2.ctx.Tuya_local_('POST', '/v1.0/devices/dev-portao-1/commands', {}, { commands: [] }), null);
+});
+
+// ---------------------------------------------------------------- canal por dispositivo e refrigerador (03/11/2026)
+// Pedido do dono: "os portões estão funcionando bem pela ponte do celular, deixa só a fechadura pela Tuya; se tiver como,
+// colocar o refrigerador pela ponte também. Cria um botão em cada dispositivo para escolhermos ponte ou Tuya."
+const cartaoDe = (amb, nome) => amb.api_('painel').unidades.flatMap((u) => u.dispositivos).find((d) => d.nome === nome);
+
+test('canal: só Diretoria e Administrador trocam, com motivo e auditoria; Ponte só para dispositivo da ponte; canal Tuya ignora a ponte viva e vai à nuvem; de volta à Ponte, nada vai à nuvem', () => {
+  const { amb, pt } = comPonte();
+  const g = amb.disp('Portão principal'), f = amb.disp('Porta da Diretoria');
+  amb.como(TEC);
+  assert.match(amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'teste do técnico' }).message, /Administrador e dos diretores/);
+  assert.equal(cartaoDe(amb, 'Portão principal').podeCanal, false);
+  assert.equal(cartaoDe(amb, 'Portão principal').canalMotivo, undefined, 'motivo e autor do canal só para a gestão');
+  amb.como(DONO);
+  assert.match(amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'x' }).message, /escreva o motivo/);
+  assert.match(amb.api_('canal', { id: g.ID, canal: 'OUTRO', motivo: 'motivo válido' }).message, /Ponte local \(celular\)" ou "Nuvem Tuya"/);
+  const r = amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'celular da ponte em manutenção' });
+  assert.equal(r.ok, true, r.message); assert.match(r.mensagem, /passa a trabalhar pela Nuvem Tuya/);
+  const linha = amb.disp('Portão principal');
+  assert.equal(linha.CANAL, 'TUYA'); assert.equal(linha.CANAL_POR, 'DONO TESTE'); assert.equal(linha.CANAL_MOTIVO, 'celular da ponte em manutenção');
+  const aud = amb.tabelas.AUT_AUDITORIA.filter((x) => x.EVENTO === 'CANAL_ALTERADO' && x.DISPOSITIVO_ID === g.ID).pop();
+  assert.match(aud.DETALHE, /Ponte local \(celular\) -> Nuvem Tuya\. Motivo: celular da ponte em manutenção/);
+  assert.match(amb.ctx.AutPred_eventoLegivel_(aud), /^Trocou por onde o dispositivo trabalha.*Motivo: celular da ponte/);
+  const card = cartaoDe(amb, 'Portão principal');
+  assert.equal(card.canal, 'TUYA'); assert.equal(card.canalPadrao, false); assert.equal(card.canalPor, 'DONO TESTE'); assert.equal(card.podeCanal, true); assert.equal(card.naPonte, true);
+  // canal Tuya: a ponte viva não é usada; o comando vai à nuvem
+  const c0 = pt.comandos.length, nuvem0 = amb.comandosApi().length;
+  const a1 = amb.abrir(g.ID, 'op-canal-tuya-0001');
+  assert.equal(a1.ok, true, a1.message);
+  assert.equal(pt.comandos.length, c0, 'nada pela ponte'); assert.equal(amb.comandosApi().length, nuvem0 + 1, 'o comando foi à nuvem');
+  assert.equal(amb.api_('canal', { id: g.ID, canal: 'TUYA', motivo: 'de novo a mesma' }).mensagem, 'Portão principal já trabalha pela Nuvem Tuya.');
+  // fechadura não está no celular da ponte: não pode ir para a Ponte (ficaria sem funcionar)
+  assert.match(amb.api_('canal', { id: f.ID, canal: 'PONTE', motivo: 'testar a ponte' }).message, /não está cadastrado no celular da ponte, e ficaria sem funcionar/);
+  assert.equal(amb.disp('Porta da Diretoria').CANAL || '', '');
+  // Administrador que não é diretor não vê nem troca a porta da Diretoria
+  amb.como(ADM2);
+  assert.match(amb.api_('canal', { id: f.ID, canal: 'TUYA', motivo: 'motivo válido' }).message, /não foi encontrado/);
+  // de volta à Ponte: comando e leitura só pela ponte
+  amb.como(DONO); amb.envelhecer();
+  assert.equal(amb.api_('canal', { id: g.ID, canal: 'PONTE', motivo: 'celular da ponte de volta' }).ok, true);
+  const n0 = amb.api.pedidos.length;
+  const a2 = amb.abrir(g.ID, 'op-canal-ponte-0001');
+  assert.equal(a2.ok, true, a2.message); assert.equal(pt.comandos.length, c0 + 1); assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada à nuvem');
+  // no ambiente do Google (sem a ponte) não há canal Ponte
+  const amb2 = ambiente(); sincronizar(amb2);
+  assert.match(amb2.api_('canal', { id: amb2.disp('Portão principal').ID, canal: 'PONTE', motivo: 'motivo válido' }).message, /só existe no servidor próprio/);
+  assert.equal(cartaoDe(amb2, 'Portão principal').canal, 'TUYA', 'sem a ponte, o padrão é a nuvem');
+});
+
+test('canal padrão: portão cadastrado na ponte fica Ponte gravado na rotina (não muda sozinho se a ponte cair); fechadura e demais Nuvem Tuya; caminho único: dispositivo da Ponte nunca chama a nuvem', () => {
+  const { amb, pt } = comPonte();
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.disp('Portão principal').CANAL, 'PONTE'); assert.equal(amb.disp('Portão principal').CANAL_POR, 'Padrão do SGO+');
+  assert.equal(amb.disp('Portão secundário').CANAL, 'PONTE'); assert.equal(amb.disp('Porta da Diretoria').CANAL || '', '');
+  assert.equal(amb.ctx.AutPred_canal_(amb.disp('Porta da Diretoria')), 'TUYA');
+  // a ponte some até da lista: o canal gravado continua Ponte (nunca cai sozinho para a nuvem)
+  pt.vivo = false; pt.online = {}; pt.gravar(); amb.ctx.AutPred_canalMemoLimpar_();
+  assert.equal(amb.ctx.AutPred_canalDoDevice_('dev-portao-1'), 'PONTE');
+  const n0 = amb.api.pedidos.length;
+  const c = amb.ctx.AutPred_cfg_();
+  let erro = null;
+  try { amb.ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-portao-1', {}); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte, 'erro da ponte'); assert.match(erro.message, /fora do ar/);
+  erro = null;
+  try { amb.ctx.Tuya_chamar_(c, 'POST', '/v1.0/devices/dev-portao-1/commands', {}, { commands: [{ code: 'switch_1', value: true }] }); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte);
+  erro = null;
+  try { amb.ctx.Tuya_chamar_(c, 'GET', '/v2.0/cloud/thing/dev-portao-1/shadow/properties', {}); } catch (e) { erro = e; }
+  assert.ok(erro && erro.tuyaPonte);
+  assert.equal(amb.api.pedidos.length, n0, 'nenhuma chamada saiu (nem token)');
+  // a fechadura (Tuya) continua pela nuvem
+  amb.ctx.Tuya_chamar_(c, 'GET', '/v1.0/devices/dev-fech-1', {});
+  assert.ok(amb.api.pedidos.length > n0);
+  // a sentinela não sonda nem atualiza o "online" de dispositivo da ponte pela nuvem
+  const n1 = amb.api.pedidos.length;
+  amb.ctx.AutPred_sentinela({ itens: [] });
+  assert.ok(!amb.api.pedidos.slice(n1).some((x) => /dev-portao/.test(x.caminho)), 'nada da nuvem para os portões da ponte');
+});
+
+test('consumo por dispositivo e origem (Saúde): chamadas da nuvem contadas por dispositivo, com o canal; gerais à parte; restrito sem nome para o Administrador', () => {
+  const amb = ambiente(); amb.api.garagem = true; sincronizar(amb); amb.homologar('Portão principal');
+  amb.como(DONO);
+  amb.api_('estado', { dispositivoId: amb.disp('Portão principal').ID });
+  amb.api_('estado', { dispositivoId: amb.disp('Porta da Diretoria').ID });
+  const u = uso(amb);
+  assert.ok(u.diaDisp['dev-portao-1'].MANUAL >= 1); assert.ok(u.mesDisp['dev-fech-1'].MANUAL >= 1);
+  assert.ok(u.diaDisp['dev-portao-1'].SINCRONIZAR >= 1, 'a sincronização leu as funções do portão');
+  const s = amb.api_('saude');
+  assert.equal(s.ok, true, s.message);
+  const lin = Object.fromEntries(s.uso.porDispositivo.map((x) => [x.nome, x]));
+  assert.ok(lin['Portão principal'].dia >= 2); assert.equal(lin['Portão principal'].canalNome, 'Nuvem Tuya');
+  assert.ok(lin['Portão principal'].origensDia.some((o) => o.origem === 'Leituras pedidas na tela'));
+  assert.ok(s.uso.geraisDia >= 1, 'lista de dispositivos e token ficam como gerais');
+  assert.equal(s.uso.porDispositivo.reduce((t, x) => t + x.dia, 0) + s.uso.geraisDia, s.uso.dia);
+  amb.como(ADM2);
+  const s2 = amb.api_('saude');
+  assert.ok(s2.uso.porDispositivo.some((x) => x.nome === 'Dispositivo restrito à Diretoria'));
+  assert.ok(!s2.uso.porDispositivo.some((x) => x.nome === 'Porta da Diretoria'));
+});
+
+test('refrigerador (xbx, "Car Refrigerator"): só leitura; sincronização lê o modelo, não as funções; cartão com °C pt-BR, modo, trava, bateria, erros E1..E9; histórico só quando muda ou na leitura agendada', () => {
+  const amb = ambiente({ freezer: true }); sincronizar(amb); amb.homologar('Portão principal');
+  const fz = amb.disp('Car Refrigerator');
+  assert.equal(fz.TIPO, 'REFRIGERADOR'); assert.equal(fz.COMPAT_OK, 'NAO'); assert.equal(fz.RESTRITO_DIRETORIA, 'NAO');
+  assert.match(fz.COMPAT_MOTIVO, /Só leitura/); assert.equal(fz.CATEGORIA_NOME, 'Refrigerador/freezer portátil (2 compartimentos)');
+  assert.equal(JSON.parse(fz.MODELO_JSON).A_BatteryVoltage.scale, 1);
+  assert.ok(!amb.api.pedidos.some((x) => /dev-frz-1\/functions/.test(x.caminho)), 'funções do refrigerador não são pedidas (a nuvem responde 2009)');
+  assert.equal(amb.ctx.AutPred_canal_(fz), 'TUYA', 'demais dispositivos: Nuvem Tuya por padrão');
+  amb.como(DONO);
+  // nenhum comando
+  const p = amb.api_('preparar', { dispositivoId: fz.ID, operacaoId: 'op-frz-comando01' });
+  assert.equal(p.ok, false); assert.match(p.message, /é um refrigerador e o SGO\+ só lê/);
+  // leitura pedida (sombra v2.0 + detalhe para o online)
+  const n0 = amb.api.pedidos.length;
+  const r = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(r.ok, true, r.message); assert.match(r.mensagem, /Leitura agora \(Nuvem Tuya\): Compartimento A -18 °C \(ajuste -20 °C\) · Compartimento B 4 °C \(ajuste 5 °C\) · modo ECO/);
+  assert.deepEqual(amb.api.pedidos.slice(n0).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties', '/v1.0/devices/dev-frz-1']);
+  const t = r.dispositivo.refrig;
+  assert.equal(t.a.tempTexto, '-18 °C'); assert.equal(t.a.ajusteTexto, '-20 °C'); assert.equal(t.b.tempTexto, '4 °C'); assert.equal(t.dupla, true);
+  assert.equal(t.modoTexto, 'ECO (econômico)'); assert.equal(t.ligadoTexto, 'Ligado'); assert.equal(t.travaTexto, 'desligada'); assert.equal(t.bateriaTexto, '85% · 12,4 V'); assert.equal(t.erroTexto, 'nenhum');
+  assert.ok(t.lidoEm); assert.equal(r.dispositivo.online, true); assert.equal(r.dispositivo.estadoPortao, null); assert.equal(r.dispositivo.tipoNome, 'Refrigerador ou freezer (só leitura)');
+  assert.equal((amb.tabelas.AUT_LEITURAS || []).length, 1, 'primeira leitura vira linha');
+  assert.equal(amb.tabelas.AUT_LEITURAS[0].A_TEMP_C, -18); assert.equal(amb.tabelas.AUT_LEITURAS[0].MOTIVO, 'MUDOU'); assert.equal(amb.tabelas.AUT_LEITURAS[0].CANAL, 'TUYA');
+  // mesma leitura: nenhuma linha nova; mudou: linha nova
+  amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1);
+  amb.api.frz.A_Temp_C = -17; amb.api.frz.Error = 5; amb.api.frz.B_BoxOnOff = false; amb.api.frz.A_BatteryVoltage = 121;
+  const r2 = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2);
+  assert.equal(r2.dispositivo.refrig.erroTexto, 'E1, E3 (código de erro do equipamento; consulte o manual do refrigerador)');
+  assert.equal(r2.dispositivo.refrig.dupla, false, 'compartimento B desligado não aparece'); assert.match(r2.dispositivo.refrig.texto, /^Temperatura -17 °C/);
+  assert.equal(amb.tabelas.AUT_LEITURAS[1].ERROS, 'E1,E3');
+  // a tensão oscila e não conta como mudança
+  amb.api.frz.A_BatteryVoltage = 123; amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2);
+  // funções puras
+  assert.deepEqual(Array.from(amb.ctx.AutPred_refrigErros_(256)), ['E9']); assert.deepEqual(Array.from(amb.ctx.AutPred_refrigErros_('E2,E2,E4')), ['E2', 'E4']);
+  assert.equal(amb.ctx.AutPred_numBr_(-0.04, 1), '0,0'); assert.equal(amb.ctx.AutPred_grausBr_(-18.5), '-18,5 °C');
+  // histórico para o gráfico
+  const h = amb.api_('leituras', { dispositivoId: fz.ID, horas: 24 });
+  assert.equal(h.ok, true, h.message); assert.equal(h.itens.length, 2); assert.equal(h.itens[1].aTemp, -17); assert.equal(h.itens[1].bTemp, null);
+  assert.match(amb.api_('leituras', { dispositivoId: amb.disp('Portão principal').ID }).message, /só dos refrigeradores/);
+  // o colaborador vê o cartão, mas não a faixa configurada
+  amb.como(TEC);
+  const ct = cartaoDe(amb, 'Car Refrigerator');
+  assert.equal(ct.refrig.a.tempTexto, '-17 °C'); assert.equal(ct.refrig.alerta.aMin, undefined);
+});
+
+// "o tempo passa" para o refrigerador: recua os horários guardados (leitura, linha, tentativa e alerta) em min minutos
+function avancarFz(amb, min, nome) {
+  const d = amb.tabelas.AUT_DISPOSITIVOS.find((x) => x.NOME === (nome || 'Car Refrigerator'));
+  const ms = min * 60000, antes = (iso) => (iso ? new Date(new Date(iso).getTime() - ms).toISOString() : iso);
+  d.LEITURA_EM = antes(d.LEITURA_EM); d.LEITURA_LINHA_EM = antes(d.LEITURA_LINHA_EM);
+  const kt = 'AUT_REFRIG_TENT_' + d.ID;
+  if (amb.props[kt]) { const t = JSON.parse(amb.props[kt]); t.em -= ms; amb.props[kt] = JSON.stringify(t); }
+  if (d.REFRIG_ALERTA_JSON) { const st = JSON.parse(d.REFRIG_ALERTA_JSON); ['desde', 'avisadoEm', 'ultimoForaAvisoEm', 'ultimoVoltaAvisoEm'].forEach((k) => { if (st[k]) st[k] -= ms; }); d.REFRIG_ALERTA_JSON = JSON.stringify(st); }
+  return d;
+}
+const frzChamadas = (amb, de) => amb.api.pedidos.slice(de).filter((x) => /dev-frz-1/.test(x.caminho));
+
+test('refrigerador pela nuvem: leitura agendada a cada 10 min (5 a 60, na Saúde), conta na cota por dispositivo, para no modo econômico, no bloqueio, sem a automação em uso e com o minuto cheio; falha marca a tentativa e recua', () => {
+  const amb = ambiente({ freezer: true }); sincronizar(amb);
+  amb.homologar('Portão principal');
+  amb.como(DONO);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal((amb.tabelas.AUT_LEITURAS || []).length, 1, 'sem leitura ainda: lê na primeira rotina');
+  assert.equal(amb.tabelas.AUT_LEITURAS[0].MOTIVO, 'AGENDADA');
+  const n0 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n0).length, 0, 'dentro dos 10 min, nenhuma chamada do refrigerador');
+  // passados 11 min: uma leitura (a sombra; o online só de hora em hora) e uma linha, mesmo sem mudança
+  avancarFz(amb, 11);
+  const n1 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.deepEqual(frzChamadas(amb, n1).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties']);
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2); assert.equal(amb.tabelas.AUT_LEITURAS[1].MOTIVO, 'AGENDADA');
+  assert.ok(uso(amb).diaDisp['dev-frz-1'].AUTOMATICA >= 2, 'conta na cota, por dispositivo');
+  // modo econômico, bloqueio, minuto cheio e automação fora de uso: nada sai
+  amb.props.AUT_ECONOMICO = JSON.stringify({ mes: amb.ctx.AutPred_orcamentoAgora_().chave, desde: Date.now(), por: 'teste', motivo: 'teste' });
+  avancarFz(amb, 11);
+  const n2 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n2).length, 0, 'modo econômico: leitura automática pausada');
+  delete amb.props.AUT_ECONOMICO;
+  const k = 'TUYA_CHAMADAS_MIN_' + Math.floor(Date.now() / 60000);
+  amb.cache[k] = '75';
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n2).length, 0, 'minuto com 70+ chamadas: a folga fica para os comandos');
+  delete amb.cache[k];
+  const h = amb.disp('Portão principal'); h.HOMOLOGADO = 'NAO';
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n2).length, 0, 'automação em implantação: sem leitura pela nuvem');
+  h.HOMOLOGADO = 'SIM';
+  bloquear(amb);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n2).length, 0, 'bloqueio: nada sai');
+  delete amb.props.TUYA_USO_V1;
+  // falha: a tentativa fica marcada (não repete a cada minuto) e o recuo dobra
+  amb.api.falhaRede = true;
+  const n3 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  const tent = () => JSON.parse(amb.props['AUT_REFRIG_TENT_' + amb.disp('Car Refrigerator').ID]);
+  assert.equal(tent().falhas, 1); assert.equal(frzChamadas(amb, n3).length, 1);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n3).length, 1, 'falhou agora: não tenta de novo no minuto seguinte');
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(tent().falhas, 2); assert.equal(frzChamadas(amb, n3).length, 2);
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n3).length, 2, '2 falhas: espera 20 min');
+  assert.equal(amb.ctx.AutPred_refrigEspera_(600000, 4), 4800000); assert.equal(amb.ctx.AutPred_refrigEspera_(600000, 9), 4800000);
+  amb.api.falhaRede = false;
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(tent().falhas, 0, 'voltou: zera o recuo');
+  // intervalo na Saúde (diretor), com motivo
+  const base = { consultaInicio: '08:00', consultaFim: '18:00', consultaIntervaloS: 60, consultaDias: [1, 2, 3, 4, 5], motivo: 'freezer da calibração' };
+  assert.match(amb.api_('saudeCfg', Object.assign({}, base, { refrigIntervaloMin: 3 })).message, /5 a 60 minutos/);
+  const g = amb.api_('saudeCfg', Object.assign({}, base, { refrigIntervaloMin: 15 }));
+  assert.equal(g.ok, true, g.message); assert.match(g.mensagem, /refrigerador lido a cada 15 min \(pela nuvem, cerca de 3\.600 chamadas por mês/);
+  assert.equal(g.cfg.refrigIntervaloMin, 15); assert.equal(g.uso.refrigNuvem, 1);
+  assert.equal(amb.ctx.AutPred_saudeCfg_().portaoParadoS, 20, 'o resto da configuração continua');
+  const lf = g.uso.porDispositivo.find((x) => x.nome === 'Car Refrigerator');
+  assert.equal(lf.canalNome, 'Nuvem Tuya'); assert.ok(lf.mes >= 3);
+});
+
+test('refrigerador pela nuvem com o serviço de mensagens: devicePropertyMessage recente é aplicado sem chamada; a leitura agendada vira reserva', () => {
+  const amb = ambiente({ freezer: true }); sincronizar(amb); amb.homologar('Portão principal');
+  const agora = Date.now();
+  amb.props.TUYA_MSG_ESTADO = JSON.stringify({ conectado: true, vivoEm: agora, desde: agora - 600000 });
+  amb.props['TUYA_EVT_dev-frz-1'] = JSON.stringify({ props: { A_Temp_C: { value: -21, time: agora - 30000 }, A_TempSet_C: { value: -22, time: agora - 30000 }, OnOff: { value: true, time: agora - 30000 } }, online: true, recebidoEm: agora });
+  const n0 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(frzChamadas(amb, n0).length, 0, 'evento recente: nenhuma chamada');
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1); assert.equal(amb.tabelas.AUT_LEITURAS[0].A_TEMP_C, -21);
+  // evento velho (mais que o intervalo): volta a leitura agendada da nuvem
+  amb.props['TUYA_EVT_dev-frz-1'] = JSON.stringify({ props: { A_Temp_C: { value: -21, time: agora - 3600000 } }, recebidoEm: agora - 3600000 });
+  avancarFz(amb, 11);
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.deepEqual(frzChamadas(amb, n0).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/shadow/properties']);
+});
+
+test('refrigerador pela ponte: leitura local sem nuvem (agente da ponte), histórico quando muda e a cada intervalo, falha recua, ponte fora não cai para a nuvem', () => {
+  const pt = ponteSimulada();
+  const amb = ambiente({ freezer: true, globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb; sincronizar(amb);
+  // o agente da ponte manda os pontos com os mesmos códigos da nuvem (mapa dp 101..123 do LEIAME)
+  pt.online['dev-frz-1'] = true; pt.props['dev-frz-1'] = Object.assign({}, FREEZER_PONTOS); pt.gravar();
+  const fz = amb.disp('Car Refrigerator');
+  amb.como(DONO);
+  assert.equal(cartaoDe(amb, 'Car Refrigerator').naPonte, true);
+  const t = amb.api_('canal', { id: fz.ID, canal: 'PONTE', motivo: 'freezer cadastrado no celular da ponte' });
+  assert.equal(t.ok, true, t.message); assert.match(t.mensagem, /A ponte está no ar e atende este dispositivo/);
+  const n0 = amb.api.pedidos.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1); assert.equal(amb.tabelas.AUT_LEITURAS[0].CANAL, 'PONTE'); assert.equal(amb.tabelas.AUT_LEITURAS[0].A_TEMP_C, -18);
+  avancarFz(amb, 1); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1, 'sem mudança e dentro do intervalo: nenhuma linha');
+  pt.mudar('dev-frz-1', 'A_Temp_C', -16); pt.gravar();
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 1, 'tentativa de menos de 1 min: espera');
+  avancarFz(amb, 1); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 2); assert.equal(amb.tabelas.AUT_LEITURAS[1].MOTIVO, 'MUDOU');
+  avancarFz(amb, 11); amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, 3); assert.equal(amb.tabelas.AUT_LEITURAS[2].MOTIVO, 'AGENDADA');
+  const r = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.match(r.mensagem, /Leitura agora \(Ponte local \(celular\)\): Compartimento A -16 °C/);
+  assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)), 'refrigerador da ponte: nenhuma chamada à nuvem');
+  // ponte fora: nada pela nuvem; a tela diz desde quando
+  pt.vivo = false; pt.gravar();
+  avancarFz(amb, 11);
+  const l0 = amb.tabelas.AUT_LEITURAS.length;
+  amb.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb.tabelas.AUT_LEITURAS.length, l0);
+  const r2 = amb.api_('estado', { dispositivoId: fz.ID });
+  assert.equal(r2.ok, true); assert.match(r2.mensagem, /Car Refrigerator trabalha pela ponte local .* fora do ar desde/); assert.match(r2.mensagem, /Confira o equipamento no local/);
+  assert.match(cartaoDe(amb, 'Car Refrigerator').ponteTexto, /fora do ar desde/);
+  assert.ok(!amb.api.pedidos.slice(n0).some((x) => /dev-frz-1/.test(x.caminho)));
+});
+
+test('alerta de faixa do refrigerador (S79): conta por tempo (fora há pelo menos o intervalo, também pela ponte que lê a cada minuto), histerese de 0,5 °C na volta e no mínimo 60 min entre avisos do mesmo tipo', () => {
+  const pt = ponteSimulada();
+  const amb = ambiente({ freezer: true, globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb; sincronizar(amb);
+  pt.online['dev-frz-1'] = true; pt.props['dev-frz-1'] = Object.assign({}, FREEZER_PONTOS); pt.gravar();
+  const fz = amb.disp('Car Refrigerator');
+  amb.como(DONO);
+  amb.api_('canal', { id: fz.ID, canal: 'PONTE', motivo: 'freezer cadastrado na ponte' });
+  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true } }).message, /pelo menos uma temperatura/);
+  assert.match(amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-10', aMax: '-15' } }).message, /mínima precisa ser menor/);
+  const sv = amb.api_('dispositivoSalvar', { id: fz.ID, refrig: { alerta: true, aMin: '-25', aMax: '-15' } });
+  assert.equal(sv.ok, true, sv.message); assert.match(sv.mensagem, /alerta de temperatura ligado \(A: -25 °C a -15 °C\)/);
+  const s79 = () => amb.notificacoes.filter((x) => x.evento === 'S79');
+  const minuto = () => { avancarFz(amb, 1); amb.ctx.AutPred_rotinaPedidos(); };
+  pt.mudar('dev-frz-1', 'A_Temp_C', -12); pt.gravar();
+  amb.ctx.AutPred_rotinaPedidos();
+  for (let i = 0; i < 5; i++) minuto();
+  assert.equal(s79().length, 0, 'fora há 5 min (6 leituras pela ponte): ainda sem aviso');
+  for (let i = 0; i < 5; i++) minuto();
+  assert.equal(s79().length, 1, 'fora há 10 min: avisa');
+  assert.match(s79()[0].titulo, /Refrigerador fora da faixa: Car Refrigerator/); assert.match(s79()[0].texto, /compartimento A em -12 °C \(máximo -15 °C\).*há 10 min/);
+  assert.deepEqual(Array.from(s79()[0].canais), ['sgo', 'email']);
+  minuto(); assert.equal(s79().length, 1, 'uma vez por ocorrência');
+  assert.equal(cartaoDe(amb, 'Car Refrigerator').refrig.alerta.fora, true);
+  // histerese: -15,2 °C está dentro, mas a menos de 0,5 °C da borda: ainda não é volta
+  pt.mudar('dev-frz-1', 'A_Temp_C', -15.2); pt.gravar(); minuto();
+  assert.equal(s79().length, 1); assert.equal(cartaoDe(amb, 'Car Refrigerator').refrig.alerta.fora, true);
+  pt.mudar('dev-frz-1', 'A_Temp_C', -16); pt.gravar(); minuto();
+  assert.equal(s79().length, 2); assert.match(s79()[1].titulo, /de volta à faixa/);
+  // sai de novo em menos de 60 min: fica na auditoria, sem novo aviso
+  pt.mudar('dev-frz-1', 'A_Temp_C', -11); pt.gravar();
+  for (let i = 0; i < 12; i++) minuto();
+  assert.equal(s79().length, 2, 'menos de 60 min do aviso anterior: não repete');
+  assert.ok(amb.tabelas.AUT_AUDITORIA.some((x) => x.EVENTO === 'REFRIG_FORA_DA_FAIXA' && x.RESULTADO === 'NAO_AVISADO'));
+  // voltou e saiu de novo depois de 60 min: avisa
+  pt.mudar('dev-frz-1', 'A_Temp_C', -18); pt.gravar(); minuto();
+  avancarFz(amb, 61);
+  pt.mudar('dev-frz-1', 'A_Temp_C', -10); pt.gravar();
+  for (let i = 0; i < 11; i++) minuto();
+  assert.equal(s79().filter((x) => /fora da faixa/.test(x.titulo)).length, 2, 'passados 60 min: novo aviso');
+  // nenhuma chamada à nuvem do refrigerador da ponte
+  assert.ok(!amb.api.pedidos.some((x) => /dev-frz-1\/shadow/.test(x.caminho)));
+});
+
+test('revisão: canal padrão grava e audita uma vez (aba sem a coluna CANAL); portão da Ponte lê pela ponte com a nuvem bloqueada; refrigerador nunca recebe comando; tipo "Outro" pede sincronizar; sincronização reclassifica no canal Ponte', () => {
+  const pt = ponteSimulada();
+  const amb = ambiente({ freezer: true, globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb; amb.api.garagem = true;
+  sincronizar(amb); amb.homologar('Portão principal'); amb.homologar('Portão secundário');
+  pt.online['dev-frz-1'] = true; pt.props['dev-frz-1'] = Object.assign({}, FREEZER_PONTOS); pt.gravar();
+  // A1: aba criada antes das colunas novas (como em produção): a rotina garante a coluna, grava e audita uma vez só
+  ['CANAL', 'CANAL_POR', 'CANAL_POR_ID', 'CANAL_EM', 'CANAL_MOTIVO'].forEach((k) => { const i = amb.cabecalhos.AUT_DISPOSITIVOS.indexOf(k); if (i >= 0) amb.cabecalhos.AUT_DISPOSITIVOS.splice(i, 1); });
+  for (let i = 0; i < 5; i++) amb.ctx.AutPred_rotinaPedidos();
+  amb.api_('painel'); amb.api_('painel');
+  assert.equal(amb.disp('Portão principal').CANAL, 'PONTE');
+  const canalAud = (id) => amb.tabelas.AUT_AUDITORIA.filter((x) => x.EVENTO === 'CANAL_ALTERADO' && x.DISPOSITIVO_ID === id).length;
+  assert.equal(canalAud(amb.disp('Portão principal').ID), 1); assert.equal(canalAud(amb.disp('Portão secundário').ID), 1);
+  // aba que não aceita a coluna (garantirColuna sem efeito): sem gravação, sem auditoria repetida
+  const amb2 = ambiente({ globais: { SGO_PORTOES_LOCAIS: pt.api } });
+  pt.amb = amb2; sincronizar(amb2); pt.gravar();
+  amb2.ctx.CertCal_garantirColuna_ = () => {};
+  amb2.cabecalhos.AUT_DISPOSITIVOS = amb2.cabecalhos.AUT_DISPOSITIVOS.filter((k) => !/^CANAL/.test(k));
+  for (let i = 0; i < 4; i++) amb2.ctx.AutPred_rotinaPedidos();
+  assert.equal(amb2.tabelas.AUT_AUDITORIA.filter((x) => x.EVENTO === 'CANAL_ALTERADO').length, 0);
+  assert.equal(amb2.ctx.AutPred_canal_(amb2.disp('Portão principal')), 'PONTE', 'o padrão continua valendo (calculado)');
+  pt.amb = amb;
+  // B4: portão da Ponte com a nuvem bloqueada lê pela ponte (sem parar na pausa da nuvem)
+  bloquear(amb);
+  delete amb.props['TUYA_EVT_dev-portao-1'];   // sem evento guardado: a leitura compartilhada vai à ponte
+  amb.como(DONO);
+  const n0 = amb.api.pedidos.length, ch0 = pt.chamadas || 0;
+  const port = amb.api_('portoes');
+  assert.equal(port.ok, true, port.message);
+  assert.ok((pt.chamadas || 0) > ch0, 'leu pela ponte'); assert.equal(amb.api.pedidos.length, n0, 'nada à nuvem');
+  delete amb.props.TUYA_USO_V1;
+  // B1: refrigerador nunca recebe comando, mesmo com COMPAT_OK forçado
+  const fz = amb.disp('Car Refrigerator');
+  fz.COMPAT_OK = 'SIM'; fz.COMANDO_ABRIR_JSON = '{"code":"OnOff","value":false}'; fz.HOMOLOGADO = 'SIM';
+  const p = amb.api_('preparar', { dispositivoId: fz.ID, operacaoId: 'op-frz-forcado-01' });
+  assert.equal(p.ok, false); assert.match(p.message, /é um refrigerador e o SGO\+ só lê/);
+  assert.throws(() => amb.ctx.AutPred_executarComTrava_({ userId: 'uA', usuario: 'admin', nome: 'DONO TESTE', perfil: 'ADMIN' }, { dispositivoId: fz.ID, operacaoId: 'op-frz-forcado-02', confirmacaoToken: 'x' }, () => {}), /refrigerador é só leitura/);
+  assert.equal(amb.tabelas.AUT_COMANDOS.find((x) => x.OPERACAO_ID === 'op-frz-forcado-02').SITUACAO, 'NEGADO');
+  assert.ok(!amb.api.pedidos.some((x) => /dev-frz-1\/commands/.test(x.caminho)) && !(pt.comandos || []).some((x) => x.devId === 'dev-frz-1'));
+  // M3: refrigerador lido antes desta versão como "Outro": trocar para a Ponte pede sincronizar primeiro
+  fz.TIPO = 'OUTRO'; fz.COMPAT_OK = 'SIM'; fz.MODELO_JSON = ''; fz.CANAL = '';
+  assert.match(amb.api_('canal', { id: fz.ID, canal: 'PONTE', motivo: 'freezer na ponte' }).message, /Sincronize primeiro/);
+  // mesmo já no canal Ponte, a sincronização reclassifica pela categoria e lê o modelo uma vez (só ela)
+  fz.CANAL = 'PONTE'; amb.ctx.AutPred_canalMemoLimpar_();
+  const nS = amb.api.pedidos.length;
+  sincronizar(amb);
+  const fz2 = amb.disp('Car Refrigerator');
+  assert.equal(fz2.TIPO, 'REFRIGERADOR'); assert.equal(fz2.COMPAT_OK, 'NAO'); assert.equal(fz2.COMANDO_ABRIR_JSON, ''); assert.equal(fz2.CANAL, 'PONTE');
+  assert.equal(JSON.parse(fz2.MODELO_JSON).A_BatteryVoltage.scale, 1);
+  assert.deepEqual(frzChamadas(amb, nS).map((x) => x.caminho), ['/v2.0/cloud/thing/dev-frz-1/model'], 'só o modelo, uma vez');
+  const nS2 = amb.api.pedidos.length;
+  sincronizar(amb);
+  assert.equal(frzChamadas(amb, nS2).length, 0, 'com o modelo guardado, nada');
+});

@@ -1,0 +1,54 @@
+COMERCIAL (assinatura, link, OC, exclusao, atividades, assinatura do vendedor)
++ CADEIA DE FRIO (bordas dos registradores) — PUBLICADO 10/11/2026 ~15:05 BRT
+
+Imagem: metrolabs/sgo:comercial-assinatura-20261110
+sha256:0ffe1e9b14ebebba26bfbe2382785ad4fa4b824f14376bf7f102dc11d0f57599
+Base: metrolabs/sgo:chat-ordem-20261109 (sha256:53b46f7d...), conferida igual a
+producao imediatamente antes (imagem e hashes dos arquivos alterados).
+Camada com 18 arquivos: pacote/app (legado Comercial, Ajuda, Gestao_RelatoriosEmpresa,
+Licitacoes_Contratos, 3 da Cadeia de Frio e app.js publico em src e dist).
+
+Fonte: codigo exato da producao baixado em base/ (o repositorio sgo_servidor local
+diverge da producao em 28 arquivos e NAO foi usado).
+
+Diagnostico: AUDITORIA_FLUXO_COMERCIAL.md (D1-D22, pedidos a-h).
+Implementacao: ETAPA1_IMPLEMENTACAO.md e ETAPA2_IMPLEMENTACAO.md.
+Ajuste meu apos revisao: "Excluir repetido" manteve a permissao que ja existia
+(vendedor com catalogo de venda), em vez de restringir a gestao.
+
+Casos reais explicados
+- PROP-2026-0039: link gerado 3 vezes; as 12:34 foi para Energiza2209@gmail.com
+  (cliente da PROP-0042); o cliente certo foi recusado por e-mail diferente.
+- E-mails de link SAIRAM (emails_saida enviado_em, sem erro), mas eram texto puro de
+  uma linha, sem remetente/responder-para: provavel spam.
+- Cadeia de Frio: DTL-11 (S3) parou 13:14:20, os outros 13:15:23/13:15:46; a ultima
+  linha contava como leitura faltando (1/81 > 1%).
+
+Testes
+- Suite inteira tests/*.test.cjs (189 arquivos) producao x candidato, local: unicas
+  diferencas = testes novos/atualizados passando. Falhas pre-existentes iguais.
+- Dentro da imagem exata (docker --network none): comercial*, cadeiafrio*,
+  avisos-gestao*, licitacoes*: mesmas conclusoes. Arquivos qa-*.txt no backup.
+- Testes alterados: avisos-gestao-revisao (contagem de avisos irreversiveis 2->3,
+  a nova chamada segue a regra da fila depois da trava); comercial-atividade-gestao
+  (2 assercoes, comportamento novo); comercial-etapa2 (permissao preservada).
+- Cadeia de Frio real em producao (arquivos reais, so leitura): 1520 linhas,
+  0 faltando, borda 13:15:23 registrada.
+
+Verificacao apos publicar
+- healthy; pagina completa servida contem as funcoes novas; /assinar-proposta/ e
+  /orcamento/ respondem 200; app.js publico novo servido.
+- NAO verificado ainda: criacao das colunas novas (ocorre na 1a abertura do
+  Comercial, chave COM_ABAS_OK_V12_ETAPA2); envio real de e-mail de link e de
+  confirmacao; tela num navegador com operador real; assinatura real de cliente.
+- PROP-2026-0042 (assinada 09/11 22:18) NAO foi alterada: aparece o botao
+  "Registrar a assinatura do cliente" para o responsavel decidir.
+
+Decisoes adotadas (podem ser revistas pelo dono): ver resposta ao usuario e
+secao 5 da auditoria.
+
+Backup e reversao: /opt/metrolabs/backup/comercial-20261110-sgo/
+  compose.antes.yml, imagem.antes.txt, banco-antes.dump (pg_dump -Fc, 123 MB)
+  Reverter: cp compose.antes.yml /opt/metrolabs/sgo/docker-compose.yml &&
+  docker compose up -d --no-build app (colunas novas sao aditivas; a versao
+  anterior as ignora).

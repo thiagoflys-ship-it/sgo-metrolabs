@@ -1,0 +1,860 @@
+/****************************************************
+ * COMERCIAL — OPORTUNIDADES (21/10/2026)
+ *
+ * Regras (da metodologia; padrão trazido do COMMAND):
+ *  - Toda oportunidade nasce ligada ao cadastro único: cliente, unidade (quando o cliente tem unidades),
+ *    contato do cliente (CAD_CONTATOS) e, quando fizer sentido, equipamentos da unidade.
+ *  - Toda oportunidade aberta tem dono, funil, etapa, origem, valor estimado e PRÓXIMA AÇÃO com data no
+ *    futuro. A próxima ação é uma atividade em Minhas atividades (módulo Comercial, 5W2H, restrita ao
+ *    responsável e à gestão): o SGO+ cobra a atividade como cobra qualquer outra (sistema até resolver,
+ *    e-mail no expediente, WhatsApp só no resumo diário) e, atrasada, ela sobe para a Caixa de decisões do
+ *    gestor comercial pela escada que já existe. Nada de cobrança a cada 2 horas.
+ *  - Registrar um contato (ligação, WhatsApp, e-mail, reunião, visita) conclui a atividade atual e exige a
+ *    próxima ação. Se a atividade for concluída direto em Minhas atividades, a oportunidade fica "sem
+ *    próxima ação" e entra no topo da lista do dia e no Início do vendedor.
+ *  - Parada (padrão 10 dias sem contato registrado): antes de mudar de etapa, registre um contato real ou a perda.
+ *  - Critérios de saída (21/10/2026, ComOpo_criteriosMudanca_): para AVANÇAR, o vendedor confirma a lista da etapa que deixa
+ *    (e das puladas), o decisor precisa estar mapeado, há pelo menos um contato registrado, passar da etapa de proposta
+ *    exige proposta enviada e a etapa de 100% exige o aceite registrado. VOLTAR pede o motivo. Vale para o quadro e a ficha.
+ *  - Perda só com motivo da lista e o aprendizado (mínimo 15 letras); cancela as atividades abertas e as
+ *    propostas que não foram respondidas (inclusive rascunhos, falha do COMMAND corrigida aqui).
+ *  - Reabrir oportunidade encerrada é decisão da gestão comercial: o vendedor pede (com o motivo) e o
+ *    pedido entra na Caixa de decisões; quem reabre é a gestão, na tela da oportunidade.
+ *  - O vendedor vê só as próprias oportunidades; a gestão comercial vê e troca o responsável.
+ *  - ORIGEM_REF é o gancho para oportunidades nascidas de outras telas (ex.: "VENCIMENTO:<id do documento>"
+ *    para renovação de calibração ou qualificação, na segunda fase).
+ ****************************************************/
+
+function ComOpo_podeVer_(eu, o) { return !!eu && (eu.gestao || (eu.vendedor && Com_s_(o.RESPONSAVEL_ID) === eu.id)); }
+
+/**
+ * 10/11/2026 (etapa 2): oportunidade excluída (teste ou engano) e o leitor único das que valem. Listas, quadro, painel,
+ * indicadores, entrada, gestora, pendências e relatórios leem por aqui; a linha excluída fica no banco (nunca é apagada).
+ */
+function ComOpo_excluida_(o) { return Com_up_(o && o.SITUACAO) === 'EXCLUIDA' || !!Com_s_(o && o.EXCLUIDA_EM); }
+function ComOpo_lerOportunidades_() { return Com_ler_(COM_ABAS.OPORTUNIDADES).filter(function (o) { return !ComOpo_excluida_(o); }); }
+
+function ComOpo_obter_(eu, id, acao) {
+  var o = SGO_DATA.getById(COM_ABAS.OPORTUNIDADES, Com_s_(id));
+  if (!o) throw new Error('Não foi possível ' + acao + ': a oportunidade não foi encontrada. Atualize a lista de oportunidades');
+  if (ComOpo_excluida_(o)) throw new Error('Não foi possível ' + acao + ': a oportunidade ' + Com_s_(o.CODIGO) + ' foi excluída em ' + Com_br_(o.EXCLUIDA_EM) + ' por ' + (Com_s_(o.EXCLUIDA_POR_NOME) || 'alguém da equipe') +
+    ' (motivo: ' + Com_s_(o.EXCLUIDA_MOTIVO) + '). Ela não aparece mais nas listas; o registro fica guardado no banco e no histórico. Atualize a lista de oportunidades');
+  if (!ComOpo_podeVer_(eu, o)) throw new Error('Não foi possível ' + acao + ': a oportunidade ' + Com_s_(o.CODIGO) + ' é de ' + (Com_s_(o.RESPONSAVEL_NOME) || 'outra pessoa') + '. O vendedor vê só as próprias; a gestão comercial vê todas');
+  return o;
+}
+
+/** Situação calculada: dias sem contato, parada, esfriando, estagnada, sem próxima ação, atrasada. */
+function ComOpo_derivados_(o, ctx) {
+  ctx = ctx || {};
+  var met = ctx.met || Com_metodologia_(), agora = ctx.agora || Com_agora_(), hoje = agora.slice(0, 10);
+  var etapa = Com_etapa_(Com_s_(o.FUNIL), Com_s_(o.ETAPA), met) || {};
+  var base = Com_dia_(o.ULTIMO_CONTATO_EM) || Com_dia_(o.CRIADO_EM) || hoje;
+  var dias = Math.max(0, Com_diasEntre_(base, hoje) || 0);
+  var naEtapa = Math.max(0, Com_diasEntre_(Com_dia_(o.ETAPA_DESDE) || base, hoje) || 0);
+  var investimento = typeof ComP_opInvestimento_ === 'function' && ComP_opInvestimento_(o, ctx.propostas);
+  var aberta = Com_up_(o.SITUACAO || 'ABERTA') === 'ABERTA' && !investimento;
+  var atv = ctx.atividades ? ctx.atividades[Com_s_(o.ATIVIDADE_ID)] : Com_atividade_(o.ATIVIDADE_ID);
+  var atvAberta = Com_atividadeAberta_(atv);
+  var prev = atvAberta ? Com_iso_(atv.PREVISAO_ATUAL || atv.PRAZO) : '';
+  var c = met.cadencia || {};
+  var r = {
+    probabilidade: Number(etapa.probabilidade) || 0, etapaNome: Com_s_(etapa.nome) || Com_s_(o.ETAPA), maxDias: Number(etapa.maxDias) || 0,
+    investimento: investimento, diasSemContato: dias, diasNaEtapa: naEtapa,
+    parada: aberta && dias >= (Number(c.paradaDias) || 10),
+    esfriando: aberta && dias >= (Number(c.esfriandoDias) || 7) && dias < (Number(c.paradaDias) || 10),
+    estagnada: aberta && !!etapa.maxDias && naEtapa > Number(etapa.maxDias),
+    semProxima: aberta && !atvAberta,
+    proximaEm: prev, atrasada: aberta && atvAberta && !!prev && prev < agora, hoje: aberta && atvAberta && prev.slice(0, 10) === hoje,
+    mudarEstrategia: aberta && (Number(o.TENTATIVAS_SEM_RESPOSTA) || 0) >= (Number(c.tentativasMudarEstrategia) || 3)
+  };
+  var valor = Number(o.VALOR_ESTIMADO) || 0;
+  r.ponderado = Com_r2_(valor * r.probabilidade / 100);
+  return r;
+}
+
+function ComOpo_paraTela_(eu, o, ctx) {
+  var d = ComOpo_derivados_(o, ctx);
+  var met = (ctx && ctx.met) || Com_metodologia_();
+  var f = Com_funil_(Com_s_(o.FUNIL), met);
+  var t = {
+    id: Com_s_(o.ID), codigo: Com_s_(o.CODIGO), titulo: Com_s_(o.TITULO), clienteId: Com_s_(o.CLIENTE_ID), cliente: Com_s_(o.CLIENTE_NOME), unidadeId: Com_s_(o.UNIDADE_ID), unidade: Com_s_(o.UNIDADE_NOME),
+    contatoId: Com_s_(o.CONTATO_ID), contato: Com_s_(o.CONTATO_NOME), equipamentos: Com_s_(o.EQUIPAMENTOS_IDS) ? Com_s_(o.EQUIPAMENTOS_IDS).split(',') : [],
+    funil: Com_s_(o.FUNIL), funilNome: f ? f.nome : Com_s_(o.FUNIL), etapa: Com_s_(o.ETAPA), etapaNome: d.etapaNome, probabilidade: d.probabilidade,
+    origem: Com_s_(o.ORIGEM), chance: Com_up_(o.CHANCE) || 'MEDIA', previsao: Com_dia_(o.PREVISAO_FECHAMENTO), previsaoBr: Com_brDia_(o.PREVISAO_FECHAMENTO),
+    responsavelId: Com_s_(o.RESPONSAVEL_ID), responsavel: Com_s_(o.RESPONSAVEL_NOME), situacao: Com_up_(o.SITUACAO || 'ABERTA'), situacaoNome: COM_SITUACOES_OPO[Com_up_(o.SITUACAO || 'ABERTA')] || '',
+    qualificacao: Com_json_(o.QUALIFICACAO_JSON, {}), motivoPerda: Com_s_(o.MOTIVO_PERDA), aprendizado: Com_s_(o.APRENDIZADO_PERDA),
+    ultimoContato: Com_br_(o.ULTIMO_CONTATO_EM), tentativasSemResposta: Number(o.TENTATIVAS_SEM_RESPOSTA) || 0,
+    proximaAcao: Com_s_(o.PROXIMA_ACAO), proximaTipo: Com_up_(o.PROXIMA_ACAO_TIPO), proximaEm: Com_br_(d.proximaEm || o.PROXIMA_ACAO_EM), atividadeId: Com_s_(o.ATIVIDADE_ID),
+    // 10/11/2026 (etapa 1, D20): data e hora do ganho e por onde a venda foi ganha
+    ganhaEm: Com_br_(o.GANHA_EM), ganhaVia: Com_up_(o.GANHA_VIA), ganhaViaNome: COM_GANHA_VIA[Com_up_(o.GANHA_VIA)] || '', perdidaEm: Com_brDia_(o.PERDIDA_EM), reaberturaPedida: !!Com_s_(o.REABERTURA_PEDIDA_EM), reaberturaMotivo: Com_s_(o.REABERTURA_MOTIVO),
+    observacoes: Com_s_(o.OBSERVACOES), origemRef: Com_s_(o.ORIGEM_REF), criadaEm: Com_brDia_(o.CRIADO_EM),
+    diasSemContato: d.diasSemContato, diasNaEtapa: d.diasNaEtapa, parada: d.parada, esfriando: d.esfriando, estagnada: d.estagnada, semProxima: d.semProxima, atrasada: d.atrasada,
+    investimento: d.investimento, venceHoje: d.hoje, mudarEstrategia: d.mudarEstrategia,
+    // 01/11/2026 (Comercial C4): quem ganhou (na perda), para a ficha mostrar e oferecer "Completar quem ganhou" quando falta
+    concorrenteVencedor: Com_s_(o.CONCORRENTE_VENCEDOR), temValorVencedor: Number(o.VALOR_VENCEDOR) > 0
+  };
+  if (eu.veValores) { t.valor = Number(o.VALOR_ESTIMADO) || 0; t.valorTxt = Com_moeda_(t.valor); t.ponderado = d.ponderado; t.valorVencedorTxt = Number(o.VALOR_VENCEDOR) > 0 ? Com_moeda_(o.VALOR_VENCEDOR) : ''; }
+  return t;
+}
+
+/** Atividades indexadas por id (uma leitura para a lista inteira). */
+function ComOpo_mapaAtividades_() {
+  var m = {};
+  try { if (typeof Atividades_abas_ === 'function') Com_ler_(Atividades_abas_().ATIVIDADES).forEach(function (a) { m[Com_s_(a.ID)] = a; }); } catch (e) {}
+  return m;
+}
+
+/** Lista para a tela. filtro: { situacao: 'ABERTA'|'GANHA'|'PERDIDA'|'TODAS', responsavelId, clienteId, funil, busca } */
+// 27/10/2026: busca sem acento e por partes (Com_casaBusca_), também no contato, no responsável e nas observações
+// (o CRM importado guarda ali o vendedor de origem). info.foraDoFiltro: quantas a busca acha em outras situações,
+// para a tela oferecer "ver em todas" em vez de dizer só "nenhuma" (a maioria das oportunidades já está ganha ou perdida).
+function ComOpo_textoBusca_(o) {
+  return [Com_s_(o.CODIGO), Com_s_(o.TITULO), Com_s_(o.CLIENTE_NOME), Com_s_(o.UNIDADE_NOME), Com_s_(o.CONTATO_NOME), Com_s_(o.RESPONSAVEL_NOME), Com_s_(o.ORIGEM), Com_s_(o.OBSERVACOES)];
+}
+function ComOpo_listar_(eu, filtro, info) {
+  Com_exigir_(eu, 'VENDEDOR', 'ver as oportunidades');
+  var f = filtro || {}, ctx = { met: Com_metodologia_(), agora: Com_agora_(), atividades: ComOpo_mapaAtividades_() };
+  var sit = Com_up_(f.situacao) || 'ABERTA', termos = Com_termosBusca_(f.busca), fora = 0;
+  var l = ComOpo_lerOportunidades_().filter(function (o) {
+    if (!ComOpo_podeVer_(eu, o)) return false;
+    if (f.responsavelId && eu.gestao && Com_s_(o.RESPONSAVEL_ID) !== Com_s_(f.responsavelId)) return false;
+    if (f.clienteId && Com_s_(o.CLIENTE_ID) !== Com_s_(f.clienteId)) return false;
+    if (f.funil && Com_s_(o.FUNIL) !== Com_s_(f.funil)) return false;
+    if (termos.length && !Com_casaBusca_(termos, ComOpo_textoBusca_(o))) return false;
+    if (sit !== 'TODAS' && Com_up_(o.SITUACAO || 'ABERTA') !== sit) { if (termos.length) fora++; return false; }
+    return true;
+  }).map(function (o) { return ComOpo_paraTela_(eu, o, ctx); });
+  if (info) info.foraDoFiltro = fora;
+  l.sort(function (a, b) { return (b.semProxima - a.semProxima) || (b.atrasada - a.atrasada) || (b.parada - a.parada) || String(a.proximaEm).localeCompare(String(b.proximaEm)); });
+  return l;
+}
+
+// ------------------------------------------------------------
+// VALIDAÇÕES COMUNS
+// ------------------------------------------------------------
+/** Cliente, unidade, contato e equipamentos do cadastro. Devolve os nomes. Lança no padrão do operador. */
+function ComOpo_vinculos_(d, acao) {
+  var cli = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, Com_s_(d.clienteId));
+  if (!cli || Com_up_(cli.STATUS || 'ATIVO') === 'INATIVO') throw new Error('Não foi possível ' + acao + ': escolha o cliente na lista (ele vem do cadastro único). Se o cliente não existe, cadastre em Cadastros > Clientes e volte aqui');
+  var unidades = Com_ler_(SGO_CFG.SHEETS.CAD_UNIDADES).filter(function (u) { return Com_s_(u.CLIENTE_ID) === Com_s_(cli.ID) && Com_up_(u.STATUS || 'ATIVO') === 'ATIVO'; });
+  var uid = Com_s_(d.unidadeId), un = null;
+  if (uid) {
+    un = unidades.filter(function (u) { return Com_s_(u.ID) === uid; })[0];
+    if (!un) throw new Error('Não foi possível ' + acao + ': a unidade escolhida não pertence a ' + (Com_s_(cli.NOME_FANTASIA) || Com_s_(cli.RAZAO_SOCIAL)) + '. Escolha a unidade de novo');
+  } else if (unidades.length) {
+    throw new Error('Não foi possível ' + acao + ': o cliente tem ' + Com_plural_(unidades.length, 'unidade', 'unidades') + ' no cadastro. Escolha em qual unidade é a oportunidade (no SGO+ documentos, equipamentos e pastas são organizados por unidade)');
+  }
+  var ct = null;
+  if (Com_s_(d.contatoId)) {
+    ct = SGO_DATA.getById(COM_ABAS.CONTATOS, Com_s_(d.contatoId));
+    if (!ct || Com_s_(ct.CLIENTE_ID) !== Com_s_(cli.ID) || Com_up_(ct.STATUS || 'ATIVO') !== 'ATIVO') throw new Error('Não foi possível ' + acao + ': o contato escolhido não é deste cliente (ou foi inativado). Escolha outro contato ou cadastre um novo no botão "Novo contato"');
+  } else {
+    throw new Error('Não foi possível ' + acao + ': escolha o contato principal do cliente (quem você vai procurar). Se ele não está na lista, toque em "Novo contato", cadastre e escolha');
+  }
+  var eqs = (Array.isArray(d.equipamentos) ? d.equipamentos : Com_s_(d.equipamentos).split(',')).map(Com_s_).filter(Boolean);
+  if (eqs.length) {
+    var mapa = {};
+    Com_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { mapa[Com_s_(e.ID)] = e; });
+    eqs.forEach(function (id) {
+      var e = mapa[id];
+      if (!e || Com_s_(e.CLIENTE_ID) !== Com_s_(cli.ID) || (uid && Com_s_(e.UNIDADE_ID) && Com_s_(e.UNIDADE_ID) !== uid)) throw new Error('Não foi possível ' + acao + ': um dos equipamentos escolhidos não é desta unidade (' + (e ? Com_s_(e.TAG) : id) + '). Tire o equipamento da lista ou escolha a unidade certa');
+    });
+  }
+  return { cliente: cli, clienteNome: Com_s_(cli.NOME_FANTASIA) || Com_s_(cli.RAZAO_SOCIAL), unidade: un, unidadeNome: un ? Com_s_(un.NOME_UNIDADE) : '', contato: ct, contatoNome: ct ? Com_s_(ct.NOME) : '', equipamentos: eqs };
+}
+
+/** Próxima ação da tela: { acao, data, hora, tipo }. Lança se faltar ou estiver no passado. */
+function ComOpo_proxima_(p, acao) {
+  p = p || {};
+  var texto = Com_texto_(p.acao, 300);
+  if (texto.length < 5) throw new Error('Não foi possível ' + acao + ': toda oportunidade aberta precisa da PRÓXIMA AÇÃO (o que você vai fazer com o cliente, por exemplo "Ligar para confirmar a visita técnica"). Preencha e salve de novo');
+  var prazo = Com_prazo_(p.data, p.hora);
+  if (!prazo) throw new Error('Não foi possível ' + acao + ': informe a DATA da próxima ação e salve de novo');
+  if (prazo < Com_agora_()) throw new Error('Não foi possível ' + acao + ': a próxima ação não pode ficar no passado (' + Com_br_(prazo) + '). O que já foi feito se registra em "Registrar contato"; aqui vai o próximo passo, com data de hoje em diante');
+  var tipo = Com_up_(p.tipo);
+  if (!COM_TIPOS_CONTATO[tipo]) tipo = 'LIGACAO';
+  return { texto: texto, prazo: prazo, tipo: tipo };
+}
+
+/** Cria a atividade da próxima ação (Minhas atividades, restrita). Devolve o id. */
+function ComOpo_criarProxima_(eu, sessionId, o, prox) {
+  var resp = Com_s_(o.RESPONSAVEL_ID);
+  return Com_criarAtividade_({
+    sessionId: resp === eu.id ? sessionId : '', comoPessoa: eu, responsavelId: resp,
+    titulo: 'Retorno ao cliente: ' + Com_s_(o.CLIENTE_NOME) + ' (' + (COM_TIPOS_CONTATO[prox.tipo] || 'Contato').toLowerCase() + ')',
+    descricao: prox.texto + '\nOportunidade ' + Com_s_(o.CODIGO) + ': ' + Com_s_(o.TITULO) + (Com_s_(o.CONTATO_NOME) ? '\nContato: ' + Com_s_(o.CONTATO_NOME) : '') +
+      '\nAo falar com o cliente, registre o contato na oportunidade (Comercial > Oportunidades): a atividade é concluída e você marca o próximo passo.',
+    prazo: prox.prazo, prioridade: 'Normal', clienteId: Com_s_(o.CLIENTE_ID), unidadeId: Com_s_(o.UNIDADE_ID),
+    porQue: 'Regra do Comercial: nenhuma oportunidade aberta fica sem próxima ação com data.', onde: 'Comercial > Oportunidades > ' + Com_s_(o.CODIGO),
+    como: prox.texto, restrita: true
+  });
+}
+
+// ------------------------------------------------------------
+// GRAVAÇÕES
+// ------------------------------------------------------------
+/**
+ * Nova oportunidade ou edição. d: { id?, titulo, clienteId, unidadeId, contatoId, equipamentos[], funil, etapa, origem, valor, chance,
+ *   previsao, observacoes, qualificacao{}, responsavelId (gestão), proxima: { acao, data, hora, tipo } (obrigatória ao criar) }
+ */
+function ComOpo_salvar_(eu, sessionId, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'salvar a oportunidade');
+  d = d || {};
+  var acao = d.id ? 'salvar a oportunidade' : 'criar a oportunidade';
+  var met = Com_metodologia_();
+  var titulo = Com_texto_(d.titulo, 200);
+  if (titulo.length < 4) throw new Error('Não foi possível ' + acao + ': escreva o título (o que o cliente precisa, por exemplo "Qualificação térmica de 2 autoclaves") e salve de novo');
+  var funil = Com_funil_(Com_s_(d.funil), met);
+  if (!funil) throw new Error('Não foi possível ' + acao + ': escolha o funil (Engenharia para serviços e contratos, Produtos para peças e equipamentos)');
+  var etapa = Com_etapa_(funil, Com_s_(d.etapa) || funil.etapas[0].codigo, met);
+  if (!etapa) throw new Error('Não foi possível ' + acao + ': a etapa escolhida não existe no funil ' + funil.nome + '. Escolha a etapa de novo');
+  var origem = Com_s_(d.origem);
+  if (met.origens.indexOf(origem) < 0) throw new Error('Não foi possível ' + acao + ': escolha a origem na lista (de onde veio a oportunidade). Ela alimenta o relatório de onde vêm as vendas');
+  var valor = Com_num_(d.valor);
+  if (!(valor > 0)) throw new Error('Não foi possível ' + acao + ': informe o valor estimado (maior que zero, por exemplo 4.500,00). Se ainda não sabe, use o ticket médio do serviço e ajuste depois');
+  var chance = ['BAIXA', 'MEDIA', 'ALTA'].indexOf(Com_up_(d.chance)) >= 0 ? Com_up_(d.chance) : 'MEDIA';
+  var previsao = Com_dia_(d.previsao);
+  var vinc = ComOpo_vinculos_(d, acao);
+  var qual = {};
+  (met.qualificacao.itens || []).forEach(function (q) { var v = (d.qualificacao || {})[q.codigo]; if (v) qual[q.codigo] = Com_texto_(v === true ? 'SIM' : v, 300); });
+  var respId = eu.id, respNome = eu.nome;
+  if (Com_s_(d.responsavelId) && Com_s_(d.responsavelId) !== eu.id) {
+    if (!eu.gestao) throw new Error('Não foi possível ' + acao + ': só a gestão comercial define outro responsável. Crie a oportunidade para você e peça à gestão a troca, se for o caso');
+    var equipe = Com_equipeComercial_().filter(function (p) { return p.id === Com_s_(d.responsavelId); })[0];
+    if (!equipe) throw new Error('Não foi possível ' + acao + ': o responsável escolhido não está ativo na equipe comercial. Escolha outra pessoa');
+    respId = equipe.id; respNome = equipe.nome;
+  }
+  var prox = d.id ? null : ComOpo_proxima_(d.proxima, acao);
+  return Com_comTrava_(function () {
+    var agora = Com_agora_();
+    var campos = { TITULO: titulo, CLIENTE_ID: Com_s_(vinc.cliente.ID), CLIENTE_NOME: vinc.clienteNome, UNIDADE_ID: vinc.unidade ? Com_s_(vinc.unidade.ID) : '', UNIDADE_NOME: vinc.unidadeNome,
+      CONTATO_ID: vinc.contato ? Com_s_(vinc.contato.ID) : '', CONTATO_NOME: vinc.contatoNome, EQUIPAMENTOS_IDS: vinc.equipamentos.join(','), ORIGEM: origem, VALOR_ESTIMADO: Com_r2_(valor),
+      CHANCE: chance, PREVISAO_FECHAMENTO: previsao, OBSERVACOES: Com_texto_(d.observacoes, 3000), QUALIFICACAO_JSON: JSON.stringify(qual), ATUALIZADO_EM: agora };
+    if (!d.id) {
+      Com_garantirAbas_();
+      campos.CODIGO = Com_proximoNumero_('OPO', COM_ABAS.OPORTUNIDADES, 'CODIGO');
+      campos.FUNIL = funil.codigo; campos.ETAPA = etapa.codigo; campos.ETAPA_DESDE = agora; campos.SITUACAO = 'ABERTA';
+      campos.RESPONSAVEL_ID = respId; campos.RESPONSAVEL_NOME = respNome; campos.CRIADO_POR_ID = eu.id; campos.CRIADO_POR_NOME = eu.nome;
+      campos.TENTATIVAS_SEM_RESPOSTA = 0; campos.ORIGEM_REF = Com_texto_(d.origemRef, 200);
+      campos.PROXIMA_ACAO = prox.texto; campos.PROXIMA_ACAO_TIPO = prox.tipo; campos.PROXIMA_ACAO_EM = prox.prazo;
+      var o = SGO_DATA.insert(COM_ABAS.OPORTUNIDADES, campos);
+      var atvId = ComOpo_criarProxima_(eu, sessionId, o, prox);
+      SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { ATIVIDADE_ID: atvId });
+      o.ATIVIDADE_ID = atvId;
+      Com_historico_('OPORTUNIDADE', o.ID, 'CRIACAO', eu, { para: etapa.nome, texto: 'Oportunidade criada no funil ' + funil.nome + ', etapa ' + etapa.nome + '. Próxima ação: ' + prox.texto + ' em ' + Com_br_(prox.prazo) + '.' });
+      return { oportunidade: ComOpo_paraTela_(eu, o), message: 'Oportunidade ' + o.CODIGO + ' criada. A próxima ação já está em Minhas atividades para ' + Com_br_(prox.prazo) + '.' };
+    }
+    var atual = ComOpo_obter_(eu, d.id, acao);
+    if (Com_up_(atual.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível salvar: a oportunidade ' + atual.CODIGO + ' está ' + COM_SITUACOES_OPO[Com_up_(atual.SITUACAO)].toLowerCase() + '. Para mudar, ela precisa ser reaberta pela gestão comercial (botão "Pedir reabertura")');
+    if (Com_s_(atual.FUNIL) !== funil.codigo) { campos.FUNIL = funil.codigo; campos.ETAPA = funil.etapas[0].codigo; campos.ETAPA_DESDE = agora; }
+    var trocaResp = eu.gestao && respId !== Com_s_(atual.RESPONSAVEL_ID) && Com_s_(d.responsavelId);
+    if (trocaResp) { campos.RESPONSAVEL_ID = respId; campos.RESPONSAVEL_NOME = respNome; }
+    var mudou = Object.keys(campos).filter(function (k) { return k !== 'ATUALIZADO_EM' && Com_s_(atual[k]) !== Com_s_(campos[k]); });
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, atual.ID, campos);
+    var novo = Object.assign({}, atual, campos), extraTroca = '';
+    if (trocaResp) {
+      // 10/11/2026 (etapa 2, D5): as propostas ainda não assinadas pela Metrolab, sem link e nunca enviadas passam junto; as
+      // outras ficam com quem assinou ou enviou (a assinatura é pessoal e o cliente recebeu com o nome dele). As atividades
+      // abertas da gestão passam ao novo responsável. O responsável anterior também é avisado.
+      var antigoId = Com_s_(atual.RESPONSAVEL_ID), antigoNome = Com_s_(atual.RESPONSAVEL_NOME) || 'o responsável anterior';
+      var tp = ComOpo_transferirPropostas_(eu, atual, respId, respNome);
+      var tg = ComOpo_transferirAtividadesGestao_(atual, respId);
+      var txtProps = (tp.passaram.length ? ' Propostas que passaram junto: ' + tp.passaram.join(', ') + '.' : '') +
+        (tp.ficaram.length ? ' Continuam com ' + antigoNome + ': ' + tp.ficaram.map(function (x) { return x.rotulo + ' (' + x.motivo + ')'; }).join('; ') + '.' : '') +
+        (tg ? ' ' + Com_plural_(tg, 'atividade da gestão passou', 'atividades da gestão passaram') + ' para ' + respNome + '.' : '');
+      Com_historico_('OPORTUNIDADE', atual.ID, 'RESPONSAVEL', eu, { de: antigoNome, para: respNome, texto: 'Responsável: ' + antigoNome + ' → ' + respNome + ' (troca pela gestão comercial, ' + eu.nome + ').' + txtProps });
+      if (antigoId && antigoId !== eu.id && antigoId !== respId) Com_avisar_(antigoId, 'OPORTUNIDADE_TRANSFERIDA', 'Oportunidade ' + atual.CODIGO + ' passou para ' + respNome,
+        eu.nome + ' passou a oportunidade ' + atual.CODIGO + ' (' + vinc.clienteNome + ') para ' + respNome + '. Ela saiu da sua lista.' +
+        (tp.ficaram.length ? ' Continuam com você, porque já foram assinadas pela Metrolab ou enviadas ao cliente: ' + tp.ficaram.map(function (x) { return x.rotulo; }).join(', ') + '. Combine com ' + respNome + ' o acompanhamento.' : ''),
+        { tipo: 'oportunidade', id: atual.ID }, { email: true });
+      extraTroca = txtProps;
+    }
+    if (trocaResp) {
+      var atv = Com_atividade_(atual.ATIVIDADE_ID);
+      if (Com_atividadeAberta_(atv)) {
+        Com_mudarAtividade_(atual.ATIVIDADE_ID, 'Cancelada', 'Oportunidade passou para ' + respNome + ' (troca de responsável pela gestão comercial).');
+        var prazoAntigo = Com_iso_(atv.PREVISAO_ATUAL || atv.PRAZO);
+        var p2 = { texto: Com_s_(atual.PROXIMA_ACAO) || 'Assumir a oportunidade e falar com o cliente', tipo: Com_up_(atual.PROXIMA_ACAO_TIPO) || 'LIGACAO', prazo: prazoAntigo && prazoAntigo > agora ? prazoAntigo : Com_somarDiasUteis_(Com_hoje_(), 1) + 'T10:00' };
+        var nova = ComOpo_criarProxima_(eu, '', novo, p2);
+        SGO_DATA.update(COM_ABAS.OPORTUNIDADES, atual.ID, { ATIVIDADE_ID: nova, PROXIMA_ACAO_EM: p2.prazo });
+        novo.ATIVIDADE_ID = nova;
+      }
+      Com_avisar_(respId, 'OPORTUNIDADE_RECEBIDA', 'Oportunidade ' + atual.CODIGO + ' passou para você', 'A gestão comercial passou para você a oportunidade ' + atual.CODIGO + ' (' + vinc.clienteNome + '). A próxima ação está em Minhas atividades.' + extraTroca, { tipo: 'oportunidade', id: atual.ID }, { email: true });
+    }
+    Com_historico_('OPORTUNIDADE', atual.ID, 'EDICAO', eu, { texto: 'Campos alterados: ' + (mudou.join(', ') || 'nenhum') + '.' });
+    return { oportunidade: ComOpo_paraTela_(eu, novo), message: 'Oportunidade ' + atual.CODIGO + ' salva.' + (trocaResp ? ' Responsável agora: ' + respNome + '.' + extraTroca : '') };
+  });
+}
+
+/** Normaliza um texto de item da lista para comparar confirmações (a gestão pode reescrever a lista). */
+function ComOpo_chaveItem_(t) { return Com_s_(t).toLowerCase().replace(/\s+/g, ' ').replace(/[.;:\s]+$/, ''); }
+
+/**
+ * O que a mudança de etapa exige (metodologia: lista de cada etapa, regras de ouro e "avanco"). NÃO grava nada.
+ * Serve ao quadro (antes de soltar o cartão, para montar a janela de confirmação) e à gravação (que confere de novo).
+ * o: linha da oportunidade. destino: código da etapa. ctx: { met, agora, atividades, propostas, contatosReg } (opcional).
+ * confirmados: { "<etapa>": [textos] } que o vendedor marcou agora.
+ * Devolve { pode, sentido: 'AVANCO'|'RECUO'|'IGUAL', origem, destino, confirmar: [{etapa, etapaNome, texto, confirmado}],
+ *   faltas: [{codigo, texto, oQueFazer}], pendentesLista: n, precisaProxima, precisaMotivo }.
+ */
+function ComOpo_criteriosMudanca_(o, destino, ctx, confirmados) {
+  ctx = ctx || {};
+  var met = ctx.met || Com_metodologia_();
+  var av = met.avanco || {};
+  var f = Com_funil_(Com_s_(o.FUNIL), met);
+  var r = { pode: false, sentido: 'IGUAL', origem: null, destino: null, confirmar: [], faltas: [], pendentesLista: 0, precisaProxima: false, precisaMotivo: false };
+  if (!f) { r.faltas.push({ codigo: 'FUNIL', texto: 'O funil desta oportunidade não existe mais na metodologia.', oQueFazer: 'Peça à gestão comercial para conferir os funis em Comercial > Metodologia comercial.' }); return r; }
+  var iO = -1, iD = -1;
+  f.etapas.forEach(function (e, i) { if (e.codigo === Com_s_(o.ETAPA)) iO = i; if (e.codigo === Com_s_(destino)) iD = i; });
+  if (iD < 0) { r.faltas.push({ codigo: 'ETAPA', texto: 'A etapa escolhida não é do funil ' + f.nome + '.', oQueFazer: 'Escolha uma das etapas do funil desta oportunidade.' }); return r; }
+  var eO = iO >= 0 ? f.etapas[iO] : null, eD = f.etapas[iD];
+  r.origem = eO ? { codigo: eO.codigo, nome: eO.nome, probabilidade: Number(eO.probabilidade) || 0 } : { codigo: Com_s_(o.ETAPA), nome: Com_s_(o.ETAPA), probabilidade: 0 };
+  r.destino = { codigo: eD.codigo, nome: eD.nome, probabilidade: Number(eD.probabilidade) || 0, criterio: Com_s_(eD.criterio) };
+  if (iD === iO) { r.pode = true; return r; }
+  r.sentido = iD > iO ? 'AVANCO' : 'RECUO';
+  var der = ComOpo_derivados_(o, { met: met, agora: ctx.agora, atividades: ctx.atividades });
+  if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') r.faltas.push({ codigo: 'ENCERRADA', texto: 'A oportunidade ' + Com_s_(o.CODIGO) + ' está ' + (COM_SITUACOES_OPO[Com_up_(o.SITUACAO)] || '').toLowerCase() + '.', oQueFazer: 'Oportunidade encerrada não muda de etapa. O vendedor pede a reabertura na ficha da oportunidade; a gestão comercial decide.' });
+  if (der.parada) r.faltas.push({ codigo: 'PARADA', texto: 'A oportunidade está parada há ' + der.diasSemContato + ' dias sem contato.', oQueFazer: 'Reaqueça antes: abra a oportunidade, toque em "Registrar contato" e registre um contato real com o cliente e a próxima ação. Se não há mais negócio, registre a perda.' });
+  r.precisaProxima = der.semProxima;
+  if (r.sentido === 'RECUO') { r.precisaMotivo = true; r.pode = !r.faltas.length; return r; }
+  // AVANÇO: lista das etapas deixadas para trás (a atual e as puladas)
+  var guardados = Com_json_(o.CRITERIOS_JSON, {}) || {};
+  if (av.exigirLista !== false) {
+    for (var i = Math.max(0, iO); i < iD; i++) {
+      var e = f.etapas[i], antes = ((guardados[e.codigo] || {}).itens || []).map(ComOpo_chaveItem_), agora = ((confirmados || {})[e.codigo] || []).map(ComOpo_chaveItem_);
+      (e.checklist || []).forEach(function (txt) {
+        var k = ComOpo_chaveItem_(txt), ok = antes.indexOf(k) >= 0 || agora.indexOf(k) >= 0;
+        r.confirmar.push({ etapa: e.codigo, etapaNome: e.nome, texto: txt, confirmado: ok, jaGravado: antes.indexOf(k) >= 0 });
+        if (!ok) r.pendentesLista++;
+      });
+    }
+  }
+  var regs = ctx.contatosReg ? ctx.contatosReg.filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === Com_s_(o.ID); }) : Com_ler_(COM_ABAS.CONTATOS_REG).filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === Com_s_(o.ID); });
+  var props = (ctx.propostas || ComP_lerPropostas_()).filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID); });
+  var qual = Com_json_(o.QUALIFICACAO_JSON, {}) || {};
+  var itemDecisor = (met.qualificacao.itens || []).filter(function (q) { return q.codigo === 'DECISOR'; })[0];
+  if (av.exigirDecisor !== false && itemDecisor && !Com_s_(qual.DECISOR)) r.faltas.push({ codigo: 'DECISOR', texto: 'O decisor não está mapeado (qualificação: ' + itemDecisor.nome + ').', oQueFazer: 'Abra a oportunidade, toque em "Editar" e preencha "' + itemDecisor.nome + '" (quem valida, quem aprova e quem assina). Depois mova de novo.' });
+  if (av.exigirContato !== false && !regs.length) r.faltas.push({ codigo: 'CONTATO', texto: 'Nenhum contato com o cliente foi registrado nesta oportunidade.', oQueFazer: 'Abra a oportunidade e toque em "Registrar contato" (o que foi conversado e a próxima ação). Depois mova de novo.' });
+  var etProposta = f.etapas.filter(function (x) { return Number(x.probabilidade) >= 60; })[0];
+  var enviadas = props.filter(function (p) { return Com_s_(p.ENVIADA_EM) && ['CANCELADA'].indexOf(Com_up_(p.SITUACAO)) < 0; });
+  if (av.exigirPropostaEnviada !== false && etProposta && Number(eD.probabilidade) > Number(etProposta.probabilidade) && !enviadas.length) {
+    r.faltas.push({ codigo: 'PROPOSTA', texto: 'Para passar da etapa ' + etProposta.nome + ' a oportunidade precisa de proposta enviada ao cliente.', oQueFazer: 'Abra a oportunidade e toque em "Nova proposta" (ou abra a proposta em rascunho): conclua, gere o documento e envie pelo "Enviar ao cliente". O envio leva a oportunidade para a etapa ' + etProposta.nome + ' sozinho; depois mova de novo.' });
+  }
+  var aprovada = props.filter(function (p) { return Com_up_(p.SITUACAO) === 'APROVADA' && Com_s_(p.ACEITE_ARQUIVO_ID); })[0];
+  if (av.exigirAceite !== false && Number(eD.probabilidade) >= 100 && !aprovada) {
+    r.faltas.push({ codigo: 'ACEITE', texto: 'A etapa ' + eD.nome + ' é de pedido aprovado: precisa da aprovação do cliente registrada na proposta, com o arquivo do aceite.', oQueFazer: 'Abra a proposta enviada (Comercial > Propostas), toque em "Registrar resposta do cliente", escolha "Aprovou" e anexe o aceite (e-mail em PDF, pedido de compra ou proposta assinada).' });
+  }
+  r.pode = !r.faltas.length && !r.pendentesLista;
+  return r;
+}
+
+/** Texto único da recusa, no padrão do operador (o quê + o que fazer + como voltar). */
+function ComOpo_textoFaltas_(o, c) {
+  var partes = c.faltas.map(function (x, i) { return (c.faltas.length > 1 ? (i + 1) + ') ' : '') + x.texto + ' O que fazer: ' + x.oQueFazer; });
+  if (c.pendentesLista) partes.push((partes.length ? (c.faltas.length + 1) + ') ' : '') + 'Faltam ' + Com_plural_(c.pendentesLista, 'item', 'itens') + ' da lista para sair da etapa (' +
+    c.confirmar.filter(function (x) { return !x.confirmado; }).map(function (x) { return x.texto; }).join('; ') + '). O que fazer: confirme cada item na janela de mudança de etapa (só marque o que foi feito de verdade).');
+  return 'Não foi possível mudar a etapa de ' + Com_s_(o.CODIGO) + ' para ' + (c.destino ? c.destino.nome : 'a etapa escolhida') + ': ' + partes.join(' ') + ' A oportunidade continua na etapa ' + (c.origem ? c.origem.nome : '') + '; depois de resolver, mova de novo';
+}
+
+/** O que falta para mudar de etapa (janela do quadro). d: { id, etapa } */
+function ComOpo_criteriosTela_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'conferir a mudança de etapa');
+  d = d || {};
+  var o = ComOpo_obter_(eu, d.id, 'conferir a mudança de etapa');
+  var c = ComOpo_criteriosMudanca_(o, Com_s_(d.etapa), null, d.confirmados);
+  c.podeMover = Com_up_(o.SITUACAO || 'ABERTA') === 'ABERTA' && (eu.gestao || Com_s_(o.RESPONSAVEL_ID) === eu.id);
+  c.oportunidade = { id: Com_s_(o.ID), codigo: Com_s_(o.CODIGO), cliente: Com_s_(o.CLIENTE_NOME), titulo: Com_s_(o.TITULO), proximaAcao: Com_s_(o.PROXIMA_ACAO) };
+  return c;
+}
+
+/**
+ * Mudar de etapa. d: { id, etapa, proxima?, confirmados?: { "<etapa>": [textos] }, motivo? (obrigatório ao voltar) }.
+ * Confere os critérios de saída da metodologia (ComOpo_criteriosMudanca_); faltando algo, explica e NÃO muda.
+ */
+function ComOpo_moverEtapa_(eu, sessionId, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'mudar a etapa');
+  d = d || {};
+  var met = Com_metodologia_();
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'mudar a etapa');
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível mudar a etapa: a oportunidade ' + o.CODIGO + ' está encerrada. Peça a reabertura à gestão comercial');
+    var etapa = Com_etapa_(Com_s_(o.FUNIL), Com_s_(d.etapa), met);
+    if (!etapa) throw new Error('Não foi possível mudar a etapa: escolha uma etapa do funil desta oportunidade');
+    if (etapa.codigo === Com_s_(o.ETAPA)) return { oportunidade: ComOpo_paraTela_(eu, o), message: 'A oportunidade já estava nesta etapa.' };
+    var der = ComOpo_derivados_(o, { met: met });
+    if (der.parada) throw new Error('Não foi possível mudar a etapa: a oportunidade ' + o.CODIGO + ' está parada há ' + der.diasSemContato + ' dias sem contato. Regra do Comercial: reaqueça antes, registrando um contato real com o cliente e a próxima ação ("Registrar contato"), ou registre a perda');
+    var crit = ComOpo_criteriosMudanca_(o, etapa.codigo, { met: met }, d.confirmados);
+    if (!crit.pode) throw new Error(ComOpo_textoFaltas_(o, crit));
+    var motivo = Com_texto_(d.motivo, 1000);
+    if (crit.sentido === 'RECUO' && motivo.length < 10) throw new Error('Não foi possível voltar ' + o.CODIGO + ' para a etapa ' + etapa.nome + ': escreva o motivo (pelo menos 10 letras), por exemplo "O cliente pediu para refazer o diagnóstico com outro equipamento". Ele fica no histórico. A oportunidade continua onde estava');
+    var campos = { ETAPA: etapa.codigo, ETAPA_DESDE: Com_agora_(), ATUALIZADO_EM: Com_agora_() };
+    var antes = Com_etapa_(Com_s_(o.FUNIL), Com_s_(o.ETAPA), met) || { nome: Com_s_(o.ETAPA) };
+    var confirmadosAgora = crit.confirmar.filter(function (x) { return x.confirmado && !x.jaGravado; });
+    if (confirmadosAgora.length) {
+      // nunca sobrescreve: acrescenta ao que já estava confirmado
+      var guard = Com_json_(o.CRITERIOS_JSON, {}) || {};
+      confirmadosAgora.forEach(function (x) {
+        var g = guard[x.etapa] = guard[x.etapa] || { itens: [] };
+        if (g.itens.map(ComOpo_chaveItem_).indexOf(ComOpo_chaveItem_(x.texto)) < 0) g.itens.push(x.texto);
+        g.por = eu.nome; g.em = Com_agora_();
+      });
+      campos.CRITERIOS_JSON = JSON.stringify(guard).slice(0, 20000);
+    }
+    if (der.semProxima || (d.proxima && Com_s_(d.proxima.acao))) {
+      var prox = ComOpo_proxima_(d.proxima, 'mudar a etapa');
+      if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Cancelada', 'Substituída pela nova próxima ação ao mudar de etapa.');
+      campos.PROXIMA_ACAO = prox.texto; campos.PROXIMA_ACAO_TIPO = prox.tipo; campos.PROXIMA_ACAO_EM = prox.prazo;
+      campos.ATIVIDADE_ID = ComOpo_criarProxima_(eu, sessionId, Object.assign({}, o, campos), prox);
+    }
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
+    Com_historico_('OPORTUNIDADE', o.ID, 'ETAPA', eu, { de: antes.nome, para: etapa.nome, texto: (crit.sentido === 'RECUO' ? 'Voltou para a etapa ' + etapa.nome + ' (' + etapa.probabilidade + '%). Motivo: ' + motivo : 'Mudou para a etapa ' + etapa.nome + ' (' + etapa.probabilidade + '%).') +
+      (confirmadosAgora.length ? ' Itens confirmados por ' + eu.nome + ': ' + confirmadosAgora.map(function (x) { return x.texto; }).join('; ') + '.' : '') });
+    return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, campos)), message: 'Etapa: ' + etapa.nome + '.' };
+  });
+}
+
+// ------------------------------------------------------------
+// ATIVIDADES DA GESTÃO NA OPORTUNIDADE (10/11/2026, etapa 2: D7 e D8)
+// ------------------------------------------------------------
+/** Lista guardada em ATIVIDADES_GESTAO_JSON: [{ id, titulo, porId, porNome, em, prazo }]. */
+function ComOpo_atividadesGestao_(o) { var l = Com_json_(o && o.ATIVIDADES_GESTAO_JSON, []); return Array.isArray(l) ? l.filter(function (x) { return x && Com_s_(x.id); }) : []; }
+
+/**
+ * A gestão comercial cria uma atividade para o responsável dentro da oportunidade. d: { id, proxima: { acao, data, hora } }.
+ * A permissão é conferida aqui (Com_exigir_ GESTAO); a atividade é criada pela identidade do Comercial, para não falhar com o gestor
+ * comercial que não tem perfil de gestor em Minhas atividades (D8). Quem pediu fica na descrição, no histórico e na lista da ficha.
+ */
+function ComOpo_criarAtividadeGestao_(eu, sessionId, d) {
+  Com_exigir_(eu, 'GESTAO', 'criar atividade na oportunidade');
+  d = d || {};
+  var prox = ComOpo_proxima_(d.proxima, 'criar atividade');
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'criar atividade');
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível criar a atividade: a oportunidade ' + Com_s_(o.CODIGO) + ' está encerrada. Reabra antes de criar uma atividade');
+    if (!Com_s_(o.RESPONSAVEL_ID)) throw new Error('Não foi possível criar a atividade: defina o responsável comercial da oportunidade antes (botão "Editar")');
+    var titulo = Com_texto_('[' + Com_s_(o.CODIGO) + '] ' + prox.texto + ' — ' + Com_s_(o.CLIENTE_NOME), 200);
+    var id = Com_criarAtividade_({ comoPessoa: Com_s_(o.RESPONSAVEL_ID) === eu.id ? eu : null, responsavelId: Com_s_(o.RESPONSAVEL_ID),
+      titulo: titulo, descricao: prox.texto + '\nOportunidade ' + Com_s_(o.CODIGO) + ': ' + Com_s_(o.TITULO) + ' (' + Com_s_(o.CLIENTE_NOME) + ')\nPedida pela gestão comercial: ' + eu.nome +
+        '\nAo concluir, registre o que foi feito na oportunidade (Comercial > Oportunidades > ' + Com_s_(o.CODIGO) + ').',
+      prazo: prox.prazo, prioridade: 'Normal', clienteId: Com_s_(o.CLIENTE_ID), unidadeId: Com_s_(o.UNIDADE_ID),
+      porQue: 'Acompanhamento da negociação pela gestão comercial (pedido de ' + eu.nome + ').', onde: 'Comercial > Oportunidades > ' + Com_s_(o.CODIGO), como: prox.texto, restrita: true });
+    var lista = ComOpo_atividadesGestao_(o);
+    lista.push({ id: id, titulo: titulo, porId: eu.id, porNome: eu.nome, em: Com_agora_(), prazo: prox.prazo });
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { ATIVIDADES_GESTAO_JSON: JSON.stringify(lista).slice(0, 40000) });
+    Com_historico_('OPORTUNIDADE', o.ID, 'ATIVIDADE_GESTAO', eu, { texto: 'Atividade da gestão para ' + Com_s_(o.RESPONSAVEL_NOME) + ', pedida por ' + eu.nome + ': ' + prox.texto + '. Prazo: ' + Com_br_(prox.prazo) + '.' });
+    return { atividadeId: id, message: 'Atividade criada em Minhas atividades de ' + Com_s_(o.RESPONSAVEL_NOME) + ' (prazo ' + Com_br_(prox.prazo) + '). Ela aparece na ficha, em "Atividades da gestão".' };
+  });
+}
+
+/** Encerra (Cancelada ou Concluída) as atividades abertas da gestão ligadas à oportunidade. Devolve quantas. Nunca lança. */
+function ComOpo_encerrarAtividadesGestao_(o, situacao, texto) {
+  var n = 0;
+  ComOpo_atividadesGestao_(o).forEach(function (x) { if (Com_atividadeAberta_(Com_atividade_(x.id)) && Com_mudarAtividade_(x.id, situacao || 'Cancelada', texto)) n++; });
+  return n;
+}
+
+/** Passa as atividades abertas da gestão ao novo responsável (troca de responsável). Devolve quantas. Nunca lança. */
+function ComOpo_transferirAtividadesGestao_(o, novoRespId) {
+  var n = 0;
+  ComOpo_atividadesGestao_(o).forEach(function (x) { var a = Com_atividade_(x.id); if (Com_atividadeAberta_(a) && Com_s_(a.RESPONSAVEL_ID) !== Com_s_(novoRespId) && Com_transferirAtividade_(x.id, novoRespId)) n++; });
+  return n;
+}
+
+/** Atividades da gestão para a ficha: título, responsável, prazo, situação e quem pediu. */
+function ComOpo_atividadesGestaoTela_(o) {
+  return ComOpo_atividadesGestao_(o).map(function (x) {
+    var a = Com_atividade_(x.id);
+    return { id: Com_s_(x.id), titulo: a ? Com_s_(a.TITULO) : Com_s_(x.titulo), responsavel: a ? Com_s_(a.RESPONSAVEL_NOME) : '', prazo: Com_br_(a ? (a.PREVISAO_ATUAL || a.PRAZO) : x.prazo),
+      situacao: a ? Com_s_(a.SITUACAO) : 'Não encontrada em Minhas atividades', aberta: Com_atividadeAberta_(a), porNome: Com_s_(x.porNome), em: Com_br_(x.em) };
+  }).reverse();
+}
+
+/**
+ * 10/11/2026 (etapa 2, D5): na troca de responsável, as propostas da oportunidade em rascunho, aguardando aprovação ou prontas, sem
+ * assinatura da Metrolab, sem link e nunca enviadas passam ao novo responsável; as outras continuam com quem as assinou ou enviou.
+ * Histórico em cada proposta. Devolve { passaram: [rótulos], ficaram: [{ rotulo, motivo }] }. Dentro da trava.
+ */
+function ComOpo_transferirPropostas_(eu, o, novoId, novoNome) {
+  var r = { passaram: [], ficaram: [] }, agora = Com_agora_(), antigo = Com_s_(o.RESPONSAVEL_NOME) || 'o responsável anterior';
+  ComP_lerPropostas_().forEach(function (p) {
+    if (Com_s_(p.OPORTUNIDADE_ID) !== Com_s_(o.ID) || Com_s_(p.RESPONSAVEL_ID) === Com_s_(novoId)) return;
+    var s = Com_up_(p.SITUACAO), rot = ComP_rotulo_(p);
+    if (['CANCELADA', 'SUBSTITUIDA'].indexOf(s) >= 0) return; // encerradas ficam como estão (registro)
+    var motivo = ComP_motivoFicaComResponsavel_(p);
+    if (['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA'].indexOf(s) >= 0 && !motivo) {
+      SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { RESPONSAVEL_ID: Com_s_(novoId), RESPONSAVEL_NOME: Com_s_(novoNome), ATUALIZADO_EM: agora });
+      Com_historico_('PROPOSTA', p.ID, 'RESPONSAVEL', eu, { de: Com_s_(p.RESPONSAVEL_NOME), para: novoNome, texto: 'A oportunidade ' + Com_s_(o.CODIGO) + ' passou de ' + (Com_s_(p.RESPONSAVEL_NOME) || antigo) + ' para ' + novoNome + ' (troca pela gestão comercial, ' + eu.nome + '); esta proposta passou junto.' });
+      r.passaram.push(rot);
+    } else {
+      motivo = motivo || ('está "' + (COM_SITUACOES_PROP[s] || s).toLowerCase() + '"');
+      Com_historico_('PROPOSTA', p.ID, 'RESPONSAVEL_MANTIDO', eu, { texto: 'A oportunidade ' + Com_s_(o.CODIGO) + ' passou para ' + novoNome + ', mas esta proposta continua com ' + (Com_s_(p.RESPONSAVEL_NOME) || antigo) + ' porque ' + motivo + ' (a assinatura pela Metrolab é pessoal e o cliente recebeu a proposta com o nome dela). O acompanhamento é combinado com a gestão comercial.' });
+      r.ficaram.push({ rotulo: rot, motivo: motivo });
+    }
+  });
+  return r;
+}
+
+/**
+ * Registrar contato feito com o cliente. d: { id, tipo, respondeu (true/false), resumo, contatoId, estrategia, proxima: {acao,data,hora,tipo} }.
+ * Conclui a atividade atual e cria a próxima (obrigatória enquanto a oportunidade estiver aberta).
+ */
+function ComOpo_registrarContato_(eu, sessionId, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'registrar o contato');
+  d = d || {};
+  var tipo = Com_up_(d.tipo);
+  if (!COM_TIPOS_CONTATO[tipo]) throw new Error('Não foi possível registrar o contato: escolha como foi (ligação, WhatsApp, e-mail, reunião ou visita)');
+  var resumo = Com_texto_(d.resumo, 3000);
+  if (resumo.length < 10) throw new Error('Não foi possível registrar o contato: escreva em poucas palavras o que aconteceu (pelo menos 10 letras), por exemplo "Falei com a enfermeira da CME; ela pediu a proposta até sexta"');
+  var respondeu = d.respondeu === true || Com_up_(d.respondeu) === 'SIM';
+  var met = Com_metodologia_();
+  var estr = Com_up_(d.estrategia);
+  if (estr && !met.estrategias.some(function (e) { return e.codigo === estr; })) estr = '';
+  if (estr === 'PERDA') throw new Error('Não foi possível registrar: para encerrar como perda use o botão "Registrar perda", com o motivo e o aprendizado');
+  var prox = ComOpo_proxima_(d.proxima, 'registrar o contato');
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'registrar o contato');
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível registrar o contato: a oportunidade ' + o.CODIGO + ' está encerrada. Peça a reabertura à gestão comercial');
+    var ct = Com_s_(d.contatoId) ? SGO_DATA.getById(COM_ABAS.CONTATOS, Com_s_(d.contatoId)) : null;
+    if (ct && Com_s_(ct.CLIENTE_ID) !== Com_s_(o.CLIENTE_ID)) ct = null;
+    var agora = Com_agora_();
+    SGO_DATA.insert(COM_ABAS.CONTATOS_REG, { OPORTUNIDADE_ID: o.ID, CLIENTE_ID: o.CLIENTE_ID, TIPO: tipo, RESPONDEU: respondeu ? 'SIM' : 'NAO', RESUMO: resumo,
+      CONTATO_ID: ct ? ct.ID : Com_s_(o.CONTATO_ID), CONTATO_NOME: ct ? Com_s_(ct.NOME) : Com_s_(o.CONTATO_NOME), ESTRATEGIA: estr, USUARIO_ID: eu.id, USUARIO_NOME: eu.nome, DATA: agora });
+    if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Concluída', COM_TIPOS_CONTATO[tipo] + (respondeu ? ' (o cliente respondeu): ' : ' (sem resposta): ') + resumo);
+    var tent = respondeu || estr ? 0 : (Number(o.TENTATIVAS_SEM_RESPOSTA) || 0) + 1;
+    var campos = { ULTIMO_CONTATO_EM: agora, TENTATIVAS_SEM_RESPOSTA: tent, PROXIMA_ACAO: prox.texto, PROXIMA_ACAO_TIPO: prox.tipo, PROXIMA_ACAO_EM: prox.prazo, ATUALIZADO_EM: agora };
+    if (ct && d.trocarPrincipal) { campos.CONTATO_ID = ct.ID; campos.CONTATO_NOME = Com_s_(ct.NOME); }
+    var novo = Object.assign({}, o, campos);
+    campos.ATIVIDADE_ID = ComOpo_criarProxima_(eu, sessionId, novo, prox);
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
+    var est = estr ? met.estrategias.filter(function (e) { return e.codigo === estr; })[0] : null;
+    Com_historico_('OPORTUNIDADE', o.ID, 'CONTATO', eu, { texto: COM_TIPOS_CONTATO[tipo] + (respondeu ? ', respondeu' : ', sem resposta') + (est ? '. Estratégia: ' + est.titulo : '') + '. Próxima ação: ' + prox.texto + ' em ' + Com_br_(prox.prazo) + '.' });
+    if (estr === 'GESTAO') {
+      Com_idsGestaoComercial_([eu.id]).forEach(function (gid) {
+        Com_avisar_(gid, 'APOIO_GESTAO', 'Pedido de apoio na oportunidade ' + o.CODIGO, eu.nome + ' pediu apoio da gestão comercial com o cliente ' + Com_s_(o.CLIENTE_NOME) + ' (' + (Number(o.TENTATIVAS_SEM_RESPOSTA) || 0) + ' tentativas sem resposta). Veja em Comercial > Oportunidades.', { tipo: 'oportunidade', id: o.ID }, { email: true });
+      });
+    }
+    return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, campos)), message: 'Contato registrado. Próxima ação marcada para ' + Com_br_(prox.prazo) + ' em Minhas atividades.' };
+  });
+}
+
+/**
+ * 10/11/2026 (etapa 2, D6): proposta desta oportunidade que espera a resposta do cliente (pronta com documento, enviada ou
+ * vencida, ou assinada pelo cliente e ainda não registrada). Com ela, a venda se ganha pela proposta (aceite com arquivo).
+ * Devolve { id, rotulo, situacao, acao: 'resposta'|'registrarAssinatura', responsavel } ou null.
+ */
+function ComOpo_propostaParaAceite_(o) {
+  var props = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID); })
+    .sort(function (a, b) { return String(b.CRIADO_EM).localeCompare(String(a.CRIADO_EM)); });
+  var tela = function (p, acao) { return { id: Com_s_(p.ID), rotulo: ComP_rotulo_(p), situacao: Com_up_(p.SITUACAO), situacaoNome: COM_SITUACOES_PROP[Com_up_(p.SITUACAO)] || '', acao: acao, responsavelId: Com_s_(p.RESPONSAVEL_ID), responsavel: Com_s_(p.RESPONSAVEL_NOME) }; };
+  var ab = function (p) { return ['PRONTA', 'ENVIADA', 'VENCIDA'].indexOf(Com_up_(p.SITUACAO)) >= 0; };
+  var ass = props.filter(function (p) { return ab(p) && ComP_assinadaCliente_(p); })[0];
+  if (ass) return tela(ass, 'registrarAssinatura');
+  var env = props.filter(function (p) { return ['ENVIADA', 'VENCIDA'].indexOf(Com_up_(p.SITUACAO)) >= 0; })[0] || props.filter(function (p) { return Com_up_(p.SITUACAO) === 'PRONTA' && Com_s_(p.PDF_ID); })[0];
+  return env ? tela(env, 'resposta') : null;
+}
+
+/**
+ * Ganha. d: { id, texto, daFicha }. Conclui a atividade aberta; o pedido aprovado segue para "Passar aos setores".
+ * 10/11/2026 (etapa 2, D6): pela ficha (daFicha = true), com proposta esperando o cliente a venda se ganha pela proposta (o
+ * aceite com o arquivo); sem proposta, a observação é obrigatória (10 letras). Chamadas sem daFicha (Licitações, telas antigas)
+ * continuam como antes.
+ */
+function ComOpo_ganhar_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'marcar a oportunidade como ganha');
+  d = d || {};
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'marcar como ganha');
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível marcar como ganha: a oportunidade ' + o.CODIGO + ' já está ' + COM_SITUACOES_OPO[Com_up_(o.SITUACAO)].toLowerCase());
+    if (d.daFicha === true) {
+      var pa = ComOpo_propostaParaAceite_(o);
+      if (pa) throw new Error('Não foi possível marcar como ganha sem o aceite: a proposta ' + pa.rotulo + ' está "' + pa.situacaoNome.toLowerCase() + '". ' +
+        (pa.acao === 'registrarAssinatura' ? 'O cliente já assinou pelo link: abra a proposta e toque em "Registrar a assinatura do cliente"' : 'Abra a proposta e toque em "Registrar resposta do cliente" (Aprovou), com o arquivo do aceite: proposta assinada, ordem de compra ou e-mail de aprovação') +
+        '. Assim a proposta fica aprovada e a oportunidade, ganha, com a data e a hora');
+      if (Com_texto_(d.texto, 1000).length < 10) throw new Error('Não foi possível marcar como ganha: escreva a observação (pelo menos 10 letras), por exemplo "Cliente confirmou por telefone; contrato assinado na reunião de 10/11". Sem proposta no sistema, ela é o registro de como a venda foi fechada');
+    }
+    var agora = Com_agora_();
+    if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Concluída', 'Oportunidade ganha. ' + Com_texto_(d.texto, 500));
+    // 10/11/2026 (etapa 2, D7): as atividades abertas da gestão nesta oportunidade são canceladas
+    var atvG = ComOpo_encerrarAtividadesGestao_(o, 'Cancelada', 'Oportunidade ' + Com_s_(o.CODIGO) + ' ganha.');
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { SITUACAO: 'GANHA', GANHA_EM: agora, GANHA_VIA: 'MANUAL', PROXIMA_ACAO: 'Passar o pedido aprovado aos setores', ATUALIZADO_EM: agora });
+    Com_historico_('OPORTUNIDADE', o.ID, 'GANHA', eu, { de: 'Aberta', para: 'Ganha', texto: (Com_texto_(d.texto, 1000) || 'Venda ganha.') + ' Ganha em ' + Com_br_(agora) + ' (marcada na oportunidade).' + (atvG ? ' ' + Com_plural_(atvG, 'atividade da gestão cancelada', 'atividades da gestão canceladas') + '.' : '') });
+    // 01/11/2026 (Comercial C3): a última proposta concluída entra no banco de preços como ganha (se o cliente não respondeu por ela)
+    if (typeof ComBP_registrarOportunidade_ === 'function') ComBP_registrarOportunidade_(o, 'GANHO');
+    Com_idsGestaoComercial_([eu.id]).forEach(function (gid) { Com_avisar_(gid, 'GANHA', 'Venda ganha: ' + o.CODIGO, eu.nome + ' ganhou a oportunidade ' + o.CODIGO + ' (' + Com_s_(o.CLIENTE_NOME) + ').', { tipo: 'oportunidade', id: o.ID }); });
+    var aprovada = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID) && Com_up_(p.SITUACAO) === 'APROVADA'; })[0];
+    return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, { SITUACAO: 'GANHA', GANHA_EM: agora, GANHA_VIA: 'MANUAL' })), propostaAprovadaId: aprovada ? Com_s_(aprovada.ID) : '',
+      message: 'Venda ganha. ' + (aprovada ? 'Agora passe o pedido aprovado aos setores (Propostas > ' + aprovada.NUMERO + ' > Passar aos setores).' : 'Registre a resposta do cliente na proposta e passe o pedido aos setores.') };
+  });
+}
+
+/** Perdida. d: { id, motivo (da lista), aprendizado (>= 15 letras) }. */
+function ComOpo_perder_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'registrar a perda');
+  d = d || {};
+  var met = Com_metodologia_();
+  var motivo = Com_s_(d.motivo);
+  if (met.motivosPerda.indexOf(motivo) < 0) throw new Error('Não foi possível registrar a perda: escolha o motivo na lista. ' + met.regraPerda);
+  // 01/11/2026 (Comercial C3): quem ganhou e por quanto (opcional, incentivado; alimenta o banco de preços)
+  var vencedor = typeof ComBP_vencedorDaTela_ === 'function' ? ComBP_vencedorDaTela_(d) : { concorrente: '', valorVencedor: null };
+  var apr = Com_texto_(d.aprendizado, 2000);
+  if (apr.length < 15) throw new Error('Não foi possível registrar a perda: escreva o que aconteceu e o que aprender com isso (pelo menos 15 letras). Sem isso o relatório de perdas não ensina nada');
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'registrar a perda');
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA') throw new Error('Não foi possível registrar a perda: a oportunidade ' + o.CODIGO + ' já está ' + COM_SITUACOES_OPO[Com_up_(o.SITUACAO)].toLowerCase());
+    // 10/11/2026 (etapa 1): proposta assinada pelo cliente não é cancelada pela perda; a perda espera a assinatura ser tratada
+    var assinadas = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID) && ['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA', 'ENVIADA', 'VENCIDA'].indexOf(Com_up_(p.SITUACAO)) >= 0 && ComP_assinadaCliente_(p); });
+    if (assinadas.length) throw new Error(ComP_msgAssinada_(assinadas[0], ComP_assinadaCliente_(assinadas[0]), 'registrar a perda').replace('Registre a assinatura na proposta', 'A perda não cancela proposta assinada. Registre a assinatura na proposta'));
+    var agora = Com_agora_();
+    if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Cancelada', 'Oportunidade perdida: ' + motivo + '.');
+    // 10/11/2026 (etapa 2, D7): as atividades abertas da gestão nesta oportunidade são canceladas
+    ComOpo_encerrarAtividadesGestao_(o, 'Cancelada', 'Oportunidade ' + Com_s_(o.CODIGO) + ' perdida: ' + motivo + '.');
+    // antes de cancelar as propostas: as concluídas entram (ou mudam) no banco de preços como perdidas
+    if (typeof ComBP_registrarOportunidade_ === 'function') ComBP_registrarOportunidade_(o, 'PERDIDO', vencedor);
+    var canceladas = 0;
+    ComP_lerPropostas_().forEach(function (p) {
+      if (Com_s_(p.OPORTUNIDADE_ID) !== Com_s_(o.ID)) return;
+      var s = Com_up_(p.SITUACAO);
+      if (['RASCUNHO', 'AGUARDANDO_APROVACAO', 'PRONTA', 'ENVIADA', 'VENCIDA'].indexOf(s) < 0) return;
+      SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { SITUACAO: 'CANCELADA', CANCELADA_MOTIVO: 'Oportunidade perdida: ' + motivo, ATUALIZADO_EM: agora });
+      if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Cancelada', 'Oportunidade perdida.');
+      if (Com_atividadeAberta_(Com_atividade_(p.VENCIMENTO_ATIVIDADE_ID))) Com_mudarAtividade_(p.VENCIMENTO_ATIVIDADE_ID, 'Cancelada', 'Oportunidade perdida.');
+      Com_historico_('PROPOSTA', p.ID, 'CANCELADA', eu, { de: COM_SITUACOES_PROP[s], para: 'Cancelada', texto: 'Oportunidade perdida: ' + motivo });
+      canceladas++;
+    });
+    var campPerda = { SITUACAO: 'PERDIDA', PERDIDA_EM: agora, MOTIVO_PERDA: motivo, APRENDIZADO_PERDA: apr, ATUALIZADO_EM: agora };
+    if (vencedor.concorrente) campPerda.CONCORRENTE_VENCEDOR = vencedor.concorrente;
+    if (vencedor.valorVencedor) campPerda.VALOR_VENCEDOR = Com_r2_(vencedor.valorVencedor);
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campPerda);
+    Com_historico_('OPORTUNIDADE', o.ID, 'PERDIDA', eu, { de: 'Aberta', para: 'Perdida', texto: motivo + '. ' + apr + (vencedor.concorrente || vencedor.valorVencedor ? ' Quem ganhou: ' + (vencedor.concorrente || 'não informado') + (vencedor.valorVencedor ? ', por ' + Com_moeda_(vencedor.valorVencedor) : '') + '.' : '') });
+    // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+    Com_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Oportunidade marcada como perdida', item: Com_s_(o.CODIGO) + (Com_s_(o.CLIENTE_NOME) ? ' (' + Com_s_(o.CLIENTE_NOME) + ')' : ''),
+      motivo: motivo + '. ' + apr + (canceladas ? ' Propostas canceladas junto: ' + canceladas + '.' : ''), tela: { tipo: 'comercial', aba: 'oportunidades', id: o.ID }, refId: 'OPO-PERDA-' + o.ID + '-' + agora }); });
+    return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, { SITUACAO: 'PERDIDA', PERDIDA_EM: agora, MOTIVO_PERDA: motivo, APRENDIZADO_PERDA: apr })),
+      message: 'Perda registrada' + (canceladas ? ' e ' + Com_plural_(canceladas, 'proposta cancelada', 'propostas canceladas') : '') + '.' + (vencedor.concorrente || vencedor.valorVencedor ? ' Quem ganhou e por quanto foram para o banco de preços.' : ' Se souber quem ganhou e por quanto, isso ajuda a precificar as próximas: a gestão pode registrar no Banco de preços.') };
+  });
+}
+
+/**
+ * 01/11/2026 (Comercial C4): completar quem ganhou e por quanto numa oportunidade já perdida (o vendedor soube depois).
+ * d: { id, concorrente, valorVencedor }. Merge: só preenche o que está vazio; o que já foi informado nunca é trocado (para
+ * corrigir, a gestão desconsidera a linha no Banco de preços e registra o preço certo). As linhas do banco desta perda ganham o
+ * concorrente e o valor só onde estavam vazios (ComBP_completarVencedor_).
+ */
+function ComOpo_completarPerda_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'completar quem ganhou');
+  d = d || {};
+  var vencedor = ComBP_vencedorDaTela_(d);
+  if (!vencedor.concorrente && !vencedor.valorVencedor) throw new Error('Não foi possível completar: escreva o concorrente que ganhou, o valor, ou os dois');
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'completar quem ganhou');
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'PERDIDA') throw new Error('Não foi possível completar: a oportunidade ' + o.CODIGO + ' não está perdida. Quem ganhou só se registra na perda');
+    var campos = {}, ja = [];
+    if (vencedor.concorrente) { if (Com_s_(o.CONCORRENTE_VENCEDOR)) ja.push('o concorrente (' + Com_s_(o.CONCORRENTE_VENCEDOR) + ')'); else campos.CONCORRENTE_VENCEDOR = vencedor.concorrente; }
+    if (vencedor.valorVencedor) { if (Number(o.VALOR_VENCEDOR) > 0) ja.push('o valor (' + Com_moeda_(o.VALOR_VENCEDOR) + ')'); else campos.VALOR_VENCEDOR = Com_r2_(vencedor.valorVencedor); }
+    if (!Object.keys(campos).length) throw new Error('Não foi possível completar: ' + ja.join(' e ') + ' já ' + (ja.length > 1 ? 'estão registrados' : 'está registrado') + ' e não é trocado. Para corrigir, peça à gestão comercial: ela desconsidera o preço no Banco de preços e registra o certo');
+    campos.ATUALIZADO_EM = Com_agora_();
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
+    var feito = { concorrente: campos.CONCORRENTE_VENCEDOR || '', valorVencedor: campos.VALOR_VENCEDOR || null };
+    var banco = typeof ComBP_completarVencedor_ === 'function' ? ComBP_completarVencedor_(o, feito) : { linhas: 0 };
+    Com_historico_('OPORTUNIDADE', o.ID, 'PERDA_COMPLETADA', eu, { texto: 'Quem ganhou, informado depois da perda: ' + (feito.concorrente || Com_s_(o.CONCORRENTE_VENCEDOR) || 'concorrente não informado') + (feito.valorVencedor ? ', por ' + Com_moeda_(feito.valorVencedor) : (Number(o.VALOR_VENCEDOR) > 0 ? ', por ' + Com_moeda_(o.VALOR_VENCEDOR) : '')) + '.' });
+    return { message: 'Quem ganhou foi registrado' + (ja.length ? ' (' + ja.join(' e ') + ' já ' + (ja.length > 1 ? 'estavam' : 'estava') + ' registrado e ficou como estava)' : '') + '.' + (banco.linhas ? ' O banco de preços foi completado em ' + Com_plural_(banco.linhas, 'item', 'itens') + ' desta perda.' : ' Esta perda não tem proposta concluída no banco de preços; o registro fica na oportunidade.') };
+  });
+}
+
+// ------------------------------------------------------------
+// EXCLUSÃO DA OPORTUNIDADE (teste ou engano) — 10/11/2026, etapa 2 (pedido h)
+// ------------------------------------------------------------
+/**
+ * Pode excluir? { pode, motivo (por que não e o que fazer) }. Quem: a gestão comercial ou o responsável pela oportunidade.
+ * Só oportunidade aberta ou perdida, sem nada que tenha chegado ao cliente ou aos setores: proposta enviada (inclusive pelo
+ * link), com link ou assinatura do cliente, aprovada, recusada ou vencida, passada aos setores; contrato de Licitações
+ * vinculado; preço desta oportunidade no banco de preços como ganho ou perdido.
+ */
+function ComOpo_podeExcluir_(eu, o) {
+  if (!eu || !(eu.gestao || eu.vendedor)) return { pode: false, motivo: 'Excluir oportunidade é da gestão comercial e do responsável pela oportunidade.' };
+  if (!eu.gestao && Com_s_(o.RESPONSAVEL_ID) !== eu.id) return { pode: false, motivo: 'A oportunidade é de ' + (Com_s_(o.RESPONSAVEL_NOME) || 'outra pessoa') + ': só o responsável ou a gestão comercial excluem.' };
+  var s = Com_up_(o.SITUACAO || 'ABERTA');
+  if (s === 'GANHA') return { pode: false, motivo: 'A oportunidade está ganha (venda registrada). Se foi criada por teste ou engano, a gestão comercial reabre (botão "Reabrir") e depois exclui.' };
+  if (s !== 'ABERTA' && s !== 'PERDIDA') return { pode: false, motivo: 'A oportunidade está "' + (COM_SITUACOES_OPO[s] || s) + '" e não pode ser excluída.' };
+  var props = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID); });
+  for (var i = 0; i < props.length; i++) {
+    var p = props[i], rot = ComP_rotulo_(p), sp = Com_up_(p.SITUACAO), a = ComP_assRegistro_(p.ID);
+    if (ComP_assinadaCliente_(p) || (a && a.finalPdfId)) return { pode: false, motivo: 'A proposta ' + rot + ' foi assinada pelo cliente: o documento assinado é o aceite e fica guardado. Registre a assinatura na proposta ou combine com a gestão comercial; a oportunidade não é excluída.' };
+    if (Com_s_(p.LINK_ENVIADO_EM) || (a && a.linkHash)) return { pode: false, motivo: 'A proposta ' + rot + ' teve link de assinatura enviado' + (Com_s_(p.LINK_EMAIL) || (a && a.clienteEmailEsperado) ? ' para ' + (Com_s_(p.LINK_EMAIL) || a.clienteEmailEsperado) : '') + ': o cliente recebeu. Use "Registrar perda" com o motivo real.' };
+    if (['APROVADA', 'RECUSADA', 'VENCIDA'].indexOf(sp) >= 0) return { pode: false, motivo: 'A proposta ' + rot + ' está "' + (COM_SITUACOES_PROP[sp] || sp).toLowerCase() + '": o cliente recebeu e respondeu (ou a validade correu). Use "Registrar perda" com o motivo real.' };
+    if (Com_s_(p.PASSAGEM_EM) || ['EM_ANDAMENTO', 'CONCLUIDO'].indexOf(Com_up_(p.PEDIDO_SITUACAO)) >= 0) return { pode: false, motivo: 'A proposta ' + rot + ' foi passada aos setores (atividades na área técnica, em Compras ou no Financeiro). A oportunidade não é excluída.' };
+    var env = ComP_foiEnviada_(p);
+    if (env.enviada) return { pode: false, motivo: 'A proposta ' + rot + ' já foi ao cliente (' + env.como + '): documento que o cliente recebeu não é apagado. Use "Registrar perda" com o motivo real.' };
+  }
+  try {
+    var abaCtr = typeof LICC_ABAS !== 'undefined' && LICC_ABAS.CONTRATOS ? LICC_ABAS.CONTRATOS : 'LIC_CONTRATOS';
+    var ctr = Com_ler_(abaCtr).filter(function (r) { return Com_s_(r.COMERCIAL_OPO_ID) === Com_s_(o.ID); })[0];
+    if (ctr) return { pode: false, motivo: 'A oportunidade está vinculada ao contrato ' + (Com_s_(ctr.NUMERO_CONTRATO) || Com_s_(ctr.NUMERO)) + ' em Licitações > Contratos. A oportunidade não é excluída.' };
+  } catch (eC) {}
+  if (typeof ComBP_ler_ === 'function') {
+    var ids = {}; props.forEach(function (p) { ids[Com_s_(p.ID)] = 1; });
+    var bp = ComBP_ler_().filter(function (r) { return Com_s_(r.REF_TIPO) === 'PROPOSTA' && ids[Com_s_(r.REF_ID)] && ['GANHO', 'PERDIDO'].indexOf(Com_up_(r.RESULTADO)) >= 0 && ComBP_valida_(r); });
+    if (bp.length) return { pode: false, motivo: 'Há ' + Com_plural_(bp.length, 'preço', 'preços') + ' desta oportunidade no banco de preços como ' + (Com_up_(bp[0].RESULTADO) === 'GANHO' ? 'ganho' : 'perdido') + ' (' + Com_s_(bp[0].REF_ROTULO) + '). Se foi teste, a gestão comercial tira esses preços das contas no Banco de preços ("Desconsiderar") e depois exclui a oportunidade.' };
+  }
+  return { pode: true, motivo: '' };
+}
+
+/**
+ * Excluir oportunidade criada por teste ou engano. d: { id, motivo (>= 10 letras) }. Exclusão lógica: SITUACAO EXCLUIDA e
+ * EXCLUIDA_EM/POR/MOTIVO (a linha nunca é apagada; o código não volta a ser usado). Cancela a próxima ação e as atividades
+ * abertas da gestão, exclui (lógica, como "Excluir proposta") as propostas que nunca foram ao cliente, registra no histórico e
+ * avisa na hora o gestor da área e a Diretoria (GI01).
+ */
+function ComOpo_excluir_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'excluir a oportunidade');
+  d = d || {};
+  var motivo = Com_texto_(d.motivo, 500);
+  if (motivo.length < 10) throw new Error('Não foi possível excluir: escreva o motivo (pelo menos 10 letras, por exemplo "Oportunidade criada para teste do sistema"). O motivo fica no histórico e vai para a gestão');
+  ComP_sincronizarEnvios_(); // envio registrado há pouco pelo "Enviar documento" conta
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'excluir a oportunidade');
+    var pe = ComOpo_podeExcluir_(eu, o);
+    if (!pe.pode) throw new Error('Não foi possível excluir a oportunidade ' + Com_s_(o.CODIGO) + ': ' + pe.motivo.replace(/\.$/, ''));
+    var agora = Com_agora_(), s0 = Com_up_(o.SITUACAO || 'ABERTA'), cod = Com_s_(o.CODIGO);
+    if (Com_atividadeAberta_(Com_atividade_(o.ATIVIDADE_ID))) Com_mudarAtividade_(o.ATIVIDADE_ID, 'Cancelada', 'Oportunidade ' + cod + ' excluída (teste ou engano): ' + motivo);
+    var atvG = ComOpo_encerrarAtividadesGestao_(o, 'Cancelada', 'Oportunidade ' + cod + ' excluída (teste ou engano): ' + motivo);
+    var props = [];
+    ComP_lerPropostas_().forEach(function (p) {
+      if (Com_s_(p.OPORTUNIDADE_ID) !== Com_s_(o.ID)) return;
+      var sp = Com_up_(p.SITUACAO), rot = ComP_rotulo_(p);
+      SGO_DATA.update(COM_ABAS.PROPOSTAS, p.ID, { SITUACAO: 'EXCLUIDA', EXCLUIDA_EM: agora, EXCLUIDA_POR_ID: eu.id, EXCLUIDA_POR_NOME: eu.nome, EXCLUIDA_MOTIVO: 'Oportunidade ' + cod + ' excluída: ' + motivo, ATUALIZADO_EM: agora });
+      Com_historico_('PROPOSTA', p.ID, 'EXCLUIDA', eu, { de: COM_SITUACOES_PROP[sp] || sp, para: 'Excluída', texto: 'Proposta ' + rot + ' excluída junto com a oportunidade ' + cod + ' por ' + eu.nome + ' em ' + Com_br_(agora) + ' (nunca foi enviada ao cliente; estava "' + (COM_SITUACOES_PROP[sp] || sp) + '"). Motivo: ' + motivo + ' O número ' + Com_s_(p.NUMERO) + ' não volta a ser usado.' });
+      if (typeof ComBP_marcarProposta_ === 'function') ComBP_marcarProposta_(p.ID, 'CANCELADO', 'Oportunidade ' + cod + ' excluída (teste ou engano): ' + motivo);
+      if (Com_atividadeAberta_(Com_atividade_(p.RETORNO_ATIVIDADE_ID))) Com_mudarAtividade_(p.RETORNO_ATIVIDADE_ID, 'Cancelada', 'Proposta ' + rot + ' excluída com a oportunidade.');
+      if (Com_atividadeAberta_(Com_atividade_(p.VENCIMENTO_ATIVIDADE_ID))) Com_mudarAtividade_(p.VENCIMENTO_ATIVIDADE_ID, 'Cancelada', 'Proposta ' + rot + ' excluída com a oportunidade.');
+      props.push(rot);
+    });
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { SITUACAO: 'EXCLUIDA', EXCLUIDA_EM: agora, EXCLUIDA_POR_ID: eu.id, EXCLUIDA_POR_NOME: eu.nome, EXCLUIDA_MOTIVO: motivo, ATUALIZADO_EM: agora });
+    var texto = 'Oportunidade ' + cod + ' (' + Com_s_(o.CLIENTE_NOME) + ') excluída por ' + eu.nome + ' em ' + Com_br_(agora) + ' (teste ou engano; estava "' + (COM_SITUACOES_OPO[s0] || s0) + '"). Motivo: ' + motivo +
+      (props.length ? ' Propostas excluídas junto (nunca foram ao cliente): ' + props.join(', ') + '.' : '') + (atvG ? ' ' + Com_plural_(atvG, 'atividade da gestão cancelada', 'atividades da gestão canceladas') + '.' : '') + ' O código ' + cod + ' não volta a ser usado.';
+    Com_historico_('OPORTUNIDADE', o.ID, 'EXCLUIDA', eu, { de: COM_SITUACOES_OPO[s0] || s0, para: 'Excluída', texto: texto });
+    if (Com_s_(o.RESPONSAVEL_ID) && Com_s_(o.RESPONSAVEL_ID) !== eu.id) Com_avisar_(o.RESPONSAVEL_ID, 'OPORTUNIDADE_EXCLUIDA', 'Oportunidade ' + cod + ' excluída', texto, { tipo: 'oportunidade', id: o.ID });
+    // ato irreversível: avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+    Com_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Oportunidade excluída (teste ou engano)', item: cod + (Com_s_(o.CLIENTE_NOME) ? ' (' + Com_s_(o.CLIENTE_NOME) + ')' : ''),
+      motivo: motivo + (props.length ? ' Propostas excluídas junto: ' + props.join(', ') + '.' : ''), tela: { tipo: 'comercial', aba: 'oportunidades' }, refId: 'OPO-EXC-' + o.ID }); });
+    return { excluida: true, message: 'Oportunidade ' + cod + ' excluída: saiu das listas, do quadro, do painel e dos relatórios.' + (props.length ? ' ' + Com_plural_(props.length, 'proposta nunca enviada foi excluída', 'propostas nunca enviadas foram excluídas') + ' junto.' : '') +
+      ' O registro (quem, quando e o motivo) fica guardado e a gestão foi avisada.' };
+  });
+}
+
+/** Vendedor pede a reabertura (vai para a Caixa de decisões). d: { id, motivo }. */
+function ComOpo_pedirReabertura_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'pedir a reabertura');
+  d = d || {};
+  var motivo = Com_texto_(d.motivo, 1000);
+  if (motivo.length < 10) throw new Error('Não foi possível pedir a reabertura: escreva o motivo (pelo menos 10 letras), por exemplo "O cliente retomou o contato e pediu nova proposta"');
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'pedir a reabertura');
+    if (Com_up_(o.SITUACAO || 'ABERTA') === 'ABERTA') throw new Error('Não foi possível pedir a reabertura: a oportunidade ' + o.CODIGO + ' já está aberta');
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { REABERTURA_PEDIDA_EM: Com_agora_(), REABERTURA_PEDIDA_POR_ID: eu.id, REABERTURA_MOTIVO: motivo, ATUALIZADO_EM: Com_agora_() });
+    Com_historico_('OPORTUNIDADE', o.ID, 'REABERTURA_PEDIDA', eu, { texto: motivo });
+    return { message: 'Pedido de reabertura enviado à gestão comercial. Ele aparece na Caixa de decisões; você é avisado quando a gestão decidir.' };
+  });
+}
+
+/** Gestão reabre. d: { id, motivo, proxima }. Ou recusa o pedido: d.recusar = true. */
+function ComOpo_reabrir_(eu, sessionId, d) {
+  Com_exigir_(eu, 'GESTAO', 'reabrir a oportunidade');
+  d = d || {};
+  var motivo = Com_texto_(d.motivo, 1000);
+  if (motivo.length < 10) throw new Error('Não foi possível ' + (d.recusar ? 'recusar o pedido' : 'reabrir') + ': escreva o motivo da decisão (pelo menos 10 letras). Ele fica no histórico e o vendedor é avisado');
+  var prox = d.recusar ? null : ComOpo_proxima_(d.proxima, 'reabrir a oportunidade');
+  return Com_comTrava_(function () {
+    var o = ComOpo_obter_(eu, d.id, 'reabrir');
+    if (Com_up_(o.SITUACAO || 'ABERTA') === 'ABERTA') throw new Error('Não foi possível reabrir: a oportunidade ' + o.CODIGO + ' já está aberta');
+    if (Com_s_(o.REABERTURA_PEDIDA_POR_ID) === eu.id && !eu.diretoria) throw new Error('Não foi possível decidir: o pedido de reabertura é seu. Quem decide é outro gestor comercial ou a Diretoria');
+    var agora = Com_agora_();
+    if (d.recusar) {
+      SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, { REABERTURA_PEDIDA_EM: '', REABERTURA_PEDIDA_POR_ID: '', ATUALIZADO_EM: agora });
+      Com_historico_('OPORTUNIDADE', o.ID, 'REABERTURA_RECUSADA', eu, { texto: motivo });
+      if (Com_s_(o.REABERTURA_PEDIDA_POR_ID)) Com_avisar_(o.REABERTURA_PEDIDA_POR_ID, 'REABERTURA_RECUSADA', 'Reabertura de ' + o.CODIGO + ' não aprovada', eu.nome + ': ' + motivo, { tipo: 'oportunidade', id: o.ID });
+      // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+      Com_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI01', modulo: 'comercial', quem: eu, oque: 'Pedido de reabertura recusado', item: Com_s_(o.CODIGO) + (Com_s_(o.CLIENTE_NOME) ? ' (' + Com_s_(o.CLIENTE_NOME) + ')' : ''), motivo: motivo,
+        tela: { tipo: 'comercial', aba: 'oportunidades', id: o.ID }, refId: 'OPO-REAB-REC-' + o.ID + '-' + agora }); });
+      return { message: 'Pedido de reabertura recusado. O vendedor foi avisado.' };
+    }
+    var antes = Com_up_(o.SITUACAO);
+    // 01/11/2026 (C4): quem ganhou e por quanto saem junto com o motivo (ficam no histórico e no banco de preços); uma perda nova
+    // não herda o vencedor da perda anterior
+    var campos = { SITUACAO: 'ABERTA', GANHA_EM: '', PERDIDA_EM: '', MOTIVO_PERDA: '', APRENDIZADO_PERDA: '', CONCORRENTE_VENCEDOR: '', VALOR_VENCEDOR: '', REABERTURA_PEDIDA_EM: '', REABERTURA_PEDIDA_POR_ID: '',
+      ETAPA_DESDE: agora, ULTIMO_CONTATO_EM: agora, TENTATIVAS_SEM_RESPOSTA: 0, PROXIMA_ACAO: prox.texto, PROXIMA_ACAO_TIPO: prox.tipo, PROXIMA_ACAO_EM: prox.prazo, ATUALIZADO_EM: agora };
+    var novo = Object.assign({}, o, campos);
+    campos.ATIVIDADE_ID = ComOpo_criarProxima_(eu, sessionId, novo, prox);
+    SGO_DATA.update(COM_ABAS.OPORTUNIDADES, o.ID, campos);
+    if (antes === 'PERDIDA' && typeof ComBP_limparVencedor_ === 'function') ComBP_limparVencedor_(o);
+    Com_historico_('OPORTUNIDADE', o.ID, 'REABERTA', eu, { de: COM_SITUACOES_OPO[antes], para: 'Aberta', texto: motivo + (antes === 'PERDIDA' ? ' (motivo da perda anterior: ' + Com_s_(o.MOTIVO_PERDA) + (Com_s_(o.CONCORRENTE_VENCEDOR) || Number(o.VALOR_VENCEDOR) > 0 ? '; quem ganhou: ' + (Com_s_(o.CONCORRENTE_VENCEDOR) || 'não informado') + (Number(o.VALOR_VENCEDOR) > 0 ? ', por ' + Com_moeda_(o.VALOR_VENCEDOR) : '') : '') + ')' : '') });
+    if (Com_s_(o.RESPONSAVEL_ID) !== eu.id) Com_avisar_(o.RESPONSAVEL_ID, 'REABERTA', 'Oportunidade ' + o.CODIGO + ' reaberta', eu.nome + ' reabriu a oportunidade: ' + motivo + ' A próxima ação está em Minhas atividades.', { tipo: 'oportunidade', id: o.ID }, { email: true });
+    return { oportunidade: ComOpo_paraTela_(eu, Object.assign({}, o, campos)), message: 'Oportunidade reaberta. A próxima ação está em Minhas atividades do responsável.' };
+  });
+}
+
+/** Ficha completa: oportunidade, contatos registrados, histórico, propostas, e-mails do cliente e sugestões da gestora. */
+function ComOpo_detalhe_(eu, id) {
+  Com_exigir_(eu, 'VENDEDOR', 'abrir a oportunidade');
+  var o = ComOpo_obter_(eu, id, 'abrir a oportunidade');
+  var met = Com_metodologia_();
+  var t = ComOpo_paraTela_(eu, o, { met: met });
+  var contatos = Com_ler_(COM_ABAS.CONTATOS_REG).filter(function (c) { return Com_s_(c.OPORTUNIDADE_ID) === t.id; })
+    .sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); })
+    .map(function (c) { return { em: Com_br_(c.DATA), tipo: COM_TIPOS_CONTATO[Com_up_(c.TIPO)] || Com_s_(c.TIPO), respondeu: Com_up_(c.RESPONDEU) === 'SIM', resumo: Com_s_(c.RESUMO), contato: Com_s_(c.CONTATO_NOME), por: Com_s_(c.USUARIO_NOME), estrategia: Com_s_(c.ESTRATEGIA) }; });
+  var hist = Com_ler_(COM_ABAS.HISTORICO).filter(function (h) { return Com_s_(h.ENTIDADE) === 'OPORTUNIDADE' && Com_s_(h.ENTIDADE_ID) === t.id; })
+    .sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); })
+    .map(function (h) { return { em: Com_br_(h.DATA), tipo: Com_s_(h.TIPO), de: Com_s_(h.DE), para: Com_s_(h.PARA), texto: Com_s_(h.TEXTO), por: Com_s_(h.USUARIO_NOME) }; });
+  var propostas = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === t.id; })
+    .sort(function (a, b) { return String(b.CRIADO_EM).localeCompare(String(a.CRIADO_EM)); })
+    .map(function (p) { return { id: Com_s_(p.ID), numero: Com_s_(p.NUMERO), revisao: typeof SGO_DocA4_revisao_ === 'function' ? SGO_DocA4_revisao_(p.REVISAO) : Com_s_(p.REVISAO), situacao: Com_up_(p.SITUACAO), situacaoNome: COM_SITUACOES_PROP[Com_up_(p.SITUACAO)] || '', total: eu.veValores ? Com_moeda_(p.TOTAL) : '' }; });
+  var atv = Com_atividade_(o.ATIVIDADE_ID);
+  var etapa = Com_etapa_(t.funil, t.etapa, met) || {};
+  var equipamentos = [];
+  if (t.equipamentos.length) {
+    Com_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { if (t.equipamentos.indexOf(Com_s_(e.ID)) >= 0) equipamentos.push({ id: Com_s_(e.ID), texto: [Com_s_(e.TIPO), Com_s_(e.TAG) ? 'TAG ' + Com_s_(e.TAG) : '', Com_s_(e.SETOR)].filter(Boolean).join(' · ') }); });
+  }
+  var emails = ComOpo_emailsDoCliente_(eu, o);
+  var sugestoes = typeof ComG_sugestoesDaOportunidade_ === 'function' ? ComG_sugestoesDaOportunidade_(eu, o, t, contatos) : [];
+  // 01/11/2026: plano da especialista em uso e, quando o gatilho venceu sem resposta do cliente, a sugestão de troca
+  var planoEsp = t.situacao === 'ABERTA' && typeof ComEsp_resumoFicha_ === 'function' ? ComEsp_resumoFicha_(o) : null;
+  // 10/11/2026 (etapa 2): atividades da gestão (D7), excluir por teste ou engano (h) e a proposta que leva ao ganho com aceite (D6)
+  var pe = ComOpo_podeExcluir_(eu, o), ehDono = eu.gestao || t.responsavelId === eu.id;
+  var extra = { atividadesGestao: ComOpo_atividadesGestaoTela_(o), podeCriarAtividadeGestao: !!eu.gestao && t.situacao === 'ABERTA',
+    podeExcluir: pe.pode, motivoSemExcluir: !pe.pode && ehDono ? pe.motivo : '', propostaParaAceite: t.situacao === 'ABERTA' ? ComOpo_propostaParaAceite_(o) : null };
+  return Object.assign(extra, {
+    oportunidade: t, contatosRegistrados: contatos, historico: hist.slice(0, 80), propostas: propostas, equipamentos: equipamentos,
+    atividade: atv ? { id: Com_s_(atv.ID), titulo: Com_s_(atv.TITULO), situacao: Com_s_(atv.SITUACAO), previsao: Com_br_(atv.PREVISAO_ATUAL || atv.PRAZO) } : null,
+    etapaChecklist: etapa.checklist || [], etapaCriterio: Com_s_(etapa.criterio), contatosCliente: ComCt_listar_(t.clienteId, t.unidadeId),
+    etapaConfirmados: (((Com_json_(o.CRITERIOS_JSON, {}) || {})[t.etapa] || {}).itens || []),
+    emails: emails, sugestoes: sugestoes, planoEspecialista: planoEsp, podeEditar: t.situacao === 'ABERTA' && (eu.gestao || t.responsavelId === eu.id)
+  });
+}
+
+/**
+ * E-mails do cliente ligados à oportunidade: os registrados no cliente (E-mail > Registrar no cliente) e, para o próprio
+ * responsável, os recebidos na caixa dele nos últimos 30 dias cujo remetente é contato deste cliente. A gestão não abre a
+ * caixa pessoal de ninguém: vê só os registrados.
+ */
+function ComOpo_emailsDoCliente_(eu, o) {
+  var lista = [], cid = Com_s_(o.CLIENTE_ID);
+  try {
+    Com_ler_(typeof EMAIL_ABA_REGISTROS !== 'undefined' ? EMAIL_ABA_REGISTROS : 'EML_CLIENTE_REGISTROS').forEach(function (r) {
+      if (Com_s_(r.CLIENTE_ID) !== cid) return;
+      lista.push({ origem: 'registrado', ord: Com_iso_(r.DATA_EMAIL || r.CRIADO_EM), em: Com_br_(r.DATA_EMAIL || r.CRIADO_EM), de: Com_s_(r.REMETENTE), assunto: Com_s_(r.ASSUNTO), resumo: Com_s_(r.RESUMO).slice(0, 300), por: Com_s_(r.USUARIO_NOME) });
+    });
+  } catch (e) {}
+  if (Com_s_(o.RESPONSAVEL_ID) === eu.id && typeof Email_disponivel_ === 'function' && Email_disponivel_() && typeof Email_euDoId_ === 'function') {
+    try {
+      var enderecos = ComCt_emailsDoCliente_(cid);
+      var dominios = enderecos.map(function (e) { return e.split('@')[1]; }).filter(function (d) { return d && (typeof EMAIL_DOMINIOS_PUBLICOS === 'undefined' || EMAIL_DOMINIOS_PUBLICOS.indexOf(d) < 0); });
+      var rec = Email_chamar_(Email_euDoId_(eu.id, { nome: eu.nome, perfil: eu.perfil }), 'recebidas', { dias: 30 }) || [];
+      rec.forEach(function (m) {
+        var de = Com_s_(m.remetente).toLowerCase();
+        if (enderecos.indexOf(de) < 0 && dominios.indexOf(de.split('@')[1]) < 0) return;
+        lista.push({ origem: 'caixa', ord: Com_iso_(m.recebidoEm), em: Com_br_(m.recebidoEm), de: Com_s_(m.remetenteNome) || de, assunto: Com_s_(m.assunto), resumo: '', lida: !!m.lida, conta: Com_s_(m.conta), uid: m.uid });
+      });
+    } catch (e) { lista.push({ origem: 'aviso', resumo: 'Não foi possível ler a sua caixa de e-mail agora. Abra E-mail para conferir as mensagens do cliente.' }); }
+  }
+  return lista.sort(function (a, b) { return String(b.ord || '').localeCompare(String(a.ord || '')); }).slice(0, 30);
+}

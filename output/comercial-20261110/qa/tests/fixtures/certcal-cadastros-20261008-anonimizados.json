@@ -1,0 +1,4089 @@
+{
+  "source": "Leitura real 08/10/2026; IDs e nomes anonimizados; somente estrutura de vínculos, não resultados metrológicos.",
+  "clientes": [
+    {
+      "ID": "C1",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C2",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C3",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C4",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C5",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C6",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C7",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C8",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C9",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C10",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C11",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C12",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C13",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C14",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C15",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C16",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C17",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C18",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C19",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C20",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C21",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C22",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C23",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C24",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C25",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C26",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C27",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C28",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C29",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C30",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C31",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C32",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C33",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C34",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C35",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C36",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C37",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C38",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C39",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C40",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C41",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C42",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C43",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C44",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "C45",
+      "RAZAO_SOCIAL": "Cliente de teste",
+      "STATUS": "ATIVO"
+    }
+  ],
+  "unidades": [
+    {
+      "ID": "U1",
+      "CLIENTE_ID": "C1",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U2",
+      "CLIENTE_ID": "C2",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U3",
+      "CLIENTE_ID": "C6",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U4",
+      "CLIENTE_ID": "C5",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U5",
+      "CLIENTE_ID": "C7",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U6",
+      "CLIENTE_ID": "C8",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U7",
+      "CLIENTE_ID": "C3",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U8",
+      "CLIENTE_ID": "C10",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U9",
+      "CLIENTE_ID": "C9",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U10",
+      "CLIENTE_ID": "C11",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U11",
+      "CLIENTE_ID": "C4",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U12",
+      "CLIENTE_ID": "C12",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U13",
+      "CLIENTE_ID": "C13",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U14",
+      "CLIENTE_ID": "C14",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U15",
+      "CLIENTE_ID": "C15",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U16",
+      "CLIENTE_ID": "C10",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U17",
+      "CLIENTE_ID": "C16",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U18",
+      "CLIENTE_ID": "C17",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U19",
+      "CLIENTE_ID": "C9",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U20",
+      "CLIENTE_ID": "C18",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U21",
+      "CLIENTE_ID": "C19",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U22",
+      "CLIENTE_ID": "C31",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U23",
+      "CLIENTE_ID": "C20",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U24",
+      "CLIENTE_ID": "C4",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U25",
+      "CLIENTE_ID": "C21",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U26",
+      "CLIENTE_ID": "C22",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U27",
+      "CLIENTE_ID": "C23",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U28",
+      "CLIENTE_ID": "C24",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U29",
+      "CLIENTE_ID": "C25",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U30",
+      "CLIENTE_ID": "C26",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U31",
+      "CLIENTE_ID": "C27",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U32",
+      "CLIENTE_ID": "C4",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U33",
+      "CLIENTE_ID": "C28",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U34",
+      "CLIENTE_ID": "C30",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U35",
+      "CLIENTE_ID": "C33",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U36",
+      "CLIENTE_ID": "C34",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U37",
+      "CLIENTE_ID": "C35",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U38",
+      "CLIENTE_ID": "C36",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U39",
+      "CLIENTE_ID": "C37",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U40",
+      "CLIENTE_ID": "C38",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U41",
+      "CLIENTE_ID": "C4",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U42",
+      "CLIENTE_ID": "C39",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U43",
+      "CLIENTE_ID": "C40",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U44",
+      "CLIENTE_ID": "C41",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U45",
+      "CLIENTE_ID": "C42",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U46",
+      "CLIENTE_ID": "C25",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U47",
+      "CLIENTE_ID": "C43",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U48",
+      "CLIENTE_ID": "C29",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U49",
+      "CLIENTE_ID": "C44",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U50",
+      "CLIENTE_ID": "C25",
+      "STATUS": "ATIVO"
+    },
+    {
+      "ID": "U51",
+      "CLIENTE_ID": "C45",
+      "STATUS": "ATIVO"
+    }
+  ],
+  "equipamentos": [
+    {
+      "row": 2,
+      "ID": "E1",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E1",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 3,
+      "ID": "E2",
+      "CLIENTE_ID": "C1",
+      "UNIDADE_ID": "U1",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E2",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 4,
+      "ID": "E3",
+      "CLIENTE_ID": "C6",
+      "UNIDADE_ID": "U3",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E3",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 5,
+      "ID": "E4",
+      "CLIENTE_ID": "C5",
+      "UNIDADE_ID": "U4",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E4",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 6,
+      "ID": "E5",
+      "CLIENTE_ID": "C5",
+      "UNIDADE_ID": "U4",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E5",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 7,
+      "ID": "E6",
+      "CLIENTE_ID": "C7",
+      "UNIDADE_ID": "U5",
+      "TIPO": "AUTOCLAVE-2",
+      "TAG": "QA-E6",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 8,
+      "ID": "E7",
+      "CLIENTE_ID": "C7",
+      "UNIDADE_ID": "U5",
+      "TIPO": "AUTOCLAVE-1",
+      "TAG": "QA-E7",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 9,
+      "ID": "E8",
+      "CLIENTE_ID": "C7",
+      "UNIDADE_ID": "U5",
+      "TIPO": "TERMODESINFECTORA-1",
+      "TAG": "QA-E8",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 10,
+      "ID": "E9",
+      "CLIENTE_ID": "C7",
+      "UNIDADE_ID": "U5",
+      "TIPO": "TERMODESINFECTORA-2",
+      "TAG": "QA-E9",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 11,
+      "ID": "E10",
+      "CLIENTE_ID": "C8",
+      "UNIDADE_ID": "U6",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E10",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 12,
+      "ID": "E11",
+      "CLIENTE_ID": "C8",
+      "UNIDADE_ID": "U6",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E11",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 13,
+      "ID": "E12",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E12",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 14,
+      "ID": "E13",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "CARDIOVERSOR",
+      "TAG": "QA-E13",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 15,
+      "ID": "E14",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "MONITOR MULTIPARÂMETRO",
+      "TAG": "QA-E14",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 16,
+      "ID": "E15",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "APARELHO DE ANESTESIA",
+      "TAG": "QA-E15",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 17,
+      "ID": "E16",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "MONITOR MULTIPARÂMETRO",
+      "TAG": "QA-E16",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 18,
+      "ID": "E17",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "VAPORIZADOR CALIBRADO",
+      "TAG": "QA-E17",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 19,
+      "ID": "E18",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "VAPORIZADOR CALIBRADO",
+      "TAG": "QA-E18",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 20,
+      "ID": "E19",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "MONITOR MULTIPARÂMETRO",
+      "TAG": "QA-E19",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 21,
+      "ID": "E20",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "BISTURI ELÉTRICO",
+      "TAG": "QA-E20",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 22,
+      "ID": "E21",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "BISTURI ELÉTRICO",
+      "TAG": "QA-E21",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 23,
+      "ID": "E22",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "DESFIBRILADOR",
+      "TAG": "QA-E22",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 24,
+      "ID": "E23",
+      "CLIENTE_ID": "C3",
+      "UNIDADE_ID": "U7",
+      "TIPO": "BALANÇA DIGITAL",
+      "TAG": "QA-E23",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 25,
+      "ID": "E24",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "AUTOCLAVE 1",
+      "TAG": "QA-E24",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 26,
+      "ID": "E25",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "AUTOCLAVE 2",
+      "TAG": "QA-E25",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 27,
+      "ID": "E26",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "AUTOCLAVE 2",
+      "TAG": "QA-E26",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 28,
+      "ID": "E27",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMODESINFECTORA",
+      "TAG": "QA-E27",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 29,
+      "ID": "E28",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E28",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 30,
+      "ID": "E29",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E29",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 31,
+      "ID": "E30",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E30",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 32,
+      "ID": "E31",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E31",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 33,
+      "ID": "E32",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E32",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 34,
+      "ID": "E33",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E33",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 35,
+      "ID": "E34",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E34",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 36,
+      "ID": "E35",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E35",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 37,
+      "ID": "E36",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E36",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 38,
+      "ID": "E37",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E37",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 39,
+      "ID": "E38",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E38",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 40,
+      "ID": "E39",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E39",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 41,
+      "ID": "E40",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E40",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 42,
+      "ID": "E41",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "TERMODESINFECTORA 1",
+      "TAG": "QA-E41",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 43,
+      "ID": "E42",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "AUTOCLAVE 2",
+      "TAG": "QA-E42",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 44,
+      "ID": "E43",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "AUTOCLAVE 2",
+      "TAG": "QA-E43",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 45,
+      "ID": "E44",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "AUTOCLAVE 2",
+      "TAG": "QA-E44",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 46,
+      "ID": "E45",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "LAVADORA ULTRASSONICA",
+      "TAG": "QA-E45",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 47,
+      "ID": "E46",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "LAVADORA ULTRASSONICA 2",
+      "TAG": "QA-E46",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 48,
+      "ID": "E47",
+      "CLIENTE_ID": "C2",
+      "UNIDADE_ID": "U2",
+      "TIPO": "LAVADORA ULTRASSONICA 2",
+      "TAG": "QA-E47",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 49,
+      "ID": "E48",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E48",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 50,
+      "ID": "E49",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E49",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 51,
+      "ID": "E50",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E50",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 52,
+      "ID": "E51",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E51",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 53,
+      "ID": "E52",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E52",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 54,
+      "ID": "E53",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E53",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 55,
+      "ID": "E54",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E54",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 56,
+      "ID": "E55",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E55",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 57,
+      "ID": "E56",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E56",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 58,
+      "ID": "E57",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E57",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 59,
+      "ID": "E58",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E58",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 60,
+      "ID": "E59",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E59",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 61,
+      "ID": "E60",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E60",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 62,
+      "ID": "E61",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E61",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 63,
+      "ID": "E62",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E62",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 64,
+      "ID": "E63",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E63",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 65,
+      "ID": "E64",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E64",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 66,
+      "ID": "E65",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E65",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 67,
+      "ID": "E66",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E66",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 68,
+      "ID": "E67",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E67",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 69,
+      "ID": "E68",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E68",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 70,
+      "ID": "E69",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E69",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 71,
+      "ID": "E70",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E70",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 72,
+      "ID": "E71",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E71",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 73,
+      "ID": "E72",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E72",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 74,
+      "ID": "E73",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E73",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 75,
+      "ID": "E74",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E74",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 76,
+      "ID": "E75",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E75",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 77,
+      "ID": "E76",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E76",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 78,
+      "ID": "E77",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E77",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 79,
+      "ID": "E78",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E78",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 80,
+      "ID": "E79",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E79",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 81,
+      "ID": "E80",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E80",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 82,
+      "ID": "E81",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E81",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 83,
+      "ID": "E82",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E82",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 84,
+      "ID": "E83",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E83",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 85,
+      "ID": "E84",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E84",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 86,
+      "ID": "E85",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E85",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 87,
+      "ID": "E86",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E86",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 88,
+      "ID": "E87",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E87",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 89,
+      "ID": "E88",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E88",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 90,
+      "ID": "E89",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E89",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 91,
+      "ID": "E90",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E90",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 92,
+      "ID": "E91",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E91",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 93,
+      "ID": "E92",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E92",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 94,
+      "ID": "E93",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E93",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 95,
+      "ID": "E94",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E94",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 96,
+      "ID": "E95",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E95",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 97,
+      "ID": "E96",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E96",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 98,
+      "ID": "E97",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E97",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 99,
+      "ID": "E98",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E98",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 100,
+      "ID": "E99",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E99",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 101,
+      "ID": "E100",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E100",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 102,
+      "ID": "E101",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E101",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 103,
+      "ID": "E102",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E102",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 104,
+      "ID": "E103",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E103",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 105,
+      "ID": "E104",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E104",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 106,
+      "ID": "E105",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E105",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 107,
+      "ID": "E106",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E106",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 108,
+      "ID": "E107",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E107",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 109,
+      "ID": "E108",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E108",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 110,
+      "ID": "E109",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E109",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 111,
+      "ID": "E110",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E110",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 112,
+      "ID": "E111",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E111",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 113,
+      "ID": "E112",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E112",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 114,
+      "ID": "E113",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E113",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 115,
+      "ID": "E114",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E114",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 116,
+      "ID": "E115",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E115",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 117,
+      "ID": "E116",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E116",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 118,
+      "ID": "E117",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E117",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 119,
+      "ID": "E118",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E118",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 120,
+      "ID": "E119",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E119",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 121,
+      "ID": "E120",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E120",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 122,
+      "ID": "E121",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E121",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 123,
+      "ID": "E122",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E122",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 124,
+      "ID": "E123",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E123",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 125,
+      "ID": "E124",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E124",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 126,
+      "ID": "E125",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E125",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 127,
+      "ID": "E126",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E126",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 128,
+      "ID": "E127",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E127",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 129,
+      "ID": "E128",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E128",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 130,
+      "ID": "E129",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E129",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 131,
+      "ID": "E130",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E130",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 132,
+      "ID": "E131",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E131",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 133,
+      "ID": "E132",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E132",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 134,
+      "ID": "E133",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E133",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 135,
+      "ID": "E134",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E134",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 136,
+      "ID": "E135",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E135",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 137,
+      "ID": "E136",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E136",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 138,
+      "ID": "E137",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E137",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 139,
+      "ID": "E138",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E138",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 140,
+      "ID": "E139",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E139",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 141,
+      "ID": "E140",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E140",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 142,
+      "ID": "E141",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E141",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 143,
+      "ID": "E142",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E142",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 144,
+      "ID": "E143",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E143",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 145,
+      "ID": "E144",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E144",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 146,
+      "ID": "E145",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E145",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 147,
+      "ID": "E146",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E146",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 148,
+      "ID": "E147",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E147",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 149,
+      "ID": "E148",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "FREEZER",
+      "TAG": "QA-E148",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 150,
+      "ID": "E149",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E149",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 151,
+      "ID": "E150",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E150",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 152,
+      "ID": "E151",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E151",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 153,
+      "ID": "E152",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E152",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 154,
+      "ID": "E153",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E153",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 155,
+      "ID": "E154",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E154",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 156,
+      "ID": "E155",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E155",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 157,
+      "ID": "E156",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E156",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 158,
+      "ID": "E157",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E157",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 159,
+      "ID": "E158",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E158",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 160,
+      "ID": "E159",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E159",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 161,
+      "ID": "E160",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E160",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 162,
+      "ID": "E161",
+      "CLIENTE_ID": "C12",
+      "UNIDADE_ID": "U12",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E161",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 163,
+      "ID": "E162",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "AUTOCLAVE FORMALDEIDO",
+      "TAG": "QA-E162",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 164,
+      "ID": "E163",
+      "CLIENTE_ID": "C1",
+      "UNIDADE_ID": "U1",
+      "TIPO": "SENSOR DE TEMPERATURA",
+      "TAG": "QA-E163",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 165,
+      "ID": "E164",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "AUTOCLAVE VAPOR - 01",
+      "TAG": "QA-E164",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 166,
+      "ID": "E165",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "AUTOCLAVE PERÓXIDO",
+      "TAG": "QA-E165",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 167,
+      "ID": "E166",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "AUTOCLAVE VAPOR - 02",
+      "TAG": "QA-E166",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 168,
+      "ID": "E167",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "AUTOCLAVE VAPOR - 03",
+      "TAG": "QA-E167",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 169,
+      "ID": "E168",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "TERMODESINFECTORA 02",
+      "TAG": "QA-E168",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 170,
+      "ID": "E169",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "TERMODESINFECTORA 01",
+      "TAG": "QA-E169",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 171,
+      "ID": "E170",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "SECADORA DE TRAQUEIA",
+      "TAG": "QA-E170",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 172,
+      "ID": "E171",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "LAVADORA ULTRASSÔNICA 01",
+      "TAG": "QA-E171",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 173,
+      "ID": "E172",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "LAVADORA ULTRASSÔNICA - 02",
+      "TAG": "QA-E172",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 174,
+      "ID": "E173",
+      "CLIENTE_ID": "C14",
+      "UNIDADE_ID": "U14",
+      "TIPO": "TERMODESINFECTORA - 03",
+      "TAG": "QA-E173",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 175,
+      "ID": "E174",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E174",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 176,
+      "ID": "E175",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E175",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 177,
+      "ID": "E176",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E176",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 178,
+      "ID": "E177",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E177",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 179,
+      "ID": "E178",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E178",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 180,
+      "ID": "E179",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E179",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 181,
+      "ID": "E180",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "VALVULA DE SEGURANÇA",
+      "TAG": "QA-E180",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 182,
+      "ID": "E181",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "VALVULA DE SEGURANÇA",
+      "TAG": "QA-E181",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 183,
+      "ID": "E182",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E182",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 184,
+      "ID": "E183",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E183",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 185,
+      "ID": "E184",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E184",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 186,
+      "ID": "E185",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "MANOMETRO 0 A 6 BAR ABS",
+      "TAG": "QA-E185",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 187,
+      "ID": "E186",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "VALVULA DE SEGURANÇA",
+      "TAG": "QA-E186",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 188,
+      "ID": "E187",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "VALVULA DE SEGURANÇA",
+      "TAG": "QA-E187",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 189,
+      "ID": "E188",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO -750 MMHG ATÉ 5 KG/CM2",
+      "TAG": "QA-E188",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 190,
+      "ID": "E189",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO -750 MMHG ATÉ 5 KG/CM2",
+      "TAG": "QA-E189",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 191,
+      "ID": "E190",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 ATÉ 5 KG/CM2",
+      "TAG": "QA-E190",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 192,
+      "ID": "E191",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "VÁLVULA DE SEGURANÇA",
+      "TAG": "QA-E191",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 193,
+      "ID": "E192",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E192",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 194,
+      "ID": "E193",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E193",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 195,
+      "ID": "E194",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E194",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 196,
+      "ID": "E195",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "VÁLVULA DE SEGURANÇA",
+      "TAG": "QA-E195",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 197,
+      "ID": "E196",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "VÁLVULA DE SEGURANÇA",
+      "TAG": "QA-E196",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 198,
+      "ID": "E197",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E197",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 199,
+      "ID": "E198",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E198",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 200,
+      "ID": "E199",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E199",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 201,
+      "ID": "E200",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E200",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 202,
+      "ID": "E201",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "MANÔMETRO 0 A 6 BAR",
+      "TAG": "QA-E201",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 203,
+      "ID": "E202",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "VÁLVULA DE SEGURNÇA",
+      "TAG": "QA-E202",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 204,
+      "ID": "E203",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "VÁLVULA DE SEGURNÇA",
+      "TAG": "QA-E203",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 205,
+      "ID": "E204",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "VÁLVULA DE SEGURNÇA",
+      "TAG": "QA-E204",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 206,
+      "ID": "E205",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "Autoclave 1",
+      "TAG": "QA-E205",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 207,
+      "ID": "E206",
+      "CLIENTE_ID": "C9",
+      "UNIDADE_ID": "U9",
+      "TIPO": "Autoclave 2",
+      "TAG": "QA-E206",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 208,
+      "ID": "E207",
+      "CLIENTE_ID": "C24",
+      "UNIDADE_ID": "U28",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E207",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 209,
+      "ID": "E208",
+      "CLIENTE_ID": "C24",
+      "UNIDADE_ID": "U28",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E208",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 210,
+      "ID": "E209",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "AUTOCLAVE VAPOR",
+      "TAG": "QA-E209",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 211,
+      "ID": "E210",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "AUTOCLAVE  VAPOR",
+      "TAG": "QA-E210",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 212,
+      "ID": "E211",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "STATIM 02",
+      "TAG": "QA-E211",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 213,
+      "ID": "E212",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "STATIM 01",
+      "TAG": "QA-E212",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 214,
+      "ID": "E213",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "TERMODESINFECTORA",
+      "TAG": "QA-E213",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 215,
+      "ID": "E214",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "TERMODESINFECTORA",
+      "TAG": "QA-E214",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 216,
+      "ID": "E215",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SECADORA",
+      "TAG": "QA-E215",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 217,
+      "ID": "E216",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA",
+      "TAG": "QA-E216",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 218,
+      "ID": "E217",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "TRANSMISSOR DE PRESSÃO",
+      "TAG": "QA-E217",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 219,
+      "ID": "E218",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "TRANSMISSOR DE PRESSÃO",
+      "TAG": "QA-E218",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 220,
+      "ID": "E219",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "TRANSMISSOR DE PRESSÃO",
+      "TAG": "QA-E219",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 221,
+      "ID": "E220",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "TRANSMISSOR DE PRESSÃO",
+      "TAG": "QA-E220",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 222,
+      "ID": "E221",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "TRANSMISSOR DE PRESSÃO",
+      "TAG": "QA-E221",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 223,
+      "ID": "E222",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA",
+      "TAG": "QA-E222",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 224,
+      "ID": "E223",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "PRESSOSTATO",
+      "TAG": "QA-E223",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 225,
+      "ID": "E224",
+      "CLIENTE_ID": "C24",
+      "UNIDADE_ID": "U28",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E224",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 226,
+      "ID": "E225",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA / -50 °C A 250°C",
+      "TAG": "QA-E225",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 227,
+      "ID": "E226",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA / -50 °C A 250°C",
+      "TAG": "QA-E226",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 228,
+      "ID": "E227",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA / -50 °C A 250°C",
+      "TAG": "QA-E227",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 229,
+      "ID": "E228",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA / -50 °C A 250°C",
+      "TAG": "QA-E228",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 230,
+      "ID": "E229",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA",
+      "TAG": "QA-E229",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 231,
+      "ID": "E230",
+      "CLIENTE_ID": "C13",
+      "UNIDADE_ID": "U13",
+      "TIPO": "SENSOR DE TEMPERATURA",
+      "TAG": "QA-E230",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 232,
+      "ID": "E231",
+      "CLIENTE_ID": "C27",
+      "UNIDADE_ID": "U31",
+      "TIPO": "VALVULA DE ALIVIO E SEGURANCA",
+      "TAG": "QA-E231",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 233,
+      "ID": "E232",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E232",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 234,
+      "ID": "E233",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E233",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 235,
+      "ID": "E234",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E234",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 236,
+      "ID": "E235",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E235",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 237,
+      "ID": "E236",
+      "CLIENTE_ID": "C19",
+      "UNIDADE_ID": "U21",
+      "TIPO": "SELADORA",
+      "TAG": "QA-E236",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 238,
+      "ID": "E237",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E237",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 239,
+      "ID": "E238",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E238",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 240,
+      "ID": "E239",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E239",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 241,
+      "ID": "E240",
+      "CLIENTE_ID": "C19",
+      "UNIDADE_ID": "U21",
+      "TIPO": "SELADORA",
+      "TAG": "QA-E240",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 242,
+      "ID": "E241",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E241",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 243,
+      "ID": "E242",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E242",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 244,
+      "ID": "E243",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E243",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 245,
+      "ID": "E244",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E244",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 246,
+      "ID": "E245",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E245",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 247,
+      "ID": "E246",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E246",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 248,
+      "ID": "E247",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E247",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 249,
+      "ID": "E248",
+      "CLIENTE_ID": "C11",
+      "UNIDADE_ID": "U10",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E248",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 250,
+      "ID": "E249",
+      "CLIENTE_ID": "C23",
+      "UNIDADE_ID": "U27",
+      "TIPO": "CÂMARA DE CONSERVAÇÃO DE HEMÁCIAS",
+      "TAG": "QA-E249",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 251,
+      "ID": "E250",
+      "CLIENTE_ID": "C23",
+      "UNIDADE_ID": "U27",
+      "TIPO": "CÂMARA DE CONSERVAÇÃO PARA REAGENTES",
+      "TAG": "QA-E250",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 252,
+      "ID": "E251",
+      "CLIENTE_ID": "C23",
+      "UNIDADE_ID": "U27",
+      "TIPO": "FREEZER PARA PLASMA FRESCO, CONGELADO E CRIOPRECIPTADO",
+      "TAG": "QA-E251",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 253,
+      "ID": "E252",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMÔMETRO",
+      "TAG": "QA-E252",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 254,
+      "ID": "E253",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMÔMETRO",
+      "TAG": "QA-E253",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 255,
+      "ID": "E254",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMÔMETRO",
+      "TAG": "QA-E254",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 256,
+      "ID": "E255",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMÔMETRO",
+      "TAG": "QA-E255",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 257,
+      "ID": "E256",
+      "CLIENTE_ID": "C16",
+      "UNIDADE_ID": "U17",
+      "TIPO": "Endojet",
+      "TAG": "QA-E256",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 258,
+      "ID": "E257",
+      "CLIENTE_ID": "C34",
+      "UNIDADE_ID": "U36",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E257",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 259,
+      "ID": "E258",
+      "CLIENTE_ID": "C34",
+      "UNIDADE_ID": "U36",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E258",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 260,
+      "ID": "E259",
+      "CLIENTE_ID": "C34",
+      "UNIDADE_ID": "U36",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E259",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 261,
+      "ID": "E260",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E260",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 262,
+      "ID": "E261",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E261",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 263,
+      "ID": "E262",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E262",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 264,
+      "ID": "E263",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMOMETRO",
+      "TAG": "QA-E263",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 265,
+      "ID": "E264",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMOMETRO",
+      "TAG": "QA-E264",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 266,
+      "ID": "E265",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMOMETRO",
+      "TAG": "QA-E265",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 267,
+      "ID": "E266",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMOMETRO",
+      "TAG": "QA-E266",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 268,
+      "ID": "E267",
+      "CLIENTE_ID": "C36",
+      "UNIDADE_ID": "U38",
+      "TIPO": "TERMOMETRO",
+      "TAG": "QA-E267",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 269,
+      "ID": "E268",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E268",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 270,
+      "ID": "E269",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E269",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 271,
+      "ID": "E270",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E270",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 272,
+      "ID": "E271",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E271",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 273,
+      "ID": "E272",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E272",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 274,
+      "ID": "E273",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E273",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 275,
+      "ID": "E274",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E274",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 276,
+      "ID": "E275",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E275",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 277,
+      "ID": "E276",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E276",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 278,
+      "ID": "E277",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E277",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 279,
+      "ID": "E278",
+      "CLIENTE_ID": "C12",
+      "UNIDADE_ID": "U12",
+      "TIPO": "VÁLVULA DE SEGURANÇA - 2,5 BAR",
+      "TAG": "QA-E278",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 280,
+      "ID": "E279",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E279",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 281,
+      "ID": "E280",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E280",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 282,
+      "ID": "E281",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E281",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 283,
+      "ID": "E282",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E282",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 284,
+      "ID": "E283",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E283",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 285,
+      "ID": "E284",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E284",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 286,
+      "ID": "E285",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E285",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 287,
+      "ID": "E286",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E286",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 288,
+      "ID": "E287",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E287",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 289,
+      "ID": "E288",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E288",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 290,
+      "ID": "E289",
+      "CLIENTE_ID": "C19",
+      "UNIDADE_ID": "U21",
+      "TIPO": "INCUBADORA",
+      "TAG": "QA-E289",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 291,
+      "ID": "E290",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMO-HIGRÔMETRO",
+      "TAG": "QA-E290",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 292,
+      "ID": "E291",
+      "CLIENTE_ID": "C19",
+      "UNIDADE_ID": "U21",
+      "TIPO": "INCUBADORA",
+      "TAG": "QA-E291",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 293,
+      "ID": "E292",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E292",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 294,
+      "ID": "E293",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMO-HIGRÔMETRO",
+      "TAG": "QA-E293",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 295,
+      "ID": "E294",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E294",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 296,
+      "ID": "E295",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E295",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 297,
+      "ID": "E296",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMO-HIGRÔMETRO",
+      "TAG": "QA-E296",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 298,
+      "ID": "E297",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E297",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 299,
+      "ID": "E298",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMO-HIGROMETRO",
+      "TAG": "QA-E298",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 300,
+      "ID": "E299",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E299",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 301,
+      "ID": "E300",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMO-HIGROMETRO",
+      "TAG": "QA-E300",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 302,
+      "ID": "E301",
+      "CLIENTE_ID": "C12",
+      "UNIDADE_ID": "U12",
+      "TIPO": "AUTOCLAVE DE BANCADA",
+      "TAG": "QA-E301",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 303,
+      "ID": "E302",
+      "CLIENTE_ID": "C12",
+      "UNIDADE_ID": "U12",
+      "TIPO": "AUTOCLAVE HOSPITALAR",
+      "TAG": "QA-E302",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 304,
+      "ID": "E303",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMO-HIGROMETRO",
+      "TAG": "QA-E303",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 305,
+      "ID": "E304",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E304",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 306,
+      "ID": "E305",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMO-HIGROMETRO",
+      "TAG": "QA-E305",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 307,
+      "ID": "E306",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E306",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 308,
+      "ID": "E307",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E307",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 309,
+      "ID": "E308",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E308",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 310,
+      "ID": "E309",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E309",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 311,
+      "ID": "E310",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E310",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 312,
+      "ID": "E311",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E311",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 313,
+      "ID": "E312",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E312",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 314,
+      "ID": "E313",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E313",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 315,
+      "ID": "E314",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E314",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 316,
+      "ID": "E315",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E315",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 317,
+      "ID": "E316",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E316",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 318,
+      "ID": "E317",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U11",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E317",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 319,
+      "ID": "E318",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E318",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 320,
+      "ID": "E319",
+      "CLIENTE_ID": "C38",
+      "UNIDADE_ID": "U40",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E319",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 321,
+      "ID": "E320",
+      "CLIENTE_ID": "C38",
+      "UNIDADE_ID": "U40",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E320",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 322,
+      "ID": "E321",
+      "CLIENTE_ID": "C38",
+      "UNIDADE_ID": "U40",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E321",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 323,
+      "ID": "E322",
+      "CLIENTE_ID": "C38",
+      "UNIDADE_ID": "U40",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E322",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 324,
+      "ID": "E323",
+      "CLIENTE_ID": "C38",
+      "UNIDADE_ID": "U40",
+      "TIPO": "TERMO HIGROMETRO",
+      "TAG": "QA-E323",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 325,
+      "ID": "E324",
+      "CLIENTE_ID": "C37",
+      "UNIDADE_ID": "U39",
+      "TIPO": "TERMO HIGRÔMETRO",
+      "TAG": "QA-E324",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 326,
+      "ID": "E325",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "BALANÇA",
+      "TAG": "QA-E325",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 327,
+      "ID": "E326",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E326",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 328,
+      "ID": "E327",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E327",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 329,
+      "ID": "E328",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E328",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 330,
+      "ID": "E329",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U32",
+      "TIPO": "AUTOCLAVE ORTOSINTESE",
+      "TAG": "QA-E329",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 331,
+      "ID": "E330",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E330",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 332,
+      "ID": "E331",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U32",
+      "TIPO": "AUTOCLAVE SERCON",
+      "TAG": "QA-E331",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 333,
+      "ID": "E332",
+      "CLIENTE_ID": "C4",
+      "UNIDADE_ID": "U32",
+      "TIPO": "Osmose da Ortosintese",
+      "TAG": "QA-E332",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 334,
+      "ID": "E333",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E333",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 335,
+      "ID": "E334",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E334",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 336,
+      "ID": "E335",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E335",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 337,
+      "ID": "E336",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E336",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 338,
+      "ID": "E337",
+      "CLIENTE_ID": "C16",
+      "UNIDADE_ID": "U17",
+      "TIPO": "seladora",
+      "TAG": "QA-E337",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 339,
+      "ID": "E338",
+      "CLIENTE_ID": "C16",
+      "UNIDADE_ID": "U17",
+      "TIPO": "seladora",
+      "TAG": "QA-E338",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 340,
+      "ID": "E339",
+      "CLIENTE_ID": "C16",
+      "UNIDADE_ID": "U17",
+      "TIPO": "seladora",
+      "TAG": "QA-E339",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 341,
+      "ID": "E340",
+      "CLIENTE_ID": "C41",
+      "UNIDADE_ID": "U44",
+      "TIPO": "TERMOMETRO",
+      "TAG": "QA-E340",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 342,
+      "ID": "E341",
+      "CLIENTE_ID": "C40",
+      "UNIDADE_ID": "U43",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E341",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 343,
+      "ID": "E342",
+      "CLIENTE_ID": "C40",
+      "UNIDADE_ID": "U43",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E342",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 344,
+      "ID": "E343",
+      "CLIENTE_ID": "C40",
+      "UNIDADE_ID": "U43",
+      "TIPO": "TERMÔMETRO INFRAVERMELHO",
+      "TAG": "QA-E343",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 345,
+      "ID": "E344",
+      "CLIENTE_ID": "C16",
+      "UNIDADE_ID": "U17",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E344",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 346,
+      "ID": "E345",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E345",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 347,
+      "ID": "E346",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E346",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 348,
+      "ID": "E347",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E347",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 349,
+      "ID": "E348",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E348",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 350,
+      "ID": "E349",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E349",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 351,
+      "ID": "E350",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E350",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 352,
+      "ID": "E351",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E351",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 353,
+      "ID": "E352",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E352",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 354,
+      "ID": "E353",
+      "CLIENTE_ID": "C22",
+      "UNIDADE_ID": "U26",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E353",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 355,
+      "ID": "E354",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E354",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 356,
+      "ID": "E355",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E355",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 357,
+      "ID": "E356",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E356",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 358,
+      "ID": "E357",
+      "CLIENTE_ID": "C22",
+      "UNIDADE_ID": "U26",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E357",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 359,
+      "ID": "E358",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E358",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 360,
+      "ID": "E359",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E359",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 361,
+      "ID": "E360",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "TERMÔMETRO PALITO",
+      "TAG": "QA-E360",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 362,
+      "ID": "E361",
+      "CLIENTE_ID": "C10",
+      "UNIDADE_ID": "U8",
+      "TIPO": "BALANÇA ANTROPOMÉTRICA",
+      "TAG": "QA-E361",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 363,
+      "ID": "E362",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E362",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 364,
+      "ID": "E363",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E363",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 365,
+      "ID": "E364",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E364",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 366,
+      "ID": "E365",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E365",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 367,
+      "ID": "E366",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E366",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 368,
+      "ID": "E367",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E367",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 369,
+      "ID": "E368",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E368",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 370,
+      "ID": "E369",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E369",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 371,
+      "ID": "E370",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E370",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 372,
+      "ID": "E371",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E371",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 373,
+      "ID": "E372",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E372",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 374,
+      "ID": "E373",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E373",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 375,
+      "ID": "E374",
+      "CLIENTE_ID": "C15",
+      "UNIDADE_ID": "U15",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E374",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 376,
+      "ID": "E375",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E375",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 377,
+      "ID": "E376",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E376",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 378,
+      "ID": "E377",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E377",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 379,
+      "ID": "E378",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E378",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 380,
+      "ID": "E379",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E379",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 381,
+      "ID": "E380",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E380",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 382,
+      "ID": "E381",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E381",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 383,
+      "ID": "E382",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E382",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 384,
+      "ID": "E383",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E383",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 385,
+      "ID": "E384",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E384",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 386,
+      "ID": "E385",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E385",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 387,
+      "ID": "E386",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E386",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 388,
+      "ID": "E387",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E387",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 389,
+      "ID": "E388",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E388",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 390,
+      "ID": "E389",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E389",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 391,
+      "ID": "E390",
+      "CLIENTE_ID": "C31",
+      "UNIDADE_ID": "U22",
+      "TIPO": "TERMOHIGRÔMETRO",
+      "TAG": "QA-E390",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 392,
+      "ID": "E391",
+      "CLIENTE_ID": "C21",
+      "UNIDADE_ID": "U25",
+      "TIPO": "AUTOCLAVE",
+      "TAG": "QA-E391",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 393,
+      "ID": "E392",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "CENTRIFUGA",
+      "TAG": "QA-E392",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 394,
+      "ID": "E393",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "TERMÔMETRO CULINÁRIO ESPETO",
+      "TAG": "QA-E393",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 395,
+      "ID": "E394",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "TERMÔMETRO CULINÁRIO ESPETO",
+      "TAG": "QA-E394",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 396,
+      "ID": "E395",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "TERMÔMETRO CULINÁRIO ESPETO",
+      "TAG": "QA-E395",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 397,
+      "ID": "E396",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "CENTRÍFUGA",
+      "TAG": "QA-E396",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 398,
+      "ID": "E397",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "TERMÔMETRO CULINÁRIO ESPETO",
+      "TAG": "QA-E397",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 399,
+      "ID": "E398",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "TERMÔMETRO CULINÁRIO ESPETO",
+      "TAG": "QA-E398",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 400,
+      "ID": "E399",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "TERMÔMETRO CULINÁRIO ESPETO",
+      "TAG": "QA-E399",
+      "STATUS": "ATIVO"
+    },
+    {
+      "row": 401,
+      "ID": "E400",
+      "CLIENTE_ID": "C29",
+      "UNIDADE_ID": "U48",
+      "TIPO": "CENTRÍFUGA",
+      "TAG": "QA-E400",
+      "STATUS": "ATIVO"
+    }
+  ]
+}

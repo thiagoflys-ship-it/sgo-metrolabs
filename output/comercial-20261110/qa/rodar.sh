@@ -1,0 +1,1 @@
+cd /qa; for t in tests/comercial*.test.cjs tests/cadeiafrio*.test.cjs tests/avisos-gestao*.test.cjs tests/licitacoes*.test.cjs; do [ -f "$t" ] || continue; r=$(timeout 180 node --require /qa/shim.cjs $t 2>&1 | grep -E "^ℹ (pass|fail) " | tr '\n' ' '); echo "$(basename $t): $r"; done

@@ -1,0 +1,38 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const base = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
+const server = { HtmlService: { createHtmlOutputFromFile: nome => { assert.equal(nome, 'JS_Padroes_Documentos'); return {getContent: () => '<script>function controlePadroesTeste() {}</script>'}; } } };
+vm.runInNewContext(fs.readFileSync(path.join(base, 'SGO_CertCal_ConteudoModulo.js'), 'utf8'), server);
+const html = server.CERTCAL_CONTEUDO_MODULO;
+assert(server.CertCal_obterConteudoModulo().includes('function controlePadroesTeste() {}\n</script>'));
+assert(!/certcal-veredito|APROVADO|REPROVADO|it\.veredito|toPrecision/.test(html));
+assert(html.includes('setor de qualidade do cliente'));
+const context = { document: { getElementById: () => null } };
+vm.runInNewContext(html.match(/<script>([\s\S]*?)<\/script>/)[1], context);
+assert.equal(context.tplCertCal_numeroExibicao_(1234.5678), '1234,57');
+assert.equal(context.tplCertCal_numeroExibicao_(0.0001), '0,00');
+assert.equal(context.tplCertCal_numeroExibicao_(-0.0001), '0,00');
+assert.equal(context.tplCertCal_numeroExibicao_(null), '\u2014');
+// Veff: mesma regra do servidor desde 14/10 (commit 211e3de): "∞" para 0, infinito ou >= 10.000; senão pt-BR com milhar.
+assert.equal(context.tplCertCal_fmtVeff_(0), '∞');
+assert.equal(context.tplCertCal_fmtVeff_(9999.333), '9.999,33');
+assert.equal(context.tplCertCal_fmtVeff_(12000), '∞');
+assert.equal(context.tplCertCal_avisosHtml_({}), '');
+assert.equal(context.tplCertCal_avisosHtml_({avisos:['<script>falha & "teste"</script>']}), '<p role="status"><strong>Pendência:</strong> &lt;script&gt;falha &amp; &quot;teste&quot;&lt;/script&gt;</p>');
+assert(html.includes("' + tplCertCal_avisosHtml_(res)"));
+assert(!html.includes('Gerando relatório interpretativo com IA'));
+assert.equal(context.tplCertCal_familiaGrandeza_('Centrífuga 3000 rpm'), 'rotacao');
+context.certcalState.blocos = [{ titulo: 'Rotação', unidade: 'rpm', padroesIds: ['TAC'], pontos: [{ nominal: '3000,1256', leituras: ['3000,1234', '3000,1235', '3000,1236'] }] }];
+assert.equal(context.tplCertCal_montarBlocosPayload_()[0].pontos[0].leituras[0], '3000,1234');
+let rendered = '';
+context.document.getElementById = () => ({ set innerHTML(value) { rendered = value; } });
+context.tplCertCal_chamarApi = () => Promise.resolve({ blocos: [{ titulo: 'Rotação', unidade: 'rpm', resultados: [{ nominal: 3000.1234, leituras: [3000.1234, 3000.1235, 3000.1236], media: 3000.1235, tendencia: 0.0001, incertezaU95: 0.0002, veff: 0, erroMaximo: 0.0003 }], piorTendencia: 0.0001, piorIncertezaU95: 0.0002, piorIncertezaVeff: 0, piorIncertezaK: 1.95996, piorErroMaximo: 0.0003 }] });
+context.tplCertCal_calcularPreview();
+setImmediate(() => {
+  assert(rendered.includes('<td>3000,12</td>'));
+  assert(rendered.includes('Veff ∞, K 1,96'));
+  assert(!rendered.includes('3000.1234'));
+  console.log('OK: interface CertCal, responsabilidade do cliente, precisão do payload e preview.');
+});

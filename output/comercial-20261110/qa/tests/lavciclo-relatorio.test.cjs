@@ -1,0 +1,820 @@
+// Relatório do ciclo da lavadora (31/10/2026). Pedido do dono: importar o arquivo .sgolav que a lavadora grava a cada
+// ciclo e gerar o relatório A4 de uma folha, salvo, com a fita, gráfico, indicadores, conclusão (IA conferida ou regra) e
+// a assinatura do responsável pelo local feita na tela; cliente só vê e gera para os equipamentos dele.
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { ambiente, fixture, montarSgolav, abrirSgolav } = require('./_lavciclo_ambiente.cjs');
+
+const EXEMPLO = 'LOT-20261030-6222.sgolav';
+const PNG = 'data:image/png;base64,' + Buffer.from('assinatura de teste em png').toString('base64');
+const ler = (amb, conteudo) => amb.ctx.LavCicL_ler_(conteudo);
+
+// ---------------------------------------------------------------- leitor
+test('leitor: arquivo de exemplo (30/10/2026) com 14 fases, 16 eventos, acentos e horários certos', () => {
+  const amb = ambiente();
+  const r = ler(amb, fixture(EXEMPLO));
+  assert.equal(r.ok, true, r.message);
+  const c = r.ciclo;
+  assert.equal(c.lote, 'LOT-20261030-6222');
+  assert.equal(c.receita, 'INSTRUMENTAL PADRÃO');
+  assert.equal(c.operador, 'MANUTENÇÃO');
+  assert.equal(c.resultadoClasse, 'APROVADO');
+  assert.equal(c.fases.length, 14);
+  assert.equal(c.eventos.length, 16);
+  assert.equal(c.eventos[6].texto, 'FIM DE FASE: ENXÁGUE: DREN');
+  assert.equal(c.eventos[15].texto, 'CICLO CONCLUÍDO');
+  assert.deepEqual([c.inicio.data, c.inicio.hora, c.fim.hora], ['30/10/2026', '18:42:04', '19:35:54']);
+  assert.equal(c.fim.hora, '19:35:54', 'o término bate com o HORA do arquivo: o relógio da lavadora é gravado como UTC');
+  assert.equal(c.duracaoSeg, 3230);
+  assert.deepEqual([c.desinfeccao.nome, c.desinfeccao.duracaoSeg, c.desinfeccao.tempMax], ['DESINFETANDO', 960, 61.3]);
+  assert.equal(c.tempFinal, 49.9);
+  assert.equal(c.manutVencida, false);
+  assert.equal(c.codFalha, 0);
+  assert.equal(c.falha, '');
+  assert.equal(c.codificacao, 'UTF-8');
+  assert.equal(c.formato, 'COMPLETO');
+  assert.equal(r.avisos.length, 0);
+});
+
+test('leitor: arquivo antigo (sem o 4º campo das fases, sem épocas e sem código de falha) e eventos na ordem certa', () => {
+  const amb = ambiente();
+  const r = ler(amb, fixture('LOT-19700101-0010.sgolav'));
+  assert.equal(r.ok, true, r.message);
+  const c = r.ciclo;
+  assert.equal(c.formato, 'ANTIGO');
+  assert.equal(c.fases.length, 8);
+  assert.ok(c.fases.every((f) => f.inicioEpoch === null));
+  assert.equal(c.inicio.estimado, true);
+  assert.equal(c.fim.hora, '14:05:52');
+  assert.equal(c.duracaoFonte, 'FASES');
+  assert.match(c.eventos[0].texto, /CICLO INICIADO/, 'o firmware antigo gravava do mais novo para o mais velho');
+  assert.match(c.eventos[c.eventos.length - 1].texto, /CICLO CONCLUÍDO/);
+  assert.ok(r.avisos.some((a) => /revisão anterior do firmware/.test(a)));
+});
+
+test('leitor: temperatura INDISPONIVEL (fase e término) e início de fase INDISPONIVEL', () => {
+  const amb = ambiente();
+  const t = abrirSgolav(fixture(EXEMPLO)).replace('TEMPFINAL=49.9', 'TEMPFINAL=INDISPONIVEL').replace('FASE12=DESINFETANDO|960|61.3|1793387893', 'FASE12=DESINFETANDO|960|INDISPONIVEL|INDISPONIVEL');
+  const r = ler(amb, montarSgolav(t));
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.ciclo.tempFinal, null);
+  assert.equal(r.ciclo.fases[11].tempMax, null);
+  assert.equal(r.ciclo.fases[11].inicioEpoch, null);
+  assert.equal(r.ciclo.desinfeccao.tempMax, null);
+  const html = amb.ctx.LavCicD_linhasFita_(r.ciclo).map((l) => l.t).join('\n');
+  assert.match(html, /TEMP FINAL:\s+INDISPONIVEL/);
+  assert.match(html, /DESINFETANDO\s+960s INDISP/);
+});
+
+test('leitor: arquivo em Windows-1252 (acentos) é convertido', () => {
+  const amb = ambiente();
+  const t = abrirSgolav(fixture(EXEMPLO));
+  const r = ler(amb, montarSgolav(t, 'latin1'));
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.ciclo.codificacao, 'WINDOWS-1252');
+  assert.equal(r.ciclo.receita, 'INSTRUMENTAL PADRÃO');
+  assert.equal(r.ciclo.operador, 'MANUTENÇÃO');
+});
+
+test('leitor: arquivo inválido, alterado, truncado ou de outro tipo é recusado com o quê, por quê e o que fazer', () => {
+  const amb = ambiente();
+  const exemplo = fixture(EXEMPLO);
+  const casos = [
+    ['', 'VAZIO'],
+    ['Lote;Data\nLOT-1;30/10/2026\n', 'FORMATO'],
+    ['SGOLAV1\n', 'VAZIO'],
+    ['SGOLAV1\n!!!isto não é base64!!!\n', 'ALTERADO'],
+    [exemplo.slice(0, exemplo.length - 300), 'ALTERADO'],
+    [exemplo.replace(/^(SGOLAV1\r?\n)(.)(.)/, (m, a, x, y) => a + y + x), 'ALTERADO'],
+    [montarSgolav(abrirSgolav(exemplo).replace('FASES=14', 'FASES=15')), 'ALTERADO'],
+    [montarSgolav(abrirSgolav(exemplo).replace('EVENTOS=16', 'EVENTOS=12')), 'ALTERADO'],
+    [montarSgolav(abrirSgolav(exemplo).replace('FASE3=AQUECENDO|225|', 'FASE3=AQUECENDO|duzentos|')), 'ALTERADO'],
+    [montarSgolav(abrirSgolav(exemplo) + 'LOTE=LOT-OUTRO\n'), 'ALTERADO'],
+    [montarSgolav(abrirSgolav(exemplo).replace(/^RESULTADO=.*\n/m, '')), 'ALTERADO']
+  ];
+  for (const [conteudo, codigo] of casos) {
+    const r = ler(amb, conteudo);
+    assert.equal(r.ok, false, 'devia recusar: ' + conteudo.slice(0, 40));
+    assert.equal(r.codigo, codigo, r.message);
+    assert.match(r.message, /Por quê: .+ O que fazer: /, r.message);
+  }
+});
+
+test('leitor: campo futuro SERIE= que não bate com o equipamento é recusado; que bate passa; sem série no cadastro avisa', () => {
+  const amb = ambiente();
+  const t = abrirSgolav(fixture(EXEMPLO));
+  const outro = ler(amb, montarSgolav('SERIE=XYZ-999\n' + t)).ciclo;
+  assert.equal(outro.serie, 'XYZ-999');
+  const eq = amb.tabelas.CAD_EQUIPAMENTOS[0];
+  const r1 = amb.ctx.LavCicL_conferirEquipamento_(outro, eq);
+  assert.equal(r1.ok, false);
+  assert.match(r1.message, /outro equipamento.*Por quê: .*XYZ-999.*LUS0001.*O que fazer/);
+  const certo = ler(amb, montarSgolav(t + 'SERIE=lus-0001\n')).ciclo;
+  assert.equal(amb.ctx.LavCicL_conferirEquipamento_(certo, eq).ok, true, 'compara sem pontuação nem caixa');
+  const porTag = ler(amb, montarSgolav(t + 'EQUIPAMENTO=LAV-01\n')).ciclo;
+  assert.equal(amb.ctx.LavCicL_conferirEquipamento_(porTag, eq).ok, true);
+  const semSerie = amb.ctx.LavCicL_conferirEquipamento_(outro, amb.tabelas.CAD_EQUIPAMENTOS[1]);
+  assert.equal(semSerie.ok, true);
+  assert.match(semSerie.aviso, /sem número de série/);
+  // pela API: a importação é recusada e nada é gravado
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: 'LOT-20261030-6222.sgolav', texto: montarSgolav('SERIE=XYZ-999\n' + t) });
+  assert.equal(g.ok, false);
+  assert.match(g.message, /outro equipamento/);
+  assert.equal((amb.tabelas.LAVCIC_RELATORIOS || []).length, 0);
+});
+
+test('leitor: os arquivos reais da lavadora (fixtures e, se existir no computador, o backup de 59 arquivos) são todos lidos', () => {
+  const amb = ambiente();
+  const pastas = [path.join(__dirname, 'fixtures/lavciclo'), 'C:/Users/venda/Documents/LAVADORA/REV20261026/SD_BACKUP_20261027_ORIGINAL/lavadora/export'].filter((p) => fs.existsSync(p));
+  let n = 0;
+  for (const p of pastas) for (const f of fs.readdirSync(p).filter((x) => x.endsWith('.sgolav'))) {
+    const r = ler(amb, fs.readFileSync(path.join(p, f), 'latin1'));
+    assert.equal(r.ok, true, f + ': ' + r.message);
+    assert.equal(r.ciclo.lote + '.sgolav', f);
+    n++;
+  }
+  assert.ok(n >= 5);
+});
+
+// ---------------------------------------------------------------- conferência, geração e lote repetido
+test('conferir mostra lote, data, horário, receita e resultado sem gravar nada', () => {
+  const amb = ambiente();
+  const r = amb.api('s_tec', 'conferir', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(r.ok, true, r.message);
+  assert.deepEqual([r.conferencia.lote, r.conferencia.data, r.conferencia.horaInicio, r.conferencia.horaFim, r.conferencia.receita, r.conferencia.resultado],
+    ['LOT-20261030-6222', '30/10/2026', '18:42', '19:35', 'INSTRUMENTAL PADRÃO', 'APROVADO']);
+  assert.equal(r.duplicado, null);
+  assert.equal((amb.tabelas.LAVCIC_RELATORIOS || []).length, 0);
+  const csv = amb.api('s_tec', 'conferir', { equipamentoId: 'eq1', nomeArquivo: 'LOT-20261030-6222.csv', texto: 'a;b' });
+  assert.equal(csv.ok, false);
+  assert.match(csv.message, /só o \.sgolav/);
+});
+
+test('gerar: relatório A4 de uma folha com fita, gráfico, indicadores, conclusão por regra (sem chave) e dados do cadastro', () => {
+  const amb = ambiente();
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(g.ok, true, g.message);
+  assert.equal(g.relatorio.numero, 'RCL-2026-0001');
+  assert.equal(g.relatorio.versao, 1);
+  assert.equal(amb.chamadasIa.length, 0, 'sem chave, a IA nem é chamada');
+  const linha = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(linha.CONCLUSAO_ORIGEM, 'REGRA');
+  assert.match(linha.CONCLUSAO_MOTIVO, /chave da IA não está cadastrada/);
+  assert.equal(linha.SALVO, 'SIM');
+  assert.equal(linha.CLIENTE_ID, 'c1');
+  assert.equal(linha.PAGINAS, 1);
+  const html = amb.arquivos[linha.HTML_ID].bytes.toString('utf8');
+  // cadastro (nunca do arquivo)
+  for (const t of ['HOSPITAL TESTE ALFA LTDA', '11.222.333/0001-81', 'Unidade Centro', 'CME', 'Lavadora ultrassônica', '<th>Fabricante</th><td>FABRICANTE TESTE</td>', 'LUS-60', 'LUS0001', 'Patrimônio PAT-778 · TAG LAV-01', '<th>Identificação</th>']) assert.ok(html.includes(t), 'falta ' + t);
+  // fita reproduzida como o ticket do firmware
+  for (const t of ['METROLABS', 'SGO+ MEDICAL WASHER', 'TÉRMINO DE CICLO', 'LOTE:          LOT-20261030-6222', 'INÍCIO:              30/10 18:42', 'DURAÇÃO:                00:53:50', 'TEMP FINAL:               49.9 C', '[ APROVADO ]', 'DESINFETANDO    960s  61.3C', 'ÚLTIMOS EVENTOS', '* FIM DE IMPRESSÃO *']) assert.ok(html.includes(t), 'fita sem ' + t);
+  assert.ok(!html.includes('CICLO INICIADO: INSTRUMENTA'), 'como no papel, só os 8 últimos eventos');
+  // gráfico, indicadores, conclusão e campo de aprovação
+  assert.match(html, /<svg[^>]+Temperatura máxima por fase/);
+  assert.match(html, /61,3 °C · 16 min 00 s/);
+  for (const t of ['Desinfecção térmica: temperatura máxima', '16 min 00 s', '53 min 50 s', '49,9 °C', 'Em dia', 'Nenhuma']) assert.ok(html.includes(t), 'indicador sem ' + t);
+  assert.match(html, /Sem valor de referência cadastrado para a receita INSTRUMENTAL PADRÃO/);
+  assert.match(html, /Conclusão escrita por regra fixa do sistema/);
+  assert.match(html, /foi concluído pela lavadora com o resultado APROVADO e sem registro de falha/);
+  assert.match(html, /temperatura máxima registrada foi de 61,3 °C, com duração de 16 min 00 s/);
+  assert.match(html, /Aguardando a assinatura do responsável pelo local/);
+  assert.match(html, new RegExp('resumo SHA-256 ' + linha.ARQUIVO_SHA256));
+  assert.ok(!/A0|NBR/.test(html.replace(/data:[^"')]+/g, '').replace(/<style>[\s\S]*?<\/style>/g, '')), 'sem critério normativo nem A0');
+  // arquivo original guardado e restrito
+  assert.match(amb.arquivos[linha.ARQUIVO_ID].compartilhamento, /^RESTRITO/);
+  assert.equal(linha.HASH_DOCUMENTO.length, 64);
+  // pasta: <CNPJ>/<TAG - tipo>/Relatórios de ciclo
+  const pasta = amb.pastas[amb.arquivos[linha.PDF_ID].pasta];
+  assert.equal(pasta.nome, 'Relatórios de ciclo');
+  assert.equal(amb.pastas[pasta.pai].nome, 'LAV-01 - Lavadora ultrassônica');
+  assert.equal(amb.pastas[amb.pastas[pasta.pai].pai].nome, '11222333000181');
+});
+
+test('o mesmo lote nunca é importado duas vezes para o mesmo equipamento: devolve o relatório que já existe', () => {
+  const amb = ambiente();
+  const a = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(a.ok, true);
+  const c = amb.api('s_cli', 'conferir', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(c.duplicado.id, a.relatorio.id);
+  const b = amb.api('s_dir', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO).replace(/\n/g, '\r\n') });
+  assert.equal(b.ok, true);
+  assert.equal(b.duplicado, true);
+  assert.equal(b.relatorio.id, a.relatorio.id);
+  assert.match(b.message, /já foi importado.*Por quê: .*O que fazer: abra o relatório que já existe/);
+  assert.equal(amb.tabelas.LAVCIC_RELATORIOS.length, 1);
+  // o mesmo lote em outro equipamento é outro relatório
+  const outro = amb.api('s_dir', 'gerar', { equipamentoId: 'eq2', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(outro.ok, true);
+  assert.notEqual(outro.duplicado, true);
+});
+
+test('ciclo cancelado também gera relatório, com a falha em destaque', () => {
+  const amb = ambiente();
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: 'LOT-20261017-0074.sgolav', texto: fixture('LOT-20261017-0074.sgolav') });
+  assert.equal(g.ok, true, g.message);
+  const linha = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(linha.RESULTADO_CLASSE, 'CANCELADO');
+  const html = amb.arquivos[linha.HTML_ID].bytes.toString('utf8');
+  assert.match(html, /<span class="val">CANCELADO<\/span><span class="mot">Falha: TIMEOUT DRENAGEM: OBSTRUÇÃO \(código 3\), na fase ENX-DRENA\. A carga não deve ser liberada/);
+  assert.match(html, /class="resultado lc-res nok"/);
+  assert.match(html, /CICLO CANCELADO/);
+  assert.match(html, /A carga não deve ser liberada com base neste ciclo/);
+  assert.match(linha.CONCLUSAO_TEXTO, /foi encerrado pela lavadora com o resultado CANCELADO\. A falha registrada foi "TIMEOUT DRENAGEM: OBSTRUÇÃO" \(código 3\), e a última fase registrada foi ENX-DRENA/);
+  assert.match(html, /Cancelamento/);
+});
+
+// ---------------------------------------------------------------- conclusão pela IA, conferida
+test('conclusão: sem chave usa a regra; IA que inventa número, troca o resultado ou cita norma é recusada; IA correta é usada', () => {
+  const ok = 'O ciclo do lote LOT-20261030-6222, receita INSTRUMENTAL PADRÃO, foi realizado em 30/10/2026, das 18:42 às 19:35, e a lavadora registrou o resultado APROVADO, sem falha, com duração total de 53 min 50 s em 14 fases. Na desinfecção térmica, a temperatura máxima registrada foi de 61,3 °C por 16 min 00 s. O arquivo registra a temperatura máxima de cada fase, e não a curva contínua.';
+  const casos = [
+    [ok.replace('61,3 °C', '93,0 °C'), /número 93,0/],
+    [ok.replace('APROVADO, sem falha', 'REPROVADO'), /resultado diferente|não disse/],
+    [ok + ' O valor de A0 atendeu à norma.', /norma/],
+    [ok.replace('61,3 °C por ', 'por '), /temperatura máxima da desinfecção/]
+  ];
+  for (const [resposta, motivo] of casos) {
+    const amb = ambiente({ props: { GEMINI_API_KEY: 'chave-de-teste' }, respostaIa: resposta });
+    const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+    assert.equal(g.ok, true);
+    const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+    assert.equal(l.CONCLUSAO_ORIGEM, 'REGRA', resposta);
+    assert.match(l.CONCLUSAO_MOTIVO, motivo);
+    assert.match(g.html, /Conclusão escrita pela regra fixa do sistema \(o texto da IA foi recusado/);
+  }
+  const amb = ambiente({ props: { GEMINI_API_KEY: 'chave-de-teste' }, respostaIa: ok });
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.CONCLUSAO_ORIGEM, 'IA', l.CONCLUSAO_MOTIVO);
+  assert.equal(amb.chamadasIa.length, 1);
+  assert.match(JSON.stringify(amb.chamadasIa[0].corpo), /61,3 °C/, 'a IA recebe só os dados do arquivo');
+  assert.match(amb.arquivos[l.HTML_ID].bytes.toString('utf8'), /Redação assistida por inteligência artificial a partir dos dados do arquivo e conferida/);
+  // IA fora do ar: regra
+  const fora = ambiente({ props: { GEMINI_API_KEY: 'chave-de-teste' }, falharIa: true });
+  fora.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(fora.tabelas.LAVCIC_RELATORIOS[0].CONCLUSAO_ORIGEM, 'REGRA');
+  assert.match(fora.tabelas.LAVCIC_RELATORIOS[0].CONCLUSAO_MOTIVO, /a IA não respondeu/);
+});
+
+test('conclusão por regra com referência da receita (a confirmar) e manutenção vencida', () => {
+  const amb = ambiente();
+  const sal = amb.api('s_met', 'referencias', { salvar: { receita: 'instrumental padrão', tempMin: '60', tempoMinMin: '10', motivo: 'parâmetro do ensaio de qualificação de teste' } });
+  assert.equal(sal.ok, true, sal.message);
+  const t = abrirSgolav(fixture(EXEMPLO)).replace('MANUTVENCIDA=NAO', 'MANUTVENCIDA=SIM');
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: montarSgolav(t) });
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  const html = amb.arquivos[l.HTML_ID].bytes.toString('utf8');
+  assert.match(html, /Referência cadastrada para a receita INSTRUMENTAL PADRÃO: temperatura máxima na desinfecção de pelo menos 60,0 °C e duração da desinfecção de pelo menos 10 min 00 s \(a confirmar pelo responsável técnico\)/);
+  assert.match(html, /a temperatura máxima atingiu o valor de referência de 60,0 °C e a duração atendeu ao tempo de referência de 10 min 00 s/);
+  assert.match(html, /\[ MANUTENÇÃO VENCIDA \]/);
+  assert.match(html, /indicava manutenção preventiva vencida/);
+  assert.match(html, /referência 60,0 °C/, 'linha da referência no gráfico');
+  // técnico e cliente não cadastram referência
+  assert.equal(amb.api('s_tec', 'referencias', { salvar: { receita: 'X', tempMin: '60', motivo: 'motivo qualquer de teste' } }).ok, false);
+  assert.equal(amb.api('s_cli', 'referencias', { salvar: { receita: 'X', tempMin: '60', motivo: 'motivo qualquer de teste' } }).ok, false);
+});
+
+// ---------------------------------------------------------------- assinatura na tela, trava e nova versão
+test('assinatura: grava imagem, nome, cargo, data, hora, usuário e hash; depois trava; correção só por nova versão com motivo', () => {
+  const amb = ambiente();
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  const id = g.relatorio.id;
+  const falta = amb.api('s_cli', 'assinar', { id, nome: 'Ma', cargo: '', imagem: '', conferi: false });
+  assert.equal(falta.ok, false);
+  assert.deepEqual(falta.faltam.map((f) => f.campo), ['nome', 'cargo', 'assinatura', 'conferi']);
+  const antes = amb.tabelas.LAVCIC_RELATORIOS[0];
+  const hashAntes = antes.HASH_DOCUMENTO, htmlAntes = antes.HTML_ID;
+  const a = amb.api('s_cli', 'assinar', { id, nome: 'Maria Cliente Alfa', cargo: 'Enfermeira responsável pela CME', imagem: PNG, conferi: true });
+  assert.equal(a.ok, true, a.message);
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.ASSINADO, 'SIM');
+  assert.equal(l.ASSINANTE_NOME, 'Maria Cliente Alfa');
+  assert.equal(l.ASSINANTE_CARGO, 'Enfermeira responsável pela CME');
+  assert.equal(l.ASSINADO_EM, '2026-10-31T10:00:00');
+  assert.equal(l.ASSINADO_POR_ID, 'u_cli');
+  assert.equal(l.HTML_ID_SEM_ASSINATURA, htmlAntes, 'o documento sem assinatura continua guardado');
+  assert.match(amb.arquivos[l.ASSINATURA_ID].compartilhamento, /^RESTRITO/);
+  assert.equal(l.ASSINATURA_SHA256.length, 64);
+  const html = amb.arquivos[l.HTML_ID].bytes.toString('utf8');
+  assert.ok(html.includes('<img src="' + PNG + '"'), 'a imagem da assinatura vai no documento');
+  for (const t of ['Maria Cliente Alfa', 'Enfermeira responsável pela CME', '31/10/2026 às 10:00', 'MARIA CLIENTE ALFA TESTE (maria@alfa.exemplo.test)', hashAntes]) assert.ok(html.includes(t), 'documento assinado sem ' + t);
+  assert.ok(!html.includes('Aguardando a assinatura'));
+  // travado
+  const de2 = amb.api('s_dir', 'assinar', { id, nome: 'Outra Pessoa', cargo: 'Gerente', imagem: PNG, conferi: true });
+  assert.equal(de2.ok, false);
+  assert.match(de2.message, /já foi assinado por Maria Cliente Alfa.*Por quê: depois de assinado, o documento fica travado.*O que fazer: .*nova versão/);
+  // cliente não gera nova versão; equipe interna gera, com motivo
+  assert.equal(amb.api('s_cli', 'novaVersao', { id, motivo: 'quero corrigir o setor da máquina' }).ok, false);
+  const sem = amb.api('s_tec', 'novaVersao', { id, motivo: 'curto' });
+  assert.equal(sem.ok, false);
+  assert.equal(sem.faltam[0].campo, 'motivo');
+  amb.tabelas.CAD_EQUIPAMENTOS[0].SETOR = 'CME - Expurgo';
+  const nv = amb.api('s_tec', 'novaVersao', { id, motivo: 'setor da máquina corrigido no cadastro' });
+  assert.equal(nv.ok, true, nv.message);
+  assert.equal(nv.relatorio.versao, 2);
+  assert.equal(nv.relatorio.numero, 'RCL-2026-0001');
+  const [v1, v2] = amb.tabelas.LAVCIC_RELATORIOS;
+  assert.equal(v1.SITUACAO, 'SUBSTITUIDO');
+  assert.equal(v1.SUBSTITUIDO_POR_ID, v2.ID);
+  assert.equal(v1.ASSINADO, 'SIM', 'a anterior continua como estava');
+  assert.equal(v2.ASSINADO, '');
+  const h2 = amb.arquivos[v2.HTML_ID].bytes.toString('utf8');
+  assert.match(h2, /Versão 2, substitui a versão 1 \(motivo: setor da máquina corrigido no cadastro\)/);
+  assert.match(h2, /Revisão 01/);
+  assert.match(h2, /CME - Expurgo/);
+  // a versão substituída não é assinada; a nova é
+  assert.match(amb.api('s_cli', 'assinar', { id: v1.ID, nome: 'Maria Cliente Alfa', cargo: 'Enfermeira', imagem: PNG, conferi: true }).message, /substituída/);
+  assert.equal(amb.api('s_cli', 'assinar', { id: v2.ID, nome: 'Maria Cliente Alfa', cargo: 'Enfermeira', imagem: PNG, conferi: true }).ok, true);
+  // a lista mostra só a versão em vigor; o lote continua sem duplicar
+  const lista = amb.api('s_dir', 'listar', {});
+  assert.equal(lista.total, 1);
+  assert.equal(lista.relatorios[0].versao, 2);
+  const ab = amb.api('s_dir', 'abrir', { id: v2.ID });
+  assert.equal(ab.relatorio.versoes.length, 2);
+  assert.ok(ab.relatorio.historico.some((h) => h.tipo === 'ASSINADO'));
+  assert.equal(amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) }).relatorio.id, v2.ID);
+});
+
+// ---------------------------------------------------------------- acesso do cliente
+test('cliente vê e gera só para os equipamentos dele, também na rota /arquivos', () => {
+  const amb = ambiente();
+  const gAlfa = amb.api('s_cli', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(gAlfa.ok, true, gAlfa.message);
+  const gBeta = amb.api('s_tec', 'gerar', { equipamentoId: 'eq2', nomeArquivo: 'LOT-20261017-0077.sgolav', texto: fixture('LOT-20261017-0077.sgolav') });
+  assert.equal(gBeta.ok, true, gBeta.message);
+  // lista de equipamentos e de relatórios
+  const iniAlfa = amb.api('s_cli', 'iniciar');
+  assert.equal(iniAlfa.equipamentos, undefined, 'a entrada não manda a lista de lavadoras');
+  assert.equal(iniAlfa.eu.clienteNome, 'Hospital Teste Alfa');
+  const todasAlfa = amb.api('s_cli', 'buscar', { todas: true });
+  assert.deepEqual(todasAlfa.equipamentos.map((e) => e.id), ['eq1'], 'só a lavadora dele (a autoclave não entra)');
+  assert.equal(todasAlfa.equipamentos[0].podeCompletar, false);
+  assert.deepEqual(amb.api('s_cli', 'listar', {}).relatorios.map((r) => r.lote), ['LOT-20261030-6222']);
+  assert.deepEqual(amb.api('s_cli2', 'listar', {}).relatorios.map((r) => r.lote), ['LOT-20261017-0077']);
+  assert.equal(amb.api('s_dir', 'listar', {}).total, 2);
+  assert.equal(amb.api('s_com', 'listar', {}).total, 2, 'equipe interna vê todos');
+  // equipamento e relatório de outro cliente: recusa
+  for (const [acao, dados] of [['equipamento', { id: 'eq2' }], ['conferir', { equipamentoId: 'eq2', texto: fixture(EXEMPLO), nomeArquivo: EXEMPLO }], ['gerar', { equipamentoId: 'eq2', texto: fixture('LOT-20261017-0074.sgolav'), nomeArquivo: 'LOT-20261017-0074.sgolav' }], ['abrir', { id: gBeta.relatorio.id }], ['assinar', { id: gBeta.relatorio.id, nome: 'Maria', cargo: 'Enfermeira', imagem: PNG, conferi: true }]]) {
+    const r = amb.api('s_cli', acao, dados);
+    assert.equal(r.ok, false, acao);
+    assert.match(r.message, /não pertence à sua empresa|não é de um equipamento da sua empresa/, acao + ': ' + r.message);
+  }
+  // rota /arquivos: HTML e PDF dos relatórios dele sim; dos outros não; o .sgolav e a assinatura nunca
+  const [la, lb] = amb.tabelas.LAVCIC_RELATORIOS;
+  const perm = (sid, id) => amb.ctx.Representacao_arquivoClientePermitido_(sid, id);
+  assert.equal(perm('s_cli', la.HTML_ID), true);
+  assert.equal(perm('s_cli', la.PDF_ID), true);
+  assert.equal(perm('s_cli', lb.HTML_ID), false);
+  assert.equal(perm('s_cli', lb.PDF_ID), false);
+  assert.equal(perm('s_cli2', lb.PDF_ID), true);
+  assert.equal(perm('s_cli', la.ARQUIVO_ID), false);
+  assert.equal(amb.ctx.LavCic_arquivoClientePermitido_('s_cli', 'arquivo-que-nao-e-do-modulo'), null, 'arquivo de outro módulo segue a regra de sempre');
+  // sem vínculo de cliente e representada: sem acesso, com o motivo
+  const sem = amb.api('s_semcli', 'iniciar');
+  assert.equal(sem.ok, false);
+  assert.match(sem.message, /não está ligado a nenhum cliente.*Por quê: .*O que fazer: /);
+  assert.equal(amb.api('s_rep', 'iniciar').ok, false);
+});
+
+test('cadastro incompleto: o relatório sai e a tela diz o que falta, com o atalho só para quem pode completar', () => {
+  const amb = ambiente();
+  const c = amb.api('s_cli2', 'conferir', { equipamentoId: 'eq2', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(c.ok, true);
+  assert.deepEqual(c.faltam, ['CNPJ do cliente', 'unidade', 'setor onde está instalado', 'fabricante', 'modelo', 'número de série']);
+  assert.equal(c.podeCompletar, false);
+  const t = amb.api('s_tec', 'conferir', { equipamentoId: 'eq2', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(t.podeCompletar, true);
+  const g = amb.api('s_cli2', 'gerar', { equipamentoId: 'eq2', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  assert.equal(g.ok, true);
+  assert.match(g.message, /O cadastro do equipamento está sem CNPJ do cliente, unidade/);
+  assert.match(g.html, /O cadastro do equipamento está sem: .*gere uma nova versão/);
+  const html = amb.arquivos[amb.tabelas.LAVCIC_RELATORIOS[0].HTML_ID].bytes.toString('utf8');
+  assert.match(html, /<th>Nº de série<\/th><td>—<\/td>/);
+  assert.ok(!/aviso-tela/.test(html.replace(/\.aviso-tela[^{]*\{[^}]*\}/g, '')), 'a faixa de aviso é só de tela, não vai para o arquivo');
+});
+
+test('lista com busca por lote, período, resultado e assinatura; nenhum Date cru no retorno', () => {
+  const amb = ambiente();
+  for (const f of ['LOT-20261030-6222.sgolav', 'LOT-20261017-0074.sgolav', 'LOT-20261017-0077.sgolav', 'LOT-20260928-0060.sgolav']) amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: f, texto: fixture(f) });
+  const t = (d) => amb.api('s_dir', 'listar', d).relatorios.map((r) => r.lote);
+  assert.deepEqual(t({}), ['LOT-20261030-6222', 'LOT-20261017-0077', 'LOT-20261017-0074', 'LOT-20260928-0060']);
+  assert.deepEqual(t({ busca: '0074' }), ['LOT-20261017-0074']);
+  assert.deepEqual(t({ de: '2026-10-01', ate: '2026-10-20' }), ['LOT-20261017-0077', 'LOT-20261017-0074']);
+  assert.deepEqual(t({ resultado: 'CANCELADO' }), ['LOT-20261017-0074', 'LOT-20260928-0060']);
+  assert.deepEqual(t({ assinatura: 'SIM' }), []);
+  const l = amb.api('s_dir', 'listar', {});
+  assert.deepEqual(l.resumo, { aprovados: 2, naoAprovados: 2, naoLiberados: 0, semAssinatura: 4 });
+  const semDate = (o) => JSON.stringify(o) === JSON.stringify(JSON.parse(JSON.stringify(o)));
+  assert.ok(semDate(l));
+  const todas = amb.api('s_dir', 'buscar', { todas: true });
+  assert.equal(todas.equipamentos.find((e) => e.id === 'eq1').relatorios, 4);
+  assert.equal(todas.equipamentos.find((e) => e.id === 'eq1').ultimo.lote, 'LOT-20261030-6222');
+  assert.deepEqual(t({ resultado: 'NAO_APROVADO' }), ['LOT-20261017-0074', 'LOT-20260928-0060']);
+});
+
+// ---------------------------------------------------------------- entrada: painel e busca única (31/10/2026)
+// Pedido do dono: "quando entro já são mostrando um monte de lavadora [...] mostra uma Dashboard, um Kanban e a busca por
+// nome ou CNPJ ou número de série ou tag, enfim só aí mostra, sem já mostrar uma lista de máquina".
+test('entrada: índices e Kanban por situação, sem a lista de lavadoras; o cliente vê só os números dele', () => {
+  const amb = ambiente();
+  for (const f of ['LOT-20261030-6222.sgolav', 'LOT-20261017-0074.sgolav', 'LOT-20261017-0077.sgolav', 'LOT-20260928-0060.sgolav']) amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: f, texto: fixture(f) });
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq2', nomeArquivo: 'LOT-20261017-0077.sgolav', texto: fixture('LOT-20261017-0077.sgolav') });
+  // um assinado e uma nova versão sem assinatura
+  const lista = amb.api('s_dir', 'listar', {}).relatorios;
+  const r6222 = lista.find((r) => r.lote === 'LOT-20261030-6222'), r0077 = lista.find((r) => r.lote === 'LOT-20261017-0077' && r.equipamentoId === 'eq1');
+  assert.equal(amb.api('s_cli', 'assinar', { id: r6222.id, nome: 'Maria Enfermeira', cargo: 'Enfermeira da CME', imagem: PNG, conferi: true }).ok, true);
+  assert.equal(amb.api('s_dir', 'novaVersao', { id: r0077.id, motivo: 'série completada no cadastro' }).ok, true);
+  const ini = amb.api('s_dir', 'iniciar');
+  assert.equal(ini.ok, true, ini.message);
+  assert.equal(ini.equipamentos, undefined);
+  const i = ini.painel.indices;
+  assert.equal(i.lavadoras, 2, 'as duas lavadoras ativas (a autoclave não conta)');
+  assert.equal(i.relatorios, 5);
+  assert.equal(i.aguardando, 4);
+  assert.equal(i.assinados, 1);
+  assert.equal(i.aprovados, 3);
+  assert.equal(i.naoAprovados, 2);
+  assert.equal(i.novasVersoes, 1);
+  assert.equal(i.noMes, 4, 'ciclos de outubro de 2026 (6222, 0074, 0077 e 0077 da Beta)');
+  assert.equal(i.cadastroIncompleto, 1, 'a lavadora da Beta está sem série, modelo, setor...');
+  const col = (k) => ini.painel.kanban.find((c) => c.chave === k);
+  assert.deepEqual(ini.painel.kanban.map((c) => c.chave), ['AGUARDANDO', 'NOVA_VERSAO', 'FALHA', 'ASSINADO']);
+  assert.deepEqual(col('FALHA').itens.map((x) => x.lote), ['LOT-20261017-0074', 'LOT-20260928-0060']);
+  assert.deepEqual(col('ASSINADO').itens.map((x) => x.lote), ['LOT-20261030-6222']);
+  assert.deepEqual(col('NOVA_VERSAO').itens.map((x) => [x.lote, x.versao]), [['LOT-20261017-0077', 2]]);
+  assert.equal(col('AGUARDANDO').qtd, 1);
+  assert.equal(col('AGUARDANDO').itens[0].cliente, 'Clínica Teste Beta', 'a equipe vê o cliente no cartão');
+  assert.equal(col('ASSINADO').itens[0].equipamento, 'TAG LAV-01 · série LUS0001');
+  // "Ver todos" de uma coluna: a busca pela situação traz os mesmos
+  assert.deepEqual(amb.api('s_dir', 'buscar', { situacao: 'FALHA' }).relatorios.map((r) => r.lote), ['LOT-20261017-0074', 'LOT-20260928-0060']);
+  assert.equal(amb.api('s_dir', 'buscar', { situacao: 'FALHA' }).equipamentos.length, 0, 'filtro sem texto não lista lavadoras');
+  // cliente: só os números e os cartões das lavadoras dele, sem o nome do cliente no cartão
+  const cli = amb.api('s_cli', 'iniciar').painel;
+  assert.equal(cli.indices.lavadoras, 1);
+  assert.equal(cli.indices.relatorios, 4);
+  assert.equal(cli.indices.cadastroIncompleto, 0);
+  assert.ok(cli.kanban.every((c) => c.itens.every((x) => x.cliente === '')));
+  assert.ok(!JSON.stringify(cli).includes('Beta'), 'nada da outra empresa');
+  const cli2 = amb.api('s_cli2', 'iniciar').painel;
+  assert.equal(cli2.indices.relatorios, 1);
+  assert.deepEqual(cli2.kanban.find((c) => c.chave === 'AGUARDANDO').itens.map((x) => x.lote), ['LOT-20261017-0077']);
+  const semDate = (o) => JSON.stringify(o) === JSON.stringify(JSON.parse(JSON.stringify(o)));
+  assert.ok(semDate(ini));
+});
+
+test('busca única: cliente, CNPJ (com ou sem máscara), série, TAG, patrimônio, modelo e lote, sem acento; o cliente não acha o que é de outro', () => {
+  const amb = ambiente();
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq2', nomeArquivo: 'LOT-20261017-0077.sgolav', texto: fixture('LOT-20261017-0077.sgolav') });
+  const eqs = (sid, termo) => amb.api(sid, 'buscar', { termo }).equipamentos.map((e) => e.id);
+  const rels = (sid, termo) => amb.api(sid, 'buscar', { termo }).relatorios.map((r) => r.lote);
+  assert.deepEqual(eqs('s_dir', 'hospital alfa'), ['eq1'], 'palavras do nome do cliente, em qualquer ordem e caixa');
+  assert.deepEqual(eqs('s_dir', 'clinica'), ['eq2'], 'sem acento acha CLÍNICA');
+  assert.deepEqual(eqs('s_dir', '11.222.333/0001-81'), ['eq1'], 'CNPJ com máscara');
+  assert.deepEqual(eqs('s_dir', '11222333'), ['eq1'], 'CNPJ só com os números');
+  assert.deepEqual(eqs('s_dir', 'LUS0001'), ['eq1'], 'número de série');
+  assert.deepEqual(eqs('s_dir', 'beta-lav'), ['eq2'], 'TAG');
+  assert.deepEqual(eqs('s_dir', 'PAT-778'), ['eq1'], 'patrimônio');
+  assert.deepEqual(eqs('s_dir', 'lus-60'), ['eq1'], 'modelo');
+  assert.deepEqual(eqs('s_dir', 'AC-01'), [], 'a autoclave não é lavadora');
+  assert.deepEqual(rels('s_dir', '6222'), ['LOT-20261030-6222'], 'parte do lote');
+  assert.deepEqual(rels('s_dir', 'hospital alfa'), ['LOT-20261030-6222'], 'relatórios das lavadoras do cliente');
+  assert.deepEqual(rels('s_dir', 'instrumental padrao'), ['LOT-20261030-6222', 'LOT-20261017-0077'], 'receita sem acento');
+  assert.deepEqual(eqs('s_dir', 'nada que exista'), []);
+  // o cliente da Alfa não acha a lavadora nem o relatório da Beta, nem pelo nome, nem pela TAG, nem pelo lote
+  assert.deepEqual(eqs('s_cli', 'beta'), []);
+  assert.deepEqual(eqs('s_cli', 'BETA-LAV'), []);
+  assert.deepEqual(rels('s_cli', '0077'), []);
+  assert.deepEqual(eqs('s_cli', 'lus0001'), ['eq1']);
+  // sem termo e sem filtro: recusa com o que fazer; 1 letra só: recusa; datas trocadas: recusa
+  const vazio = amb.api('s_dir', 'buscar', {});
+  assert.equal(vazio.ok, false);
+  assert.match(vazio.message, /O que fazer: escreva o nome do cliente, o CNPJ/);
+  assert.match(amb.api('s_dir', 'buscar', { termo: 'a' }).message, /pelo menos 2 letras ou números/);
+  assert.match(amb.api('s_dir', 'buscar', { de: '2026-10-30', ate: '2026-10-01' }).message, /"De" está depois da data "Até"/);
+  // a lavadora escolhida: o cartão dela e os relatórios dela
+  const deEq = amb.api('s_dir', 'buscar', { equipamentoId: 'eq1' });
+  assert.deepEqual([deEq.equipamentos.map((e) => e.id), deEq.relatorios.map((r) => r.lote)], [['eq1'], ['LOT-20261030-6222']]);
+  assert.equal(amb.api('s_cli', 'buscar', { equipamentoId: 'eq2' }).equipamentos.length, 0, 'cliente não abre a lavadora de outro pelo id');
+  assert.equal(amb.api('s_cli', 'buscar', { equipamentoId: 'eq2' }).totalRelatorios, 0);
+});
+
+test('tela: a entrada não lista lavadoras; o documento A4 cabe na tela do celular e volta à escala 1 na impressão', () => {
+  const pasta = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
+  const tela = fs.readFileSync(path.join(pasta, 'JS_LavCiclo.html'), 'utf8');
+  const iniciar = /function Lc_iniciar_\(depois\) \{[\s\S]*?\n  \}/.exec(tela)[0];
+  assert.match(iniciar, /Lc_chamar_\("iniciar"/);
+  assert.ok(!/"buscar"|"listar"/.test(iniciar), 'a entrada não pede a lista de lavadoras ao servidor');
+  assert.match(tela, /Lc_chamar_\("buscar"/);
+  assert.match(tela, /touch-action: none/);
+  const amb = ambiente();
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: EXEMPLO, texto: fixture(EXEMPLO) });
+  const html = amb.arquivos[amb.tabelas.LAVCIC_RELATORIOS[0].HTML_ID].bytes.toString('utf8');
+  assert.equal(g.ok, true);
+  assert.match(html, /@media screen\{\.folha\{max-width:none\}/, 'na tela a folha fica com a largura do A4');
+  assert.match(html, /@media print\{\.folha\{zoom:1!important\}\}/, 'na impressão a escala volta a 1');
+  assert.match(html, /f\.style\.zoom=/, 'o script reduz a folha inteira na tela estreita');
+  assert.ok(!/max-width:640px\)\{\.lc-grade\{grid-template-columns:1fr\}/.test(html), 'a folha não muda de disposição no celular');
+  assert.match(html, /table\.lc-ficha td,[^{]*\{overflow-wrap:anywhere/, 'texto longo quebra dentro da caixa');
+});
+
+// ---------------------------------------------------------------- cadastro do equipamento (31/10/2026)
+// Conferência pedida pela coordenação: a lavadora real cadastrada em produção parecia ter os valores deslocados de coluna.
+// Lido o banco (só leitura): o registro está certo na planilha do SGO+; o cabeçalho "TIPO, MARCA, MODELO, SERIE, VOLUME,
+// BOMBA_VACUO..." é de outra planilha (METROLABS_CME_DB). Este teste trava a regra: o formulário manda chaves com o nome
+// das colunas de CAD_EQUIPAMENTOS e o SGO_DATA grava por nome de cabeçalho, nunca por posição.
+test('cadastro de equipamento: o formulário só envia colunas de CAD_EQUIPAMENTOS e a gravação é por nome do cabeçalho', () => {
+  const pasta = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
+  const tela = fs.readFileSync(path.join(pasta, 'JS_Equipamentos.html'), 'utf8');
+  const m = /function Equipamentos_salvar_\(id\) \{[\s\S]*?var p = \{([\s\S]*?)\};/.exec(tela);
+  assert.ok(m, 'Equipamentos_salvar_ não encontrado');
+  const chaves = [...m[1].matchAll(/([A-Z_]+):\s*getValue_\("([a-z_]+)"\)/g)].map((x) => ({ coluna: x[1], campo: x[2] }));
+  assert.ok(chaves.length >= 10);
+  const setup = fs.readFileSync(path.join(pasta, 'SGO_Setup.js'), 'utf8');
+  const bloco = /setupTabela\(SGO_CFG\.SHEETS\.CAD_EQUIPAMENTOS, \[([\s\S]*?)\]\);/.exec(setup)[1];
+  const colunas = [...bloco.matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
+  for (const k of chaves) assert.ok(colunas.includes(k.coluna), 'o campo ' + k.campo + ' grava em ' + k.coluna + ', que não é coluna de CAD_EQUIPAMENTOS');
+  const pares = { eqp_tipo: 'TIPO', eqp_tag: 'TAG', eqp_serie: 'SERIE', eqp_fabricante: 'FABRICANTE', eqp_modelo: 'MODELO', eqp_setor: 'SETOR', eqp_patrimonio: 'PATRIMONIO', eqp_capacidade: 'CAPACIDADE' };
+  for (const [campo, coluna] of Object.entries(pares)) assert.equal(chaves.find((k) => k.campo === campo).coluna, coluna, 'rótulo e coluna não batem: ' + campo);
+  // SGO_DATA.insert monta a linha pelos nomes do cabeçalho (qualquer ordem de colunas na aba)
+  const dados = fs.readFileSync(path.join(pasta, 'SGO_Data.js'), 'utf8');
+  assert.match(dados, /insert\(nome, obj\) \{[\s\S]*?const row = headers\.map\(function\(h\) \{\s*return normalizado\[h\];/);
+  // e o relatório do ciclo lê os campos certos do cadastro, com a lavadora real de produção (cabeçalho em outra ordem não importa)
+  const amb = ambiente({ tabelas: { CAD_EQUIPAMENTOS: [{ ID: '380fdff0-e6e4-493a-89c8-eed7c40cdc0a', CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', TIPO: 'LAVADORA ULTRASSÔNICA', FABRICANTE: 'MEDISAFE', MODELO: 'MED11131', SERIE: '04131027801', TAG: 'LAV-01', SETOR: 'CME', PATRIMONIO: '0023', CAPACIDADE: '70 LITROS', STATUS: 'ATIVO' }] } });
+  const c = amb.ctx.LavCic_cadastro_(amb.tabelas.CAD_EQUIPAMENTOS[0]);
+  assert.deepEqual(JSON.parse(JSON.stringify([c.cad.equipamento, c.cad.fabricante, c.cad.modelo, c.cad.serie, c.cad.patrimonio, c.cad.tag, c.cad.setor])), ['LAVADORA ULTRASSÔNICA', 'MEDISAFE', 'MED11131', '04131027801', '0023', 'LAV-01', 'CME']);
+  assert.equal(c.faltam.length, 0);
+  // CNPJ só com dígitos sai com a máscara; a cidade não se repete quando o endereço já a traz
+  amb.tabelas.CAD_CLIENTES[0].CNPJ = '19324171000447';
+  amb.tabelas.CAD_UNIDADES[0].ENDERECO = 'RUA UM, GOIÂNIA - GO, 75380-000';
+  const c2 = amb.ctx.LavCic_cadastro_(amb.tabelas.CAD_EQUIPAMENTOS[0]);
+  assert.equal(c2.cad.cnpj, '19.324.171/0004-47');
+  assert.equal(c2.cad.unidade, 'Unidade Centro · RUA UM, GOIÂNIA - GO, 75380-000');
+});
+
+// ---------------------------------------------------------------- firmware REV20261101 (01/11/2026)
+// Pedido do dono: o SGO+ precisa entender o que a nova revisão do firmware passa a gravar no .sgolav (resultado NAO LIBERADO,
+// campo PROCESSO, códigos 17 e 18, textos novos de falha e eventos novos) sem deixar de ler os arquivos antigos.
+/** Ciclo NAO LIBERADO montado a partir do arquivo real 6222: processo concluído, arrefecimento estourou com a câmara quente. */
+function textoNaoLiberado(resultado) {
+  return abrirSgolav(fixture(EXEMPLO))
+    .replace('LOTE=LOT-20261030-6222', 'LOTE=LOT-20261101-0101')
+    .replace('HORA=19:35:54', 'HORA=20:00:24')
+    .replace('RESULTADO=APROVADO\n', 'RESULTADO=' + (resultado || 'NAO LIBERADO') + '\nPROCESSO=CONCLUIDO\n')
+    .replace('TEMPFINAL=49.9', 'TEMPFINAL=52.4')
+    .replace('FIMEPOCH=1793388954', 'FIMEPOCH=1793390424')
+    .replace('CODFALHA=0\nFALHA=SEM FALHA', 'CODFALHA=17\nFALHA=ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE')
+    .replace('FASE14=ARREFECENDO|30|58.2|1793388924', 'FASE14=ARREFECENDO|1500|58.2|1793388924')
+    .replace('EVENTOS=16', 'EVENTOS=18')
+    .replace('EVT15=19:35|FIM DE FASE: ARREFECENDO|30/10/2026\nEVT16=19:35|CICLO CONCLUÍDO|30/10/2026',
+      'EVT15=19:50|ARREFECIMENTO PROLONGADO|30/10/2026\nEVT16=20:00|ARREFEC. NÃO CONCLUÍDO|30/10/2026\nEVT17=20:00|FIM DE FASE: ARREFECENDO|30/10/2026\nEVT18=20:00|CICLO NÃO LIBERADO|30/10/2026');
+}
+const NL_NOME = 'LOT-20261101-0101.sgolav';
+
+test('REV20261101 leitor: NAO LIBERADO com PROCESSO=CONCLUIDO, código 17 e os eventos novos', () => {
+  const amb = ambiente();
+  const t = textoNaoLiberado();
+  assert.match(t, /RESULTADO=NAO LIBERADO\nPROCESSO=CONCLUIDO\n/);
+  assert.match(t, /EVENTOS=18/);
+  const r = ler(amb, montarSgolav(t));
+  assert.equal(r.ok, true, r.message);
+  const c = r.ciclo;
+  assert.equal(c.resultado, 'NAO LIBERADO');
+  assert.equal(c.resultadoClasse, 'NAO_LIBERADO');
+  assert.equal(c.processo, 'CONCLUIDO');
+  assert.equal(c.codFalha, 17);
+  assert.equal(c.falha, 'ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE');
+  assert.equal(c.eventos.length, 18);
+  assert.deepEqual(Array.from(c.eventos.slice(-4), (e) => e.texto), ['ARREFECIMENTO PROLONGADO', 'ARREFEC. NÃO CONCLUÍDO', 'FIM DE FASE: ARREFECENDO', 'CICLO NÃO LIBERADO']);
+  assert.ok(c.ocorrencias.some((o) => /ARREFEC\. NÃO CONCLUÍDO/.test(o)));
+  assert.deepEqual(JSON.parse(JSON.stringify(c.extras)), {}, 'PROCESSO é campo conhecido, não vai para extras');
+  assert.equal(r.avisos.length, 0, r.avisos.join(' | '));
+  // com acento também
+  const ac = ler(amb, montarSgolav(textoNaoLiberado('NÃO LIBERADO'))).ciclo;
+  assert.equal(ac.resultadoClasse, 'NAO_LIBERADO');
+  assert.equal(amb.ctx.LavCicL_classeResultado_('nao liberado'), 'NAO_LIBERADO');
+  assert.equal(amb.ctx.LavCicL_classeResultado_('CANCELADO'), 'CANCELADO');
+  assert.equal(amb.ctx.LavCicL_classeResultado_('APROVADO'), 'APROVADO');
+  // fita: título, resultado, processo e texto da falha, como a impressora imprime
+  const fita = amb.ctx.LavCicD_linhasFita_(c);
+  const idx = (txt) => fita.findIndex((l) => l.t === txt);
+  const iTit = idx('CICLO NÃO LIBERADO');
+  assert.ok(iTit > 0 && fita[iTit].c && fita[iTit].b);
+  assert.ok(!fita.some((l) => l.t === 'TÉRMINO DE CICLO' || l.t === 'CICLO CANCELADO'));
+  const iRes = idx('[ NÃO LIBERADO ]');
+  assert.ok(iRes > 0 && fita[iRes].c && fita[iRes].b, 'linha centralizada em negrito');
+  assert.equal(fita[iRes + 1].t, 'PROCESSO CONCLUÍDO');
+  assert.equal(fita[iRes + 2].t + fita[iRes + 3].t, 'ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE', 'texto da falha do arquivo (quebrado em 32 colunas)');
+  assert.ok(fita.some((l) => l.t === '20:00 CICLO NÃO LIBERADO'));
+});
+
+test('REV20261101 leitor: códigos 17 e 18 mostram o texto do arquivo; PROCESSO desconhecido ou incoerente avisa e não derruba', () => {
+  const amb = ambiente();
+  const base = abrirSgolav(fixture('LOT-20261017-0074.sgolav'));
+  const t18 = base.replace('RESULTADO=CANCELADO\n', 'RESULTADO=CANCELADO\nPROCESSO=INTERROMPIDO\n').replace('CODFALHA=3\nFALHA=TIMEOUT DRENAGEM: OBSTRUÇÃO', 'CODFALHA=18\nFALHA=PAUSA EXCEDEU O TEMPO MÁXIMO');
+  const r18 = ler(amb, montarSgolav(t18));
+  assert.equal(r18.ok, true, r18.message);
+  assert.deepEqual([r18.ciclo.resultadoClasse, r18.ciclo.processo, r18.ciclo.codFalha, r18.ciclo.falha], ['CANCELADO', 'INTERROMPIDO', 18, 'PAUSA EXCEDEU O TEMPO MÁXIMO']);
+  assert.equal(r18.avisos.length, 0, r18.avisos.join(' | '));
+  const f18 = amb.ctx.LavCicD_linhasFita_(r18.ciclo).map((l) => l.t);
+  assert.ok(f18.includes('CICLO CANCELADO') && f18.includes('[ CANCELADO ]') && f18.includes('PAUSA EXCEDEU O TEMPO MÁXIMO'));
+  assert.ok(!f18.includes('PROCESSO CONCLUÍDO'));
+  // texto novo de um código antigo (1 a 16 não mudaram de número): vale o texto gravado
+  const t3 = base.replace('FALHA=TIMEOUT DRENAGEM: OBSTRUÇÃO', 'FALHA=TEMPO DE DRENAGEM ESGOTADO: CUBA NÃO ESVAZIOU');
+  const g3 = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: 'LOT-20261017-0074.sgolav', texto: montarSgolav(t3) });
+  assert.equal(g3.ok, true, g3.message);
+  assert.match(g3.html, /Falha: TEMPO DE DRENAGEM ESGOTADO: CUBA NÃO ESVAZIOU \(código 3\)/);
+  // código 17 num cancelado (arrefecimento de segurança que não chegou ao alvo)
+  const t17 = base.replace('CODFALHA=3\nFALHA=TIMEOUT DRENAGEM: OBSTRUÇÃO', 'CODFALHA=17\nFALHA=ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE');
+  const r17 = ler(amb, montarSgolav(t17));
+  assert.equal(r17.ok, true);
+  assert.equal(r17.ciclo.resultadoClasse, 'CANCELADO');
+  assert.ok(amb.ctx.LavCicD_linhasFita_(r17.ciclo).some((l) => l.t === 'ARREFECIMENTO NÃO CONCLUÍDO: CÂM'));
+  // PROCESSO com valor desconhecido
+  const rx = ler(amb, montarSgolav(textoNaoLiberado().replace('PROCESSO=CONCLUIDO', 'PROCESSO=PARCIAL')));
+  assert.equal(rx.ok, true, rx.message);
+  assert.equal(rx.ciclo.processo, 'OUTRO');
+  assert.equal(rx.ciclo.resultadoClasse, 'NAO_LIBERADO');
+  assert.ok(rx.avisos.some((a) => /campo PROCESSO do arquivo \("PARCIAL"\) não é um dos conhecidos/.test(a)), rx.avisos.join(' | '));
+  // combinação que a lavadora não grava
+  const ri = ler(amb, montarSgolav(textoNaoLiberado().replace('PROCESSO=CONCLUIDO', 'PROCESSO=INTERROMPIDO')));
+  assert.equal(ri.ok, true);
+  assert.ok(ri.avisos.some((a) => /combinação que a lavadora não grava/.test(a)));
+  // arquivo antigo: sem PROCESSO, sem aviso de processo
+  const ant = ler(amb, fixture(EXEMPLO));
+  assert.equal(ant.ciclo.processo, '');
+  assert.equal(ant.avisos.length, 0);
+  // campo desconhecido continua indo para extras
+  const ext = ler(amb, montarSgolav(textoNaoLiberado() + 'CAMPONOVO=123\n'));
+  assert.equal(ext.ok, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(ext.ciclo.extras)), { CAMPONOVO: '123' });
+});
+
+test('REV20261101 relatório NÃO LIBERADO: âmbar, fita, indicadores e conclusão por regra (processo concluído, liberação bloqueada)', () => {
+  const amb = ambiente();
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  assert.equal(g.ok, true, g.message);
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.RESULTADO_CLASSE, 'NAO_LIBERADO');
+  assert.equal(l.RESULTADO, 'NAO LIBERADO');
+  assert.equal(l.COD_FALHA, '17');
+  assert.equal(l.PAGINAS, 1);
+  const html = amb.arquivos[l.HTML_ID].bytes.toString('utf8');
+  assert.match(html, /class="resultado lc-res aviso"/);
+  assert.ok(!/class="resultado lc-res (ok|nok)"/.test(html));
+  assert.match(html, /<span class="val">NÃO LIBERADO<\/span><span class="mot">Processo concluído \(etapas cumpridas e cuba drenada\); liberação da carga bloqueada: ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE \(código 17\)\. A tampa só destrava abaixo de 45 °C/);
+  assert.match(html, /<div class="kpi aviso"><span class="v">NÃO LIBERADO<\/span><span class="r">Resultado registrado pela lavadora \(processo concluído\)/);
+  assert.match(html, /<div class="kpi aviso"><span class="v">Código 17<\/span><span class="r">Motivo do bloqueio da liberação/);
+  assert.ok(!/kpi critico/.test(html), 'nada em vermelho de falha do processo');
+  assert.match(html, /CICLO NÃO LIBERADO/);
+  assert.match(html, /\[ NÃO LIBERADO \]/);
+  assert.match(html, /PROCESSO CONCLUÍDO/);
+  const conc = l.CONCLUSAO_TEXTO;
+  assert.match(conc, /teve o processo concluído pela lavadora: as etapas de limpeza, enxágue e desinfecção foram cumpridas e registradas em 14 fases/);
+  assert.match(conc, /a cuba foi drenada/);
+  assert.match(conc, /Na desinfecção térmica, a temperatura máxima registrada foi de 61,3 °C, com duração de 16 min 00 s/);
+  assert.match(conc, /A liberação da carga, porém, ficou bloqueada com o resultado NÃO LIBERADO: o arrefecimento de fim de ciclo esgotou o tempo com a câmara ainda acima da temperatura-alvo \(registro da lavadora: "ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE", código 17\)/);
+  assert.match(conc, /A tampa da lavadora só destrava com leitura válida de temperatura abaixo de 45 °C/);
+  assert.match(conc, /não equivale a ciclo aprovado/);
+  assert.ok(!/foi encerrado|cancelad|interrompid/i.test(conc), conc);
+  // tela: conferência e cartão
+  const cf = amb.api('s_tec', 'conferir', { equipamentoId: 'eq2', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  assert.equal(cf.conferencia.classe, 'NAO_LIBERADO');
+  assert.equal(g.relatorio.classe, 'NAO_LIBERADO');
+});
+
+test('REV20261101 Kanban, índices, filtros e busca: NÃO LIBERADO é resultado próprio (nem aprovado, nem falha)', () => {
+  const amb = ambiente();
+  for (const f of ['LOT-20261030-6222.sgolav', 'LOT-20261017-0074.sgolav']) amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: f, texto: fixture(f) });
+  // sem não liberado, a coluna não aparece
+  assert.deepEqual(amb.api('s_dir', 'iniciar').painel.kanban.map((c) => c.chave), ['AGUARDANDO', 'NOVA_VERSAO', 'FALHA', 'ASSINADO']);
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  const ini = amb.api('s_dir', 'iniciar');
+  const col = (k) => ini.painel.kanban.find((c) => c.chave === k);
+  assert.deepEqual(ini.painel.kanban.map((c) => c.chave), ['AGUARDANDO', 'NOVA_VERSAO', 'FALHA', 'NAO_LIBERADO', 'ASSINADO']);
+  assert.deepEqual(col('NAO_LIBERADO').itens.map((x) => [x.lote, x.classe, x.falha]), [['LOT-20261101-0101', 'NAO_LIBERADO', 'ARREFECIMENTO NÃO CONCLUÍDO: CÂMARA AINDA QUENTE']]);
+  assert.deepEqual(col('FALHA').itens.map((x) => x.lote), ['LOT-20261017-0074']);
+  assert.deepEqual(col('AGUARDANDO').itens.map((x) => x.lote), ['LOT-20261030-6222']);
+  const i = ini.painel.indices;
+  assert.deepEqual([i.relatorios, i.aprovados, i.naoAprovados, i.naoLiberados], [3, 1, 1, 1]);
+  const t = (d) => amb.api('s_dir', 'listar', d).relatorios.map((r) => r.lote);
+  assert.deepEqual(t({ resultado: 'NAO_LIBERADO' }), ['LOT-20261101-0101']);
+  assert.deepEqual(t({ resultado: 'NAO_APROVADO' }), ['LOT-20261017-0074'], '"cancelado ou reprovado" não inclui o não liberado');
+  assert.deepEqual(t({ resultado: 'APROVADO' }), ['LOT-20261030-6222']);
+  assert.deepEqual(t({ resultado: 'CANCELADO' }), ['LOT-20261017-0074']);
+  assert.deepEqual(amb.api('s_dir', 'listar', {}).resumo, { aprovados: 1, naoAprovados: 1, naoLiberados: 1, semAssinatura: 3 });
+  assert.deepEqual(amb.api('s_dir', 'buscar', { situacao: 'NAO_LIBERADO' }).relatorios.map((r) => r.lote), ['LOT-20261101-0101']);
+  assert.deepEqual(amb.api('s_dir', 'buscar', { situacao: 'FALHA' }).relatorios.map((r) => r.lote), ['LOT-20261017-0074']);
+  // assinado continua na coluna própria (como a falha), não em "Assinado e aprovado"
+  const id = amb.api('s_dir', 'listar', { resultado: 'NAO_LIBERADO' }).relatorios[0].id;
+  assert.equal(amb.api('s_cli', 'assinar', { id, nome: 'Maria Enfermeira', cargo: 'Enfermeira da CME', imagem: PNG, conferi: true }).ok, true);
+  const k2 = amb.api('s_dir', 'iniciar').painel.kanban;
+  assert.deepEqual(k2.find((c) => c.chave === 'NAO_LIBERADO').itens.map((x) => x.lote), ['LOT-20261101-0101']);
+  assert.ok(!k2.find((c) => c.chave === 'ASSINADO').itens.some((x) => x.lote === 'LOT-20261101-0101'));
+  // tela: selo âmbar, filtro e cor de coluna próprios
+  const js = fs.readFileSync(path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db/JS_LavCiclo.html'), 'utf8');
+  assert.match(js, /classe === "NAO_LIBERADO" \? "laranja"/);
+  assert.match(js, /<option value="NAO_LIBERADO">Não liberado<\/option>/);
+  assert.match(js, /NAO_LIBERADO: "#d97706"/);
+});
+
+test('REV20261101 conclusão pela IA de um NÃO LIBERADO: aceita o texto coerente; recusa "aprovado", "cancelado" e "falha do processo"', () => {
+  const ok = 'O ciclo do lote LOT-20261101-0101, receita INSTRUMENTAL PADRÃO, foi realizado em 30/10/2026, das 18:42 às 20:00, com duração total de 1 h 18 min. O processo foi concluído, com a desinfecção térmica registrando temperatura máxima de 61,3 °C por 16 min 00 s, mas a lavadora registrou o resultado NÃO LIBERADO: o arrefecimento terminou com a câmara acima da temperatura-alvo (código 17), e a tampa só destrava abaixo de 45 °C. O arquivo registra a temperatura máxima de cada fase, e não a curva contínua.';
+  const casos = [
+    [ok.replace('o resultado NÃO LIBERADO', 'o resultado APROVADO'), /não disse o resultado|aprovado/],
+    [ok.replace('O processo foi concluído, com', 'O ciclo foi cancelado, com'), /concluído|cancelado/],
+    [ok + ' Houve falha do processo.', /falha do processo/],
+    [ok.replace('o arrefecimento terminou com a câmara acima da temperatura-alvo', 'a máquina travou'), /arrefecimento/],
+    [ok.replace('abaixo de 45 °C', 'abaixo de 40 °C'), /número 40/]
+  ];
+  for (const [resposta, motivo] of casos) {
+    const amb = ambiente({ props: { GEMINI_API_KEY: 'chave-de-teste' }, respostaIa: resposta });
+    const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+    assert.equal(g.ok, true, g.message);
+    const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+    assert.equal(l.CONCLUSAO_ORIGEM, 'REGRA', resposta);
+    assert.match(l.CONCLUSAO_MOTIVO, motivo);
+  }
+  const amb = ambiente({ props: { GEMINI_API_KEY: 'chave-de-teste' }, respostaIa: ok });
+  amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: NL_NOME, texto: montarSgolav(textoNaoLiberado()) });
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.CONCLUSAO_ORIGEM, 'IA', l.CONCLUSAO_MOTIVO);
+  const prompt = JSON.stringify(amb.chamadasIa[0].corpo);
+  assert.match(prompt, /NÃO LIBERADO significa que o processo foi concluído/);
+  assert.match(prompt, /Não escreva que o ciclo foi aprovado, cancelado, interrompido ou reprovado, nem que houve falha do processo/);
+  // o texto de um aprovado não pode dizer "não liberado"
+  const c = amb.ctx.LavCicL_ler_(fixture(EXEMPLO)).ciclo;
+  const okAprov = 'O ciclo do lote LOT-20261030-6222, receita INSTRUMENTAL PADRÃO, foi realizado em 30/10/2026, das 18:42 às 19:35, e a lavadora registrou o resultado APROVADO, com duração total de 53 min 50 s em 14 fases. Na desinfecção térmica, a temperatura máxima registrada foi de 61,3 °C por 16 min 00 s. O arquivo registra a temperatura máxima de cada fase.';
+  assert.equal(amb.ctx.LavCicD_conferirIa_(okAprov, c, null).ok, true);
+  assert.equal(amb.ctx.LavCicD_conferirIa_(okAprov + ' A carga ficou não liberada.', c, null).ok, false);
+});
+
+test('REV20261101 arquivo antigo com código 2 terminando em arrefecimento: nota honesta, resultado gravado não muda', () => {
+  const amb = ambiente();
+  const t = abrirSgolav(fixture(EXEMPLO))
+    .replace('LOTE=LOT-20261030-6222', 'LOTE=LOT-20261029-0222')
+    .replace('RESULTADO=APROVADO', 'RESULTADO=CANCELADO')
+    .replace('CODFALHA=0\nFALHA=SEM FALHA', 'CODFALHA=2\nFALHA=SUBTEMPERATURA: ALVO NÃO ATINGIDO')
+    .replace('FASES=14', 'FASES=15').replace('FASE14=ARREFECENDO|30|58.2|1793388924', 'FASE14=ARREFECENDO|1200|58.2|1793388924\nFASE15=ABORTANDO|60|52.0|1793390124')
+    .replace('EVT16=19:35|CICLO CONCLUÍDO|30/10/2026', 'EVT16=19:57|CICLO CANCELADO|30/10/2026');
+  const r = ler(amb, montarSgolav(t));
+  assert.equal(r.ok, true, r.message);
+  assert.equal(r.ciclo.resultadoClasse, 'CANCELADO');
+  assert.equal(r.ciclo.ultimaFase, 'ARREFECENDO');
+  assert.ok(r.avisos.some((a) => /Nota sobre o código 2 deste arquivo/.test(a)), r.avisos.join(' | '));
+  const g = amb.api('s_tec', 'gerar', { equipamentoId: 'eq1', nomeArquivo: 'LOT-20261029-0222.sgolav', texto: montarSgolav(t) });
+  assert.equal(g.ok, true, g.message);
+  const l = amb.tabelas.LAVCIC_RELATORIOS[0];
+  assert.equal(l.RESULTADO, 'CANCELADO', 'o registro da máquina fica');
+  assert.equal(l.RESULTADO_CLASSE, 'CANCELADO');
+  const html = amb.arquivos[l.HTML_ID].bytes.toString('utf8');
+  assert.match(html, /class="resultado lc-res nok"/);
+  assert.match(html, /<p class="lc-nota-antiga">Nota sobre o código 2 deste arquivo: na revisão do firmware que gravou este ciclo, o código 2 \(SUBTEMPERATURA\) também era registrado quando o arrefecimento de fim de ciclo esgotava o tempo com a câmara ainda quente\./);
+  assert.match(html, /Como a última fase registrada foi ARREFECENDO/);
+  assert.match(html, /O resultado CANCELADO é o registro da máquina e foi mantido; a partir da revisão REV20261101 esse caso passa a ser gravado como NÃO LIBERADO \(código 17\)/);
+  // a nota também sai ao reabrir um relatório já gravado (a assinatura usa o ciclo do DADOS_JSON)
+  assert.equal(amb.api('s_cli', 'assinar', { id: l.ID, nome: 'Maria Enfermeira', cargo: 'Enfermeira da CME', imagem: PNG, conferi: true }).ok, true);
+  assert.match(amb.arquivos[amb.tabelas.LAVCIC_RELATORIOS[0].HTML_ID].bytes.toString('utf8'), /lc-nota-antiga/);
+  // código 2 em outra fase (subtemperatura de verdade) e arquivo novo com PROCESSO: sem a nota
+  const naDesinf = t.replace('FASE14=ARREFECENDO|1200|58.2|1793388924\nFASE15=ABORTANDO', 'FASE14=DESINFETANDO|1200|58.2|1793388924\nFASE15=ABORTANDO');
+  const r2 = ler(amb, montarSgolav(naDesinf));
+  assert.equal(r2.ok, true, r2.message);
+  assert.ok(!r2.avisos.some((a) => /código 2/.test(a)));
+  assert.equal(amb.ctx.LavCicL_notaCodigo2Antigo_(r2.ciclo), '');
+  const novo = ler(amb, montarSgolav(t.replace('RESULTADO=CANCELADO\n', 'RESULTADO=CANCELADO\nPROCESSO=INTERROMPIDO\n')));
+  assert.equal(amb.ctx.LavCicL_notaCodigo2Antigo_(novo.ciclo), '', 'na revisão nova o código 2 é só subtemperatura de verdade');
+});
+
+// Todos os .sgolav reais que existirem neste computador (cartão da lavadora, backups e downloads). Em outra máquina, sem as
+// pastas, o teste é pulado. LAVCIC_SGOLAV_PASTAS (separadas por ;) acrescenta pastas.
+const PASTAS_REAIS = ['C:/Users/venda/Downloads', 'C:/Users/venda/Desktop/lavadora', 'C:/Users/venda/Documents/LAVADORA', 'C:/Users/venda/Documents/Arduino/_BACKUPS/PROJETO_ESP32_LAV']
+  .concat(String(process.env.LAVCIC_SGOLAV_PASTAS || '').split(';').filter(Boolean)).filter((p) => fs.existsSync(p));
+test('REV20261101 todos os .sgolav reais do computador continuam sendo lidos sem erro', { skip: PASTAS_REAIS.length ? false : 'pastas dos arquivos reais não existem nesta máquina' }, () => {
+  const amb = ambiente();
+  const arquivos = [];
+  const varrer = (d, prof) => {
+    let itens = [];
+    try { itens = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { return; }
+    for (const x of itens) {
+      const p = path.join(d, x.name);
+      if (x.isDirectory()) { if (prof < 8 && !/^(node_modules|\.git)$/.test(x.name)) varrer(p, prof + 1); } else if (/\.sgolav$/i.test(x.name)) arquivos.push(p);
+    }
+  };
+  // Downloads: só a pasta em si (sem descer nas subpastas)
+  PASTAS_REAIS.forEach((p) => varrer(p, /Downloads$/.test(p) ? 8 : 0));
+  const falhas = [];
+  const classes = {};
+  for (const f of arquivos) {
+    const r = ler(amb, fs.readFileSync(f, 'latin1'));
+    if (!r.ok) { falhas.push(f + ': ' + r.message); continue; }
+    classes[r.ciclo.resultadoClasse] = (classes[r.ciclo.resultadoClasse] || 0) + 1;
+    // o documento também monta sem erro
+    amb.ctx.LavCicD_linhasFita_(r.ciclo);
+    amb.ctx.LavCicD_conclusaoRegra_(r.ciclo, null);
+  }
+  console.log('# .sgolav reais lidos sem erro: ' + (arquivos.length - falhas.length) + ' de ' + arquivos.length + ' ' + JSON.stringify(classes));
+  assert.deepEqual(falhas, []);
+  assert.ok(arquivos.length > 0);
+});

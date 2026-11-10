@@ -154,7 +154,7 @@ test('6. desempenho: o aviso irreversível roda depois de soltar a trava (Comerc
   assert.throws(() => vm.runInContext("Com_comTrava_(function () { Com_depois_(function () { passos.push('aviso'); }); throw new Error('falhou'); });", ctx));
   assert.ok(!passos.includes('aviso'), 'ação que falhou não avisa');
   // nenhum aviso irreversível chamado direto dentro das travas
-  [['SGO_Comercial_Oportunidades.js', 'Com_depois_', 2], ['SGO_Comercial_Propostas.js', 'Com_depois_', 3], ['SGO_Compras_Requisicoes.js', 'Cmp_depois_', 1], ['SGO_Assistencia_Chamados.js', 'Ast_depois_', 3]].forEach(([f, fila, n]) => {
+  [['SGO_Comercial_Oportunidades.js', 'Com_depois_', 3], ['SGO_Comercial_Propostas.js', 'Com_depois_', 3], ['SGO_Compras_Requisicoes.js', 'Cmp_depois_', 1], ['SGO_Assistencia_Chamados.js', 'Ast_depois_', 3]].forEach(([f, fila, n]) => {
     const s = fonte(f);
     assert.equal((s.match(/SGO_avisoGestaoIrreversivel_\(/g) || []).length, n, f);
     assert.equal((s.match(new RegExp(fila + "\\(function \\(\\) \\{ if \\(typeof SGO_avisoGestaoIrreversivel_", 'g')) || []).length, n, f + ': todos pela fila de depois');
