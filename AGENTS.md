@@ -222,3 +222,6 @@ ligado (contas/senhas/acessos, espelho). Evidência: output/poderes-20261110/PUB
 SGO+ — 11/11/2026 ~02:35: base atual metrolabs/sgo:poderes-lote4-20261111 (sha256:aeae8028…). Lote 4 das caixas
 ligado (aprovação de relatório técnico, espelho). Lotes 0,1,4 publicados; Lote 2 (Conduta) adiado por pedido do
 dono; próximos: 3 Financeiro (tem trava no Node), 5 Compras, 6 Frota, 7–11. Evidência: PUBLICADO_LOTE4_20261111.txt.
+SGO+ — 11/11/2026 ~02:52: base atual metrolabs/sgo:poderes-lote5-20261111 (sha256:7d954e75…). Lotes 0,1,4,5 ligados.
+Pendências: Lote 2 Conduta (adiado pelo dono), 3 Financeiro (trava no Node), 6–11; teste compras-acesso-financeiro-
+delegado falhava já antes desta noite (investigar). Evidência: PUBLICADO_LOTE5_20261111.txt.

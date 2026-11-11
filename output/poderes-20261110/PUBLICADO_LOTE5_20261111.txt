@@ -1,0 +1,12 @@
+ACESSOS POR CAIXAS — LOTE 5 (Compras) — PUBLICADO 11/11/2026 ~02:52 BRT
+Imagem: metrolabs/sgo:poderes-lote5-20261111
+sha256:7d954e75d14085074319a872279fea04eb2a1b36a138b86abac79389a097f5b9 (base poderes-lote4-20261111).
+8 arquivos (Compras Config/Cotacoes/Financeiro/Painel/Relatorios, SGO_Poderes.js e ajudas). 10 caixas de Compras
+ligadas (28 no total). Alçadas em R$ continuam nas Regras de compras; "quem pediu não aprova" e "quem cotou não
+aprova acima da faixa do comprador" ficam fora das caixas. Espelho: 1.564 comparações sem diferença.
+Limites (LOTE5_IMPLEMENTACAO.md seção 6): perfil Financeiro ainda abre o painel (lote Financeiro); aprovar exige
+também ver fila/valores para o botão aparecer; Caixa de decisões segue as listas; pedido automático do link não
+consulta "Pedir compra". Pré-existente (não desta noite): compras-acesso-financeiro-delegado falha 7/7 já na
+produção anterior ao Lote 0 — investigar.
+Pós-publicação: healthy; telas preservadas; /api/run forjado 403; sem erros de código.
+Reverter: /opt/metrolabs/backup/poderes-lote5-20261111/compose.antes.yml (+ banco-antes.dump).

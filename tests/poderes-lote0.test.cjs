@@ -100,7 +100,10 @@ function montarHoje(a) {
 // ------------------------------------------------------------------ 1. catálogo
 const LIGADOS_LOTE1 = ['CONTAS_VER', 'CONTAS_CRIAR', 'CONTAS_ALTERAR_OUTROS', 'CONTAS_MUDAR_PERFIL', 'CONTAS_REDEFINIR_SENHA', 'CONTAS_INATIVAR', 'CONTAS_EXCLUIR', 'CONTAS_GERIR_ADMINISTRADOR', 'CONTAS_DAR_DIRETORIA', 'AREAS_GERIR', 'AREAS_DEFINIR_PESSOA', 'SEGURANCA_VER_REGISTRO', 'SEGURANCA_ALTERAR', 'MODO_PERSONALIZADO_DESIGNAR', 'ACESSOS_GERIR',
   // lote 4 (11/11/2026): aprovação de relatório técnico (RELATORIO_INTERNO_SIMULADO fica de fora)
-  'RELATORIO_TECNICO_APROVAR', 'RELATORIO_BAIXATEMP_APROVAR', 'RELATORIO_MODELO_ESCOLHER'];
+  'RELATORIO_TECNICO_APROVAR', 'RELATORIO_BAIXATEMP_APROVAR', 'RELATORIO_MODELO_ESCOLHER',
+  // lote 5 (11/11/2026): Compras
+  'COMPRAS_PEDIR', 'COMPRAS_VER_FILA', 'COMPRAS_VER_VALORES', 'COMPRAS_COMPRAR', 'COMPRAS_APROVAR_ATE_LIMITE', 'COMPRAS_APROVAR_DA_AREA',
+  'COMPRAS_APROVAR_SEM_LIMITE', 'COMPRAS_GESTAO', 'COMPRAS_REGRAS_EDITAR', 'COMPRAS_CIENCIA_GESTAO'];
 test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os ligados pelo lote 1; nada fora do catalogo.json', () => {
   const a = ambiente();
   const cat = a.ctx.SGO_poderesCatalogo_();
@@ -112,7 +115,7 @@ test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os l
     assert.ok(p.nome && !/NOVO/.test(p.nome), p.codigo);
     assert.equal(typeof p.padrao, 'function', p.codigo);
     // lote 1 (11/11/2026): só as caixas de Contas, senhas e acessos ligadas (SISTEMA_* ficam no servidor Node)
-    assert.equal(p.ligado, LIGADOS_LOTE1.includes(p.codigo), p.codigo + ' ligado fora dos lotes 1 e 4');
+    assert.equal(p.ligado, LIGADOS_LOTE1.includes(p.codigo), p.codigo + ' ligado fora dos lotes 1, 4 e 5');
   }
   assert.deepEqual(Array.from(vm.runInContext('SGO_PODERES_LIGADOS', a.ctx)), LIGADOS_LOTE1);
   assert.throws(() => a.ctx.SGO_pode_('s_admin', 'PODER_INEXISTENTE'), /Poder desconhecido/);
@@ -181,7 +184,7 @@ test('exceções: SIM e NÃO sobrepõem o padrão; voltar ao padrão; histórico
   assert.equal(a.ctx.SGO_pode_('s_monica', 'COM_USAR'), false);
   const ef = a.ctx.SGO_poderesEfetivos_(monica);
   const g = ef.find((p) => p.codigo === 'COMPRAS_GESTAO');
-  assert.equal(g.origem, 'excecao'); assert.equal(g.valor, true); assert.equal(g.padrao, false); assert.equal(g.ligado, false);
+  assert.equal(g.origem, 'excecao'); assert.equal(g.valor, true); assert.equal(g.padrao, false); assert.equal(g.ligado, true); // ligado desde o lote 5 (Compras)
   assert.equal(ef.find((p) => p.codigo === 'CONDUTA_PARTICIPAR').origem, 'padrao');
   assert.equal(a.tabelas.SYS_PODERES_EXCECOES.length, 2);
   const e1 = a.tabelas.SYS_PODERES_EXCECOES.find((l) => l.PODER === 'COMPRAS_GESTAO');
