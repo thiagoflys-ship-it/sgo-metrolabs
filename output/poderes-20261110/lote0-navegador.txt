@@ -1,0 +1,11 @@
+Conferência no navegador (página completa, 2026-11-10T23:17:20.366Z)
+  OK ricardo (Gestor): menu sem "Acessos"; abrir direto mostra a recusa do servidor com o caminho de volta
+  OK admin (dono): item "Acessos" aparece no grupo Administração da página completa
+  OK monica aberta: 18 módulos, 150 caixas, aviso "passa a valer quando o módulo for ligado" em todas
+  OK marcar/desmarcar → 2 pendentes → Salvar pede motivo (recusa 3 letras) → gravado; selo "Alterado para esta pessoa" com quem/quando/motivo
+  OK Histórico (2 linhas) e "Ver como esta pessoa vê" com a caixa alterada
+  OK "voltar ao padrão" com motivo: caixa volta marcada e com o selo do padrão
+  OK "Copiar de…" Ricardo: Mônica fica com as mesmas caixas
+  OK "Aplicar modelo" Comercial (substituir): volta a ser só vendedora
+  OK a própria conta (dono): só consulta, aviso "ninguém altera as próprias", 150 selos "Responsável pelo sistema"
+  OK celular 390 px: sem rolagem lateral; caixa marcável; rodapé com pendência

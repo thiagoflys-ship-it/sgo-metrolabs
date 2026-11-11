@@ -7,7 +7,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { ambiente, oportunidadeDeTeste, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
+const { ambiente: ambienteBase, oportunidadeDeTeste, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
+// 10/11/2026 (brechas de preço): item sem custo leva a proposta para a Diretoria; estes testes não tratam de custo e dão aos itens sem
+// custo 30% do preço antes de concluir (opção custoAvulso do ambiente). As regras de custo estão em comercial-precos-brechas.test.cjs.
+const ambiente = (o) => ambienteBase(Object.assign({ custoAvulso: 0.3 }, o || {}));
 
 const C1 = JSON.parse(fs.readFileSync(path.join(__dirname, '../docs/COMERCIAL_C1_TABELA_SERVICOS.json'), 'utf8')).servicos;
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };

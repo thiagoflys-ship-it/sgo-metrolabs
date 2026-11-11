@@ -17,6 +17,8 @@ const AREAS = [['DIRETORIA', 'Diretoria'], ['ADMINISTRATIVO', 'Administrativo'],
 const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO_Areas.js', 'SGO_Atividades.js', 'SGO_Atividades_Avisos.js', 'SGO_Alertas_Central.js',
   'SGO_DocA4.js', 'SGO_DocSalvar.js', 'SGO_Documentos_RelatorioA4.js', 'SGO_QualifIA_Verificador.js', 'SGO_Gestao_Decisoes.js', 'SGO_Gestao_Escada.js', 'SGO_Gestao_Avaliacao.js', 'SGO_EnviarDoc.js',
   'SGO_Comercial_Config.js', 'SGO_Comercial_Contatos.js', 'SGO_Comercial_Oportunidades.js', 'SGO_Comercial_Propostas.js', 'SGO_Comercial_Documento.js', 'SGO_Comercial_Gestora.js', 'SGO_Comercial_Painel.js', 'SGO_Comercial_Quadro.js', 'SGO_Comercial_Precificacao.js', 'SGO_Comercial_TabelaC1.js', 'SGO_Comercial_Ficha.js',
+  // 11/11/2026: custo com cotação do fornecedor, validade, painel "Custos a atualizar" e preço sugerido
+  'SGO_Comercial_Custos.js',
   // 01/11/2026 (Comercial C3): banco de preços (com a carga da C1) e o Orçamentista
   'SGO_Comercial_BancoC1.js', 'SGO_Comercial_BancoPrecos.js', 'SGO_Comercial_Orcamentista.js',
   // 01/11/2026: a especialista (planos A/B/C, memória de planos, verificador anti-genérico)
@@ -141,7 +143,33 @@ function ambiente(opcoes) {
   });
   for (const f of ARQUIVOS) vm.runInContext(fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n'), ctx, { filename: f });
   vm.runInContext("var CONDUTA_SHEETS = undefined; var CNDQ_SHEETS = undefined;", ctx);
-  const api = (sid, acao, dados) => ctx.Comercial_api(sid, acao, dados || {});
+  // 10/11/2026 (brechas de preço, caso PROP-2026-0028): item sem custo leva a proposta para a aprovação da Diretoria. Os testes que não
+  // tratam de custo pedem a opção custoAvulso (fração do preço): antes de concluir, o item sem custo recebe esse custo na proposta gravada
+  // (simula o custo conhecido). Sem a opção, nada muda (é o comportamento real).
+  const darCusto = (id) => {
+    const r = (tabelas.COM_PROPOSTAS || []).find((x) => String(x.ID) === String(id));
+    if (!r) return;
+    const itens = JSON.parse(r.ITENS_JSON || '[]'); let mudou = false;
+    itens.forEach((i) => { if (i && !i.auto && (i.custoUnitario === null || i.custoUnitario === undefined || i.custoUnitario === '') && Number(i.precoUnitario) > 0) { i.custoUnitario = Math.round(Number(i.precoUnitario) * o.custoAvulso * 100) / 100; mudou = true; } });
+    if (mudou) r.ITENS_JSON = JSON.stringify(itens);
+  };
+  // 11/11/2026 (custo com cotação): o custo do catálogo só vale com a cotação do fornecedor anexada e na validade. Os testes que não tratam
+  // disso (custo semeado nas tabelas ou gravado por "salvarProduto" sem cotação) recebem uma cotação de teste válida, como se o custo já
+  // estivesse documentado. Com a opção cotacaoReal, nada disso acontece (é o comportamento real; usado em comercial-custos-cotacao).
+  const cotacaoTeste = () => ({ fornecedor: 'Fornecedor de teste', data: ctx.Com_hoje_(), validade: ctx.Com_somarDias_(ctx.Com_hoje_(), 60), arquivo: { nome: 'cotacao-teste.pdf', tipo: 'application/pdf', base64: Buffer.from('%PDF-1.4 cotacao de teste').toString('base64') } });
+  const semearCotacoes = () => {
+    (tabelas.COM_PRODUTOS || []).forEach((p) => { if (Number(p.CUSTO) > 0 && !p.CUSTO_COTACAO_ID) Object.assign(p, { CUSTO_COTACAO_ID: 'cot-teste-' + p.ID, CUSTO_COTACAO_VALOR: Number(p.CUSTO), CUSTO_VALIDO_ATE: '2099-12-31' }); });
+  };
+  const api = (sid, acao, dados) => {
+    if (!o.cotacaoReal) {
+      semearCotacoes();
+      if (acao === 'salvarProduto' && dados && String(dados.custo === undefined || dados.custo === null ? '' : dados.custo).trim() !== '' && !dados.cotacao) dados = Object.assign({}, dados, { cotacao: cotacaoTeste() });
+    }
+    if (o.custoAvulso && acao === 'concluirProposta' && dados && dados.id) darCusto(dados.id);
+    const r = ctx.Comercial_api(sid, acao, dados || {});
+    if (!o.cotacaoReal) semearCotacoes();
+    return r;
+  };
   const mudar = (iso) => { relogio.agora = em(iso); Object.keys(cache).forEach((k) => delete cache[k]); };
   return { ctx, tabelas, props, cache, emails, whats, iaPrompts, relogio, api, mudar, arquivos, pastas, sessoes };
 }

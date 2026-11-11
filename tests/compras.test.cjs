@@ -4,6 +4,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { ambiente, FOTO, PDF, regrasDeTeste, fornecedoresDeTeste, pedidoSimples, CNPJS } = require('./_compras_ambiente.cjs');
+// 10/11/2026 (brechas de preço): item sem custo leva a proposta à aprovação da Diretoria. Estes testes de Compras usam a proposta só
+// como origem do pedido aprovado; o item avulso recebe um custo de teste (30% do preço) antes de concluir, como em comercial.test.cjs.
+function darCustoAvulso(amb, id) {
+  const r = (amb.tabelas.COM_PROPOSTAS || []).find((x) => String(x.ID) === String(id)); if (!r) return;
+  const itens = JSON.parse(r.ITENS_JSON || '[]');
+  itens.forEach((i) => { if (i && !i.auto && (i.custoUnitario === null || i.custoUnitario === undefined || i.custoUnitario === '') && Number(i.precoUnitario) > 0) i.custoUnitario = Math.round(Number(i.precoUnitario) * 0.3 * 100) / 100; });
+  r.ITENS_JSON = JSON.stringify(itens);
+}
 const { SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
 
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
@@ -344,6 +352,7 @@ test('etapa 3 · pedido aprovado do Comercial abre a requisição com os produto
   const op = ok(amb.com('s_vera', 'salvarOportunidade', { titulo: 'Peças para lavadora da CME', clienteId: 'c1', unidadeId: 'un1', contatoId: ct.contato.id, funil: 'PRODUTOS', etapa: 'PRO_2', origem: 'Indicação', valor: '3.200,00', proxima: { acao: 'Confirmar o modelo das peças', data: '2026-10-20', hora: '10:00', tipo: 'LIGACAO' } })).oportunidade;
   const np = ok(amb.com('s_vera', 'novaProposta', { oportunidadeId: op.id }));
   ok(amb.com('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: np.proposta.id, escopo: 'Fornecimento de peças de reposição para a lavadora da CME.', itens: [{ tipo: 'PRODUTO', descricao: 'Kit de vedação da câmara', quantidade: 2, unidade: 'kit', precoUnitario: '1.600,00' }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'Até 30 dias', garantia: 'Garantia do fabricante' } }));
+  darCustoAvulso(amb, np.proposta.id); // a proposta de teste não trata de custo: o item avulso recebe custo (sem custo iria à Diretoria, regra de 10/11/2026)
   ok(amb.com('s_vera', 'concluirProposta', { id: np.proposta.id }));
   const g = ok(amb.com('s_vera', 'gerarDocumento', { id: np.proposta.id }));
   ok(amb.com('s_vera', 'marcarEnviada', { id: np.proposta.id, como: 'Enviada por e-mail para a coordenação (teste)' }));
@@ -384,6 +393,7 @@ test('auditoria de integração (21/10/2026): sem escolher o responsável, o set
   const op = ok(amb.com('s_vera', 'salvarOportunidade', { titulo: 'Peças para lavadora da CME', clienteId: 'c1', unidadeId: 'un1', contatoId: ct.contato.id, funil: 'PRODUTOS', etapa: 'PRO_2', origem: 'Indicação', valor: '3.200,00', proxima: { acao: 'Confirmar o modelo das peças', data: '2026-10-20', hora: '10:00', tipo: 'LIGACAO' } })).oportunidade;
   const np = ok(amb.com('s_vera', 'novaProposta', { oportunidadeId: op.id }));
   ok(amb.com('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: np.proposta.id, escopo: 'Fornecimento de peças de reposição para a lavadora da CME.', itens: [{ tipo: 'PRODUTO', descricao: 'Kit de vedação da câmara', quantidade: 2, unidade: 'kit', precoUnitario: '1.600,00' }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'Até 30 dias', garantia: 'Garantia do fabricante' } }));
+  darCustoAvulso(amb, np.proposta.id); // a proposta de teste não trata de custo: o item avulso recebe custo (sem custo iria à Diretoria, regra de 10/11/2026)
   ok(amb.com('s_vera', 'concluirProposta', { id: np.proposta.id }));
   ok(amb.com('s_vera', 'gerarDocumento', { id: np.proposta.id }));
   ok(amb.com('s_vera', 'marcarEnviada', { id: np.proposta.id, como: 'Enviada por e-mail (teste)' }));

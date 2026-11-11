@@ -1,0 +1,1 @@
+metrolabs/sgo:comercial-assinatura-20261110 sha256:0ffe1e9b14ebebba26bfbe2382785ad4fa4b824f14376bf7f102dc11d0f57599

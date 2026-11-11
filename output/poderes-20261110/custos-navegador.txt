@@ -1,0 +1,6 @@
+Conferência no navegador (página completa, 2026-11-11T03:40:08.544Z, Chrome headless)
+- 1280 px, gestão: catálogo avisa os custos a atualizar; painel lista o item sem cotação; "Atualizar custo" recusa sem anexo com o que fazer; sem rolagem lateral
+- 1280 px, vendedora: passo 4 mostra mínimo e sugerido sem o custo, as quatro opções; "Pedir atualização do custo" avisa; "Ajustar para o mínimo" grava R$ 21.467,00; sem rolagem lateral
+- 390 px, gestão: catálogo avisa os custos a atualizar; painel lista o item sem cotação; "Atualizar custo" recusa sem anexo com o que fazer; sem rolagem lateral
+- 390 px, vendedora: passo 4 mostra mínimo e sugerido sem o custo, as quatro opções; "Pedir atualização do custo" avisa; "Ajustar para o mínimo" grava R$ 21.467,00; sem rolagem lateral
+Telas: output/poderes-20261110/custos-telas/

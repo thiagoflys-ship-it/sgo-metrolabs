@@ -1,0 +1,29 @@
+FASE=candidato em 2026-11-11T03:16:30.065Z
+arquivos=27 pass=266 fail=13
+comercial-assinatura-aprovacao.test.cjs	saida=0	pass=20	fail=0
+comercial-atividade-gestao.test.cjs	saida=0	pass=5	fail=0
+comercial-busca.test.cjs	saida=0	pass=6	fail=0
+comercial-c2-precos.test.cjs	saida=0	pass=10	fail=0
+comercial-c2-revisao.test.cjs	saida=0	pass=7	fail=0
+comercial-c3-orcamentista.test.cjs	saida=0	pass=10	fail=0
+comercial-c3-revisao.test.cjs	saida=0	pass=12	fail=0
+comercial-c4-entrada-mercado.test.cjs	saida=1	pass=8	fail=1	FALHAS: menu, ajuda, manual e base do assistente: Quadro e Gantt dentro de Oportunidades; entrada, perda e relatório documentados
+comercial-catalogo-equipe-exclusao.test.cjs	saida=0	pass=8	fail=0
+comercial-catalogo-oficial.test.cjs	saida=1	pass=14	fail=3	FALHAS: implantação: cria os 26 com os preços do dono, desativa os repetidos da C1 com histórico (nunca apaga), freezer com parâmetros; reexecutar cria 0 | sobra dos 26 pela ficha (só gestão e Diretoria): preço, custo, impostos GO, comissão, sobra R$ e %; o preço do dono não muda | reajuste da decisão: suspeitos (alta acima de 100% ou custo maior que o preço) ficam fora; limite configurável; os 26 oficiais sempre fora (também do reajuste por percentual)
+comercial-celular.test.cjs	saida=0	pass=3	fail=0
+comercial-decisao-dono.test.cjs	saida=0	pass=13	fail=0
+comercial-especialista.test.cjs	saida=0	pass=16	fail=0
+comercial-etapa2.test.cjs	saida=0	pass=18	fail=0
+comercial-importar-crm.test.cjs	saida=0	pass=2	fail=0
+comercial-investimento.test.cjs	saida=0	pass=9	fail=0
+comercial-modelo-orcamento.test.cjs	saida=0	pass=7	fail=0
+comercial-precificacao.test.cjs	saida=0	pass=13	fail=0
+comercial-precos-brechas.test.cjs	saida=0	pass=13	fail=0
+comercial-quadro.test.cjs	saida=0	pass=8	fail=0
+comercial-termos-catalogo.test.cjs	saida=0	pass=7	fail=0
+comercial.test.cjs	saida=0	pass=16	fail=0
+compras-acesso-financeiro-delegado.test.cjs	saida=1	pass=0	fail=7	FALHAS: delegação financeira de Compras mantém perfil, área e alçadas existentes | delegados cadastram cartão e consultam conferência sem alterar dados globais do usuário | gestor sem autorização não amplia a própria permissão financeira | tela antiga que omite financeiros preserva os acessos já liberados | delegação recusa usuário inativo e perfis de acesso restrito | destinatários financeiros acrescentam apenas os delegados e respeitam exclusão | retirada da delegação revoga edição e conferência imediatamente
+compras-equipamento-cadastro.test.cjs	saida=0	pass=4	fail=0
+compras-informar-conciliacao.test.cjs	saida=0	pass=10	fail=0
+compras.test.cjs	saida=1	pass=14	fail=2	FALHAS: etapa 3 · pedido aprovado do Comercial abre a requisição com os produtos, sem o valor de venda; disponível conclui a atividade do setor e avisa o vendedor | auditoria de integração (21/10/2026): sem escolher o responsável, o setor Compras do pedido aprovado vai ao comprador das Regras de compras
+poderes-lote0.test.cjs	saida=0	pass=13	fail=0

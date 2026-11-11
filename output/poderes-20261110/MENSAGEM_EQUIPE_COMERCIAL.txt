@@ -1,0 +1,21 @@
+Pessoal, bom dia!
+
+A partir de hoje o Comercial do SGO+ passa a conferir preço e custo de toda proposta. O que muda para vocês:
+
+1. Custo com cotação do fornecedor
+Para cadastrar ou atualizar o custo de um produto, é obrigatório anexar a cotação atualizada do fornecedor (PDF ou foto), com a data e a validade. O custo vale até o fim da validade da cotação (no máximo 90 dias). Custo vencido é tratado como "sem custo".
+Os custos que já estavam no catálogo sem cotação continuam valendo até 11/12/2026: até lá, anexem as cotações (o painel "Custos a atualizar" mostra a lista, começando pelos itens das propostas abertas).
+
+2. Preço sugerido na hora de montar a proposta
+Em cada item aparecem o preço mínimo e o preço sugerido. Antes de concluir, o sistema mostra o resumo e as opções:
+- usar o preço sugerido;
+- ajustar para o mínimo;
+- manter o seu preço e pedir autorização da Diretoria, com a justificativa;
+- se o item estiver sem custo ou com a cotação vencida: pedir a atualização do custo ou a autorização da Diretoria.
+
+3. Propostas que já estavam "Prontas"
+Ao gerar o documento, enviar ou mandar o link, o sistema confere de novo. Se faltar custo ou o preço estiver abaixo do mínimo, a tela explica o que fazer: atualizar o custo e concluir de novo, ou voltar para rascunho e pedir a autorização.
+
+Propostas já enviadas ou aprovadas não mudam.
+
+Qualquer dúvida, falem comigo.

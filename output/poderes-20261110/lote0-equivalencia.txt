@@ -1,0 +1,50 @@
+Equivalência do lote 0 (gerado por tests/poderes-lote0.test.cjs em 2026-11-11T03:47:50.068Z)
+Comparações: 3450 (150 poderes × 23 contas). Divergências SGO_pode_ × hoje: 0. Catálogo (H) × funções do legado: 1 (AST_GERIR_FILA_SETOR elisa: legado=false catálogo(H)=true; vale o legado).
+Dono (admin): SIM em tudo; muda em 3 caixas: COM_CATALOGO_EDITAR_VENDA, FROTA_BLOQUEIO_ROUBO, REP_ABRIR_EM_NOME.
+Configuração real usada: gestoresPorArea={"RH":["1ec5d6d0-284c-4919-aa05-8804172a070e","1749164c-7e45-494e-b81c-4bd1f4080bf0","3a63382c-e790-4e5a-b60c-28a83a7e1a26"],"TECNICA":["f5c4cb0e-a3bf-4988-9a78-94738cd3f912","3a63382c-e790-4e5a-b60c-28a83a7e1a26","2263e0c4-e5d2-48f4-bf2c-86badf283993"],"COMERCIAL":["1ec5d6d0-284c-4919-aa05-8804172a070e","2263e0c4-e5d2-48f4-bf2c-86badf283993","3a63382c-e790-4e5a-b60c-28a83a7e1a26"],"DIRETORIA":["1ec5d6d0-284c-4919-aa05-8804172a070e","3a63382c-e790-4e5a-b60c-28a83a7e1a26"],"LOGISTICA":["2263e0c4-e5d2-48f4-bf2c-86badf283993"],"QUALIDADE":["1ec5d6d0-284c-4919-aa05-8804172a070e","2263e0c4-e5d2-48f4-bf2c-86badf283993","3a63382c-e790-4e5a-b60c-28a83a7e1a26"],"FINANCEIRO":["1ec5d6d0-284c-4919-aa05-8804172a070e","3a63382c-e790-4e5a-b60c-28a83a7e1a26","84d0dbf3-216e-414e-af56-3b0ee0b18fc7"],"METROLOGIA":["f5c4cb0e-a3bf-4988-9a78-94738cd3f912","3a63382c-e790-4e5a-b60c-28a83a7e1a26"],"ADMINISTRATIVO":["1ec5d6d0-284c-4919-aa05-8804172a070e","84d0dbf3-216e-414e-af56-3b0ee0b18fc7"]}; triagem=["f5c4cb0e-a3bf-4988-9a78-94738cd3f912","1ec5d6d0-284c-4919-aa05-8804172a070e","b36756b2-d5e1-474d-9ae3-f5e5826a6c13","2263e0c4-e5d2-48f4-bf2c-86badf283993","1b451e8f-bcee-4d1b-9ad3-4f676ad29c91"]; responsáveis da representação (Rep_responsaveis_)=["f5c4cb0e-a3bf-4988-9a78-94738cd3f912","1ec5d6d0-284c-4919-aa05-8804172a070e","b36756b2-d5e1-474d-9ae3-f5e5826a6c13","2263e0c4-e5d2-48f4-bf2c-86badf283993","1b451e8f-bcee-4d1b-9ad3-4f676ad29c91"].
+
+Diferenças do "hoje" real em relação ao catalogo.json (29 células, 19 poderes):
+  SISTEMA_SEGREDOS_SERVIDOR: matheusgodoi perde, elisa perde, ricardo perde, charles perde, priscilla perde, bruna perde
+  COMPRAS_APROVAR_DA_AREA: wanessa ganha
+  COM_USAR: matheusgodoi ganha
+  COM_TODAS_AS_VENDAS: matheusgodoi ganha
+  COM_GESTAO_COMERCIAL: matheusgodoi ganha
+  COM_DECIDIR_DESCONTO: matheusgodoi ganha
+  COM_PEDIDOS_APROVADOS: matheusgodoi ganha
+  COM_VER_VALORES: matheusgodoi ganha
+  COM_VER_CUSTO: matheusgodoi ganha
+  COM_CATALOGO_EDITAR: matheusgodoi ganha
+  COM_BANCO_PRECOS_GERIR: matheusgodoi ganha
+  COM_EXCLUIR: matheusgodoi ganha
+  AST_GESTAO: matheusgodoi ganha, bruna ganha
+  AST_EXECUTAR_OS_DE_OUTROS: matheusgodoi ganha, bruna ganha
+  AST_GERIR_FILA_SETOR: wanessa ganha
+  REP_ADMINISTRAR: bento ganha
+  REP_LIBERAR_FOTO: bento ganha, matheusgodoi ganha, ricardo ganha, bruna ganha
+  AVISOS_ABRIR_DE_OUTROS: wanessa ganha
+  PONTO_VER_EQUIPE_AREA: wanessa ganha
+
+Poderes por pessoa (hoje real; catalogo.json entre parênteses):
+  bento TECNICO/METROLOGIA: 15 (13)
+  admin ADMIN/DIRETORIA: 147 (147)
+  matheusgodoi GESTOR/QUALIDADE: 97 (85)
+  hidelbrandosampaio TECNICO/TECNICA: 10 (10)
+  paulohenrique TECNICO/TECNICA: 10 (10)
+  gabrielpereira TECNICO/TECNICA: 10 (10)
+  elisa GESTOR/RH: 77 (78)
+  wanessa FINANCEIRO/FINANCEIRO: 54 (50)
+  beatriz METROLOGIA/METROLOGIA: 14 (14)
+  guilherme TECNICO/LOGISTICA: 15 (15)
+  hst CLIENTE/-: 0 (0)
+  hcn CLIENTE/-: 0 (0)
+  ndi CLIENTE/-: 0 (0)
+  ricardo GESTOR/COMERCIAL: 92 (92)
+  gabrieldias TECNICO/TECNICA: 10 (10)
+  charles DIRETORIA/DIRETORIA: 127 (128)
+  joaopedro TECNICO/TECNICA: 10 (10)
+  energiza2209 REPRESENTADA/-: 0 (0)
+  priscilla GESTOR/METROLOGIA: 76 (77)
+  bruna GESTOR/METROLOGIA: 82 (80)
+  monica COMERCIAL/COMERCIAL: 22 (22)
+  rafael.marques TECNICO/TECNICA: 10 (10)
+  qualidade REPRESENTADA/-: 0 (0)

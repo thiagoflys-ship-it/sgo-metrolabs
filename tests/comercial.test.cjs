@@ -3,7 +3,10 @@
 // e a rotina. Código real num contexto isolado (tests/_comercial_ambiente.cjs). Só dados de teste.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ambiente, oportunidadeDeTeste, em, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
+const { ambiente: ambienteBase, oportunidadeDeTeste, em, SEM_VIAGEM } = require('./_comercial_ambiente.cjs');
+// 10/11/2026 (brechas de preço): item sem custo leva a proposta para a Diretoria; estes testes não tratam de custo e dão aos itens sem
+// custo 30% do preço antes de concluir (opção custoAvulso do ambiente). As regras de custo estão em comercial-precos-brechas.test.cjs.
+const ambiente = (o) => ambienteBase(Object.assign({ custoAvulso: 0.3 }, o || {}));
 
 const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
 

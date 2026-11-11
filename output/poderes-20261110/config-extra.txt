@@ -1,0 +1,7 @@
+CAIXAS_EMAIL
+GES_ACESSOS
+GES_AVALIACOES
+GES_DECISOES
+GES_ENVIOS
+MODO_PERS_RESPONSAVEIS = [{"userId":"b36756b2-d5e1-474d-9ae3-f5e5826a6c13","usuario":"bento","nome":"GABRIEL BENTO","desde":"22/10/2026 22:58:33","por":"THIAGO GARCEZ GONZALES"},{"userId":"2263e0c4-e5d2-48f4-bf2c-86badf283993","usuario":"matheusgodoi","nome":"MATHEUS GODOI","desde":"22/10/2026 22:58:33","por":"THIAGO GARCEZ GONZALES"},{"userId":"3a63382c-e790-4e5a-b60c-28a83a7e1a26","usuario":"admin","nome":"THIAGO GARCEZ GONZALES","desde":"22/10/2026 22:58:33","por":"THIAGO GARCEZ GONZALES"}]
+script | GESTAO_DECISOES_CFG = {"escada": {"mensal": true, "semanal": true, "whatsapp": true, "horaEmail": "08:00", "emailDiario": true, "horaSemanal": "08:00", "whatsDiasUteis": 2, "diretoriaDiasUteis": 5}, "automacoes": {"cnhCondutor": true, "manutencaoAgenda": true, "relatoriosMensais": true, "atividadeSemResponsavel": true}, "implantadoEm": "2026-10-20T12:15", "areaPorModulo": {"auvo": "TECNICA", "nr13": "TECNICA", "email": "COMERCIAL", "frota": "ADMINISTRATIVO", "ponto": "RH", "avisos": "ADMINISTRATIVO", "compras": "LOGI

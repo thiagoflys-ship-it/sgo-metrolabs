@@ -1,0 +1,24 @@
+FASE=producao em 2026-11-11T01:03:47.209Z
+arquivos=22 pass=211 fail=18
+comercial-assinatura-aprovacao.test.cjs	saida=1	pass=19	fail=1	FALHAS: tela, página pública e ajuda: janela do link, tipo do aceite, registro posterior, textos de proposta e manual atualizado
+comercial-atividade-gestao.test.cjs	saida=0	pass=5	fail=0
+comercial-busca.test.cjs	saida=0	pass=6	fail=0
+comercial-c2-precos.test.cjs	saida=0	pass=10	fail=0
+comercial-c2-revisao.test.cjs	saida=0	pass=7	fail=0
+comercial-c3-orcamentista.test.cjs	saida=0	pass=10	fail=0
+comercial-c3-revisao.test.cjs	saida=0	pass=12	fail=0
+comercial-c4-entrada-mercado.test.cjs	saida=1	pass=8	fail=1	FALHAS: menu, ajuda, manual e base do assistente: Quadro e Gantt dentro de Oportunidades; entrada, perda e relatório documentados
+comercial-catalogo-equipe-exclusao.test.cjs	saida=0	pass=8	fail=0
+comercial-catalogo-oficial.test.cjs	saida=1	pass=14	fail=3	FALHAS: implantação: cria os 26 com os preços do dono, desativa os repetidos da C1 com histórico (nunca apaga), freezer com parâmetros; reexecutar cria 0 | sobra dos 26 pela ficha (só gestão e Diretoria): preço, custo, impostos GO, comissão, sobra R$ e %; o preço do dono não muda | reajuste da decisão: suspeitos (alta acima de 100% ou custo maior que o preço) ficam fora; limite configurável; os 26 oficiais sempre fora (também do reajuste por percentual)
+comercial-celular.test.cjs	saida=0	pass=3	fail=0
+comercial-decisao-dono.test.cjs	saida=0	pass=13	fail=0
+comercial-especialista.test.cjs	saida=0	pass=16	fail=0
+comercial-etapa2.test.cjs	saida=0	pass=18	fail=0
+comercial-importar-crm.test.cjs	saida=0	pass=2	fail=0
+comercial-investimento.test.cjs	saida=0	pass=9	fail=0
+comercial-modelo-orcamento.test.cjs	saida=0	pass=7	fail=0
+comercial-precificacao.test.cjs	saida=0	pass=13	fail=0
+comercial-quadro.test.cjs	saida=0	pass=8	fail=0
+comercial-termos-catalogo.test.cjs	saida=0	pass=7	fail=0
+comercial.test.cjs	saida=0	pass=16	fail=0
+poderes-lote0.test.cjs	saida=1	pass=0	fail=13	FALHAS: catálogo: 150 poderes com regra padrão, todos desligados no lote 0; nada fora do catalogo.json | equivalência: sem exceções, SGO_pode_ = hoje (funções do legado + configuração real) nos 150 poderes × 23 contas; só o dono muda, nas 3 caixas documentadas | exceções: SIM e NÃO sobrepõem o padrão; voltar ao padrão; histórico com antes e depois; nunca apaga histórico | motivo obrigatório (5 letras), valores inválidos e caixas repetidas são recusados sem gravar nada | proteções: ninguém altera as próprias caixas; não-dono sem ACESSOS_GERIR é recusado no servidor; dono não perde poder; conta de fora não tem caixa | SGO_podeExigir_: recusa com o nome da caixa, o porquê e o que fazer | copiar de outra pessoa: fica igual, com exceção só onde difere do padrão; a caixa de gerir acessos nunca é copiada | modelos: substituir deixa exatamente o modelo; somar só libera; Gestor de área usa a área; nenhum modelo mexe em gerir acessos | API da tela: pessoa agrupada por módulo com padrão × efetivo × origem × ligado; ver como; tela devolvida depois de salvar | fora do ar não libera: regra padrão que falha vale NÃO e o erro chega à tela; abas ausentes = sem exceção | memória por requisição: muitas perguntas leem as abas uma vez; gravar limpa a memória | tela: incluída na página completa, item do menu escondido por padrão e só aparece para quem pode; casca abre a tela; ajuda registrada | tela: textos corridos justificados, celular sem largura fixa, aviso do lote em toda caixa desligada, motivo pedido em toda gravação

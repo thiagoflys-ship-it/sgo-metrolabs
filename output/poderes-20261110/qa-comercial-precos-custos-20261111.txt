@@ -1,0 +1,192 @@
+agenda-unica-os.test.cjs: ℹ pass 3 ℹ fail 1 
+ajuda-sem-recurso-admin.test.cjs: ℹ pass 1 ℹ fail 0 
+app-tecnico-atividades.test.cjs: ℹ pass 3 ℹ fail 0 
+assistencia-aceite-orcamento.test.cjs: ℹ pass 7 ℹ fail 0 
+assistencia-campo.test.cjs: ℹ pass 3 ℹ fail 4 
+assistencia-compras-retorno.test.cjs: ℹ pass 6 ℹ fail 0 
+assistencia-documento-envio.test.cjs: ℹ pass 8 ℹ fail 0 
+assistencia-duas-assinaturas.test.cjs: ℹ pass 7 ℹ fail 0 
+assistencia-fonte-integracao.test.cjs: ℹ pass 5 ℹ fail 0 
+assistencia-logistica.test.cjs: ℹ pass 5 ℹ fail 0 
+assistencia-questionarios-tarefas.test.cjs: ℹ pass 2 ℹ fail 0 
+assistencia-ronda-revisao.test.cjs: ℹ pass 5 ℹ fail 0 
+assistencia-ronda.test.cjs: ℹ pass 6 ℹ fail 0 
+assistencia-tela.test.cjs: ℹ pass 2 ℹ fail 1 
+assistencia-triagem-exclusao.test.cjs: ℹ pass 5 ℹ fail 1 
+assistencia-triagem-logistica.test.cjs: ℹ pass 7 ℹ fail 0 
+assistencia.test.cjs: ℹ pass 13 ℹ fail 0 
+assistente-duvidas.test.cjs: 
+atividades-equipe-avisos.test.cjs: ℹ pass 12 ℹ fail 1 
+atividades-pedido-nova-data.test.cjs: ℹ pass 14 ℹ fail 0 
+autoclave-lavadora-pasta-uploads.test.cjs: ℹ pass 2 ℹ fail 0 
+autoclave-planilha-dados.test.cjs: ℹ pass 8 ℹ fail 0 
+autoclave-qualificacao.test.cjs: ℹ pass 17 ℹ fail 0 
+autoclave-simulado.test.cjs: ℹ pass 7 ℹ fail 0 
+automacao-predial-tuya.test.cjs: ℹ pass 12 ℹ fail 0 
+automacao-predial.test.cjs: ℹ pass 48 ℹ fail 0 
+auvo-acervo.test.cjs: ℹ pass 17 ℹ fail 0 
+auvo-gestao-envio-cliente.test.cjs: ℹ pass 4 ℹ fail 0 
+auvo-pendencias-um-ano.test.cjs: ℹ pass 3 ℹ fail 0 
+auvo-reconhecer-existente.test.cjs: ℹ pass 10 ℹ fail 0 
+auvo-tabelas-celular.test.cjs: ℹ pass 5 ℹ fail 0 
+avisos-gestao-celular.test.cjs: ℹ pass 14 ℹ fail 0 
+avisos-gestao-revisao.test.cjs: ℹ pass 10 ℹ fail 0 
+avisos-janela-cartoes.test.cjs: ℹ pass 8 ℹ fail 1 
+baixatemp-cadastro-opcionais.test.cjs: ℹ pass 2 ℹ fail 0 
+baixatemp-ia-documento.test.cjs: ℹ pass 5 ℹ fail 1 
+baixatemp-motor.test.cjs: ℹ pass 9 ℹ fail 0 
+baixatemp-parser.test.cjs: ℹ pass 11 ℹ fail 0 
+bate-papo-imagens.test.cjs: ℹ pass 6 ℹ fail 0 
+bate-papo.test.cjs: ℹ pass 5 ℹ fail 0 
+cadastro-equipamento-campos.test.cjs: ℹ pass 6 ℹ fail 2 
+cadastro-excluir-contatos.test.cjs: ℹ pass 2 ℹ fail 0 
+cadastro-qualidade.test.cjs: ℹ pass 12 ℹ fail 0 
+cadeiafrio-abas-horarios.test.cjs: ℹ pass 9 ℹ fail 0 
+cadeiafrio-bordas-registradores.test.cjs: ℹ pass 4 ℹ fail 0 
+cadeiafrio-emissao.test.cjs: ℹ pass 6 ℹ fail 3 
+cadeiafrio-motor.test.cjs: ℹ pass 14 ℹ fail 1 
+cadeiafrio-oficial.test.cjs: ℹ pass 0 ℹ fail 3 
+cadeiafrio-xlsx-hora-24h.test.cjs: ℹ pass 5 ℹ fail 0 
+campo-celular.test.cjs: ℹ pass 11 ℹ fail 1 
+certcal-202600250.test.cjs: 
+certcal-acesso-executor.test.cjs: ℹ pass 4 ℹ fail 1 
+certcal-cadastros-cruzados.test.cjs: 
+certcal-documentos-evolucao.test.cjs: 
+certcal-documentos.test.cjs: 
+certcal-emissao-parcial.test.cjs: ℹ pass 11 ℹ fail 0 
+certcal-gestao-cruzamento.test.cjs: 
+certcal-instrumentos.test.cjs: ℹ pass 2 ℹ fail 9 
+certcal-interface.test.cjs: 
+certcal-inventario-cadastro.test.cjs: ℹ pass 3 ℹ fail 0 
+certcal-mobile-interpretativo.test.cjs: 
+certcal-motor.test.cjs: 
+certcal-proxima-backend.test.cjs: 
+certcal-proxima-interface.test.cjs: 
+certcal-proxima-mobile.test.cjs: 
+certcal-snapshot-documental.test.cjs: 
+certcal-snapshot-drive.test.cjs: ℹ pass 7 ℹ fail 0 
+chaves-zapi-url.test.cjs: ℹ pass 2 ℹ fail 0 
+comercial-assinatura-aprovacao.test.cjs: ℹ pass 20 ℹ fail 0 
+comercial-atividade-gestao.test.cjs: ℹ pass 5 ℹ fail 0 
+comercial-busca.test.cjs: ℹ pass 5 ℹ fail 1 
+comercial-c2-precos.test.cjs: 
+comercial-c2-revisao.test.cjs: ℹ pass 7 ℹ fail 0 
+comercial-c3-orcamentista.test.cjs: ℹ pass 10 ℹ fail 0 
+comercial-c3-revisao.test.cjs: ℹ pass 11 ℹ fail 1 
+comercial-c4-entrada-mercado.test.cjs: ℹ pass 8 ℹ fail 1 
+comercial-catalogo-equipe-exclusao.test.cjs: ℹ pass 7 ℹ fail 1 
+comercial-catalogo-oficial.test.cjs: ℹ pass 13 ℹ fail 4 
+comercial-celular.test.cjs: ℹ pass 2 ℹ fail 1 
+comercial-custos-cotacao.test.cjs: ℹ pass 12 ℹ fail 0 
+comercial-decisao-dono.test.cjs: ℹ pass 12 ℹ fail 1 
+comercial-especialista.test.cjs: ℹ pass 16 ℹ fail 0 
+comercial-etapa2.test.cjs: ℹ pass 18 ℹ fail 0 
+comercial-importar-crm.test.cjs: ℹ pass 2 ℹ fail 0 
+comercial-investimento.test.cjs: ℹ pass 9 ℹ fail 0 
+comercial-modelo-orcamento.test.cjs: ℹ pass 6 ℹ fail 1 
+comercial-precificacao.test.cjs: ℹ pass 13 ℹ fail 0 
+comercial-precos-brechas.test.cjs: ℹ pass 13 ℹ fail 0 
+comercial-quadro.test.cjs: ℹ pass 8 ℹ fail 0 
+comercial-termos-catalogo.test.cjs: ℹ pass 6 ℹ fail 1 
+comercial.test.cjs: ℹ pass 16 ℹ fail 0 
+compras-acesso-financeiro-delegado.test.cjs: ℹ pass 0 ℹ fail 7 
+compras-equipamento-cadastro.test.cjs: ℹ pass 4 ℹ fail 0 
+compras-informar-conciliacao.test.cjs: ℹ pass 10 ℹ fail 0 
+compras.test.cjs: ℹ pass 16 ℹ fail 0 
+conduta-diretoria-envolvida.test.cjs: ℹ pass 10 ℹ fail 0 
+conduta-diretoria-registra-homologada.test.cjs: ℹ pass 5 ℹ fail 1 
+conduta-fechamento-retroativo.test.cjs: ℹ pass 5 ℹ fail 0 
+conduta-qualidade-areas.test.cjs: ℹ pass 8 ℹ fail 0 
+conduta-sigilo-envolvido.test.cjs: ℹ pass 8 ℹ fail 0 
+documento-revisao-geradores.test.cjs: ℹ pass 4 ℹ fail 2 
+documento-revisao-oficial.test.cjs: ℹ pass 1 ℹ fail 2 
+documento-revisao-tela.test.cjs: ℹ pass 4 ℹ fail 0 
+documento-revisao.test.cjs: ℹ pass 4 ℹ fail 0 
+documentos-celular.test.cjs: ℹ pass 8 ℹ fail 1 
+documentos-log-persistencia.test.cjs: 
+documentos-tres-modulos-integracao.test.cjs: 
+email-integrado.test.cjs: ℹ pass 17 ℹ fail 0 
+enviar-documento.test.cjs: ℹ pass 13 ℹ fail 0 
+estufa-oficial.test.cjs: ℹ pass 0 ℹ fail 2 
+estufa-qualificacao.test.cjs: ℹ pass 18 ℹ fail 2 
+estufa-simulado.test.cjs: ℹ pass 7 ℹ fail 14 
+etapa5-compras-email-cadastros.test.cjs: ℹ pass 9 ℹ fail 1 
+etapa6-administracao-configuracao.test.cjs: ℹ pass 9 ℹ fail 1 
+frota-abastecimento.test.cjs: ℹ pass 18 ℹ fail 0 
+frota-bloqueio.test.cjs: ℹ pass 22 ℹ fail 0 
+frota-gestao.test.cjs: ℹ pass 7 ℹ fail 0 
+frota-identificacao.test.cjs: ℹ pass 11 ℹ fail 0 
+frota-leva2.test.cjs: ℹ pass 13 ℹ fail 0 
+frota-rastreador-km.test.cjs: ℹ pass 8 ℹ fail 0 
+frota-rastreamento-redesenho.test.cjs: ℹ pass 9 ℹ fail 1 
+frota-rastreamento.test.cjs: ℹ pass 13 ℹ fail 0 
+frota-reservas.test.cjs: ℹ pass 14 ℹ fail 0 
+gantt-layout.test.cjs: ℹ pass 6 ℹ fail 0 
+gestao-decisoes.test.cjs: ℹ pass 18 ℹ fail 0 
+gestao-relatorios-empresa.test.cjs: ℹ pass 8 ℹ fail 1 
+integracao-auditoria-20261021.test.cjs: ℹ pass 2 ℹ fail 0 
+lavadora-qualificacao.test.cjs: ℹ pass 18 ℹ fail 1 
+lavciclo-relatorio.test.cjs: ℹ pass 27 ℹ fail 0 
+licitacoes.test.cjs: ℹ pass 11 ℹ fail 2 
+licitacoes_agenda.test.cjs: ℹ pass 14 ℹ fail 1 
+licitacoes_alertas_agrupados.test.cjs: ℹ pass 9 ℹ fail 0 
+licitacoes_alertas_radar.test.cjs: ℹ pass 6 ℹ fail 1 
+licitacoes_alertas_revisao.test.cjs: ℹ pass 9 ℹ fail 0 
+licitacoes_alta_aderencia.test.cjs: ℹ pass 14 ℹ fail 0 
+licitacoes_analise.test.cjs: ℹ pass 26 ℹ fail 2 
+licitacoes_analise_parcial.test.cjs: ℹ pass 5 ℹ fail 0 
+licitacoes_contratos.test.cjs: ℹ pass 21 ℹ fail 1 
+licitacoes_disputa.test.cjs: ℹ pass 22 ℹ fail 1 
+licitacoes_fila_analise.test.cjs: ℹ pass 23 ℹ fail 1 
+licitacoes_guarda.test.cjs: ℹ pass 3 ℹ fail 1 
+licitacoes_habilitacao.test.cjs: ℹ pass 24 ℹ fail 2 
+licitacoes_leitura.test.cjs: ℹ pass 33 ℹ fail 1 
+licitacoes_mercado.test.cjs: ℹ pass 14 ℹ fail 1 
+licitacoes_painel.test.cjs: ℹ pass 14 ℹ fail 1 
+licitacoes_pareceres.test.cjs: ℹ pass 20 ℹ fail 1 
+licitacoes_precos.test.cjs: ℹ pass 15 ℹ fail 1 
+licitacoes_precos_revisao.test.cjs: ℹ pass 11 ℹ fail 1 
+licitacoes_proposta.test.cjs: ℹ pass 20 ℹ fail 2 
+licitacoes_ramo.test.cjs: ℹ pass 9 ℹ fail 1 
+licitacoes_ramo_alertas_integracao.test.cjs: ℹ pass 2 ℹ fail 0 
+licitacoes_verificador_pdf.test.cjs: ℹ pass 22 ℹ fail 0 
+login-email.test.cjs: ℹ pass 13 ℹ fail 0 
+matriz-avisos.test.cjs: ℹ pass 15 ℹ fail 4 
+modo-personalizado.test.cjs: ℹ pass 7 ℹ fail 2 
+navegacao-subniveis.test.cjs: ℹ pass 10 ℹ fail 1 
+navegacao-voltar.test.cjs: ℹ pass 17 ℹ fail 1 
+nr13-cadastro-equipamento.test.cjs: ℹ pass 2 ℹ fail 0 
+omie-conciliacao.test.cjs: 
+omie-faturamento.test.cjs: ℹ pass 0 ℹ fail 11 
+omie-financeiro.test.cjs: ℹ pass 0 ℹ fail 13 
+omie-operacoes.test.cjs: 
+padroes-equipamento-documentos.test.cjs: ℹ pass 10 ℹ fail 1 
+perfil-rh-vinculo.test.cjs: ℹ pass 14 ℹ fail 0 
+perfis-rotina-frota.test.cjs: ℹ pass 6 ℹ fail 0 
+perfis-rotina-geral.test.cjs: ℹ pass 10 ℹ fail 0 
+pgtpop-ia-formato.test.cjs: ℹ pass 5 ℹ fail 0 
+poderes-lote0.test.cjs: ℹ pass 13 ℹ fail 0 
+ponto.test.cjs: ℹ pass 21 ℹ fail 1 
+qiqo-auditoria.test.cjs: ℹ pass 9 ℹ fail 0 
+qualificacao-integrada.test.cjs: ℹ pass 4 ℹ fail 10 
+relatorios-qualificacao-cadastro.test.cjs: ℹ pass 0 ℹ fail 3 
+relcal-acesso.test.cjs: ℹ pass 2 ℹ fail 0 
+relcal-declaracao-cadastro.test.cjs: ℹ pass 4 ℹ fail 1 
+relcal-deteccao-concorrente.test.cjs: 
+relcal-geracao-contexto.test.cjs: 
+relcal-nove-neutralidade.test.cjs: ℹ pass 6 ℹ fail 0 
+relcal-vinculo-certificados.test.cjs: 
+representacao-acesso.test.cjs: ℹ pass 4 ℹ fail 0 
+representacao-documentos.test.cjs: ℹ pass 7 ℹ fail 0 
+representacao-em-nome.test.cjs: ℹ pass 9 ℹ fail 0 
+representacao-modelos-avisos.test.cjs: ℹ pass 19 ℹ fail 0 
+representacao-painel.test.cjs: ℹ pass 6 ℹ fail 0 
+representacao.test.cjs: ℹ pass 9 ℹ fail 0 
+sedna.test.cjs: ℹ pass 10 ℹ fail 1 
+seguranca-acesso.test.cjs: ℹ pass 13 ℹ fail 0 
+servico-tecnico-atividade.test.cjs: ℹ pass 5 ℹ fail 0 
+sessao-cache.test.cjs: ℹ pass 3 ℹ fail 0 
+usuarios-excluir-vinculo.test.cjs: ℹ pass 16 ℹ fail 0 
+vinculos-auvo-unidade.test.cjs: ℹ pass 9 ℹ fail 0 
+whatsapp-piloto.test.cjs: ℹ pass 11 ℹ fail 0 
+whatsapp-zapi.test.cjs: ℹ pass 8 ℹ fail 0 

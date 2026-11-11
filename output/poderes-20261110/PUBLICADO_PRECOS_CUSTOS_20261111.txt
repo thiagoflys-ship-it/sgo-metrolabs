@@ -1,0 +1,22 @@
+COMERCIAL — brechas de preço + custo com cotação e validade + preço sugerido — PUBLICADO 11/11/2026 00:53 BRT
+Imagem: metrolabs/sgo:comercial-precos-custos-20261111
+sha256:f02de011f2202794f7c33524411f59a85bd1f984c9c905241168577445a83fc6
+Base: poderes-lote0-20261110 (sha256:ad471a8a…), conferida antes da troca.
+Camada (8 arquivos): JS_Comercial.html, SGO_Ajuda_Comercial.js, SGO_Comercial_Config.js, _Gestora.js,
+_Painel.js, _Precificacao.js, _Propostas.js e SGO_Comercial_Custos.js (novo).
+Motivo: PROP-2026-0028 (item sem custo passou ~R$ 5.900 abaixo da sobra mínima).
+Documentos: AUDITORIA_PRECOS_COMERCIAL.md, PRECOS_IMPLEMENTACAO.md, CUSTOS_COTACAO_IMPLEMENTACAO.md.
+Decisões do dono: item sem custo só a Diretoria libera; vale a sobra TOTAL (item abaixo = aviso);
+cotação do fornecedor obrigatória ao gravar custo; preço sugerido e opções ao vendedor.
+Ajuste meu na implantação: custo antigo sem cotação (894 itens) vale para o cálculo do mínimo até
+11/12/2026 (situação LEGADO, com aviso; configurável em COM_CONFIG CUSTOS.carenciaLegadoAte); depois
+vira "sem custo válido". Custo novo exige cotação já.
+Testes: suíte local 190 arquivos — sem falha nova (compras.test ajustado: item avulso de teste recebe
+custo, como nos testes do Comercial). Na imagem exata (docker --network none): diferenças só por
+arquivos fora do pacote de teste (docs/MANUAL_*.md e _tools/gerar_banco_c1.cjs); com docs enviados,
+os mesmos resultados do local. qa-*.txt nesta pasta.
+Pós-publicação: healthy; https 200; página servida com as telas novas e as anteriores; sem erros.
+NÃO verificado: operador real concluindo proposta; envio de aviso de custo vencendo (rotina diária).
+Impacto esperado: 31 propostas PRONTAS param na próxima ação (sem custo ou abaixo do mínimo) até
+custo/aprovação da Diretoria. Prioridade de saneamento: custos-saneamento-prioridade.csv.
+Reverter: /opt/metrolabs/backup/comercial-precos-custos-20261111/compose.antes.yml (+ banco-antes.dump).

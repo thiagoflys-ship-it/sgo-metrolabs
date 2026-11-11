@@ -1,0 +1,11 @@
+SEGURANCA — gravacao de chaves e senhas so pelo dono — PUBLICADO 10/11/2026 (noite)
+Imagem: metrolabs/sgo:seguranca-segredos-20261110
+sha256:1f270f5f18678124a848aa4d9d99db4db32eb2baef341e678039473c1fe1980d
+Base: comercial-assinatura-20261110 (sha256:0ffe1e9b...), conferida antes.
+Mudanca: /_sgo/segredos (POST) passou de isAdminSession (qualquer Gestor/Admin/Diretoria)
+para Chaves_exigirDono_ (dono, SGO_DONOS = admin), mesma regra da tela Chaves e senhas.
+Arquivos: src/servidor.ts e dist/servidor.js (2 linhas). /_sgo/estado (painel somente
+leitura) NAO mudou: vira caixa na tela de Acessos.
+Verificado: sem sessao 403; sessao invalida 403; pagina /_sgo/segredos 200; pagina
+principal 200; healthy. NAO verificado com a sessao do dono (gravar uma chave real).
+Reverter: /opt/metrolabs/backup/seguranca-segredos-20261110/compose.antes.yml.
