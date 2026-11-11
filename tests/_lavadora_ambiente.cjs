@@ -8,6 +8,7 @@ const vm = require('node:vm');
 const A = require('./_autoclave_ambiente.cjs');
 
 const ARQUIVOS_LAV = [
+  'SGO_QualifSimulacao.js', // 11/11/2026: simulação didática (ignorado se a fonte testada não tiver)
   'SGO_LavRel_Config.js', 'SGO_LavRel_Parser.js', 'SGO_LavRel_AnaliseCiclo.js', 'SGO_LavRel_Main.js', 'SGO_LavRel_Simulador.js',
   'SGO_LavRel_CertificadoIA.js', 'SGO_LavRel_CertificadoRelatorio.js', 'SGO_LavRel_PlanilhaDados.js',
   'SGO_QualifEquipamento.js', 'SGO_LavRel_ModeloOficialDoc.js', 'SGO_LavRel_ModeloOficialNovo.js'

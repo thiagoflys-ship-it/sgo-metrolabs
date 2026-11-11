@@ -1,0 +1,23 @@
+FASE=candidato em 2026-11-11T04:02:06.542Z
+arquivos=21 pass=184 fail=15
+autoclave-lavadora-pasta-uploads.test.cjs	saida=0	pass=2	fail=0
+autoclave-planilha-dados.test.cjs	saida=0	pass=8	fail=0
+autoclave-qualificacao.test.cjs	saida=0	pass=17	fail=0
+autoclave-simulado.test.cjs	saida=0	pass=7	fail=0
+baixatemp-cadastro-opcionais.test.cjs	saida=0	pass=2	fail=0
+baixatemp-ia-documento.test.cjs	saida=0	pass=6	fail=0
+baixatemp-motor.test.cjs	saida=0	pass=9	fail=0
+baixatemp-parser.test.cjs	saida=0	pass=11	fail=0
+cadeiafrio-abas-horarios.test.cjs	saida=0	pass=9	fail=0
+cadeiafrio-bordas-registradores.test.cjs	saida=0	pass=4	fail=0
+cadeiafrio-emissao.test.cjs	saida=0	pass=9	fail=0
+cadeiafrio-motor.test.cjs	saida=1	pass=14	fail=1	FALHAS: evento iniciado com sensor fora da faixa e início do evento fora dos dados viram travas
+cadeiafrio-oficial.test.cjs	saida=0	pass=3	fail=0
+cadeiafrio-xlsx-hora-24h.test.cjs	saida=0	pass=5	fail=0
+estufa-oficial.test.cjs	saida=0	pass=2	fail=0
+estufa-qualificacao.test.cjs	saida=0	pass=20	fail=0
+estufa-simulado.test.cjs	saida=1	pass=7	fail=14	FALHAS: ESTUFA_INCUBACAO: forçar APROVADO passa pelo motor novo, não por troca de parecer | BANHO_MARIA: forçar APROVADO passa pelo motor novo, não por troca de parecer | SECADORA_TRAQUEIAS: forçar APROVADO passa pelo motor novo, não por troca de parecer | ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO: forçar APROVADO passa pelo motor novo, não por troca de parecer | ESTUFA_ESTERILIZACAO_DESPIROGENIZACAO: forçar REPROVADO passa pelo motor novo, não por troca de parecer | prévia e documento: mesmos dados sem cache, inclusive por sensor | cache/fingerprint muda com critérios, perfil, repetições e resultado | ABERTURA_PORTA: APROVADO com tempo-alvo no motor novo | QUEDA_ENERGIA: APROVADO com tempo-alvo no motor novo | despirogenização FD: APROVADO, sem inventar resultado de laboratório | despirogenização FD: REPROVADO, sem inventar resultado de laboratório | falhas de entrada dizem como corrigir, sem inventar aprovação nem recortar dados | períodos sobrepostos de resultados contraditórios são recusados | documentos simulados: prévia, relatório e planilha mantêm o resultado nos quatro perfis
+lavadora-qualificacao.test.cjs	saida=0	pass=19	fail=0
+qualificacao-integrada.test.cjs	saida=0	pass=14	fail=0
+relatorios-qualificacao-cadastro.test.cjs	saida=0	pass=3	fail=0
+seguranca-acesso.test.cjs	saida=0	pass=13	fail=0

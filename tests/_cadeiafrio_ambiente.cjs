@@ -8,7 +8,7 @@ const path = require('node:path');
 const A = require('./_autoclave_ambiente.cjs');
 
 const ARQUIVOS = [
-  'SGO_QualifEquipamento.js',
+  'SGO_QualifEquipamento.js', 'SGO_QualifSimulacao.js',
   'SGO_CadeiaFrioRel_Config.js', 'SGO_CadeiaFrioRel_Datas.js', 'SGO_CadeiaFrioRel_Parser.js', 'SGO_CadeiaFrioRel_Engine.js',
   'SGO_CadeiaFrioRel_Main.js', 'SGO_CadeiaFrioRel_Simulador.js', 'SGO_CadeiaFrioRel_CertificadoIA.js', 'SGO_CadeiaFrioRel_CertificadoRelatorio.js',
   'SGO_CadeiaFrioRel_Planilha.js', 'SGO_CadeiaFrioRel_Graficos.js',

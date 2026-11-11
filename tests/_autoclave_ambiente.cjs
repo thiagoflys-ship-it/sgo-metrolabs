@@ -117,6 +117,8 @@ function criarAmbiente(opcoes) {
     if (!fs.existsSync(path.join(BASE, nome))) continue;
     vm.runInContext(ler(nome), ctx, { filename: nome });
   }
+  // 11/11/2026: na produção a emissão confere o vínculo do cadastro (SGO_CadastroQualidade.js, CadQ_exigirVinculosCompletos_). O cadastro de teste é completo: stub que aprova.
+  vm.runInContext('if (typeof CadQ_exigirVinculosCompletos_ !== "function") { this.CadQ_exigirVinculosCompletos_ = function () {}; }', ctx);
   if (opcoes.extra) vm.runInContext(opcoes.extra, ctx);
   return {
     ctx, props, arquivos, pastas,

@@ -48,6 +48,8 @@ function criarAmbiente(opcoes) {
   opcoes = opcoes || {};
   const env = A.criarAmbiente(Object.assign({}, opcoes, { extra: STUBS + '\n' + (opcoes.extra || '') }));
   for (const f of ARQUIVOS_NOVOS) env.run(ler(f));
+  // 11/11/2026: simulação didática (SGO_QualifSimulacao.js), quando existir na fonte testada.
+  if (fs.existsSync(path.join(A.BASE, 'SGO_QualifSimulacao.js'))) env.run(ler('SGO_QualifSimulacao.js'));
   env.run([
     'SGO_DATA.insert("CAD_CLIENTES", { ID: "cli1", RAZAO_SOCIAL: "HOSPITAL MODELO TESTE LTDA", NOME_FANTASIA: "HOSPITAL MODELO TESTE", CNPJ: "11222333000181", ENDERECO: "Rua de Teste, 100", STATUS: "ATIVO" });',
     'SGO_DATA.insert("CAD_UNIDADES", { ID: "uni1", CLIENTE_ID: "cli1", NOME_UNIDADE: "CME CENTRAL TESTE", ENDERECO: "Rua de Teste, 100", CIDADE: "Goiânia", UF: "GO", STATUS: "ATIVO" });',

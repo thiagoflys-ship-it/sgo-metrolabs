@@ -130,6 +130,8 @@ function criarAmbiente(opcoes) {
     'SGO_DocA4_paginar_ = function (h) { return { html: h, pdfBlob: null }; };',
     'function SGO_DocA4_chamarGemini_(prompt, op) { if (typeof IA_TESTE !== "function") throw new Error("a chave da IA (GEMINI_API_KEY) não está cadastrada"); return IA_TESTE(prompt, op); }'
   ].join('\n'), ctx);
+  // 11/11/2026: na produção a emissão confere o vínculo do cadastro (SGO_CadastroQualidade.js, CadQ_exigirVinculosCompletos_). O cadastro de teste é completo: stub que aprova.
+  vm.runInContext('if (typeof CadQ_exigirVinculosCompletos_ !== "function") { this.CadQ_exigirVinculosCompletos_ = function () {}; }', ctx);
   if (opcoes.extra) vm.runInContext(opcoes.extra, ctx);
   // cadastro de teste
   SGO_DATA.insert('CAD_CLIENTES', { ID: 'cli1', RAZAO_SOCIAL: 'HOSPITAL TESTE LTDA', NOME_FANTASIA: 'HOSPITAL TESTE', CNPJ: '11222333000181', ENDERECO: 'Rua de Teste, 1', STATUS: 'ATIVO' });

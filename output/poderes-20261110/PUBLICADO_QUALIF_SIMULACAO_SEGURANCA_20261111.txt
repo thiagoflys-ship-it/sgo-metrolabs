@@ -1,0 +1,19 @@
+QUALIFICAÇÃO (o que falta + simulação didática + código WhatsApp) e SEGURANÇA /api/run — PUBLICADO 11/11/2026 ~01:51 BRT
+Imagem: metrolabs/sgo:qualif-simulacao-20261111
+sha256:5136d1a3f48a62e27ac3f6b43d22d47a92a10f068f9d20c4732648dcf02cea86
+Base: comercial-precos-custos-20261111 (sha256:f02de011…), conferida antes.
+Camada: 29 arquivos legado (Estufa, Autoclave, Lavadora, Cadeia de Frio, QualifEmissao/Equipamento,
+DocSalvar, SegurancaAcesso, novos SGO_QualifSimulacao.js e SGO_SimuladorCodigo.js) + src/dist servidor.
+1) Relatório completo diz o que falta (planilha sem relatório de ensaio, sem vínculo, aguardando aprovação,
+   nada emitido) com botão para a etapa. Caso real: secadora 004-EC-00018 (planilha REE-2026-00002).
+2) Simulação didática: só marca d'água "SIMULAÇÃO DIDÁTICA", número SIM-AAAA-NNNN, aba QUALIF_SIMULACOES e
+   pasta própria; nunca na ficha/QR/Arquivo/envio; número SIM recusado em documento oficial.
+3) Modo dados reconstituídos: código de 6 dígitos no WhatsApp do admin (10 min, uso único, 5 tentativas,
+   vale 2 h na sessão), além da senha; servidor confere quem pode (ADMIN ou Bento autorizado).
+4) SEGURANÇA (achado desta noite, já existia antes): /api/run executava funções públicas que recebem a
+   sessão como objeto — chamada direta com {perfil:"ADMIN"} sem login funcionava (testado com função só de
+   leitura). Corrigido: no SGO+, essas funções (126, lista montada do código ao iniciar) só pelos despachos.
+Testes: suíte na imagem exata (com docs e _tools): única diferença = 23 testes novos passando.
+Pós-publicação: healthy; chamada forjada 403 com registro; despacho normal responde; página com telas novas.
+NÃO verificado: operador real nas telas; envio real do código ao WhatsApp do dono; emissão real de ensaio.
+Reverter: /opt/metrolabs/backup/qualif-simulacao-20261111/compose.antes.yml (+ banco-antes.dump).
