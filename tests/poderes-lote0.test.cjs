@@ -103,7 +103,9 @@ const LIGADOS_LOTE1 = ['CONTAS_VER', 'CONTAS_CRIAR', 'CONTAS_ALTERAR_OUTROS', 'C
   'RELATORIO_TECNICO_APROVAR', 'RELATORIO_BAIXATEMP_APROVAR', 'RELATORIO_MODELO_ESCOLHER',
   // lote 5 (11/11/2026): Compras
   'COMPRAS_PEDIR', 'COMPRAS_VER_FILA', 'COMPRAS_VER_VALORES', 'COMPRAS_COMPRAR', 'COMPRAS_APROVAR_ATE_LIMITE', 'COMPRAS_APROVAR_DA_AREA',
-  'COMPRAS_APROVAR_SEM_LIMITE', 'COMPRAS_GESTAO', 'COMPRAS_REGRAS_EDITAR', 'COMPRAS_CIENCIA_GESTAO'];
+  'COMPRAS_APROVAR_SEM_LIMITE', 'COMPRAS_GESTAO', 'COMPRAS_REGRAS_EDITAR', 'COMPRAS_CIENCIA_GESTAO',
+  // lote 6 (11/11/2026): Frota, localização e bloqueio
+  'FROTA_LOCALIZAR', 'FROTA_RASTREADOR_CONFIGURAR', 'FROTA_BLOQUEAR_PARTIDA', 'FROTA_LIBERAR_PARTIDA', 'FROTA_BLOQUEIO_ROUBO', 'FROTA_ODOMETRO_CORRIGIR'];
 test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os ligados pelo lote 1; nada fora do catalogo.json', () => {
   const a = ambiente();
   const cat = a.ctx.SGO_poderesCatalogo_();
@@ -115,7 +117,7 @@ test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os l
     assert.ok(p.nome && !/NOVO/.test(p.nome), p.codigo);
     assert.equal(typeof p.padrao, 'function', p.codigo);
     // lote 1 (11/11/2026): só as caixas de Contas, senhas e acessos ligadas (SISTEMA_* ficam no servidor Node)
-    assert.equal(p.ligado, LIGADOS_LOTE1.includes(p.codigo), p.codigo + ' ligado fora dos lotes 1, 4 e 5');
+    assert.equal(p.ligado, LIGADOS_LOTE1.includes(p.codigo), p.codigo + ' ligado fora dos lotes 1, 4, 5 e 6');
   }
   assert.deepEqual(Array.from(vm.runInContext('SGO_PODERES_LIGADOS', a.ctx)), LIGADOS_LOTE1);
   assert.throws(() => a.ctx.SGO_pode_('s_admin', 'PODER_INEXISTENTE'), /Poder desconhecido/);

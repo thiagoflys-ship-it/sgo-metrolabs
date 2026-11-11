@@ -1,0 +1,896 @@
+/****************************************************
+ * AJUDA "COMO USAR ESTA TELA" — GRUPO ADMINISTRACAO (17/10/2026)
+ * Contrato: docs/AJUDA_CONTRATO_20261017.md
+ * Telas: Usuários (usuarios), Configurações (admin), Chaves e senhas (chaves); Acessos (acessos, 10/11/2026).
+ * Texto conferido com JS_Admin.html, JS_Chaves.html, JS_Cadastros.html,
+ * SGO_Usuarios.js e SGO_Chaves.js. Texto puro, sem HTML.
+ ****************************************************/
+function SGO_ajudaTelas_Administracao_() {
+  return {
+    "usuarios": {
+      titulo: "Usuários",
+      paraQueServe: "Cria e mantém as contas de acesso ao SGO+. Em cada conta ficam o perfil, o vínculo de trabalho (CLT, PJ, Diretoria, Cliente ou Representante), a situação, o e-mail (com ele a pessoa entra no SGO+), o celular (WhatsApp) e o último acesso da pessoa.",
+      antesDeComecar: [
+        "Esta tela é usada pela gestão: Administrador, Diretoria, Gestor, RH e Financeiro. Os demais perfis não veem o item \"Usuários\" no menu.",
+        "Área (Comercial, Financeiro, RH, Técnica/Campo e as demais): preenchida uma vez no cadastro e lida pelo Programa de conduta, pelos indicadores de qualidade e pelos relatórios. Quem está sem área aparece como \"Sem área definida\" nesses lugares.",
+        "Vínculo de trabalho: CLT, PJ ou Diretoria (22/10/2026: a empresa tem os três). Pela matriz de avisos (21/10/2026), o WhatsApp é só para quem é CLT, inclusive as mensagens do ponto. Quem é PJ, Diretoria ou está como \"Não informado\" recebe os avisos pelo sistema e por e-mail; a Diretoria só recebe WhatsApp se a gestão a marcar em Atividades da equipe > Avisos e horários.",
+        "Conta com perfil Diretoria sem vínculo de trabalho: a lista mostra \"Diretoria?\" e a rotina diária do sistema preenche Diretoria sozinha (fica registrado como feito pelo sistema). Um vínculo já informado nunca é trocado pelo sistema.",
+        "Cliente e Representante (03/11/2026) são os vínculos das contas de fora da Metrolabs. Escolher \"Cliente\" pede a empresa (cliente) e põe o perfil Cliente; escolher \"Representante\" pede a representada e o papel nela e põe o perfil Representada. Combinação que não fecha (por exemplo, vínculo Representante com perfil Técnico) não é salva: a mensagem diz o que corrigir. Conta de cliente ou da representada sem vínculo mostra \"Cliente?\" ou \"Representante?\" e a rotina preenche sozinha. Essas contas nunca recebem as mensagens do ponto nem os avisos internos da equipe.",
+        "Tenha em mãos o nome completo, o e-mail e o celular com DDD da pessoa.",
+        "Entrada pelo e-mail (31/10/2026): cada pessoa entra no SGO+ com o e-mail cadastrado aqui e a senha. O e-mail é obrigatório e não pode estar em duas contas. Conta ativa sem e-mail, ou com o mesmo e-mail de outra conta ativa, não entra: aparece em vermelho na lista, na faixa do topo e nos números \"Sem e-mail (não entram)\" e \"E-mail repetido\".",
+        "Escolha o perfil certo antes de cadastrar. O perfil define o que a pessoa vê e faz no sistema.",
+        "Para um usuário do perfil Cliente, a empresa dele precisa estar cadastrada e ativa em Clientes.",
+        "Para a pessoa de uma empresa representada (Brasmedical), use o perfil Representada: escolha a representada (cadastrada em Representação > Representadas) e o papel dela (administrador da representada, atendente, financeiro de garantia ou leitura). Essa conta vê só o módulo Representação e não aparece nas listas de pessoas do SGO+ (responsáveis, avisos, bate-papo).",
+        "Combine a senha inicial com a pessoa por um canal seguro. Nunca envie a senha em grupo ou por mensagem aberta. Quem esquece a senha usa \"Esqueci minha senha\" na tela de entrada; a gestão também pode enviar o link de redefinição (Mais ações)."
+      ],
+      passos: [
+        {
+          titulo: "Abrir a tela",
+          itens: [
+            "Toque em \"Usuários\" no menu, no grupo de administração.",
+            "Outra forma: em \"Configurações\", no bloco \"Empresa e sistema\", toque em \"Usuários e perfis\".",
+            "Confira os números do resumo no topo: \"Total\", \"Ativos\", \"Sem e-mail (não entram)\", \"E-mail repetido\", \"Inativos\", \"Sem celular (ativos)\", \"Administração e gestão\", \"Sem vínculo (ativos)\", \"Sem área (ativos)\" e \"Nunca entraram\"."
+          ]
+        },
+        {
+          titulo: "Cuidar das áreas (gestão e RH)",
+          itens: [
+            "Toque em \"Áreas\", no alto da tela de Usuários.",
+            "A faixa diz quantas pessoas ativas estão sem área. Em \"Sem área\", escolha a área de cada uma: grava na hora.",
+            "Em \"Pessoas e áreas\", troque a área de qualquer pessoa. É o mesmo que trocar no cadastro.",
+            "Para criar uma área, toque em \"Nova área\", escreva o nome e toque em \"Criar área\".",
+            "Para corrigir o nome, toque em \"Editar\" na linha da área. As pessoas continuam nela.",
+            "Para tirar uma área da lista, toque em \"Inativar\". Só é possível quando ninguém ativo está nela; nada é apagado.",
+            "Na primeira vez, o SGO+ preencheu a área de quem estava sem ela pelo perfil de acesso (Comercial, Financeiro, RH, Diretoria, Metrologia, Técnico). Administrador e Gestor não dizem a área: escolha na lista."
+          ]
+        },
+        {
+          titulo: "Encontrar um usuário",
+          itens: [
+            "Digite no campo de busca o nome, o e-mail ou o celular.",
+            "Para ver só um grupo, toque no número do resumo. Exemplo: toque em \"Sem celular (ativos)\".",
+            "Toque de novo no mesmo número para desfazer o filtro.",
+            "Use a lista \"Todos os perfis\" para ver só um perfil.",
+            "Use a lista \"Todas as situações\" para ver só ativos ou só inativos.",
+            "Use a lista \"Todos os vínculos\" para ver só CLT, só PJ, só Diretoria ou só quem está como \"Não informado\".",
+            "Use a lista \"Todas as áreas\" para ver uma área ou quem está \"Sem área\".",
+            "Use a ordenação para escolher entre \"Ordenar por nome\" e \"Último acesso mais recente\".",
+            "Toque em \"Limpar filtros\" para voltar à lista completa. Esse botão só aparece quando há filtro ativo."
+          ]
+        },
+        {
+          titulo: "Cadastrar um usuário novo",
+          itens: [
+            "Toque em \"Novo usuário\", à direita da barra de busca.",
+            "Preencha \"Nome completo\".",
+            "Preencha \"E-mail (entrada no SGO+)\". É obrigatório: com ele a pessoa entra no SGO+, recebe o link de nova senha e os avisos. Ele não pode estar em outra conta.",
+            "Preencha \"Celular (WhatsApp)\" com DDD. O sistema coloca a máscara sozinho.",
+            "Em \"Trabalho\", escolha a \"Área\" da pessoa. Ao escolher um perfil que diz a área (Comercial, Financeiro, RH, Diretoria, Metrologia, Técnico), ela já vem marcada se o campo estiver vazio; confira.",
+            "Em \"Trabalho\", escolha o \"Vínculo de trabalho\": CLT, PJ, Diretoria, Cliente, Representante ou Não informado. Ao escolher o perfil Diretoria com o vínculo vazio, \"Diretoria\" já vem marcada; confira. Para a conta de um cliente, escolha \"Cliente\" (o perfil muda para Cliente e aparece o campo da empresa); para a pessoa da representada, escolha \"Representante\" (o perfil muda para Representada e aparecem a representada e o papel).",
+            "Escolha o \"Perfil de acesso\". Para quem cuida do RH, escolha \"RH\". Para a direção da empresa, escolha \"Diretoria\" (só aparece para Administrador e Diretoria).",
+            "Se escolheu o perfil Cliente, escolha a \"Empresa (cliente)\".",
+            "Preencha a \"Senha inicial\" com pelo menos 6 caracteres. Ela é provisória: no primeiro acesso a pessoa cria a dela.",
+            "Toque em \"Cadastrar usuário\".",
+            "Aguarde a mensagem \"Usuário ... cadastrado. A pessoa entra com o e-mail ...\". O painel de detalhe da conta abre em seguida.",
+            "Avise a pessoa: ela entra com o e-mail cadastrado e a senha inicial."
+          ]
+        },
+        {
+          titulo: "Ver os detalhes de uma conta",
+          itens: [
+            "Toque na linha do usuário (ou no cartão, no celular).",
+            "Confira no painel as seções \"Identificação\" (nome e o e-mail com que a pessoa entra), \"Contato\", \"Trabalho\" (vínculo de trabalho) e \"Acesso\".",
+            "Em \"Acesso\", confira o perfil, a empresa (se for Cliente), o último acesso e a data do cadastro.",
+            "Para fechar, toque fora do painel ou aperte a tecla Esc. No celular, toque em Voltar."
+          ]
+        },
+        {
+          titulo: "Editar uma conta",
+          itens: [
+            "Toque em \"Editar\" na linha do usuário ou no rodapé do painel de detalhe.",
+            "Altere só o que precisa. Os campos que você não mexer ficam como estavam (o vínculo de trabalho também).",
+            "Toque em \"Salvar alterações\".",
+            "Se mudou o perfil, avise a pessoa: o perfil novo vale em até 5 minutos ou no próximo login.",
+            "Para desistir, toque em \"Cancelar\". Se já digitou algo, o sistema pergunta se quer fechar sem salvar."
+          ]
+        },
+        {
+          titulo: "Enviar o link de redefinição de senha (a pessoa esqueceu)",
+          itens: [
+            "Primeiro, a própria pessoa pode tocar em \"Esqueci minha senha\" na tela de entrada: o link chega no e-mail dela.",
+            "Para enviar pela gestão: toque em \"Mais\" na linha do usuário (no painel de detalhe, \"Mais ações\") e em \"Enviar link de redefinição\".",
+            "Escreva o motivo (fica no registro de segurança com o seu nome) e toque em \"Enviar o link\".",
+            "O link vai para o e-mail da pessoa, vale por 30 minutos e só pode ser usado uma vez. Se o acesso dela pede o código no celular, o link também pede o código no WhatsApp.",
+            "A senha atual continua valendo até a pessoa criar a nova. Depois, todas as sessões e aparelhos confiados dela são desconectados e ela recebe um aviso por e-mail."
+          ]
+        },
+        {
+          titulo: "Senha provisória (só para quem não tem e-mail)",
+          itens: [
+            "Use só quando a conta não tem e-mail: quem tem e-mail recebe o link.",
+            "Toque em \"Mais\" e em \"Senha provisória (sem e-mail)\".",
+            "Digite a senha nova em \"Senha nova\", com pelo menos 6 caracteres, e de novo em \"Repita a senha nova\".",
+            "Toque em \"Gravar senha provisória\". A senha antiga deixa de valer na hora e as sessões abertas caem.",
+            "Combine a senha com a pessoa por um canal seguro. No próximo acesso ela vê \"Crie sua nova senha\" e cria a dela.",
+            "Lembre: sem e-mail a pessoa não consegue entrar. Cadastre o e-mail dela assim que possível (Editar)."
+          ]
+        },
+        {
+          titulo: "Bloquear ou liberar o acesso",
+          itens: [
+            "Para bloquear, toque em \"Mais\" e depois em \"Inativar (bloquear o acesso)\".",
+            "Leia a confirmação e toque em \"Bloquear o acesso\".",
+            "A sessão aberta da pessoa é encerrada em até 5 minutos. O histórico dela fica guardado.",
+            "Para liberar de novo, toque em \"Mais\" e depois em \"Reativar (liberar o acesso)\".",
+            "Confira o perfil mostrado na confirmação e toque em \"Liberar o acesso\"."
+          ]
+        },
+        {
+          titulo: "Excluir uma conta (só o Administrador)",
+          itens: [
+            "Prefira inativar quando a pessoa pode voltar: a conta inativa pode ser reativada; a excluída não volta.",
+            "Toque em \"Mais\" e depois em \"Excluir usuário\". O botão fica apagado para quem não é Administrador, na sua própria conta e no último Administrador ativo.",
+            "O sistema confere todas as abas e mostra o que está ligado à conta: logins e acessos, chamados e pedidos, ordens de serviço, mensagens, atividades, documentos, avisos e histórico (ponto, comercial, licitações, frota, conduta e os demais), com quantos registros em cada um. Aba que não deu para ler aparece como \"não conferida\" e a conta fica guardada.",
+            "Se a pessoa é o técnico de um chamado ou O.S. em aberto, ou está fazendo a triagem de um chamado agora, a exclusão espera (para tirar o acesso já, use Inativar): passe cada um para outra pessoa na Assistência técnica e exclua de novo. Os papéis de configuração que ela tem (listas de responsáveis, piloto do WhatsApp, destinatários fixos) aparecem na confirmação e ela sai dessas listas ao excluir.",
+            "Escreva o motivo (pelo menos 10 letras). Ele fica no registro de auditoria com o seu nome, a data e a hora.",
+            "Sem nenhum registro ligado, a conta sai do cadastro (botão \"Excluir a conta\").",
+            "Com registro ligado, a conta fica guardada (botão \"Excluir (fica guardada)\"): some da lista e dos seletores, a sessão aberta da pessoa cai na hora, o login é recusado e o nome continua nos registros antigos.",
+            "Para consultar as contas excluídas (quem excluiu, quando e o motivo), toque em \"Excluídos\", no alto da tela."
+          ]
+        }
+      ],
+      cores: [
+        { nome: "Selo verde \"Ativo\"", significado: "A conta pode entrar no SGO+." },
+        { nome: "Selo cinza \"Inativo\"", significado: "O acesso está bloqueado. A conta e o histórico continuam guardados. Para liberar, use \"Mais\" e \"Reativar (liberar o acesso)\"." },
+        { nome: "Selo azul \"Você\"", significado: "É a sua própria conta. Você não pode inativar nem excluir a si mesmo." },
+        { nome: "Selo amarelo \"Sem celular\"", significado: "A pessoa não tem celular cadastrado. Ela não recebe avisos por WhatsApp e não usa o Assistente do ponto do COMMAND. Toque em \"Editar\" e informe o celular com DDD." },
+        { nome: "Selo azul \"CLT\", \"PJ\" ou \"Diretoria\" na coluna Vínculo", significado: "Vínculo de trabalho informado. Só quem é CLT recebe as mensagens do ponto; PJ e Diretoria não batem ponto." },
+        { nome: "Selo amarelo \"Diretoria?\" na coluna Vínculo", significado: "Conta com perfil Diretoria ainda sem vínculo de trabalho. O sistema sugere Diretoria e preenche sozinho na rotina diária; para fazer agora, toque em \"Editar\" e salve." },
+        { nome: "\"Não informado\" na coluna Vínculo", significado: "Ninguém informou se a pessoa é CLT, PJ ou Diretoria. Ela não recebe mensagens do ponto até a gestão escolher o vínculo em \"Editar\"." },
+        { nome: "Número amarelo \"Sem vínculo (ativos)\" no resumo", significado: "Quantas contas ativas da equipe estão sem CLT, PJ ou Diretoria. Contas da Diretoria com a sugestão \"Diretoria?\" não entram na conta. Toque no número para ver quais são." },
+        { nome: "Selo vermelho \"Sem e-mail: não entra\"", significado: "A conta não tem e-mail válido. A entrada no SGO+ é pelo e-mail, então a pessoa não consegue entrar nem pedir o link de nova senha. Toque em \"Editar\" e preencha um e-mail que seja só dela." },
+        { nome: "Selo vermelho \"Repetido (...)\" ao lado do e-mail", significado: "O mesmo e-mail está em outra conta ativa (o nome aparece no selo). Nenhuma das duas entra até a correção: deixe o e-mail em uma conta só (Editar ou Inativar a conta errada)." },
+        { nome: "Faixa vermelha no topo da lista", significado: "Quantas contas ativas não conseguem entrar (sem e-mail ou com e-mail repetido) e quais são. Corrija cada uma em \"Editar\"." },
+        { nome: "Números vermelhos \"Sem e-mail (não entram)\" e \"E-mail repetido\" no resumo", significado: "Contas ativas que não conseguem entrar. Toque no número para ver quais são." },
+        { nome: "\"Conta técnica (Auvo)\" na coluna E-mail", significado: "Conta da integração com o Auvo. Ela não é de uma pessoa, não usa e-mail e continua entrando como antes." },
+        { nome: "\"Não informado\" no celular de um usuário Cliente", significado: "O celular é opcional para o perfil Cliente. Por isso não aparece em destaque." },
+        { nome: "\"Nunca entrou\" no último acesso", significado: "Não há registro de entrada recente desta conta. Confira se a pessoa sabe que entra com o e-mail cadastrado e se recebeu a senha inicial." },
+        { nome: "Número amarelo \"Sem celular (ativos)\" no resumo", significado: "Quantas contas ativas, fora do perfil Cliente, estão sem celular. Toque no número para ver quais são." },
+        { nome: "Número verde \"Ativos\" no resumo", significado: "Quantas contas podem entrar hoje. Toque para filtrar." },
+        { nome: "Faixa amarela no painel de detalhe", significado: "Avisa que a conta ativa está sem celular e diz o que fazer." },
+        { nome: "Faixa vermelha no painel de detalhe", significado: "Avisa que a conta ativa está sem e-mail ou com e-mail repetido: ela não consegue entrar. Diz o que fazer." },
+        { nome: "Faixa azul no painel de detalhe", significado: "Avisa que é uma conta de Administrador: só outro Administrador pode alterar, redefinir a senha, inativar ou excluir." },
+        { nome: "Faixa cinza \"Acesso bloqueado (inativo)\"", significado: "A conta está inativa. Para liberar, use \"Mais\" e \"Reativar\"." },
+        { nome: "Opções em vermelho no menu \"Mais\"", significado: "São ações de risco (inativar e excluir). Sempre pedem confirmação." },
+        { nome: "Opção apagada (cinza) no menu \"Mais\"", significado: "A ação não é permitida para esta conta. O motivo aparece logo abaixo da opção." }
+      ],
+      problemas: [
+        { situacao: "Aparece \"Este e-mail já é da conta de ...\"", oQueFazer: "Cada e-mail só pode estar em uma conta (maiúsculas e espaços não contam). Se a outra conta é da mesma pessoa e está inativa, reative-a (Mais > Reativar) em vez de criar outra; se é de outra pessoa, use outro e-mail." },
+        { situacao: "Aparece \"Não foi possível reativar: o e-mail desta conta ... já é da conta ativa de ...\"", oQueFazer: "Duas contas ativas com o mesmo e-mail não entram. Troque o e-mail de uma delas (Editar) e reative de novo." },
+        { situacao: "Aparece \"Vínculo de trabalho incoerente: ...\"", oQueFazer: "O vínculo não combina com o perfil. Cliente é só da conta com perfil Cliente (com a empresa); Representante é só da conta com perfil Representada (com a representada e o papel). Faça o que a mensagem diz: troque o perfil ou escolha outro vínculo (CLT, PJ, Diretoria ou Não informado) e salve de novo." },
+        { situacao: "Aparece \"Não foi possível excluir: excluir uma conta é só do Administrador.\"", oQueFazer: "Para tirar o acesso agora, use Mais > Inativar (a conta pode ser reativada depois). Se a conta precisa sumir de vez, peça ao Administrador, com o motivo." },
+        { situacao: "Aparece \"... a conta de ... foi excluída em ...\" ao reativar ou editar", oQueFazer: "Conta excluída fica só para consulta (botão Excluídos) e não volta. Se a pessoa precisa de acesso de novo, toque em \"Novo usuário\": o mesmo e-mail pode ser usado." },
+        { situacao: "A pessoa diz que aparece \"Não foi possível entrar: esta conta foi excluída do SGO+\"", oQueFazer: "A conta dela foi excluída pelo Administrador (veja em Excluídos o motivo). Se ela ainda precisa de acesso, cadastre uma conta nova." },
+        { situacao: "Aparece \"Esta pessoa tem e-mail cadastrado: use Enviar link de redefinição\"", oQueFazer: "Quem tem e-mail recebe o link de nova senha (Mais > Enviar link de redefinição). A senha provisória fica só para quem não tem e-mail." },
+        { situacao: "Aparece \"Esta conta não tem e-mail válido cadastrado\" ao enviar o link", oQueFazer: "Cadastre o e-mail da pessoa (Editar) e envie de novo; enquanto isso, use \"Senha provisória (sem e-mail)\"." },
+        { situacao: "A pessoa diz que o link não chegou", oQueFazer: "Confira o e-mail cadastrado (sem erro de digitação) e peça para olhar o lixo eletrônico; o e-mail sai de sistema@metrolabs.com.br. O link vale 30 minutos: envie outro se venceu (o novo cancela o anterior)." },
+        { situacao: "A pessoa diz que entrou com o nome de usuário e não consegue mais", oQueFazer: "A entrada agora é pelo e-mail cadastrado. Confirme com ela qual é o e-mail da conta (coluna E-mail)." },
+        { situacao: "Aparece \"E-mail inválido: confira o formato (nome@empresa.com.br).\"", oQueFazer: "Confira se o e-mail tem @ e o domínio completo, sem espaço." },
+        { situacao: "Aparece \"Celular inválido: DDD + número, no formato (11) 98765-4321, ou deixe vazio.\"", oQueFazer: "Digite o DDD e o número completo. Se a pessoa não tem celular, deixe o campo vazio." },
+        { situacao: "Aparece \"Escolha a representada desta conta.\" ou \"Escolha o papel na representada.\"", oQueFazer: "Com o perfil Representada, escolha a empresa em \"Representada (empresa)\" e o papel. Se a empresa não aparece, cadastre em Representação > Representadas (ela precisa estar ativa)." },
+        { situacao: "Aparece \"Escolha a empresa do usuário Cliente.\"", oQueFazer: "Com o perfil Cliente, escolha a empresa na lista \"Empresa (cliente)\". Se a empresa não aparece, ela não está ativa em Clientes: peça o cadastro dela primeiro." },
+        { situacao: "Aparece \"A senha inicial precisa ter pelo menos 6 caracteres.\" ou \"A senha nova precisa ter pelo menos 6 caracteres.\"", oQueFazer: "Digite uma senha com 6 caracteres ou mais." },
+        { situacao: "Aparece \"As duas senhas não são iguais. Digite de novo.\"", oQueFazer: "Digite a mesma senha nos dois campos da janela \"Senha provisória (sem e-mail)\"." },
+        { situacao: "O perfil Administrador não aparece na lista de perfis", oQueFazer: "Só um Administrador pode dar o perfil Administrador. Peça a um Administrador." },
+        { situacao: "O perfil Diretoria não aparece na lista de perfis", oQueFazer: "O perfil Diretoria é dado só por um Administrador ou pela Diretoria. Peça a um Administrador." },
+        { situacao: "Aparece \"Não foi possível ...: contas de Administrador só podem ser criadas ou alteradas por um Administrador.\"", oQueFazer: "A conta é de Administrador. Peça a um Administrador para fazer a alteração." },
+        { situacao: "Aparece \"Não foi possível ...: o perfil Diretoria só é dado ou alterado por um Administrador ou pela Diretoria.\"", oQueFazer: "A Diretoria decide no Programa de conduta a ocorrência em que é a envolvida, por isso um Gestor não dá esse perfil nem altera essa conta. Peça a um Administrador. Para dar o perfil: Usuários, Novo usuário ou Editar, campo \"Perfil de acesso\", opção \"Diretoria\"." },
+        { situacao: "A linha não tem o botão \"Editar\"", oQueFazer: "É uma conta de Administrador e você não é Administrador. Peça a um Administrador." },
+        { situacao: "Aparece \"Único Administrador ativo: cadastre ou reative outro antes.\"", oQueFazer: "O sistema não pode ficar sem Administrador ativo. Cadastre ou reative outro Administrador e depois repita a ação." },
+        { situacao: "Aparece \"Você não pode inativar nem excluir a sua própria conta.\"", oQueFazer: "Peça a outra pessoa da gestão para fazer isso na sua conta." },
+        { situacao: "Aparece \"Usuário não encontrado: pode ter sido alterado por outra pessoa. Atualize a lista.\"", oQueFazer: "Outra pessoa mexeu na conta ao mesmo tempo. Saia e entre de novo na tela \"Usuários\" e confira." },
+        { situacao: "Aparece \"Vínculo de trabalho inválido: escolha CLT, PJ, Diretoria ou Não informado.\"", oQueFazer: "Escolha uma das quatro opções da lista \"Vínculo de trabalho\" e salve de novo." },
+        { situacao: "Não consigo mudar o meu próprio perfil", oQueFazer: "Ninguém muda o próprio perfil. Peça a outra pessoa da gestão; os perfis Administrador e Diretoria só são dados por quem já é Administrador ou Diretoria." },
+        { situacao: "A tela mostra \"A gestão de usuários é feita pelos perfis Administrador, Diretoria, Gestor, RH e Financeiro.\"", oQueFazer: "O seu perfil não gerencia contas. Para criar uma conta, trocar o perfil ou redefinir a senha, peça a um deles." },
+        { situacao: "A lista de empresas aparece como \"A lista de clientes não carregou\"", oQueFazer: "Verifique a conexão, feche o formulário e abra de novo." },
+        { situacao: "A pessoa inativada ainda está usando o sistema", oQueFazer: "Aguarde até 5 minutos. A sessão aberta dela é encerrada nesse prazo." },
+        { situacao: "Aparece \"Você não tem a permissão «...»\" ou o botão está apagado com \"Você não tem a caixa «...»\"", oQueFazer: "Desde 11/11/2026 cada ação desta tela segue uma caixa de acesso (Administração > Acessos). O responsável pelo sistema retirou essa caixa de você, ou ela não vem com o seu perfil. Peça a ele, se for o caso; as regras de Administrador e Diretoria valem do mesmo jeito." },
+        { situacao: "Troquei o e-mail de uma pessoa e ela recebeu um aviso no e-mail antigo", oQueFazer: "É uma proteção: o e-mail antigo sempre recebe o aviso da troca (com o e-mail novo mascarado) e a troca fica no registro da Segurança do acesso. Se a mensagem disser que o aviso não foi enviado, avise a pessoa por outro meio." }
+      ],
+      quemPode: [
+        { perfil: "TODOS (caixas)", pode: "O que vem abaixo é o padrão de cada perfil. O responsável pelo sistema pode liberar ou retirar caixas de uma pessoa em Administração > Acessos (grupo Contas e acessos), sem passar por cima das regras fixas de Administrador e Diretoria." },
+        { perfil: "ADMIN", pode: "Criar, editar, redefinir a senha, inativar, reativar e excluir qualquer conta, inclusive de Administrador (menos a própria e o último Administrador ativo). Dar o perfil Administrador. Só o Administrador exclui conta." },
+        { perfil: "DIRETORIA", pode: "Criar, editar, redefinir a senha, inativar e reativar contas que não sejam de Administrador. Dá e tira o perfil Diretoria. Não dá o perfil Administrador e não exclui conta (use Inativar ou peça ao Administrador)." },
+        { perfil: "GESTOR,RH,FINANCEIRO", pode: "Criar, editar (área, vínculo CLT, PJ, Diretoria, Cliente ou Representante, celular), redefinir a senha, inativar e reativar contas dos perfis Técnico, Metrologia, Comercial, Financeiro, RH, Gestor e Cliente, e organizar as áreas. Não dão nem alteram os perfis Administrador e Diretoria e não excluem conta (use Inativar)." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Não usam esta tela. Para criar conta, trocar perfil ou redefinir senha, peçam à gestão (Gestor, RH ou Financeiro)." },
+        { perfil: "TODOS", pode: "Ninguém muda o próprio perfil: o campo fica travado na própria conta." },
+        { perfil: "CLIENTE", pode: "Não usa esta tela. Para acesso de mais alguém da sua empresa, peça à Metrolabs." },
+        { perfil: "REPRESENTADA", pode: "Não usa esta tela. Para incluir ou tirar alguém da equipe, escreve à Metrolabs pelo Canal geral do módulo Representação." },
+        { perfil: "TODOS", pode: "Ninguém inativa ou exclui a própria conta. O sistema nunca fica sem um Administrador ativo." }
+      ],
+      perguntas: [
+        { p: "Qual a diferença entre inativar e excluir?", r: "Inativar bloqueia o acesso e guarda a conta e o histórico; dá para reativar depois (toda a gestão pode). Excluir é só do Administrador e não volta: conta sem nenhum registro ligado sai do cadastro; conta com registro ligado fica guardada (exclusão lógica), some da lista e dos seletores, não entra mais e aparece só em Excluídos, com o nome mantido nos registros antigos. A conta do responsável pelo sistema nunca é excluída. Prefira inativar quando a pessoa pode voltar." },
+        { p: "Por que não consigo excluir alguém que tem chamado ou O.S. em aberto?", r: "Para o atendimento não ficar sem dono. Bloqueia só quando a pessoa é o técnico de um chamado ou de uma O.S. em aberto, ou está fazendo a triagem de um chamado agora (situação Em triagem). Nos demais casos (quem abriu, quem assumiu antes, triagem já feita) o histórico guarda o nome e a exclusão segue. Na Assistência técnica, reagende a visita com outro técnico ou encerre; para a triagem, peça à gestão da área Técnica para assumir. Depois exclua de novo. Para tirar o acesso já, use Mais > Inativar." },
+        { p: "O que acontece com as listas em que a pessoa estava?", r: "Ao excluir, ela sai sozinha das listas de configuração (responsável pela triagem e pela representação, \"Quem pode abrir pedido em nome da representada\", piloto do WhatsApp, quem recebe os relatórios da empresa e gestores por área da Caixa de decisões). A tela mostra essas listas antes de confirmar, e cada saída fica no registro de auditoria." },
+        { p: "Por que o celular é importante?", r: "O celular é usado nos avisos por WhatsApp e pelo Assistente do ponto do COMMAND. Sem ele, a pessoa não recebe esses avisos." },
+        { p: "Consigo ver a senha atual de alguém?", r: "Não. A senha nunca aparece. Use \"Mais\" e \"Enviar link de redefinição\" para a pessoa criar uma nova." },
+        { p: "Onde troco a senha no formulário de edição?", r: "A senha não fica no formulário de edição. Quem esqueceu recebe o link (Mais > Enviar link de redefinição). A própria pessoa troca a senha dela em \"Trocar senha\", no topo da tela (no celular, em \"Conta\" > \"Trocar minha senha\")." },
+        { p: "Onde fica o nome de usuário (login)?", r: "Não existe mais para quem usa o sistema: a pessoa entra com o e-mail cadastrado. Por dentro, o sistema guarda um identificador para o histórico antigo, que não aparece em nenhuma tela." },
+        { p: "A senha que eu defino aqui vale para sempre?", r: "Não. A senha de uma conta nova, ou a senha provisória de quem não tem e-mail, vale só para o primeiro acesso: a pessoa cria a senha dela (8 caracteres ou mais, letras e números). Exigir a troca de todos, usar “Desconectar aparelhos” e ver o registro de entradas ficam em Administração > Segurança do acesso." },
+        { p: "Por que aparece \"Nunca entrou\" para quem já usou o sistema?", r: "O último acesso vem do registro recente de entradas. Uma entrada muito antiga pode não aparecer. Quando a pessoa entrar de novo, a data é atualizada." },
+        { p: "Quando o perfil novo começa a valer?", r: "Em até 5 minutos ou no próximo login da pessoa." },
+        { p: "O que o perfil Cliente vê?", r: "Só os dados da empresa escolhida em \"Empresa (cliente)\"." },
+        { p: "O que o perfil Representada vê?", r: "Só o módulo Representação, com os pedidos, chamados, equipamentos e conversas da representada escolhida. O resto do SGO+ recusa essa conta." }
+      ]
+    },
+
+    "admin": {
+      titulo: "Configurações",
+      paraQueServe: "Reúne os ajustes do SGO+ separados por assunto. Cada bloco tem título, explicação curta e o próprio botão de salvar.",
+      antesDeComecar: [
+        "Abra pelo item \"Configurações\" do menu, no grupo de administração.",
+        "Os blocos que aparecem dependem do seu perfil. O bloco \"Alertas de calibração\" só aparece para o Administrador.",
+        "O bloco \"Sessão e ociosidade\" vale só para o navegador que você está usando.",
+        "Cada bloco salva sozinho. Salvar um bloco não salva os outros."
+      ],
+      passos: [
+        {
+          titulo: "Ajustar o aviso de tela parada (Sessão e ociosidade)",
+          itens: [
+            "No bloco \"Sessão e ociosidade\", preencha \"Avisar depois de (minutos sem uso)\".",
+            "Use vírgula para meio minuto. Exemplo: 2,5.",
+            "Ligue ou desligue a chave \"Som do aviso\". O texto ao lado mostra \"Ligado\" ou \"Desligado\".",
+            "Toque em \"Testar o som\" para ouvir o aviso.",
+            "Toque em \"Salvar\" do bloco.",
+            "Confira a mensagem \"Salvo: aviso depois de ... minutos, som ...\"."
+          ]
+        },
+        {
+          titulo: "Sair e recarregar (quando a tela travar)",
+          itens: [
+            "No bloco \"Sessão neste navegador\", toque em \"Sair e recarregar\".",
+            "Leia a confirmação e toque em \"Sair e recarregar\" de novo.",
+            "Entre com o seu e-mail e senha. Os dados salvos não são afetados."
+          ]
+        },
+        {
+          titulo: "Ir para outras telas de configuração (Empresa e sistema)",
+          itens: [
+            "No bloco \"Empresa e sistema\", confira o nome do sistema, a versão e o seu acesso.",
+            "Toque em \"Usuários e perfis\" para abrir a tela de usuários (só para a gestão).",
+            "Toque em \"Chaves e senhas das integrações\" para abrir essa tela (só para o responsável pelo sistema).",
+            "Toque em \"Padrões de referência\" para abrir a lista de padrões."
+          ]
+        },
+        {
+          titulo: "Configurar os alertas de calibração (só Administrador)",
+          itens: [
+            "No bloco \"Alertas de calibração\", ligue ou desligue a chave \"Alertas ligados\".",
+            "Em \"Quem recebe\", marque \"Gestor\", \"Metrologia\" ou os dois.",
+            "Preencha \"Horário inicial\" e \"Horário final\" do período em que os lembretes aparecem.",
+            "Preencha \"Avisar antes do vencimento (dias)\", de 1 a 365.",
+            "Preencha \"Repetir o lembrete a cada (minutos)\", de 15 a 720.",
+            "Preencha \"Tempo visível do lembrete (segundos)\", de 5 a 120.",
+            "Ligue ou desligue \"Mostrar quando houver padrão vencido\" para a janela no centro da tela.",
+            "Preencha \"Repetir a janela a cada (minutos)\", de 30 a 1440.",
+            "Escreva a \"Mensagem da janela\", com até 240 caracteres.",
+            "Toque em \"Salvar\" do bloco e aguarde a confirmação.",
+            "Toque em \"Testar agora\" para ver a janela como ela vai aparecer."
+          ]
+        },
+        {
+          titulo: "Designar os responsáveis técnicos do modo personalizado (só Administrador)",
+          itens: [
+            "No bloco \"Responsáveis técnicos do modo personalizado\", toque no botão de mesmo nome.",
+            "Marque quem pode ajustar os parâmetros dos geradores e aprovar os documentos com parâmetros personalizados (perfis Administrador, Diretoria, Gestor e Metrologia) e toque em \"Gravar a lista\".",
+            "Quem foi incluído cria a própria senha do modo personalizado ao abrir Qualificação e inspeção > Modo personalizado. Ninguém mais vê a senha.",
+            "Se um responsável esquecer a senha, toque em \"Apagar a senha (esqueceu)\" na linha dele; se ele errou a senha 5 vezes, toque em \"Desbloquear\". Quem é retirado da lista perde a senha e o acesso na hora."
+          ]
+        }
+      ],
+      cores: [
+        { nome: "Chave \"Som do aviso\" com \"Ligado\"", significado: "O aviso de tela parada toca um som. Com \"Desligado\", o aviso aparece sem som." },
+        { nome: "Mensagem \"Alteração ainda não salva.\"", significado: "Você mudou a chave do som e ainda não tocou em \"Salvar\"." },
+        { nome: "Mensagem verde ao lado do botão", significado: "O bloco foi salvo." },
+        { nome: "Mensagem vermelha ao lado do botão", significado: "Não foi possível salvar ou carregar. Leia a mensagem e tente de novo." },
+        { nome: "Selo verde \"Ligados\" (Alertas de calibração)", significado: "Os lembretes de vencimento dos padrões estão ligados." },
+        { nome: "Selo cinza \"Desligados\" (Alertas de calibração)", significado: "Ninguém recebe os lembretes de vencimento dos padrões." }
+      ],
+      problemas: [
+        { situacao: "No celular, a chave do som ou da janela do centro é difícil de tocar", oQueFazer: "Toque em qualquer ponto da linha (a chave e o texto ao lado): desde 01/11/2026 a linha inteira tem altura de toque. A dica embaixo do tempo de ociosidade mostra o valor de hoje em minutos." },
+        { situacao: "Aparece \"Informe pelo menos meio minuto (0,5).\"", oQueFazer: "Digite um tempo de 0,5 minuto ou mais, com vírgula se for fração." },
+        { situacao: "A tela ficou travada depois de uma atualização do sistema", oQueFazer: "Use \"Sair e recarregar\" no bloco \"Sessão neste navegador\" e entre de novo." },
+        { situacao: "O tempo de ociosidade voltou ao que era em outro computador", oQueFazer: "Esse ajuste vale só para o navegador onde foi salvo. Ajuste e salve em cada navegador." },
+        { situacao: "Aparece \"Não foi possível carregar as configurações. Verifique a conexão e atualize a página.\"", oQueFazer: "Confira a internet e atualize a página (tecla F5)." },
+        { situacao: "Aparece \"Não foi possível salvar. Verifique a conexão e tente de novo; nada foi alterado.\"", oQueFazer: "Confira a internet e toque em \"Salvar\" de novo. Nada foi gravado." },
+        { situacao: "Ao tocar em \"Testar agora\" aparece \"Nenhum padrão vencido ou vencendo agora: não há o que mostrar no teste.\"", oQueFazer: "Está tudo em dia. A janela só aparece quando há padrão vencido ou vencendo." },
+        { situacao: "Não vejo o bloco \"Alertas de calibração\"", oQueFazer: "Esse bloco é só do Administrador. Peça a ele a alteração." },
+        { situacao: "Não vejo os botões \"Usuários e perfis\" ou \"Chaves e senhas das integrações\"", oQueFazer: "\"Usuários e perfis\" é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). \"Chaves e senhas das integrações\" é só do responsável pelo sistema." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Usar todos os blocos, inclusive \"Alertas de calibração\"." },
+        { perfil: "GESTOR,DIRETORIA,FINANCEIRO", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar os atalhos para Usuários e Padrões." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Ajustar a sessão e a ociosidade, sair e recarregar e usar o atalho para Padrões." },
+        { perfil: "RH", pode: "Não usa esta tela: o item \"Configurações\" não aparece no menu do RH." },
+        { perfil: "CLIENTE", pode: "Não vê o grupo de administração no menu." },
+        { perfil: "TODOS", pode: "O atalho \"Chaves e senhas das integrações\" só aparece para o responsável pelo sistema." }
+      ],
+      perguntas: [
+        { p: "O tempo de ociosidade vale para todo mundo?", r: "Não. Vale só para o navegador onde você salvou." },
+        { p: "\"Sair e recarregar\" apaga algum dado?", r: "Não. Só encerra a sua sessão neste navegador e recarrega a página. Você entra de novo com o seu login." },
+        { p: "Quem recebe os alertas de calibração?", r: "Os perfis marcados em \"Quem recebe\" (Gestor, Metrologia ou os dois), dentro do horário configurado." },
+        { p: "Preciso salvar todos os blocos de uma vez?", r: "Não. Cada bloco tem o próprio botão e salva só o que está nele." }
+      ]
+    },
+
+    "admin/alertas_calibracao": {
+      titulo: "Alertas de calibração",
+      paraQueServe: "Lembra Gestor e Metrologia dos padrões de referência vencidos ou perto de vencer: um balão discreto e, se ligada, uma janela no centro da tela.",
+      antesDeComecar: [
+        "Só o Administrador vê e altera este bloco.",
+        "Os lembretes usam a validade cadastrada em \"Padrões de referência\"."
+      ],
+      passos: [
+        {
+          titulo: "Ligar e ajustar os lembretes",
+          itens: [
+            "Ligue a chave \"Alertas ligados\".",
+            "Marque quem recebe: \"Gestor\" e ou \"Metrologia\".",
+            "Ajuste os horários, a antecedência em dias e os intervalos.",
+            "Toque em \"Salvar\".",
+            "Toque em \"Testar agora\" para conferir a janela."
+          ]
+        }
+      ],
+      cores: [
+        { nome: "Selo verde \"Ligados\"", significado: "Os lembretes estão ativos." },
+        { nome: "Selo cinza \"Desligados\"", significado: "Os lembretes estão parados para todos." }
+      ],
+      problemas: [
+        { situacao: "Ninguém recebe os lembretes", oQueFazer: "Confira se \"Alertas ligados\" está ligado, se algum perfil está marcado em \"Quem recebe\" e se o horário atual está entre o inicial e o final." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Ver, alterar e testar os alertas de calibração." },
+        { perfil: "GESTOR,METROLOGIA", pode: "Receber os lembretes, quando marcados em \"Quem recebe\"." }
+      ]
+    },
+
+    "chaves": {
+      titulo: "Chaves e senhas",
+      paraQueServe: "Guarda as chaves de acesso das integrações (inteligência artificial, Auvo, e-mail, WhatsApp, rastreador da frota, COMMAND) e as senhas administrativas dos relatórios técnicos. Mostra a situação de cada integração e permite testar.",
+      antesDeComecar: [
+        "Esta tela é exclusiva do responsável pelo sistema. Para as demais pessoas, o item \"Chaves e senhas\" não aparece no menu.",
+        "Tenha em mãos a chave de acesso copiada do painel do fornecedor da integração.",
+        "O valor gravado nunca aparece de novo. Das chaves de acesso aparecem só os 4 últimos caracteres; das senhas, nada.",
+        "Cada gravação, teste e exclusão fica registrada no histórico do sistema (quem, quando e qual chave; nunca o valor)."
+      ],
+      passos: [
+        {
+          titulo: "Abrir a tela",
+          itens: [
+            "Toque em \"Chaves e senhas\" no menu. No celular, o atalho fica também no Início.",
+            "Outra forma: em \"Configurações\", no bloco \"Empresa e sistema\", toque em \"Chaves e senhas das integrações\".",
+            "Confira os três números do topo: \"Configuradas\", \"Falta configurar\" e \"Com erro no teste\".",
+            "Toque em um número para abrir as integrações daquela situação."
+          ]
+        },
+        {
+          titulo: "Gravar ou trocar uma chave",
+          itens: [
+            "Toque no nome da integração para abrir o cartão dela.",
+            "Se não souber onde achar o valor, toque em \"Onde encontrar e para que serve\" abaixo do campo.",
+            "Cole o valor no campo da chave.",
+            "Toque em \"Gravar\".",
+            "Confira a mensagem de confirmação e o selo \"Gravado em ...\" ao lado do nome da chave.",
+            "Para trocar uma chave já gravada, cole o valor novo por cima e toque em \"Gravar\"."
+          ]
+        },
+        {
+          titulo: "Ligar ou desligar uma opção",
+          itens: [
+            "Algumas chaves são uma lista, como \"Rastreador ligado no SGO+\" e \"Provedor do WhatsApp em uso\".",
+            "Escolha a opção na lista.",
+            "Toque em \"Gravar\".",
+            "Para voltar ao padrão, escolha a primeira opção da lista (por exemplo \"Desligado\" ou \"Automático\") e toque em \"Gravar\"."
+          ]
+        },
+        {
+          titulo: "Testar uma integração",
+          itens: [
+            "Grave a chave antes. O teste usa o valor gravado, não o que está digitado no campo.",
+            "Toque em \"Testar\" ao lado do nome da integração. No rastreador da frota o botão é \"Testar conexão\".",
+            "Aguarde o texto \"Testando…\" sumir.",
+            "Leia o resultado: faixa verde começa com \"Funcionou\"; faixa vermelha começa com \"Não funcionou\" e diz o que fazer.",
+            "O teste de e-mail envia uma mensagem para o e-mail do seu usuário. Confira também o lixo eletrônico.",
+            "O teste do rastreador consulta a iTracker e mostra quantos veículos encontrou. Ele não envia comando aos veículos e não mostra a chave."
+          ]
+        },
+        {
+          titulo: "Apagar uma chave",
+          itens: [
+            "Toque em \"Apagar\", em vermelho, ao lado da chave.",
+            "Leia o aviso: o que depende da chave para de funcionar até gravar outra.",
+            "Toque em \"Apagar\" na janela para confirmar, ou em \"Cancelar\" para desistir."
+          ]
+        }
+      ],
+      cores: [
+        { nome: "Selo verde \"Configurada\"", significado: "Os campos obrigatórios da integração estão gravados. O texto abaixo diz se o último teste funcionou ou se ainda não foi testada depois da última alteração." },
+        { nome: "Selo amarelo \"Falta configurar\"", significado: "Algum campo obrigatório está vazio. O texto abaixo do nome diz o que falta." },
+        { nome: "Selo vermelho \"Com erro no teste\"", significado: "O último teste não funcionou e nenhuma chave da integração mudou depois. O cartão já abre sozinho. Leia o motivo, corrija a chave e teste de novo." },
+        { nome: "Selo verde \"Gravado em ...\" ao lado de uma chave", significado: "A chave tem valor gravado, na data e hora mostradas. Ao lado podem aparecer os 4 últimos caracteres, para conferência." },
+        { nome: "Selo cinza \"Vazio\"", significado: "A chave não tem valor gravado." },
+        { nome: "Botão vermelho \"Apagar\"", significado: "Remove o valor gravado. Pede confirmação." },
+        { nome: "Faixa verde no resultado do teste", significado: "A integração respondeu com as chaves gravadas." },
+        { nome: "Faixa vermelha no resultado do teste", significado: "A integração recusou ou não respondeu. O texto diz o motivo e o que fazer." },
+        { nome: "Número apagado no resumo do topo", significado: "Nenhuma integração naquela situação." }
+      ],
+      problemas: [
+        { situacao: "A tela mostra só o alarme e a faixa \"As chaves das integrações ficam com o responsável pelo sistema\"", oQueFazer: "É o esperado para quem não é o responsável pelo sistema: o seu perfil configura o alarme e a automação predial. Para gravar ou trocar a chave de uma integração, peça a ele." },
+        { situacao: "Aparece \"Não foi possível abrir: este módulo é exclusivo do responsável pelo sistema.\"", oQueFazer: "Esta tela não é do seu acesso. Peça ao responsável pelo sistema para gravar ou testar a chave." },
+        { situacao: "Aparece \"Não foi possível abrir: a sua sessão expirou. Saia e entre de novo no SGO+.\"", oQueFazer: "Saia do sistema, entre de novo e abra a tela outra vez." },
+        { situacao: "Aparece \"Cole o valor no campo antes de clicar em Gravar.\"", oQueFazer: "O campo está vazio. Cole o valor e toque em \"Gravar\". Para remover uma chave, use \"Apagar\"." },
+        { situacao: "Aparece \"Não foi possível gravar: o valor tem quebra de linha.\"", oQueFazer: "Copie de novo só o valor, numa linha só, e cole." },
+        { situacao: "Aparece \"Não foi possível gravar: o valor tem mais de 4.000 caracteres.\"", oQueFazer: "Confira se copiou só a chave, sem texto a mais." },
+        { situacao: "Aparece \"Não foi possível gravar: informe o endereço com https://\"", oQueFazer: "No endereço do rastreador, digite o endereço completo começando por https://, sem espaços." },
+        { situacao: "Aparece \"Não foi possível gravar: este campo é um número de identificação (só algarismos...)\"", oQueFazer: "Copie do painel da Meta o número de identificação, só com algarismos. Não é o número de telefone." },
+        { situacao: "Aparece \"Não foi possível gravar: informe os logins separados por vírgula\"", oQueFazer: "Em \"Avisos de O.S.: quem da gestão recebe (logins)\", digite os logins separados por vírgula, sem outros sinais. Exemplo: joao, maria." },
+        { situacao: "Aparece \"Não foi possível gravar: chave desconhecida. Atualize a página (F5) e tente de novo.\"", oQueFazer: "Atualize a página com a tecla F5 e grave de novo." },
+        { situacao: "Aparece \"A lista de chaves não carregou.\"", oQueFazer: "Confira a internet e toque em \"Tentar de novo\"." },
+        { situacao: "Aparece \"Não foi possível falar com o servidor. Verifique a conexão e tente de novo; nada foi alterado.\"", oQueFazer: "Confira a internet e repita a ação. Nada foi gravado." },
+        { situacao: "Gravei a chave nova e o teste ainda falha", oQueFazer: "Confira se colou a chave inteira, sem espaço no começo ou no fim. Leia o motivo na faixa vermelha. Se continuar, gere uma chave nova no painel do fornecedor e grave de novo." },
+        { situacao: "O teste de e-mail funcionou, mas a mensagem não chegou", oQueFazer: "Aguarde alguns minutos e confira o lixo eletrônico. Se não chegar, grave de novo a senha do e-mail do sistema." },
+        { situacao: "O cartão diz \"Configurada, mas o WhatsApp está usando ...\"", oQueFazer: "As chaves estão certas, mas o WhatsApp usa o outro provedor. Para trocar, mude \"Provedor do WhatsApp em uso\" no cartão \"WhatsApp oficial (Meta)\"." }
+      ],
+      quemPode: [
+        { perfil: "TODOS", pode: "Só a conta do responsável pelo sistema vê e usa esta tela. Para as demais contas, o item não aparece no menu e o sistema recusa o acesso." },
+        { perfil: "ADMIN", pode: "Ter o perfil Administrador não basta para abrir esta tela. Se precisar mudar uma chave, peça ao responsável pelo sistema." }
+      ],
+      perguntas: [
+        { p: "Consigo ver uma chave que já está gravada?", r: "Não. O valor nunca aparece de novo. Das chaves de acesso aparecem só os 4 últimos caracteres. Para trocar, grave outro valor por cima." },
+        { p: "O teste usa o que eu digitei no campo?", r: "Não. O teste usa o valor gravado. Grave primeiro, depois teste." },
+        { p: "O que acontece se eu apagar uma chave?", r: "O que depende dela para de funcionar até você gravar outra. O valor apagado não pode ser recuperado por esta tela." },
+        { p: "Por que as integrações \"Relatórios técnicos\" e \"COMMAND\" não têm botão de teste?", r: "Essas chaves não têm teste nesta tela. Confira se aparecem como \"Configurada\" e use o recurso que depende delas para conferir." },
+        { p: "O que gravar no rastreador da frota?", r: "Só a \"Chave de acesso (Bearer)\" que a iTracker enviou. O endereço já vem preenchido. Os endereços dos comandos de bloqueio e liberação ficam vazios até a iTracker liberar o acesso com comandos; sem eles o SGO+ só monitora." },
+        { p: "Por quanto tempo a localização dos veículos fica guardada?", r: "Pelo número de dias de \"Rastreador: dias de guarda da localização\" (vazio = 90). Depois disso o SGO+ apaga sozinho." }
+      ]
+    },
+
+    "chaves/whatsapp": {
+      titulo: "WhatsApp (Meta e Z-API)",
+      paraQueServe: "O SGO+ envia avisos por WhatsApp por um provedor de cada vez: o WhatsApp oficial (Meta) ou a Z-API. Aqui se escolhe o provedor, se gravam as chaves e se cuidam dos modelos de mensagem da Meta.",
+      antesDeComecar: [
+        "Pela Meta, o SGO+ só envia mensagens por modelo aprovado.",
+        "Pela Z-API, as mensagens saem em texto pronto, sem modelo a aprovar, com intervalo entre elas e limite por hora e por dia para proteger o número. O passo a passo da Z-API fica no cartão \"Z-API\".",
+        "Para testar, tenha um celular com DDD que possa receber a mensagem de teste."
+      ],
+      passos: [
+        {
+          titulo: "Escolher o provedor",
+          itens: [
+            "Abra o cartão \"WhatsApp oficial (Meta)\".",
+            "Em \"Provedor do WhatsApp em uso\", escolha \"WhatsApp oficial (Meta)\", \"Z-API\" ou \"Automático\".",
+            "Toque em \"Gravar\".",
+            "Em \"Automático\", o SGO+ usa a Meta se a chave dela estiver gravada; senão usa a Z-API, se as 3 chaves dela estiverem gravadas."
+          ]
+        },
+        {
+          titulo: "Testar o envio",
+          itens: [
+            "No cartão do provedor em uso, digite o celular com DDD no campo do teste.",
+            "Toque em \"Testar\".",
+            "Confira se a mensagem chegou no celular."
+          ]
+        },
+        {
+          titulo: "Cuidar dos modelos de mensagem da Meta",
+          itens: [
+            "No cartão \"WhatsApp oficial (Meta)\", vá até \"Modelos de mensagem (Meta)\".",
+            "Toque em \"Ver a situação dos modelos\" para conferir quais estão aprovados.",
+            "Para enviar à Meta os modelos que faltam, toque em \"Cadastrar os modelos na Meta\".",
+            "Confirme em \"Enviar para análise\". Os modelos que já existem não são alterados.",
+            "Aguarde a aprovação. Ela sai em minutos ou em até 24 horas."
+          ]
+        }
+      ],
+      cores: [
+        { nome: "Selo verde do modelo (aprovado ou \"Já cadastrado\")", significado: "O modelo pode ser usado nos envios." },
+        { nome: "Selo azul do modelo (em análise ou \"Enviado\")", significado: "A Meta ainda está analisando. Aguarde." },
+        { nome: "Selo amarelo do modelo (faltando ou \"Não tentado\")", significado: "O modelo não está cadastrado na Meta. Use \"Cadastrar os modelos na Meta\"." },
+        { nome: "Selo vermelho do modelo (recusado ou \"Erro\")", significado: "A Meta recusou ou houve erro. Leia o motivo ao lado e avise o suporte do SGO+." }
+      ],
+      problemas: [
+        { situacao: "Aparece \"Digite o celular com DDD que vai receber o teste.\"", oQueFazer: "Preencha o campo do celular antes de tocar em \"Testar\"." },
+        { situacao: "Aparece \"Não foi possível falar com a Meta: falta gravar ...\"", oQueFazer: "Grave os campos indicados no cartão \"WhatsApp oficial (Meta)\" e tente de novo." },
+        { situacao: "O teste pela Meta não chega", oQueFazer: "Confira em \"Ver a situação dos modelos\" se o modelo de aviso geral está aprovado. Sem aprovação, a Meta não entrega." }
+      ],
+      quemPode: [
+        { perfil: "TODOS", pode: "Só o responsável pelo sistema escolhe o provedor, grava as chaves, testa e cadastra os modelos." }
+      ]
+    },
+
+    // 20/10/2026: WhatsApp da empresa pela Z-API (SGO_Zapi.js) — passo a passo e os três botões do cartão "Z-API".
+    "chaves/zapi": {
+      titulo: "WhatsApp pela Z-API",
+      // 21/10/2026: a Z-API saiu do sistema (piloto do WhatsApp); o cartão fica só para consulta.
+      paraQueServe: "Desde 21/10/2026 a Z-API está fora do sistema: com o piloto do WhatsApp ligado (ou o provedor meta), nenhuma mensagem sai pela Z-API e as mensagens que chegam por ela são ignoradas; o WhatsApp do sistema é o oficial (Meta). O texto abaixo vale só se o dono decidir religar a Z-API depois do piloto. Liga o WhatsApp da empresa pela Z-API para o SGO+ e o COMMAND: avisos, resumo de atividades, reservas da frota, conduta, chamados do Auvo, lembretes do ponto e as mensagens recebidas no COMMAND. Não depende de modelo aprovado pela Meta.",
+      antesDeComecar: [
+        "Tenha a conta da Z-API aberta (app.z-api.io) e o celular da empresa à mão, com o WhatsApp instalado e internet.",
+        "Cadastre o seu celular em Administração > Usuários > Celular, para receber a mensagem de teste.",
+        "A Z-API usa o WhatsApp de um celular: muitas mensagens seguidas podem bloquear o número. Por isso existem o intervalo e os limites deste cartão."
+      ],
+      passos: [
+        {
+          titulo: "Ligar a Z-API, em ordem",
+          itens: [
+            "No painel da Z-API, abra a instância da Metrolabs e copie a identificação da instância e o token da instância. No menu Segurança, copie o token de segurança da conta.",
+            "No cartão \"Z-API\", cole cada valor no campo dele e toque em \"Gravar\".",
+            "No cartão \"WhatsApp oficial (Meta)\", em \"Provedor do WhatsApp em uso\", escolha \"Z-API\" e toque em \"Gravar\". Vale para o SGO+ e para o COMMAND.",
+            "Volte ao cartão \"Z-API\" e toque em \"Conferir conexão\". Faixa verde: conectada, com o número. Faixa vermelha \"Desconectada\": leia o QR Code no painel da Z-API com o celular da empresa e confira de novo.",
+            "Toque em \"Configurar recebimento\" (uma vez). A Z-API passa a entregar ao COMMAND as mensagens que chegam ao número; o endereço é protegido e não aparece na tela.",
+            "Toque em \"Enviar mensagem de teste para mim\" e confira no seu celular."
+          ]
+        },
+        {
+          titulo: "Ajustar a proteção do número (opcional)",
+          itens: [
+            "Os campos \"intervalo mínimo\", \"intervalo máximo\", \"limite por hora\", \"limite por dia\" e \"limite por hora para o mesmo celular\" ficam no cartão \"Z-API\". Vazio = padrão (3 a 8 segundos; 40 por hora; 200 por dia; 6 por hora para a mesma pessoa).",
+            "Os limites somam o SGO+ e o COMMAND, que mandam pelo mesmo número.",
+            "Passou do limite, o aviso continua no sistema e o envio fica registrado como pulado, com o motivo. Respostas a quem escreveu para a empresa e testes não são barrados."
+          ]
+        }
+      ],
+      cores: [
+        { nome: "Faixa verde \"Conectada\"", significado: "A instância está ligada ao WhatsApp do celular da empresa. Mostra o número." },
+        { nome: "Faixa vermelha \"Desconectada\"", significado: "Leia o QR Code no painel da Z-API com o celular da empresa e toque em \"Conferir conexão\" de novo." },
+        { nome: "Faixa verde \"Recebimento configurado\"", significado: "As mensagens recebidas no número vão para o COMMAND. Mensagens de grupo e as enviadas pelo próprio celular são ignoradas." }
+      ],
+      problemas: [
+        { situacao: "Aparece \"faltam chaves da Z-API\"", oQueFazer: "Grave as 3 chaves no cartão \"Z-API\" e toque no botão de novo." },
+        { situacao: "Aparece \"a Z-API exige o token de segurança da conta\"", oQueFazer: "No painel da Z-API, menu Segurança, ative o token de segurança da conta, copie e grave em \"Z-API: token de segurança da conta\"." },
+        { situacao: "Aparece \"o seu cadastro não tem celular válido\"", oQueFazer: "Cadastre o seu celular com DDD em Administração > Usuários > Celular e toque em \"Enviar mensagem de teste para mim\" de novo." },
+        { situacao: "Aparece \"este botão funciona no SGO+ do servidor próprio\"", oQueFazer: "Abra o SGO+ pelo endereço sgo.metrolabs.com.br, ou use no COMMAND: Integrações > Z-API > Cadastrar webhook." },
+        { situacao: "Uma pessoa diz que não recebeu", oQueFazer: "Confira o celular no cadastro (telefone fixo não recebe pela Z-API) e o motivo em Notificações enviadas: limite, fora do expediente ou um resumo por dia são regras do sistema, não erro." }
+      ],
+      quemPode: [
+        { perfil: "TODOS", pode: "Só o responsável pelo sistema grava as chaves, confere a conexão, configura o recebimento e envia o teste." }
+      ]
+    },
+
+    // 21/10/2026: matriz de avisos (SGO_Avisos_Matriz.js / JS_AvisosMatriz.html), aprovada pelo dono.
+    "avisos_matriz": {
+      titulo: "Matriz de avisos",
+      paraQueServe: "Mostra e ajusta a regra de cada aviso que o SGO+ manda: quem recebe e por qual canal (sistema, e-mail na hora, e-mail no resumo do dia, WhatsApp). O padrão é a matriz aprovada pelo dono em 21/10/2026. Aqui também ficam os horários do resumo do dia, o gestor de cada área, os resumos enviados, a medição de avisos por pessoa e a trilha de mudanças.",
+      antesDeComecar: [
+        "Esta tela é do Administrador e da Diretoria. Para as demais pessoas, o item não aparece no menu; cada uma ajusta o que recebe em Menu > Meus avisos.",
+        "No sistema, todo aviso aparece na hora e cobra até ser resolvido. Isso não muda por esta tela.",
+        "E-mail: cada pessoa recebe no máximo um e-mail de resumo por dia útil (padrão 08:00). Na hora, só o que exige ciência ou muda algo de hoje, sempre no expediente.",
+        "WhatsApp: no máximo um resumo por dia (padrão 09:30), só para CLT, só para quem ainda não abriu o sistema e, durante o piloto, só para quem está na lista do piloto. Na hora, só as quatro exceções da Frota (partida não liberada, uso de veículo sem registro no expediente, devolução atrasada com reserva no mesmo dia e reserva de hoje liberada a outra pessoa).",
+        "O Assistente do ponto tem regra própria e não aparece aqui.",
+        "O gestor de cada área vem de Caixa de decisões > Regras e responsáveis. Área sem gestor: os avisos vão para a Diretoria. Compras fica na área Logística.",
+        "Avisos da gestão (01/11/2026, decisão do dono): pendência, aprovação, atraso e ato irreversível vão aos gestores e à Diretoria por WhatsApp e e-mail, com o link que abre o item. Gestor só no expediente; Diretoria a qualquer hora; pendência agrupada em 30 minutos; atraso e irreversível na hora; sem teto e sem piloto, inclusive PJ (o celular da gestão vai numa lista própria do piloto, que libera só estes avisos). RH e Financeiro entram só quando são responsáveis de área. O ponto fica fora."
+      ],
+      passos: [
+        { titulo: "Ver e ajustar a regra de um aviso", itens: [
+          "Toque em \"Matriz de avisos\" no menu Administração.",
+          "No bloco \"Regras de cada evento\", escolha o módulo no filtro.",
+          "Em cada evento, confira quem recebe, o limite e a observação.",
+          "Escolha o canal do e-mail, o do WhatsApp e a decisão (continua avisando ou vira só histórico).",
+          "Toque em \"Salvar\" e escreva o motivo. A mudança vale a partir do próximo aviso.",
+          "Para desfazer, toque em \"Voltar ao padrão aprovado\" e escreva o motivo."
+        ] },
+        { titulo: "Mudar os horários do resumo do dia", itens: [
+          "No bloco \"Resumo do dia e filtro por área\", abra \"Alterar horários\".",
+          "Escolha a hora do e-mail e a do WhatsApp (dentro do expediente).",
+          "Marque ou desmarque o WhatsApp de resumo e o filtro da central por área.",
+          "Escreva o motivo e toque em \"Salvar horários\"."
+        ] },
+        { titulo: "Acompanhar os avisos da gestão", itens: [
+          "No bloco \"Avisos da gestão\", escolha o dia e toque em \"Mostrar\".",
+          "Confira os totais: enviados, na fila, falhas, parados e WhatsApp aguardando modelo.",
+          "Em cada linha veja a pessoa, o tipo, o item, a situação, os canais (e-mail e WhatsApp) e o motivo.",
+          "Para ligar ou desligar o aviso da gestão de um evento, use \"Avisos da gestão\" na regra do evento, toque em \"Salvar\" e escreva o motivo."
+        ] },
+        { titulo: "Acompanhar os resumos e medir", itens: [
+          "No bloco \"Resumos do dia\", escolha o dia e toque em \"Mostrar\": cada pessoa, o canal, a situação e o motivo.",
+          "No bloco \"Medição\", confira os períodos antes e depois e toque em \"Calcular\".",
+          "Compare as médias de e-mail e WhatsApp por pessoa por dia com as metas (até 2 e-mails e 1 WhatsApp; zero WhatsApp fora do expediente e para PJ)."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo \"Obrigatório\"", significado: "Aviso que a matriz aprovada não deixa desligar. Dá para trocar entre na hora e no resumo, mas não tirar o aviso." },
+        { nome: "Selo amarelo \"Alterada\"", significado: "A regra foi mudada nesta tela. A trilha mostra quem, quando e por quê." },
+        { nome: "Selo \"Vira histórico\"", significado: "Ninguém é avisado. O fato continua no histórico do próprio registro." },
+        { nome: "Selo verde \"Gestão: <tipo>\"", significado: "Aviso da gestão ligado (Pendência / Aprovação, Atraso ou Irreversível): vai aos gestores e à Diretoria por WhatsApp e e-mail. Com \"(desligado)\", segue só a regra comum da linha." },
+        { nome: "Selo vermelho \"Parado\" nos avisos da gestão", significado: "Na fila há mais de 1 hora, enviado e sem resolução depois do prazo, ou nada chegou (nem e-mail nem WhatsApp). O motivo está na linha." },
+        { nome: "Selo amarelo \"Sem gestor: vai para a Diretoria\"", significado: "A área não tem gestor em Regras e responsáveis. Os avisos dela vão para a Diretoria." },
+        { nome: "Selo verde \"Enviado\" nos resumos", significado: "O resumo saiu. \"Já abriu o sistema\", \"Sem WhatsApp (vínculo)\" e \"Sem novidade\" não são erro: são a regra." }
+      ],
+      problemas: [
+        { situacao: "Com Módulo em \"Todos\", as regras aparecem em grupos fechados", oQueFazer: "Cada grupo é um módulo, com o número de avisos e de regras alteradas. Toque no nome para abrir. No celular os grupos começam fechados (a página ficava enorme); no computador, abertos. Para ver um módulo só, escolha-o em Módulo." },
+        { situacao: "Aparece \"WhatsApp na hora só vale para as exceções aprovadas pelo dono\"", oQueFazer: "Escolha \"Na contagem do WhatsApp do dia\" ou \"Sem WhatsApp\" para este evento. Só as quatro exceções da Frota e o aviso ao cliente (depois do piloto) podem ir na hora." },
+        { situacao: "Aparece \"é obrigatório pela matriz aprovada pelo dono\"", oQueFazer: "Este aviso não pode deixar de avisar. Troque só entre \"na hora\" e \"no resumo\". Se a regra precisa mudar, leve ao dono." },
+        { situacao: "Aparece \"escreva o motivo da mudança\"", oQueFazer: "Toque em Salvar de novo e escreva pelo menos 8 letras explicando a mudança." },
+        { situacao: "Aviso da gestão com \"WhatsApp aguardando modelo\"", oQueFazer: "O modelo sgo_gestao_acao ainda não foi aprovado pela Meta. O e-mail já saiu. Cadastre em Chaves e senhas > Cadastrar modelos na Meta e acompanhe em Situação dos modelos." },
+        { situacao: "Aviso da gestão com \"Sem celular no cadastro\"", oQueFazer: "Complete o celular da pessoa em Administração > Usuários. O e-mail já saiu." },
+        { situacao: "Uma pessoa diz que não recebeu o WhatsApp de resumo", oQueFazer: "Em \"Resumos do dia\", veja o motivo: PJ ou vínculo não informado, já abriu o sistema, nada para hoje, fora do piloto ou desligado por ela em Meus avisos." },
+        { situacao: "Um gestor diz que a central mostra pouca coisa", oQueFazer: "Com o filtro por área, ele vê o da sua área e o que é dele. Confira a área dele em Administração > Usuários e em Caixa de decisões > Regras e responsáveis." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Vê e ajusta as regras, os horários e a medição. Cada mudança fica na trilha com o nome." },
+        { perfil: "DIRETORIA", pode: "Vê e ajusta as regras, os horários e a medição. Cada mudança fica na trilha com o nome." },
+        { perfil: "GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH", pode: "Não abre a tela. Ajusta o que recebe em Menu > Meus avisos." }
+      ],
+      perguntas: [
+        { p: "Por que o COMMAND não manda mais aviso?", r: "Pela matriz aprovada, o COMMAND fica em silêncio fora do próprio sino enquanto não for usado pela equipe. Cada módulo que vier para o SGO+ entra já com a sua linha nesta matriz." },
+        { p: "O que entra no e-mail de resumo do dia?", r: "Atividades (atrasadas, que vencem hoje e avisos novos), decisões da Caixa de decisões (para quem é gestor), avisos da Frota, do Comercial, do Auvo e do Programa de conduta guardados para o resumo, a contagem de avisos com ciência e a contagem de mensagens não lidas no bate-papo. Assunto de conduta e de ponto vai só como contagem." },
+        { p: "E o assistente do ponto?", r: "Tem identificação e regra próprias (Assistente do ponto). O resumo do dia não leva assunto do ponto e não sai perto de um lembrete do ponto da mesma pessoa." }
+      ]
+    },
+
+    // 21/10/2026: piloto do WhatsApp (SGO_WhatsappPiloto.js / JS_WhatsappPiloto.html).
+    "whatsapp_piloto": {
+      titulo: "Piloto do WhatsApp",
+      paraQueServe: "Define quem recebe as mensagens do sistema pelo WhatsApp oficial (Meta) durante o piloto e mostra, dia a dia, o que saiu, o que foi retido e o que falhou, no SGO+ e no COMMAND. Quem não está na lista recebe os mesmos avisos no sistema e por e-mail.",
+      antesDeComecar: [
+        "Esta tela é do Administrador e da Diretoria. Para as demais pessoas, o item não aparece no menu.",
+        "O número do WhatsApp oficial é só do sistema. A Z-API (o WhatsApp de uma pessoa da equipe) está fora: nenhuma mensagem sai por ela e as que chegam por ela são ignoradas.",
+        "Cada pessoa da lista precisa de celular válido no cadastro (Administração > Usuários > Celular, com DDD). Sem celular, ela recebe só no sistema e por e-mail.",
+        "Sem nada gravado, vale a lista padrão: o piloto ligado e só o responsável pelo sistema na lista."
+      ],
+      passos: [
+        { titulo: "Escolher quem recebe", itens: [
+          "Toque em \"Piloto do WhatsApp\" no menu Administração.",
+          "Confira o bloco \"Situação\": piloto ligado, provedor em uso \"WhatsApp oficial (Meta)\" e \"Envio antigo (Z-API) desligado\".",
+          "No bloco \"Quem recebe pelo WhatsApp\", deixe \"Piloto ligado\" marcado.",
+          "Marque as pessoas do piloto. Use o campo de busca para achar pelo nome.",
+          "Confira, abaixo do nome, se a pessoa tem celular válido.",
+          "Abaixo de cada pessoa marcada, em \"Recebe pelo WhatsApp\", deixe marcado só o que ela deve receber: Ponto (lembretes, só CLT), Avisos gerais (comunicados), Atividades e pendências (atividades, decisões, resumo do dia e bate-papo) e Avisos do setor (Frota, Comercial, Compras, Assistência, Conduta, Auvo e Segurança predial). O que ficar desmarcado continua no sistema e no e-mail.",
+          "Toque em \"Gravar\". A mensagem abaixo do botão diz quantas pessoas recebem pelo WhatsApp."
+        ] },
+        { titulo: "Testar o WhatsApp de uma pessoa", itens: [
+          "Depois de gravar, toque em \"Mandar teste\" ao lado da pessoa.",
+          "Peça para a pessoa confirmar que a mensagem chegou.",
+          "Confira o envio em \"O que saiu, foi retido ou falhou\". Se não saiu, a mensagem abaixo do botão diz o motivo (celular, modelo da Meta ou pagamento).",
+          "Dá para mandar um teste por pessoa a cada 2 minutos."
+        ] },
+        { titulo: "Acompanhar o dia", itens: [
+          "No bloco \"O que saiu, foi retido ou falhou\", escolha o dia e, se quiser, a pessoa.",
+          "Toque em \"Mostrar\".",
+          "Confira os números do topo: enviadas, retidas pelo piloto, bloqueadas pelo servidor, falharam e não enviadas por regra do módulo.",
+          "Em cada linha, veja a hora, o sistema (SGO+ ou COMMAND), a origem, para quem foi e a situação, com o motivo.",
+          "Todo dia às 18h, o responsável pelo sistema recebe por e-mail o resumo do dia."
+        ] },
+        { titulo: "Liberar por etapas (depois do piloto)", itens: [
+          "Abra \"Liberar uma área inteira\" e marque a área. Todas as pessoas daquele perfil passam a receber.",
+          "Toque em \"Gravar\".",
+          "Para liberar todos, desmarque \"Piloto ligado\", toque em \"Gravar\" e confirme."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo verde \"Enviada\"", significado: "A Meta aceitou a mensagem." },
+        { nome: "Selo cinza \"Retida pelo piloto\"", significado: "A pessoa não está na lista, o tipo de aviso está desmarcado para ela, ou é cliente ou contato externo. O aviso ficou no sistema e no e-mail." },
+        { nome: "Selo vermelho \"Bloqueada pelo servidor\"", significado: "O servidor barrou o envio: número fora da lista ou tentativa pela Z-API. Nada saiu." },
+        { nome: "Selo vermelho \"Falhou\"", significado: "A Meta recusou. O motivo diz o que fazer (modelo não aprovado, pagamento, número sem WhatsApp)." },
+        { nome: "Selo amarelo \"Não enviada (regra do módulo)\"", significado: "A regra do módulo segurou: fora do expediente, limite de uma por dia, PJ, sem celular ou modelo não aprovado." }
+      ],
+      problemas: [
+        { situacao: "O bloco Situação diz que falta gravar o token permanente ou a identificação do número", oQueFazer: "São campos do cartão WhatsApp oficial (Meta) em Chaves e senhas, gravados pelo responsável pelo sistema. Enquanto faltarem, as mensagens ficam no sistema e no e-mail. O selo \"Envio antigo (Z-API) desligado\" é o normal." },
+        { situacao: "Ninguém da lista recebe e aparece \"Falhou\" com código 141006 ou de pagamento", oQueFazer: "A conta da Meta está com bloqueio de pagamento. No Gerenciador do WhatsApp (Meta), confira a forma de pagamento; depois as mensagens voltam a sair." },
+        { situacao: "Aparece \"Provedor em uso: nenhum\"", oQueFazer: "O responsável pelo sistema grava o token e o identificador do número da Meta em Chaves e senhas > WhatsApp oficial e escolhe \"meta\" no provedor." },
+        { situacao: "Uma pessoa da lista não recebeu", oQueFazer: "Filtre o relatório pela pessoa. Confira o celular no cadastro e o motivo da linha; regras como expediente e limite por dia continuam valendo." },
+        { situacao: "Aparece \"Modelo não aprovado na Meta\"", oQueFazer: "Em Chaves e senhas > Situação dos modelos, confira e cadastre o modelo. Enquanto isso, o aviso vai pelo aviso geral (se aprovado) ou fica no sistema e no e-mail." },
+        { situacao: "Aparece \"Uma das pessoas marcadas não está mais ativa\"", oQueFazer: "Atualize a tela, marque de novo e toque em \"Gravar\"." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Escolhe as pessoas, liga e desliga o piloto e vê o relatório com o telefone. Recebe o e-mail das 18h, quando é o responsável pelo sistema." },
+        { perfil: "DIRETORIA", pode: "Escolhe as pessoas, liga e desliga o piloto e vê o relatório sem o telefone." },
+        { perfil: "GESTOR,RH,FINANCEIRO", pode: "Escolhe as pessoas e as áreas que recebem pelo WhatsApp e vê o relatório sem o telefone. Ligar e desligar o piloto fica com o Administrador e a Diretoria." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL", pode: "Não abre a tela. Recebe pelo WhatsApp só se estiver na lista; os avisos seguem no sistema e por e-mail." },
+      ],
+      perguntas: [
+        { p: "O que cada pessoa da lista recebe pelo WhatsApp?", r: "Desde a matriz de avisos (21/10/2026): no máximo um resumo do dia (09:30, só CLT, só se a pessoa ainda não abriu o sistema) e, na hora, só as quatro exceções da Frota, no expediente. O assistente do ponto tem regra própria. Tudo por modelo aprovado na Meta. As regras ficam em Administração > Matriz de avisos." },
+        { p: "Cliente recebe alguma coisa durante o piloto?", r: "Não pelo WhatsApp. O Atendente de IA, os avisos do Auvo ao cliente e o orçamento do chamado ficam retidos. O e-mail ao cliente continua como antes." },
+        { p: "E se alguém mandar mensagem para o número antigo da Z-API?", r: "A mensagem não entra no sistema: não vai para a Caixa de Entrada, nem para o bate-papo, nem para a IA. A Z-API está fora." },
+        { p: "Dá para mandar documento pelo WhatsApp?", r: "Não durante o piloto. Envie o documento por e-mail, pela janela \"Enviar documento\"." }
+      ],
+      secoesManual: [
+        { titulo: "Garantia dupla", paragrafos: [
+          "A lista é conferida duas vezes: no próprio sistema, antes de montar a mensagem, e no servidor, em toda chamada de envio ao WhatsApp, venha do SGO+ ou do COMMAND. O servidor compara o telefone sem o 9: o mesmo número com ou sem o 9 vale igual.",
+          "Sem a lista gravada, o servidor não deixa sair nenhuma mensagem."
+        ] },
+        { titulo: "O que fica registrado", paragrafos: [
+          "Cada mensagem fica registrada com a data, o sistema, a origem, o destinatário e a situação. O conteúdo da mensagem não é guardado no registro do servidor.",
+          "O registro do servidor é apagado depois de 90 dias. O histórico do SGO+ continua em Notificações enviadas."
+        ] }
+      ]
+    },
+
+    // 31/10/2026: segurança do acesso (SGO_SegurancaAcesso.js / JS_SegurancaAcesso.html), pedido do dono.
+    "seguranca_acesso": {
+      titulo: "Segurança do acesso",
+      paraQueServe: "Protege a entrada no SGO+ contra invasões: exige que as pessoas criem uma senha nova, liga o código de 6 números enviado ao celular (ou ao e-mail) depois da senha, recupera o acesso de quem perdeu o celular e mostra o registro de cada entrada, código enviado e troca de senha.",
+      antesDeComecar: [
+        "A tela é da gestão: Administrador, Diretoria e Gestor consultam; só o Administrador altera.",
+        "Confira em Administração > Usuários se cada pessoa tem e-mail válido e celular com DDD. A entrada é pelo e-mail: sem e-mail a pessoa não entra; sem os dois, não recebe o código.",
+        "Quem não consegue entrar (sem e-mail ou com e-mail repetido em duas contas ativas) aparece no bloco vermelho \"Não conseguem entrar no SGO+\", no topo.",
+        "O código pelo WhatsApp precisa do modelo sgo_codigo_acesso aprovado pela Meta. Até lá, use \"Só e-mail\" ou deixe desligado.",
+        "Nenhuma senha, código ou token aparece nesta tela nem no registro."
+      ],
+      passos: [
+        { titulo: "Exigir a troca de senha de todos", itens: [
+          "Toque em \"Segurança do acesso\" no menu Administração.",
+          "No bloco \"Troca de senha obrigatória\", toque em \"Exigir troca de senha de todos\".",
+          "Escreva o motivo (fica no registro com o seu nome) e confirme.",
+          "No próximo login, cada pessoa vê \"Crie sua nova senha\" e não abre nada antes de trocar. Quem já está dentro vê a tela em até 5 minutos. Você também troca a sua.",
+          "Acompanhe no bloco \"Situação\" quantas trocas ainda estão pendentes."
+        ] },
+        { titulo: "Ligar o código no celular", itens: [
+          "No bloco \"Código no celular (segundo fator)\", escolha \"Só e-mail\" ou \"WhatsApp com e-mail de reserva\".",
+          "Para começar aos poucos, marque só alguns perfis. Nenhum marcado = todos, inclusive Cliente e Representada.",
+          "Toque em \"Gravar\". Vale a partir do próximo login de cada pessoa.",
+          "Para voltar atrás, escolha \"Desligado\" e grave."
+        ] },
+        { titulo: "Cadastrar e acompanhar o modelo do WhatsApp", itens: [
+          "Abra \"Modelo do WhatsApp na Meta (sgo_codigo_acesso)\".",
+          "Toque em \"Cadastrar modelo na Meta\". A Meta analisa em minutos ou até 24 horas.",
+          "Toque em \"Consultar situação\" até aparecer \"Aprovado\". Só então escolha \"WhatsApp com e-mail de reserva\"."
+        ] },
+        { titulo: "Ajudar quem perdeu o celular ou desconfia da senha", itens: [
+          "No bloco \"Pessoas\", ache a pessoa pelo nome.",
+          "Perdeu ou trocou o celular: corrija o celular em Administração > Usuários e toque em \"Desconectar aparelhos\". Os aparelhos confiados e as sessões dela caem, e nas próximas 24 horas ela entra só com a senha.",
+          "Desconfia que a senha vazou: toque em \"Exigir nova senha\".",
+          "Escreva o motivo e confirme. Tudo fica no registro de segurança."
+        ] },
+        { titulo: "Atender quem esqueceu a senha", itens: [
+          "A própria pessoa toca em \"Esqueci minha senha\" na tela de entrada e digita o e-mail. A resposta é sempre a mesma (\"Se o e-mail estiver cadastrado, enviamos um link\"), para não revelar quem tem conta.",
+          "O link chega no e-mail, vale 30 minutos e uma vez só. Se o código está ligado para o perfil e a pessoa tem celular, o link pede também o código no WhatsApp (com o e-mail de reserva).",
+          "Limite: 3 pedidos por e-mail por hora e um limite por conexão. Pedir outro link cancela o anterior.",
+          "A gestão também envia o link em Administração > Usuários > Mais ações > Enviar link de redefinição (com motivo).",
+          "No registro, acompanhe \"Pediu o link de nova senha\", \"Link de nova senha enviado\" e \"Senha redefinida pelo link\". \"Pedido de link sem envio\" diz o motivo (e-mail sem conta, repetido ou limite)."
+        ] },
+        { titulo: "Consultar o registro de segurança", itens: [
+          "No bloco \"Registro de segurança\", escolha o período e, se quiser, a pessoa (nome ou e-mail) e o evento.",
+          "Toque em \"Mostrar\". Cada linha traz quando, o evento, a pessoa, o IP, o aparelho e o detalhe (e quem fez, nas ações da gestão)."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo verde", significado: "Em dia: entrada certa, código certo, senha trocada." },
+        { nome: "Selo amarelo", significado: "Ação da gestão ou pendência: troca exigida, segundo fator zerado, configuração alterada, troca pendente." },
+        { nome: "Selo vermelho", significado: "Falha: senha errada, código errado, código vencido, login cancelado por 5 códigos errados, código não enviado, link de nova senha vencido ou usado, pessoa sem celular e sem e-mail." },
+        { nome: "Bloco vermelho \"Não conseguem entrar no SGO+\"", significado: "Contas ativas sem e-mail ou com o mesmo e-mail de outra conta ativa. A entrada é pelo e-mail, então elas não entram até a correção em Administração > Usuários." },
+        { nome: "Selo vermelho \"sem e-mail: não entra\" na lista de pessoas", significado: "A pessoa não tem e-mail válido: não entra e não recebe o link de nova senha." },
+        { nome: "Selo cinza", significado: "Informação neutra: código desligado, senha guardada no formato antigo (vira forte sozinha no próximo login)." }
+      ],
+      problemas: [
+        { situacao: "Onde foi parar o \"Zerar segundo fator\"?", oQueFazer: "Agora se chama \"Desconectar aparelhos\", na lista de Pessoas. Faz o mesmo: desconecta os aparelhos confiados e as sessões da pessoa e libera 24 horas sem código (para quem perdeu ou trocou o celular). Pede o motivo e fica no registro." },
+        { situacao: "A pessoa diz que o código não chegou", oQueFazer: "No registro, filtre pelo nome ou e-mail dela e veja \"Código enviado\" e para onde foi (WhatsApp terminado em ... ou e-mail). Confira o celular e o e-mail em Administração > Usuários. Ela pode tocar em \"Receber por e-mail\" ou \"Reenviar código\" depois de 60 segundos." },
+        { situacao: "Aparece \"Código não enviado\" no registro", oQueFazer: "O detalhe diz o motivo: sem celular válido, sem e-mail válido, modelo da Meta não aprovado ou e-mail fora do ar. Corrija o cadastro ou a chave em Chaves e senhas." },
+        { situacao: "A pessoa ficou trancada (perdeu o celular e não acessa o e-mail)", oQueFazer: "Corrija o celular e toque em \"Desconectar aparelhos\": ela entra só com a senha nas próximas 24 horas." },
+        { situacao: "Ninguém da gestão consegue entrar", oQueFazer: "O responsável pelo sistema roda no servidor o script de recuperação (sgo_servidor, scripts/seguranca_recuperar_acesso.ts), que zera o segundo fator, gera senha provisória e, se pedido, desliga o código para todos. O passo a passo está no manual da gestão." },
+        { situacao: "Aparece \"Muitas tentativas de senha erradas\" na entrada", oQueFazer: "O servidor segura por 15 minutos depois de 5 senhas erradas com o mesmo e-mail (ou 10 na mesma conexão). Espere ou peça para a pessoa usar \"Esqueci minha senha\" (ou envie o link em Administração > Usuários)." },
+        { situacao: "A pessoa abriu o link e aparece \"Este link venceu\" ou \"Este link não vale mais\"", oQueFazer: "O link vale 30 minutos e uma vez só, e um link novo cancela o anterior. Ela toca em \"Pedir outro link\" (ou você envia em Usuários) e usa o e-mail mais recente." },
+        { situacao: "Aparece \"Pedido de link sem envio\" no registro", oQueFazer: "O detalhe diz o motivo: e-mail sem conta ativa, e-mail repetido em duas contas (corrija em Usuários) ou limite de 3 pedidos por hora (espere)." },
+        { situacao: "A pessoa entra e aparece \"Seu acesso precisa de um e-mail cadastrado\" ou \"este e-mail está cadastrado em mais de uma conta ativa\"", oQueFazer: "Corrija o e-mail da conta em Administração > Usuários (deixe cada e-mail em uma conta só)." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "Liga e desliga o código, escolhe os perfis, cadastra o modelo na Meta, exige a troca de todos, exige nova senha e zera o segundo fator de uma pessoa, e consulta o registro." },
+        { perfil: "DIRETORIA,GESTOR", pode: "Consulta a situação, as pessoas e o registro de segurança. As alterações são do Administrador." },
+        { perfil: "TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH,CLIENTE,REPRESENTADA", pode: "Não abre esta tela. Entra com o e-mail, troca a própria senha em \"Trocar senha\" (no celular, em \"Conta\" > \"Trocar minha senha\"; ou quando o sistema pede), usa \"Esqueci minha senha\" na entrada e digita o código que chega no celular ou no e-mail." }
+      ],
+      perguntas: [
+        { p: "Como a senha fica guardada?", r: "Nunca em texto: só um resumo forte (PBKDF2 com 600 mil rodadas e sal próprio). Senhas antigas viram o formato forte sozinhas no próximo login certo de cada pessoa." },
+        { p: "O código sai fora do horário de trabalho?", r: "Sim. O código é pedido pela própria pessoa na hora em que ela entra, então sai a qualquer hora. Nenhuma outra mensagem vai pelo WhatsApp neste fluxo." },
+        { p: "O piloto do WhatsApp segura o código?", r: "Não. O servidor deixa passar só o modelo sgo_codigo_acesso, só do SGO+ e só com o botão do código, mesmo para quem não está na lista do piloto. Os outros avisos continuam seguindo o piloto." },
+        { p: "O que é \"Confiar neste aparelho\"?", r: "A pessoa marca no celular ou computador dela e, por 30 dias, não recebe o código naquele aparelho. Trocar a senha ou usar “Desconectar aparelhos” desconecta todos os aparelhos confiados." },
+        { p: "Senha definida pela gestão em Usuários vale para sempre?", r: "Não. Conta nova ou senha provisória (só para quem não tem e-mail) vale para o primeiro acesso: a pessoa cria a dela." },
+        { p: "Por que a resposta do \"Esqueci minha senha\" é sempre a mesma?", r: "Para ninguém descobrir, pela tela, quais e-mails têm conta no SGO+. Só quem tem conta ativa recebe o e-mail." },
+        { p: "Por que o link pede o código no WhatsApp?", r: "Para que quem invadir só o e-mail da pessoa não consiga trocar a senha. Vale quando o código está ligado para o perfil e a pessoa tem celular cadastrado." },
+        { p: "O que acontece depois que a senha é redefinida pelo link?", r: "Todas as sessões abertas e os aparelhos confiados da pessoa são desconectados na hora, ela recebe um e-mail \"sua senha foi alterada; se não foi você, avise a gestão\" e o registro guarda o evento." }
+      ],
+      secoesManual: [
+        { titulo: "Ordem de implantação", paragrafos: [
+          "1. Publicar com o código desligado. 2. Cadastrar o modelo sgo_codigo_acesso na Meta e esperar a aprovação. 3. Exigir a troca de senha de todos. 4. Ligar o código, primeiro \"Só e-mail\" ou para alguns perfis, depois \"WhatsApp com e-mail de reserva\".",
+          "Antes do passo 4, confira na Situação quantas pessoas estão sem e-mail e sem celular."
+        ] },
+        { titulo: "Proteções do código", paragrafos: [
+          "Código de 6 números, vale 10 minutos e uma vez só. No máximo 5 tentativas por login; depois o login é cancelado. Reenvio depois de 60 segundos, no máximo 3 por login. O código anterior deixa de valer quando um novo é enviado.",
+          "A senha errada também tem freio: 5 erros com o mesmo e-mail ou 10 na mesma conexão seguram as tentativas por 15 minutos, com aviso de quantas tentativas faltam."
+        ] },
+        { titulo: "Entrada pelo e-mail e link de nova senha (31/10/2026)", paragrafos: [
+          "Todos entram com o e-mail cadastrado em Administração > Usuários (sem diferença de maiúsculas e sem espaços). O nome de usuário não existe mais para ninguém; a conta técnica do Auvo continua como antes.",
+          "Conta ativa sem e-mail recebe \"Seu acesso precisa de um e-mail cadastrado. Peça à gestão da Metrolabs para cadastrar.\". Duas contas ativas com o mesmo e-mail: as duas ficam recusadas até a correção.",
+          "Link de nova senha: token aleatório forte, guardado só como resumo, uso único, 30 minutos; um por pessoa (o novo cancela o anterior). Ao concluir, todas as sessões e aparelhos confiados caem, a pessoa recebe o aviso por e-mail e o registro guarda o evento.",
+          "Antes de publicar a entrada pelo e-mail, o responsável pelo sistema roda no servidor scripts/seguranca_listar_emails.ts, que lista quem está sem e-mail ou com e-mail repetido (só lê)."
+        ] }
+      ]
+    },
+
+    // 10/11/2026: acessos por caixas, lote 0 (SGO_Poderes.js / JS_Acessos.html), pedido do dono.
+    "acessos": {
+      titulo: "Acessos",
+      paraQueServe: "Mostra e altera, pessoa a pessoa, o que cada uma pode ver e fazer no SGO+. Cada permissão é uma caixa com nome e descrição (por exemplo, \"Aprovar compra até o limite do comprador\" ou \"Ver o ponto de todos\"). Sem nenhuma alteração, cada pessoa tem exatamente o que o perfil, a área e as listas de configuração dão hoje.",
+      antesDeComecar: [
+        "A tela é do responsável pelo sistema. Outra pessoa só abre se ele liberar para ela a caixa \"Gerir os acessos (tela Acessos)\". O item \"Acessos\" não aparece no menu de quem não pode, e o servidor confere de novo em cada gravação.",
+        "Implantação por etapas: desde o lote 1 (11/11/2026) o grupo Contas, senhas e acessos já obedece às caixas: ver a lista de contas, criar, alterar dados, mudar o perfil, redefinir a senha, inativar, excluir, contas de Administrador e de Diretoria, áreas, Segurança do acesso, responsáveis do modo personalizado e a própria tela Acessos. Desde o lote 4 (11/11/2026), também a aprovação de relatório técnico: aprovar, emitir ou devolver relatório de Autoclave, Lavadora, Cadeia de frio, Estufa/Banho-maria/Secadora, aprovar ensaio de baixa temperatura e escolher o modelo dos relatórios oficiais. Desde o lote 5 (11/11/2026), também Compras: pedir compra, ver a fila, ver valores e fornecedores, cotar e comprar, aprovar em cada faixa, gestão de Compras, regras de compras e ciência da gestão. Desde o lote 6 (11/11/2026), também a Frota na parte de localização e bloqueio: ver localização, mapa e rotas, configurar o rastreador, bloqueio da partida, liberar a partida agora, bloqueio de roubo e acerto do hodômetro. O \"Relatório interno\" (dados reconstituídos) continua protegido pela senha do simulador e não foi ligado. Os outros módulos continuam decidindo pelo perfil até serem ligados; cada caixa ainda não ligada mostra o aviso \"Esta caixa passa a valer quando o módulo for ligado (lote N)\". As duas caixas do servidor (gravar chaves e ver o painel do servidor) também aguardam: a trava delas fica no servidor e será ligada à parte.",
+        "Contas, senhas e acessos: as proteções fixas continuam acima das caixas. Conta e perfil de Administrador só por um Administrador; conta e perfil da Diretoria só por Administrador ou Diretoria; o sistema nunca fica sem Administrador ativo; ninguém muda o próprio perfil nem inativa ou exclui a própria conta. Marcar uma caixa a mais para alguém não passa por cima dessas regras; desmarcar uma caixa tira o poder mesmo de quem o perfil daria.",
+        "Troca de e-mail: quando o e-mail de uma conta é trocado em Usuários, o e-mail antigo recebe um aviso (quem trocou, quando e o e-mail novo mascarado) e a troca fica no registro da Segurança do acesso. Assim a pessoa percebe se alguém tentou tomar o acesso dela.",
+        "Proteções fixas, que nenhuma caixa muda: ninguém altera as próprias caixas; o responsável pelo sistema tem sempre todas as caixas e ninguém tira poderes dele; contas de cliente e de representada não aparecem (usam só o próprio portal).",
+        "Toda mudança pede o motivo (pelo menos 5 letras) e fica no histórico com quem fez, quando, o antes e o depois. O histórico nunca é apagado.",
+        "Perfil e área continuam sendo trocados em Administração > Usuários. Eles mudam o padrão das caixas; as caixas alteradas para a pessoa continuam valendo."
+      ],
+      passos: [
+        { titulo: "Abrir as caixas de uma pessoa", itens: [
+          "Toque em \"Acessos\" no menu Administração (no celular, no Início).",
+          "Busque a pessoa pelo nome, e-mail, perfil ou área e toque no nome dela.",
+          "O cabeçalho mostra o perfil, a área, o vínculo e quantas caixas foram alteradas para ela.",
+          "As caixas vêm agrupadas por módulo. Toque no nome do módulo para abrir ou fechar o grupo; \"Abrir todos\" e \"Fechar todos\" fazem isso de uma vez. Os grupos com caixas alteradas já abrem sozinhos."
+        ] },
+        { titulo: "Liberar ou retirar caixas", itens: [
+          "Marque a caixa para liberar ou desmarque para retirar. Ela fica amarela com o selo \"Não salvo\".",
+          "O rodapé mostra quantas alterações estão pendentes. \"Desfazer\" volta tudo como estava.",
+          "Toque em \"Salvar\", confira a lista do que muda, escreva o motivo e confirme.",
+          "Se você trocar de pessoa ou de tela com alterações pendentes, o sistema pergunta antes de descartar."
+        ] },
+        { titulo: "Voltar uma caixa ao padrão do perfil", itens: [
+          "Na caixa com o selo \"Alterado para esta pessoa\", toque em \"voltar ao padrão\".",
+          "Escreva o motivo e confirme. A caixa volta a seguir o perfil (a janela diz se fica marcada ou desmarcada)."
+        ] },
+        { titulo: "Copiar as caixas de outra pessoa", itens: [
+          "Com a pessoa aberta, toque em \"Copiar de…\".",
+          "Escolha de quem copiar, escreva o motivo e confirme.",
+          "A pessoa fica com as mesmas caixas marcadas da outra. Só onde o resultado difere do padrão do perfil vira alteração. A caixa \"Gerir os acessos\" nunca é copiada."
+        ] },
+        { titulo: "Aplicar um modelo", itens: [
+          "Toque em \"Aplicar modelo\" e escolha: Gerente, Gestor de área, Técnico, Metrologia, Comercial, Financeiro ou RH. Cada modelo mostra quantas caixas tem e o que libera.",
+          "Escolha como aplicar: \"Substituir\" deixa a pessoa exatamente com as caixas do modelo; \"Somar\" só libera as caixas do modelo, sem retirar nenhuma.",
+          "Escreva o motivo e confirme. O modelo Gestor de área usa a área da própria pessoa; sem área no cadastro, ele não fica disponível."
+        ] },
+        { titulo: "Consultar o histórico e ver como a pessoa vê", itens: [
+          "\"Histórico\" lista cada mudança da pessoa: quando, a caixa, antes e depois, o motivo e quem fez.",
+          "\"Ver como esta pessoa vê\" resume, módulo a módulo, as caixas marcadas para ela. As marcadas com * ainda não valem no sistema (módulo não ligado)."
+        ] }
+      ],
+      cores: [
+        { nome: "Selo cinza \"Padrão do perfil\"", significado: "A caixa segue o perfil, a área e as listas de configuração, como sempre foi." },
+        { nome: "Selo amarelo \"Alterado para esta pessoa\"", significado: "A caixa foi liberada ou retirada só para esta pessoa. Abaixo aparecem quem alterou, quando, o motivo e o que o padrão seria." },
+        { nome: "Selo verde \"Responsável pelo sistema\"", significado: "Tem sempre todas as caixas; não pode ser alterado." },
+        { nome: "Caixa com fundo amarelo e selo azul \"Não salvo\"", significado: "Alteração marcada e ainda não salva." },
+        { nome: "Aviso em itálico \"passa a valer quando o módulo for ligado\"", significado: "A caixa grava, mas o módulo ainda decide pelo perfil." }
+      ],
+      problemas: [
+        { situacao: "O item \"Acessos\" não aparece no menu", oQueFazer: "A tela é do responsável pelo sistema. Peça a ele a mudança de que você precisa, ou que libere para você a caixa \"Gerir os acessos (tela Acessos)\"." },
+        { situacao: "Aparece \"ninguém altera as próprias caixas de acesso\"", oQueFazer: "É uma proteção fixa. Peça ao responsável pelo sistema que faça a mudança nas suas caixas." },
+        { situacao: "Marquei a caixa, salvei, e a pessoa ainda não consegue (ou ainda consegue)", oQueFazer: "Veja se a caixa tem o aviso \"passa a valer quando o módulo for ligado\". Enquanto o módulo não for ligado, o sistema segue o perfil. A alteração fica gravada e passa a valer sozinha quando o módulo for ligado." },
+        { situacao: "Aparece \"A regra padrão desta caixa não pôde ser conferida agora\"", oQueFazer: "A caixa vale como desmarcada até a correção (o sistema nunca libera por erro). Avise o responsável pelo sistema com o nome da caixa." },
+        { situacao: "Aparece \"outra pessoa está gravando acessos neste momento\"", oQueFazer: "Espere alguns segundos e toque em Salvar de novo. Nada foi alterado." }
+      ],
+      quemPode: [
+        { perfil: "ADMIN", pode: "O responsável pelo sistema abre a tela, altera as caixas de qualquer pessoa da equipe (menos as próprias, que já são todas), copia, aplica modelos e consulta o histórico. Outro Administrador só abre se tiver a caixa \"Gerir os acessos\"." },
+        { perfil: "DIRETORIA,GESTOR,TECNICO,METROLOGIA,COMERCIAL,FINANCEIRO,RH", pode: "Não abre esta tela, a não ser que o responsável pelo sistema libere a caixa \"Gerir os acessos\" para a pessoa. Mesmo assim, ninguém altera as próprias caixas." },
+        { perfil: "CLIENTE,REPRESENTADA", pode: "Não abre esta tela e não tem caixas: usa só o próprio portal." }
+      ],
+      perguntas: [
+        { p: "O que muda para a equipe nesta etapa?", r: "Sem alteração gravada, nada: cada pessoa tem exatamente o que tinha. Com alteração gravada, valem já as caixas do grupo Contas, senhas e acessos (lote 1) as de aprovação de relatório técnico (lote 4), as de Compras (lote 5) e as de localização e bloqueio da Frota (lote 6); os outros módulos só passam a obedecer às caixas quando forem ligados, um por vez." },
+        { p: "Tirei a caixa \"Alterar dados de outra pessoa\" de um gestor. O que ele vê?", r: "Ele continua vendo a lista de contas (se tiver \"Ver a lista de contas\"), mas ao salvar nome, e-mail, celular ou vínculo de outra pessoa o sistema recusa e diz qual caixa falta. As outras caixas dele continuam valendo; os botões que ele não pode usar ficam apagados com o motivo." },
+        { p: "Se eu mudar o perfil de alguém em Usuários, o que acontece com as caixas?", r: "As caixas no padrão acompanham o perfil novo. As caixas alteradas para a pessoa continuam como foram gravadas, até alguém tocar em \"voltar ao padrão\"." },
+        { p: "Posso apagar uma linha do histórico?", r: "Não. O histórico guarda cada mudança para sempre, com antes, depois, motivo, quem e quando." },
+        { p: "Como os modelos são montados?", r: "Cada modelo é o que um perfil de referência tem hoje pelo padrão, sem as listas de configuração (compradores, triagem, responsáveis de área) e sem nada exclusivo do responsável pelo sistema. Nenhum modelo mexe na caixa \"Gerir os acessos\"." }
+      ],
+      secoesManual: [
+        { titulo: "Como o sistema decide", paragrafos: [
+          "Para cada caixa, nesta ordem: conta de cliente ou de representada não tem caixa; o responsável pelo sistema tem todas; se há uma alteração gravada para a pessoa, vale a alteração; senão vale o padrão do perfil, que é a mesma regra que o sistema usa hoje (perfil, área, Diretoria, listas de compradores, triagem e responsáveis de área).",
+          "Depois da caixa continuam valendo as proteções de cada ação, que nenhuma caixa desliga: quem pediu a compra não aprova a própria compra, quem elaborou o relatório não aprova o próprio relatório, o envolvido não decide a própria ocorrência e ninguém altera as próprias caixas."
+        ] },
+        { titulo: "Implantação por lotes", paragrafos: [
+          "Lote 0: catálogo das 150 caixas, alterações e histórico, tela Acessos.",
+          "Lote 1 (11/11/2026): Contas, senhas e acessos. As travas de Usuários, Áreas, Segurança do acesso e modo personalizado perguntam às caixas, e o menu e os botões dessas telas aparecem conforme as caixas da pessoa. Sem alteração gravada, o resultado e as mensagens são os mesmos de antes (conferido para as 23 contas).",
+          "Lote 4 (11/11/2026): aprovação de relatório técnico. As caixas «Aprovar relatório técnico de qualificação», «Aprovar ensaio de baixa temperatura» e «Escolher o modelo dos relatórios oficiais» valem no servidor (Autoclave, Lavadora, Cadeia de frio, Estufa/Banho-maria/Secadora e Baixa temperatura) e a tela mostra os botões de aprovar e de escolher o modelo conforme a caixa. Quem tem a caixa tirada é recusado com o nome da caixa; quem recebe a caixa passa a aprovar, mas nunca o ensaio de baixa temperatura que ele mesmo elaborou (proteção fixa). O diagnóstico \"o que falta\" passa a citar as pessoas que de fato aprovam. A simulação didática não mudou e nunca vira documento oficial. Sem alteração gravada, o resultado e as mensagens são os mesmos de antes (conferido para as 23 contas).",
+          "Lote 5 (11/11/2026): Compras. As caixas «Pedir compra e informar compra feita», «Ver a fila e o painel de compras», «Ver valores de compras e fornecedores», «Cotar e comprar», «Aprovar compra até o limite do comprador», «Aprovar compra da própria área (faixa do gestor)», «Aprovar compra acima de todas as faixas», «Gestão de Compras», «Alterar as regras de compras» e «Dar ciência de compra fora do fluxo» valem no servidor. Sem alteração gravada vale o de antes: a lista de compradores e substitutos, a área de Compras e o gestor de cada área continuam em Compras > Regras de compras e em Caixa de decisões > Regras e responsáveis. A alteração NÃO tira o poder mesmo de quem está na lista de compradores; a alteração SIM dá o poder a quem não está nela. Os valores das faixas (hoje até R$ 1.000,00 o comprador, até R$ 10.000,00 o gestor da área, acima a Diretoria) continuam nas Regras de compras: a caixa diz se a pessoa aprova naquela faixa, a faixa diz até quanto. «Aprovar compra da própria área» dada por alteração vale só para pedidos da área da pessoa (Diretoria: todas). Quem pediu nunca aprova a própria compra e, acima da faixa do comprador, quem cotou não aprova (proteções fixas). Quem pediu continua acompanhando os próprios pedidos (sem valores), com ou sem caixa. Para aprovar pela ficha, a pessoa precisa também ver a fila e os valores.",
+          "Lote 6 (11/11/2026): Frota, localização e bloqueio. As caixas «Ver localização, mapa e rotas dos veículos», «Configurar rastreador e alertas», «Bloqueio da partida», «Liberar a partida agora», «Bloqueio de roubo» e «Corrigir o hodômetro do bloqueio» valem no servidor. Sem alteração gravada vale o de antes: a gestão da Frota (Administrador, Diretoria, Gestor, RH e Financeiro); \"Liberar agora\" sem o Financeiro; bloqueio de roubo só a Diretoria; hodômetro só Gestor e Administrador. A caixa decide só QUEM pode: o motivo obrigatório, a dupla confirmação do roubo (marcar e digitar BLOQUEAR e a placa), o modo de cada carro (Ativo, Simulação, Desligado), as condições seguras (carro conectado, parado, desligado e na base), o prazo de 24 horas da liberação de emergência e o registro inviolável continuam iguais para todos. Ninguém autoriza a passagem do carro em que está envolvido (proteção fixa). Quem usa o carro continua retirando, devolvendo, passando o carro e respondendo os próprios pedidos de comprovante sem caixa. Para usar os botões do cartão do carro (liberar, roubo, hodômetro), a pessoa precisa também da caixa «Bloqueio da partida», que abre o painel.",
+          "Lotes seguintes: um módulo por vez passa a perguntar às caixas (Contas e acessos, Programa de conduta, Financeiro, aprovação de relatório técnico, Compras, Frota, Comercial, Assistência e Representação, Caixa de decisões e Ponto, Atividades e comunicação, Cadastros, Auvo, Licitações e automação predial). Antes de cada lote, o teste confere que ninguém ganha nem perde acesso sem alteração gravada."
+        ] }
+      ]
+    }
+  };
+}

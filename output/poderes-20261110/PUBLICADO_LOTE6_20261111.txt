@@ -1,0 +1,10 @@
+ACESSOS POR CAIXAS — LOTE 6 (Frota: localização e bloqueio da partida) — PUBLICADO 11/11/2026 ~03:07 BRT
+Imagem: metrolabs/sgo:poderes-lote6-20261111
+sha256:fd7fe18291254bedbcea047310d461cac5f457f5711622d779fca58672c3dffb (base poderes-lote5-20261111).
+8 arquivos (Frota Bloqueio/Main/Rastreador/Rastreamento/RastreamentoGestao, SGO_Poderes.js, ajudas).
+6 caixas ligadas (34 no total). Espelho: 782 comparações sem diferença. Todas as confirmações do bloqueio
+mantidas (motivo, "BLOQUEAR <PLACA>", modo do carro, condições seguras, 24 h, registro).
+Limites: abas da Frota ainda pelo perfil (lote 9); avisos da gestão da Frota pelo perfil; admin sem bloqueio
+de roubo (decisão do dono, D-08).
+Pós-publicação: healthy; telas preservadas; /api/run forjado 403; sem erros de código.
+Reverter: /opt/metrolabs/backup/poderes-lote6-20261111/compose.antes.yml (+ banco-antes.dump).

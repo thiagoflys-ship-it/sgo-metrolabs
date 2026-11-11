@@ -225,3 +225,4 @@ dono; próximos: 3 Financeiro (tem trava no Node), 5 Compras, 6 Frota, 7–11. E
 SGO+ — 11/11/2026 ~02:52: base atual metrolabs/sgo:poderes-lote5-20261111 (sha256:7d954e75…). Lotes 0,1,4,5 ligados.
 Pendências: Lote 2 Conduta (adiado pelo dono), 3 Financeiro (trava no Node), 6–11; teste compras-acesso-financeiro-
 delegado falhava já antes desta noite (investigar). Evidência: PUBLICADO_LOTE5_20261111.txt.
+SGO+ — 11/11/2026 ~03:07: base atual metrolabs/sgo:poderes-lote6-20261111 (sha256:fd7fe182…). Lotes 0,1,4,5,6 ligados (34 caixas).
