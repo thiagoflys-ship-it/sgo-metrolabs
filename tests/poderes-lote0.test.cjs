@@ -98,7 +98,9 @@ function montarHoje(a) {
 }
 
 // ------------------------------------------------------------------ 1. catálogo
-const LIGADOS_LOTE1 = ['CONTAS_VER', 'CONTAS_CRIAR', 'CONTAS_ALTERAR_OUTROS', 'CONTAS_MUDAR_PERFIL', 'CONTAS_REDEFINIR_SENHA', 'CONTAS_INATIVAR', 'CONTAS_EXCLUIR', 'CONTAS_GERIR_ADMINISTRADOR', 'CONTAS_DAR_DIRETORIA', 'AREAS_GERIR', 'AREAS_DEFINIR_PESSOA', 'SEGURANCA_VER_REGISTRO', 'SEGURANCA_ALTERAR', 'MODO_PERSONALIZADO_DESIGNAR', 'ACESSOS_GERIR'];
+const LIGADOS_LOTE1 = ['CONTAS_VER', 'CONTAS_CRIAR', 'CONTAS_ALTERAR_OUTROS', 'CONTAS_MUDAR_PERFIL', 'CONTAS_REDEFINIR_SENHA', 'CONTAS_INATIVAR', 'CONTAS_EXCLUIR', 'CONTAS_GERIR_ADMINISTRADOR', 'CONTAS_DAR_DIRETORIA', 'AREAS_GERIR', 'AREAS_DEFINIR_PESSOA', 'SEGURANCA_VER_REGISTRO', 'SEGURANCA_ALTERAR', 'MODO_PERSONALIZADO_DESIGNAR', 'ACESSOS_GERIR',
+  // lote 4 (11/11/2026): aprovação de relatório técnico (RELATORIO_INTERNO_SIMULADO fica de fora)
+  'RELATORIO_TECNICO_APROVAR', 'RELATORIO_BAIXATEMP_APROVAR', 'RELATORIO_MODELO_ESCOLHER'];
 test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os ligados pelo lote 1; nada fora do catalogo.json', () => {
   const a = ambiente();
   const cat = a.ctx.SGO_poderesCatalogo_();
@@ -110,7 +112,7 @@ test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os l
     assert.ok(p.nome && !/NOVO/.test(p.nome), p.codigo);
     assert.equal(typeof p.padrao, 'function', p.codigo);
     // lote 1 (11/11/2026): só as caixas de Contas, senhas e acessos ligadas (SISTEMA_* ficam no servidor Node)
-    assert.equal(p.ligado, LIGADOS_LOTE1.includes(p.codigo), p.codigo + ' ligado fora do lote 1');
+    assert.equal(p.ligado, LIGADOS_LOTE1.includes(p.codigo), p.codigo + ' ligado fora dos lotes 1 e 4');
   }
   assert.deepEqual(Array.from(vm.runInContext('SGO_PODERES_LIGADOS', a.ctx)), LIGADOS_LOTE1);
   assert.throws(() => a.ctx.SGO_pode_('s_admin', 'PODER_INEXISTENTE'), /Poder desconhecido/);

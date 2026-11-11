@@ -219,3 +219,6 @@ código WhatsApp do dono para dados reconstituídos; /api/run bloqueia funções
 Ao publicar a partir daqui, src/servidor.ts e dist/servidor.js da base já têm a trava (manter).
 SGO+ — 11/11/2026 ~02:20: base atual metrolabs/sgo:poderes-lote1-20261111 (sha256:820f35b3…). Lote 1 das caixas
 ligado (contas/senhas/acessos, espelho). Evidência: output/poderes-20261110/PUBLICADO_LOTE1_20261111.txt.
+SGO+ — 11/11/2026 ~02:35: base atual metrolabs/sgo:poderes-lote4-20261111 (sha256:aeae8028…). Lote 4 das caixas
+ligado (aprovação de relatório técnico, espelho). Lotes 0,1,4 publicados; Lote 2 (Conduta) adiado por pedido do
+dono; próximos: 3 Financeiro (tem trava no Node), 5 Compras, 6 Frota, 7–11. Evidência: PUBLICADO_LOTE4_20261111.txt.

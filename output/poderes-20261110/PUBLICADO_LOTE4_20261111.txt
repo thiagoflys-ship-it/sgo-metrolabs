@@ -1,0 +1,11 @@
+ACESSOS POR CAIXAS — LOTE 4 (aprovação de relatório técnico) — PUBLICADO 11/11/2026 ~02:35 BRT
+Imagem: metrolabs/sgo:poderes-lote4-20261111
+sha256:aeae80289fd5613224a865730de287211494283d1a5bf0ca80d19a5343e07ba6 (base poderes-lote1-20261111).
+15 arquivos (Qualificação de Autoclave, Lavadora, Cadeia de Frio, Estufa, Baixa Temperatura, QualifEmissao/
+Equipamento, SGO_Poderes.js e ajudas). Poderes ligados: RELATORIO_TECNICO_APROVAR, RELATORIO_BAIXATEMP_APROVAR,
+RELATORIO_MODELO_ESCOLHER (18 ligados no total). RELATORIO_INTERNO_SIMULADO NÃO ligado (a trava real é senha +
+código WhatsApp, sem perfil; ligar mudaria a regra — decisão do dono).
+Espelho: 1.495 comparações (23 contas x 65 ações) sem diferença. "Quem elaborou não aprova" mantido.
+Simulação didática intacta. Testes na imagem: iguais exceto os que dependem de lote4-antes-legado (fora do
+pacote; passaram local). Pós-publicação: healthy; telas preservadas; /api/run forjado 403; despacho ok.
+Reverter: /opt/metrolabs/backup/poderes-lote4-20261111/compose.antes.yml (+ banco-antes.dump).
