@@ -1,0 +1,6 @@
+Conferência no navegador — lote 1 (página completa, 2026-11-11T05:08:44.440Z)
+  OK charles (Diretoria, sem exceção): menu Usuários, "Novo usuário" e "Áreas" visíveis, como antes
+  OK joaopedro (Técnico + exceção SIM ver/alterar): menu e lista; Editar em conta comum e não na do Administrador; sem "Novo usuário" e "Áreas"; link de senha e inativar apagados com "Você não tem a caixa «...»"
+  OK elisa (Gestor + exceção NÃO ver): menu Usuários escondido; abrir direto mostra o aviso; o servidor recusa com a caixa
+  OK ricardo (Gestor + exceção NÃO criar/senha/inativar), celular 390 px: sem "Novo usuário", Editar mantido, Inativar apagado com o motivo, sem rolagem lateral
+  OK monica (Comercial, sem exceção): menu Usuários escondido, como antes

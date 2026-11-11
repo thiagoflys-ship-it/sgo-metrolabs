@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="theme-color" content="#FFFFFF">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <style>
+    /* Página do assistente do ponto do SGO+ (21/10/2026): leve (sem fontes externas nem imagens), celular primeiro.
+       Campos de 16 px (o iPhone não amplia a tela), alvos de 48 px, áreas seguras, sem rolagem lateral. */
+    :root { color-scheme: light; --bg: #F5F7F6; --card: #FFFFFF; --text: #1F2A24; --muted: #5B6B63; --border: #D5DDD8; --borda-forte: #B9C6BF;
+      --verde: #2F5D50; --perigo-bg: #FBEBE8; --aviso-bg: #FAF0D7; --ok-bg: #E8F2E5; --info-bg: #E7EFF6; --raio: 6px; }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow-x: hidden; }
+    body { min-height: 100vh; min-height: 100dvh; -webkit-tap-highlight-color: rgba(47,93,80,.12); }
+    .pg { max-width: 520px; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+    .topo { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 6px 0 12px; border-bottom: 2px solid var(--verde); }
+    .marca { font-weight: 700; font-size: 18px; letter-spacing: .2px; color: var(--verde); }
+    .topo span { color: var(--muted); font-size: 13px; text-align: right; }
+    h1 { font-size: 20px; margin: 18px 0 4px; line-height: 1.3; overflow-wrap: anywhere; }
+    .sub { color: var(--muted); margin: 0 0 14px; font-size: 15px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--raio); padding: 16px; margin: 12px 0; }
+    .marc { font-size: 17px; font-weight: 700; margin: 0 0 2px; }
+    .prev { color: var(--muted); font-size: 15px; margin: 0; }
+    .btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; padding: 12px 16px; border-radius: var(--raio); border: 1px solid var(--borda-forte);
+      font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; background: var(--card); color: var(--text); margin-top: 12px; text-align: center; }
+    .btn.prim { background: var(--verde); border-color: var(--verde); color: #fff; }
+    .btn:disabled { opacity: .6; cursor: default; }
+    .btn:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid rgba(47,93,80,.35); outline-offset: 2px; }
+    label { display: block; font-weight: 600; margin: 14px 0 6px; font-size: 15px; }
+    input, textarea { display: block; width: 100%; font: inherit; font-size: 16px; min-height: 48px; padding: 10px 12px; border: 1px solid var(--borda-forte); border-radius: var(--raio); background: #fff; color: var(--text); }
+    textarea { min-height: 88px; resize: vertical; }
+    .dica { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .msg { border-radius: var(--raio); padding: 12px 14px; margin: 12px 0; font-size: 15px; }
+    .msg.ok { background: var(--ok-bg); border: 1px solid #BFD9B8; }
+    .msg.erro { background: var(--perigo-bg); border: 1px solid #E8BDB6; color: #6E1A12; }
+    .msg.aviso { background: var(--aviso-bg); border: 1px solid #E9D6A2; }
+    .msg.info { background: var(--info-bg); border: 1px solid #C3D6E8; }
+    .rodape { color: var(--muted); font-size: 13px; margin-top: 22px; line-height: 1.45; }
+    .ajuda { background: var(--card); border: 1px solid var(--border); border-radius: var(--raio); margin: 16px 0 0; }
+    .ajuda summary { cursor: pointer; font-weight: 700; padding: 12px 14px; min-height: 48px; display: flex; align-items: center; }
+    .ajuda > div { padding: 0 14px 12px; font-size: 15px; }
+    .ajuda h2 { font-size: 15px; margin: 12px 0 4px; }
+    .ajuda ol, .ajuda ul { margin: 4px 0 6px 20px; padding: 0; } .ajuda li { margin-bottom: 4px; }
+    .oculto { display: none; }
+    .carregando { color: var(--muted); padding: 28px 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="pg">
+    <div class="topo"><div class="marca">Metrolabs SGO+</div><span>Assistente do ponto</span></div>
+    <div id="conteudo"><div class="carregando" role="status">Abrindo…</div></div>
+    <details class="ajuda" id="ajudaPagina">
+      <summary>Como usar esta página</summary>
+      <div>
+        <p>Esta página abre pelo botão "Confirmar" do lembrete do ponto (WhatsApp da empresa ou e-mail). Não precisa de senha.</p>
+        <h2>Bateu o ponto</h2>
+        <ol>
+          <li>Bata o ponto no relógio da empresa (em viagem, no aplicativo de ponto).</li>
+          <li>Toque no botão verde desta página (por exemplo, "Já bati a entrada").</li>
+          <li>Confira a mensagem "confirmada às". Pronto.</li>
+        </ol>
+        <h2>Esqueceu de bater</h2>
+        <ol>
+          <li>Toque em "Esqueci de bater".</li>
+          <li>Informe o horário em que você chegou ou saiu.</li>
+          <li>Escreva uma frase curta contando o que aconteceu.</li>
+          <li>Toque em "Enviar ao RH". O RH lança no ponto e a resposta aparece no SGO+ e no seu e-mail.</li>
+        </ol>
+        <h2>Bom saber</h2>
+        <ul>
+          <li>O registro oficial é o do relógio ou do aplicativo de ponto. Tocar no botão não substitui a batida.</li>
+          <li>Cada marcação tem um lembrete só. Não chega outro, mesmo sem confirmação.</li>
+          <li>O link vale só para o dia do lembrete e só uma vez: depois de confirmar ou pedir o ajuste, ele só mostra a situação.</li>
+          <li>Tocou por engano ou o dia já passou? No SGO+, abra Assistente do ponto &gt; Meus lembretes &gt; Pedir ajuste ao RH, ou fale com o RH.</li>
+          <li>Marcação sem confirmação até o fim do dia fica como "não confirmado". Isso não é prova de falta e não gera punição automática.</li>
+        </ul>
+      </div>
+    </details>
+    <p class="rodape" id="rodape">O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). Este lembrete não substitui a batida.</p>
+  </main>
+  <script>
+  (function () {
+    var TOKEN = "<?= token ?>";
+    var P = { d: null, msg: null, esqueci: false, enviando: false };
+    function $(id) { return document.getElementById(id); }
+    function h(s) { return String(s === undefined || s === null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+    function msgHtml() { return P.msg ? "<div class='msg " + P.msg.tipo + "' role='" + (P.msg.tipo === "erro" ? "alert" : "status") + "'>" + h(P.msg.texto) + "</div>" : ""; }
+
+    function desenhar() {
+      var d = P.d;
+      if (!d) return;
+      var html = "<h1>Olá, " + h(d.primeiroNome) + ".</h1><p class='sub'>" + h(d.diaSemana) + ", " + h(d.dia) + "</p>" + msgHtml() +
+        (d.previa ? "<div class='msg info'>Pré-visualização: é assim que o colaborador vê a página. Nada é gravado.</div>" : "") +
+        "<div class='card'><p class='marc'>" + h(d.rotulo) + "</p><p class='prev'>" + (d.previsto ? "Horário previsto: " + h(d.previsto) : "") + "</p>";
+      if (d.situacao === "CONFIRMADO") {
+        html += "<div class='msg ok'>Confirmada às " + h(d.confirmadoAs) + ". Obrigado.</div>" +
+          "<p class='dica'>Este link já foi usado. Tocou por engano e não bateu o ponto? No SGO+, abra Assistente do ponto &gt; Meus lembretes &gt; Pedir ajuste ao RH.</p>";
+      } else if (d.situacao === "ESQUECI") {
+        html += "<div class='msg aviso'>Pedido de ajuste enviado ao RH" + (d.ajuste ? " (" + h(d.ajuste.codigo) + ")" : "") + ", com o horário " + h(d.horarioInformado) + ". " +
+          (d.ajuste && d.ajuste.situacao !== "PENDENTE" ? "Situação: " + h(d.ajuste.situacaoTexto) + "." : "O RH lança no ponto e a resposta aparece no SGO+ e no seu e-mail.") + "</div>";
+      } else {
+        html += "<button type='button' class='btn prim' id='btConfirmar' onclick='Ponto.confirmar()'>" + h(d.botao) + "</button>" +
+          "<button type='button' class='btn' id='btEsqueci' aria-expanded='" + (P.esqueci ? "true" : "false") + "' aria-controls='formEsqueci' onclick='Ponto.abrirEsqueci()'>Esqueci de bater</button>" +
+          "<div id='formEsqueci' class='" + (P.esqueci ? "" : "oculto") + "'>" +
+          "<label for='esqHora'>" + h(d.rotuloEsqueci) + "</label><input type='time' id='esqHora' value='" + h(P.hora || d.previsto || "") + "' required>" +
+          "<label for='esqTxt'>O que aconteceu? (uma frase curta)</label><textarea id='esqTxt' maxlength='200' placeholder='Ex.: cheguei no horário, mas o relógio estava com fila.'>" + h(P.txt || "") + "</textarea>" +
+          "<p class='dica'>O pedido vai para o RH, que lança no ponto. Não precisa mandar mensagem.</p>" +
+          "<button type='button' class='btn prim' id='btEnviarEsq' onclick='Ponto.esqueci()'>Enviar ao RH</button></div>";
+      }
+      html += "</div>";
+      $("conteudo").innerHTML = html;
+      if (d.rodape) $("rodape").textContent = d.rodape;
+    }
+    function invalido(texto) { $("conteudo").innerHTML = "<h1>Link do assistente do ponto</h1><div class='msg aviso' role='status'>" + h(texto) + "</div>"; }
+    function guardar() { if ($("esqHora")) P.hora = $("esqHora").value; if ($("esqTxt")) P.txt = $("esqTxt").value; }
+    function chamar(fn, args, ok, falha) { google.script.run.withSuccessHandler(ok).withFailureHandler(falha)[fn].apply(null, args); }
+    function carregar() {
+      chamar("Ponto_paginaAbrir", [TOKEN], function (r) {
+        if (!r || !r.ok) return invalido((r && r.mensagem) || "Este link não é válido. Se continuar, fale com o RH.");
+        P.d = r; desenhar();
+      }, function () { invalido("Sem conexão. Confira a internet e abra o link de novo."); });
+    }
+    function responder(acao, dados, botao, textoBotao) {
+      if (P.enviando) return;
+      P.enviando = true;
+      var b = $(botao); if (b) { b.disabled = true; b.textContent = "Registrando…"; }
+      chamar("Ponto_paginaResponder", [TOKEN, acao, dados || {}], function (r) {
+        P.enviando = false;
+        if (!r || !r.ok) {
+          if (r && (r.motivo === "VENCIDO" || r.motivo === "INVALIDO" || r.motivo === "FUTURO")) return invalido(r.mensagem);
+          P.msg = { tipo: "erro", texto: (r && r.mensagem) || "Não foi possível registrar. Tente de novo." };
+          guardar(); desenhar(); window.scrollTo(0, 0); return;
+        }
+        P.d = r; P.msg = r.gravado ? { tipo: "ok", texto: r.mensagem } : { tipo: "info", texto: r.mensagem || "Registrado." };
+        if (acao === "ESQUECI" && r.gravado) { P.esqueci = false; P.hora = ""; P.txt = ""; }
+        desenhar(); window.scrollTo(0, 0);
+      }, function () {
+        P.enviando = false; if (b) { b.disabled = false; b.textContent = textoBotao; }
+        P.msg = { tipo: "erro", texto: "Sem conexão. Toque de novo quando a internet voltar (não registra duas vezes)." };
+        guardar(); desenhar();
+      });
+    }
+    window.Ponto = {
+      confirmar: function () { responder("CONFIRMAR", {}, "btConfirmar", P.d ? P.d.botao : "Confirmar"); },
+      abrirEsqueci: function () { guardar(); P.esqueci = !P.esqueci; P.msg = null; desenhar(); if (P.esqueci && $("esqHora")) $("esqHora").focus(); },
+      esqueci: function () {
+        guardar();
+        if (!P.hora) { P.msg = { tipo: "erro", texto: "Informe o horário." }; desenhar(); return; }
+        if (String(P.txt || "").replace(/\s/g, "").length < 5) { P.msg = { tipo: "erro", texto: "Escreva uma frase curta contando o que aconteceu." }; desenhar(); return; }
+        responder("ESQUECI", { horario: P.hora, justificativa: P.txt }, "btEnviarEsq", "Enviar ao RH");
+      }
+    };
+    if (!/^(v1|p1)\.\d{8}\.[0-9a-f]{20}\.[0-9a-f]{32}$/.test(TOKEN)) invalido("Este link não é válido. Use o botão da mensagem mais recente do assistente do ponto. Se continuar, fale com o RH.");
+    else if (typeof google !== "undefined" && google.script && google.script.run) carregar();
+  })();
+  </script>
+</body>
+</html>

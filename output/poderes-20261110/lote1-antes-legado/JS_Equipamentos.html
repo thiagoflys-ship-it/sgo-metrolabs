@@ -1,0 +1,372 @@
+<script>
+  // ==========================================
+  // EQUIPAMENTOS (CADASTROS E ADMINISTRAÇÃO 17/10) — padrão comum em JS_Cadastros.html (CadUI_/CadTela_)
+  // Servidor: cadastrosPainel('equipamentos'), cadastrosDetalhe, equipamentos* (SGO_Equipamentos.js),
+  // qrcodeGerarParaEquipamento (SGO_QRCode.js).
+  // ==========================================
+  function Equipamentos_nome_(e) { return (e && (e.TAG || [e.TIPO, e.SERIE].filter(Boolean).join(" "))) || "Equipamento sem identificação"; }
+
+  function renderEquipamentosModulo_() {
+    var gestao = CadUI_gestao_(), cliente = CadUI_ehCliente_();
+    CadTela_montar_({
+      chave: "equipamentos", titulo: "Equipamentos", nomeItens: ["equipamento", "equipamentos"],
+      subtitulo: cliente ? "Equipamentos da sua empresa atendidos pela Metrolabs, com a situação dos documentos de cada um." : "Parque de equipamentos de cada cliente e unidade, identificados pela TAG, com a situação dos documentos.",
+      idBusca: "equipamentosPesquisa", buscaPlaceholder: "Buscar por TAG, tipo, série, fabricante, modelo, cliente ou setor",
+      ajuda: cliente
+        ? "<p>Aqui aparecem só os equipamentos da sua empresa. Em cada um você vê os documentos e o QR Code de identificação. Para corrigir um dado, fale com a Metrolabs.</p>"
+        : "<p>O equipamento pertence a uma unidade de um cliente e é identificado pela <b>TAG</b> (código do patrimônio ou da etiqueta). A TAG não pode se repetir no mesmo cliente.</p>" +
+          "<ul><li><b>Cadastro incompleto</b> = falta TAG, fabricante, modelo ou número de série. <b>Sem documento</b> = nenhum documento no Arquivo de documentos.</li>" +
+          "<li><b>Vínculo pendente</b> = unidade ou cliente inativos, ou a unidade é de outro cliente. A correção é feita em <b>Vínculos</b> (gestão).</li>" +
+          "<li>O <b>QR Code</b> fica em <i>Mais</i>: imprima a etiqueta e cole no equipamento.</li>" +
+          "<li>Equipamento com documento, certificado, laudo ou atendimento ligado não é excluído: use <i>Inativar</i>, que guarda o histórico.</li></ul>",
+      resumo: [
+        { id: "todos", rotulo: "Total" },
+        { id: "ativos", rotulo: "Ativos", tom: "tom-ok", filtro: function (e) { return e.STATUS === "ATIVO"; } },
+        { id: "inativos", rotulo: "Inativos", filtro: function (e) { return e.STATUS !== "ATIVO"; } },
+        { id: "incompleto", rotulo: "Cadastro incompleto", tom: "tom-alerta", filtro: function (e) { return (e.PENDENCIAS || []).indexOf("incompleto") >= 0; } },
+        { id: "vinculo", rotulo: "Vínculo pendente", tom: "tom-perigo", filtro: function (e) { return (e.PENDENCIAS || []).indexOf("vinculo_pendente") >= 0; } },
+        { id: "docs", rotulo: "Documento vencido ou vencendo", tom: "tom-perigo", filtro: function (e) { return (e.PENDENCIAS || []).some(function (p) { return p === "doc_vencido" || p === "doc_vencendo"; }); } },
+        { id: "semdoc", rotulo: "Sem documento", tom: "tom-alerta", filtro: function (e) { return (e.PENDENCIAS || []).indexOf("sem_documento") >= 0; } }
+      ],
+      filtros: [
+        { id: "cliente", rotulo: "Todos os clientes", opcoes: function (its) { return CadTela_opcoesDe_(its, "CLIENTE_ID", "CLIENTE_NOME"); }, aplicar: function (e, v) { return String(e.CLIENTE_ID) === v; } },
+        { id: "tipo", rotulo: "Todos os tipos", opcoes: function (its) { return CadTela_opcoesDe_(its, "TIPO", "TIPO").map(function (o) { return [o[0], CadUI_maiusculaInicial_(o[1])]; }); }, aplicar: function (e, v) { return String(e.TIPO || "") === v; } }
+      ],
+      ordenar: [
+        { id: "tag", rotulo: "Ordenar por TAG", fn: null },
+        { id: "venc", rotulo: "Vencimento mais próximo", fn: function (a, b) { var x = a.PROXIMO_VENCIMENTO_DIAS, y = b.PROXIMO_VENCIMENTO_DIAS; return (x === null) - (y === null) || (x || 0) - (y || 0); } },
+        { id: "recentes", rotulo: "Mais recentes primeiro", fn: function (a, b) { return String(b.CRIADO_EM || "").localeCompare(String(a.CRIADO_EM || "")); } }
+      ],
+      texto: function (e) { return [e.TAG, e.TIPO, e.SERIE, e.PATRIMONIO, e.FABRICANTE, e.MODELO, e.SETOR, e.CLIENTE_NOME, e.UNIDADE_NOME, e.CLIENTE_CNPJ].join(" "); },
+      acao: cliente ? null : { texto: "Novo equipamento", fn: function () { Equipamentos_formulario_(null); } },
+      vazioTitulo: "Nenhum equipamento cadastrado ainda.", vazio: cliente ? "Os equipamentos da sua empresa aparecem aqui assim que forem cadastrados pela Metrolabs." : "Clique em Novo equipamento. Antes, o cliente e a unidade precisam estar cadastrados.",
+      colunas: [
+        { titulo: "Equipamento", html: function (e) { return '<div class="cadx-tit">' + CadUI_esc_(e.TAG || "Sem TAG") + '</div><div class="cadx-sub">' + CadUI_esc_(CadUI_maiusculaInicial_(e.TIPO) || "Tipo não informado") + "</div>" + CadUI_chips_(e); } },
+        { titulo: "Cliente / unidade", html: function (e) { return "<div>" + CadUI_esc_(e.CLIENTE_NOME || "Sem cliente") + '</div><div class="cadx-sub">' + CadUI_esc_(e.UNIDADE_NOME || "Sem unidade") + (e.SETOR ? " · " + CadUI_esc_(e.SETOR) : "") + "</div>"; } },
+        { titulo: "Fabricante / modelo", html: function (e) { return "<div>" + CadUI_esc_(e.FABRICANTE || "") + '</div><div class="cadx-sub">' + CadUI_esc_(e.MODELO || "") + "</div>" + (!e.FABRICANTE && !e.MODELO ? '<span class="cadx-sub">Não informado</span>' : ""); } },
+        { titulo: "Nº de série", html: function (e) { return e.SERIE ? '<span class="cadx-mono">' + CadUI_esc_(e.SERIE) + "</span>" : '<span class="cadx-sub">Sem série</span>'; } },
+        { titulo: "Documentos", html: function (e) { return '<span class="cadx-mono">' + CadUI_num_(e.QTD_DOCUMENTOS) + "</span>" + (e.DOCS_VENCIDOS ? ' <span class="cadx-chip tom-perigo">' + CadUI_num_(e.DOCS_VENCIDOS) + " vencido(s)</span>" : e.DOCS_VENCENDO ? ' <span class="cadx-chip tom-alerta">' + CadUI_num_(e.DOCS_VENCENDO) + " vencendo</span>" : ""); } },
+        { titulo: "Situação", html: function (e) { return CadUI_selo_(e.STATUS); } },
+        { titulo: "", classe: "cadx-col-acoes", html: function (e) { return CadTela_botoesLinha_("equipamentos", e); } }
+      ],
+      cartao: function (e) {
+        return '<div class="cadx-cartao-topo"><div><div class="cadx-tit">' + CadUI_esc_(e.TAG || "Sem TAG") + " · " + CadUI_esc_(CadUI_maiusculaInicial_(e.TIPO)) + '</div><div class="cadx-sub">' + CadUI_esc_([e.CLIENTE_NOME, e.UNIDADE_NOME].filter(Boolean).join(" · ")) + "</div></div>" + CadUI_selo_(e.STATUS) + "</div>" +
+          '<div class="cadx-cartao-linhas"><span>' + CadUI_esc_(e.SERIE ? "Série " + e.SERIE : "Sem série") + "</span><span>" + CadUI_num_(e.QTD_DOCUMENTOS) + " doc.</span></div>" + CadUI_chips_(e);
+      },
+      botaoPrincipal: cliente ? function () { return { texto: "QR Code", acao: "qr" }; } : null,
+      acoesExtras: { qr: function (e) { equipamentosGerarQR_(e.ID); } },
+      editar: cliente ? null : function (e) { Equipamentos_formulario_(e.ID); },
+      mais: cliente ? null : function (e) { return Equipamentos_menu_(e, gestao); },
+      abrir: function (e, aba) { Equipamentos_detalhe_(e, aba); },
+      carregar: function (ok, erro) {
+        CadUI_chamar_("cadastrosPainel", ["equipamentos"], function (res) { ok(res.items || []); setTimeout(function () { CadTela_cumprirIrPara_("equipamentos"); }, 0); }, erro);
+      }
+    });
+  }
+
+  function Equipamentos_menu_(e, gestao) {
+    var ativo = e.STATUS === "ATIVO";
+    var temDoc = (e.QTD_DOCUMENTOS || 0) > 0;
+    return [
+      { texto: "Ver detalhes e documentos", icone: "fa-circle-info", acao: function () { CadTela_abrirItem_("equipamentos", e.ID); } },
+      { texto: "QR Code e etiqueta", icone: "fa-qrcode", acao: function () { equipamentosGerarQR_(e.ID); } },
+      { texto: "Novo documento deste equipamento", icone: "fa-file-circle-plus", desabilitado: !ativo, nota: ativo ? "" : "Reative o equipamento para anexar documento.", acao: function () { if (typeof Documentos_novoPara_ === "function") Documentos_novoPara_(e); } },
+      { texto: "Transferir para outra unidade (Vínculos)", icone: "fa-right-left", desabilitado: !gestao, nota: gestao ? "" : "Só a gestão (Administrador, Diretoria, Gestor, RH ou Financeiro).", acao: function () { CadTela_abrirVinculos_("EQUIPAMENTO", e.ID); } },
+      "-",
+      ativo
+        ? { texto: "Inativar equipamento", icone: "fa-ban", risco: true, acao: function () { Equipamentos_inativar_(e); } }
+        : { texto: "Reativar equipamento", icone: "fa-rotate-left", acao: function () { Equipamentos_reativar_(e); } },
+      { texto: "Excluir equipamento", icone: "fa-trash-can", risco: true, desabilitado: !CadUI_podeExcluir_() || temDoc,
+        nota: !CadUI_podeExcluir_() ? CADUI_TXT_EXCLUIR : temDoc ? "Tem documento ligado: não é excluído. Use Inativar para tirar de uso sem perder o histórico." : "",
+        acao: function () { Equipamentos_excluir_(e); } }
+    ];
+  }
+
+  function Equipamentos_detalhe_(e, aba) {
+    var gestao = CadUI_gestao_(), cliente = CadUI_ehCliente_();
+    var det = null, auvo = null;
+    var cfg = {
+      chave: "equipamentos", id: e.ID, titulo: (e.TAG || "Sem TAG") + (e.TIPO ? " · " + CadUI_maiusculaInicial_(e.TIPO) : ""),
+      sub: CadUI_esc_([e.CLIENTE_NOME, e.UNIDADE_NOME].filter(Boolean).join(" · ")),
+      seloHtml: CadUI_selo_(e.STATUS) + CadUI_chips_(e).replace('<div class="cadx-chips">', "").replace(/<\/div>$/, ""),
+      abas: [{ id: "dados", rotulo: "Dados" }, { id: "qualificacoes", rotulo: "Qualificações" }, { id: "documentos", rotulo: "Documentos (" + CadUI_num_(e.QTD_DOCUMENTOS) + ")" }].concat(cliente ? [] : [{ id: "auvo", rotulo: "Atendimentos" }]),
+      aba: aba || "dados",
+      corpo: function (a) {
+        if (a !== "dados") return '<div data-vinc-carregando="1">' + CadUI_esqueleto_(5) + "</div>";
+        var faixas = "";
+        if (CadUI_pendencias_(e).indexOf("vinculo_pendente") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-perigo"><b>Vínculo pendente.</b> A unidade ou o cliente deste equipamento estão inativos, ou a unidade é de outro cliente. ' + (gestao ? "Corrija em Mais › Transferir para outra unidade." : "Peça à gestão para corrigir em Vínculos.") + "</div>";
+        if (CadUI_pendencias_(e).indexOf("incompleto") >= 0) faixas += '<div class="cadx-faixa bc-faixa tom-alerta"><b>Cadastro incompleto.</b> Falta: ' + CadUI_esc_((e.FALTAM || []).join(", ")) + "." + (cliente ? "" : " Clique em Editar para completar.") + "</div>";
+        return faixas +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Identificação</h4>' + CadUI_dados_([["TAG", e.TAG], ["Tipo", CadUI_maiusculaInicial_(e.TIPO)], ["Número de série", e.SERIE], ["Patrimônio", e.PATRIMONIO], ["Fabricante", e.FABRICANTE], ["Modelo", e.MODELO], ["Ano de fabricação", e.ANO_FABRICACAO], ["Capacidade ou volume", e.CAPACIDADE], ["Câmaras ou portas", e.NUM_CAMARAS]]) + "</section>" +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Onde está</h4>' + CadUI_dados_([["Cliente", e.CLIENTE_NOME], ["Unidade", e.UNIDADE_NOME], ["Setor ou local", e.SETOR], ["Responsável no cliente", e.RESPONSAVEL_CLIENTE]]) +
+            (cliente ? "" : '<div class="cadx-acoes" style="margin-top:8px"><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'clientes\',\'' + CadUI_esc_(e.CLIENTE_ID) + '\')">Abrir cliente</button><button type="button" class="cadx-btn" onclick="CadTela_irPara_(\'unidades\',\'' + CadUI_esc_(e.UNIDADE_ID) + '\')">Abrir unidade</button></div>') + "</section>" +
+          (e.QUALIF_ROTULO ? '<section class="cadx-sec"><h4 class="cadx-sec-tit">Qualificação</h4><div class="qualif-situacao ' + CadUI_esc_(e.QUALIF_SITUACAO) + '">' + CadUI_esc_(e.QUALIF_ROTULO) + '</div><p class="cadx-sub">Relatórios, revisões e próxima requalificação na aba Qualificações.</p></section>' : "") +
+          '<section class="cadx-sec"><h4 class="cadx-sec-tit">Documentos</h4>' + CadUI_dados_([["Documentos", CadUI_num_(e.QTD_DOCUMENTOS)], ["Vencidos", CadUI_num_(e.DOCS_VENCIDOS)], ["Vencendo em 30 dias", CadUI_num_(e.DOCS_VENCENDO)], ["Cadastrado em", CadUI_dataHora_(e.CRIADO_EM)]]) + "</section>";
+      },
+      depois: function (p, a) {
+        var mais = p.querySelector("#cadxPainelMais");
+        if (mais) mais.onclick = function () { CadUI_menu_(mais, Equipamentos_menu_(e, gestao).filter(function (x) { return x === "-" || x.texto !== "Ver detalhes e documentos"; })); };
+        var corpo = p.querySelector("#cadxPainelCorpo");
+        if (a === "qualificacoes") {
+          // 20/10/2026: relatórios de qualificação emitidos (vigente, revisões substituídas e próxima requalificação).
+          CadUI_chamar_("qualifEquipamentoListar", [e.ID], function (res) {
+            if (!corpo || CADUI.painel !== cfg || cfg.aba !== "qualificacoes") return;
+            corpo.innerHTML = (typeof SGO_QVinc !== "undefined" ? SGO_QVinc.htmlQualificacoes(res, { cliente: cliente, via: "ficha" }) : "") +
+              (res.podeVerMinutas ? '<p class="cadx-sub" style="margin-top:8px">Minutas aguardando aprovação aparecem só para a equipe; o cliente vê apenas documentos emitidos e aprovados.</p>' : "");
+          }, function (msg) { if (corpo) corpo.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta">' + CadUI_esc_(msg) + "</div>"; });
+        } else if (a === "documentos") {
+          var d1 = function () { if (corpo && det) corpo.innerHTML = (!cliente && e.STATUS === "ATIVO" ? '<div class="cadx-acoes" style="margin-bottom:10px"><button type="button" class="cadx-btn" id="cadxNovoDocEq">Novo documento deste equipamento</button></div>' : "") + CadTela_htmlDocumentos_(det.documentos, "Nenhum documento deste equipamento."); var b = p.querySelector("#cadxNovoDocEq"); if (b) b.onclick = function () { Documentos_novoPara_(e); }; };
+          if (det) d1(); else CadTela_detalheRemoto_("equipamentos", e.ID, function (res) { det = res; if (CADUI.painel === cfg) d1(); });
+        } else if (a === "auvo") {
+          var d2 = function () {
+            if (!corpo) return;
+            var lista = auvo || [];
+            corpo.innerHTML = lista.length ? '<ul class="cadx-arvore">' + lista.map(function (x) {
+              return '<li><div class="cadx-no"><div class="cadx-no-texto"><b>' + CadUI_esc_(x.data ? new Date(x.data).toLocaleDateString("pt-BR") : "Sem data") + "</b> · " + CadUI_esc_(x.tipo || "") + " " + (x.finalizada ? '<span class="cadx-selo bc-selo tom-ok">Concluído</span>' : '<span class="cadx-selo bc-selo tom-alerta">Em andamento</span>') +
+                '<div class="cadx-sub">' + CadUI_esc_(x.origemNome || "Auvo") + (x.numero ? " " + CadUI_esc_(x.numero) : "") + " · Técnico: " + CadUI_esc_(x.tecnico || "não informado") + "</div>" + (x.relato ? '<div class="cadx-sub">' + CadUI_esc_(x.relato) + "</div>" : "") + "</div>" +
+                (x.relatorioUrl ? '<a class="cadx-btn" href="' + CadUI_esc_(x.relatorioUrl) + '" target="_blank" rel="noopener">Relatório da O.S.</a>' : "") +
+                ((x.origem || "AUVO") === "AUVO" && x.auvoTaskId && typeof Auvo_abrirModalOS_ === "function" ? '<button type="button" class="cadx-btn" onclick="Auvo_abrirModalOS_(\'' + CadUI_esc_(String(x.auvoTaskId).replace(/'/g, "")) + '\')">Ver O.S.</button>' : "") +
+                // 21/10/2026: fonte única (Assistência técnica do SGO+, Auvo e o histórico copiado do Auvo)
+                (x.origem === "SGO" && x.osId && typeof Assistencia_irPara_ === "function" ? '<button type="button" class="cadx-btn" onclick="Assistencia_irPara_({ mod: \'assistencia_os\', id: \'' + CadUI_esc_(String(x.osId).replace(/'/g, "")) + '\' })">Ver O.S. do SGO+</button>' : "") +
+                (x.origem === "AUVO_ACERVO" && x.acervo && x.qtdArquivos ? '<button type="button" class="cadx-btn" data-acervo="' + CadUI_esc_(x.numero) + '">Fotos do Auvo</button>' : "") + "</div></li>";
+            }).join("") + "</ul>" : '<div class="cadx-vazio bc-vazio">Nenhum atendimento ligado a este equipamento (SGO+, Auvo ou histórico do Auvo).</div>';
+          };
+          if (auvo) d2(); else CadUI_chamar_("equipamentosObter", [e.ID], function (res) { auvo = res.atendimentosAuvo || []; if (CADUI.painel === cfg && cfg.aba === "auvo") d2(); }, function (msg) { if (corpo) corpo.innerHTML = '<div class="cadx-faixa bc-faixa tom-alerta">' + CadUI_esc_(msg) + "</div>"; });
+        }
+      },
+      rodape: cliente ? '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="equipamentosGerarQR_(\'' + CadUI_esc_(e.ID) + '\')">QR Code</button>' :
+        '<div class="cadx-rodape-esq"><button type="button" class="cadx-btn cadx-btn-grande" id="cadxPainelMais">Mais ações <i class="fas fa-chevron-up" aria-hidden="true" style="font-size:10px"></i></button></div>' +
+        '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario" onclick="Equipamentos_formulario_(\'' + CadUI_esc_(e.ID) + '\')">Editar</button>'
+    };
+    CadUI_painelAbrir_(cfg);
+  }
+
+  function Equipamentos_inativar_(e) {
+    CadTela_acaoRisco_({
+      titulo: "Inativar o equipamento", botao: "Inativar equipamento", fn: "equipamentosInativar", id: e.ID,
+      texto: "<p>Inativar <b>" + CadUI_esc_(Equipamentos_nome_(e)) + "</b> (" + CadUI_esc_([e.CLIENTE_NOME, e.UNIDADE_NOME].filter(Boolean).join(" · ")) + ")?</p><p>Ele sai das listas de novos certificados e relatórios. Documentos, certificados e atendimentos continuam guardados. Para voltar, use Reativar.</p>",
+      aoConcluir: function () { CadTela_recarregar_("equipamentos", e.ID); }
+    });
+  }
+  function Equipamentos_reativar_(e) {
+    CadTela_acaoRisco_({
+      titulo: "Reativar o equipamento", botao: "Reativar equipamento", risco: false, fn: "equipamentosReativar", id: e.ID,
+      texto: "<p>Reativar <b>" + CadUI_esc_(Equipamentos_nome_(e)) + "</b>? O cliente e a unidade precisam estar ativos; se não estiverem, o sistema avisa o que reativar antes.</p>",
+      aoConcluir: function () { CadTela_recarregar_("equipamentos", e.ID); }
+    });
+  }
+  function Equipamentos_excluir_(e) {
+    CadTela_acaoRisco_({
+      titulo: "Excluir o equipamento", botao: "Excluir definitivamente", fn: "equipamentosExcluir", id: e.ID,
+      texto: "<p>Excluir <b>" + CadUI_esc_(Equipamentos_nome_(e)) + "</b>? A exclusão não pode ser desfeita.</p><p>Se houver documento, certificado, laudo ou atendimento ligado, o sistema não exclui e orienta a inativar.</p>",
+      aoConcluir: function () { CadUI_painelFechar_(); CadTela_recarregar_("equipamentos"); }
+    });
+  }
+
+  /** Novo equipamento com cliente (e unidade) já escolhidos — chamado de Clientes e Unidades. */
+  function Equipamentos_novoPara_(clienteId, clienteNome, unidadeId) {
+    var pre = { clienteId: clienteId, clienteNome: clienteNome, unidadeId: unidadeId || "" };
+    if (CADUI.telas.equipamentos && document.getElementById("cadxTela_equipamentos")) { Equipamentos_formulario_(null, pre); return; }
+    CADUI.irPara = { chave: "equipamentos", novo: function () { Equipamentos_formulario_(null, pre); } };
+    abrir("equipamentos");
+  }
+
+  function Equipamentos_formulario_(id, pre) {
+    if (CadUI_ehCliente_()) return;
+    var e = id ? CadTela_item_("equipamentos", id) : null;
+    var novo = !e;
+    e = e || {};
+    pre = pre || {};
+    var gestao = CadUI_gestao_();
+    var vinculo = novo
+      ? [CadUI_campo_({ id: "eqp_cliente_id", paraId: "eqp_cliente_id_busca", rotulo: "Cliente", obrigatorio: true, inteiro: true, html: SGO_htmlBuscaClienteLike_("eqp_cliente_id", "Digite o nome ou o CNPJ do cliente e escolha na lista") }),
+         CadUI_campo_({ id: "eqp_unidade_id", rotulo: "Unidade", obrigatorio: true, inteiro: true, tipo: "select", opcoes: [["", "Escolha o cliente primeiro"]] })]
+      : [CadUI_campo_({ id: "eqp_vinculo_fixo", rotulo: "Cliente e unidade", inteiro: true, html: '<div class="cadx-travado">' + CadUI_esc_([e.CLIENTE_NOME || "Sem cliente", e.UNIDADE_NOME || "Sem unidade"].join(" · ")) + "</div>",
+          dica: gestao ? 'Para mudar de unidade ou de cliente use <button type="button" class="cadx-btn cadx-btn-link" onclick="CadUI_painelSujo_(false);CadTela_abrirVinculos_(\'EQUIPAMENTO\',\'' + CadUI_esc_(id) + '\')">Vínculos › Transferir</button>: os documentos acompanham, com prévia e auditoria.' : "Trocar a unidade ou o cliente é feito pela gestão, na tela Vínculos." })];
+    var cfg = {
+      chave: "equipamentos", id: id || "", titulo: novo ? "Novo equipamento" : "Editar equipamento",
+      sub: novo ? "O equipamento fica ligado a uma unidade de um cliente." : CadUI_esc_(Equipamentos_nome_(e)),
+      corpo: function () {
+        return CadUI_secao_("Vínculo", vinculo) +
+          CadUI_secao_("Identificação", [
+            CadUI_campo_({ id: "eqp_tipo", rotulo: "Tipo do equipamento", obrigatorio: true, inteiro: true, valor: e.TIPO, placeholder: "Ex.: Autoclave, Lavadora termodesinfectora, Refrigerador", attrs: ' list="eqpTiposLista"' }) + '<datalist id="eqpTiposLista">' + Equipamentos_tiposConhecidos_().map(function (t) { return '<option value="' + CadUI_esc_(t) + '">'; }).join("") + "</datalist>",
+            CadUI_campo_({ id: "eqp_tag", rotulo: "TAG (identificador)", valor: e.TAG, placeholder: "Ex.: AUT-01", dica: "Código da etiqueta ou do patrimônio. Não se repete no mesmo cliente." }),
+            CadUI_campo_({ id: "eqp_serie", rotulo: "Número de série", valor: e.SERIE, placeholder: "Como está na placa do fabricante", dica: "Se outro equipamento deste cliente tiver a mesma série, o sistema avisa ao salvar." }),
+            CadUI_campo_({ id: "eqp_patrimonio", rotulo: "Patrimônio", valor: e.PATRIMONIO, placeholder: "Número de patrimônio do cliente, se houver" })
+          ]) +
+          CadUI_secao_("Fabricação e capacidade", [
+            CadUI_campo_({ id: "eqp_fabricante", rotulo: "Fabricante (marca)", valor: e.FABRICANTE, dica: "Como está na placa. Sai na identificação de todos os documentos do equipamento." }),
+            CadUI_campo_({ id: "eqp_modelo", rotulo: "Modelo", valor: e.MODELO, dica: "Como está na placa. Sai na identificação de todos os documentos do equipamento." }),
+            CadUI_campo_({ id: "eqp_ano", rotulo: "Ano de fabricação", valor: e.ANO_FABRICACAO, placeholder: "Ex.: 2019", attrs: ' inputmode="numeric" maxlength="4"' }),
+            CadUI_campo_({ id: "eqp_capacidade", rotulo: "Capacidade ou volume", valor: e.CAPACIDADE, placeholder: "Ex.: 150 L, 4 cestos, 500 L" }),
+            CadUI_campo_({ id: "eqp_camaras", rotulo: "Número de câmaras ou portas", valor: e.NUM_CAMARAS, placeholder: "Quando o tipo tiver mais de uma", attrs: ' inputmode="numeric" maxlength="3"' })
+          ]) +
+          CadUI_secao_("Localização e responsável", [
+            CadUI_campo_({ id: "eqp_setor", rotulo: "Setor ou local", inteiro: true, valor: e.SETOR, placeholder: "Ex.: CME, Centro cirúrgico, Sala de vacina", dica: "Setor da unidade onde o equipamento está instalado. Sai nos relatórios e certificados." }),
+            CadUI_campo_({ id: "eqp_responsavel", rotulo: "Responsável no cliente", inteiro: true, valor: e.RESPONSAVEL_CLIENTE, placeholder: "Nome e função de quem responde pelo equipamento no cliente" })
+          ]) +
+          '<p class="cadx-dica">Campos com <span class="cadx-obr">*</span> são obrigatórios. TAG, número de série e setor saem nos relatórios, certificados e na etiqueta do QR code; TAG, série, setor, fabricante e modelo completam o cadastro (sem eles o equipamento aparece como "Cadastro incompleto").</p>';
+      },
+      rodape: '<button type="button" class="cadx-btn cadx-btn-grande" onclick="' + (novo ? "CadUI_painelFechar_()" : "Equipamentos_voltarDetalhe_('" + CadUI_esc_(id) + "')") + '">Cancelar</button>' + CadUI_botaoSalvar_(novo ? "Cadastrar equipamento" : "Salvar alterações"),
+      depois: function (p) {
+        CadUI_ligarFormulario_(p);
+        if (novo) {
+          var carregarUnidades = function (clienteId, escolher) {
+            var sel = document.getElementById("eqp_unidade_id");
+            if (!sel) return;
+            if (!clienteId) { sel.innerHTML = '<option value="">Escolha o cliente primeiro</option>'; return; }
+            sel.innerHTML = '<option value="">Carregando as unidades…</option>';
+            CadUI_chamar_("equipamentosListarUnidadesAtivasPorCliente", [clienteId], function (res) {
+              var its = res.items || [];
+              if (!document.getElementById("eqp_unidade_id") || getValue_("eqp_cliente_id") !== clienteId) return;
+              sel.innerHTML = its.length ? '<option value="">Escolha a unidade</option>' + its.map(function (u) { return '<option value="' + CadUI_esc_(u.ID) + '">' + CadUI_esc_(u.NOME_UNIDADE) + "</option>"; }).join("") : '<option value="">Este cliente não tem unidade ativa</option>';
+              if (escolher) sel.value = escolher; else if (its.length === 1) sel.value = its[0].ID;
+              if (!its.length) CadUI_erroCampo_("eqp_unidade_id", 'Cadastre uma unidade para este cliente antes (<button type="button" class="cadx-btn cadx-btn-link" onclick="CadUI_painelSujo_(false);Unidades_novaPara_(\'' + CadUI_esc_(clienteId) + '\',\'\')">Nova unidade</button>).');
+            }, function (msg) { sel.innerHTML = '<option value="">Não foi possível carregar</option>'; CadUI_erroCampo_("eqp_unidade_id", CadUI_esc_(msg)); });
+          };
+          CadUI_chamar_("equipamentosListarClientesAtivos", [], function (res) {
+            SGO_montarBuscaClienteLike_("eqp_cliente_id", (res.items || []).map(function (c) { return Object.assign({}, c, { CNPJ: CadUI_cnpj_(c.CNPJ) }); }), function (cid) { CadUI_erroCampo_("eqp_cliente_id", ""); CadUI_erroCampo_("eqp_unidade_id", ""); carregarUnidades(cid); });
+            if (pre.clienteId) { SGO_prefillBuscaClienteLike_("eqp_cliente_id", pre.clienteId, pre.clienteNome || ""); carregarUnidades(pre.clienteId, pre.unidadeId); }
+          }, function (msg) { CadUI_erroCampo_("eqp_cliente_id", "A lista de clientes não carregou: " + CadUI_esc_(msg)); });
+        }
+        p.querySelector("#eqp_tag").addEventListener("input", function () { Equipamentos_conferirTag_(id); });
+        p.querySelector("#cadxSalvar").onclick = function () { Equipamentos_salvar_(id); };
+      }
+    };
+    CadUI_painelAbrir_(cfg);
+  }
+  function Equipamentos_voltarDetalhe_(id) { CadUI_painelSujo_(false); var e = CadTela_item_("equipamentos", id); if (e) Equipamentos_detalhe_(e); else CadUI_painelFechar_(); }
+  function Equipamentos_tiposConhecidos_() {
+    var st = CADUI.telas.equipamentos, vistos = {};
+    var base = ["AUTOCLAVE", "LAVADORA TERMODESINFECTORA", "LAVADORA ULTRASSÔNICA", "REFRIGERADOR", "CÂMARA FRIA", "ESTUFA", "BANHO-MARIA", "SECADORA", "ESTERILIZADOR A BAIXA TEMPERATURA", "TERMO-HIGRÔMETRO", "SELADORA"];
+    (st ? st.itens : []).forEach(function (e) { if (e.TIPO) base.push(String(e.TIPO)); });
+    return base.filter(function (t) { var k = t.toUpperCase(); if (vistos[k]) return false; vistos[k] = 1; return true; });
+  }
+  function Equipamentos_conferirTag_(id) {
+    var tag = String(getValue_("eqp_tag") || "").trim().toUpperCase();
+    var clienteId = id ? (CadTela_item_("equipamentos", id) || {}).CLIENTE_ID : getValue_("eqp_cliente_id");
+    if (!tag || !clienteId || /^(N\/P|N\/A|S\/N|SEM TAG|-)$/.test(tag)) { CadUI_erroCampo_("eqp_tag", ""); return true; }
+    var st = CADUI.telas.equipamentos;
+    var outro = st && st.itens.filter(function (x) { return String(x.TAG || "").toUpperCase() === tag && x.CLIENTE_ID === clienteId && String(x.ID) !== String(id || "") && x.STATUS === "ATIVO"; })[0];
+    if (outro) { CadUI_erroCampo_("eqp_tag", "Este cliente já tem um equipamento ativo com a TAG " + CadUI_esc_(tag) + ' (' + CadUI_esc_(CadUI_maiusculaInicial_(outro.TIPO)) + '). <button type="button" class="cadx-btn cadx-btn-link" onclick="CadUI_painelSujo_(false);CadTela_abrirItem_(\'equipamentos\',\'' + CadUI_esc_(outro.ID) + '\')">Abrir o existente</button>'); return false; }
+    CadUI_erroCampo_("eqp_tag", "");
+    return true;
+  }
+
+  function Equipamentos_salvar_(id) {
+    var novo = !id;
+    var p = { TIPO: getValue_("eqp_tipo"), TAG: getValue_("eqp_tag"), SERIE: getValue_("eqp_serie"), FABRICANTE: getValue_("eqp_fabricante"), MODELO: getValue_("eqp_modelo"), SETOR: getValue_("eqp_setor"),
+      PATRIMONIO: getValue_("eqp_patrimonio"), ANO_FABRICACAO: getValue_("eqp_ano"), CAPACIDADE: getValue_("eqp_capacidade"), NUM_CAMARAS: getValue_("eqp_camaras"), RESPONSAVEL_CLIENTE: getValue_("eqp_responsavel") };
+    if (p.ANO_FABRICACAO && !/^(19|20)\d{2}$/.test(String(p.ANO_FABRICACAO).trim())) { CadUI_mostrarErros_({ eqp_ano: "Informe o ano com 4 dígitos (ex.: 2019) ou deixe em branco." }, ["eqp_ano"]); return; }
+    if (novo) { p.CLIENTE_ID = getValue_("eqp_cliente_id"); p.UNIDADE_ID = getValue_("eqp_unidade_id"); }
+    else { var at = CadTela_item_("equipamentos", id) || {}; p.CLIENTE_ID = at.CLIENTE_ID; p.UNIDADE_ID = at.UNIDADE_ID; }
+    var erros = {};
+    if (novo && !p.CLIENTE_ID) erros.eqp_cliente_id = "Escolha o cliente na lista (digite parte do nome ou do CNPJ e clique na sugestão).";
+    if (novo && p.CLIENTE_ID && !p.UNIDADE_ID) erros.eqp_unidade_id = "Escolha a unidade onde o equipamento fica.";
+    if (!p.TIPO) erros.eqp_tipo = "Informe o tipo do equipamento.";
+    if (!CadUI_mostrarErros_(erros, ["eqp_cliente_id", "eqp_unidade_id", "eqp_tipo", "eqp_tag"])) return;
+    if (!Equipamentos_conferirTag_(id)) return;
+    CadUI_salvando_(true);
+    CadUI_chamar_(novo ? "equipamentosCriar" : "equipamentosAtualizar", novo ? [p] : [id, p], function (res) {
+      CadUI_painelSujo_(false);
+      var novoId = id || (res.item && res.item.ID) || "";
+      CadUI_aviso_(res.message || "Equipamento salvo.", "ok");
+      CadTela_carregar_("equipamentos", function () { var it = novoId && CadTela_item_("equipamentos", novoId); if (it) Equipamentos_detalhe_(it); else CadUI_painelFechar_(); });
+    }, function (msg) {
+      CadUI_salvando_(false);
+      if (/TAG/.test(msg)) CadUI_erroCampo_("eqp_tag", CadUI_esc_(msg));
+      else if (/unidade/i.test(msg) && novo) CadUI_erroCampo_("eqp_unidade_id", CadUI_esc_(msg));
+      else if (/cliente/i.test(msg) && novo) CadUI_erroCampo_("eqp_cliente_id", CadUI_esc_(msg));
+      CadUI_aviso_(msg, "erro");
+    }, novo ? "Aguarde, cadastrando o equipamento…" : "Aguarde, salvando as alterações…");
+  }
+
+  // Compatibilidade com chamadas antigas (busca rápida, celular, Vínculos, QR).
+  function equipamentosPesquisar_() { CadTela_buscarDoCampo_("equipamentos"); }
+  function equipamentosEditar_(id) { if (CADUI.telas.equipamentos && CadTela_item_("equipamentos", id)) Equipamentos_formulario_(id); else { CADUI.irPara = { chave: "equipamentos", novo: function () { Equipamentos_formulario_(id); } }; abrir("equipamentos"); } }
+  function equipamentosNovo_() { Equipamentos_formulario_(null); }
+  function carregarClientesParaEquipamentos_() { /* 17/10: a lista de clientes carrega dentro do formulário */ }
+
+  // ---------- QR Code (sem mudança de regra: Comercial/Financeiro recusados no servidor; cliente só o próprio) ----------
+  function equipamentosGerarQR_(id) {
+    if (!SESSION) return;
+    CadUI_fecharMenu_();
+    var modalId = "modal-qr-code";
+    var modal = document.getElementById(modalId);
+    if (!modal) { modal = document.createElement("div"); modal.id = modalId; modal.className = "modal-overlay"; document.body.appendChild(modal); }
+    modal.innerHTML =
+      '<div class="modal-card qr-print-area" role="dialog" aria-modal="true" aria-labelledby="qrTitulo">' +
+        '<div class="modal-header"><h3 class="modal-title" id="qrTitulo">QR Code do equipamento</h3></div>' +
+        '<div class="modal-body qr-wrapper" id="qr-body-content"><p>Gerando o QR Code…</p></div>' +
+        '<div class="modal-footer"><button class="btn-primary" type="button" onclick="imprimirQRCode_()">Imprimir etiqueta</button><button class="btn-secondary" type="button" onclick="fecharModalQR_()">Fechar</button></div>' +
+      "</div>";
+    modal.style.display = "flex";
+    SGO_iniciarCarregamento_();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        SGO_finalizarCarregamento_();
+        var body = document.getElementById("qr-body-content");
+        if (!body) return;
+        if (!res || !res.success) { body.innerHTML = '<p class="text-danger">' + CadUI_esc_((res && res.message) || "Não foi possível gerar o QR Code. Tente de novo.") + "</p>"; return; }
+        var eqp = res.equipamento || {};
+        var nc = String(eqp.CLIENTE_NOME || "").trim(), nu = String(eqp.UNIDADE_NOME || "").trim();
+        var linha = nu && nu.toUpperCase() !== nc.toUpperCase() ? nc + " - " + nu : nc;
+        // 21/10/2026: o setor do cadastro entra no local da etiqueta.
+        if (eqp.SETOR) linha = linha + " · " + eqp.SETOR;
+        EQP_QR_ATUAL = { qrUrl: res.qrUrl, tag: eqp.TAG, tipo: eqp.TIPO, modelo: eqp.MODELO, serie: eqp.SERIE, local: linha };
+        body.innerHTML = '<img src="' + CadUI_esc_(res.qrUrl) + '" alt="QR Code do equipamento" class="qr-image"><div class="qr-info">' +
+          "<div><strong>TAG:</strong> " + CadUI_esc_(eqp.TAG) + "</div><div><strong>Tipo:</strong> " + CadUI_esc_(eqp.TIPO) + "</div><div><strong>Modelo:</strong> " + CadUI_esc_(eqp.MODELO) + "</div><div><strong>Série:</strong> " + CadUI_esc_(eqp.SERIE) + "</div>" +
+          '<div style="margin-top:10px; font-size:12px; color:#475569;">' + CadUI_esc_(linha) + "</div></div>";
+      })
+      .withFailureHandler(function (err) {
+        SGO_finalizarCarregamento_();
+        console.error("Falha ao gerar QR Code:", err);
+        var body = document.getElementById("qr-body-content");
+        if (body) body.innerHTML = '<p class="text-danger">Não foi possível gerar o QR Code. Verifique a conexão e tente de novo. Nada foi alterado.</p>';
+      })
+      .qrcodeGerarParaEquipamento(SESSION, id);
+    EQP_QR_ATUAL = null;
+  }
+  function fecharModalQR_() { var m = document.getElementById("modal-qr-code"); if (m) m.style.display = "none"; }
+  // Etiqueta do equipamento numa folha A4 própria (padrão A4 de 18/10/2026): a etiqueta de 90 × 50 mm sai
+  // no canto superior da folha, com linha de corte. Antes, o botão imprimia a tela inteira do sistema.
+  var EQP_QR_ATUAL = null;
+  function imprimirQRCode_() {
+    var q = EQP_QR_ATUAL;
+    if (!q || !q.qrUrl) { CadUI_avisoQR_("Espere o QR Code aparecer e toque em \"Imprimir etiqueta\" de novo."); return; }
+    var w = window.open("", "_blank");
+    if (!w) { CadUI_avisoQR_("O navegador bloqueou a janela da etiqueta. Libere as janelas deste site (ícone na barra de endereço) e toque em \"Imprimir etiqueta\" de novo."); return; }
+    var e = CadUI_esc_;
+    var linha = function (r, v) { return v ? '<div class="l"><b>' + r + '</b> ' + e(v) + '</div>' : ''; };
+    w.document.open();
+    w.document.write('<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Etiqueta ' + e(q.tag || "") + '</title><style>' +
+      '@page{size:A4 portrait;margin:15mm}*{box-sizing:border-box}html{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#1f2933;background:#e4e8ed}' +
+      '.barra{max-width:210mm;margin:12px auto 0;display:flex;justify-content:flex-end;gap:8px}.barra button{background:#0b3d6e;color:#fff;border:0;border-radius:4px;padding:10px 16px;font:700 14px Arial,sans-serif;cursor:pointer;min-height:44px}' +
+      '.folha{background:#fff;width:210mm;max-width:100%;min-height:120mm;margin:12px auto 30px;padding:15mm;box-shadow:0 1px 6px rgba(0,0,0,.18)}' +
+      '.corte{width:94mm;height:54mm;border:.4pt dashed #9aa5b1;padding:2mm}' +
+      '.etq{width:90mm;height:50mm;border:.6pt solid #3e4c59;display:flex;gap:3mm;padding:3mm;overflow:hidden}' +
+      '.etq img{width:38mm;height:38mm;display:block;flex:0 0 38mm;image-rendering:pixelated}' +
+      '.dados{flex:1;min-width:0;display:flex;flex-direction:column;font-size:7.6pt;line-height:1.3}' +
+      '.tag{font-size:13pt;font-weight:700;color:#0b3d6e;margin:0 0 1.4mm;word-break:break-all}.l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.l b{color:#52606d;font-weight:700}' +
+      '.loc{margin-top:auto;font-size:7pt;color:#52606d;border-top:.4pt solid #bcc5cf;padding-top:1mm;overflow:hidden;max-height:7.4mm}' +
+      '.instr{font-size:8pt;color:#52606d;margin:3mm 0 0}' +
+      '@media screen and (max-width:640px){.barra{margin:8px 16px 0}.folha{padding:16px 0;margin:8px 0 20px;box-shadow:none;display:flex;flex-direction:column;align-items:center}.instr{padding:0 16px}}' +
+      '@media print{body{background:#fff}.barra,.instr{display:none}.folha{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}}' +
+      '</style></head><body><div class="barra"><button type="button" onclick="window.print()">Imprimir etiqueta</button></div><main class="folha"><div class="corte"><div class="etq">' +
+      '<img src="' + e(q.qrUrl) + '" alt="QR Code do equipamento ' + e(q.tag || "") + '"><div class="dados"><div class="tag">' + e(q.tag || "Sem TAG") + '</div>' +
+      linha("Tipo:", q.tipo) + linha("Modelo:", q.modelo) + linha("Série:", q.serie) + (q.local ? '<div class="loc">' + e(q.local) + '</div>' : "") +
+      '</div></div></div><p class="instr">Recorte na linha tracejada e cole a etiqueta no equipamento, em local visível e sem dobras. Aponte a câmera do celular para o código para abrir o equipamento no SGO+.</p></main></body></html>');
+    w.document.close();
+    var img = w.document.images[0];
+    var imprimir = function () { try { w.focus(); w.print(); } catch (x) { /* o operador usa o botão da página */ } };
+    if (img && !img.complete) { img.onload = imprimir; img.onerror = function () {}; } else setTimeout(imprimir, 150);
+  }
+  function CadUI_avisoQR_(msg) {
+    var body = document.getElementById("qr-body-content");
+    if (!body) return;
+    var p = document.getElementById("qrAvisoImpressao");
+    if (!p) { p = document.createElement("p"); p.id = "qrAvisoImpressao"; p.className = "text-danger"; p.setAttribute("role", "alert"); body.appendChild(p); }
+    p.textContent = msg;
+  }
+</script>

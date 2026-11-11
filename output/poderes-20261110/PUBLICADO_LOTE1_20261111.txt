@@ -1,0 +1,12 @@
+ACESSOS POR CAIXAS — LOTE 1 (contas, senhas e acessos) — PUBLICADO 11/11/2026 ~02:20 BRT
+Imagem: metrolabs/sgo:poderes-lote1-20261111
+sha256:820f35b3736aaaa68ed3c04d531f91def2a0e95380a67aceaa45889777533ead (base qualif-simulacao-20261111).
+10 arquivos: JS_Acessos.html, JS_Admin.html, JS_Core.html, JS_SegurancaAcesso.html, SGO_Ajuda_Administracao.js,
+SGO_Areas.js, SGO_ModoPersonalizado.js, SGO_Poderes.js, SGO_SegurancaAcesso.js, SGO_Usuarios.js.
+15 de 17 poderes do lote ligados (os 2 do servidor Node — segredos e painel — seguem pela regra do servidor).
+Espelho: 920 comparações (23 contas x 40 ações) sem diferença de resultado nem de mensagem.
+Novas proteções: troca de e-mail avisa o e-mail antigo; ações da Segurança do acesso sobre contas de
+Administrador/Diretoria e "exigir troca de todos" só Administrador/dono.
+Testes na imagem: igual à anterior exceto poderes-lote0/1 (o teste de equivalência precisa da cópia
+lote1-antes-legado, fora do pacote; passou local). Pós-publicação: healthy; telas preservadas; trava /api/run ativa.
+Reverter: /opt/metrolabs/backup/poderes-lote1-20261111/compose.antes.yml (+ banco-antes.dump).

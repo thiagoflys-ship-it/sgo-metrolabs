@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>METROLABS SGO+</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <?!= include('UI_Estilos'); ?>
+</head>
+<body>
+
+  <div id="login" class="login-screen">
+    <div class="login-split">
+      <div class="login-welcome">
+        <div class="login-welcome-shapes" aria-hidden="true"></div>
+        <div class="login-welcome-text">
+          <h2>Bem-vindo(a)</h2>
+          <p>O SGO+ é o sistema de gestão operacional da Metrolabs: clientes, equipamentos, relatórios técnicos e auditorias, tudo em um só lugar.</p>
+        </div>
+      </div>
+
+      <div class="login-card">
+        <div class="login-title-wrap">
+          <h1 class="login-title"><span>SGO+</span></h1>
+          <p class="login-subtitle">Sistema de Gestão Operacional e Técnica</p>
+        </div>
+
+        <div class="login-form">
+          <!-- 31/10/2026 (pedido do dono): a entrada é pelo e-mail cadastrado; o nome de usuário não existe mais para a pessoa.
+               O id continua "usuario" (ganchos da casca e do Leitor de QR). -->
+          <div class="form-group">
+            <label for="usuario">E-mail</label>
+            <input
+              id="usuario"
+              type="email"
+              inputmode="email"
+              placeholder="nome@empresa.com.br"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              onkeydown="if(event.key === 'Enter') document.getElementById('senha').focus()"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="senha">Senha</label>
+            <input
+              id="senha"
+              type="password"
+              placeholder="Digite sua senha"
+              autocomplete="current-password"
+              onkeydown="if(event.key === 'Enter') fazerLogin()"
+            >
+          </div>
+
+          <div class="login-actions">
+            <button id="btnLogin" type="button" onclick="fazerLogin()">Entrar</button>
+          </div>
+          <!-- 31/10/2026: "Esqueci minha senha" (link por e-mail, JS_SegurancaAcesso.html) -->
+          <div class="login-esqueci">
+            <button type="button" id="btnEsqueci" class="login-esqueci-btn" onclick="SegAcesso_abrirEsqueci_()">Esqueci minha senha</button>
+          </div>
+        </div>
+
+        <!-- 31/10/2026: etapas do login (código no celular e "Crie sua nova senha"), JS_SegurancaAcesso.html -->
+        <div id="loginEtapa" class="login-etapa" style="display:none;" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="app-shell" style="display:none;">
+    
+    <header id="topo" class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo-block" onclick="irTelaInicial_()" style="cursor: pointer;">
+          <img id="logoTopo" alt="" class="topbar-logo" onerror="this.style.display='none'" onload="this.style.display=''">
+          <div class="topbar-brand">
+            <div class="topbar-title">SGO<span class="topbar-title-plus">+</span></div>
+            <div class="topbar-subtitle">Metrolabs · Painel Operacional</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <button type="button" id="buscaGatilho" class="busca-gatilho" onclick="Busca_abrir_()" aria-haspopup="dialog" aria-controls="buscaPainel" title="Busca rápida (Ctrl K)">
+          <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+          <span class="busca-gatilho-texto">Buscar TAG, cliente, certificado ou tela</span>
+          <kbd class="busca-gatilho-tecla">Ctrl K</kbd>
+        </button>
+        <div
+          id="mensagemMotivacional"
+          class="mensagem-motivacional"
+          title="Mensagem do dia"
+          style="display:none;"
+        ></div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="topbar-info-block">
+          <div id="relogioTopo" class="relogio-texto">--/--/----, --:--:--</div>
+        </div>
+        <div class="user-action-block">
+            <div id="userInfo" class="user-info"></div>
+            <!-- 31/10/2026: a própria pessoa troca a senha (senha atual + nova), JS_SegurancaAcesso.html -->
+            <button id="btnTrocarSenha" type="button" class="btn-logout btn-trocar-senha" onclick="abrir('trocar_senha')" title="Trocar minha senha">
+              <i class="fas fa-key" aria-hidden="true"></i> Trocar senha
+            </button>
+            <button id="btnLogout" type="button" class="btn-logout" onclick="logout()">
+              Sair
+            </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-layout">
+      
+      <!-- MENU LATERAL — ordem de trabalho (revisado 16/10/2026):
+           Principal, Qualificação, Calibração, Documentos técnicos, Operação de campo, Gestão, Cadastros, Administração.
+           data-mod = chave usada por abrir(mod) (não mudar: módulos e atividades dependem dela).
+           data-busca = palavras extras para a busca rápida (Ctrl K) achar a tela por sinônimo ou sigla.
+           Regras de perfil: aplicarRegrasDeAcesso_ (JS_Core), Atividades_aplicarMenu_ (JS_Atividades),
+           AvisosTela_iniciar_ (JS_Avisos), ChavesTela_mostrarMenu_ (JS_Chaves). -->
+      <aside id="menu" class="sidebar" aria-label="Menu principal">
+        <div class="sidebar-section menu-grupo" data-grupo="principal" id="menu-secao-principal">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-principal" onclick="Menu_alternarGrupo_('principal')"><span class="menu-grupo-nome">Principal</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-principal">
+          <button type="button" class="menu-btn" data-mod="dashboard" data-busca="inicio painel pendencias" onclick="abrir('dashboard')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
+          <button type="button" class="menu-btn" data-mod="minhas_atividades" data-busca="tarefas agenda kanban" id="menu-btn-atv-minhas" onclick="abrir('minhas_atividades')"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Minhas atividades<span class="menu-badge" id="menuBadgeAtividades"></span></button>
+          <button type="button" class="menu-btn" data-mod="atividades_equipe" data-busca="tarefas gantt equipe justificativas" id="menu-btn-atv-equipe" style="display:none;" onclick="abrir('atividades_equipe')"><span class="menu-btn-icon"><i class="fas fa-people-group" aria-hidden="true"></i></span>Atividades da equipe</button>
+          <button type="button" class="menu-btn" data-mod="avisos" data-busca="comunicados ciencia recados" id="menu-btn-avisos" onclick="abrir('avisos')"><span class="menu-btn-icon"><i class="fas fa-bullhorn" aria-hidden="true"></i></span>Avisos<span class="menu-badge" id="menuBadgeAvisos"></span></button>
+          <!-- 21/10/2026: matriz de avisos. Meus avisos = Minha conta > Avisos (JS_AvisosMatriz.html / SGO_Avisos_Matriz.js). -->
+          <button type="button" class="menu-btn" data-mod="meus_avisos" data-busca="minha conta preferencias notificacoes email whatsapp resumo do dia" id="menu-btn-meus_avisos" style="display:none;" onclick="abrir('meus_avisos')" title="Minha conta: o que você recebe por e-mail e WhatsApp"><span class="menu-btn-icon"><i class="fas fa-bell" aria-hidden="true"></i></span>Meus avisos</button>
+          <!-- 21/10/2026: Assistente do ponto nativo (JS_Ponto.html / SGO_Ponto_*.js). Aparece quando o assistente está ligado; RH, Administrador e Diretoria veem sempre (Ponto_iniciar_). -->
+          <button type="button" class="menu-btn" data-mod="ponto" data-busca="ponto relogio batida lembrete esqueci de bater ajuste rh jornada" id="menu-btn-ponto" style="display:none;" onclick="abrir('ponto')"><span class="menu-btn-icon"><i class="fas fa-clock" aria-hidden="true"></i></span>Assistente do ponto<span class="menu-badge" id="menuBadgePonto"></span></button>
+          <button type="button" class="menu-btn" data-mod="email" data-busca="email e-mail caixa de entrada mensagens responder cliente outlook" id="menu-btn-email" style="display:none;" onclick="abrir('email')"><span class="menu-btn-icon"><i class="fas fa-envelope" aria-hidden="true"></i></span>E-mail<span class="menu-badge" id="menuBadgeEmail"></span></button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="qualificacao" id="menu-secao-tecnica">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-qualificacao" onclick="Menu_alternarGrupo_('qualificacao')"><span class="menu-grupo-nome">Qualificação e inspeção</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-qualificacao">
+          <button type="button" class="menu-btn" data-mod="autoclave" data-busca="esterilizacao vapor ciclo qualificacao termica" onclick="abrir('autoclave')"><span class="menu-btn-icon"><i class="fas fa-temperature-high" aria-hidden="true"></i></span>Autoclaves</button>
+          <button type="button" class="menu-btn" data-mod="lavadora" data-busca="termodesinfectora ultrassonica qualificacao termica" onclick="abrir('lavadora')"><span class="menu-btn-icon"><i class="fas fa-soap" aria-hidden="true"></i></span>Lavadoras</button>
+          <button type="button" class="menu-btn" data-mod="cadeia_frio" data-busca="geladeira refrigerador camara fria freezer vacina datalogger qualificacao termica" onclick="abrir('cadeia_frio')"><span class="menu-btn-icon"><i class="fas fa-snowflake" aria-hidden="true"></i></span>Cadeia de frio</button>
+          <button type="button" class="menu-btn" data-mod="estufa_banhomaria" data-busca="estufa banho maria secadora traqueias qualificacao termica" onclick="abrir('estufa_banhomaria')"><span class="menu-btn-icon"><i class="fas fa-temperature-half" aria-hidden="true"></i></span>Estufa, banho-maria e secadora</button>
+          <button type="button" class="menu-btn" data-mod="baixa_temperatura" data-busca="baixa temperatura peroxido de hidrogenio plasma formaldeido vbtf ltsf esterilizacao qualificacao qi qo qd" onclick="abrir('baixa_temperatura')"><span class="menu-btn-icon"><i class="fas fa-flask" aria-hidden="true"></i></span>Esterilização a baixa temperatura</button>
+          <button type="button" class="menu-btn" data-mod="declaracao_qiqo" data-busca="qi qo qd qualificacao instalacao operacao desempenho" onclick="abrir('declaracao_qiqo')"><span class="menu-btn-icon"><i class="fas fa-file-circle-check" aria-hidden="true"></i></span>Relatório QI/QO/QD</button>
+          <button type="button" class="menu-btn" data-mod="nr13" data-busca="nr13 nr 13 vaso pressao caldeira inspecao laudo" onclick="abrir('nr13')"><span class="menu-btn-icon"><i class="fas fa-gauge-high" aria-hidden="true"></i></span>Laudo NR-13</button>
+          <button type="button" class="menu-btn" data-mod="modo_personalizado" data-busca="modo personalizado parametros personalizados responsavel tecnico criterios referencia normativa" id="menu-btn-modo_personalizado" style="display:none;" onclick="abrir('modo_personalizado')" title="Parâmetros personalizados pelo responsável técnico"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Modo personalizado</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="calibracao" id="menu-secao-calibracao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-calibracao" onclick="Menu_alternarGrupo_('calibracao')"><span class="menu-grupo-nome">Calibração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-calibracao">
+          <button type="button" class="menu-btn" data-mod="certificado_calibracao" data-busca="certificado metrologia emitir rascunho" onclick="abrir('certificado_calibracao')"><span class="menu-btn-icon"><i class="fas fa-certificate" aria-hidden="true"></i></span>Certificado de calibração</button>
+          <button type="button" class="menu-btn" data-mod="relatorio_calibracao" data-busca="instrumento metrologia" onclick="abrir('relatorio_calibracao')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Relatório de calibração</button>
+          <button type="button" class="menu-btn" data-mod="padroes" data-busca="padroes referencia laboratorio vencimento rastreabilidade" id="menu-btn-padroes" onclick="abrir('padroes')" title="Padrões de referência do laboratório: cadastro e controle de vencimento"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Padrões de referência<span class="menu-badge" id="menuBadgePadroes"></span></button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="documentos" id="menu-secao-documentos">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-documentos" onclick="Menu_alternarGrupo_('documentos')"><span class="menu-grupo-nome">Documentos técnicos</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-documentos">
+          <button type="button" class="menu-btn" data-mod="declaracao_exec" data-busca="declaracao execucao servico atestado" onclick="abrir('declaracao_exec')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Declaração de execução</button>
+          <button type="button" class="menu-btn" data-mod="pgt_pop" data-busca="pgt pop plano gerenciamento tecnologias procedimento operacional padrao" onclick="abrir('pgt_pop')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>PGT e POP</button>
+          <button type="button" class="menu-btn" data-mod="reg_op" data-busca="registros operacionais formularios" onclick="abrir('reg_op')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Registros operacionais</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="planejamento" id="menu-secao-planejamento">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-planejamento" onclick="Menu_alternarGrupo_('planejamento')"><span class="menu-grupo-nome">Planejamento de serviços</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-planejamento">
+          <button type="button" class="menu-btn" data-mod="planejamento_cme" data-busca="cme central material esterilizado receitas planejamento servicos qualificacao" onclick="abrir('planejamento_cme')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Planejamento CME</button>
+          <button type="button" class="menu-btn" data-mod="cronograma_execucao" data-busca="cronograma calendario planejamento servicos grupos datas" onclick="abrir('cronograma_execucao')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Cronograma de execução</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="operacao" id="menu-secao-operacao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-operacao" onclick="Menu_alternarGrupo_('operacao')"><span class="menu-grupo-nome">Operação de campo</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-operacao">
+          <button type="button" class="menu-btn" data-mod="auvo" data-busca="auvo ordem servico os tarefas atendimentos tecnicos" onclick="abrir('auvo')"><span class="menu-btn-icon"><i class="fas fa-arrows-rotate" aria-hidden="true"></i></span>Integração Auvo</button>
+          <button type="button" class="menu-btn" data-mod="frota" data-busca="veiculo carro retirada devolucao abastecimento multa manutencao condutor" onclick="abrir('frota')"><span class="menu-btn-icon"><i class="fas fa-car" aria-hidden="true"></i></span>Frota<span class="menu-badge" id="menuBadgeFrota"></span></button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="comercial" id="menu-secao-comercial" style="display:none;">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-comercial" onclick="Menu_alternarGrupo_('comercial')"><span class="menu-grupo-nome">Comercial</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-comercial">
+          <!-- 21/10/2026: Comercial nativo (JS_Comercial.html / SGO_Comercial_*.js). Grupo visível só para Comercial, gestão comercial, Diretoria, Administrador e (Pedidos aprovados) Financeiro: Comercial_mostrarMenu_. -->
+          <button type="button" class="menu-btn" data-mod="comercial" data-busca="comercial vendas hoje gestora lista do dia funil" onclick="abrir('comercial')"><span class="menu-btn-icon"><i class="fas fa-briefcase" aria-hidden="true"></i></span>Hoje no Comercial</button>
+          <!-- 01/11/2026 (Comercial C4): Quadro do funil (Kanban) e Gantt comercial viraram modos de ver dentro de Oportunidades. O dono pediu para manter Kanban e Gantt: os dois atalhos continuam no menu e abrem Oportunidades no modo certo. -->
+          <button type="button" class="menu-btn" data-mod="comercial_oportunidades" data-busca="oportunidades negociacoes funil crm leads vendas cliente quadro kanban etapas arrastar mover gantt linha do tempo previsao fechamento marcos" onclick="if (typeof Comercial_abrirOportunidadesMenu_ === 'function') Comercial_abrirOportunidadesMenu_(); else abrir('comercial_oportunidades')"><span class="menu-btn-icon"><i class="fas fa-handshake" aria-hidden="true"></i></span>Oportunidades</button>
+          <button type="button" class="menu-btn" data-mod="comercial_kanban" data-busca="quadro kanban funil etapas arrastar mover oportunidades" onclick="abrir('comercial_kanban')"><span class="menu-btn-icon"><i class="fas fa-table-columns" aria-hidden="true"></i></span>Kanban do funil</button>
+          <button type="button" class="menu-btn" data-mod="comercial_gantt" data-busca="gantt cronograma linha do tempo previsao fechamento marcos propostas retornos" onclick="abrir('comercial_gantt')"><span class="menu-btn-icon"><i class="fas fa-chart-gantt" aria-hidden="true"></i></span>Gantt comercial</button>
+          <button type="button" class="menu-btn" data-mod="comercial_propostas" data-busca="propostas orcamentos prop desconto revisao aceite" onclick="abrir('comercial_propostas')"><span class="menu-btn-icon"><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i></span>Propostas</button>
+          <button type="button" class="menu-btn" data-mod="comercial_orcamentista" data-busca="orcamentista orcamento montar pedido especialista preco servico produto" onclick="abrir('comercial_orcamentista')"><span class="menu-btn-icon"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i></span>Orçamentista</button>
+          <button type="button" class="menu-btn" data-mod="comercial_pedidos" data-busca="pedidos aprovados faturamento pos venda setores" onclick="abrir('comercial_pedidos')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Pedidos aprovados</button>
+          <button type="button" class="menu-btn" data-mod="comercial_catalogo" data-busca="catalogo produtos servicos precos tabela" onclick="abrir('comercial_catalogo')"><span class="menu-btn-icon"><i class="fas fa-tags" aria-hidden="true"></i></span>Produtos e serviços</button>
+          <button type="button" class="menu-btn" data-mod="comercial_precos" data-busca="banco de precos historico mercado licitacao concorrente cotacao fornecedor" onclick="abrir('comercial_precos')"><span class="menu-btn-icon"><i class="fas fa-database" aria-hidden="true"></i></span>Banco de preços</button>
+          <button type="button" class="menu-btn" data-mod="comercial_painel" data-busca="painel comercial indicadores conversao perdas relatorio mensal" onclick="abrir('comercial_painel')"><span class="menu-btn-icon"><i class="fas fa-chart-column" aria-hidden="true"></i></span>Painel comercial</button>
+          <button type="button" class="menu-btn" data-mod="comercial_metodologia" data-busca="metodologia playbook cadencia politica desconto etapas" onclick="abrir('comercial_metodologia')"><span class="menu-btn-icon"><i class="fas fa-book-open" aria-hidden="true"></i></span>Metodologia comercial</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="compras" id="menu-secao-compras" style="display:none;">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-compras" onclick="Menu_alternarGrupo_('compras')"><span class="menu-grupo-nome">Compras</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-compras">
+          <!-- 21/10/2026: Compras e peças nativo (JS_Compras.html / SGO_Compras_*.js). Pedir e acompanhar: toda a equipe interna; fila, fornecedores e regras: compradores, gestores, Financeiro e Diretoria (Compras_mostrarMenu_). -->
+          <button type="button" class="menu-btn" data-mod="compras_pedir" data-busca="compras pedir peca material requisicao comprar ferramenta insumo" onclick="abrir('compras_pedir')"><span class="menu-btn-icon"><i class="fas fa-cart-plus" aria-hidden="true"></i></span>Pedir peça ou material</button>
+          <!-- 31/10/2026: compra feita com o cartão da empresa, faturado, Pix, dinheiro ou do próprio bolso é informada aqui (substitui o aviso no grupo do WhatsApp) -->
+          <button type="button" class="menu-btn" data-mod="compras_informar" data-busca="informar compra ja feita cartao empresa comprovante nota reembolso fatura pix faturado" onclick="abrir('compras_informar')"><span class="menu-btn-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>Informar compra já feita</button>
+          <button type="button" class="menu-btn" data-mod="compras_meus" data-busca="meus pedidos de compra requisicoes previsao entrega peca chegou" onclick="abrir('compras_meus')"><span class="menu-btn-icon"><i class="fas fa-box-open" aria-hidden="true"></i></span>Meus pedidos de compra</button>
+          <button type="button" class="menu-btn" data-mod="compras" data-busca="fila de compras comprador cotacao orcamento aprovacao pedido de compra recebimento" style="display:none;" onclick="abrir('compras')"><span class="menu-btn-icon"><i class="fas fa-cart-shopping" aria-hidden="true"></i></span>Fila de compras</button>
+          <button type="button" class="menu-btn" data-mod="compras_fornecedores" data-busca="fornecedores cnpj cadastro oficina posto distribuidor" style="display:none;" onclick="abrir('compras_fornecedores')"><span class="menu-btn-icon"><i class="fas fa-truck-field" aria-hidden="true"></i></span>Fornecedores</button>
+          <button type="button" class="menu-btn" data-mod="compras_financeiro" data-busca="conferencia financeiro compras comprovante cartao fatura pagamento" style="display:none;" onclick="abrir('compras_financeiro')"><span class="menu-btn-icon"><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i></span>Conferência do Financeiro</button>
+          <button type="button" class="menu-btn" data-mod="compras_conciliacao" data-busca="conciliacao fatura cartao extrato ofx csv importar nao informada" style="display:none;" onclick="abrir('compras_conciliacao')"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Conciliação das faturas</button>
+          <button type="button" class="menu-btn" data-mod="compras_apagar" data-busca="a pagar vencimento boleto faturado reembolso colaborador" style="display:none;" onclick="abrir('compras_apagar')"><span class="menu-btn-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span>A pagar</button>
+          <button type="button" class="menu-btn" data-mod="compras_cartoes" data-busca="cartoes da empresa final responsavel fechamento vencimento limite" style="display:none;" onclick="abrir('compras_cartoes')"><span class="menu-btn-icon"><i class="fas fa-credit-card" aria-hidden="true"></i></span>Cartões da empresa</button>
+          <button type="button" class="menu-btn" data-mod="compras_painel" data-busca="painel de compras gasto fornecedor relatorio mensal atrasadas kanban gantt colaborador forma pagamento" style="display:none;" onclick="abrir('compras_painel')"><span class="menu-btn-icon"><i class="fas fa-chart-pie" aria-hidden="true"></i></span>Painel de compras</button>
+          <button type="button" class="menu-btn" data-mod="compras_regras" data-busca="regras de compras comprador substituto faixas aprovacao alcada cotacoes minimas" style="display:none;" onclick="abrir('compras_regras')"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Regras de compras</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="assistencia" id="menu-secao-assistencia" style="display:none;">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-assistencia" onclick="Menu_alternarGrupo_('assistencia')"><span class="menu-grupo-nome">Assistência técnica</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-assistencia">
+          <!-- 21/10/2026: Assistência técnica nativa (JS_Assistencia.html / SGO_Assistencia_*.js). Equipe interna: chamados, O.S., agenda; gestão: transição e indicadores; cliente: Meus chamados (Assistencia_mostrarMenu_). -->
+          <button type="button" class="menu-btn" data-mod="assistencia" data-busca="chamados assistencia tecnica triagem prazo sla atendimento conserto" style="display:none;" onclick="abrir('assistencia')"><span class="menu-btn-icon"><i class="fas fa-headset" aria-hidden="true"></i></span>Chamados<span class="menu-badge" id="menuBadgeAssistencia"></span></button>
+          <button type="button" class="menu-btn" data-mod="assistencia_abrir" data-busca="abrir chamado telefone email pedido atendimento tecnico" style="display:none;" onclick="abrir('assistencia_abrir')"><span class="menu-btn-icon"><i class="fas fa-circle-plus" aria-hidden="true"></i></span>Abrir chamado</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_os" data-busca="ordem de servico os minhas os checklist foto assinatura relato pecas" style="display:none;" onclick="abrir('assistencia_os')"><span class="menu-btn-icon"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>Ordens de serviço</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_agenda" data-busca="agenda tecnicos despacho rota do dia conflito reagendar" style="display:none;" onclick="abrir('assistencia_agenda')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Agenda dos técnicos</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_solicitacoes" data-busca="solicitacoes clientes portal qr pedido de atendimento fila" style="display:none;" onclick="abrir('assistencia_solicitacoes')"><span class="menu-btn-icon"><i class="fas fa-inbox" aria-hidden="true"></i></span>Solicitações dos clientes</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_casos" data-busca="reclamacoes cliente caso problema recorrente" style="display:none;" onclick="abrir('assistencia_casos')"><span class="menu-btn-icon"><i class="fas fa-comment-dots" aria-hidden="true"></i></span>Reclamações</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_rondas" data-busca="ronda rondas engenharia clinica inspecao periodica setores contrato recorrente" style="display:none;" onclick="abrir('assistencia_rondas')"><span class="menu-btn-icon"><i class="fas fa-route" aria-hidden="true"></i></span>Rondas de engenharia clínica</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_indicadores" data-busca="indicadores sla prazo cumprido reincidencia relatorio mensal assistencia" style="display:none;" onclick="abrir('assistencia_indicadores')"><span class="menu-btn-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>Indicadores da assistência</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_regras" data-busca="regras da assistencia prazos contratos tipos de servico checklist" style="display:none;" onclick="abrir('assistencia_regras')"><span class="menu-btn-icon"><i class="fas fa-sliders" aria-hidden="true"></i></span>Regras da assistência</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_transicao" data-busca="transicao auvo desligar criterios acervo" style="display:none;" onclick="abrir('assistencia_transicao')"><span class="menu-btn-icon"><i class="fas fa-right-left" aria-hidden="true"></i></span>Transição do Auvo</button>
+          <button type="button" class="menu-btn" data-mod="assistencia_portal" data-busca="meus chamados pedir atendimento relatorio cliente" style="display:none;" onclick="abrir('assistencia_portal')"><span class="menu-btn-icon"><i class="fas fa-headset" aria-hidden="true"></i></span>Meus chamados</button>
+          </div>
+        </div>
+
+        <!-- 01/11/2026: SGO+ Licitações, etapa 1 (JS_Licitacoes.html / SGO_Licitacoes*.js). Grupo só da Diretoria e do Administrador (Licitacoes_mostrarMenu_; o servidor confere toda chamada). Etapas 2 e 3: IA, agenda e alertas. Etapa 4 (02/11/2026): Painel (Dashboard), Kanban e Gantt. Proposta em A4 (aba Proposta da ficha) e Relatórios em A4 (02/11/2026). Central de disputas, modo assistido, e resultado (02/11/2026, JS_Licitacoes_Disputa.html). Contratos entram na próxima etapa. -->
+        <div class="sidebar-section menu-grupo" data-grupo="licitacoes" id="menu-secao-licitacoes" style="display:none;">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-licitacoes" onclick="Menu_alternarGrupo_('licitacoes')"><span class="menu-grupo-nome">Licitações</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-licitacoes">
+          <button type="button" class="menu-btn" data-mod="licitacoes" data-busca="licitacoes licitacao hoje radar pncp pregao edital prazos coletor" onclick="abrir('licitacoes')"><span class="menu-btn-icon"><i class="fas fa-gavel" aria-hidden="true"></i></span>Hoje em Licitações</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_painel" data-busca="painel dashboard indice indicadores licitacao numeros notas uf prazos alertas coletor saude analises ia" onclick="abrir('licitacoes_painel')"><span class="menu-btn-icon"><i class="fas fa-chart-column" aria-hidden="true"></i></span>Painel (Dashboard)</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_oportunidades" data-busca="oportunidades licitacao radar pncp compras gov pregao dispensa concorrencia triagem descartar analise orgao edital" onclick="abrir('licitacoes_oportunidades')"><span class="menu-btn-icon"><i class="fas fa-binoculars" aria-hidden="true"></i></span>Oportunidades</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_kanban" data-busca="kanban quadro etapas licitacao radar analise decisao proposta disputa resultado contrato mover" onclick="abrir('licitacoes_kanban')"><span class="menu-btn-icon"><i class="fas fa-table-columns" aria-hidden="true"></i></span>Kanban</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_gantt" data-busca="gantt linha do tempo prazos licitacao sessao propostas impugnacao esclarecimento recurso cronograma" onclick="abrir('licitacoes_gantt')"><span class="menu-btn-icon"><i class="fas fa-chart-gantt" aria-hidden="true"></i></span>Gantt</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_agenda" data-busca="agenda prazos licitacao impugnacao esclarecimento sessao propostas recurso feriados calendario" onclick="abrir('licitacoes_agenda')"><span class="menu-btn-icon"><i class="fas fa-calendar-days" aria-hidden="true"></i></span>Agenda e prazos</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_alertas" data-busca="alertas licitacao whatsapp email ciencia ciente escalonamento notificacoes central" onclick="abrir('licitacoes_alertas')"><span class="menu-btn-icon"><i class="fas fa-bell" aria-hidden="true"></i></span>Central de alertas</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_disputas" data-busca="disputas disputa central sessao lances lance piso pregao resultado ganho perdido recurso contrarrazoes homologacao adjudicacao" onclick="abrir('licitacoes_disputas')"><span class="menu-btn-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Central de disputas</button>
+          <!-- 02/11/2026: contratos conquistados e integração com os módulos (JS_Licitacoes_Contratos.html / SGO_Licitacoes_Contratos.js) -->
+          <button type="button" class="menu-btn" data-mod="licitacoes_contratos" data-busca="contratos contrato ata vigencia aditivo apostilamento reajuste garantia renovacao entregas obrigacoes faturamento ganho cliente comercial execucao" onclick="abrir('licitacoes_contratos')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Contratos</button>
+          <!-- 03/11/2026: pareceres por área e alçadas de decisão (JS_Licitacoes_Pareceres.html / SGO_Licitacoes_Pareceres.js). Quem não é da Diretoria e tem pedido de parecer aberto vê o grupo só com este botão (Licitacoes_mostrarMenu_) -->
+          <button type="button" class="menu-btn" data-mod="licitacoes_pareceres" data-busca="pareceres parecer area tecnica financeira comercial licitacoes alcada aprovacao diretoria divergencias pedido" onclick="abrir('licitacoes_pareceres')"><span class="menu-btn-icon"><i class="fas fa-clipboard-check" aria-hidden="true"></i></span>Meus pareceres</button>
+          <!-- 03/11/2026: fornecedores, concorrentes e inteligência de mercado (JS_Licitacoes_Mercado.html / SGO_Licitacoes_Mercado.js) -->
+          <button type="button" class="menu-btn" data-mod="licitacoes_mercado" data-busca="inteligencia de mercado concorrentes concorrente fornecedores fornecedor cnpj vencedor quem ganha orgao preco de referencia mediana quartis desconto pncp resultados" onclick="abrir('licitacoes_mercado')"><span class="menu-btn-icon"><i class="fas fa-chess" aria-hidden="true"></i></span>Inteligência de mercado</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_habilitacao" data-busca="habilitacao documentos certidoes certidao atestados atestado capacidade tecnica balanco contrato social fgts cndt sicaf validade vencimento inmetro licitacao" onclick="abrir('licitacoes_habilitacao')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Documentos de habilitação</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_precos" data-busca="precos preco licitacao tabela piso margem simulador custo diretoria sobra" onclick="abrir('licitacoes_precos')"><span class="menu-btn-icon"><i class="fas fa-tags" aria-hidden="true"></i></span>Preços de licitação</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_portais" data-busca="portais licitacao integracoes api pncp compras gov bll bionexo parametrizar testar conexao regras do radar regras dos alertas antecedencias" onclick="abrir('licitacoes_portais')"><span class="menu-btn-icon"><i class="fas fa-plug" aria-hidden="true"></i></span>Portais e configurações</button>
+          <!-- 03/11/2026: filtro do ramo, revisar as palavras que incluem e excluem, sugestões dos descartes e segundo filtro pela IA (JS_Licitacoes_Ramo.html / SGO_Licitacoes_Ramo.js) -->
+          <button type="button" class="menu-btn" data-mod="licitacoes_ramo" data-busca="filtro do ramo palavras que incluem excluem termos negativos positivos triagem radar candidatas fora do ramo sugestoes descarte segundo filtro ia nota minima tipo de servico" onclick="abrir('licitacoes_ramo')"><span class="menu-btn-icon"><i class="fas fa-filter" aria-hidden="true"></i></span>Revisar o filtro do ramo</button>
+          <button type="button" class="menu-btn" data-mod="licitacoes_relatorios" data-busca="relatorios relatorio licitacao a4 periodo oportunidade nota leitura habilitacao preco proposta historico rastreabilidade imprimir pdf" onclick="abrir('licitacoes_relatorios')"><span class="menu-btn-icon"><i class="fas fa-file-lines" aria-hidden="true"></i></span>Relatórios</button>
+          </div>
+        </div>
+
+        <!-- 29/10/2026: módulo Representação (JS_Representacao.html / SGO_Representacao*.js): a representada (perfil REPRESENTADA) vê só este grupo; a Metrolabs trata pedidos, conversas, representadas e catálogo. -->
+        <div class="sidebar-section menu-grupo" data-grupo="representacao" id="menu-secao-representacao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-representacao" onclick="Menu_alternarGrupo_('representacao')"><span class="menu-grupo-nome">Representação</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-representacao">
+          <button type="button" class="menu-btn" data-mod="representacao" data-busca="representacao representada brasmedical garantia pedido de atendimento parceiro conversa" id="menu-btn-representacao" onclick="abrir('representacao')"><span class="menu-btn-icon"><i class="fas fa-handshake" aria-hidden="true"></i></span>Representação</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="automacao" id="menu-secao-automacao" style="display:none;">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-automacao" onclick="Menu_alternarGrupo_('automacao')"><span class="menu-grupo-nome">Segurança predial</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-automacao">
+          <!-- 22/10/2026: Segurança e automação predial (JS_AutomacaoPredial.html / SGO_Automacao_Predial.js). Aparece para Administrador, Diretoria e quem tem permissão em algum dispositivo (AutPred_iniciar_); o servidor confere tudo. -->
+          <button type="button" class="menu-btn" data-mod="automacao_predial" data-busca="portao portoes fechadura porta diretoria smart life tuya automacao predial seguranca abrir destravar" id="menu-btn-automacao_predial" onclick="abrir('automacao_predial')" title="Portões e porta da Diretoria pelo SGO+"><span class="menu-btn-icon"><i class="fas fa-door-open" aria-hidden="true"></i></span>Segurança e automação predial</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="gestao" id="menu-secao-gestao">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-gestao" onclick="Menu_alternarGrupo_('gestao')"><span class="menu-grupo-nome">Gestão</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-gestao">
+          <button type="button" class="menu-btn" data-mod="gestao_decisoes" data-busca="decisoes pendencias gestor cobranca escada diretoria" id="menu-btn-gestao-decisoes" style="display:none;" onclick="abrir('gestao_decisoes')"><span class="menu-btn-icon"><i class="fas fa-inbox" aria-hidden="true"></i></span>Caixa de decisões<span class="menu-badge" id="menuBadgeDecisoes"></span></button>
+          <button type="button" class="menu-btn" data-mod="gestao_desempenho" data-busca="avaliacao gestor nota farol desempenho indicadores" id="menu-btn-gestao-desempenho" style="display:none;" onclick="abrir('gestao_desempenho')"><span class="menu-btn-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>Desempenho da gestão</button>
+          <button type="button" class="menu-btn" data-mod="qualidade" data-busca="qualidade ocorrencias indicadores" onclick="abrir('qualidade')"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Painel de qualidade</button>
+          <button type="button" class="menu-btn" data-mod="conduta" data-busca="conduta farol ico bonus pontuacao ocorrencias missoes ausencias" onclick="abrir('conduta')"><span class="menu-btn-icon"><i class="fas fa-traffic-light" aria-hidden="true"></i></span>Programa de conduta</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="cadastros" id="menu-secao-cadastros">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-cadastros" onclick="Menu_alternarGrupo_('cadastros')"><span class="menu-grupo-nome">Cadastros</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-cadastros">
+          <button type="button" class="menu-btn" data-mod="clientes" data-busca="cliente cnpj hospital empresa" id="menu-btn-clientes" onclick="abrir('clientes')"><span class="menu-btn-icon"><i class="fas fa-building" aria-hidden="true"></i></span>Clientes</button>
+          <button type="button" class="menu-btn" data-mod="unidades" data-busca="unidade filial local endereco" id="menu-btn-unidades" onclick="abrir('unidades')"><span class="menu-btn-icon"><i class="fas fa-location-dot" aria-hidden="true"></i></span>Unidades</button>
+          <button type="button" class="menu-btn" data-mod="equipamentos" data-busca="equipamento tag serie qr code prontuario" id="menu-btn-equipamentos" onclick="abrir('equipamentos')"><span class="menu-btn-icon"><i class="fas fa-industry" aria-hidden="true"></i></span>Equipamentos</button>
+          <!-- 31/10/2026: Relatório do ciclo da lavadora (JS_LavCiclo.html / SGO_LavCiclo_*.js): equipe interna e cliente (só os equipamentos dele; o servidor recorta). -->
+          <button type="button" class="menu-btn" data-mod="lavadora_ciclos" data-busca="relatorio ciclo lavadora ultrassonica sgolav lote fita assinatura termodesinfectora" id="menu-btn-lavadora_ciclos" onclick="abrir('lavadora_ciclos')"><span class="menu-btn-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>Relatórios de ciclo</button>
+          <button type="button" class="menu-btn" data-mod="vinculos" data-busca="vinculos cliente unidade equipamento auvo transferir consolidar desvincular auditoria" id="menu-btn-vinculos" onclick="abrir('vinculos')" title="Vínculos entre cliente, unidade, equipamento e documentos"><span class="menu-btn-icon"><i class="fas fa-diagram-project" aria-hidden="true"></i></span>Vínculos</button>
+          <!-- 29/10/2026: Correções de cadastro (JS_CadastroCorrecoes.html / SGO_CadastroQualidade.js): erros, cadastros a completar e repetidos de clientes, unidades e catálogo. Equipe interna; o servidor recorta por perfil. -->
+          <button type="button" class="menu-btn" data-mod="cadastro_correcoes" data-busca="correcoes cadastro erros duplicados repetidos incompleto completar juntar ciente qualidade dos cadastros" id="menu-btn-cadastro_correcoes" onclick="abrir('cadastro_correcoes')" title="Cadastros com erro, incompletos ou repetidos"><span class="menu-btn-icon"><i class="fas fa-list-check" aria-hidden="true"></i></span>Correções de cadastro</button>
+          <button type="button" class="menu-btn" data-mod="documentos" data-busca="documentos arquivo anexos nbr 15943 relatorios certificados contratos" id="menu-btn-documentos" onclick="abrir('documentos')"><span class="menu-btn-icon"><i class="fas fa-folder-open" aria-hidden="true"></i></span>Arquivo de documentos</button>
+          <button type="button" class="menu-btn" data-mod="inventario" data-busca="inventario parque tecnologico lista equipamentos" onclick="abrir('inventario')"><span class="menu-btn-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span>Inventário de equipamentos</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section menu-grupo" data-grupo="administracao" id="menu-secao-admin">
+          <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-administracao" onclick="Menu_alternarGrupo_('administracao')"><span class="menu-grupo-nome">Administração</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+          <div class="menu-grupo-itens" id="menu-grupo-itens-administracao">
+          <button type="button" class="menu-btn" data-mod="usuarios" data-busca="usuarios login senha perfil acesso celular whatsapp" id="menu-btn-usuarios" onclick="abrir('usuarios')" title="Usuários e perfis de acesso"><span class="menu-btn-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Usuários</button>
+          <button type="button" class="menu-btn" data-mod="admin" data-busca="administracao configuracoes ociosidade alertas sessao" onclick="abrir('admin')"><span class="menu-btn-icon"><i class="fas fa-gear" aria-hidden="true"></i></span>Configurações</button>
+          <button type="button" class="menu-btn" data-mod="chaves" data-busca="chaves senhas api integracoes whatsapp email" id="menu-btn-chaves" style="display:none;" onclick="abrir('chaves')"><span class="menu-btn-icon"><i class="fas fa-key" aria-hidden="true"></i></span>Chaves e senhas</button>
+          <button type="button" class="menu-btn" data-mod="seguranca_acesso" data-busca="seguranca acesso senha trocar troca obrigatoria codigo celular segundo fator token aparelho confiado registro login invasao" id="menu-btn-seguranca_acesso" style="display:none;" onclick="abrir('seguranca_acesso')" title="Troca de senha, código no celular e registro de acessos"><span class="menu-btn-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></span>Segurança do acesso</button>
+          <button type="button" class="menu-btn" data-mod="acessos" data-busca="acessos permissoes poderes caixas quem pode perfil liberar retirar modelo copiar historico" id="menu-btn-acessos" style="display:none;" onclick="abrir('acessos')" title="O que cada pessoa pode ver e fazer (caixas de acesso)"><span class="menu-btn-icon"><i class="fas fa-user-lock" aria-hidden="true"></i></span>Acessos</button>
+          <button type="button" class="menu-btn" data-mod="whatsapp_piloto" data-busca="piloto whatsapp meta quem recebe mensagens retidas relatorio" id="menu-btn-whatsapp_piloto" style="display:none;" onclick="abrir('whatsapp_piloto')" title="Quem recebe WhatsApp durante o piloto e o que saiu"><span class="menu-btn-icon"><i class="fas fa-comment-sms" aria-hidden="true"></i></span>Piloto do WhatsApp</button>
+          <button type="button" class="menu-btn" data-mod="avisos_matriz" data-busca="matriz de avisos regras notificacoes email whatsapp resumo do dia gestor da area medicao" id="menu-btn-avisos_matriz" style="display:none;" onclick="abrir('avisos_matriz')" title="Quem recebe cada aviso e por qual canal"><span class="menu-btn-icon"><i class="fas fa-table-list" aria-hidden="true"></i></span>Matriz de avisos</button>
+          <button type="button" class="menu-btn" data-mod="assistente" data-busca="assistente duvidas perguntas ajuda manual tire sua duvida" id="menu-btn-assistente" style="display:none;" onclick="abrir('assistente')"><span class="menu-btn-icon"><i class="fas fa-circle-question" aria-hidden="true"></i></span>Perguntas ao assistente</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content-area">
+        <section id="barraAlertas" class="alert-bar" style="display:none;"></section>
+        <section id="areaAvisos" class="avisos-wrap" style="display:none;"></section>
+        <section id="conteudo" class="content-panel"></section>
+      </main>
+
+    </div>
+
+    <!-- Barra do topo do celular (31/10/2026): Voltar, nome da tela numa linha, busca, Ajuda e o menu "Conta"
+         (nome de quem entrou, Trocar minha senha e Sair). O Voltar tem de ser o primeiro filho: no Início ele some
+         (UI_Estilos › .mobile-na-home). Menu: JS_Core › MenuConta_*. -->
+    <div class="mobile-topbar">
+      <button type="button" class="mobile-topbar-btn mobile-topbar-voltar" onclick="voltarMobile_()" aria-label="Voltar" title="Voltar"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Voltar</span></button>
+      <div id="mobileTopbarTitulo" class="mobile-topbar-titulo">Menu</div>
+      <button type="button" class="mobile-topbar-btn mobile-topbar-busca" onclick="Busca_abrir_()" aria-label="Buscar" title="Buscar"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></button>
+      <button type="button" id="mobileBtnAjuda" class="mobile-topbar-btn mobile-topbar-ajuda" onclick="Ajuda_abrir_()" aria-label="Como usar esta tela" title="Como usar esta tela"><i class="fas fa-circle-question" aria-hidden="true"></i><span>Ajuda</span></button>
+      <div class="mobile-conta">
+        <button type="button" id="mobileBtnConta" class="mobile-topbar-btn mobile-topbar-conta" onclick="MenuConta_alternar_()" aria-haspopup="menu" aria-expanded="false" aria-controls="mobileMenuConta" aria-label="Conta: trocar minha senha e sair" title="Conta"><i class="fas fa-ellipsis-vertical" aria-hidden="true"></i><span>Conta</span></button>
+        <div id="mobileMenuConta" class="mobile-conta-menu" role="menu" aria-labelledby="mobileBtnConta" hidden>
+          <div id="mobileContaQuem" class="mobile-conta-quem"></div>
+          <button type="button" role="menuitem" class="mobile-conta-item" onclick="MenuConta_fechar_(true); abrir('trocar_senha')"><i class="fas fa-key" aria-hidden="true"></i>Trocar minha senha</button>
+          <button type="button" role="menuitem" class="mobile-conta-item mobile-conta-sair" onclick="MenuConta_fechar_(true); logout()"><i class="fas fa-right-from-bracket" aria-hidden="true"></i>Sair</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<?!= include('JS_Core'); ?>
+<!-- Etapa 1 (01/11/2026): navegação e voltar únicos, janelas na pilha e visualizador de documentos do celular -->
+<?!= include('JS_Navegacao'); ?>
+<?!= include('JS_Admin'); ?>
+<?!= include('JS_Equipamentos'); ?>
+<?!= include('JS_Cadastros'); ?>
+<?!= include('JS_Vinculos'); ?>
+<?!= include('JS_CadastroCorrecoes'); ?>
+<?!= include('JS_QualifVinculo'); ?>
+<?!= include('JS_DocRevisao'); ?>
+<?!= include('JS_TemplateAutoclave'); ?>
+<?!= include('JS_TemplateLavadora'); ?>
+<?!= include('JS_AutoclaveRelatorio'); ?>
+<?!= include('JS_LavadoraRelatorio'); ?>
+<?!= include('JS_CadeiaFrioRelatorio'); ?>
+<?!= include('JS_EstufaBanhoRelatorio'); ?>
+<?!= include('JS_BaixaTemp'); ?>
+<?!= include('JS_DeclaracaoExec'); ?>
+<?!= include('JS_DeclaracaoExecQIQO'); ?>
+<?!= include('JS_RelCal'); ?>
+<?!= include('JS_CertCal'); ?>
+<?!= include('JS_Frota'); ?>
+<?!= include('JS_PlanejamentoCME'); ?>
+<?!= include('JS_CronExec'); ?>
+<?!= include('JS_PgtPop'); ?>
+<?!= include('JS_RegOp'); ?>
+<?!= include('JS_NR13'); ?>
+<?!= include('JS_Auvo'); ?>
+<?!= include('JS_Qualidade'); ?>
+<?!= include('JS_Conduta'); ?>
+<?!= include('JS_Inventario'); ?>
+<?!= include('JS_Atividades'); ?>
+<?!= include('JS_Avisos'); ?>
+<?!= include('JS_Chaves'); ?>
+<?!= include('JS_SegurancaAcesso'); ?>
+<?!= include('JS_Acessos'); ?>
+<?!= include('JS_AutomacaoPredial'); ?>
+<?!= include('JS_ModoPersonalizado'); ?>
+<?!= include('JS_WhatsappPiloto'); ?>
+<?!= include('JS_AvisosMatriz'); ?>
+<?!= include('JS_Inicio'); ?>
+<?!= include('JS_EnviarDoc'); ?>
+<?!= include('JS_Gestao'); ?>
+<?!= include('JS_Comercial'); ?>
+<?!= include('JS_Compras'); ?>
+<?!= include('JS_PainelAtendimento'); ?>
+<?!= include('JS_Assistencia'); ?>
+<?!= include('JS_Representacao'); ?>
+<?!= include('JS_Licitacoes'); ?>
+<?!= include('JS_Licitacoes_Leitura'); ?>
+<?!= include('JS_Licitacoes_Precos'); ?>
+<?!= include('JS_Licitacoes_Habilitacao'); ?>
+<?!= include('JS_Licitacoes_Proposta'); ?>
+<?!= include('JS_Licitacoes_Relatorios'); ?>
+<?!= include('JS_Licitacoes_Disputa'); ?>
+<?!= include('JS_Licitacoes_Contratos'); ?>
+<?!= include('JS_Licitacoes_Pareceres'); ?>
+<?!= include('JS_Licitacoes_Mercado'); ?>
+<?!= include('JS_Licitacoes_Ramo'); ?>
+<?!= include('JS_LavCiclo'); ?>
+<?!= include('JS_Ponto'); ?>
+<?!= include('JS_Email'); ?>
+<?!= include('JS_Assistente'); ?>
+<!-- Comunicação compartilhada SGO+ <-> COMMAND (balão). COM_CFG precisa vir ANTES do widget. -->
+<script>
+  // imagens: o SGO+ tem comImagemApi (SGO_ComunicacaoImagens.js); no COMMAND fica sem, e a imagem aparece só como "Imagem: explicação"
+  window.COM_CFG = { sistema: "SGO", outro: "COMMAND", imagens: true,
+    // 29/10/2026: o perfil Representada não usa o bate-papo interno (a conversa com ela é no módulo Representação)
+    token: function () { try { if (typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_()) return ""; return (window.SGO_getSessionId && SGO_getSessionId()) || ""; } catch (e) { return ""; } } };
+</script>
+<?!= include('ComunicacaoWidget'); ?>
+<!-- Assistente "Tire sua dúvida" (componente comum SGO+ e COMMAND). ASSIST_CFG vem de JS_Assistente, antes deste include. -->
+<?!= include('AssistenteWidget'); ?>
+
+  <script>
+    // Relógio em tempo real otimizado
+    document.addEventListener("DOMContentLoaded", function() {
+      const elRelogio = document.getElementById('relogioTopo');
+      if (elRelogio) {
+        setInterval(function() {
+          const agora = new Date();
+          const dia = String(agora.getDate()).padStart(2, '0');
+          const mes = String(agora.getMonth() + 1).padStart(2, '0');
+          const ano = agora.getFullYear();
+          const horas = String(agora.getHours()).padStart(2, '0');
+          const min = String(agora.getMinutes()).padStart(2, '0');
+          const seg = String(agora.getSeconds()).padStart(2, '0');
+          elRelogio.innerText = `${dia}/${mes}/${ano}, ${horas}:${min}:${seg}`;
+        }, 1000);
+      }
+    });
+
+    // Arquivo de documentos: a tela passou para JS_Admin.html › renderDocumentosModulo_ (CADASTROS E ADMINISTRAÇÃO 17/10).
+  </script>
+
+  <script>
+    window.SGO_QR_STATE = {
+      equipamentoId: null,
+      processando: false,
+      redirecionado: false
+    };
+
+    function sgoQrGetEquipamentoId_() {
+      try {
+        const url = new URL(window.location.href);
+        return url.searchParams.get("equipamento") || "";
+      } catch (e) {
+        try {
+          const query = window.location.search || "";
+          const params = new URLSearchParams(query);
+          return params.get("equipamento") || "";
+        } catch (err) {
+          return "";
+        }
+      }
+    }
+
+    function sgoQrTemFluxo_() {
+      return !!sgoQrGetEquipamentoId_();
+    }
+
+    function sgoQrMostrarMensagem_(msg) {
+      try { alert(msg); } catch (e) { console.error(msg); }
+    }
+
+    function sgoQrExecutarAcesso_(sessionId) {
+      const equipamentoId = sgoQrGetEquipamentoId_();
+      if (!equipamentoId || !sessionId) return;
+      if (window.SGO_QR_STATE.processando || window.SGO_QR_STATE.redirecionado) return;
+
+      window.SGO_QR_STATE.equipamentoId = equipamentoId;
+      window.SGO_QR_STATE.processando = true;
+
+      const btn = document.getElementById("btnLogin");
+      if(btn) {
+        btn.innerText = "Acessando Equipamento...";
+        btn.disabled = true;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          window.SGO_QR_STATE.processando = false;
+
+          if (!res || !res.success) {
+            sgoQrMostrarMensagem_((res && res.message) ? res.message : "Acesso negado ao equipamento.");
+            if(btn) { btn.innerText = "Entrar"; btn.disabled = false; }
+            return;
+          }
+
+          const redirectUrl = (res.redirectUrl || "").trim();
+          if (!redirectUrl) {
+            sgoQrMostrarMensagem_("Link do equipamento não encontrado.");
+            if(btn) { btn.innerText = "Entrar"; btn.disabled = false; }
+            return;
+          }
+
+          window.SGO_QR_STATE.redirecionado = true;
+          window.location.href = redirectUrl;
+        })
+        .withFailureHandler(function(err) {
+          window.SGO_QR_STATE.processando = false;
+          console.error("Falha ao acessar via QR Code:", err);
+          sgoQrMostrarMensagem_("Não foi possível abrir o equipamento pelo QR Code. Verifique a conexão e tente de novo.");
+          if(btn) { btn.innerText = "Entrar"; btn.disabled = false; }
+        })
+        .qrcodeAcessar(sessionId, equipamentoId);
+    }
+
+    function sgoQrValidarSessaoEExecutar_() {
+      const equipamentoId = sgoQrGetEquipamentoId_();
+      if (!equipamentoId) return;
+
+      const sessionId = sessionStorage.getItem("SGO_SESSION") || 
+                        sessionStorage.getItem("SGO_SESSION_ID") || 
+                        sessionStorage.getItem("sessionId") || "";
+
+      if (!sessionId) return; 
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          const ok = !!(res && (res.valid || res.success));
+          if (!ok) {
+            try {
+              sessionStorage.removeItem("SGO_SESSION");
+              sessionStorage.removeItem("SGO_SESSION_ID");
+              sessionStorage.removeItem("sessionId");
+            } catch (e) {}
+            return;
+          }
+
+          sgoQrExecutarAcesso_(sessionId);
+        })
+        .withFailureHandler(function() {
+          try {
+            sessionStorage.removeItem("SGO_SESSION");
+            sessionStorage.removeItem("SGO_SESSION_ID");
+            sessionStorage.removeItem("sessionId");
+          } catch (e) {}
+        })
+        .validarSessao(sessionId);
+    }
+
+    function sgoQrPatchLogin_() {
+      if (typeof window.fazerLogin !== "function") return;
+      if (window.__SGO_QR_LOGIN_PATCHED__) return;
+
+      const loginOriginal = window.fazerLogin;
+
+      window.fazerLogin = function() {
+        const retorno = loginOriginal.apply(this, arguments);
+
+        setTimeout(function() {
+          if (sgoQrTemFluxo_()) {
+            sgoQrValidarSessaoEExecutar_();
+          }
+        }, 1000); 
+
+        return retorno;
+      };
+
+      window.__SGO_QR_LOGIN_PATCHED__ = true;
+    }
+
+    function sgoQrBootstrap_() {
+      try {
+        // 20/10/2026: com a tela do equipamento no próprio SGO+ (JS_Core.html, renderProntuarioDigital_, com a seção
+        // Qualificação), este desvio direto para a pasta não roda mais: ele trocava a página e escondia a seção.
+        if (typeof renderProntuarioDigital_ === "function") return;
+        sgoQrPatchLogin_();
+
+        if (sgoQrTemFluxo_()) {
+          sgoQrValidarSessaoEExecutar_();
+        }
+      } catch (e) {
+        console.error("Falha no bootstrap do QR:", e);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      setTimeout(sgoQrBootstrap_, 300);
+    });
+  </script>
+
+  <!-- Overlay global de carregamento — mostrado por SGO_iniciarCarregamento_()/
+       SGO_finalizarCarregamento_() (JS_Core.html) em toda chamada ao servidor
+       que registra/salva/gera algo, em qualquer módulo. Objetivo: sem isto,
+       clique em ação sem nenhum feedback visual levava usuário a clicar
+       várias vezes, gerando registro duplicado (mesma causa raiz do bug de
+       retirada duplicada da Frota, só que espalhada pelo Portal inteiro). -->
+  <div id="sgoOverlayCarregando" class="sgo-overlay-carregando" aria-hidden="true">
+    <div class="sgo-overlay-caixa">
+      <div class="sgo-overlay-spinner"></div>
+      <div id="sgoOverlayCarregandoTexto" class="sgo-overlay-texto">Aguarde, processando...</div>
+    </div>
+  </div>
+</body>
+</html>

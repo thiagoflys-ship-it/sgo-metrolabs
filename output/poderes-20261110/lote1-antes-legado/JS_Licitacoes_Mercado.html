@@ -1,0 +1,371 @@
+<!--
+  SGO+ LICITAÇÕES — FORNECEDORES, CONCORRENTES E INTELIGÊNCIA DE MERCADO (03/11/2026): a tela "Inteligência de mercado" (concorrentes,
+  órgãos, preço de referência, cadastro de fornecedores e registros manuais), a aba "Mercado" da ficha e o quadro do mercado na tela do
+  pedido de parecer. Servidor: SGO_Licitacoes_Mercado.js (Licitacoes_api ação "mercado" com { op }). Usa os utilitários de
+  JS_Licitacoes.html (Lic_esc_, Lic_chamar_, Lic_janela_, Lic_faixa_, Lic_tabelaHtml_, Lic_brlHtml_, Lic_toast_, Lic_carregando_,
+  Lic_erroTela_, Lic_ligarRefazer_, Lic_irFicha_, Lic_num_, Lic_url_, Lic_corpo_). Todo texto passa por Lic_esc_. Só consulta: as únicas
+  gravações são do cadastro e dos registros manuais, sempre por ação de quem está na tela. Sem atualização automática.
+-->
+<style>
+  .lmk-filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 0 0 10px; }
+  .lmk-filtros label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 3px; }
+  .lmk-filtros input, .lmk-filtros select { min-height: 44px; box-sizing: border-box; max-width: 100%; }
+  .lmk-filtros > div { flex: 1 1 180px; min-width: 0; }
+  .lmk-campo { margin: 8px 0; }
+  .lmk-campo label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .lmk-campo input, .lmk-campo select, .lmk-campo textarea { width: 100%; min-height: 44px; box-sizing: border-box; max-width: 100%; }
+  .lmk-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 12px; }
+  .lmk-dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px 14px; margin: 8px 0; font-size: 12.5px; }
+  .lmk-dl div { min-width: 0; }
+  .lmk-dl span { display: block; color: var(--muted); font-weight: 700; font-size: 11.5px; }
+  .lmk-dl b { font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .lmk-lista { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; }
+  .lmk-lista li { padding: 6px 0; border-top: 1px dashed var(--border); overflow-wrap: anywhere; }
+  .lmk-det summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+  .lmk-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  @media (max-width: 900px) { .lmk-acoes .btn-primary, .lmk-acoes .btn-secondary { flex: 1 1 140px; } }
+</style>
+<script>
+  var LICMK = { aba: "concorrentes", meses: 24, busca: "", servico: "", equipamento: "", tela: null, ficha: {} };
+  var LICMK_ABAS = [["concorrentes", "Concorrentes"], ["orgaos", "Órgãos"], ["referencia", "Preço de referência"], ["cadastro", "Cadastro de fornecedores"], ["registros", "Registros manuais"]];
+
+  function LicMk_chamar_(op, dados, ok, erro, o) { Lic_chamar_("mercado", Object.assign({ op: op }, dados || {}), ok, erro, Object.assign({ ignorarVelha: true }, o || {})); }
+  function LicMk_selo_(cor, texto) { return '<span class="cm-selo ' + Lic_esc_(cor || "cinza") + '">' + Lic_esc_(texto) + "</span>"; }
+  function LicMk_dl_(pares) { return '<div class="lmk-dl">' + pares.map(function (x) { return "<div><span>" + Lic_esc_(x[0]) + "</span><b>" + x[1] + "</b></div>"; }).join("") + "</div>"; }
+  function LicMk_pct_(v) { return v === null || v === undefined || !isFinite(Number(v)) ? "—" : Lic_esc_(Lic_num_(v) + "%"); }
+  function LicMk_rs_(v) { return v === null || v === undefined || !isFinite(Number(v)) ? "—" : Lic_brlHtml_(v); }
+  function LicMk_valor_(id) { var e = Lic_$_(id); return e ? e.value : ""; }
+  function LicMk_msg_(id, texto, tipo) { var e = Lic_$_(id); if (e) e.innerHTML = Lic_faixa_(texto, tipo || "erro"); }
+  function LicMk_link_(url, texto) { var u = Lic_url_(url); return u ? '<a href="' + Lic_esc_(u) + '" target="_blank" rel="noopener noreferrer">' + Lic_esc_(texto || "abrir a fonte") + "</a>" : ""; }
+  function LicMk_desconto_(d) { if (!d || !d.n) return "—"; return LicMk_pct_(d.media) + ' <span class="cm-meta">(n = ' + Lic_esc_(d.n) + (d.pequena ? ", amostra pequena" : "") + ")</span>"; }
+  function LicMk_estatTxt_(s) {
+    if (!s || s.semDados) return LicMk_selo_("cinza", "Sem dados");
+    return '<span class="lmk-num">' + Lic_brlHtml_(s.mediana) + "</span>" + (s.pequena ? " " + LicMk_selo_("laranja", "amostra pequena") : "");
+  }
+  function LicMk_fontesHtml_(fontes) {
+    if (!(fontes || []).length) return '<p class="cm-vazio">Sem fonte registrada.</p>';
+    return '<ul class="lmk-lista">' + fontes.map(function (f) {
+      return "<li>" + (f.valor !== undefined && f.valor !== null ? '<b class="lmk-num">' + Lic_brlHtml_(f.valor) + "</b> · " : "") + Lic_esc_(f.fornecedor || "") + " · " + Lic_esc_(f.orgao || "") + (f.uf ? "/" + Lic_esc_(f.uf) : "") + " · " + Lic_esc_(f.dataTxt || "sem data") +
+        '<br><span class="cm-meta">' + Lic_esc_(f.origemNome || "") + (f.fonte ? ": " + Lic_esc_(f.fonte) : "") + (f.descricao ? " · item: " + Lic_esc_(f.descricao) : "") + "</span> " + LicMk_link_(f.link, "abrir no PNCP") + "</li>";
+    }).join("") + "</ul>";
+  }
+
+  // ================= tela "Inteligência de mercado" =================
+  function LicMk_renderTela_() {
+    var c = Lic_corpo_(); if (!c) return;
+    c.innerHTML = Lic_carregando_(3);
+    LicMk_chamar_("tela", { meses: LICMK.meses }, function (r) { LICMK.tela = r; LicMk_desenharTela_(); }, function (m) { c.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(c, LicMk_renderTela_); });
+  }
+  function LicMk_coletaHtml_(t) {
+    var k = t.coleta || {}, s = k.servidor, u = k.ultima, h = '<div class="cm-caixa"><h3>De onde vêm os dados</h3>';
+    h += '<p class="cm-txt">Três fontes, cada número diz a sua: os <b>resultados publicados no PNCP</b> (vencedor e preço homologado de cada item, lidos pelo coletor do servidor nas licitações do ramo já encerradas), as <b>disputas da Metrolabs</b> registradas pela Diretoria e os <b>registros manuais</b> (ata lida pela Diretoria, com a fonte). O PNCP publica só o vencedor de cada item: quem participou e perdeu aparece só pelas disputas e pelos registros manuais.</p>';
+    if (!k.coletor) h += Lic_faixa_(k.semColetorTxt || "Sem o coletor neste ambiente.", "aviso");
+    else if (k.erroServidor) h += Lic_faixa_("Não foi possível ler a situação do coletor de resultados agora (" + k.erroServidor + "). Os dados já sincronizados continuam valendo; tente de novo em alguns minutos.", "aviso");
+    else if (s) h += LicMk_dl_([["Contratações na fila", Lic_esc_(s.fila)], ["Lidas no PNCP", Lic_esc_(s.lidas)], ["Completas", Lic_esc_(s.completas)], ["Resultados no servidor", Lic_esc_(s.resultados)], ["Última leitura", Lic_esc_(s.ultimaLeituraEm ? Lic_dataHora_(s.ultimaLeituraEm) : "ainda nenhuma")], ["Com erro", Lic_esc_(s.comErro)]]);
+    h += '<p class="cm-meta">' + (u ? "Última sincronia com o SGO+: " + Lic_esc_(u.emTxt) + " (" + Lic_esc_(u.por) + "), " + Lic_esc_(u.novos) + " resultado(s) novo(s)." : "Ainda não houve sincronia com o SGO+.") + "</p>";
+    h += '<div class="lic-acoes-linha lmk-acoes"><button type="button" class="btn-secondary" data-lmk-sincronizar><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Sincronizar agora</button></div>';
+    if (t.fora && (t.fora.alterados || t.fora.cancelados)) h += '<p class="cm-ajuda-campo">Fora das contas: ' + Lic_esc_(t.fora.cancelados) + " resultado(s) cancelado(s) na fonte ou anulado(s)" + (t.fora.alterados ? " e " + Lic_esc_(t.fora.alterados) + " registro(s) alterado(s) fora do SGO+ (avise o Administrador)" : "") + ".</p>";
+    return h + "</div>";
+  }
+  function LicMk_desenharTela_() {
+    var c = Lic_corpo_(), t = LICMK.tela; if (!c || !t) return;
+    var k = t.contagens || {};
+    var h = LicMk_coletaHtml_(t) + '<div class="cm-caixa">' + LicMk_dl_([["Período", Lic_esc_("últimos " + t.meses + " meses (desde " + t.desdeTxt + ")")], ["Registros", Lic_esc_(k.observacoes)], ["Com preço", Lic_esc_(k.comPreco)], ["Contratações", Lic_esc_(k.contratacoes)], ["Concorrentes", Lic_esc_(k.concorrentes)], ["Órgãos", Lic_esc_(k.orgaos)], ["No cadastro", Lic_esc_(k.cadastrados)]]) +
+      '<p class="cm-ajuda-campo">Calculado pelo sistema (regras ' + Lic_esc_(t.regras) + "), sem IA. Grupo de menos de " + Lic_esc_(t.amostraMin) + " preços mostra \"amostra pequena\"; sem preço mostra \"sem dados\".</p></div>";
+    h += '<div class="cm-tabs" role="tablist" aria-label="Partes da inteligência de mercado">' + LICMK_ABAS.map(function (a) { return '<button type="button" class="cm-tab' + (a[0] === LICMK.aba ? " active" : "") + '" role="tab" aria-selected="' + (a[0] === LICMK.aba) + '" data-lmk-aba="' + a[0] + '">' + Lic_esc_(a[1]) + "</button>"; }).join("") + "</div>";
+    h += '<div class="lmk-filtros"><div><label for="lmkMeses">Período</label><select id="lmkMeses">' + [6, 12, 24, 36, 60].map(function (m) { return '<option value="' + m + '"' + (m === LICMK.meses ? " selected" : "") + ">Últimos " + m + " meses</option>"; }).join("") + "</select></div>" +
+      '<div><label for="lmkBusca">Buscar</label><input id="lmkBusca" type="search" maxlength="120" value="' + Lic_esc_(LICMK.busca) + '" placeholder="Nome, CNPJ, órgão ou serviço"></div>' +
+      (LICMK.aba === "referencia" ? '<div><label for="lmkServ">Tipo de serviço</label><select id="lmkServ"><option value="">Todos</option>' + (t.servicos || []).map(function (s) { return '<option value="' + Lic_esc_(s.codigo) + '"' + (s.codigo === LICMK.servico ? " selected" : "") + ">" + Lic_esc_(s.nome) + "</option>"; }).join("") + "</select></div>" +
+        '<div><label for="lmkEquip">Equipamento</label><select id="lmkEquip"><option value="">Todos</option>' + (t.equipamentos || []).map(function (s) { return '<option value="' + Lic_esc_(s.codigo) + '"' + (s.codigo === LICMK.equipamento ? " selected" : "") + ">" + Lic_esc_(s.nome) + "</option>"; }).join("") + "</select></div>" : "") +
+      '<div style="flex:0 0 auto"><button type="button" class="btn-primary" data-lmk-filtrar>Filtrar</button></div></div><div id="lmkConteudo">' + Lic_carregando_(2) + "</div>";
+    c.innerHTML = h;
+    var sc = c.querySelector("[data-lmk-sincronizar]"); if (sc) sc.onclick = function () { sc.disabled = true; LicMk_chamar_("sincronizar", {}, function (r) { Lic_toast_(r.texto); LicMk_renderTela_(); }, function (m) { sc.disabled = false; Lic_toast_(m, "erro"); }); };
+    c.querySelectorAll("[data-lmk-aba]").forEach(function (b) { b.onclick = function () { LICMK.aba = b.getAttribute("data-lmk-aba"); LicMk_desenharTela_(); }; });
+    var filtrar = function () { LICMK.meses = Number(LicMk_valor_("lmkMeses")) || 24; LICMK.busca = LicMk_valor_("lmkBusca"); if (Lic_$_("lmkServ")) LICMK.servico = LicMk_valor_("lmkServ"); if (Lic_$_("lmkEquip")) LICMK.equipamento = LicMk_valor_("lmkEquip"); LicMk_carregarAba_(); };
+    c.querySelector("[data-lmk-filtrar]").onclick = filtrar;
+    var bu = Lic_$_("lmkBusca"); if (bu) bu.onkeydown = function (e) { if (e.key === "Enter") filtrar(); };
+    LicMk_carregarAba_();
+  }
+  function LicMk_alvo_() { return Lic_$_("lmkConteudo"); }
+  function LicMk_carregarAba_() {
+    var el = LicMk_alvo_(); if (!el) return;
+    el.innerHTML = Lic_carregando_(2);
+    var f = { meses: LICMK.meses, busca: LICMK.busca }, erro = function (m) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, LicMk_carregarAba_); };
+    if (LICMK.aba === "orgaos") LicMk_chamar_("orgaos", f, LicMk_desenharOrgaos_, erro);
+    else if (LICMK.aba === "referencia") LicMk_chamar_("referencia", Object.assign(f, { servico: LICMK.servico, equipamento: LICMK.equipamento }), LicMk_desenharReferencia_, erro);
+    else if (LICMK.aba === "cadastro") LicMk_chamar_("fornecedores", { busca: LICMK.busca }, LicMk_desenharCadastro_, erro);
+    else if (LICMK.aba === "registros") LicMk_chamar_("manuais", {}, LicMk_desenharRegistros_, erro);
+    else LicMk_chamar_("concorrentes", f, LicMk_desenharConcorrentes_, erro);
+  }
+  /** Tela vazia: o quê, por quê e o que fazer. */
+  function LicMk_vazio_(oque) {
+    var t = LICMK.tela || {}, k = t.coleta || {};
+    var porque = !k.coletor ? "neste ambiente não há o coletor do servidor (os resultados do PNCP só chegam no SGO+ do servidor próprio)" : k.servidor && !k.servidor.lidas ? "o coletor ainda não leu nenhum resultado no PNCP (ele lê as licitações do ramo 2 dias depois do fim das propostas, até 40 consultas a cada rodada)" : "nada no período e no filtro escolhidos";
+    return '<div class="cm-caixa">' + Lic_faixa_(oque + ": " + porque + ".", "aviso") + '<p class="cm-txt">O que fazer: aumente o período ou limpe a busca; toque em "Sincronizar agora" para trazer o que o coletor já leu; na ficha de uma licitação encerrada, aba Mercado, peça "Buscar resultados no PNCP"; ou registre um resultado lido em ata (aba Registros manuais).</p></div>';
+  }
+  function LicMk_desenharConcorrentes_(r) {
+    var el = LicMk_alvo_(); if (!el) return;
+    if (!(r.lista || []).length) { el.innerHTML = LicMk_vazio_("Nenhum concorrente encontrado"); return; }
+    el.innerHTML = '<div class="cm-caixa"><h3>Concorrentes (' + Lic_esc_(r.total) + ")</h3>" + (r.cortada ? '<p class="cm-meta">Mostrando os 100 primeiros: use a busca.</p>' : "") +
+      Lic_tabelaHtml_(["Concorrente", "Participações conhecidas", "Vitórias", "Desconto médio sobre o estimado", "Onde mais ganha", "UFs", ""], r.lista.map(function (x) {
+        return ["<b>" + Lic_esc_(x.nome) + "</b>" + (x.cnpj ? '<br><span class="cm-meta lic-mono">' + Lic_esc_(x.cnpjTxt) + "</span>" : " " + LicMk_selo_("laranja", "sem CNPJ")) + (x.porte ? " " + LicMk_selo_("cinza", x.porte) : ""),
+          Lic_esc_(x.participacoes), Lic_esc_(x.vitorias + " (" + x.itensGanhos + " item(ns))"), LicMk_desconto_(x.desconto), Lic_esc_((x.orgaos || []).slice(0, 2).map(function (o) { return o.nome + " (" + o.n + ")"; }).join("; ") || "—"),
+          Lic_esc_((x.ufs || []).slice(0, 4).map(function (u) { return u.nome + " " + u.n; }).join(", ") || "—"), '<button type="button" class="btn-secondary" data-lmk-conc="' + Lic_esc_(x.chave) + '">Abrir</button>'];
+      })) + '<p class="cm-ajuda-campo">Participações conhecidas = licitações em que o concorrente aparece em qualquer fonte. O PNCP publica só o vencedor: participação sem vitória vem das disputas da Metrolabs e dos registros manuais.</p></div>';
+    el.querySelectorAll("[data-lmk-conc]").forEach(function (b) { b.onclick = function () { LicMk_abrirConcorrente_(b.getAttribute("data-lmk-conc")); }; });
+  }
+  function LicMk_voltarHtml_() { return '<div class="lic-acoes-linha" style="margin-bottom:10px"><button type="button" class="btn-secondary" data-lmk-voltar><i class="fas fa-arrow-left" aria-hidden="true"></i>&nbsp;Voltar à lista</button></div>'; }
+  function LicMk_ligarVoltar_(el) { var v = el.querySelector("[data-lmk-voltar]"); if (v) v.onclick = LicMk_carregarAba_; }
+  function LicMk_abrirConcorrente_(chave) {
+    var el = LicMk_alvo_(); if (!el) return;
+    el.innerHTML = Lic_carregando_(2);
+    LicMk_chamar_("concorrente", { chave: chave, meses: LICMK.meses }, function (r) {
+      var x = r.concorrente, h = LicMk_voltarHtml_() + '<div class="cm-caixa"><h3>' + Lic_esc_(x.nome) + "</h3>" + LicMk_dl_([["CNPJ", x.cnpj ? '<span class="lic-mono">' + Lic_esc_(x.cnpjTxt) + "</span>" : "sem CNPJ (nome digitado na disputa)"], ["Participações conhecidas", Lic_esc_(x.participacoes)], ["Vitórias", Lic_esc_(x.vitorias)], ["Itens ganhos", Lic_esc_(x.itensGanhos)],
+        ["Valor ganho (total homologado)", LicMk_rs_(x.valorGanho)], ["Desconto médio sobre o estimado", LicMk_desconto_(x.desconto)], ["Primeiro e último registro", Lic_esc_((x.primeira || "—") + " a " + (x.ultima || "—"))], ["De onde vem", Lic_esc_((x.origens || []).map(function (o) { return o.nome + " (" + o.n + ")"; }).join("; "))]]);
+      if (!x.cnpj) h += Lic_faixa_("Este nome foi digitado na disputa sem CNPJ: as vitórias e participações dele não se juntam ao cadastro. Em Cadastro de fornecedores › Concorrentes das disputas sem CNPJ, use \"Ligar ao CNPJ\".", "aviso");
+      h += "</div>";
+      h += '<div class="cm-caixa"><h3>Faixa de preço por tipo de serviço</h3>' + ((x.faixas || []).length ? Lic_tabelaHtml_(["Serviço", "n", "Menor", "Mediana", "Maior"], x.faixas.map(function (f) { return [Lic_esc_(f.nome) + (f.pequena ? " " + LicMk_selo_("laranja", "amostra pequena") : ""), Lic_esc_(f.n), LicMk_rs_(f.min), LicMk_rs_(f.mediana), LicMk_rs_(f.max)]; })) : '<p class="cm-vazio">Sem preço registrado deste concorrente no período (as participações sem vitória não têm preço homologado).</p>') + "</div>";
+      h += '<div class="cm-caixa"><h3>Órgãos e UFs</h3>' + Lic_tabelaHtml_(["Órgão", "Vezes"], (x.orgaos || []).map(function (o) { return [Lic_esc_(o.nome), Lic_esc_(o.n)]; })) + '<p class="cm-meta">UFs: ' + Lic_esc_((x.ufs || []).map(function (u) { return u.nome + " (" + u.n + ")"; }).join(", ") || "—") + "</p></div>";
+      h += '<div class="cm-caixa"><h3>Registros (' + Lic_esc_((r.registros || []).length) + ")</h3>" + Lic_tabelaHtml_(["Data", "Papel", "Órgão", "Item", "Valor unitário", "Desconto", "Fonte"], (r.registros || []).map(function (g) {
+        return [Lic_esc_(g.dataTxt || "—"), Lic_esc_(g.papelNome), Lic_esc_(g.orgao + (g.uf ? "/" + g.uf : "")), Lic_esc_(g.descricao || g.grupoNome), LicMk_rs_(g.valor), LicMk_pct_(g.desconto), Lic_esc_(g.origemNome) + " " + LicMk_link_(g.link, "abrir")];
+      })) + "</div>";
+      el.innerHTML = h; LicMk_ligarVoltar_(el);
+    }, function (m) { el.innerHTML = LicMk_voltarHtml_() + Lic_erroTela_(m); LicMk_ligarVoltar_(el); Lic_ligarRefazer_(el, function () { LicMk_abrirConcorrente_(chave); }); });
+  }
+  function LicMk_vencedoresHtml_(lista, comPreco) {
+    if (!(lista || []).length) return '<p class="cm-vazio">Sem vencedor registrado.</p>';
+    var cabs = ["Quem ganhou", "Vitórias", "Itens"].concat(comPreco ? ["Valor total", "Desconto médio"] : []);
+    return Lic_tabelaHtml_(cabs, lista.map(function (v) {
+      var l = ["<b>" + Lic_esc_(v.nome) + "</b>" + (v.proprio ? " " + LicMk_selo_("verde", "nós") : v.cnpj ? '<br><span class="cm-meta lic-mono">' + Lic_esc_(v.cnpjTxt) + "</span>" : ""), Lic_esc_(v.vitorias), Lic_esc_(v.itens)];
+      return comPreco ? l.concat([LicMk_rs_(v.valor), LicMk_desconto_(v.desconto)]) : l;
+    }));
+  }
+  function LicMk_desenharOrgaos_(r) {
+    var el = LicMk_alvo_(); if (!el) return;
+    if (!(r.lista || []).length) { el.innerHTML = LicMk_vazio_("Nenhum órgão com resultado"); return; }
+    el.innerHTML = '<div class="cm-caixa"><h3>Órgãos (' + Lic_esc_(r.total) + ")</h3>" + (r.cortada ? '<p class="cm-meta">Mostrando os 100 primeiros: use a busca.</p>' : "") +
+      Lic_tabelaHtml_(["Órgão", "Contratações com resultado", "Quem mais ganha", "Desconto médio", ""], r.lista.map(function (o) {
+        return ["<b>" + Lic_esc_(o.nome) + "</b>" + (o.uf ? " · " + Lic_esc_(o.uf) : "") + (o.cnpj ? '<br><span class="cm-meta lic-mono">' + Lic_esc_(o.cnpjTxt) + "</span>" : ""), Lic_esc_(o.contratacoes + " (" + o.itens + " item(ns))"),
+          Lic_esc_(o.vencedores.map(function (v) { return v.nome + " (" + v.vitorias + ")"; }).join("; ")) + (o.totalVencedores > 3 ? '<span class="cm-meta"> e mais ' + Lic_esc_(o.totalVencedores - 3) + "</span>" : ""), LicMk_desconto_(o.desconto),
+          '<button type="button" class="btn-secondary" data-lmk-org="' + Lic_esc_(o.chave) + '">Abrir</button>'];
+      })) + "</div>";
+    el.querySelectorAll("[data-lmk-org]").forEach(function (b) { b.onclick = function () { LicMk_abrirOrgao_(b.getAttribute("data-lmk-org")); }; });
+  }
+  function LicMk_abrirOrgao_(chave) {
+    var el = LicMk_alvo_(); if (!el) return;
+    el.innerHTML = Lic_carregando_(2);
+    LicMk_chamar_("orgao", { chave: chave, meses: LICMK.meses }, function (r) {
+      var o = r.orgao;
+      el.innerHTML = LicMk_voltarHtml_() + '<div class="cm-caixa"><h3>' + Lic_esc_(o.nome) + "</h3>" + LicMk_dl_([["CNPJ", o.cnpj ? '<span class="lic-mono">' + Lic_esc_(o.cnpjTxt) + "</span>" : "—"], ["UF", Lic_esc_(o.uf || "—")], ["Contratações com resultado", Lic_esc_(o.contratacoes)], ["Itens", Lic_esc_(o.itens)], ["Desconto médio sobre o estimado", LicMk_desconto_(o.desconto)], ["Período dos registros", Lic_esc_((o.primeira || "—") + " a " + (o.ultima || "—"))]]) + "</div>" +
+        '<div class="cm-caixa"><h3>Quem ganha e por quanto</h3>' + LicMk_vencedoresHtml_(o.vencedores, true) + "</div>" +
+        '<div class="cm-caixa"><h3>Resultados (' + Lic_esc_((r.registros || []).length) + ")</h3>" + Lic_tabelaHtml_(["Data", "Item", "Quem ganhou", "Valor unitário", "Desconto", "Fonte"], (r.registros || []).map(function (g) {
+          return [Lic_esc_(g.dataTxt || "—"), Lic_esc_(g.descricao || g.grupoNome), Lic_esc_(g.fornecedor), LicMk_rs_(g.valor), LicMk_pct_(g.desconto), Lic_esc_(g.origemNome) + " " + LicMk_link_(g.link, "abrir")];
+        })) + "</div>";
+      LicMk_ligarVoltar_(el);
+    }, function (m) { el.innerHTML = LicMk_voltarHtml_() + Lic_erroTela_(m); LicMk_ligarVoltar_(el); Lic_ligarRefazer_(el, function () { LicMk_abrirOrgao_(chave); }); });
+  }
+  function LicMk_desenharReferencia_(r) {
+    var el = LicMk_alvo_(); if (!el) return;
+    if (!(r.lista || []).length) { el.innerHTML = LicMk_vazio_("Nenhum preço de referência"); return; }
+    el.innerHTML = '<div class="cm-caixa"><h3>Preço de referência de mercado (' + Lic_esc_(r.total) + " grupo(s))</h3>" +
+      '<p class="cm-ajuda-campo">Preço unitário de quem venceu, por tipo de serviço, equipamento e unidade (preço por unidade não se compara com preço por lote ou por mês). Mediana e quartis da amostra; menos de ' + Lic_esc_(r.amostraMin) + ' preços = amostra pequena. Cada grupo mostra as fontes com o link.</p>' +
+      r.lista.map(function (g) {
+        var s = g.estat;
+        return '<details class="lmk-det"><summary>' + Lic_esc_(g.nome) + " · n = " + Lic_esc_(s.n) + " · mediana&nbsp;" + LicMk_estatTxt_(s) + "</summary>" +
+          LicMk_dl_([["1º quartil", LicMk_rs_(s.q1)], ["Mediana", LicMk_rs_(s.mediana)], ["3º quartil", LicMk_rs_(s.q3)], ["Menor e maior", LicMk_rs_(s.min) + " a " + LicMk_rs_(s.max)], ["n (preços)", Lic_esc_(s.n)], ["Contratações", Lic_esc_(g.contratacoes)],
+            ["Período", Lic_esc_((g.periodo.deTxt || "—") + " a " + (g.periodo.ateTxt || "—"))], ["Desconto médio sobre o estimado", LicMk_desconto_(g.desconto)], ["Fontes", Lic_esc_((g.origens || []).map(function (o) { return o.nome + " (" + o.n + ")"; }).join("; "))]]) +
+          (s.aviso ? Lic_faixa_(s.aviso, "aviso") : "") + "<h4>Fontes (as mais recentes)</h4>" + LicMk_fontesHtml_(g.fontes) + "</details>";
+      }).join("") + "</div>";
+  }
+
+  // ---------------- cadastro de fornecedores ----------------
+  function LicMk_desenharCadastro_(r) {
+    var el = LicMk_alvo_(); if (!el) return;
+    LICMK.cad = r;
+    var sem = (LICMK.tela && LICMK.tela.semCnpj) || [];
+    var h = '<div class="cm-caixa"><h3>Cadastro de fornecedores e concorrentes (' + Lic_esc_(r.total) + ")</h3>" +
+      '<p class="cm-ajuda-campo">Um cadastro por CNPJ (nunca duplica). O que vem do PNCP e das disputas só preenche campo vazio: valor diferente fica como "variante" para a Diretoria decidir, com o motivo. Nada é apagado; o histórico mostra quem mudou o quê.</p>' +
+      '<div class="lic-acoes-linha lmk-acoes"><button type="button" class="btn-primary" data-lmk-novo>Novo fornecedor</button></div>';
+    h += (r.lista || []).length ? Lic_tabelaHtml_(["Fornecedor", "CNPJ", "UF", "Porte", "De onde veio", ""], r.lista.map(function (f) {
+      return ["<b>" + Lic_esc_(f.razaoSocial || "(sem razão social)") + "</b>" + (f.variantes ? " " + LicMk_selo_("laranja", f.variantes + " variante(s) para conferir") : "") + (f.integra ? "" : " " + LicMk_selo_("vermelho", "alterado fora do SGO+")),
+        '<span class="lic-mono">' + Lic_esc_(f.cnpjTxt) + "</span>", Lic_esc_(f.uf || "—"), Lic_esc_(f.porteNome || "—"), Lic_esc_((f.origens || []).join("; ")), '<button type="button" class="btn-secondary" data-lmk-forn="' + Lic_esc_(f.cnpj) + '">Abrir</button>'];
+    })) : Lic_faixa_("O cadastro está vazio: ele se forma sozinho com os vencedores lidos no PNCP e nas disputas (com CNPJ). Para incluir um concorrente agora, toque em \"Novo fornecedor\".", "aviso");
+    h += "</div>";
+    h += '<div class="cm-caixa"><h3>Concorrentes das disputas sem CNPJ (' + Lic_esc_(sem.length) + ")</h3>" + (sem.length ? '<p class="cm-ajuda-campo">Nomes digitados nos lances ou no resultado da disputa, sem CNPJ. Ligar ao CNPJ junta as participações e vitórias deste nome ao cadastro (ação da Diretoria, com o motivo).</p>' +
+      Lic_tabelaHtml_(["Nome digitado", "Participações", "Vitórias", ""], sem.map(function (s, i) { return [Lic_esc_(s.nome), Lic_esc_(s.participacoes), Lic_esc_(s.vitorias), '<button type="button" class="btn-secondary" data-lmk-ligar="' + i + '">Ligar ao CNPJ</button>']; }))
+      : '<p class="cm-vazio">Nenhum: todos os concorrentes das disputas do período já estão ligados a um CNPJ (ou nenhuma disputa registrou concorrente).</p>') + "</div>";
+    el.innerHTML = h;
+    var nv = el.querySelector("[data-lmk-novo]"); if (nv) nv.onclick = function () { LicMk_janelaFornecedor_(null, nv); };
+    el.querySelectorAll("[data-lmk-forn]").forEach(function (b) { b.onclick = function () { LicMk_abrirFornecedor_(b.getAttribute("data-lmk-forn")); }; });
+    el.querySelectorAll("[data-lmk-ligar]").forEach(function (b) { b.onclick = function () { LicMk_janelaLigar_(sem[Number(b.getAttribute("data-lmk-ligar"))].nome, b); }; });
+  }
+  function LicMk_campoTexto_(id, rotulo, valor, extra) { return '<div class="lmk-campo"><label for="' + id + '">' + Lic_esc_(rotulo) + '</label><input id="' + id + '" type="text" value="' + Lic_esc_(valor || "") + '" ' + (extra || "") + "></div>"; }
+  function LicMk_selectUf_(id, valor) { var ufs = (LICMK.cad && LICMK.cad.ufs) || []; return '<div class="lmk-campo"><label for="' + id + '">UF</label><select id="' + id + '"><option value="">—</option>' + ufs.map(function (u) { return '<option' + (u === valor ? " selected" : "") + ">" + Lic_esc_(u) + "</option>"; }).join("") + "</select></div>"; }
+  function LicMk_janelaFornecedor_(f, origem, depois) {
+    var novo = !f, portes = { ME: "ME", EPP: "EPP", DEMAIS: "Demais" };
+    var ov = Lic_janela_(novo ? "Novo fornecedor ou concorrente" : "Mudar o cadastro de " + (f.razaoSocial || f.cnpjTxt),
+      (novo ? LicMk_campoTexto_("lmkCnpj", "CNPJ (obrigatório)", "", 'maxlength="20" inputmode="text" placeholder="11.222.333/0001-81" autocomplete="off"') + '<p class="cm-ajuda-campo">Conferido pelos dígitos verificadores (aceita o CNPJ com letras). Se o CNPJ já estiver no cadastro, os campos preenchidos aqui mudam o cadastro existente.</p>' : '<p class="cm-txt">CNPJ <span class="lic-mono">' + Lic_esc_(f.cnpjTxt) + "</span> (não muda).</p>") +
+      '<div class="lmk-grade">' + LicMk_campoTexto_("lmkRazao", "Razão social" + (novo ? " (obrigatória)" : ""), f ? f.razaoSocial : "", 'maxlength="300"') + LicMk_campoTexto_("lmkFant", "Nome fantasia", f ? f.nomeFantasia : "", 'maxlength="300"') +
+      LicMk_selectUf_("lmkUf", f ? f.uf : "") + LicMk_campoTexto_("lmkMun", "Município", f ? f.municipio : "", 'maxlength="120"') +
+      '<div class="lmk-campo"><label for="lmkPorte">Porte</label><select id="lmkPorte"><option value="">—</option>' + Object.keys(portes).map(function (k) { return '<option value="' + k + '"' + (f && f.porte === k ? " selected" : "") + ">" + portes[k] + "</option>"; }).join("") + "</select></div></div>" +
+      '<div class="lmk-campo"><label for="lmkObs">Observação</label><textarea id="lmkObs" rows="2" maxlength="1000">' + Lic_esc_(f ? f.obs : "") + "</textarea></div>" +
+      '<div class="lmk-campo"><label for="lmkMot">Motivo (obrigatório)</label><textarea id="lmkMot" rows="2" maxlength="1000" placeholder="Ex.: dados do cartão CNPJ conferidos na Receita"></textarea><p class="cm-ajuda-campo">Pelo menos 10 letras. Campo em branco não apaga o que existe; cada campo mudado fica no histórico (de → para) com o seu nome.</p></div><div id="lmkMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>Salvar</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = LicMk_valor_("lmkMot");
+      if (mot.trim().length < 10) { LicMk_msg_("lmkMsg", "Escreva o motivo com pelo menos 10 letras. Nada foi gravado."); return; }
+      bt.disabled = true;
+      LicMk_chamar_("fornecedorSalvar", { cnpj: novo ? LicMk_valor_("lmkCnpj") : f.cnpj, campos: { RAZAO_SOCIAL: LicMk_valor_("lmkRazao"), NOME_FANTASIA: LicMk_valor_("lmkFant"), UF: LicMk_valor_("lmkUf"), MUNICIPIO: LicMk_valor_("lmkMun"), PORTE: LicMk_valor_("lmkPorte") }, obs: LicMk_valor_("lmkObs"), motivo: mot },
+        function (r) { ov.fechar(); Lic_toast_(r.texto); if (depois) depois(r); else LicMk_abrirFornecedor_(r.fornecedor.cnpj); }, function (m) { bt.disabled = false; LicMk_msg_("lmkMsg", m); });
+    };
+  }
+  function LicMk_janelaLigar_(nome, origem) {
+    var ov = Lic_janela_("Ligar \"" + nome + "\" a um CNPJ", '<p class="cm-txt">As participações e vitórias deste nome nas disputas passam a contar para o CNPJ escolhido. Se o CNPJ ainda não estiver no cadastro, ele é criado com este nome como razão social (corrija depois, se precisar).</p>' +
+      LicMk_campoTexto_("lmkLCnpj", "CNPJ (obrigatório)", "", 'maxlength="20" placeholder="11.222.333/0001-81" autocomplete="off"') + LicMk_campoTexto_("lmkLRazao", "Razão social (se o CNPJ for novo no cadastro)", nome, 'maxlength="300"') +
+      '<div class="lmk-campo"><label for="lmkLMot">Motivo (obrigatório)</label><textarea id="lmkLMot" rows="2" maxlength="1000" placeholder="Ex.: CNPJ conferido na ata da sessão"></textarea></div><div id="lmkMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>Ligar ao CNPJ</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = LicMk_valor_("lmkLMot");
+      if (mot.trim().length < 10) { LicMk_msg_("lmkMsg", "Escreva o motivo com pelo menos 10 letras. Nada foi gravado."); return; }
+      bt.disabled = true;
+      LicMk_chamar_("vincular", { nome: nome, cnpj: LicMk_valor_("lmkLCnpj"), razaoSocial: LicMk_valor_("lmkLRazao"), motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto); LicMk_renderTela_(); }, function (m) { bt.disabled = false; LicMk_msg_("lmkMsg", m); });
+    };
+  }
+  function LicMk_abrirFornecedor_(cnpj) {
+    var el = LicMk_alvo_(); if (!el) return;
+    el.innerHTML = Lic_carregando_(2);
+    LicMk_chamar_("fornecedor", { cnpj: cnpj }, function (r) {
+      var f = r.fornecedor;
+      LICMK.cad = LICMK.cad || { ufs: r.ufs };
+      var h = LicMk_voltarHtml_() + '<div class="cm-caixa"><h3>' + Lic_esc_(f.razaoSocial || f.cnpjTxt) + "</h3>" + (f.integra ? "" : Lic_faixa_("O cadastro não confere com o hash gravado (alterado fora do SGO+). Avise o Administrador; os números continuam aparecendo.", "erro")) +
+        Lic_tabelaHtml_(["Campo", "Valor", "De onde veio"], f.campos.map(function (c) { return [Lic_esc_(c.nome), Lic_esc_(c.valor || "—"), Lic_esc_(c.origemNome ? c.origemNome + (c.emTxt ? ", " + c.emTxt : "") + (c.ref ? " (" + c.ref + ")" : "") : "—")]; })) +
+        LicMk_dl_([["CNPJ", '<span class="lic-mono">' + Lic_esc_(f.cnpjTxt) + "</span>"], ["Versão", Lic_esc_(f.versao)], ["Cadastrado", Lic_esc_(f.criadoEm + " · " + f.criadoPor)], ["Última mudança", Lic_esc_(f.atualizadoEm ? f.atualizadoEm + " · " + f.atualizadoPor : "—")],
+          ["Nomes ligados", Lic_esc_((f.apelidos || []).join("; ") || "—")], ["Origens", Lic_esc_((f.origens || []).map(function (o) { return o.nome + " (" + o.primeiraTxt + (o.ultimaTxt && o.ultimaTxt !== o.primeiraTxt ? " a " + o.ultimaTxt : "") + ")"; }).join("; "))]]) +
+        (f.obs ? '<p class="cm-txt">Observação: ' + Lic_esc_(f.obs) + "</p>" : "") + '<div class="lic-acoes-linha lmk-acoes"><button type="button" class="btn-primary" data-lmk-editar>Mudar o cadastro</button></div></div>';
+      h += '<div class="cm-caixa"><h3>Variantes para conferir (' + Lic_esc_(f.variantes.length) + ")</h3>" + (f.variantes.length ? '<p class="cm-ajuda-campo">Uma fonte informou um valor diferente do cadastro. O cadastro não muda sozinho: "Usar este valor" troca o campo, com o motivo.</p>' +
+        Lic_tabelaHtml_(["Campo", "No cadastro", "A fonte informou", "Fonte", ""], f.variantes.map(function (v, i) { var atual = (f.campos.filter(function (c) { return c.campo === v.campo; })[0] || {}).valor; return [Lic_esc_(v.nome), Lic_esc_(atual || "—"), "<b>" + Lic_esc_(v.valor) + "</b>", Lic_esc_(v.origemNome + (v.emTxt ? ", " + v.emTxt : "") + (v.ref ? " (" + v.ref + ")" : "")), '<button type="button" class="btn-secondary" data-lmk-var="' + i + '">Usar este valor</button>']; }))
+        : '<p class="cm-vazio">Nenhuma: todas as fontes concordam com o cadastro.</p>') + "</div>";
+      h += '<div class="cm-caixa"><h3>Histórico</h3>' + ((r.historico || []).length ? '<ul class="lmk-lista">' + r.historico.map(function (x) { return "<li><b>" + Lic_esc_(x.emTxt) + "</b> · " + Lic_esc_(x.por) + (x.de || x.para ? " · " + Lic_esc_(x.de || "(vazio)") + " → " + Lic_esc_(x.para) : "") + "<br>" + Lic_esc_(x.texto) + "</li>"; }).join("") + "</ul>" : '<p class="cm-vazio">Sem registros ainda.</p>') + "</div>";
+      el.innerHTML = h; LicMk_ligarVoltar_(el);
+      var ed = el.querySelector("[data-lmk-editar]"); if (ed) ed.onclick = function () { LicMk_janelaFornecedor_(f, ed); };
+      el.querySelectorAll("[data-lmk-var]").forEach(function (b) { b.onclick = function () { var v = f.variantes[Number(b.getAttribute("data-lmk-var"))]; LicMk_janelaVariante_(f, v, b); }; });
+    }, function (m) { el.innerHTML = LicMk_voltarHtml_() + Lic_erroTela_(m); LicMk_ligarVoltar_(el); Lic_ligarRefazer_(el, function () { LicMk_abrirFornecedor_(cnpj); }); });
+  }
+  function LicMk_janelaVariante_(f, v, origem) {
+    var ov = Lic_janela_("Usar \"" + v.valor + "\" em " + v.nome, '<p class="cm-txt">O campo ' + Lic_esc_(v.nome) + " passa a ser <b>" + Lic_esc_(v.valor) + "</b> (" + Lic_esc_(v.origemNome) + "). O valor anterior fica no histórico.</p>" +
+      '<div class="lmk-campo"><label for="lmkVMot">Motivo (obrigatório)</label><textarea id="lmkVMot" rows="2" maxlength="1000" placeholder="Ex.: o cartão CNPJ confirma o nome novo"></textarea></div><div id="lmkMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>Usar este valor</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = LicMk_valor_("lmkVMot"), campos = {};
+      if (mot.trim().length < 10) { LicMk_msg_("lmkMsg", "Escreva o motivo com pelo menos 10 letras. Nada foi gravado."); return; }
+      campos[v.campo] = v.valor; bt.disabled = true;
+      LicMk_chamar_("fornecedorSalvar", { cnpj: f.cnpj, campos: campos, motivo: mot }, function (r) { ov.fechar(); Lic_toast_(r.texto); LicMk_abrirFornecedor_(f.cnpj); }, function (m) { bt.disabled = false; LicMk_msg_("lmkMsg", m); });
+    };
+  }
+
+  // ---------------- registros manuais (resultado ou participação lidos em ata) ----------------
+  function LicMk_desenharRegistros_(r) {
+    var el = LicMk_alvo_(); if (!el) return;
+    LICMK.man = r;
+    var h = '<div class="cm-caixa"><h3>Registros manuais (' + Lic_esc_((r.lista || []).length) + ")</h3>" +
+      '<p class="cm-ajuda-campo">Resultado ou participação que a Diretoria leu numa ata ou no portal e que o PNCP não trouxe (por exemplo, quem participou e perdeu). A fonte é obrigatória. Registro errado é anulado com o motivo (fica guardado, fora das contas).</p>' +
+      '<div class="lic-acoes-linha lmk-acoes"><button type="button" class="btn-primary" data-lmk-registrar>Registrar resultado ou participação</button></div>';
+    h += (r.lista || []).length ? Lic_tabelaHtml_(["Data", "Papel", "Fornecedor", "Órgão", "Item", "Valor", "Fonte", ""], r.lista.map(function (x) {
+      return [Lic_esc_(x.dataTxt), Lic_esc_(x.papelNome), Lic_esc_(x.fornecedor) + '<br><span class="cm-meta lic-mono">' + Lic_esc_(x.cnpjTxt) + "</span>", Lic_esc_(x.orgao + (x.uf ? "/" + x.uf : "")), Lic_esc_(x.descricao),
+        x.valor ? Lic_brlHtml_(x.valor) + '<span class="cm-meta"> por ' + Lic_esc_(x.unidade) + "</span>" : "—", Lic_esc_(x.fonte) + " " + LicMk_link_(x.link, "abrir") + '<br><span class="cm-meta">' + Lic_esc_(x.por) + "</span>",
+        x.anulado ? LicMk_selo_("cinza", "Anulado: " + x.anuladoMotivo) : '<button type="button" class="btn-secondary" data-lmk-anular="' + Lic_esc_(x.id) + '">Anular</button>'];
+    })) : '<p class="cm-vazio">Nenhum registro manual ainda. Use quando ler numa ata um resultado ou um participante que o PNCP não publica.</p>';
+    el.innerHTML = h + "</div>";
+    var rg = el.querySelector("[data-lmk-registrar]"); if (rg) rg.onclick = function () { LicMk_janelaRegistro_(rg); };
+    el.querySelectorAll("[data-lmk-anular]").forEach(function (b) { b.onclick = function () { LicMk_janelaAnular_(b.getAttribute("data-lmk-anular"), b); }; });
+  }
+  function LicMk_janelaRegistro_(origem) {
+    var r = LICMK.man || {}, ufs = r.ufs || [];
+    var ov = Lic_janela_("Registrar resultado ou participação",
+      '<div class="lmk-campo"><label for="lmkRPapel">O fornecedor (obrigatório)</label><select id="lmkRPapel"><option value="VENCEDOR">venceu o item</option><option value="PARTICIPANTE">participou, sem vitória</option></select></div>' +
+      '<div class="lmk-campo"><label for="lmkROp">Licitação do SGO+ (opcional)</label><select id="lmkROp"><option value="">Outra (digite o órgão)</option>' + (r.oportunidades || []).map(function (o) { return '<option value="' + Lic_esc_(o.id) + '">' + Lic_esc_(o.codigo + " · " + o.orgao + (o.uf ? "/" + o.uf : "")) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="lmk-grade">' + LicMk_campoTexto_("lmkROrg", "Órgão (sem licitação escolhida)", "", 'maxlength="300"') + '<div class="lmk-campo"><label for="lmkRUf">UF</label><select id="lmkRUf"><option value="">—</option>' + ufs.map(function (u) { return "<option>" + Lic_esc_(u) + "</option>"; }).join("") + "</select></div>" +
+      LicMk_campoTexto_("lmkRCnpj", "CNPJ do fornecedor (obrigatório)", "", 'maxlength="20" placeholder="11.222.333/0001-81" autocomplete="off"') + LicMk_campoTexto_("lmkRNome", "Razão social (se não estiver no cadastro)", "", 'maxlength="300"') +
+      LicMk_campoTexto_("lmkRItem", "Número do item", "", 'maxlength="20"') + LicMk_campoTexto_("lmkRUn", "Unidade", "unidade", 'maxlength="60"') + "</div>" +
+      '<div class="lmk-campo"><label for="lmkRDesc">Descrição do item (obrigatória)</label><textarea id="lmkRDesc" rows="2" maxlength="1000" placeholder="Ex.: calibração de termômetro digital com certificado"></textarea><p class="cm-ajuda-campo">O serviço e o equipamento do texto agrupam o preço de referência.</p></div>' +
+      '<div class="lmk-grade">' + LicMk_campoTexto_("lmkRValor", "Valor unitário (obrigatório para vencedor)", "", 'inputmode="decimal" placeholder="185,40"') + LicMk_campoTexto_("lmkREst", "Valor unitário estimado no edital", "", 'inputmode="decimal" placeholder="200,00"') +
+      LicMk_campoTexto_("lmkRQtd", "Quantidade", "", 'inputmode="decimal"') + '<div class="lmk-campo"><label for="lmkRData">Data do resultado (obrigatória)</label><input id="lmkRData" type="date"></div></div>' +
+      '<div class="lmk-campo"><label for="lmkRFonte">Fonte (obrigatória)</label><input id="lmkRFonte" type="text" maxlength="500" placeholder="Ex.: ata da sessão de 10/10/2026, página 3"></div>' + LicMk_campoTexto_("lmkRLink", "Link da fonte (opcional)", "", 'maxlength="600" placeholder="https://"') +
+      '<div class="lmk-campo"><label for="lmkRMot">Motivo (obrigatório)</label><textarea id="lmkRMot" rows="2" maxlength="1000" placeholder="Ex.: o PNCP não publicou os participantes deste pregão"></textarea></div><div id="lmkMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Cancelar</button><button type="button" class="btn-primary" data-lic-confirmar>Registrar</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = LicMk_valor_("lmkRMot");
+      if (mot.trim().length < 10) { LicMk_msg_("lmkMsg", "Escreva o motivo com pelo menos 10 letras. Nada foi gravado."); return; }
+      bt.disabled = true;
+      LicMk_chamar_("resultadoManual", { papel: LicMk_valor_("lmkRPapel"), oportunidadeId: LicMk_valor_("lmkROp"), orgaoNome: LicMk_valor_("lmkROrg"), uf: LicMk_valor_("lmkRUf"), cnpj: LicMk_valor_("lmkRCnpj"), nome: LicMk_valor_("lmkRNome"),
+        item: LicMk_valor_("lmkRItem"), unidade: LicMk_valor_("lmkRUn"), descricao: LicMk_valor_("lmkRDesc"), valor: LicMk_valor_("lmkRValor"), estimado: LicMk_valor_("lmkREst"), quantidade: LicMk_valor_("lmkRQtd"), data: LicMk_valor_("lmkRData"),
+        fonte: LicMk_valor_("lmkRFonte"), link: LicMk_valor_("lmkRLink"), motivo: mot }, function (x) { ov.fechar(); Lic_toast_(x.texto); LicMk_carregarAba_(); }, function (m) { bt.disabled = false; LicMk_msg_("lmkMsg", m); });
+    };
+  }
+  function LicMk_janelaAnular_(id, origem) {
+    var ov = Lic_janela_("Anular o registro manual", '<p class="cm-txt">O registro sai das contas e continua guardado, com o motivo.</p><div class="lmk-campo"><label for="lmkAMot">Motivo (obrigatório)</label><textarea id="lmkAMot" rows="2" maxlength="1000" placeholder="Ex.: valor digitado errado; registrado de novo"></textarea></div><div id="lmkMsg" aria-live="assertive"></div>',
+      '<button type="button" class="btn-secondary" data-lic-cancelar>Voltar</button><button type="button" class="btn-primary" data-lic-confirmar>Anular</button>', origem);
+    ov.querySelector("[data-lic-confirmar]").onclick = function () {
+      var bt = this, mot = LicMk_valor_("lmkAMot");
+      if (mot.trim().length < 10) { LicMk_msg_("lmkMsg", "Escreva o motivo com pelo menos 10 letras. Nada foi alterado."); return; }
+      bt.disabled = true;
+      LicMk_chamar_("resultadoAnular", { id: id, motivo: mot }, function (x) { ov.fechar(); Lic_toast_(x.texto); LicMk_carregarAba_(); }, function (m) { bt.disabled = false; LicMk_msg_("lmkMsg", m); });
+    };
+  }
+
+  // ================= aba "Mercado" da ficha e o quadro do pedido de parecer =================
+  function LicMk_htmlAba_(d) { return '<div id="licMercado">' + Lic_carregando_(2) + "</div>"; }
+  function LicMk_ligarAba_(c, d, id) {
+    LicMk_chamar_("ficha", { id: id }, function (r) { LICMK.ficha[id] = r; LicMk_desenharFicha_(id); },
+      function (m) { var el = Lic_$_("licMercado"); if (el) { el.innerHTML = Lic_erroTela_(m); Lic_ligarRefazer_(el, function () { LicMk_ligarAba_(c, d, id); }); } });
+  }
+  function LicMk_precosHtml_(m) {
+    if (m.nivelPreco === "NENHUM") return '<div class="cm-caixa"><h3>Preço praticado no mercado</h3><p class="cm-txt">O preço não faz parte do parecer da sua área: os valores ficam com a Diretoria, a área Financeira e a área de Licitações.</p></div>';
+    var h = '<div class="cm-caixa"><h3>Preço praticado no mercado</h3>' + (m.temSimulacao ? '<p class="cm-ajuda-campo">Cada item da simulação versão ' + Lic_esc_(m.simVersao) + " comparado com o preço unitário de quem venceu itens do mesmo serviço e equipamento (por unidade), nos últimos " + Lic_esc_(m.meses) + " meses.</p>"
+      : Lic_faixa_("Sem simulação de preço salva: aparece o preço de mercado dos tipos de serviço do objeto. Para comparar item a item, salve a simulação na aba Preço.", "aviso"));
+    if (!(m.precos || []).length) return h + '<p class="cm-vazio">O objeto não indica um tipo de serviço que o sistema reconheça (calibração, manutenção, qualificação, NR-13, segurança elétrica): não há grupo para comparar.</p></div>';
+    h += Lic_tabelaHtml_(["Item", "Grupo de mercado", "n", "1º quartil", "Mediana", "3º quartil", "Período"].concat(m.temSimulacao ? ["Nossa proposta", "Onde fica"] : []), m.precos.map(function (p) {
+      var g = p.referencia, s = g ? g.estat : null;
+      var l = [Lic_esc_((p.numero ? p.numero + " · " : "") + (p.descricao || p.servicoTabela || "")), Lic_esc_(p.grupoNome) + (s && s.pequena ? " " + LicMk_selo_("laranja", "amostra pequena") : "") + (!g ? " " + LicMk_selo_("cinza", "sem dados") : ""),
+        Lic_esc_(s ? s.n : 0), LicMk_rs_(s && s.q1), LicMk_rs_(s && s.mediana), LicMk_rs_(s && s.q3), Lic_esc_(g ? (g.periodo.deTxt || "—") + " a " + (g.periodo.ateTxt || "—") : "—")];
+      if (m.temSimulacao) l = l.concat([LicMk_rs_(p.precoProposta), p.proposta ? LicMk_selo_(p.proposta.posicao === "DENTRO" ? "verde" : "laranja", p.proposta.posicao === "ABAIXO" ? "abaixo do mercado" : p.proposta.posicao === "ACIMA" ? "acima do mercado" : "dentro da faixa") + '<br><span class="cm-meta">' + Lic_esc_(p.proposta.texto) + "</span>" : Lic_esc_(p.aviso || "—")]);
+      return l;
+    }));
+    var comFonte = m.precos.filter(function (p) { return p.referencia && (p.referencia.fontes || []).length; });
+    if (comFonte.length) h += comFonte.map(function (p) { return '<details class="lmk-det"><summary>Fontes de "' + Lic_esc_(p.grupoNome) + '"</summary>' + LicMk_fontesHtml_(p.referencia.fontes) + "</details>"; }).join("");
+    return h + '<p class="cm-ajuda-campo">A comparação é informação para a Diretoria decidir: o sistema não muda preço nenhum. Amostra pequena (menos de ' + Lic_esc_(m.amostraMin) + " preços) é indício, não referência.</p></div>";
+  }
+  /** O mercado de uma oportunidade (ficha e parecer). m.nivelPreco NENHUM = sem valor nenhum. */
+  function LicMk_htmlMercado_(m) {
+    if (!m) return "";
+    if (m.erro) return '<div class="cm-caixa"><h3>Mercado</h3>' + Lic_faixa_(m.erro, "aviso") + "</div>";
+    var comPreco = m.nivelPreco !== "NENHUM", h = "", tp = m.tipos || {}, temTipo = (tp.servicos || []).length > 0;
+    h += '<div class="cm-caixa"><h3>Quem costuma ganhar neste órgão</h3>' + (m.orgao ? '<p class="cm-meta">' + Lic_esc_(m.orgao.nome + ": " + m.orgao.contratacoes + " contratação(ões) com resultado nos últimos " + m.meses + " meses (a última em " + (m.orgao.ultimaTxt || "—") + ")") + (comPreco && m.orgao.desconto && m.orgao.desconto.n ? " · desconto médio sobre o estimado " + LicMk_desconto_(m.orgao.desconto) : "") + "</p>" + LicMk_vencedoresHtml_(m.orgao.vencedores, comPreco)
+      : '<p class="cm-vazio">Nenhum resultado deste órgão nos últimos ' + Lic_esc_(m.meses) + " meses (nem no PNCP lido pelo coletor, nem nas disputas da Metrolabs, nem nos registros manuais).</p>") + "</div>";
+    h += '<div class="cm-caixa"><h3>Quem costuma ganhar neste tipo de objeto</h3>' + (temTipo ? '<p class="cm-meta">Reconhecido no objeto e nos itens: ' + Lic_esc_(tp.servicos.join(", ")) + ((tp.equipamentos || []).length ? " · equipamentos: " + Lic_esc_(tp.equipamentos.join(", ")) : "") + "</p>" : "") +
+      (m.tipo ? '<p class="cm-meta">' + Lic_esc_(m.tipo.contratacoes + " contratação(ões), " + m.tipo.itens + " item(ns) com resultado; " + m.tipo.mesmaUf + " na UF " + (m.tipo.uf || "—")) + "</p>" + LicMk_vencedoresHtml_(m.tipo.vencedores, comPreco)
+        : '<p class="cm-vazio">' + (temTipo ? "Nenhum resultado deste tipo de objeto nos últimos " + Lic_esc_(m.meses) + " meses." : "O objeto não indica um tipo de serviço que o sistema reconheça (calibração, manutenção, qualificação, NR-13, segurança elétrica).") + "</p>") + "</div>";
+    if ((m.estaLicitacao || []).length) h += '<div class="cm-caixa"><h3>Resultado desta licitação</h3>' + Lic_tabelaHtml_(["Item", "Quem ganhou"].concat(comPreco ? ["Valor unitário"] : []).concat(["Data", "Fonte"]), m.estaLicitacao.map(function (x) {
+      return [Lic_esc_(x.item + (x.descricao ? " · " + x.descricao : "")), Lic_esc_(x.fornecedor)].concat(comPreco ? [LicMk_rs_(x.valor)] : []).concat([Lic_esc_(x.dataTxt || "—"), Lic_esc_(x.origemNome) + " " + LicMk_link_(x.link, "abrir")]);
+    })) + "</div>";
+    return h + LicMk_precosHtml_(m);
+  }
+  function LicMk_desenharFicha_(id) {
+    var el = Lic_$_("licMercado"), m = LICMK.ficha[id]; if (!el || !m) return;
+    var k = m.coleta || {}, s = k.situacao, h = "";
+    h += '<div class="cm-caixa"><h3>Resultados desta licitação no PNCP</h3>';
+    if (!k.coletor) h += Lic_faixa_("Neste ambiente não há o coletor do servidor: os resultados do PNCP só chegam no SGO+ do servidor próprio. As disputas e os registros manuais continuam valendo.", "aviso");
+    else if (!k.podePedir) h += '<p class="cm-txt">Esta licitação não veio do PNCP: não há resultado publicado lá para ler. Registre o resultado lido na ata em Inteligência de mercado › Registros manuais.</p>';
+    else {
+      h += s && s.naFila ? LicMk_dl_([["Situação", Lic_esc_(s.completo ? "lida por inteiro (" + (s.fimMotivo || "") + ")" : s.emAndamento ? "leitura em andamento" : "na fila")], ["Última leitura", Lic_esc_(s.verificadoEm ? Lic_dataHora_(s.verificadoEm) : "ainda não lida")], ["Próxima conferência", Lic_esc_(s.completo ? "—" : Lic_dataHora_(s.proximoEm))],
+        ["Itens com resultado", Lic_esc_(s.itensComResultado + " de " + s.itensTotal)], ["Pedido por", Lic_esc_(s.pedidoPor || "rotina do coletor")]]) + (s.ultimoErro ? Lic_faixa_("Última tentativa falhou: " + s.ultimoErro + ". O coletor tenta de novo no dia seguinte.", "aviso") : "")
+        : '<p class="cm-txt">' + (m.op.encerrou ? "O coletor ainda não leu esta licitação (ele lê as do ramo 2 dias depois do fim das propostas)." : "As propostas ainda não encerraram (" + Lic_esc_(m.op.encerramentoTxt) + "): o resultado só sai depois da sessão.") + "</p>";
+      h += '<div class="lic-acoes-linha lmk-acoes"><button type="button" class="btn-secondary" data-lmk-pedir>Buscar resultados no PNCP agora</button></div><p class="cm-ajuda-campo">Passa esta licitação na frente da fila do coletor (sai na próxima rodada, em até 2 horas). Só lê o que o órgão publicou; nada é criado em outro módulo.</p>';
+    }
+    h += "</div>" + LicMk_htmlMercado_(m);
+    el.innerHTML = h;
+    var pd = el.querySelector("[data-lmk-pedir]"); if (pd) pd.onclick = function () { pd.disabled = true; LicMk_chamar_("pedirResultados", { id: id }, function (r) { Lic_toast_(r.texto); LicMk_ligarAba_(null, null, id); }, function (mm) { pd.disabled = false; Lic_toast_(mm, "erro"); }); };
+  }
+  /** Quadro da tela do pedido de parecer (JS_Licitacoes_Pareceres.html): o mercado com o preço conforme a área. */
+  function LicMk_htmlParecer_(m) { if (!m) return ""; return '<div class="cm-caixa"><h3>Mercado (concorrentes e preços praticados)</h3><p class="cm-ajuda-campo">Calculado pelo sistema a partir dos resultados publicados no PNCP, das disputas da Metrolabs e dos registros da Diretoria. Informação para o parecer; não decide nada.</p></div>' + LicMk_htmlMercado_(m); }
+</script>

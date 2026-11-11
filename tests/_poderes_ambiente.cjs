@@ -98,9 +98,10 @@ function ambiente(opcoes) {
     normalizarObjetoParaSheet: (t, x) => copia(x || {}), log() {}
   };
   // carga na ordem do servidor: alfabética não importa aqui; quem falha por depender de outro vai para o fim
-  const arquivos = ARQUIVOS.filter((f) => !(o.semArquivos || []).includes(f));
+  // lote 1: o.extras acrescenta arquivos (SGO_Usuarios.js...); o.pasta carrega de outra cópia do legado (a de antes da mudança)
+  const arquivos = ARQUIVOS.concat(o.extras || []).filter((f) => !(o.semArquivos || []).includes(f));
   const fonte = {};
-  arquivos.forEach((f) => { fonte[f] = fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n'); });
+  arquivos.forEach((f) => { fonte[f] = fs.readFileSync(path.join(o.pasta || pastaLegado, f), 'utf8').replace(/\r\n/g, '\n'); });
   let ordem = arquivos.slice(), ctx = null;
   for (let volta = 0; volta < 40; volta++) {
     ctx = vm.createContext(ctxBase());

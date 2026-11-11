@@ -98,7 +98,8 @@ function montarHoje(a) {
 }
 
 // ------------------------------------------------------------------ 1. catálogo
-test('catálogo: 150 poderes com regra padrão, todos desligados no lote 0; nada fora do catalogo.json', () => {
+const LIGADOS_LOTE1 = ['CONTAS_VER', 'CONTAS_CRIAR', 'CONTAS_ALTERAR_OUTROS', 'CONTAS_MUDAR_PERFIL', 'CONTAS_REDEFINIR_SENHA', 'CONTAS_INATIVAR', 'CONTAS_EXCLUIR', 'CONTAS_GERIR_ADMINISTRADOR', 'CONTAS_DAR_DIRETORIA', 'AREAS_GERIR', 'AREAS_DEFINIR_PESSOA', 'SEGURANCA_VER_REGISTRO', 'SEGURANCA_ALTERAR', 'MODO_PERSONALIZADO_DESIGNAR', 'ACESSOS_GERIR'];
+test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os ligados pelo lote 1; nada fora do catalogo.json', () => {
   const a = ambiente();
   const cat = a.ctx.SGO_poderesCatalogo_();
   assert.equal(cat.lista.length, 150);
@@ -108,9 +109,10 @@ test('catálogo: 150 poderes com regra padrão, todos desligados no lote 0; nada
     assert.equal(p.modulo, ref.modulo); assert.equal(p.categoria, ref.categoria); assert.equal(p.lote, ref.lote); assert.equal(p.descricao, ref.descricao);
     assert.ok(p.nome && !/NOVO/.test(p.nome), p.codigo);
     assert.equal(typeof p.padrao, 'function', p.codigo);
-    assert.equal(p.ligado, false, p.codigo + ' não pode estar ligado no lote 0');
+    // lote 1 (11/11/2026): só as caixas de Contas, senhas e acessos ligadas (SISTEMA_* ficam no servidor Node)
+    assert.equal(p.ligado, LIGADOS_LOTE1.includes(p.codigo), p.codigo + ' ligado fora do lote 1');
   }
-  assert.equal(vm.runInContext('SGO_PODERES_LIGADOS.length', a.ctx), 0);
+  assert.deepEqual(Array.from(vm.runInContext('SGO_PODERES_LIGADOS', a.ctx)), LIGADOS_LOTE1);
   assert.throws(() => a.ctx.SGO_pode_('s_admin', 'PODER_INEXISTENTE'), /Poder desconhecido/);
 });
 
@@ -373,7 +375,7 @@ test('API da tela: pessoa agrupada por módulo com padrão × efetivo × origem 
   assert.equal(vc.resumo.reduce((s2, g) => s2 + g.pode.length, 0), a.ctx.SGO_poderesEfetivos_(elisa).filter((p) => p.valor).length);
   const pessoas = ok(a.api('admin', 'pessoas')).pessoas;
   assert.equal(pessoas.find((p) => p.id === elisa).excecoes, 1);
-  assert.deepEqual(ok(a.api('admin', 'pessoas')).ligados, []);
+  assert.deepEqual(ok(a.api('admin', 'pessoas')).ligados, LIGADOS_LOTE1);
   recusa(a.api('admin', 'acaoInventada', {}), /ação desconhecida/);
   recusa(a.api('admin', 'pessoa', { usuarioId: a.idDe('ndi') }), /conta de fora/);
 });
