@@ -1,0 +1,26 @@
+== 1. base
+base conferida
+== 2. backup
+total 156644
+-rw-r--r-- 1 root root 160399093 Nov 14 23:36 banco-antes.dump
+-rw-r--r-- 1 root root      1670 Nov 14 23:36 compose.antes.yml
+== 3. imagem
+sha256:fa003bf6e1cf65cadd75a0d4ab8d1349d48189b8b5748e7703506b57cc936b96
+pwuser
+487
+a413e6c294bdb56873c577ab1adbd4488f72476823e6dc3c8bb67b1e9c944413  JS_GanhosVendedores.html
+imagem conferida
+== 4. troca
+ Container sgo-db-1 Running 
+ Container sgo-app-1 Recreate 
+ Container sgo-app-1 Recreated 
+ Container sgo-db-1 Waiting 
+ Container sgo-db-1 Healthy 
+ Container sgo-app-1 Starting 
+ Container sgo-app-1 Started 
+saudável
+== 5. no ar
+GET / 200
+metrolabs/sgo:ganhos-omie-20261115 sha256:fa003bf6e1cf65cadd75a0d4ab8d1349d48189b8b5748e7703506b57cc936b96
+erros no log desde a troca: 0
+14/11 23:36

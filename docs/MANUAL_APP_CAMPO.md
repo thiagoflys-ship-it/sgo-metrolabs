@@ -42,8 +42,14 @@ A mesma ajuda está dentro do aplicativo, no botão **Ajuda** (canto de cima, em
 
 ## 2. Meu dia
 
-- Mostra as suas O.S. de **hoje** (e as que ficaram abertas de dias anteriores, marcadas em vermelho) e as de
-  **amanhã**, na ordem definida pelo supervisor.
+- Quatro abas (12/11/2026):
+  - **Em aberto**: todas as suas O.S. abertas, de qualquer dia, agrupadas por dia (atrasadas no alto, em vermelho;
+    depois hoje, amanhã e os próximos dias), e as suas atividades internas.
+  - **Agenda**: um botão por dia (hoje e os próximos 13), com a quantidade de O.S.; toque no dia para ver as dele.
+  - **Kanban**: colunas A fazer, Em andamento, Aguardando (documentação pendente ou pausada) e Concluídas. A O.S. muda
+    de coluna sozinha quando você toca em Saí, Cheguei e Concluí. No celular, arraste para o lado para ver as colunas.
+  - **Concluídas**: as O.S. encerradas dos últimos 30 dias.
+- A ordem do dia é a definida pelo supervisor.
 - Abra o app com internet ao menos uma vez por dia, de preferência antes de sair. É quando a agenda é baixada e fica
   guardada no celular. A linha "Agenda atualizada às ..." mostra quando foi a última vez.
 - Cada cartão mostra cliente, horário, tipo de serviço, prioridade, endereço, equipamento e a situação ("A fazer",
@@ -51,6 +57,24 @@ A mesma ajuda está dentro do aplicativo, no botão **Ajuda** (canto de cima, em
 - **Atualizar agenda** baixa de novo quando houver sinal.
 
 ## 2a. Novo atendimento (fora da agenda)
+
+**Não abrir em dobro (12/11/2026):** se você já abriu hoje uma O.S. na mesma unidade e ela ainda está aberta, o app mostra
+qual é e pergunta: **Continuar na O.S. que já existe** ou **É outro atendimento: abrir mais uma** (outro equipamento ou outro
+serviço). O mesmo equipamento com O.S. aberta nunca abre outra: o app leva para a que já existe.
+
+**Abri por engano ou em dobro:** na tela da O.S., em **Abri esta O.S. por engano ou em dobro**, escreva o motivo e toque em
+**Excluir esta O.S.** Vale só para a O.S. que você mesmo abriu em campo e antes de começar o atendimento (antes do Saí ou do
+Cheguei). O chamado sai junto, a gestão é avisada e pode restaurar. A O.S. provisória que ainda não subiu sai só do aparelho;
+a que já tem número precisa de sinal.
+
+Atualização de 12/11/2026:
+
+- A O.S. provisória cuja abertura o servidor recusou (aparece em **Envios > Recusados**) também sai só do aparelho pelo
+  **Excluir esta O.S.**; antes o cartão ficava preso em "Em aberto".
+- Com itens guardados esperando envio, o app pede para enviar antes ("Toque em Enviar agora, espere terminar e exclua de
+  novo"). Depois da exclusão, o que era daquela O.S. sai da fila e ela não é aberta de novo.
+- Cadastrou o cliente sem sinal e o sinal voltou no meio? A unidade e o equipamento desse cliente vão juntos pela fila,
+  na ordem, e a O.S. fica provisória até subir.
 
 Surgiu um atendimento que não estava no Meu dia (equipamento ao lado, pedido do responsável, cliente novo)? Não precisa
 ligar para a gestão: toque em **Novo atendimento**, no fim do Meu dia, e siga os quatro passos.
@@ -68,7 +92,7 @@ ligar para a gestão: toque em **Novo atendimento**, no fim do Meu dia, e siga o
    o contato, a prioridade (P1 só para equipamento parado que afeta o paciente) e se o equipamento está parado. Confira o
    resumo ("Você vai abrir uma O.S. para: cliente › unidade › equipamento") e toque em **Abrir a O.S.**.
 
-A O.S. aparece no Meu dia com o selo **Aberta em campo** e o atendimento segue igual aos outros (item 3). No SGO+, o chamado
+A O.S. de atendimento (serviço, retirada, entrega) fica no seu nome, mesmo sem sinal (O.S. provisória), e aparece em "Em aberto" com o selo **Aberta em campo**; pedido sem visita a outro setor (envio de orçamento, correção) vai para o setor escolher quem executa. Ela aparece no Meu dia com o selo **Aberta em campo** e o atendimento segue igual aos outros (item 3). No SGO+, o chamado
 nasce com a triagem feita em campo (sem passar pela gestão) e a gestão é avisada.
 
 - **Com sinal:** a O.S. recebe o número oficial na hora.
@@ -79,6 +103,11 @@ nasce com a triagem feita em campo (sem passar pela gestão) e a gestão é avis
 - Todo cadastro feito em campo fica marcado **criado em campo** para a gestão conferir depois (vínculo e repetição); nada é
   bloqueado por isso. Errou um campo? Peça à gestão para corrigir em Cadastros.
 - Campo com erro: a mensagem aparece ao lado do campo (nome curto, CNPJ inválido, UF com 2 letras, série ou TAG faltando).
+
+**Fotos do celular (12/11/2026):** em cada pergunta de foto do checklist e no passo Fotos há **Tirar foto** (câmera) e
+**Escolher do celular (uma ou várias)**: dá para marcar várias fotos de uma vez na galeria (até 20 por vez). Cada uma é reduzida
+no aparelho, leva a O.S., a data e a hora, entra na pergunta com a legenda dela e sobe com a fila. Uma foto só abre a prévia
+com a legenda para editar.
 
 ## 3. Atendimento, passo a passo
 
@@ -99,9 +128,14 @@ feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
    celular (lado maior até 1600 pixels, cerca de 300 KB) e leva gravados o número da O.S., a data e a hora. Escreva uma
    legenda curta. Foto ainda não enviada pode ser removida; depois de começar a subir, não.
 6. **Peças**: **Aplicada** para a peça usada; **Falta (pedir)** para a peça que precisa ser comprada (abre o pedido em
-   Compras e a O.S. fica aguardando peça), com urgência Normal ou Urgente. Lançou errado: **Desfazer**.
-7. **Relato**: condição encontrada, causa, serviço realizado, teste funcional, recomendações e observações. Pode usar o
-   microfone do teclado para ditar. Toque em **Guardar relato** (sair da tela também guarda): o app guarda e segue para o próximo passo que falta.
+   Compras e a O.S. fica aguardando peça), com urgência Normal ou Urgente. Lançou errado: **Desfazer**. Escreva o nome e
+   a especificação como na plaqueta (ex.: "Resistência 7 kW 220 V") e escolha a unidade na lista (un, pç, par, conj.,
+   kit, m, kg, L). Se a especificação estiver grudada ou com a unidade em caixa errada ("7kv"), o app lembra de conferir
+   (kV é tensão, kW é potência); o que você escreveu não muda sozinho.
+7. **Relato**: condição encontrada, causa ou diagnóstico, serviço realizado, medições, teste funcional, como o
+   equipamento ficou, recomendações e observações. Cada campo mostra um exemplo do nível de detalhe esperado. Pode usar o
+   microfone do teclado para ditar. Toque em **Guardar relato** (sair da tela também guarda): o app guarda e segue para o
+   próximo passo que falta. Veja "Resultado, medições e revisão do texto" abaixo.
 8. **Assinatura do cliente**: o responsável assina no quadro com o dedo e informa o **nome completo** (nome e
    sobrenome). O documento (CPF, RG ou matrícula) é **opcional**: em branco é aceito; preenchido, o app confere (CPF com
    os dígitos certos). Sem quem assine: **Registrar sem assinatura**, com o motivo, o nome de quem recebeu o serviço e a
@@ -122,6 +156,29 @@ feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
    **Enviar**: o pedido entra na fila como qualquer registro (sem sinal, sobe depois) e o servidor manda o PDF num e-mail
    da Metrolabs, com o número do chamado no assunto. A O.S. passa a mostrar "Enviado às ..."; o mesmo envio nunca sai
    duas vezes. Sem envio em 1 dia útil, a gestão recebe a cobrança e pode enviar pela tela do SGO+.
+
+### Resultado, medições e revisão do texto (13/11/2026)
+
+O relatório que o cliente recebe mostra no topo como o equipamento ficou. Por isso, nos serviços técnicos:
+
+- **Resultado do teste funcional** (obrigatório): toque em **Aprovado**, **Reprovado** ou **Não realizado**. Reprovado
+  ou não realizado: escreva no campo Teste funcional o que falhou ou por que não deu para testar (pelo menos 5 palavras).
+- **Como o equipamento ficou** (obrigatório): **Liberado para uso**, **Liberado com restrição** ou **Não liberado**.
+  Com restrição ou não liberado, aparece o campo para escrever a restrição ou o que falta para liberar (pelo menos 4
+  palavras). "Liberado para uso" só vale com o teste aprovado; se o teste não foi feito, o app pede para escolher outra
+  opção ou registrar o teste. Equipamento não liberado avisa a gestão e o cliente.
+- **Mínimo de palavras**: condição encontrada 4, causa ou diagnóstico 3 (na corretiva) e serviço realizado 5. "Parada"
+  ou "Resistência" sozinhos não bastam: escreva como o equipamento estava, o que provocou a falha e o que foi feito, em
+  qual parte e com qual peça. A lista **Para o relato ficar completo**, logo acima do Guardar, diz o que falta.
+- **Medições** (opcional): **Registrar uma medição** abre uma linha com a grandeza (ex.: tensão entre fases), o valor, a
+  unidade (lista com V, A, kW, Ω, °C, bar...) e onde ou em que condição foi medido (ex.: L1-L2 na entrada do quadro).
+  **Mais uma medição** acrescenta outra; **Tirar esta medição** apaga a linha. Cada linha vira uma linha da tabela
+  "Medições realizadas" no relatório. As medições ficam no aparelho e sobem com o relato, com ou sem sinal.
+- **Revisar o português** (com internet): a IA do SGO+ corrige a ortografia e organiza as frases do que você escreveu.
+  Ela não acrescenta fatos nem números: o servidor descarta a revisão que traz um número que não estava no seu texto ou
+  que muda muito o tamanho. O texto revisado aparece num quadro; toque em **Usar este texto** (ou **Usar todos**) só se o
+  sentido continuar o mesmo, ou em **Manter o meu texto**. Depois toque em **Guardar relato**. Sem sinal, ou sem a IA
+  ligada no servidor, o botão não aparece ou avisa; o relato segue normalmente.
 
 ### Continuar e Seguir (03/11/2026)
 
@@ -217,6 +274,11 @@ Toque na barra **Pendente de envio (N)**. A tela lista:
   adianta reenviar (por exemplo, O.S. cancelada ou de outro técnico), o item fica guardado como registro; fale com o
   supervisor.
 - **Enviados**: os últimos confirmados, com a hora do envio.
+
+Atualização de 12/11/2026: apagou um campo do relato (causa, recomendações...)? O campo vazio também é enviado e sai do
+relatório. A O.S. que saiu da sua agenda (cancelada, passada a outro técnico ou excluída) depois do Saí ou do Cheguei fica
+com o selo "Saiu da sua agenda" até o que você fez subir; na atualização seguinte, sem nada pendente, ela sai do aparelho.
+Equipamento não identificado aparece com a descrição escrita na triagem.
 
 ## 6. Trocar de celular (ou entregar o aparelho)
 

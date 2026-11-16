@@ -1,0 +1,15 @@
+Acessos por caixas — Lote 3 (Financeiro em Compras) — publicado em 15/11/2026 00:14 BRT
+
+Imagem: metrolabs/sgo:poderes-lote3-20261115
+        sha256:1b61228fa400023df48f70efcc80ddef3da99b090aa481783428cabc614cc140
+Base:   metrolabs/sgo:financeiro-abas-20261115 (sha256:ac60b5cb…); produção = lote3-antes (7 hashes iguais); imagem pwuser, 489, 7 hashes.
+Backup: /opt/metrolabs/backup/poderes-lote3-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Ligadas: FIN_CONFERIR_COMPRAS, FIN_FATURAS_CONCILIAR, FIN_A_PAGAR, FIN_FATURA_REABRIR, FIN_CARTOES_VER, FIN_CARTOES_EDITAR.
+Desligadas: FIN_VER_CONTAS, FIN_CONCILIAR_BANCO (página antiga /financeiro aposentada; Painel usa FIN_OMIE_*).
+Detalhes, travas e testes: LOTE3_IMPLEMENTACAO.md. Equivalência: lote3-equivalencia.txt (23 contas, 322 comparações, 0 divergências).
+Testes: poderes-lote3 4/4 (novo), poderes-lote0 13/13 (lista de ligadas), lotes 1/4/5/6 5/5/5/4, compras 17/17,
+compras-informar-conciliacao 10/10, compras-equipamento-cadastro 4/4, etapa5-compras-email-cadastros 10/10,
+assistencia-compras-retorno 6/6 — iguais antes e depois; compras-acesso-financeiro-delegado 0/7 igual antes e depois (anterior).
+Produção: 0 exceções gravadas em SYS_PODERES_EXCECOES (nenhuma de FIN_*) => ninguém teve o acesso alterado.
+No ar: saudável, GET 200, 0 erros, Cmp_exigirFinCx_ e a lista de ligadas publicados.

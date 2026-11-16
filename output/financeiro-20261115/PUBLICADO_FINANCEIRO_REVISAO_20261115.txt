@@ -1,0 +1,27 @@
+Painel financeiro e Ganhos — correções da revisão independente — publicado em 15/11/2026 00:26 BRT
+
+Imagem: metrolabs/sgo:financeiro-revisao-20261115
+        sha256:e1fd4afab5094c200a9b5bc7f2fd90b4a3e3c1780f5475cb9fb168557b465110
+Base:   metrolabs/sgo:poderes-lote3-20261115 (sha256:1b61228f…); produção = revisao-antes (8 hashes); 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-revisao-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Revisão de código independente (somente leitura) do que foi publicado na noite: 9 achados. Corrigidos 7:
+1) Ganhos: a referência do Omie ficava presa no formulário e podia ir num lançamento manual posterior -> limpa ao abrir a aba,
+   ao marcar "sem proposta" e ao escolher proposta pela busca.
+2) Ganhos: título pago em meses diferentes sugeria o acumulado -> referência por pagamento (OMIE:<título>:<data>) e a sugestão
+   desconta o já lançado do mesmo título (mostra "já lançado antes ... (descontado)"); referência antiga aceita.
+3) Ganhos: ler o Omie passou a exigir também «Consultar o Financeiro no SGO+ (Omie)» (depois da caixa de Ganhos).
+4) Gravações: a prévia lê o título sem memória; a confirmação espera 61 s dessa leitura (regra do Omie: 1 consulta igual por
+   minuto) e diz quantos segundos faltam, sem chamar o Omie. Antes a confirmação no primeiro minuto seria recusada.
+5) Lista vazia também fica na memória de 60 s (antes, "Atualizar" em menos de 1 minuto virava erro).
+8) Vínculo pedido -> título: referência exata ou exata + "-<parcela>"; revisões da mesma proposta não se confundem; excluída fora.
+9) Aviso "já existe no Omie" reconhece as parcelas (-1, -2...).
+Não corrigidos (só mensagem de "aguarde", sem dado errado): 6) duas consultas de movimentos simultâneas (outro usuário, ou
+"Ver vencidos" durante o carregamento) podem receber "ocupado"; 7) páginas de uma mesma consulta guardadas em momentos diferentes
+podem se desencontrar se o Omie mudar no meio (janela curta).
+Arquivos: JS_GanhosVendedores.html, SGO_Ajuda_Financeiro.js, SGO_Ganhos_Vendedores.js, SGO_Omie.js, SGO_Omie_Faturamento.js,
+SGO_Omie_Ganhos.js, SGO_Omie_Operacoes.js, SGO_Omie_Pedidos.js. Patch: patch-revisao.cjs (+ ordem das caixas em Ganhos e ajuda).
+Testes: financeiro-omie-20261114 15/15 (novos: espera de 1 minuto; vínculo com revisões), ganhos-omie-20261115 5/5 (novo:
+pagamento em meses diferentes), ganhos-vendedores 12/12, omie-* 13/20/9/12, poderes-lote0/3 13/4, ajuda 1/1.
+Ensaio REAL somente leitura: Ganhos novembro 49 / outubro 87 recebimentos; "parciais" falsos caíram de 18/29 para 0 (retenções).
+Documentos: roteiro e manual com a espera de 1 minuto. No ar: saudável, GET 200, 0 erros.

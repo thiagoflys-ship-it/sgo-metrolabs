@@ -1,0 +1,27 @@
+== 1. base
+base conferida
+== 2. backup
+total 156648
+-rw-r--r-- 1 root root 160400399 Nov 14 23:38 banco-antes.dump
+-rw-r--r-- 1 root root      1664 Nov 14 23:38 compose.antes.yml
+== 3. imagem
+sha256:65b6e961af11b1a1fceae118fc5afcadbaba3ff7a86d7f4847cea2856d00c462
+pwuser
+487
+bde92f6072c15c7b30751743a143e81f8d757fa6cba6b41c3c838012bc139062  /app/dist/servicos/financeiro.js
+c2966e46321d037a0d207bdd22a9010c3bf8aa492fe4b35457682e38a4eddb6b  /app/src/servicos/financeiro.ts
+imagem conferida
+== 4. troca
+ Container sgo-db-1 Running 
+ Container sgo-app-1 Recreate 
+ Container sgo-app-1 Recreated 
+ Container sgo-db-1 Waiting 
+ Container sgo-db-1 Healthy 
+ Container sgo-app-1 Starting 
+ Container sgo-app-1 Started 
+saudável
+== 5. no ar
+GET / 200 | GET /financeiro 200 true | POST /financeiro/consulta 410
+metrolabs/sgo:financeiro-pagina-antiga-20261115 sha256:65b6e961af11b1a1fceae118fc5afcadbaba3ff7a86d7f4847cea2856d00c462
+erros no log desde a troca: 0
+14/11 23:39

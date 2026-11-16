@@ -1,0 +1,14 @@
+Painel financeiro — faixas de atraso e planilhas CSV — publicado em 15/11/2026 00:38 BRT
+
+Imagem: metrolabs/sgo:financeiro-faixas-20261115
+        sha256:f810538bf3e6268412efcc601c352cbc573e3dadfb03b52e31217a97ad4644e0
+Base:   metrolabs/sgo:financeiro-resultado-20261115 (sha256:0b482e9a…), 3 arquivos conferidos; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-faixas-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+- Vencidos a receber: cartões por faixa de atraso, título a título (até 30 dias, 31 a 90, mais de 90), valor em aberto.
+- "Baixar planilha (CSV)" nos vencidos por cliente, na agenda e no resultado do mês: gerada no navegador com o que está na tela
+  (";" e vírgula decimal, BOM UTF-8, células começando com = + @ - protegidas), sem nova consulta ao Omie.
+Arquivos: SGO_Omie_Gestao.js, JS_Omie_Gestao.html, SGO_Ajuda_Financeiro.js. Patch: patch-faixas-csv.cjs.
+Testes: financeiro-omie-20261114 16/16 (faixas; download do CSV na página completa).
+Ensaio REAL somente leitura: 80 vencidos = 26 até 30 dias + 7 de 31 a 90 + 47 há mais de 90 dias; soma das faixas = total.
+No ar: saudável, GET 200, 0 erros.

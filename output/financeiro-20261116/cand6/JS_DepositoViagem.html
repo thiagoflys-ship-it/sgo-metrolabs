@@ -1,0 +1,1609 @@
+<style>
+  /* DEPÓSITO DE VIAGEM (E1, 11/11/2026; organização, Kanban, Gantt e relatórios em 11/11/2026): menu Operação de campo > Depósito
+     de viagem. Servidor: SGO_Viagem.js, SGO_Viagem_Documento.js e SGO_Viagem_Painel.js (Viagem_api). Visual do SGO+: tokens --bc-*
+     e componentes de UI_Estilos.html (cadx-*), Kanban e Gantt comuns (JS_PainelAtendimento.html / JS_Atividades.html).
+     Cores das situações: as mesmas de VIA_CORES (SGO_Viagem_Painel.js), usadas também no Kanban, no Gantt e nos relatórios A4. */
+  #vgTela { --vg-gap: 12px; }
+  #vgTela .cadx-btn { min-height: 40px; height: auto; padding: 6px 14px; white-space: normal; text-align: center; line-height: 1.25; font-size: 13px; }
+  #vgTela .cadx-btn:focus-visible, #vgTela .vg-aba:focus-visible, #vgTela .vg-cartao:focus-visible, #vgTela summary:focus-visible { outline: 2px solid var(--bc-info, #1E4F7A); outline-offset: 2px; }
+  #vgTela .cadx-btn-link { min-height: 32px; padding: 0 2px; }
+  .vg-abas { display: flex; gap: 2px; margin: 4px 0 14px; border-bottom: 1px solid var(--bc-line, #E2E0D8); overflow-x: auto; scrollbar-width: thin; }
+  .vg-aba { flex: 0 0 auto; min-height: 44px; padding: 0 14px; border: 0 !important; border-bottom: 3px solid transparent !important; border-radius: 0; background: transparent !important; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--bc-text-3, #5F645F) !important; cursor: pointer; box-shadow: none !important; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .vg-aba:hover { color: var(--bc-text, #1C1F1D) !important; }
+  .vg-aba.is-atual { color: var(--bc-action, #1F6B2A) !important; border-bottom-color: var(--bc-action, #1F6B2A) !important; }
+  .vg-aba.is-guia { color: var(--bc-info, #1E4F7A) !important; }
+  .vg-aba .vg-n { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--bc-danger, #A3261B); color: #fff; font-size: 11.5px; line-height: 20px; text-align: center; }
+  .vg-bloco { background: var(--bc-surface, #fff); border: 1px solid var(--bc-line, #E2E0D8); border-radius: var(--radius, 8px); padding: 16px 18px; margin-bottom: var(--vg-gap); min-width: 0; }
+  .vg-bloco > h3, .vg-tit { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: var(--bc-text, #1C1F1D); }
+  .vg-bloco h4 { margin: 14px 0 6px; font-size: 13.5px; }
+  .vg-bloco.is-acao { border-color: var(--bc-action-line, #B9D3B3); box-shadow: inset 4px 0 0 var(--bc-action, #1F6B2A); }
+  .vg-texto { font-size: 13.5px; line-height: 1.6; text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; margin: 0 0 8px; color: var(--bc-text-2, #4A4F4B); }
+  .vg-sub { font-size: 12.5px; color: var(--bc-text-3, #5F645F); line-height: 1.5; text-align: justify; overflow-wrap: break-word; }
+  .vg-mono { font-family: var(--bc-mono, monospace); }
+  .vg-faixa { padding: 11px 14px; border-radius: 6px; border: 1px solid var(--bc-info-line, #BFD2E4); background: var(--bc-info-bg, #E7EFF6); color: var(--bc-text, #1C1F1D); font-size: 13px; line-height: 1.55; margin-bottom: 12px; text-align: justify; overflow-wrap: break-word; }
+  .vg-faixa.is-alerta { border-color: var(--bc-warn-line, #E6D3A2); background: var(--bc-warn-bg, #FAF0D7); }
+  .vg-faixa.is-erro { border-color: var(--bc-danger-line, #EBC2BC); background: var(--bc-danger-bg, #FBEBE8); }
+  .vg-faixa.is-ok { border-color: var(--bc-action-line, #B9D3B3); background: var(--bc-action-bg, #E8F2E5); }
+  .vg-faixa.is-neutra { border-color: var(--bc-line, #E2E0D8); background: var(--bc-surface-2, #FAF9F6); }
+  .vg-faixa ul, .vg-faixa ol { margin: 6px 0 0 18px; padding: 0; }
+  .vg-faixa li { margin: 3px 0; }
+  .vg-faixa .vg-acoes { margin-top: 8px; }
+  /* guia rápido (primeira visita) */
+  .vg-guia-faixa { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 10px 14px; margin: 0 0 12px; border-radius: 6px; border: 1px solid var(--bc-info-line, #BFD2E4); background: var(--bc-info-bg, #E7EFF6); font-size: 13px; }
+  .vg-guia-faixa b { color: var(--bc-info, #1E4F7A); }
+  /* "para você agora" */
+  .vg-agora { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin: 0 0 12px; }
+  .vg-agora .cadx-num { min-height: 64px; width: 100%; }
+  /* selos de situação (mesmas cores de VIA_CORES) */
+  .vg-selo { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; line-height: 1.6; border: 1px solid currentColor; white-space: nowrap; background: #fff; }
+  .vg-selo::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .vg-selo.s-RASCUNHO { color: #4A4F4B; background: #F1F2F4; border-color: #C9CDD2; }
+  .vg-selo.s-DEVOLVIDA { color: #8A3D00; background: #FDF0E3; border-color: #EBC49C; }
+  .vg-selo.s-AGUARDANDO_APROVACAO { color: #7A5200; background: #FAF0D7; border-color: #E6D3A2; }
+  .vg-selo.s-AGUARDANDO_DIRETORIA { color: #5E3591; background: #F2ECF9; border-color: #D3C2EA; }
+  .vg-selo.s-APROVADA { color: #1A4F8C; background: #E7EFF8; border-color: #BCD0EA; }
+  .vg-selo.s-CARGA_FEITA { color: #1D6B3F; background: #E8F2E5; border-color: #B9D3B3; }
+  .vg-selo.s-NEGADA { color: #A3261B; background: #FBEBE8; border-color: #EBC2BC; }
+  .vg-selo.s-CANCELADA { color: #3E4852; background: #EDEFF1; border-color: #C3C9CF; }
+  .vg-selo.s-PRESTACAO_PENDENTE { color: #9D174D; background: #FCE7F3; border-color: #F3B4D3; }
+  .vg-selo.s-PRESTACAO_DEVOLVIDA { color: #831843; background: #FCE7F3; border-color: #E9A5C6; }
+  .vg-selo.s-PRESTACAO_ENVIADA { color: #0E7490; background: #E0F2F5; border-color: #A5D8E2; }
+  .vg-selo.s-ACERTO_PENDENTE { color: #3F6212; background: #ECF5DD; border-color: #C3DCA0; }
+  .vg-selo.s-AGUARDANDO_CIENCIA { color: #3730A3; background: #EBEBFB; border-color: #C3C2EE; }
+  .vg-selo.s-ENCERRADA { color: #1F2933; background: #EDEFF1; border-color: #AEB6BF; }
+  .vg-selo.urgente, .vg-selo.vencida { color: #A3261B; background: #FBEBE8; border-color: #EBC2BC; }
+  .vg-borda-RASCUNHO { --vg-cor: #6b7480; } .vg-borda-DEVOLVIDA { --vg-cor: #b45309; } .vg-borda-AGUARDANDO_APROVACAO { --vg-cor: #a87406; } .vg-borda-AGUARDANDO_DIRETORIA { --vg-cor: #7b4fb0; }
+  .vg-borda-APROVADA { --vg-cor: #1f5fa8; } .vg-borda-CARGA_FEITA { --vg-cor: #1d6b3f; } .vg-borda-NEGADA { --vg-cor: #a61b1b; } .vg-borda-CANCELADA { --vg-cor: #52606d; }
+  .vg-borda-PRESTACAO_PENDENTE { --vg-cor: #be185d; } .vg-borda-PRESTACAO_DEVOLVIDA { --vg-cor: #9d174d; } .vg-borda-PRESTACAO_ENVIADA { --vg-cor: #0e7490; } .vg-borda-ACERTO_PENDENTE { --vg-cor: #4d7c0f; }
+  .vg-borda-AGUARDANDO_CIENCIA { --vg-cor: #4338ca; } .vg-borda-ENCERRADA { --vg-cor: #1f2933; }
+  /* prestação de contas (E2) */
+  .vg-contas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 4px 0 12px; }
+  .vg-conta { padding: 10px 12px; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 6px; background: var(--bc-surface-2, #FAF9F6); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .vg-conta span { font-size: 11.5px; font-weight: 600; color: var(--bc-text-3, #5F645F); }
+  .vg-conta b { font-family: var(--bc-mono, monospace); font-size: 16px; font-weight: 600; color: var(--bc-text, #1C1F1D); }
+  .vg-conta.is-destaque { border-color: var(--bc-warn-line, #E6D3A2); background: var(--bc-warn-bg, #FAF0D7); }
+  .vg-conta.is-ok { border-color: var(--bc-action-line, #B9D3B3); background: var(--bc-action-bg, #E8F2E5); }
+  .vg-itens { display: flex; flex-direction: column; gap: 8px; }
+  .vg-item { border: 1px solid var(--bc-line, #E2E0D8); border-left: 4px solid var(--vg-item, #a87406); border-radius: 6px; padding: 10px 12px; background: #fff; min-width: 0; }
+  .vg-item.s-ACEITO { --vg-item: #1d6b3f; } .vg-item.s-GLOSADO { --vg-item: #a61b1b; } .vg-item.s-LANCADO { --vg-item: #a87406; }
+  .vg-item-cab { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+  .vg-item-cab b { font-size: 13.5px; }
+  .vg-item .vg-sub { margin-top: 3px; }
+  .vg-item-sit { font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .vg-item-sit.s-ACEITO { color: #1D6B3F; } .vg-item-sit.s-GLOSADO { color: #A3261B; } .vg-item-sit.s-LANCADO { color: #7A5200; }
+  .vg-ia { padding: 8px 10px; border-radius: 6px; background: var(--bc-info-bg, #E7EFF6); border: 1px solid var(--bc-info-line, #BFD2E4); font-size: 12.5px; line-height: 1.5; margin-top: 8px; text-align: justify; }
+  /* listas de solicitações */
+  .vg-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .vg-cartao { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 12px 14px 12px 16px; border: 1px solid var(--bc-line, #E2E0D8) !important; border-left: 4px solid var(--vg-cor, #6b7480) !important; border-radius: 8px; background: var(--bc-surface, #fff) !important; cursor: pointer; font: inherit; color: inherit !important; min-width: 0; box-shadow: none !important; }
+  .vg-cartao:hover { border-color: var(--bc-line-2, #CFCCC1) !important; box-shadow: 0 2px 10px rgba(28,31,29,.06) !important; }
+  .vg-cartao .vg-linha1 { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+  .vg-cartao .vg-num { font-family: var(--bc-mono, monospace); font-size: 12.5px; font-weight: 600; color: var(--bc-text-2, #4A4F4B); }
+  .vg-cartao .vg-dest { font-size: 15px; font-weight: 700; color: var(--bc-text, #1C1F1D); }
+  .vg-cartao .vg-rod { display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: flex-end; border-top: 1px solid var(--bc-line-soft, #ECEAE3); padding-top: 8px; margin-top: 2px; }
+  .vg-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .vg-chip { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11.5px; font-weight: 600; line-height: 1.6; background: var(--bc-surface-3, #F1EFE9); color: var(--bc-text-2, #4A4F4B); }
+  .vg-total { font-family: var(--bc-mono, monospace); font-size: 22px; font-weight: 600; color: var(--bc-text, #1C1F1D); }
+  .vg-valor { font-family: var(--bc-mono, monospace); font-weight: 600; font-size: 14px; }
+  .vg-vazio { padding: 26px 18px; text-align: center; color: var(--bc-text-3, #5F645F); line-height: 1.6; background: var(--bc-surface, #fff); border: 1px dashed var(--bc-line-2, #CFCCC1); border-radius: var(--radius, 8px); }
+  .vg-vazio b { display: block; color: var(--bc-text, #1C1F1D); font-size: 14px; margin-bottom: 4px; }
+  /* detalhe */
+  .vg-topo { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px 20px; align-items: start; }
+  .vg-topo .vg-dest { font-size: 19px; font-weight: 700; margin: 4px 0 2px; }
+  .vg-numeros { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: flex-end; text-align: right; }
+  .vg-numeros div { display: flex; flex-direction: column; }
+  .vg-numeros span { font-size: 11.5px; font-weight: 600; color: var(--bc-text-3, #5F645F); }
+  .vg-numeros b { font-family: var(--bc-mono, monospace); font-size: 16px; font-weight: 600; }
+  .vg-numeros .vg-total { font-size: 24px; }
+  .vg-etapas { display: flex; gap: 0; margin: 14px 0 2px; list-style: none; padding: 0; counter-reset: vgEt; }
+  .vg-etapas li { flex: 1 1 0; position: relative; padding: 26px 4px 0; text-align: center; font-size: 11.5px; font-weight: 600; color: var(--bc-text-3, #5F645F); line-height: 1.3; min-width: 0; }
+  .vg-etapas li::before { counter-increment: vgEt; content: counter(vgEt); position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--bc-line-2, #CFCCC1); background: #fff; font-size: 11px; line-height: 18px; z-index: 1; box-sizing: border-box; }
+  .vg-etapas li::after { content: ""; position: absolute; top: 10px; left: -50%; width: 100%; height: 2px; background: var(--bc-line, #E2E0D8); }
+  .vg-etapas li:first-child::after { display: none; }
+  .vg-etapas li.feita { color: var(--bc-action, #1F6B2A); }
+  .vg-etapas li.feita::before { content: "✓"; background: var(--bc-action, #1F6B2A); border-color: var(--bc-action, #1F6B2A); color: #fff; }
+  .vg-etapas li.feita::after, .vg-etapas li.atual::after { background: var(--bc-action, #1F6B2A); }
+  .vg-etapas li.atual { color: var(--bc-text, #1C1F1D); }
+  .vg-etapas li.atual::before { border-color: var(--bc-action, #1F6B2A); color: var(--bc-action, #1F6B2A); box-shadow: 0 0 0 3px var(--bc-action-bg, #E8F2E5); }
+  .vg-etapas li.parada::before { content: "×"; background: var(--bc-danger, #A3261B); border-color: var(--bc-danger, #A3261B); color: #fff; }
+  .vg-etapas li.futura { opacity: .75; font-weight: 500; }
+  .vg-det { background: var(--bc-surface, #fff); border: 1px solid var(--bc-line, #E2E0D8); border-radius: var(--radius, 8px); margin-bottom: var(--vg-gap); min-width: 0; }
+  .vg-det > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 16px; font-weight: 700; font-size: 14.5px; }
+  .vg-det > summary::-webkit-details-marker { display: none; }
+  .vg-det > summary::before { content: ""; flex: 0 0 auto; width: 7px; height: 7px; border-right: 2px solid var(--bc-text-3, #5F645F); border-bottom: 2px solid var(--bc-text-3, #5F645F); transform: rotate(-45deg); transition: transform .15s ease; }
+  .vg-det[open] > summary::before { transform: rotate(45deg); }
+  .vg-det > summary h3 { margin: 0; font-size: 14.5px; }
+  .vg-det > summary .vg-sum-res { margin-left: auto; font-weight: 500; font-size: 12.5px; color: var(--bc-text-3, #5F645F); text-align: right; }
+  .vg-det-corpo { padding: 0 18px 16px; }
+  /* formulário em etapas */
+  .vg-etapa > summary { min-height: 56px; }
+  .vg-etapa-n { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; background: var(--bc-surface-3, #F1EFE9); color: var(--bc-text-2, #4A4F4B); }
+  .vg-etapa.is-ok .vg-etapa-n { background: var(--bc-action, #1F6B2A); color: #fff; }
+  .vg-etapa-txt { display: flex; flex-direction: column; min-width: 0; }
+  .vg-etapa-txt small { font-weight: 500; font-size: 12px; color: var(--bc-text-3, #5F645F); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 62vw; }
+  .vg-etapa-estado { margin-left: auto; flex: 0 0 auto; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--bc-warn-bg, #FAF0D7); color: var(--bc-warn, #7A5200); }
+  .vg-etapa.is-ok .vg-etapa-estado { background: var(--bc-action-bg, #E8F2E5); color: var(--bc-action, #1F6B2A); }
+  .vg-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
+  .vg-campo { display: flex; flex-direction: column; gap: 5px; font-size: 13px; min-width: 0; }
+  .vg-campo > span { font-weight: 600; color: var(--bc-text, #1C1F1D); }
+  .vg-campo input, .vg-campo select, .vg-campo textarea { width: 100%; max-width: 100%; box-sizing: border-box; min-height: 42px; padding: 8px 10px; border: 1px solid var(--bc-line-2, #CFCCC1); border-radius: 6px; font: inherit; font-size: 14px; background: #fff; color: inherit; }
+  .vg-campo input:focus, .vg-campo select:focus, .vg-campo textarea:focus { outline: 2px solid var(--bc-info-line, #BFD2E4); border-color: var(--bc-info, #1E4F7A); }
+  .vg-campo textarea { min-height: 72px; resize: vertical; }
+  .vg-campo.largo { grid-column: 1 / -1; }
+  .vg-campo .vg-dica { font-weight: 400; font-size: 12px; color: var(--bc-text-3, #5F645F); text-align: justify; line-height: 1.45; }
+  .vg-acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  .vg-cat { border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; min-width: 0; background: var(--bc-surface-2, #FAF9F6); }
+  .vg-cat-cab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; }
+  .vg-cat-cab b { font-size: 14px; }
+  .vg-linhaorc { border: 1px solid var(--bc-line, #E2E0D8); background: #fff; border-radius: 6px; padding: 12px; margin-top: 10px; }
+  .vg-erro { color: var(--bc-danger, #A3261B); font-size: 12.5px; font-weight: 600; }
+  .vg-anexos { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 12.5px; }
+  .vg-anexos a { overflow-wrap: anywhere; }
+  .vg-na { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; margin-top: 8px; }
+  .vg-na label { display: inline-flex; gap: 8px; align-items: center; min-height: 40px; cursor: pointer; }
+  .vg-na input[type="checkbox"] { width: 18px; height: 18px; }
+  .vg-na input[type="text"] { flex: 1 1 220px; min-height: 40px; padding: 6px 10px; border: 1px solid var(--bc-line-2, #CFCCC1); border-radius: 6px; font: inherit; min-width: 0; max-width: 100%; box-sizing: border-box; background: #fff; }
+  .vg-pessoas { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .vg-pessoa { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 6px; font-size: 13px; background: #fff; }
+  .vg-pessoa label { display: flex; gap: 8px; align-items: center; min-height: 40px; cursor: pointer; }
+  .vg-rodape { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); margin-top: 12px; background: var(--bc-surface, #fff); border: 1px solid var(--bc-line, #E2E0D8); border-radius: var(--radius, 8px); box-shadow: 0 -4px 14px rgba(0,0,0,.06); }
+  .vg-tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .vg-tabela th { text-align: left; padding: 8px; border-bottom: 1px solid var(--bc-line-2, #CFCCC1); font-size: 11.5px; color: var(--bc-text-3, #5F645F); font-weight: 700; }
+  .vg-tabela td { text-align: left; padding: 8px; border-bottom: 1px solid var(--bc-line-soft, #ECEAE3); vertical-align: top; overflow-wrap: anywhere; }
+  .vg-tabela td.num, .vg-tabela th.num { text-align: right; white-space: nowrap; font-family: var(--bc-mono, monospace); }
+  .vg-tabela tr.total td { font-weight: 700; border-top: 2px solid var(--bc-line-2, #CFCCC1); }
+  .vg-pares { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 6px 14px; font-size: 13px; margin: 0; }
+  .vg-pares dt { font-weight: 600; color: var(--bc-text-3, #5F645F); }
+  .vg-pares dd { margin: 0; overflow-wrap: anywhere; text-align: justify; }
+  /* comece por aqui */
+  .vg-fluxo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 4px; }
+  .vg-fluxo .vg-selo { font-size: 12px; }
+  .vg-fluxo i { font-style: normal; color: var(--bc-text-3, #5F645F); }
+  .vg-papeis { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+  .vg-papel { background: var(--bc-surface, #fff); border: 1px solid var(--bc-line, #E2E0D8); border-radius: var(--radius, 8px); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .vg-papel.is-meu { border-color: var(--bc-action, #1F6B2A); box-shadow: inset 0 0 0 1px var(--bc-action, #1F6B2A); }
+  .vg-papel h4 { margin: 0; font-size: 14.5px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .vg-papel ol { margin: 4px 0 0 18px; padding: 0; font-size: 13px; line-height: 1.55; color: var(--bc-text-2, #4A4F4B); text-align: justify; }
+  .vg-papel ol li { margin: 3px 0; }
+  .vg-papel .vg-acoes { margin-top: auto; padding-top: 8px; }
+  .vg-meu { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--bc-action, #1F6B2A); color: #fff; }
+  .vg-exemplos { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 8px; }
+  .vg-exemplos div { padding: 8px 10px; border-radius: 6px; background: var(--bc-surface-2, #FAF9F6); border: 1px solid var(--bc-line-soft, #ECEAE3); font-size: 12.5px; line-height: 1.45; }
+  .vg-exemplos b { font-family: var(--bc-mono, monospace); font-size: 12.5px; }
+  /* filtros, Kanban e Gantt */
+  .vg-filtros { display: flex; flex-wrap: wrap; gap: 10px 12px; align-items: flex-end; padding: 10px 12px; margin-bottom: 12px; background: var(--bc-surface, #fff); border: 1px solid var(--bc-line, #E2E0D8); border-radius: var(--radius, 8px); }
+  .vg-filtros .vg-campo { flex: 1 1 180px; }
+  .vg-filtros .vg-campo select { min-height: 40px; }
+  .vg-kcard-dest { font-weight: 700; font-size: 13.5px; color: var(--bc-text, #1C1F1D); }
+  .vg-kcard-lin { font-size: 12px; color: var(--bc-text-3, #5F645F); margin-top: 2px; overflow-wrap: anywhere; }
+  .vg-kcard-rod { display: flex; justify-content: space-between; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .vg-conflito { color: var(--bc-danger, #A3261B); font-weight: 700; font-size: 12px; }
+  .vg-legenda { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+  /* relatórios */
+  .vg-tipos { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .vg-tipo { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; line-height: 1.45; min-height: 44px; }
+  .vg-tipo input { margin-top: 3px; width: 18px; height: 18px; flex: 0 0 auto; }
+  .vg-tipo b { display: block; font-size: 14px; color: var(--bc-text, #1C1F1D); }
+  .vg-tipo.is-sel { border-color: var(--bc-action, #1F6B2A); box-shadow: inset 0 0 0 1px var(--bc-action, #1F6B2A); background: var(--bc-action-bg, #E8F2E5); }
+  /* política: escolha dos aprovadores */
+  .vg-escolhidos { display: flex; flex-wrap: wrap; gap: 6px; min-height: 40px; align-items: center; padding: 6px 8px; border: 1px solid var(--bc-line-2, #CFCCC1); border-radius: 6px; background: var(--bc-surface-2, #FAF9F6); }
+  .vg-escolhido { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 999px; background: var(--bc-action-bg, #E8F2E5); border: 1px solid var(--bc-action-line, #B9D3B3); color: var(--bc-action, #1F6B2A); font-size: 12.5px; font-weight: 700; }
+  .vg-escolhido button { min-width: 32px; min-height: 32px; border: 0 !important; background: transparent !important; color: inherit !important; font-size: 16px; cursor: pointer; box-shadow: none !important; padding: 0; }
+  .vg-marcar { max-height: 260px; overflow-y: auto; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 6px; background: #fff; }
+  .vg-marcar label { display: flex; gap: 10px; align-items: center; min-height: 44px; padding: 4px 12px; border-bottom: 1px solid var(--bc-line-soft, #ECEAE3); cursor: pointer; font-size: 13.5px; }
+  .vg-marcar label:last-child { border-bottom: 0; }
+  .vg-marcar input { width: 18px; height: 18px; flex: 0 0 auto; }
+  .vg-marcar .vg-sub { margin-left: auto; text-align: right; }
+  .vg-teto { border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; padding: 12px; background: var(--bc-surface-2, #FAF9F6); }
+  /* centros de custo */
+  .vg-prog { height: 8px; border-radius: 4px; background: var(--bc-surface-3, #F1EFE9); overflow: hidden; margin: 6px 0 2px; }
+  .vg-prog > div { height: 100%; background: var(--bc-action, #1F6B2A); }
+  .vg-check { list-style: none; margin: 8px 0 0; padding: 0; counter-reset: vgChk; }
+  .vg-check li { position: relative; padding: 6px 0 6px 34px; font-size: 13px; line-height: 1.5; text-align: justify; color: var(--bc-text-2, #4A4F4B); }
+  .vg-check li::before { counter-increment: vgChk; content: counter(vgChk); position: absolute; left: 0; top: 5px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--bc-line-2, #CFCCC1); font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; box-sizing: border-box; background: #fff; }
+  .vg-check li.ok::before { content: "✓"; background: var(--bc-action, #1F6B2A); border-color: var(--bc-action, #1F6B2A); color: #fff; }
+  .vg-check li b { color: var(--bc-text, #1C1F1D); }
+  .vg-guiado { border: 2px solid var(--bc-action, #1F6B2A); }
+  .vg-guiado .vg-cc-cod { font-family: var(--bc-mono, monospace); font-size: 22px; font-weight: 600; }
+  @media (max-width: 760px) {
+    .vg-bloco { padding: 14px; }
+    .vg-lista { grid-template-columns: 1fr; }
+    .vg-topo { grid-template-columns: 1fr; }
+    .vg-numeros { justify-content: flex-start; text-align: left; }
+    .vg-acoes .cadx-btn, .vg-rodape .cadx-btn { min-height: 44px; flex: 1 1 auto; }
+    #vgTela .cadx-btn { min-height: 44px; }
+    .vg-pares { grid-template-columns: 1fr; }
+    .vg-pares dt { margin-top: 6px; }
+    .vg-tabela thead { display: none; }
+    .vg-tabela tr { display: block; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 6px; margin-bottom: 8px; padding: 6px 10px; background: #fff; }
+    .vg-tabela td { display: block; border: 0; padding: 3px 0; }
+    .vg-tabela td.num { text-align: left; }
+    .vg-tabela td[data-r]::before { content: attr(data-r) ": "; font-weight: 600; color: var(--bc-text-3, #5F645F); font-family: var(--bc-sans, sans-serif); }
+    .vg-etapas li { font-size: 10.5px; }
+    .vg-det-corpo { padding: 0 14px 14px; }
+    .vg-filtros .vg-campo { flex: 1 1 100%; }
+    .vg-det > summary .vg-sum-res { display: none; }
+  }
+</style>
+<script>
+  // ==========================================================
+  // DEPÓSITO DE VIAGEM (E1, 11/11/2026, decisões do dono). Servidor: SGO_Viagem.js (Viagem_api), SGO_Viagem_Documento.js e
+  // SGO_Viagem_Painel.js (Kanban, Gantt e relatórios A4 do período).
+  // Ganchos na casca (JS_Core.html): Viagem_iniciar_ no login mostra o item do menu (equipe interna); abrir('deposito_viagem')
+  // -> Viagem_render_; Início/avisos -> Viagem_irPara_({ id }). O servidor confere sessão, caixa e proteções em toda chamada.
+  // Sem window.confirm/prompt: as confirmações são caixas na própria tela (fsPerguntar_ da casca). Sem atualização automática:
+  // a tela só redesenha quando a pessoa pede, e o formulário em edição avisa a casca (data-sgo-sujo) antes de sair.
+  // Organização (11/11/2026, pedido do dono): aba "Comece por aqui" com o passo a passo de cada papel, Kanban e Gantt comuns
+  // do SGO+ (PnA_kanbanHtml_ / PnA_ganttHtml_), relatórios A4 para abrir e baixar, conferência guiada dos centros de custo e a
+  // escolha dos aprovadores por caixas de marcar.
+  // E2 (11/11/2026): prestação de contas (lançar gastos com comprovante e leitura por IA), conferência do Financeiro item a item,
+  // acerto do saldo, ciência do fechamento (A4 de fechamento) e trava de prestação vencida; abas Prestar contas e Conferir prestações.
+  // ==========================================================
+  var VG = { ini: null, opcoes: null, aba: "minhas", lista: [], atual: null, form: null, sujo: false, ocupado: false, nav: null, vista: "lista", abrirId: "",
+    painel: null, filtro: { centro: "", pessoa: "", periodo: "todas" }, gAgrupar: "pessoa", rel: { tipo: "PERIODO" }, polSel: null, polBusca: "", centros: null, guiado: null, etapasAbertas: {}, gasto: { arq: null, sujo: false } };
+  var VG_CORES = { RASCUNHO: "#6b7480", DEVOLVIDA: "#b45309", AGUARDANDO_APROVACAO: "#a87406", AGUARDANDO_DIRETORIA: "#7b4fb0", APROVADA: "#1f5fa8", CARGA_FEITA: "#1d6b3f", NEGADA: "#a61b1b", CANCELADA: "#52606d", PRESTACAO_PENDENTE: "#be185d", PRESTACAO_DEVOLVIDA: "#9d174d", PRESTACAO_ENVIADA: "#0e7490", ACERTO_PENDENTE: "#4d7c0f", AGUARDANDO_CIENCIA: "#4338ca", ENCERRADA: "#1f2933" };
+  var VG_NOMES = { RASCUNHO: "Rascunho", AGUARDANDO_APROVACAO: "Aguardando aprovação", AGUARDANDO_DIRETORIA: "Aguardando a Diretoria", DEVOLVIDA: "Devolvida para ajuste", APROVADA: "Aprovada, aguardando a carga", CARGA_FEITA: "Carga feita no cartão", NEGADA: "Negada", CANCELADA: "Cancelada",
+    PRESTACAO_PENDENTE: "Prestação de contas pendente", PRESTACAO_DEVOLVIDA: "Prestação devolvida para ajuste", PRESTACAO_ENVIADA: "Prestação em conferência", ACERTO_PENDENTE: "Conferida, acerto do saldo pendente", AGUARDANDO_CIENCIA: "Aguardando a ciência do fechamento", ENCERRADA: "Encerrada (contas fechadas)" };
+  var VG_PROXIMO = {
+    RASCUNHO: "Quem pediu completa o que falta e envia para aprovação.",
+    DEVOLVIDA: "Quem pediu lê a fundamentação, ajusta e envia de novo.",
+    AGUARDANDO_APROVACAO: "O aprovador confere o relatório A4 e decide.",
+    AGUARDANDO_DIRETORIA: "A Diretoria confere o relatório A4 e decide.",
+    APROVADA: "O Financeiro faz a carga no Caju e registra aqui.",
+    CARGA_FEITA: "Viagem liberada: gastar no cartão Caju e guardar os comprovantes.",
+    PRESTACAO_PENDENTE: "Quem levou o dinheiro lança os gastos com o comprovante e envia ao Financeiro.",
+    PRESTACAO_DEVOLVIDA: "Quem levou o dinheiro ajusta o que o Financeiro pediu e envia de novo.",
+    PRESTACAO_ENVIADA: "O Financeiro confere item a item e conclui.",
+    ACERTO_PENDENTE: "O Financeiro registra a devolução ou o reembolso.",
+    AGUARDANDO_CIENCIA: "O aprovador lê o A4 de fechamento e dá ciência.",
+    ENCERRADA: "Contas fechadas.",
+    NEGADA: "Encerrada.", CANCELADA: "Encerrada."
+  };
+
+  function VgT_esc_(v) { return String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function VgT_$(id) { return document.getElementById(id); }
+  function VgT_num_(v) {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number") return isFinite(v) ? v : null;
+    var s = String(v).replace(/R\$/gi, "").replace(/\s+/g, "");
+    if (!s) return null;
+    if (s.indexOf(",") >= 0) s = s.replace(/\./g, "").replace(",", ".");
+    else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
+    if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+    var n = Number(s); return isFinite(n) ? n : null;
+  }
+  function VgT_moeda_(v) { var n = Math.round((Number(v) || 0) * 100) / 100; return "R$ " + n.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  /** Valor em reais para um campo de digitar: 2660 -> "2.660,00" ('' se vazio). */
+  function VgT_valorCampo_(v) { return v === null || v === undefined || v === "" ? "" : VgT_moeda_(v).slice(3); }
+  function VgT_numTxt_(v) { if (v === null || v === undefined || v === "") return ""; var n = Number(v); return isFinite(n) ? String(n).replace(".", ",") : String(v); }
+  function VgT_pode_(cod) { return !!(VG.ini && VG.ini.poderes && VG.ini.poderes[cod]); }
+  function Viagem_pode_() { return !!VG.ini; }
+  function VgT_selo_(sit, nome) { return '<span class="vg-selo s-' + VgT_esc_(sit) + '">' + VgT_esc_(nome || VG_NOMES[sit] || sit) + "</span>"; }
+  function VgT_guardar_(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function VgT_lerGuardado_(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function VgT_norm_(t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
+  function VgT_hojeIso_() { var d = new Date(), p = function (n) { return ("0" + n).slice(-2); }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+  function VgT_somarDias_(iso, n) { var d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); var p = function (x) { return ("0" + x).slice(-2); }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+
+  // ---------- ganchos da casca ----------
+  function Viagem_mostrarMenu_() {
+    var b = VgT_$("menu-btn-deposito_viagem");
+    if (b) b.style.display = VG.ini ? "" : "none";
+    var badge = VgT_$("menuBadgeViagem");
+    if (badge) { var n = VG.ini ? (VG.ini.contagens.decidir || 0) + (VG.ini.contagens.carga || 0) + (VG.ini.contagens.devolvidas || 0) + (VG.ini.contagens.ciencia || 0) + (VG.ini.contagens.prestar || 0) + (VG.ini.contagens.conferir || 0) : 0; badge.textContent = n ? String(n) : ""; }
+  }
+  /** No login: só a equipe interna recebe resposta ok (cliente e representada não veem o item). */
+  function Viagem_iniciar_() {
+    VG.ini = null; VG.opcoes = null; VG.atual = null; VG.form = null; VG.sujo = false;
+    Viagem_mostrarMenu_();
+    if (typeof SGO_getSessionId !== "function" || !SGO_getSessionId()) return;
+    google.script.run
+      .withSuccessHandler(function (r) { VG.ini = r && r.ok ? r : null; Viagem_mostrarMenu_(); })
+      .withFailureHandler(function () { VG.ini = null; Viagem_mostrarMenu_(); })
+      .Viagem_api(SGO_getSessionId(), "iniciar", {});
+  }
+  function VgT_chamar_(acao, dados, ok, erro, opcoes) {
+    opcoes = opcoes || {};
+    if (VG.ocupado && !opcoes.livre) return;
+    if (!opcoes.livre) { VG.ocupado = true; VgT_travarBotoes_(true); }
+    var fim = function () { if (!opcoes.livre) { VG.ocupado = false; VgT_travarBotoes_(false); } };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        fim();
+        if (!r || !r.ok) { (erro || VgT_erro_)((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e confira se a mudança foi gravada antes de tentar de novo."); return; }
+        try { ok(r); } catch (e) { console.error("Depósito de viagem:", e); VgT_erro_("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5); o que foi gravado está guardado."); }
+      })
+      .withFailureHandler(function (e) { fim(); (erro || VgT_erro_)(String((e && e.message) || "Não foi possível falar com o servidor. Verifique a conexão e tente de novo; confira antes se a mudança já foi gravada.")); })
+      .Viagem_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function VgT_travarBotoes_(sim) { var t = VgT_$("vgTela"); if (!t) return; t.querySelectorAll("button[data-vg-acao]").forEach(function (b) { b.disabled = !!sim; }); }
+  function VgT_msg_(texto, tipo) {
+    var el = VgT_$("vgMsg");
+    if (!el) { if (typeof CadUI_aviso_ === "function") CadUI_aviso_(texto, tipo === "erro" ? "erro" : tipo); return; }
+    el.innerHTML = texto ? '<div class="vg-faixa ' + (tipo === "erro" ? "is-erro" : tipo === "ok" ? "is-ok" : tipo === "alerta" ? "is-alerta" : "") + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + VgT_esc_(texto) + "</div>" : "";
+    if (texto) { try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
+  }
+  function VgT_erro_(m) { VgT_msg_(m, "erro"); }
+  function VgT_perguntar_(titulo, texto, opcoes) {
+    if (typeof fsPerguntar_ === "function") { fsPerguntar_(titulo, texto, opcoes); return; }
+    // sem a caixa da casca: a primeira opção principal segue (nunca window.confirm)
+    var o = (opcoes || []).filter(function (x) { return x.prim; })[0]; if (o && o.fn) o.fn();
+  }
+  function VgT_marcarSujo_() { VG.sujo = true; }
+  /** Sair de dentro do módulo com o formulário alterado pergunta antes (caixa na tela). */
+  function VgT_seguirSemPerder_(fn) {
+    if (VG.vista === "detalhe" && VG.gasto && VG.gasto.sujo) {
+      VgT_perguntar_("Descartar o gasto que você está lançando?", "O gasto que você começou a preencher ainda não foi lançado. Toque em Continuar lançando para voltar, ou em Descartar para sair sem lançar.",
+        [{ rotulo: "Continuar lançando", prim: true }, { rotulo: "Descartar e sair", perigo: true, fn: function () { VG.gasto = { arq: null, sujo: false }; fn(); } }]);
+      return;
+    }
+    if (VG.vista !== "form" || !VG.sujo) { fn(); return; }
+    VgT_perguntar_("Descartar as alterações?", "O que você mudou nesta solicitação ainda não foi salvo. Toque em Continuar editando para voltar ao formulário, ou em Descartar para sair sem salvar.",
+      [{ rotulo: "Continuar editando", prim: true }, { rotulo: "Descartar e sair", perigo: true, fn: function () { VG.sujo = false; fn(); } }]);
+  }
+
+  // ---------- casca do módulo ----------
+  function Viagem_render_() {
+    var div = VgT_$("conteudo");
+    if (!div) return;
+    try { if (typeof atualizarTituloMobile_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Depósito de viagem"); } catch (e) {}
+    VG.form = null; VG.sujo = false; VG.vista = "lista"; VG.atual = null; VG.guiado = null;
+    div.innerHTML =
+      '<div class="module-shell cadx" id="vgTela">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Depósito de viagem</h2>' +
+          '<p class="content-subtitle">Pedido do dinheiro da viagem com a conta inteira (o total é a soma das linhas), relatório A4, aprovação e registro da carga no cartão Caju.</p></div><div class="module-header-right"></div></div>' +
+        '<div id="vgGuiaFaixa"></div><div id="vgAgora"></div>' +
+        '<div class="vg-abas" id="vgAbas" role="tablist" aria-label="Partes do Depósito de viagem"></div>' +
+        '<div id="vgMsg" aria-live="polite"></div>' +
+        '<div id="vgCorpo"><p class="vg-sub">Carregando…</p></div>' +
+      '</div>';
+    var abrirId = VG.abrirId; VG.abrirId = "";
+    var depois = function () { VgT_desenharTopo_(); VgT_desenharAbas_(); if (abrirId) VgT_abrir_(abrirId); else VgT_irAba_(VG.aba || "minhas"); };
+    if (!VG.ini) {
+      VgT_chamar_("iniciar", {}, function (r) { VG.ini = r; Viagem_mostrarMenu_(); depois(); }, function (m) {
+        VgT_$("vgCorpo").innerHTML = '<div class="vg-faixa is-erro"><b>A tela não abriu.</b> ' + VgT_esc_(m) + '</div><button type="button" class="cadx-btn" onclick="irTelaInicial_()">Voltar ao Início</button>';
+      }, { livre: true });
+    } else depois();
+  }
+  /** Do Início, de um aviso ou da Caixa de decisões: abre a solicitação. */
+  function Viagem_irPara_(acao) {
+    VG.abrirId = String((acao && acao.id) || "");
+    if (window.SGO_MODULO_ATUAL === "deposito_viagem" && VgT_$("vgTela")) { var id = VG.abrirId; VG.abrirId = ""; VgT_seguirSemPerder_(function () { if (id) VgT_abrir_(id); else VgT_irAba_("minhas"); }); return; }
+    abrir("deposito_viagem");
+  }
+  /** Faixa de primeira visita e o "para você agora" (o que espera esta pessoa). */
+  function VgT_desenharTopo_() {
+    var f = VgT_$("vgGuiaFaixa"), a = VgT_$("vgAgora");
+    if (f) f.innerHTML = VgT_lerGuardado_("vg_guia_visto") || VG.aba === "guia" ? "" :
+      '<div class="vg-guia-faixa"><span><b>Primeira vez aqui?</b> Veja em poucos passos o que você faz neste módulo e para que serve cada parte.</span><span class="vg-acoes" style="margin:0">' +
+      '<button type="button" class="cadx-btn cadx-btn-primario" onclick="VgT_tocarAba_(\'guia\')">Comece por aqui</button><button type="button" class="cadx-btn" onclick="VgT_guiaVisto_()">Já sei usar, esconder</button></span></div>';
+    if (!a) return;
+    var c = (VG.ini && VG.ini.contagens) || {}, itens = [];
+    if (c.decidir) itens.push(["decidir", c.decidir, c.decidir === 1 ? "solicitação para você decidir" : "solicitações para você decidir", "tom-alerta"]);
+    if (c.carga) itens.push(["carga", c.carga, c.carga === 1 ? "carga para registrar no Caju" : "cargas para registrar no Caju", "tom-alerta"]);
+    if (c.devolvidas) itens.push(["minhas", c.devolvidas, c.devolvidas === 1 ? "devolvida para você ajustar" : "devolvidas para você ajustar", "tom-perigo"]);
+    if (c.ciencia) itens.push(["decidir", c.ciencia, c.ciencia === 1 ? "fechamento para a sua ciência" : "fechamentos para a sua ciência", "tom-alerta"]);
+    if (c.prestar) itens.push(["prestar", c.prestar, c.prestar === 1 ? "prestação de contas para você fazer" : "prestações de contas para você fazer", "tom-perigo"]);
+    if (c.conferir) itens.push(["conferir", c.conferir, c.conferir === 1 ? "prestação para conferir ou acertar" : "prestações para conferir ou acertar", "tom-alerta"]);
+    a.innerHTML = itens.length ? '<div class="vg-agora" aria-label="Esperando por você">' + itens.map(function (i) {
+      return '<button type="button" class="cadx-num ' + i[3] + '" onclick="VgT_tocarAba_(\'' + i[0] + '\')"><span class="cadx-num-valor">' + i[1] + '</span><span class="cadx-num-rotulo">' + VgT_esc_(i[2]) + "</span></button>";
+    }).join("") + "</div>" : "";
+  }
+  function VgT_guiaVisto_() { VgT_guardar_("vg_guia_visto", "1"); VgT_desenharTopo_(); }
+  function VgT_abas_() {
+    var c = (VG.ini && VG.ini.contagens) || {}, a = [["guia", "Comece por aqui"], ["minhas", "Minhas solicitações", c.devolvidas]];
+    if (VgT_pode_("VIAGEM_APROVAR") || VgT_pode_("VIAGEM_APROVAR_DIRETORIA")) a.push(["decidir", "Aguardando minha decisão", (c.decidir || 0) + (c.ciencia || 0)]);
+    if (VgT_pode_("VIAGEM_DEPOSITAR")) a.push(["carga", "Carga no cartão", c.carga]);
+    a.push(["prestar", "Prestar contas", c.prestar]);
+    if (VgT_pode_("VIAGEM_CONFERIR")) a.push(["conferir", "Conferir prestações", c.conferir]);
+    a.push(["kanban", "Kanban"], ["gantt", "Gantt"], ["relatorios", "Relatórios A4"]);
+    if (VgT_pode_("VIAGEM_VER_TODAS")) a.push(["todas", "Todas"]);
+    a.push(["politica", "Política de viagem"]);
+    if (VgT_pode_("VIAGEM_CENTRO_CUSTO") || VgT_pode_("VIAGEM_VER_TODAS")) a.push(["centros", "Centros de custo"]);
+    return a;
+  }
+  function VgT_temAba_(cod) { return VgT_abas_().some(function (a) { return a[0] === cod; }); }
+  function VgT_desenharAbas_() {
+    var el = VgT_$("vgAbas"); if (!el) return;
+    el.innerHTML = VgT_abas_().map(function (a) {
+      var atual = VG.aba === a[0] && VG.vista === "lista";
+      return '<button type="button" role="tab" class="vg-aba' + (atual ? " is-atual" : "") + (a[0] === "guia" ? " is-guia" : "") + '" aria-selected="' + atual + '" onclick="VgT_tocarAba_(\'' + a[0] + '\')">' + VgT_esc_(a[1]) + (a[2] ? '<span class="vg-n">' + a[2] + "</span>" : "") + "</button>";
+    }).join("");
+    var at = el.querySelector(".is-atual"); if (at && at.scrollIntoView && el.scrollWidth > el.clientWidth) { try { el.scrollLeft = Math.max(0, at.offsetLeft - 40); } catch (e) {} }
+  }
+  function VgT_tocarAba_(aba) { VgT_seguirSemPerder_(function () { VgT_irAba_(aba); }); }
+  function VgT_sairSub_() { try { if (VG.nav && window.SGO_NAV && SGO_NAV.descartar) SGO_NAV.descartar(VG.nav); } catch (e) {} VG.nav = null; }
+  function VgT_irAba_(aba) {
+    VgT_sairSub_();
+    if (!VgT_temAba_(aba)) aba = "minhas";
+    VG.aba = aba; VG.vista = "lista"; VG.form = null; VG.sujo = false; VG.atual = null; VG.guiado = null;
+    if (aba === "guia") VgT_guardar_("vg_guia_visto", "1");
+    VgT_desenharTopo_(); VgT_desenharAbas_(); VgT_msg_("");
+    var corpo = VgT_$("vgCorpo"); if (!corpo) return;
+    if (aba === "guia") return VgT_guia_();
+    if (aba === "politica") return VgT_politica_();
+    if (aba === "centros") return VgT_centros_();
+    if (aba === "kanban" || aba === "gantt") return VgT_painel_();
+    if (aba === "relatorios") return VgT_relatorios_();
+    corpo.innerHTML = '<p class="vg-sub">Carregando…</p>';
+    VgT_chamar_("listar", { aba: aba }, function (r) { VG.lista = r.itens || []; VgT_desenharLista_(); }, function (m) { corpo.innerHTML = '<div class="vg-faixa is-erro">' + VgT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  function VgT_vazio_(titulo, texto) { return '<div class="vg-vazio"><b>' + VgT_esc_(titulo) + "</b>" + VgT_esc_(texto) + "</div>"; }
+  function VgT_cartaoHtml_(i) {
+    return '<button type="button" class="vg-cartao vg-borda-' + VgT_esc_(i.situacao) + '" onclick="VgT_abrir_(\'' + VgT_esc_(i.id) + '\')" aria-label="Abrir ' + VgT_esc_(i.numero) + '">' +
+      '<span class="vg-linha1"><span class="vg-num">' + VgT_esc_(i.numero) + "</span><span>" + VgT_selo_(i.situacao, i.situacaoNome) + (i.urgente ? ' <span class="vg-selo urgente">Urgente</span>' : "") + (i.prestacaoVencida ? ' <span class="vg-selo vencida">Prestação vencida</span>' : "") + "</span></span>" +
+      '<span class="vg-dest">' + VgT_esc_(i.destino || "Destino a definir") + "</span>" +
+      '<span class="vg-sub">' + (i.saida ? VgT_esc_(i.saida) + " a " + VgT_esc_(i.chegada) : "Datas ainda não informadas") + "</span>" +
+      '<span class="vg-chips">' + (i.centro ? '<span class="vg-chip">' + VgT_esc_(i.centro) + "</span>" : '<span class="vg-chip">sem centro de custo</span>') + '<span class="vg-chip">pedido de ' + VgT_esc_(i.solicitante) + "</span>" + (i.responsavel ? '<span class="vg-chip">dinheiro com ' + VgT_esc_(i.responsavel) + "</span>" : "") + "</span>" +
+      '<span class="vg-rod"><span class="vg-sub" style="flex:1 1 160px">' + VgT_esc_(VG_PROXIMO[i.situacao] || "") + (i.prazoPrestacao ? " Prazo da prestação: " + VgT_esc_(i.prazoPrestacao) + "." : "") + (i.aDevolverTxt ? " A devolver: " + VgT_esc_(i.aDevolverTxt) + "." : i.aReembolsarTxt ? " A reembolsar: " + VgT_esc_(i.aReembolsarTxt) + "." : "") + '</span><span style="text-align:right"><span class="vg-valor">' + VgT_esc_(i.totalTxt) + "</span>" + (i.carregadoTxt ? '<br><span class="vg-sub">carregado ' + VgT_esc_(i.carregadoTxt) + "</span>" : "") + "</span></span></button>";
+  }
+  function VgT_desenharLista_() {
+    var corpo = VgT_$("vgCorpo"); if (!corpo) return;
+    var h = "";
+    if (VG.aba === "minhas") {
+      h += VgT_pode_("VIAGEM_SOLICITAR") ? '<div class="vg-bloco is-acao"><div class="vg-cat-cab"><div style="flex:1 1 280px"><h3 class="vg-tit" style="margin:0 0 4px">Suas solicitações e as viagens em que você está</h3><p class="vg-sub" style="margin:0">Para pedir o dinheiro de uma viagem, monte uma solicitação nova: o total sai da soma das linhas.</p></div>' +
+          '<button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_nova_()">Nova solicitação</button></div></div>'
+        : '<div class="vg-faixa">Quem monta a solicitação é o gestor da área: ele inclui você na equipe da viagem. Aqui aparecem as viagens em que você está; a carga no cartão Caju sai depois da aprovação.</div>';
+    }
+    if (VG.aba === "decidir") h += '<div class="vg-faixa">Para que serve: aqui ficam as solicitações que esperam a <b>sua</b> decisão e os fechamentos de viagem que esperam a <b>sua ciência</b>. Abra cada uma, confira o relatório A4 (ou o A4 de fechamento) e decida com a fundamentação. Ninguém aprova a própria despesa: o que você pediu ou em que viaja vai para outra pessoa.</div>';
+    if (VG.aba === "carga") h += '<div class="vg-faixa">Para que serve: aqui ficam as solicitações aprovadas que esperam a carga no cartão Caju. Para cada uma: faça a carga no portal do Caju (carteira de despesas do responsável pelo dinheiro), abra a solicitação e registre a data, o valor e o comprovante. O valor carregado nunca passa do aprovado.</div>';
+    if (VG.aba === "prestar") h += '<div class="vg-faixa">Para que serve: aqui ficam as viagens com carga no cartão Caju em que <b>você leva o dinheiro</b> (ou que você pediu). Depois da viagem, abra cada uma, lance cada gasto com a foto ou o PDF do comprovante e envie a prestação ao Financeiro dentro do prazo. Os gastos podem ser lançados durante a viagem, à medida que acontecem. Quem tem prestação vencida não recebe dinheiro de outra viagem.</div>';
+    if (VG.aba === "conferir") h += '<div class="vg-faixa">Para que serve: aqui ficam as prestações de contas enviadas para conferir e as que esperam o acerto do saldo. Para cada uma: abra, confira cada gasto com o comprovante (aceite ou glose com o motivo), conclua a conferência e registre a devolução do saldo (recolhimento no Caju) ou o reembolso, com o comprovante.</div>';
+    if (VG.aba === "todas") h += '<div class="vg-faixa is-neutra">Todas as solicitações de todas as áreas, das urgentes para as mais recentes. Para ver por etapa, use o <b>Kanban</b>; para ver no tempo, o <b>Gantt</b>.</div>';
+    if (!VG.lista.length) h += VG.aba === "minhas" ? VgT_vazio_("Nenhuma solicitação ainda.", VgT_pode_("VIAGEM_SOLICITAR") ? " Toque em \"Nova solicitação\" para pedir o dinheiro de uma viagem." : " Quando o gestor incluir você numa viagem, ela aparece aqui.")
+      : VG.aba === "decidir" ? VgT_vazio_("Nada esperando a sua decisão.", " Você é avisado por e-mail e no sistema quando chegar uma solicitação.")
+      : VG.aba === "carga" ? VgT_vazio_("Nenhuma carga a registrar.", " Quando uma solicitação for aprovada, ela aparece aqui e você é avisada.")
+      : VG.aba === "prestar" ? VgT_vazio_("Nenhuma prestação de contas aberta.", " Quando o Financeiro fizer a carga no cartão Caju de uma viagem sua, ela aparece aqui.")
+      : VG.aba === "conferir" ? VgT_vazio_("Nada para conferir.", " Quando alguém enviar uma prestação de contas, ela aparece aqui e você é avisada.")
+      : VgT_vazio_("Nenhuma solicitação.", "");
+    else h += '<div class="vg-lista">' + VG.lista.map(VgT_cartaoHtml_).join("") + "</div>";
+    corpo.innerHTML = h;
+  }
+
+  // ---------- comece por aqui ----------
+  function VgT_guia_() {
+    var corpo = VgT_$("vgCorpo"), meu = function (cod) { return VgT_pode_(cod); };
+    var ir = function (aba, rot) { return VgT_temAba_(aba) ? '<div class="vg-acoes"><button type="button" class="cadx-btn" onclick="VgT_tocarAba_(\'' + aba + '\')">' + VgT_esc_(rot) + "</button></div>" : ""; };
+    var papel = function (titulo, eMeu, passos, botoes) {
+      return '<div class="vg-papel' + (eMeu ? " is-meu" : "") + '"><h4>' + VgT_esc_(titulo) + (eMeu ? '<span class="vg-meu">seu papel</span>' : "") + "</h4><ol>" + passos.map(function (p) { return "<li>" + p + "</li>"; }).join("") + "</ol>" + (botoes || "") + "</div>";
+    };
+    var h = '<div class="vg-bloco"><h3>Para que serve este módulo</h3>' +
+      '<p class="vg-texto">Antes, o dinheiro da viagem era pedido só com um número e, depois, ninguém cobrava o que foi gasto. Agora, quem pede mostra a conta inteira: hotel, alimentação, combustível, pedágio e os demais gastos, cada um com a base de cálculo e, quando é o caso, o orçamento anexado. O total é a soma dessas linhas. A solicitação gera um relatório A4, vai para aprovação e, aprovada, o Financeiro faz a carga no cartão Caju de quem leva o dinheiro. Depois da viagem, quem levou o dinheiro presta contas gasto por gasto, com o comprovante; o Financeiro confere, acerta o saldo (devolução ou reembolso) e o fechamento vai para a ciência do aprovador.</p>' +
+      '<p class="vg-sub" style="margin:8px 0 0">O caminho de cada solicitação:</p><div class="vg-fluxo">' + VgT_selo_("RASCUNHO", "Rascunho") + "<i>→</i>" + VgT_selo_("AGUARDANDO_APROVACAO", "Aprovação da gerência") + "<i>→</i>" + VgT_selo_("AGUARDANDO_DIRETORIA", "Diretoria (só nas exceções)") + "<i>→</i>" + VgT_selo_("APROVADA", "Aprovada") + "<i>→</i>" + VgT_selo_("CARGA_FEITA", "Carga feita no Caju") +
+      "<i>→</i>" + VgT_selo_("PRESTACAO_PENDENTE", "Prestação de contas") + "<i>→</i>" + VgT_selo_("PRESTACAO_ENVIADA", "Conferência do Financeiro") + "<i>→</i>" + VgT_selo_("ACERTO_PENDENTE", "Acerto do saldo") + "<i>→</i>" + VgT_selo_("AGUARDANDO_CIENCIA", "Ciência") + "<i>→</i>" + VgT_selo_("ENCERRADA", "Encerrada") + "</div>" +
+      '<p class="vg-sub">Se faltar algo, quem aprova devolve para ajuste (' + VgT_selo_("DEVOLVIDA", "Devolvida") + '), e o Financeiro pode devolver a prestação para ajuste. Negada ou cancelada encerra a solicitação. A prestação tem prazo (dias úteis depois da volta, pela política); vencida, a pessoa não recebe dinheiro de outra viagem até prestar contas. A conciliação com o extrato do cartão Caju é feita pelo Financeiro em outro módulo.</p></div>';
+    h += '<h3 class="vg-tit" style="margin:4px 0 10px">O que cada pessoa faz</h3><div class="vg-papeis">' +
+      papel("Gestor que pede a viagem", meu("VIAGEM_SOLICITAR"), ["Em <b>Minhas solicitações</b>, toque em <b>Nova solicitação</b>.", "Preencha as 5 etapas: centro de custo, viagem, equipe, transporte e orçamento.", "Anexe o orçamento do hotel e da passagem e salve o rascunho.", "Confira a lista <b>O que falta para enviar</b> e toque em <b>Enviar para aprovação</b>.", "Depois da viagem, cobre a prestação de contas de quem levou o dinheiro; se precisar, lance os gastos por ele em <b>Prestar contas</b>."], ir("minhas", "Ir para Minhas solicitações")) +
+      papel("Quem leva o dinheiro (responsável)", !meu("VIAGEM_SOLICITAR") && !meu("VIAGEM_VER_TODAS"), ["A carga cai no seu cartão Caju depois da aprovação, e você é avisado com o prazo da prestação.", "Gaste no cartão Caju e tire foto de cada comprovante (nota, cupom ou recibo).", "Em <b>Prestar contas</b>, abra a viagem e lance cada gasto: categoria, data, valor, estabelecimento e a foto ou o PDF do comprovante. Pode lançar durante a viagem.", "No fim, toque em <b>Enviar a prestação ao Financeiro</b>, dentro do prazo. A tela mostra quanto sobra a devolver ou falta a reembolsar."], ir("prestar", "Ir para Prestar contas")) +
+      papel("Aprovador (gerência, padrão: Matheus)", meu("VIAGEM_APROVAR"), ["Você recebe o aviso por e-mail e WhatsApp quando chega uma solicitação.", "Abra <b>Aguardando minha decisão</b> e toque na solicitação.", "Toque em <b>Ver o relatório A4</b> e confira as linhas, os anexos e a conferência automática.", "Escreva a fundamentação e toque em Aprovar, Devolver para ajuste ou Negar.", "No fim de cada viagem, o fechamento chega para a sua <b>ciência</b>: leia o A4 de fechamento e toque em <b>Dar ciência</b>."], ir("decidir", "Ir para Aguardando minha decisão")) +
+      papel("Financeiro (Wanessa)", meu("VIAGEM_DEPOSITAR") || meu("VIAGEM_CONFERIR"), ["<b>Uma vez só, no começo:</b> confira a lista de <b>Centros de custo</b> com a conferência guiada.", "Aprovada a solicitação, faça a carga no portal do Caju e registre em <b>Carga no cartão</b>, com o comprovante.", "Quando a prestação chega, abra <b>Conferir prestações</b> e confira cada gasto com o comprovante: <b>Aceitar</b> ou <b>Glosar</b> com o motivo. Se faltar algo, devolva para ajuste.", "Toque em <b>Concluir a conferência</b>: o sistema calcula o que devolver ou reembolsar.", "Recolha o saldo no Caju (ou faça o reembolso) e registre o acerto com o comprovante. O fechamento vai para a ciência do Matheus."], ir("conferir", "Ir para Conferir prestações") + ir("carga", "Ir para Carga no cartão") + ir("centros", "Conferir os centros de custo")) +
+      papel("Diretoria", meu("VIAGEM_APROVAR_DIRETORIA"), ["Decide as exceções: quando o aprovador pede ou viaja, quando o total passa do limite da política e quando hotel ou alimentação passam do teto.", "Mantém a <b>Política de viagem</b>: quem aprova, o limite, o urgente, os tetos, o prazo da prestação e o gasto sem comprovante.", "Em caso excepcional, libera a <b>trava</b> de quem tem prestação vencida, com o motivo, na própria viagem vencida.", "Acompanha tudo no <b>Kanban</b>, no <b>Gantt</b> e nos <b>Relatórios A4</b>."], ir("politica", "Ir para a Política de viagem")) + "</div>";
+    h += '<div class="vg-bloco" style="margin-top:12px"><h3>O que é centro de custo</h3>' +
+      '<p class="vg-texto">É a "etiqueta" que diz <b>de qual unidade e de qual área</b> é o gasto. Serve para a empresa saber quanto cada unidade e cada área gasta com viagem. Toda solicitação tem um. O código é o mesmo usado na carga do cartão Caju, para que o Financeiro consiga conferir (conciliar) o que foi aprovado com o que foi gasto.</p>' +
+      '<div class="vg-exemplos"><div><b>GO-TECNICA</b><br>Goiânia · Técnica/Campo: viagem do técnico para atender um cliente.</div><div><b>RJ-COMERCIAL</b><br>Rio de Janeiro · Comercial: visita do vendedor a um hospital.</div><div><b>GO-FROTA</b><br>Goiânia · Frota: levar um carro para a revisão em outra cidade.</div></div></div>';
+    h += '<div class="vg-bloco"><h3>Para que serve cada parte desta tela</h3><dl class="vg-pares">' + [
+      ["Minhas solicitações", "As que você pediu e as viagens em que você está. É aqui que se monta uma solicitação nova."],
+      ["Aguardando minha decisão", "Só para quem aprova: o que espera a sua decisão e os fechamentos que esperam a sua ciência."],
+      ["Carga no cartão", "Só para o Financeiro: as aprovadas que esperam a carga no Caju."],
+      ["Prestar contas", "As viagens com carga em que você leva o dinheiro (ou que você pediu): lance os gastos com o comprovante e envie ao Financeiro."],
+      ["Conferir prestações", "Só para o Financeiro: as prestações para conferir item a item e os acertos de saldo a registrar."],
+      ["Kanban", "As solicitações em colunas, uma por etapa, até o fechamento. Mostra onde cada uma está parada e as prestações vencidas."],
+      ["Gantt", "As viagens no calendário, por pessoa ou por centro de custo. Mostra quem está viajando e quando, e avisa se a mesma pessoa está em duas viagens ao mesmo tempo."],
+      ["Relatórios A4", "Gera o relatório do período (aprovado, carregado, gasto, aceito, glosado e devolvido por centro de custo e por pessoa), o Kanban e o Gantt em folha A4, para abrir, imprimir ou baixar."],
+      ["Todas", "Para a gerência, o Financeiro e a Diretoria: a lista de todas as solicitações."],
+      ["Política de viagem", "As regras em vigor: quem aprova, quando a Diretoria também aprova, o que é urgente, os tetos de hotel e alimentação, o prazo da prestação e o gasto sem comprovante."],
+      ["Centros de custo", "A lista das etiquetas de unidade e área, com o código usado no Caju."]
+    ].filter(function (p) { return ({ "Aguardando minha decisão": "decidir", "Carga no cartão": "carga", "Conferir prestações": "conferir", "Todas": "todas", "Centros de custo": "centros" })[p[0]] ? VgT_temAba_(({ "Aguardando minha decisão": "decidir", "Carga no cartão": "carga", "Conferir prestações": "conferir", "Todas": "todas", "Centros de custo": "centros" })[p[0]]) : true; })
+      .map(function (p) { return "<dt>" + VgT_esc_(p[0]) + "</dt><dd>" + VgT_esc_(p[1]) + "</dd>"; }).join("") + "</dl>" +
+      '<p class="vg-sub" style="margin-top:10px">O botão <b>Como usar esta tela</b>, no alto, abre a ajuda completa com os problemas comuns. Em qualquer dúvida, use também <b>Tire sua dúvida</b>.</p></div>';
+    corpo.innerHTML = h;
+  }
+
+  // ---------- opções (centros, pessoas, clientes, veículos) ----------
+  function VgT_comOpcoes_(fn) {
+    if (VG.opcoes) { fn(); return; }
+    VgT_chamar_("opcoes", {}, function (r) { VG.opcoes = r; fn(); }, null, { livre: true });
+  }
+  function VgT_cat_(cod) { return ((VG.opcoes && VG.opcoes.categorias) || []).filter(function (c) { return c.cod === cod; })[0]; }
+
+  // ---------- detalhe ----------
+  function VgT_abrir_(id) {
+    VgT_comOpcoes_(function () {
+      VgT_chamar_("abrir", { id: id }, function (r) { VgT_mostrarDetalhe_(r.solicitacao); }, null, { livre: true });
+    });
+  }
+  function VgT_empilhar_(rotulo) {
+    try { if (window.SGO_NAV && SGO_NAV.empilhar) VG.nav = SGO_NAV.empilhar(rotulo, function () { VG.sujo = false; VG.nav = null; VgT_irAba_(VG.aba); }, { chave: "vg-sub" }) || VG.nav; } catch (e) {}
+  }
+  /** Linha do tempo da solicitação: feita, atual, futura ou parada (negada/cancelada). */
+  function VgT_etapasHtml_(s) {
+    var sit = s.situacao, dir = !!s.exigeDiretoria || sit === "AGUARDANDO_DIRETORIA";
+    var et = [["RASCUNHO", "Montagem"], ["GERENCIA", "Aprovação"]];
+    if (dir) et.push(["DIRETORIA", "Diretoria"]);
+    et.push(["CARGA", "Carga no Caju"], ["PRESTACAO", "Prestação de contas"], ["CONFERENCIA", "Conferência e acerto"], ["CIENCIA", "Ciência e fechamento"]);
+    var iC = et.length - 4;
+    var pos = { RASCUNHO: 0, DEVOLVIDA: 0, AGUARDANDO_APROVACAO: 1, AGUARDANDO_DIRETORIA: dir ? 2 : 1, APROVADA: iC, CARGA_FEITA: iC + 1, PRESTACAO_PENDENTE: iC + 1, PRESTACAO_DEVOLVIDA: iC + 1, PRESTACAO_ENVIADA: iC + 2, ACERTO_PENDENTE: iC + 2, AGUARDANDO_CIENCIA: iC + 3, ENCERRADA: et.length }[sit];
+    var parada = sit === "NEGADA" || sit === "CANCELADA";
+    if (parada) pos = s.aprovacao && s.aprovacao.valida ? iC : (sit === "NEGADA" ? 1 : 0);
+    return '<ol class="vg-etapas" aria-label="Etapas da solicitação">' + et.map(function (e, i) {
+      var cl = i < pos ? "feita" : i === pos ? (parada ? "parada" : "atual") : "futura";
+      return '<li class="' + cl + '"' + (i === pos ? ' aria-current="step"' : "") + ">" + VgT_esc_(e[1]) + "</li>";
+    }).join("") + "</ol>";
+  }
+  function VgT_proximoPasso_(s) {
+    var ac = s.acoes || {}, sit = s.situacao, eu = VG.ini && VG.ini.eu ? VG.ini.eu.id : "";
+    if (ac.decidir && ac.decidir.pode) return ["is-alerta", "Esta solicitação espera a <b>sua decisão</b>. Confira o relatório A4 e decida no quadro abaixo."];
+    if (ac.carga && ac.carga.pode) return ["is-alerta", "Esta solicitação espera a <b>carga no cartão Caju</b>. Siga os passos do quadro abaixo."];
+    var pr = s.prestacao, pz = pr && pr.prazo;
+    if (ac.conferir && ac.conferir.pode) return ["is-alerta", "A prestação de contas espera a <b>sua conferência</b>. Confira cada gasto com o comprovante no quadro Prestação de contas (aceite ou glose com o motivo) e toque em Concluir a conferência."];
+    if (ac.acerto && ac.acerto.pode) return ["is-alerta", "Conferida. Falta o <b>acerto do saldo</b>: " + (pr.contas.aDevolver > 0 ? VgT_esc_(pr.contas.aDevolverTxt) + " a devolver (recolhimento no Caju ou depósito da pessoa)" : VgT_esc_(pr.contas.aReembolsarTxt) + " a reembolsar") + ". Registre com o comprovante no quadro abaixo."];
+    if (ac.ciencia && ac.ciencia.pode) return ["is-alerta", "O fechamento espera a <b>sua ciência</b>. Toque em Ver o A4 de fechamento, confira e dê ciência no quadro abaixo."];
+    if (ac.prestar && ac.prestar.pode) {
+      if (sit === "PRESTACAO_DEVOLVIDA") return [pz && pz.vencida ? "is-erro" : "is-alerta", "A prestação foi <b>devolvida para ajuste</b> pelo Financeiro (o motivo está no histórico e foi por e-mail). Ajuste os gastos e envie de novo" + (pz ? " até <b>" + VgT_esc_(pz.prazoTxt) + "</b>" : "") + "."];
+      if (pz && pz.vencida) return ["is-erro", "A prestação de contas <b>venceu em " + VgT_esc_(pz.prazoTxt) + "</b>. Lance os gastos com o comprovante e envie ao Financeiro. Enquanto estiver vencida, " + VgT_esc_(s.responsavelNome || "o responsável") + " não recebe dinheiro de outra viagem."];
+      if (sit === "PRESTACAO_PENDENTE") return ["is-alerta", "A viagem terminou: <b>preste contas" + (pz ? " até " + VgT_esc_(pz.prazoTxt) : "") + "</b>. Lance cada gasto com a foto ou o PDF do comprovante e envie ao Financeiro."];
+      return ["is-ok", "Carga feita: " + VgT_esc_(s.carregadoTxt) + " no cartão Caju de <b>" + VgT_esc_(s.responsavelNome || "responsável") + "</b>. Gaste no cartão e guarde os comprovantes; você já pode lançar os gastos aqui, à medida que acontecem." + (pz ? " Prazo da prestação: " + VgT_esc_(pz.prazoTxt) + "." : "")];
+    }
+    if (sit === "PRESTACAO_PENDENTE" || sit === "PRESTACAO_DEVOLVIDA") return [pz && pz.vencida ? "is-erro" : "is-neutra", "Aguardando a prestação de contas de <b>" + VgT_esc_(s.responsavelNome || "responsável") + "</b>" + (pz ? " (prazo " + VgT_esc_(pz.prazoTxt) + (pz.vencida ? ", vencida" : "") + ")" : "") + "."];
+    if (sit === "PRESTACAO_ENVIADA") return ["is-neutra", "Prestação enviada: o Financeiro" + (pr && pr.conferentes ? " (" + VgT_esc_(pr.conferentes) + ")" : "") + " confere item a item. Você é avisado do resultado."];
+    if (sit === "ACERTO_PENDENTE") return ["is-neutra", "Conferida: " + (pr.contas.aDevolver > 0 ? VgT_esc_(pr.contas.aDevolverTxt) + " a devolver" : VgT_esc_(pr.contas.aReembolsarTxt) + " a reembolsar") + ". O Financeiro registra o acerto do saldo."];
+    if (sit === "AGUARDANDO_CIENCIA") return ["is-neutra", "Saldo acertado. Aguardando a ciência do fechamento" + (pr && pr.quemDaCiencia ? " de <b>" + VgT_esc_(pr.quemDaCiencia) + "</b>" : "") + "."];
+    if (sit === "ENCERRADA") return ["is-ok", "Viagem encerrada: contas fechadas" + (pr && pr.cienciaPor ? " com a ciência de " + VgT_esc_(pr.cienciaPor) + " em " + VgT_esc_(pr.cienciaEm) : "") + ". O A4 de fechamento está no quadro Prestação de contas."];
+    if (sit === "RASCUNHO" || sit === "DEVOLVIDA") {
+      if (ac.editar && ac.editar.pode) return ["is-alerta", sit === "DEVOLVIDA" ? "Foi <b>devolvida para ajuste</b>. Leia a fundamentação em Decisões, toque em Editar a solicitação, ajuste e envie de novo." : (s.faltas || []).length ? "Ainda é rascunho. Resolva a lista <b>O que falta para enviar</b> (abaixo) e toque em Enviar para aprovação." : "Está tudo preenchido. Confira o relatório A4 e toque em <b>Enviar para aprovação</b>."];
+      return ["is-neutra", "Ainda não foi enviada: quem pediu (" + VgT_esc_(s.solicitante) + ") está montando."];
+    }
+    if (sit === "AGUARDANDO_APROVACAO" || sit === "AGUARDANDO_DIRETORIA") return ["is-neutra", "Aguardando a decisão" + (s.aguardando ? " de <b>" + VgT_esc_(s.aguardando) + "</b>" : "") + ". Quem pediu é avisado quando houver decisão."];
+    if (sit === "APROVADA") return ["is-neutra", "Aprovada. Agora o Financeiro faz a carga de " + VgT_esc_(VgT_moeda_(s.saldoACarregar)) + " no cartão Caju de <b>" + VgT_esc_(s.responsavelNome || "responsável") + "</b>."];
+    if (sit === "CARGA_FEITA") return ["is-ok", "Carga feita: " + VgT_esc_(s.carregadoTxt) + " no cartão Caju de <b>" + VgT_esc_(s.responsavelNome || "responsável") + "</b>. Gaste no cartão e guarde todos os comprovantes; depois da viagem, quem levou o dinheiro presta contas aqui." + (s.saldoACarregar > 0 ? " Ainda falta carregar " + VgT_esc_(VgT_moeda_(s.saldoACarregar)) + "." : "")];
+    return ["is-neutra", "Solicitação encerrada (" + VgT_esc_(s.situacaoNome.toLowerCase()) + "). Nada mais a fazer."];
+  }
+  function VgT_mostrarDetalhe_(s, msg, tipoMsg) {
+    VG.atual = s; VG.vista = "detalhe"; VG.form = null; VG.sujo = false; VG.gasto = { arq: null, sujo: false };
+    VgT_desenharAbas_();
+    VgT_empilhar_("Solicitação " + s.numero);
+    var corpo = VgT_$("vgCorpo"); if (!corpo) return;
+    var c = s.conteudo || {};
+    var h = '<div class="vg-acoes" style="margin:0 0 12px"><button type="button" class="cadx-btn" onclick="VgT_tocarAba_(\'' + VG.aba + '\')">← Voltar à lista</button>' +
+      '<button type="button" class="cadx-btn" onclick="VgT_documento_()">Ver o relatório A4</button></div>';
+    var px = VgT_proximoPasso_(s);
+    h += '<div class="vg-bloco vg-borda-' + VgT_esc_(s.situacao) + '" style="border-left:4px solid var(--vg-cor)"><div class="vg-topo"><div>' +
+      '<div class="vg-cat-cab" style="justify-content:flex-start"><span class="vg-mono" style="font-weight:600">' + VgT_esc_(s.numero) + " · revisão " + VgT_esc_(s.revisao) + "</span>" + VgT_selo_(s.situacao, s.situacaoNome) + (s.urgente ? ' <span class="vg-selo urgente">Urgente</span>' : "") + "</div>" +
+      '<div class="vg-dest">' + VgT_esc_(s.destino || "Destino a definir") + "</div>" +
+      '<div class="vg-sub">' + (s.saida ? VgT_esc_(s.saida) + " a " + VgT_esc_(s.chegada) + (s.dias ? " · " + s.dias + (s.dias === 1 ? " dia" : " dias") : "") : "Datas ainda não informadas") + (s.centroNome ? " · " + VgT_esc_(s.centroNome) : "") + "</div></div>" +
+      '<div class="vg-numeros"><div><span>Total pela soma das linhas</span><b class="vg-total">' + VgT_esc_(s.totalCalculadoTxt) + "</b></div>" +
+      (s.aprovacao && s.aprovacao.valida ? "<div><span>Aprovado (rev. " + VgT_esc_(s.aprovacao.revisao) + ")</span><b>" + VgT_esc_(s.aprovacao.totalTxt) + "</b></div>" : "") +
+      (s.carregado ? "<div><span>Carregado no Caju</span><b>" + VgT_esc_(s.carregadoTxt) + "</b></div>" : "") + "</div></div>" +
+      VgT_etapasHtml_(s) + "</div>";
+    h += '<div class="vg-faixa ' + px[0] + '"><b>Próximo passo:</b> ' + px[1] + (s.exigeDiretoria && s.motivosDiretoria ? '<br><span class="vg-sub">Vai também à Diretoria: ' + VgT_esc_(s.motivosDiretoria) + ".</span>" : "") + "</div>";
+    if ((s.faltas || []).length && ["RASCUNHO", "DEVOLVIDA"].indexOf(s.situacao) >= 0) {
+      h += '<div class="vg-faixa is-alerta"><b>O que falta para enviar (' + s.faltas.length + "):</b><ul>" + s.faltas.map(function (f) { return "<li>" + VgT_esc_(f) + "</li>"; }).join("") + "</ul></div>";
+    }
+    h += VgT_painelAcoes_(s);
+    if (s.prestacao) h += VgT_prestacaoHtml_(s);
+    if ((s.apontamentos || []).length) h += '<div class="vg-faixa is-neutra"><b>Conferência automática</b> (vai para quem aprova e para o relatório A4):<ul>' + s.apontamentos.map(function (a) { return "<li>" + VgT_esc_(a.texto) + "</li>"; }).join("") + "</ul></div>";
+    var det = function (titulo, resumo, corpoHtml, aberto) { return '<details class="vg-det"' + (aberto ? " open" : "") + '><summary><h3>' + VgT_esc_(titulo) + '</h3><span class="vg-sum-res">' + VgT_esc_(resumo || "") + '</span></summary><div class="vg-det-corpo">' + corpoHtml + "</div></details>"; };
+    h += det("Dados da viagem", (s.equipe.length ? s.equipe.length + (s.equipe.length === 1 ? " pessoa" : " pessoas") : "sem equipe") + (s.responsavelNome ? " · dinheiro com " + s.responsavelNome : ""), '<dl class="vg-pares">' + [
+      ["Centro de custo", s.centroNome], ["Vínculo", (s.vinculoNome || "—") + (s.clienteNome ? ": " + s.clienteNome : "") + (c.vinculoRef ? " · nº " + c.vinculoRef : "")],
+      ["Objetivo", c.objetivo], ["Destino", s.destino], ["Saída", s.saida], ["Chegada", s.chegada], ["Duração", s.dias ? s.dias + (s.dias === 1 ? " dia" : " dias") + " (" + s.noites + (s.noites === 1 ? " noite" : " noites") + ")" : ""],
+      ["Transporte", (s.veiculoTipoNome || "—") + (s.veiculoNome ? ": " + s.veiculoNome : "")], ["Roteiro", c.roteiro], ["Solicitante", s.solicitante], ["Responsável pelo dinheiro", s.responsavelNome]
+    ].concat(c.vinculoTipo === "INTERNA" ? [["Justificativa (viagem interna)", c.vinculoJustificativa]] : []).concat(c.veiculoTipo === "PROPRIO" ? [["Veículo próprio", c.veiculoJustificativa]] : [])
+      .map(function (p) { return "<dt>" + VgT_esc_(p[0]) + "</dt><dd>" + (p[1] ? VgT_esc_(p[1]) : '<span class="vg-sub">não informado</span>') + "</dd>"; }).join("") + "</dl>" +
+      "<h4>Equipe</h4>" + (s.equipe.length ? '<table class="vg-tabela"><thead><tr><th>Pessoa</th><th>Função</th><th>Vínculo</th></tr></thead><tbody>' + s.equipe.map(function (p) {
+        return '<tr><td data-r="Pessoa">' + VgT_esc_(p.nome) + (p.id === c.responsavelId ? " <b>(dinheiro)</b>" : "") + '</td><td data-r="Função">' + VgT_esc_(p.funcaoNome) + '</td><td data-r="Vínculo">' + VgT_esc_(p.vinculo || "—") + "</td></tr>";
+      }).join("") + "</tbody></table>" : '<p class="vg-sub">Ninguém na equipe ainda.</p>'), true);
+    h += det("Orçamento discriminado", (s.linhas || []).length + ((s.linhas || []).length === 1 ? " linha" : " linhas") + " · " + s.totalCalculadoTxt, VgT_tabelaLinhas_(s), true);
+    if ((s.decisoes || []).length) h += det("Decisões", s.decisoes.length + (s.decisoes.length === 1 ? " decisão" : " decisões"), '<table class="vg-tabela"><thead><tr><th>Revisão</th><th>Etapa</th><th>Decisão</th><th>Por</th><th>Fundamentação</th></tr></thead><tbody>' + s.decisoes.map(function (d) {
+      return '<tr><td data-r="Revisão">' + VgT_esc_(d.revisao) + '</td><td data-r="Etapa">' + VgT_esc_(d.etapaNome) + '</td><td data-r="Decisão">' + VgT_esc_(d.decisaoNome) + '</td><td data-r="Por">' + VgT_esc_(d.por) + " em " + VgT_esc_(d.em) + '</td><td data-r="Fundamentação">' + VgT_esc_(d.fundamentacao) + "</td></tr>";
+    }).join("") + "</tbody></table>", s.situacao === "DEVOLVIDA" || s.situacao === "NEGADA");
+    if ((s.cargas || []).length) h += det("Cargas no cartão Caju", s.carregadoTxt, '<table class="vg-tabela"><thead><tr><th>Data</th><th class="num">Valor</th><th>Centro no Caju</th><th>Comprovante</th><th>Registrada por</th></tr></thead><tbody>' + s.cargas.map(function (g) {
+      return '<tr><td data-r="Data">' + VgT_esc_(g.data) + '</td><td class="num" data-r="Valor">' + VgT_esc_(g.valorTxt) + '</td><td data-r="Centro no Caju">' + VgT_esc_(g.centroCaju) + '</td><td data-r="Comprovante">' + (g.comprovante.url ? '<a href="' + VgT_esc_(g.comprovante.url) + '" target="_blank" rel="noopener">' + VgT_esc_(g.comprovante.nome) + "</a>" : VgT_esc_(g.comprovante.nome)) + '</td><td data-r="Registrada por">' + VgT_esc_(g.por) + " em " + VgT_esc_(g.em) + (g.obs ? ". " + VgT_esc_(g.obs) : "") + (g.taxaTxt ? ". Taxa do Caju: " + VgT_esc_(g.taxaTxt) : "") + (g.conciliada ? ". Conferida no extrato do Caju." : "") + "</td></tr>";
+    }).join("") + "</tbody></table>", true);
+    h += det("Revisões e histórico", (s.revisoes || []).length ? (s.revisoes.length + (s.revisoes.length === 1 ? " revisão" : " revisões")) : "ainda não enviada",
+      ((s.revisoes || []).length ? "<h4>Revisões</h4>" + s.revisoes.map(function (v) { return '<p class="vg-texto">Revisão ' + VgT_esc_(v.revisao) + " · " + VgT_esc_(v.em) + " · " + VgT_esc_(v.por) + " · " + VgT_esc_(v.totalTxt) + ". " + VgT_esc_(v.motivo) + ' <button type="button" class="cadx-btn cadx-btn-link" onclick="VgT_documento_(' + Number(v.revisao) + ')">ver o A4 desta revisão</button></p>'; }).join("") : "") +
+      "<h4>Histórico</h4>" + (s.historico || []).map(function (x) { return '<p class="vg-texto"><b>' + VgT_esc_(x.em) + "</b> · " + VgT_esc_(x.por) + " · " + VgT_esc_(x.acao) + (x.para ? " (" + VgT_esc_(x.para) + ")" : "") + (x.texto ? ": " + VgT_esc_(x.texto) : "") + "</p>"; }).join(""), false);
+    corpo.innerHTML = h;
+    var gf = VgT_$("vgGasto"); if (gf) gf.__sgoSujo = function () { return !!(VG.gasto && VG.gasto.sujo); };
+    if (msg) VgT_msg_(msg, tipoMsg || "ok"); else VgT_msg_("");
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+  function VgT_tabelaLinhas_(s) {
+    var na = s.naoSeAplica || {};
+    var linhas = (s.linhas || []).map(function (l) {
+      return '<tr><td data-r="Categoria">' + VgT_esc_(l.categoriaNome) + '</td><td data-r="Descrição">' + VgT_esc_(l.descricao || "—") + (l.justificativa ? "<br><span class=\"vg-sub\">Justificativa: " + VgT_esc_(l.justificativa) + "</span>" : "") +
+        (l.acimaTeto ? '<br><span class="vg-erro">Acima do teto (' + VgT_esc_(l.tetoTxt) + ")" + (l.justificativaTeto ? ": " + VgT_esc_(l.justificativaTeto) : "") + "</span>" : "") +
+        ((l.anexos || []).length ? '<div class="vg-anexos">' + l.anexos.map(function (a) { return '<a href="' + VgT_esc_(a.url) + '" target="_blank" rel="noopener">' + VgT_esc_(a.nome) + "</a>"; }).join("") + "</div>" : "") +
+        '</td><td data-r="Base de cálculo">' + VgT_esc_(l.base || (l.erros || []).join("; ")) + '</td><td class="num" data-r="Valor">' + VgT_esc_(l.valorTxt || "—") + "</td></tr>";
+    });
+    var nas = Object.keys(na).map(function (k) { var cat = VgT_cat_(k); return "<li>" + VgT_esc_(cat ? cat.nome : k) + ": não se aplica (" + VgT_esc_(na[k]) + ")</li>"; });
+    return (linhas.length ? '<table class="vg-tabela"><thead><tr><th>Categoria</th><th>Descrição e anexos</th><th>Base de cálculo</th><th class="num">Valor</th></tr></thead><tbody>' + linhas.join("") +
+      '<tr class="total"><td colspan="3" data-r="">Total pela soma das linhas</td><td class="num" data-r="Total">' + VgT_esc_(s.totalCalculadoTxt) + "</td></tr></tbody></table>" : '<p class="vg-sub">Nenhuma linha ainda.</p>') +
+      (nas.length ? '<ul class="vg-sub">' + nas.join("") + "</ul>" : "");
+  }
+  function VgT_centroCaju_(codigo) {
+    var c = ((VG.opcoes && VG.opcoes.centros) || []).filter(function (x) { return x.codigo === codigo; })[0];
+    return c && c.codigoCaju ? c.codigoCaju : codigo;
+  }
+  function VgT_painelAcoes_(s) {
+    var ac = s.acoes || {}, h = '<div class="vg-bloco is-acao"><h3>O que você pode fazer agora</h3>', algum = false;
+    var botoes = [];
+    if (ac.editar && ac.editar.pode) botoes.push('<button type="button" class="cadx-btn cadx-btn-grande' + (ac.enviar && ac.enviar.pode ? "" : " cadx-btn-primario") + '" data-vg-acao="1" onclick="VgT_editar_()">Editar a solicitação</button>');
+    if (ac.retirar && ac.retirar.pode) botoes.push('<button type="button" class="cadx-btn cadx-btn-grande" data-vg-acao="1" onclick="VgT_retirar_()">Retirar para ajustar</button>');
+    if (ac.cancelar && ac.cancelar.pode) botoes.push('<button type="button" class="cadx-btn cadx-btn-risco cadx-btn-grande" data-vg-acao="1" onclick="VgT_abrirCancelar_()">Cancelar a solicitação</button>');
+    if (botoes.length) { h += '<div class="vg-acoes" style="margin-top:0">' + botoes.join("") + "</div>"; algum = true; }
+    h += '<div id="vgCancelar"></div>';
+    if (ac.enviar && ac.enviar.pode) {
+      algum = true;
+      var pr = s.proximaRevisao || {};
+      h += '<h4>Enviar para aprovação</h4><p class="vg-sub">Envia a revisão ' + VgT_esc_(pr.numero) + ' com o relatório A4. ' + (s.faltas && s.faltas.length ? "Antes, resolva o que falta (lista acima)." : "Tudo preenchido. Confira o relatório A4 antes de enviar.") + "</p>" +
+        (pr.pedeMotivo ? '<label class="vg-campo largo"><span>O que mudou desde a revisão anterior *</span><textarea id="vgMotivoRev" placeholder="Ex.: hotel trocado por outro mais perto do cliente; um técnico a menos"></textarea><span class="vg-dica">Vai para o relatório A4 e para quem aprova (10 letras ou mais).</span></label>' : "") +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_enviar_()">Enviar para aprovação</button></div>';
+    }
+    if (ac.decidir && ac.decidir.pode) {
+      algum = true;
+      h += '<h4>Sua decisão (' + (ac.decidir.etapa === "DIRETORIA" ? "etapa da Diretoria" : "etapa da gerência") + ")</h4>" +
+        '<p class="vg-sub">Confira o relatório A4 antes. A decisão vale para a revisão ' + VgT_esc_(s.revisao) + ' (total ' + VgT_esc_(s.totalTxt) + "); se a solicitação mudar depois, ela volta para nova aprovação.</p>" +
+        '<label class="vg-campo largo"><span>Fundamentação *</span><textarea id="vgFund" placeholder="Ex.: valores dentro do praticado na cidade; hotel mais próximo do cliente"></textarea><span class="vg-dica">Obrigatória (' + ((VG.opcoes && VG.opcoes.minimos.fundamentacao) || 15) + " letras ou mais). Vai para quem pediu e para o relatório A4.</span></label>" +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_decidir_(\'APROVAR\')">Aprovar</button>' +
+        '<button type="button" class="cadx-btn cadx-btn-grande" data-vg-acao="1" onclick="VgT_decidir_(\'DEVOLVER\')">Devolver para ajuste</button>' +
+        '<button type="button" class="cadx-btn cadx-btn-risco cadx-btn-grande" data-vg-acao="1" onclick="VgT_decidir_(\'NEGAR\')">Negar</button></div>';
+    }
+    var hc = VgT_cajuCargaHtml_(s);
+    if (hc) { h += hc; algum = true; }
+    if (ac.carga && ac.carga.pode) {
+      algum = true;
+      var cc = VgT_centroCaju_(s.centro);
+      if (s.caju && s.caju.pode && !(s.caju.falta || []).length) h += '<h4>Ou registre uma carga feita no portal do Caju</h4><p class="vg-sub">Use só se a carga foi feita direto no portal (fora do SGO+).</p>';
+      h += '<h4>Registrar a carga no cartão Caju</h4><ol class="vg-check">' +
+        "<li>Entre no portal do Caju e abra a carteira de despesas de <b>" + VgT_esc_(s.responsavelNome || "responsável pelo dinheiro") + "</b>.</li>" +
+        "<li>Carregue <b>" + VgT_esc_(VgT_moeda_(ac.carga.saldo)) + "</b> (o que falta carregar do aprovado) usando o centro de custo <b>" + VgT_esc_(cc || "—") + "</b>.</li>" +
+        "<li>Tire o print da tela da carga ou baixe o recibo do portal.</li>" +
+        "<li>Preencha abaixo e toque em <b>Registrar a carga</b>. O comprovante é obrigatório.</li></ol><div class=\"vg-grade\" style=\"margin-top:8px\">" +
+        '<label class="vg-campo"><span>Data da carga *</span><input type="date" id="vgCgData" value="' + VgT_hojeIso_() + '"></label>' +
+        '<label class="vg-campo"><span>Valor carregado (R$) *</span><input type="text" inputmode="decimal" id="vgCgValor" value="' + VgT_esc_(VgT_valorCampo_(ac.carga.saldo)) + '"><span class="vg-dica">Nunca passa de ' + VgT_esc_(VgT_moeda_(ac.carga.saldo)) + ".</span></label>" +
+        '<label class="vg-campo"><span>Centro de custo usado no Caju</span><input type="text" id="vgCgCentro" value="' + VgT_esc_(cc) + '"></label>' +
+        '<label class="vg-campo"><span>Comprovante da carga (PDF ou imagem) *</span><input type="file" id="vgCgArq" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,application/pdf,image/*"></label>' +
+        '<label class="vg-campo largo"><span>Observação</span><textarea id="vgCgObs" placeholder="Obrigatória se a carga for menor que o que falta carregar"></textarea></label></div>' +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_registrarCarga_()">Registrar a carga</button></div>';
+    }
+    var hp = VgT_acoesPrestacaoHtml_(s);
+    if (hp) { h += hp; algum = true; }
+    if (!algum) {
+      var porque = (s.prestacao ? [ac.prestar, ac.conferir, ac.ciencia] : [ac.editar, ac.decidir, ac.carga]).filter(function (x) { return x && !x.pode && x.motivo; }).map(function (x) { return x.motivo; });
+      h += '<p class="vg-texto" style="margin:0">Nada a fazer por você agora nesta solicitação.' + (porque.length ? " " + VgT_esc_(porque[0]) : "") + "</p>";
+    }
+    return h + "</div>";
+  }
+  /** 11/11/2026: carga pelo Caju (pedido de crédito pela API) e os pedidos desta solicitação. */
+  var VG_PED_FINAIS = ["RECUSADO", "CREDITADO", "CANCELADO"];
+  function VgT_cajuCargaHtml_(s) {
+    var c = s.caju; if (!c) return "";
+    var h = "", vivos = (c.pedidos || []).filter(function (p) { return VG_PED_FINAIS.indexOf(p.situacao) < 0; }), finais = (c.pedidos || []).filter(function (p) { return VG_PED_FINAIS.indexOf(p.situacao) >= 0; });
+    if (vivos.length) h += "<h4>Pedido de crédito no Caju em andamento</h4>" + vivos.map(function (p) { return VgT_pedidoCardHtml_(p, c); }).join("");
+    // 11/11/2026 (protocolo Caju 02527150): modo da carga escolhido pelo Financeiro; no manual, só a frase que explica
+    if (c.modo !== "API" && s.acoes && s.acoes.carga && s.acoes.carga.pode && !vivos.length) h += '<p class="vg-sub" style="margin:0 0 6px"><b>Modo da carga: manual.</b> ' + VgT_esc_(c.modoTexto || "") + "</p>";
+    if (c.pode) {
+      h += "<h4>Fazer a carga pelo Caju</h4>";
+      if ((c.falta || []).length) h += '<div class="vg-faixa is-alerta"><b>Antes da carga pelo Caju:</b><ul>' + c.falta.map(function (f) { return "<li>" + VgT_esc_(f) + "</li>"; }).join("") + "</ul></div>";
+      else {
+        h += '<ol class="vg-check"><li>O SGO+ cria o pedido de crédito <b>VIAGEM ' + VgT_esc_(s.numero) + "</b> no Caju para <b>" + VgT_esc_(s.responsavelNome || "o responsável") + "</b>.</li>" +
+          "<li>Paga com o <b>saldo da conta Caju da empresa</b> (crédito mais a taxa do Caju). Faltando saldo, a tela oferece o PIX.</li>" +
+          "<li>Acompanha sozinho até o Caju creditar e registra a carga aqui, com o comprovante do pedido.</li></ol>" +
+          '<div class="vg-grade" style="margin-top:8px">' +
+          (c.categoria ? '<p class="vg-sub vg-campo">Categoria do crédito: <b>' + VgT_esc_(c.categoriaNome || c.categoria) + "</b> (muda em Conciliação Caju > Configuração).</p>"
+            : c.podeConfigurar ? '<label class="vg-campo largo"><span>Categoria do crédito no Caju * (primeira carga)</span><select id="vgCjCat"><option value="">Escolha</option>' + (c.categorias || []).map(function (k) { return '<option value="' + VgT_esc_(k[0]) + '">' + VgT_esc_(k[1]) + "</option>"; }).join("") + '</select><span class="vg-dica">Em que saldo do Caju o dinheiro da viagem cai. A escolha fica gravada para as próximas cargas.</span></label>'
+            : '<p class="vg-erro vg-campo">A categoria do crédito ainda não foi escolhida: peça a quem configura a Conciliação Caju.</p>') +
+          '<label class="vg-campo"><span>Valor do crédito (R$) *</span><input type="text" inputmode="decimal" id="vgCjValor" value="' + VgT_esc_(VgT_valorCampo_(c.saldo)) + '"><span class="vg-dica">Nunca passa de ' + VgT_esc_(VgT_moeda_(c.saldo)) + ".</span></label>" +
+          '<label class="vg-campo largo"><span>Observação</span><textarea id="vgCjObs" placeholder="Obrigatória se o crédito for menor que o que falta carregar"></textarea></label></div>' +
+          '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_cajuCriar_()">Fazer a carga pelo Caju</button></div>';
+      }
+    }
+    if (finais.length) h += '<details class="vg-sub" style="margin-top:8px"><summary>Pedidos anteriores no Caju (' + finais.length + ")</summary>" + finais.map(function (p) {
+      return '<p class="vg-texto">' + VgT_esc_(p.criadoEm) + " · " + VgT_esc_(p.situacaoNome) + " · " + VgT_esc_(p.valorTxt) + (p.pedidoCaju ? " · pedido " + VgT_esc_(p.pedidoCaju) : "") + (p.mensagem ? " · " + VgT_esc_(p.mensagem) : "") + (p.canceladoMotivo ? " · " + VgT_esc_(p.canceladoMotivo) : "") + "</p>";
+    }).join("") + "</details>";
+    return h;
+  }
+  function VgT_pedidoCardHtml_(p, c) {
+    var id = VgT_esc_(p.id), q = function (t) { return "'" + t + "'"; };
+    var h = '<div class="vg-item" style="--vg-item:' + VgT_esc_(p.cor) + '"><div class="vg-item-cab"><b>' + VgT_esc_(p.nome || "Pedido de crédito") + '</b><span class="vg-item-sit" style="color:' + VgT_esc_(p.cor) + '">' + VgT_esc_(p.situacaoNome) + "</span></div>" +
+      '<div class="vg-sub">Crédito ' + VgT_esc_(p.valorTxt) + (p.taxaTxt ? " · taxa do Caju " + VgT_esc_(p.taxaTxt) : "") + (p.totalTxt ? " · total cobrado " + VgT_esc_(p.totalTxt) : "") + " · " + VgT_esc_(p.categoria) + (p.pedidoCaju ? " · pedido " + VgT_esc_(p.pedidoCaju) : "") + (p.ambiente !== "producao" ? " · HOMOLOGAÇÃO" : "") + "</div>" +
+      '<div class="vg-sub">Feito por ' + VgT_esc_(p.criadoPor) + " em " + VgT_esc_(p.criadoEm) + (p.consultadoEm ? " · última consulta ao Caju " + VgT_esc_(p.consultadoEm) + (p.statusCajuNome ? " (" + VgT_esc_(p.statusCajuNome) + ")" : "") : "") + "</div>" +
+      (p.mensagem ? '<div class="vg-faixa is-alerta" style="margin:8px 0 0">' + VgT_esc_(p.mensagem) + "</div>" : "");
+    if (p.pix) h += '<label class="vg-campo largo" style="margin-top:8px"><span>Código PIX (copia e cola) para pagar no banco da empresa</span><textarea id="vgCjPix_' + id + '" readonly rows="3" style="font-family:monospace;font-size:12px">' + VgT_esc_(p.pix) + "</textarea></label>" +
+      '<div class="vg-acoes" style="margin-top:6px"><button type="button" class="cadx-btn" onclick="VgT_cajuCopiarPix_(' + q(id) + ')">Copiar o código PIX</button>' + (p.pixVence ? '<span class="vg-sub">Vale até ' + VgT_esc_(p.pixVence) + "</span>" : "") + "</div>";
+    var bt = [];
+    if (c.podeCarga) {
+      if (p.podeAtualizar) bt.push('<button type="button" class="cadx-btn" data-vg-acao="1" onclick="VgT_cajuAcao_(' + q("pedidoAtualizar") + ", " + q(id) + ')">Atualizar</button>');
+      if (p.podePagarSaldo) bt.push('<button type="button" class="cadx-btn cadx-btn-primario" data-vg-acao="1" onclick="VgT_cajuAcao_(' + q("pedidoPagarSaldo") + ", " + q(id) + ')">' + (p.situacao === "SALDO_INSUFICIENTE" ? "Tentar de novo com o saldo" : "Pagar com o saldo da conta") + "</button>");
+      if (p.podePix) bt.push('<button type="button" class="cadx-btn" data-vg-acao="1" onclick="VgT_cajuAcao_(' + q("pedidoPagarPix") + ", " + q(id) + ')">Pagar por PIX</button>');
+      if (p.podeCancelar) bt.push('<button type="button" class="cadx-btn cadx-btn-risco" onclick="VgT_cajuCancelarAbrir_(' + q(id) + ')">Cancelar o pedido</button>');
+    }
+    if (bt.length) h += '<div class="vg-acoes" style="margin-top:8px">' + bt.join("") + "</div>";
+    if (p.verificar && c.podeCarga) h += '<div class="vg-faixa is-erro" style="margin-top:8px"><b>Confira no portal do Caju</b> se existe o pedido "' + VgT_esc_(p.nome) + '".<div class="vg-grade" style="margin-top:8px">' +
+      '<label class="vg-campo"><span>Se existe: número do pedido no portal</span><input type="text" id="vgCjNum_' + id + '"></label>' +
+      '<label class="vg-campo"><span>Se não existe: o que você conferiu</span><input type="text" id="vgCjLib_' + id + '" placeholder="Ex.: não há pedido com este nome no portal"></label></div>' +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-vg-acao="1" onclick="VgT_cajuAcao_(' + q("pedidoInformar") + ", " + q(id) + ", { pedidoCajuId: VgT_$(" + q("vgCjNum_" + id) + ').value })">Ligar este número</button>' +
+      '<button type="button" class="cadx-btn" data-vg-acao="1" onclick="VgT_cajuAcao_(' + q("pedidoLiberar") + ", " + q(id) + ", { motivo: VgT_$(" + q("vgCjLib_" + id) + ').value })">Não foi criado, liberar</button></div></div>';
+    return h + '<div id="vgCjCanc_' + id + '"></div></div>';
+  }
+  function VgT_cajuCriar_() {
+    var s = VG.atual, c = s.caju || {}, cat = VgT_$("vgCjCat") ? VgT_$("vgCjCat").value : "", valor = String((VgT_$("vgCjValor") || {}).value || "").trim(), obs = String((VgT_$("vgCjObs") || {}).value || "").trim();
+    if (!c.categoria && !cat) { VgT_erro_("Escolha a categoria do crédito no Caju (primeira carga)."); try { VgT_$("vgCjCat").focus(); } catch (e) {} return; }
+    var n = VgT_num_(valor);
+    if (n === null || !(n > 0)) { VgT_erro_("Informe o valor do crédito (maior que zero)."); return; }
+    VgT_perguntar_("Fazer a carga de " + VgT_moeda_(n) + " pelo Caju?", "O SGO+ cria o pedido VIAGEM " + s.numero + " para " + (s.responsavelNome || "o responsável") + " e paga com o saldo da conta Caju da empresa (o crédito mais a taxa do Caju). " + (c.integracao && c.integracao.producao ? "É dinheiro de verdade." : "Homologação: crédito fictício, a carga não entra no depósito."),
+      [{ rotulo: "Fazer a carga", prim: true, fn: function () { VgT_cajuChamar_("pedidoCriar", { id: s.id, valor: valor, observacao: obs, categoria: cat, daViagem: true }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); }); } }, { rotulo: "Voltar" }]);
+  }
+  function VgT_cajuAcao_(acao, pedidoId, extra) {
+    VgT_cajuChamar_(acao, Object.assign({ pedidoId: pedidoId, daViagem: true }, extra || {}), function (r) { if (r.solicitacao) VgT_mostrarDetalhe_(r.solicitacao, r.message); else VgT_msg_(r.message, "ok"); VgT_atualizarContagens_(); });
+  }
+  function VgT_cajuCancelarAbrir_(pedidoId) {
+    var el = VgT_$("vgCjCanc_" + pedidoId); if (!el) return;
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:8px"><label class="vg-campo largo"><span>Motivo do cancelamento *</span><textarea id="vgCjCancM_' + pedidoId + '" placeholder="Ex.: viagem adiada pelo cliente"></textarea><span class="vg-dica">10 letras ou mais. O pedido é cancelado também no Caju.</span></label>' +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-risco-cheio" data-vg-acao="1" onclick="VgT_cajuAcao_(\'pedidoCancelar\', \'' + pedidoId + '\', { motivo: VgT_$(\'vgCjCancM_' + pedidoId + '\').value })">Confirmar o cancelamento</button>' +
+      '<button type="button" class="cadx-btn" onclick="VgT_$(\'vgCjCanc_' + pedidoId + '\').innerHTML=\'\'">Desistir</button></div></div>';
+  }
+  function VgT_cajuCopiarPix_(pedidoId) {
+    var t = VgT_$("vgCjPix_" + pedidoId); if (!t) return;
+    var ok = function () { VgT_msg_("Código PIX copiado. Cole no aplicativo do banco da empresa.", "ok"); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t.value).then(ok, function () { t.select(); document.execCommand("copy"); ok(); }); return; } } catch (e) {}
+    try { t.select(); document.execCommand("copy"); ok(); } catch (e) { VgT_erro_("O navegador não deixou copiar: selecione o código e copie à mão."); }
+  }
+  /** Abre um A4 (HTML) numa janela nova; a janela é aberta antes da resposta para o navegador não bloquear. */
+  function VgT_abrirHtml_(acao, dados, aviso) {
+    var w = window.open("", "_blank");
+    if (w) { try { w.document.write('<p style="font-family:sans-serif;padding:24px">Gerando o relatório A4…</p>'); } catch (e) {} }
+    VgT_chamar_(acao, dados, function (r) {
+      if (w) { w.document.open(); w.document.write(r.html); w.document.close(); } else VgT_erro_("O navegador bloqueou a janela do relatório. Permita janelas do SGO+ e toque de novo.");
+      if (aviso) VgT_msg_(r.message || "Relatório gerado.", "ok");
+    }, function (m) { if (w) try { w.close(); } catch (e) {} VgT_erro_(m); }, { livre: true });
+  }
+  function VgT_documento_(rev) {
+    var s = VG.atual; if (!s) return;
+    VgT_abrirHtml_("documento", { id: s.id, revisao: rev === undefined ? "" : rev });
+  }
+  function VgT_retirar_() {
+    var s = VG.atual;
+    VgT_perguntar_("Retirar da aprovação?", "A solicitação " + s.numero + " volta a rascunho e o pedido de aprovação deixa de valer. Depois de ajustar, envie de novo.",
+      [{ rotulo: "Retirar para ajustar", prim: true, fn: function () { VgT_chamar_("retirar", { id: s.id }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); }); } }, { rotulo: "Deixar como está" }]);
+  }
+  function VgT_abrirCancelar_() {
+    var el = VgT_$("vgCancelar"); if (!el) return;
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:12px"><label class="vg-campo largo"><span>Motivo do cancelamento *</span><textarea id="vgCancMotivo" placeholder="Ex.: cliente adiou a visita para dezembro"></textarea><span class="vg-dica">10 letras ou mais. Fica no histórico e no relatório; nada é apagado.</span></label>' +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-risco-cheio cadx-btn-grande" data-vg-acao="1" onclick="VgT_cancelar_()">Confirmar o cancelamento</button><button type="button" class="cadx-btn cadx-btn-grande" onclick="document.getElementById(\'vgCancelar\').innerHTML=\'\'">Desistir</button></div></div>';
+    try { VgT_$("vgCancMotivo").focus(); } catch (e) {}
+  }
+  function VgT_cancelar_() {
+    var s = VG.atual, m = String((VgT_$("vgCancMotivo") || {}).value || "").trim();
+    if (m.length < 10) return VgT_erro_("Escreva o motivo do cancelamento (10 letras ou mais; foram " + m.length + ").");
+    VgT_chamar_("cancelar", { id: s.id, motivo: m }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); });
+  }
+  function VgT_enviar_() {
+    var s = VG.atual, mot = VgT_$("vgMotivoRev") ? String(VgT_$("vgMotivoRev").value || "").trim() : "";
+    VgT_chamar_("enviar", { id: s.id, motivoRevisao: mot }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); });
+  }
+  function VgT_decidir_(decisao) {
+    var s = VG.atual, f = String((VgT_$("vgFund") || {}).value || "").trim(), min = (VG.opcoes && VG.opcoes.minimos.fundamentacao) || 15;
+    if (f.length < min) { VgT_erro_("Escreva a fundamentação da decisão (" + min + " letras ou mais; foram " + f.length + ")."); try { VgT_$("vgFund").focus(); } catch (e) {} return; }
+    var ir = function () { VgT_chamar_("decidir", { id: s.id, decisao: decisao, fundamentacao: f, revisao: s.revisao }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); }); };
+    if (decisao === "NEGAR") VgT_perguntar_("Negar a solicitação?", "Negar encerra a solicitação " + s.numero + " (não volta para ajuste). Se quem pediu pode corrigir, use Devolver para ajuste.",
+      [{ rotulo: "Negar", perigo: true, fn: ir }, { rotulo: "Voltar", prim: true }]);
+    else ir();
+  }
+  function VgT_lerArquivo_(input, fn) {
+    var f = input && input.files && input.files[0];
+    if (!f) { VgT_erro_("Escolha o arquivo (PDF ou imagem) e tente de novo."); return; }
+    if (f.size > 10 * 1024 * 1024) { VgT_erro_("O arquivo passa de 10 MB. Salve em tamanho menor (PDF ou foto reduzida) e escolha de novo."); return; }
+    var rd = new FileReader();
+    rd.onload = function () { fn({ nome: f.name, tipo: f.type || "", base64: String(rd.result || "").replace(/^data:[^,]*,/, "") }); };
+    rd.onerror = function () { VgT_erro_("O navegador não conseguiu ler o arquivo. Escolha de novo."); };
+    rd.readAsDataURL(f);
+  }
+  function VgT_registrarCarga_() {
+    var s = VG.atual;
+    if (!VgT_$("vgCgArq").files || !VgT_$("vgCgArq").files[0]) return VgT_erro_("Anexe o comprovante da carga (print da tela ou recibo do portal do Caju). Sem o comprovante a carga não é registrada.");
+    VgT_lerArquivo_(VgT_$("vgCgArq"), function (arq) {
+      VgT_chamar_("registrarCarga", { id: s.id, data: VgT_$("vgCgData").value, valor: VgT_$("vgCgValor").value, centroCustoCaju: VgT_$("vgCgCentro").value, observacao: VgT_$("vgCgObs").value, comprovante: arq },
+        function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); });
+    });
+  }
+  function VgT_atualizarContagens_() {
+    VG.painel = null;
+    VgT_chamar_("iniciar", {}, function (r) { VG.ini = r; Viagem_mostrarMenu_(); VgT_desenharTopo_(); if (VG.vista === "detalhe") VgT_desenharAbas_(); }, function () {}, { livre: true });
+  }
+
+  // ---------- formulário (em 5 etapas recolhíveis, cada uma com o resumo do que foi preenchido) ----------
+  function VgT_nova_() {
+    VgT_comOpcoes_(function () {
+      VgT_abrirForm_(null, { centroCustoId: "", vinculoTipo: "", clienteId: "", vinculoRef: "", vinculoJustificativa: "", objetivo: "", destinoCidade: "", destinoUf: "", saidaEm: "", chegadaEm: "",
+        equipe: [], responsavelId: "", veiculoTipo: "", veiculoId: "", veiculoJustificativa: "", roteiro: "", linhas: [], naoSeAplica: {} });
+    });
+  }
+  function VgT_editar_() {
+    var s = VG.atual;
+    VgT_comOpcoes_(function () { VgT_abrirForm_(s, JSON.parse(JSON.stringify(s.conteudo))); });
+  }
+  function VgT_novaLinhaId_() { return "L" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function VgT_abrirForm_(s, c) {
+    VG.vista = "form"; VG.form = { s: s, c: c }; VG.sujo = false; VG.etapasAbertas = {};
+    VgT_desenharAbas_(); VgT_msg_("");
+    VgT_empilhar_(s ? "Editar " + s.numero : "Nova solicitação");
+    VgT_desenharForm_();
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+  function VgT_opcoesSel_(lista, atual, vazio) {
+    return '<option value="">' + VgT_esc_(vazio || "Escolha") + "</option>" + lista.map(function (o) { return '<option value="' + VgT_esc_(o[0]) + '"' + (String(o[0]) === String(atual) ? " selected" : "") + ">" + VgT_esc_(o[1]) + "</option>"; }).join("");
+  }
+  function VgT_etapaHtml_(n, titulo, corpo) {
+    var aberta = VG.etapasAbertas[n] === undefined ? true : VG.etapasAbertas[n];
+    return '<details class="vg-det vg-etapa" id="vgEt_' + n + '"' + (aberta ? " open" : "") + ' ontoggle="VG.etapasAbertas[' + n + ']=this.open"><summary><span class="vg-etapa-n">' + n + '</span><span class="vg-etapa-txt"><span>' + VgT_esc_(titulo) + '</span><small id="vgEtRes_' + n + '"></small></span><span class="vg-etapa-estado" id="vgEtEst_' + n + '">falta</span></summary><div class="vg-det-corpo">' + corpo + "</div></details>";
+  }
+  function VgT_desenharForm_() {
+    var corpo = VgT_$("vgCorpo"); if (!corpo || !VG.form) return;
+    var o = VG.opcoes, c = VG.form.c, s = VG.form.s;
+    var pessoas = {}; o.pessoas.forEach(function (p) { pessoas[p.id] = p; });
+    var h = '<div id="vgForm" data-sgo-sujo="0" data-sgo-sujo-texto="Descartar o que foi alterado nesta solicitação? O que você mudou ainda não foi salvo.">';
+    h += '<div class="vg-cat-cab" style="margin-bottom:10px"><h3 class="vg-tit" style="margin:0">' + (s ? "Editar " + VgT_esc_(s.numero) : "Nova solicitação de depósito de viagem") + '</h3><button type="button" class="cadx-btn" onclick="VgT_cancelarForm_()">← Voltar sem salvar</button></div>';
+    if (s && ["APROVADA", "CARGA_FEITA"].indexOf(s.situacao) >= 0) h += '<div class="vg-faixa is-alerta">Esta solicitação já está aprovada. Se você mudar o conteúdo e salvar, a aprovação deixa de valer: ela volta a rascunho e precisa ser enviada de novo (revisão nova). A carga no cartão só continua depois da nova aprovação.</div>';
+    h += '<div class="vg-faixa">Preencha as 5 etapas. O total <b>não é digitado</b>: ele sai da soma das linhas do orçamento. Pode salvar o rascunho a qualquer momento, mesmo incompleto; o envio para aprovação fica na tela da solicitação, com a lista do que falta.</div>';
+    // 1. centro de custo e vínculo
+    var b1 = '<div class="vg-grade">' +
+      '<label class="vg-campo"><span>Centro de custo *</span><select id="vgCentro" onchange="VgT_campo_(\'centroCustoId\', this.value)">' + VgT_opcoesSel_(o.centros.map(function (x) { return [x.id, x.codigo + " · " + x.nome]; }), c.centroCustoId) + '</select><span class="vg-dica">De qual unidade e área é o gasto (ex.: GO-TECNICA para viagem do técnico de Goiânia). É o mesmo código da carga no Caju.</span></label>' +
+      '<label class="vg-campo"><span>A viagem está ligada a *</span><select id="vgVinc" onchange="VgT_campo_(\'vinculoTipo\', this.value); VgT_desenharFormMantendo_()">' + VgT_opcoesSel_(Object.keys(o.vinculos).map(function (k) { return [k, o.vinculos[k]]; }), c.vinculoTipo) + '</select><span class="vg-dica">Para quem foi o gasto: um cliente, uma proposta, uma ordem de serviço ou uma viagem interna.</span></label>';
+    if (c.vinculoTipo && c.vinculoTipo !== "INTERNA") {
+      b1 += '<label class="vg-campo"><span>Cliente' + (c.vinculoTipo === "CLIENTE" ? " *" : "") + '</span><input type="text" id="vgCliBusca" placeholder="Digite para filtrar a lista" oninput="VgT_filtrarClientes_()"><select id="vgCli" onchange="VgT_campo_(\'clienteId\', this.value)">' + VgT_opcoesSel_(o.clientes.map(function (x) { return [x.id, x.nome]; }), c.clienteId) + "</select></label>";
+      if (c.vinculoTipo !== "CLIENTE") b1 += '<label class="vg-campo"><span>Número da ' + (c.vinculoTipo === "OS" ? "ordem de serviço" : "proposta") + ' *</span><input type="text" id="vgRef" value="' + VgT_esc_(c.vinculoRef) + '" oninput="VgT_campo_(\'vinculoRef\', this.value)" placeholder="' + (c.vinculoTipo === "OS" ? "Ex.: OS-2026-0123" : "Ex.: PROP-2026-0042") + '"></label>';
+    }
+    if (c.vinculoTipo === "INTERNA") b1 += '<label class="vg-campo largo"><span>Justificativa da viagem interna *</span><textarea id="vgVincJust" oninput="VgT_campo_(\'vinculoJustificativa\', this.value)" placeholder="Ex.: treinamento da equipe na filial do Rio de Janeiro">' + VgT_esc_(c.vinculoJustificativa) + '</textarea><span class="vg-dica">20 letras ou mais.</span></label>';
+    b1 += "</div>";
+    h += VgT_etapaHtml_(1, "Centro de custo e vínculo", b1);
+    // 2. viagem
+    h += VgT_etapaHtml_(2, "A viagem", '<div class="vg-grade">' +
+      '<label class="vg-campo largo"><span>Objetivo *</span><textarea id="vgObj" oninput="VgT_campo_(\'objetivo\', this.value)" placeholder="Ex.: qualificação térmica das autoclaves do Hospital X">' + VgT_esc_(c.objetivo) + "</textarea></label>" +
+      '<label class="vg-campo"><span>Cidade de destino *</span><input type="text" id="vgCidade" list="vgDestinos" value="' + VgT_esc_(c.destinoCidade) + '" oninput="VgT_campo_(\'destinoCidade\', this.value); VgT_dicaKm_()"><datalist id="vgDestinos">' + (o.referenciasKm || []).map(function (r) { return '<option value="' + VgT_esc_(String(r.destino).replace(/\/[A-Z]{2}$/, "")) + '">'; }).join("") + "</datalist></label>" +
+      '<label class="vg-campo"><span>UF *</span><select id="vgUf" onchange="VgT_campo_(\'destinoUf\', this.value)">' + VgT_opcoesSel_(o.ufs.map(function (u) { return [u, u]; }), c.destinoUf, "UF") + "</select></label>" +
+      '<label class="vg-campo"><span>Saída (data e hora) *</span><input type="datetime-local" id="vgSaida" value="' + VgT_esc_(c.saidaEm) + '" onchange="VgT_campo_(\'saidaEm\', this.value); VgT_dur_()"></label>' +
+      '<label class="vg-campo"><span>Chegada (data e hora) *</span><input type="datetime-local" id="vgChegada" value="' + VgT_esc_(c.chegadaEm) + '" onchange="VgT_campo_(\'chegadaEm\', this.value); VgT_dur_()"></label>' +
+      '<p class="vg-sub vg-campo largo" id="vgDur"></p><p class="vg-sub vg-campo largo" id="vgKm"></p></div>');
+    // 3. equipe
+    h += VgT_etapaHtml_(3, "Equipe e responsável pelo dinheiro", '<div class="vg-grade">' +
+      '<label class="vg-campo"><span>Pessoa</span><select id="vgPes">' + VgT_opcoesSel_(o.pessoas.filter(function (p) { return !c.equipe.some(function (e) { return e.id === p.id; }); }).map(function (p) { return [p.id, p.nome + (p.vinculo ? " (" + p.vinculo + ")" : "")]; }), "") + "</select></label>" +
+      '<label class="vg-campo"><span>Função na viagem</span><select id="vgFun">' + VgT_opcoesSel_(Object.keys(o.funcoes).map(function (k) { return [k, o.funcoes[k]]; }), "TECNICO", "Escolha") + "</select></label>" +
+      '<div class="vg-campo" style="justify-content:flex-end"><button type="button" class="cadx-btn cadx-btn-grande" onclick="VgT_incluirPessoa_()">Incluir na equipe</button></div></div>' +
+      '<div class="vg-pessoas">' + (c.equipe.length ? c.equipe.map(function (e, i) {
+        var p = pessoas[e.id] || { nome: e.id, vinculo: "" };
+        return '<div class="vg-pessoa"><label><input type="radio" name="vgResp" ' + (c.responsavelId === e.id ? "checked" : "") + ' onchange="VgT_campo_(\'responsavelId\', \'' + VgT_esc_(e.id) + '\')"> <span><b>' + VgT_esc_(p.nome) + "</b> · " + VgT_esc_(o.funcoes[e.funcao] || e.funcao) + (p.vinculo ? " · " + VgT_esc_(p.vinculo) : "") + "</span></label>" +
+          '<button type="button" class="cadx-btn" onclick="VgT_tirarPessoa_(' + i + ')">Tirar</button></div>';
+      }).join("") + '<p class="vg-sub">Marque (bolinha) o <b>responsável pelo dinheiro</b>: quem recebe a carga no cartão Caju e presta contas.</p>' : '<p class="vg-sub">Inclua quem viaja. Depois marque o responsável pelo dinheiro.</p>') + "</div>");
+    // 4. transporte
+    var b4 = '<div class="vg-grade">' +
+      '<label class="vg-campo"><span>Como a equipe vai *</span><select id="vgVeicTipo" onchange="VgT_campo_(\'veiculoTipo\', this.value); VgT_desenharFormMantendo_()">' + VgT_opcoesSel_(Object.keys(o.veiculoTipos).map(function (k) { return [k, o.veiculoTipos[k]]; }), c.veiculoTipo) + "</select></label>";
+    if (c.veiculoTipo === "FROTA") b4 += '<label class="vg-campo"><span>Veículo da Frota *</span><select id="vgVeic" onchange="VgT_campo_(\'veiculoId\', this.value)">' + VgT_opcoesSel_(o.veiculos.map(function (v) { return [v.id, v.nome]; }), c.veiculoId) + "</select></label>";
+    if (c.veiculoTipo === "PROPRIO") b4 += '<label class="vg-campo largo"><span>Por que veículo próprio e quem autorizou *</span><textarea id="vgVeicJust" oninput="VgT_campo_(\'veiculoJustificativa\', this.value)">' + VgT_esc_(c.veiculoJustificativa) + '</textarea><span class="vg-dica">20 letras ou mais. O reembolso por km tem regras próprias.</span></label>';
+    b4 += '<label class="vg-campo largo"><span>Roteiro *</span><textarea id="vgRot" oninput="VgT_campo_(\'roteiro\', this.value)" placeholder="Ex.: Goiânia > Rio Verde (carro da Frota, 230 km); Rio Verde > Goiânia (carro da Frota)">' + VgT_esc_(c.roteiro) + "</textarea></label></div>";
+    h += VgT_etapaHtml_(4, "Transporte e roteiro", b4);
+    // 5. orçamento
+    h += VgT_etapaHtml_(5, "Orçamento discriminado", '<p class="vg-sub" style="margin-top:0">Cada categoria precisa de uma linha com valor ou de "Não se aplica" com o motivo. Hotel, passagem e "Outros" precisam do orçamento ou do print anexado.</p>' + o.categorias.map(function (cat) { return VgT_catHtml_(cat); }).join(""));
+    // rodapé
+    h += '<div class="vg-rodape"><div><span class="vg-sub">Total pela soma das linhas</span><br><span class="vg-total" id="vgTotal"></span></div><div class="vg-acoes" style="margin:0">' +
+      '<button type="button" class="cadx-btn cadx-btn-grande" onclick="VgT_cancelarForm_()">Cancelar</button><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_salvar_()">Salvar rascunho</button></div></div></div>';
+    corpo.innerHTML = h;
+    var f = VgT_$("vgForm"); if (f) f.__sgoSujo = function () { return VG.sujo; };
+    VgT_dur_(); VgT_dicaKm_(); VgT_recalcular_();
+  }
+  /** Resumo e situação de cada etapa do formulário (só tela; quem confere de verdade é o servidor). */
+  function VgT_resumosEtapas_() {
+    if (!VG.form || !VG.opcoes) return;
+    var c = VG.form.c, o = VG.opcoes, nomeP = {}; o.pessoas.forEach(function (p) { nomeP[p.id] = p.nome; });
+    var centro = o.centros.filter(function (x) { return x.id === c.centroCustoId; })[0];
+    var vincOk = c.vinculoTipo === "CLIENTE" ? !!c.clienteId : c.vinculoTipo === "INTERNA" ? String(c.vinculoJustificativa || "").trim().length >= 20 : !!c.vinculoTipo && String(c.vinculoRef || "").trim().length >= 3;
+    var datasOk = !!(c.saidaEm && c.chegadaEm && c.chegadaEm > c.saidaEm);
+    var cats = (o.categorias || []).filter(function (k) { return !k.opcional; });
+    var faltamCats = cats.filter(function (k) { return c.naoSeAplica[k.cod] === undefined && !c.linhas.some(function (l) { return l.categoria === k.cod; }); });
+    var est = [
+      [!!centro && vincOk, [centro ? centro.codigo : "", c.vinculoTipo ? o.vinculos[c.vinculoTipo] : ""].filter(Boolean).join(" · ")],
+      [String(c.objetivo || "").trim().length >= 10 && !!String(c.destinoCidade || "").trim() && !!c.destinoUf && datasOk, [c.destinoCidade ? c.destinoCidade + (c.destinoUf ? "/" + c.destinoUf : "") : "", c.saidaEm ? c.saidaEm.slice(8, 10) + "/" + c.saidaEm.slice(5, 7) + (c.chegadaEm ? " a " + c.chegadaEm.slice(8, 10) + "/" + c.chegadaEm.slice(5, 7) : "") : ""].filter(Boolean).join(" · ")],
+      [c.equipe.length > 0 && !!c.responsavelId, c.equipe.length ? c.equipe.length + (c.equipe.length === 1 ? " pessoa" : " pessoas") + (c.responsavelId ? " · dinheiro com " + (nomeP[c.responsavelId] || "") : " · falta o responsável") : ""],
+      [!!c.veiculoTipo && String(c.roteiro || "").trim().length >= 5 && (c.veiculoTipo !== "FROTA" || !!c.veiculoId), c.veiculoTipo ? o.veiculoTipos[c.veiculoTipo] : ""],
+      [!faltamCats.length && c.linhas.length > 0, (VgT_$("vgTotal") ? VgT_$("vgTotal").textContent : "") + (faltamCats.length ? " · faltam " + faltamCats.length + (faltamCats.length === 1 ? " categoria" : " categorias") : "")]
+    ];
+    est.forEach(function (e, i) {
+      var d = VgT_$("vgEt_" + (i + 1)), r = VgT_$("vgEtRes_" + (i + 1)), st = VgT_$("vgEtEst_" + (i + 1));
+      if (d) d.classList.toggle("is-ok", !!e[0]);
+      if (r) r.textContent = e[1] || "";
+      if (st) st.textContent = e[0] ? "preenchida" : "falta";
+    });
+  }
+  function VgT_filtrarClientes_() {
+    var t = VgT_norm_(VgT_$("vgCliBusca").value), sel = VgT_$("vgCli"), atual = VG.form.c.clienteId;
+    var l = VG.opcoes.clientes.filter(function (x) { return !t || VgT_norm_(x.nome).indexOf(t) >= 0 || x.id === atual; }).slice(0, 300);
+    sel.innerHTML = VgT_opcoesSel_(l.map(function (x) { return [x.id, x.nome]; }), atual);
+  }
+  function VgT_campo_(k, v) { if (!VG.form) return; VG.form.c[k] = v; VgT_marcarSujo_(); VgT_resumosEtapas_(); }
+  function VgT_dur_() {
+    var el = VgT_$("vgDur"); if (!el || !VG.form) return;
+    var a = VG.form.c.saidaEm, b = VG.form.c.chegadaEm;
+    if (!a || !b) { el.textContent = ""; return; }
+    if (b <= a) { el.textContent = "A chegada precisa ser depois da saída."; return; }
+    var n = Math.round((Date.parse(b.slice(0, 10) + "T00:00:00Z") - Date.parse(a.slice(0, 10) + "T00:00:00Z")) / 864e5);
+    el.textContent = "Duração: " + (n + 1) + (n + 1 === 1 ? " dia" : " dias") + " (" + n + (n === 1 ? " noite" : " noites") + "). Use para conferir as noites de hotel e os dias de alimentação.";
+  }
+  function VgT_dicaKm_() {
+    var el = VgT_$("vgKm"); if (!el || !VG.form) return;
+    var cid = String(VG.form.c.destinoCidade || "").toLowerCase().trim();
+    var ref = cid ? (VG.opcoes.referenciasKm || []).filter(function (r) { return String(r.destino).toLowerCase().replace(/\/[a-z]{2}$/, "") === cid; })[0] : null;
+    el.textContent = ref ? "Referência da tabela de distâncias (sede de Goiânia): " + VgT_numTxt_(ref.km) + " km só a ida. Ida e volta: " + VgT_numTxt_(ref.km * 2) + " km (use no combustível, se for de carro saindo de Goiânia)." : "";
+  }
+  function VgT_catHtml_(cat) {
+    var c = VG.form.c, ls = c.linhas.filter(function (l) { return l.categoria === cat.cod; }), na = c.naoSeAplica[cat.cod];
+    var naMarcado = na !== undefined;
+    var h = '<div class="vg-cat" id="vgCat_' + cat.cod + '"><div class="vg-cat-cab"><b>' + VgT_esc_(cat.nome) + (cat.anexo ? ' <span class="vg-sub">(anexo obrigatório)</span>' : "") + (cat.opcional ? ' <span class="vg-sub">(opcional)</span>' : "") + "</b>" +
+      '<span class="vg-valor" id="vgCatTot_' + cat.cod + '"></span></div><p class="vg-sub" style="margin:4px 0 0">' + VgT_esc_(cat.ajuda || "") + "</p>";
+    if (!cat.opcional) h += '<div class="vg-na"><label><input type="checkbox" ' + (naMarcado ? "checked" : "") + ' onchange="VgT_na_(\'' + cat.cod + '\', this.checked)"> Não se aplica</label>' +
+      (naMarcado ? '<input type="text" placeholder="Motivo (ex.: carro da Frota com cartão-combustível)" value="' + VgT_esc_(na) + '" oninput="VgT_naMotivo_(\'' + cat.cod + '\', this.value)">' : "") + "</div>";
+    if (!naMarcado) {
+      h += ls.map(function (l) { return VgT_linhaHtml_(cat, l); }).join("");
+      h += '<div class="vg-acoes" style="margin-top:8px"><button type="button" class="cadx-btn" onclick="VgT_addLinha_(\'' + cat.cod + '\')">' + (ls.length ? "Adicionar outra linha" : "Adicionar a linha") + " de " + VgT_esc_(cat.nome.toLowerCase()) + "</button></div>";
+    }
+    return h + "</div>";
+  }
+  function VgT_linhaHtml_(cat, l) {
+    var id = VgT_esc_(l.id), salvo = VgT_linhaSalva_(l.id), anexos = salvo ? (salvo.anexos || []) : [];
+    var campo = function (k, rot, extra) { return '<label class="vg-campo"><span>' + VgT_esc_(rot) + ' *</span><input type="text" inputmode="decimal" value="' + VgT_esc_(VgT_numTxt_(l[k])) + '" oninput="VgT_linhaCampo_(\'' + id + '\', \'' + k + '\', this.value)"' + (extra || "") + "></label>"; };
+    var h = '<div class="vg-linhaorc" id="vgL_' + id + '"><div class="vg-grade">' + campo("q1", cat.q1.rot) + (cat.q2 ? campo("q2", cat.q2.rot) : "") + campo("unitario", cat.un) +
+      (cat.desc ? '<label class="vg-campo"><span>' + VgT_esc_(cat.desc) + (cat.descObrig ? " *" : "") + '</span><input type="text" value="' + VgT_esc_(l.descricao) + '" oninput="VgT_linhaCampo_(\'' + id + '\', \'descricao\', this.value)"></label>' : "") +
+      (cat.justificativa ? '<label class="vg-campo largo"><span>Justificativa *</span><textarea oninput="VgT_linhaCampo_(\'' + id + '\', \'justificativa\', this.value)">' + VgT_esc_(l.justificativa) + '</textarea><span class="vg-dica">20 letras ou mais.</span></label>' : "") +
+      '<label class="vg-campo largo" id="vgLT_' + id + '" style="display:none"><span>Justificativa do valor acima do teto *</span><textarea oninput="VgT_linhaCampo_(\'' + id + '\', \'justificativaTeto\', this.value)">' + VgT_esc_(l.justificativaTeto) + '</textarea><span class="vg-dica" id="vgLTd_' + id + '"></span></label>' +
+      "</div>";
+    h += '<div class="vg-acoes" style="justify-content:space-between"><span><span class="vg-valor" id="vgLV_' + id + '"></span> <span class="vg-sub" id="vgLB_' + id + '"></span></span><button type="button" class="cadx-btn" onclick="VgT_tirarLinha_(\'' + id + '\')">Tirar esta linha</button></div>';
+    if (cat.anexo) {
+      h += '<div class="vg-anexos">' + (anexos.length ? anexos.map(function (a) { return '<span><a href="' + VgT_esc_(a.url) + '" target="_blank" rel="noopener">' + VgT_esc_(a.nome) + '</a> <button type="button" class="cadx-btn cadx-btn-link" onclick="VgT_removerAnexo_(\'' + VgT_esc_(a.id) + '\')">tirar</button></span>'; }).join("") : '<span class="vg-erro">Sem orçamento ou print anexado.</span>') +
+        '<label class="vg-campo"><span>Anexar orçamento ou print (PDF ou imagem)</span><input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,application/pdf,image/*" onchange="VgT_anexar_(\'' + id + '\', this)"></label>' +
+        '<span class="vg-dica vg-sub">Ao anexar, o rascunho é salvo primeiro.</span></div>';
+    }
+    return h + "</div>";
+  }
+  function VgT_linhaSalva_(id) { var s = VG.form && VG.form.s; return s ? (s.linhas || []).filter(function (l) { return l.id === id; })[0] : null; }
+  function VgT_na_(cod, marcado) { var c = VG.form.c; if (marcado) { c.naoSeAplica[cod] = c.naoSeAplica[cod] || ""; c.linhas = c.linhas.filter(function (l) { return l.categoria !== cod; }); } else delete c.naoSeAplica[cod]; VgT_marcarSujo_(); VgT_redesenharCat_(cod); }
+  function VgT_naMotivo_(cod, v) { VG.form.c.naoSeAplica[cod] = v; VgT_marcarSujo_(); }
+  function VgT_addLinha_(cod) { VG.form.c.linhas.push({ id: VgT_novaLinhaId_(), categoria: cod, descricao: "", q1: null, q2: null, unitario: null, justificativa: "", justificativaTeto: "" }); VgT_marcarSujo_(); VgT_redesenharCat_(cod); }
+  function VgT_tirarLinha_(id) { var c = VG.form.c, l = c.linhas.filter(function (x) { return x.id === id; })[0]; if (!l) return; c.linhas = c.linhas.filter(function (x) { return x.id !== id; }); VgT_marcarSujo_(); VgT_redesenharCat_(l.categoria); }
+  function VgT_redesenharCat_(cod) { var el = VgT_$("vgCat_" + cod), cat = VgT_cat_(cod); if (el && cat) el.outerHTML = VgT_catHtml_(cat); VgT_recalcular_(); }
+  function VgT_linhaCampo_(id, k, v) {
+    var l = VG.form.c.linhas.filter(function (x) { return x.id === id; })[0]; if (!l) return;
+    l[k] = ["q1", "q2", "unitario"].indexOf(k) >= 0 ? (String(v).trim() === "" ? null : (VgT_num_(v) === null ? v : VgT_num_(v))) : v;
+    VgT_marcarSujo_(); VgT_recalcular_();
+  }
+  /** Mesmo cálculo do servidor (SGO_Viagem.js > Via_calcLinha_), só para mostrar; quem vale é o servidor. */
+  function VgT_calcLinha_(l) {
+    var cat = VgT_cat_(l.categoria), q1 = VgT_num_(l.q1), q2 = cat.q2 ? VgT_num_(l.q2) : 1, u = VgT_num_(l.unitario);
+    if (!(q1 > 0) || !(q2 > 0) || !(u > 0)) return null;
+    var v = cat.q2 && cat.q2.divisor ? q1 / q2 * u : q1 * q2 * u;
+    return Math.round((v + 1e-9) * 100) / 100;
+  }
+  function VgT_recalcular_() {
+    if (!VG.form) return;
+    var pol = VG.opcoes.politica || {}, tetos = {}, total = 0, porCat = {};
+    (pol.tetos || []).forEach(function (t) { tetos[t.cod] = t.valor; });
+    VG.form.c.linhas.forEach(function (l) {
+      var v = VgT_calcLinha_(l), cat = VgT_cat_(l.categoria);
+      var ev = VgT_$("vgLV_" + l.id), eb = VgT_$("vgLB_" + l.id), jt = VgT_$("vgLT_" + l.id), jtd = VgT_$("vgLTd_" + l.id);
+      if (v !== null) { total += Math.round(v * 100); porCat[l.categoria] = (porCat[l.categoria] || 0) + Math.round(v * 100); }
+      if (ev) ev.textContent = v === null ? "Preencha as quantidades e o valor" : VgT_moeda_(v);
+      if (eb) eb.textContent = v === null ? "" : "(" + VgT_numTxt_(VgT_num_(l.q1)) + (cat.q2 ? (cat.q2.divisor ? " ÷ " : " × ") + VgT_numTxt_(VgT_num_(l.q2)) : "") + " × " + VgT_moeda_(VgT_num_(l.unitario)) + ")";
+      var u = VgT_num_(l.unitario), teto = tetos[l.categoria], acima = !!(teto && u !== null && u > teto + 0.0001);
+      if (jt) jt.style.display = acima ? "" : "none";
+      if (jtd && acima) jtd.textContent = "O valor passa do teto da política (" + VgT_moeda_(teto) + " " + cat.tetoRot + "). Com a justificativa (20 letras ou mais), a solicitação vai também à Diretoria.";
+    });
+    (VG.opcoes.categorias || []).forEach(function (cat) { var e = VgT_$("vgCatTot_" + cat.cod); if (e) e.textContent = porCat[cat.cod] ? VgT_moeda_(porCat[cat.cod] / 100) : ""; });
+    var t = VgT_$("vgTotal"); if (t) t.textContent = VgT_moeda_(total / 100);
+    VgT_resumosEtapas_();
+  }
+  function VgT_incluirPessoa_() {
+    var id = VgT_$("vgPes").value, f = VgT_$("vgFun").value || "OUTRO";
+    if (!id) return VgT_erro_("Escolha a pessoa na lista e toque em Incluir na equipe.");
+    VG.form.c.equipe.push({ id: id, funcao: f });
+    if (!VG.form.c.responsavelId && VG.form.c.equipe.length === 1) VG.form.c.responsavelId = id;
+    VgT_marcarSujo_(); VgT_desenharFormMantendo_();
+  }
+  function VgT_tirarPessoa_(i) {
+    var e = VG.form.c.equipe[i]; if (!e) return;
+    VG.form.c.equipe.splice(i, 1);
+    if (VG.form.c.responsavelId === e.id) VG.form.c.responsavelId = "";
+    VgT_marcarSujo_(); VgT_desenharFormMantendo_();
+  }
+  /** Redesenho pedido pela própria pessoa (incluir, tirar, trocar opção): o que foi digitado está em VG.form.c; mantém a rolagem e as etapas abertas. */
+  function VgT_desenharFormMantendo_() { var y = window.scrollY || 0; var sujo = VG.sujo; VgT_desenharForm_(); VG.sujo = sujo; try { window.scrollTo(0, y); } catch (e) {} }
+  function VgT_cancelarForm_() {
+    var s = VG.form && VG.form.s;
+    VgT_seguirSemPerder_(function () { VG.sujo = false; if (s) VgT_abrir_(s.id); else VgT_irAba_("minhas"); });
+  }
+  function VgT_dadosForm_() {
+    var c = JSON.parse(JSON.stringify(VG.form.c));
+    c.id = VG.form.s ? VG.form.s.id : "";
+    return c;
+  }
+  function VgT_salvar_(depois) {
+    if (!VG.form) return;
+    VgT_chamar_("salvar", VgT_dadosForm_(), function (r) {
+      VG.sujo = false;
+      if (typeof depois === "function") { VG.form.s = r.solicitacao; depois(r); return; }
+      VgT_mostrarDetalhe_(r.solicitacao, r.message, "ok");
+    });
+  }
+  function VgT_anexar_(linhaId, input) {
+    var y = window.scrollY || 0;
+    VgT_lerArquivo_(input, function (arq) {
+      VgT_salvar_(function (r) {
+        VgT_chamar_("anexar", { id: r.solicitacao.id, linhaId: linhaId, arquivo: arq }, function (r2) {
+          VG.form.s = r2.solicitacao; VG.form.c = JSON.parse(JSON.stringify(r2.solicitacao.conteudo)); VG.sujo = false;
+          VgT_desenharForm_(); try { window.scrollTo(0, y); } catch (e) {}
+          VgT_msg_(r2.message, "ok");
+        }, function (m) { VgT_desenharFormMantendo_(); VgT_erro_(m); });
+      });
+    });
+  }
+  function VgT_removerAnexo_(anexoId) {
+    var s = VG.form && VG.form.s; if (!s) return;
+    var tirar = function () {
+      VgT_chamar_("removerAnexo", { id: s.id, anexoId: anexoId }, function (r) {
+        var cAtual = VG.form.c, sujo = VG.sujo;
+        VG.form.s = r.solicitacao; VG.form.c = sujo ? cAtual : JSON.parse(JSON.stringify(r.solicitacao.conteudo));
+        VgT_desenharFormMantendo_(); VgT_msg_(r.message, "ok");
+      });
+    };
+    VgT_perguntar_("Tirar o anexo?", "O anexo sai desta linha (o arquivo continua guardado). Se a solicitação já estava aprovada, a aprovação deixa de valer.", [{ rotulo: "Tirar o anexo", perigo: true, fn: tirar }, { rotulo: "Manter", prim: true }]);
+  }
+
+  // ---------- prestação de contas (E2, 11/11/2026): lançar gastos, conferir, acertar o saldo, ciência e trava ----------
+  // Nada redesenha sozinho: o formulário do gasto só some quando a pessoa lança, sai ou o servidor devolve a tela depois de uma
+  // ação dela. A leitura do comprovante (IA) só preenche campos VAZIOS: nunca troca o que a pessoa já digitou.
+  function VgT_contaHtml_(rot, valor, cls) { return '<div class="vg-conta' + (cls ? " " + cls : "") + '"><span>' + VgT_esc_(rot) + "</span><b>" + VgT_esc_(valor) + "</b></div>"; }
+  function VgT_prestacaoHtml_(s) {
+    var p = s.prestacao, k = p.contas, ac = s.acoes || {};
+    var h = '<div class="vg-bloco" id="vgPrest"><div class="vg-cat-cab"><h3 style="margin:0">Prestação de contas</h3><button type="button" class="cadx-btn" onclick="VgT_fechamentoA4_()">Ver o A4 de fechamento</button></div>';
+    if (p.prazo) h += '<div class="vg-faixa ' + (p.prazo.vencida ? "is-erro" : "is-alerta") + '" style="margin-top:10px">' + (p.prazo.vencida
+      ? "<b>Prestação vencida em " + VgT_esc_(p.prazo.prazoTxt) + "</b> (" + p.prazo.diasAtraso + (p.prazo.diasAtraso === 1 ? " dia" : " dias") + " de atraso). Enquanto estiver vencida, " + VgT_esc_(p.responsavelNome) + " não pode ser o responsável pelo dinheiro de outra viagem."
+      : "<b>Prazo da prestação: " + VgT_esc_(p.prazo.prazoTxt) + "</b> (" + VgT_esc_(p.prazoDiasUteis) + " dias úteis depois da volta" + (p.prazo.devolvida ? "; prazo novo, contado da devolução para ajuste" : "") + ").") + "</div>";
+    h += '<p class="vg-texto" style="margin-top:10px">Nada aqui é digitado: o sistema soma os gastos lançados e compara com o que foi carregado no cartão. ' + (k.conferida ? "Os valores são os da conferência do Financeiro (o glosado não é aceito e entra no valor a devolver)." : "Antes de concluída a conferência do Financeiro, a conta usa o gasto lançado, menos o que já foi glosado; o valor final sai da conferência.") + "</p>";
+    h += '<div class="vg-contas">' + VgT_contaHtml_("Carregado no Caju", k.carregadoTxt) + VgT_contaHtml_("Gasto lançado (" + k.itens + (k.itens === 1 ? " gasto" : " gastos") + ")", k.gastoTxt) +
+      (k.gastoProprio ? VgT_contaHtml_("Pago com dinheiro próprio", k.gastoProprioTxt) : "") + (k.conferida ? VgT_contaHtml_("Aceito pelo Financeiro", k.aceitoTxt, "is-ok") : "") +
+      (k.glosado ? VgT_contaHtml_("Glosado", k.glosadoTxt, "is-destaque") : "") + (k.devolvido ? VgT_contaHtml_("Já devolvido", k.devolvidoTxt) : "") + (k.reembolsado ? VgT_contaHtml_("Já reembolsado", k.reembolsadoTxt) : "") +
+      (k.aDevolver > 0 ? VgT_contaHtml_(k.conferida ? "A devolver" : "Sobra a devolver (previsão)", k.aDevolverTxt, "is-destaque") : k.aReembolsar > 0 ? VgT_contaHtml_(k.conferida ? "A reembolsar" : "Falta a reembolsar (previsão)", k.aReembolsarTxt, "is-destaque") : VgT_contaHtml_("Saldo", "R$ 0,00", "is-ok")) + "</div>";
+    h += "<h4>Gastos lançados</h4>";
+    h += p.itens.length ? '<div class="vg-itens">' + p.itens.map(function (i) { return VgT_itemHtml_(i, ac); }).join("") + "</div>" : '<p class="vg-sub">Nenhum gasto lançado ainda.' + (p.obs ? " Observação de quem prestou contas: " + VgT_esc_(p.obs) : "") + "</p>";
+    if (p.obs && p.itens.length) h += '<p class="vg-sub" style="margin-top:8px">Observação de quem prestou contas: ' + VgT_esc_(p.obs) + "</p>";
+    if (k.porCategoria.length) h += "<h4>Por categoria</h4>" + '<table class="vg-tabela"><thead><tr><th>Categoria</th><th class="num">Orçado</th><th class="num">Aprovado</th><th class="num">Gasto</th>' + (k.conferida ? '<th class="num">Aceito</th>' : "") + '<th class="num">Glosado</th></tr></thead><tbody>' +
+      k.porCategoria.map(function (x) { return '<tr><td data-r="Categoria">' + VgT_esc_(x.nome) + (x.aprovado === 0 && x.gasto > 0 ? " (fora do orçado)" : "") + '</td><td class="num" data-r="Orçado">' + VgT_esc_(x.orcadoTxt) + '</td><td class="num" data-r="Aprovado">' + VgT_esc_(x.aprovadoTxt) + '</td><td class="num" data-r="Gasto">' + VgT_esc_(x.gastoTxt) + "</td>" + (k.conferida ? '<td class="num" data-r="Aceito">' + VgT_esc_(x.aceitoTxt) + "</td>" : "") + '<td class="num" data-r="Glosado">' + VgT_esc_(x.glosadoTxt) + "</td></tr>"; }).join("") + "</tbody></table>" +
+      '<p class="vg-sub">Orçado: o pedido original (primeira revisão). Aprovado: a revisão aprovada. A carga e a devolução são do cartão inteiro, por isso ficam só no total.</p>';
+    if (p.acertos.length) h += "<h4>Acerto do saldo</h4>" + '<table class="vg-tabela"><thead><tr><th>Tipo</th><th>Como</th><th>Data</th><th class="num">Valor</th><th>Comprovante</th><th>Registrado por</th></tr></thead><tbody>' + p.acertos.map(function (a) {
+      return '<tr><td data-r="Tipo">' + VgT_esc_(a.tipoNome) + '</td><td data-r="Como">' + VgT_esc_(a.forma) + '</td><td data-r="Data">' + VgT_esc_(a.data) + '</td><td class="num" data-r="Valor">' + VgT_esc_(a.valorTxt) + '</td><td data-r="Comprovante">' + (a.comprovante.url ? '<a href="' + VgT_esc_(a.comprovante.url) + '" target="_blank" rel="noopener">' + VgT_esc_(a.comprovante.nome) + "</a>" : VgT_esc_(a.comprovante.nome)) + '</td><td data-r="Registrado por">' + VgT_esc_(a.por) + " em " + VgT_esc_(a.em) + (a.obs ? ". " + VgT_esc_(a.obs) : "") + "</td></tr>";
+    }).join("") + "</tbody></table>";
+    if (p.liberacoes.length) h += "<h4>Liberações da trava (Diretoria)</h4>" + p.liberacoes.map(function (l) { return '<p class="vg-texto">' + VgT_esc_(l.por) + " em " + VgT_esc_(l.em) + ": " + VgT_esc_(l.pessoa) + " liberado até " + VgT_esc_(l.validaAte) + (l.valida ? "" : " (já venceu)") + ". Motivo: " + VgT_esc_(l.motivo) + "</p>"; }).join("");
+    var trilha = [p.enviadaEm ? "Enviada por " + p.enviadaPor + " em " + p.enviadaEm : "", p.conferidaEm ? "conferida por " + p.conferidaPor + " em " + p.conferidaEm : "", p.cienciaEm ? "ciência de " + p.cienciaPor + " em " + p.cienciaEm + (p.cienciaComentario ? " (" + p.cienciaComentario + ")" : "") : ""].filter(Boolean);
+    if (trilha.length) h += '<p class="vg-sub" style="margin-top:10px">' + VgT_esc_(trilha.join("; ")) + ".</p>";
+    return h + "</div>";
+  }
+  function VgT_itemHtml_(i, ac) {
+    var id = VgT_esc_(i.id);
+    var h = '<div class="vg-item s-' + VgT_esc_(i.situacao) + '" id="vgIt_' + id + '"><div class="vg-item-cab"><b>Nº ' + VgT_esc_(i.item) + " · " + VgT_esc_(i.categoriaNome) + (i.foraDoOrcado ? ' <span class="vg-chip">fora do orçado</span>' : "") + "</b>" +
+      '<span><span class="vg-valor">' + VgT_esc_(i.valorTxt) + '</span> <span class="vg-item-sit s-' + VgT_esc_(i.situacao) + '">' + VgT_esc_(i.situacaoNome) + (i.situacao === "GLOSADO" ? " " + VgT_esc_(i.valorGlosadoTxt) : "") + "</span></span></div>" +
+      (i.semDescricao ? '<div class="vg-erro">Sem descrição de para que foi o gasto' + (i.descricao ? ' (só "' + VgT_esc_(i.descricao) + '")' : "") + ". Peça a quem prestou contas.</div>" : '<div class="vg-texto" style="margin:4px 0 0"><b>Para que foi:</b> ' + VgT_esc_(i.descricao) + "</div>") +
+      '<div class="vg-sub">' + VgT_esc_(i.data) + " · " + VgT_esc_(i.estabelecimento) + (i.cnpj ? " · CNPJ " + VgT_esc_(i.cnpj) : "") + " · " + VgT_esc_(i.pagoComNome) + "</div>" +
+      (i.semComprovante ? '<div class="vg-erro">Sem comprovante. Justificativa: ' + VgT_esc_(i.justificativa) + "</div>" : '<div class="vg-anexos"><a href="' + VgT_esc_(i.comprovante.url) + '" target="_blank" rel="noopener">Comprovante: ' + VgT_esc_(i.comprovante.nome) + "</a></div>") +
+      (i.foraDasDatas ? '<div class="vg-erro">A data está fora do período da viagem (com um dia de folga antes e depois).</div>' : "") +
+      (i.iaDivergencias ? '<div class="vg-erro">Diferente da leitura automática do comprovante: ' + VgT_esc_(i.iaDivergencias) + ".</div>" : i.ia ? '<div class="vg-sub">Bate com a leitura automática do comprovante.</div>' : "") +
+      (i.glosaMotivo ? '<div class="vg-sub"><b>Motivo da glosa:</b> ' + VgT_esc_(i.glosaMotivo) + "</div>" : "") +
+      (i.conferidoPor ? '<div class="vg-sub">Conferido por ' + VgT_esc_(i.conferidoPor) + " em " + VgT_esc_(i.conferidoEm) + ".</div>" : '<div class="vg-sub">Lançado por ' + VgT_esc_(i.lancadoPor) + " em " + VgT_esc_(i.lancadoEm) + ".</div>");
+    var bt = [];
+    if (ac.conferir && ac.conferir.pode) {
+      bt.push('<button type="button" class="cadx-btn' + (i.situacao === "ACEITO" ? "" : " cadx-btn-primario") + '" data-vg-acao="1" onclick="VgT_itemAceitar_(\'' + id + '\')">' + (i.situacao === "ACEITO" ? "Aceito" : "Aceitar") + "</button>");
+      bt.push('<button type="button" class="cadx-btn cadx-btn-risco" data-vg-acao="1" onclick="VgT_itemGlosarAbrir_(\'' + id + '\', ' + Number(i.valor) + ')">' + (i.situacao === "GLOSADO" ? "Mudar a glosa" : "Glosar") + "</button>");
+    }
+    if (ac.prestar && ac.prestar.pode) bt.push('<button type="button" class="cadx-btn" data-vg-acao="1" onclick="VgT_gastoTirar_(\'' + id + '\', ' + Number(i.item) + ')">Tirar este gasto</button>');
+    if (bt.length) h += '<div class="vg-acoes" style="margin-top:8px">' + bt.join("") + '</div><div id="vgGl_' + id + '"></div>';
+    return h + "</div>";
+  }
+  /** Ações da prestação no quadro "O que você pode fazer agora" ('' quando nenhuma). */
+  function VgT_acoesPrestacaoHtml_(s) {
+    var ac = s.acoes || {}, p = s.prestacao, h = "";
+    if (!p) return "";
+    if (ac.prestar && ac.prestar.pode) {
+      var cats = (VG.opcoes && VG.opcoes.categorias) || [], linhas = p.linhasOrcamento || [], opts = '<option value="">Escolha a categoria</option>';
+      cats.forEach(function (c) {
+        var ls = linhas.filter(function (l) { return l.categoria === c.cod; });
+        if (ls.length) ls.forEach(function (l) { opts += '<option value="' + VgT_esc_(c.cod + "|" + l.id) + '">' + VgT_esc_(c.nome + (l.descricao ? " · " + l.descricao : "") + (l.valorTxt ? " (orçado " + l.valorTxt + ")" : "")) + "</option>"; });
+        else opts += '<option value="' + VgT_esc_(c.cod + "|") + '">' + VgT_esc_(c.nome + " (fora do orçado)") + "</option>";
+      });
+      var pago = ((VG.opcoes && VG.opcoes.prestacao && VG.opcoes.prestacao.pagoCom) || { CAJU: "Cartão Caju", PROPRIO: "Dinheiro próprio (vira reembolso)" });
+      h += '<h4>Lançar um gasto</h4><div id="vgGasto" class="vg-faixa is-neutra" data-sgo-sujo="0" data-sgo-sujo-texto="Descartar o gasto que você começou a lançar? Ele ainda não foi lançado." oninput="VgT_gastoSujo_()" onchange="VgT_gastoSujo_()">' +
+        '<ol class="vg-check" style="margin-top:0"><li>Escolha a <b>foto ou o PDF do comprovante</b> (nota, cupom ou recibo).</li>' + (p.iaDisponivel ? "<li>Toque em <b>Ler o comprovante</b>: o sistema sugere o valor, a data e o estabelecimento. Confira com o papel.</li>" : "") +
+        "<li>Escolha a categoria (a linha do orçamento a que o gasto pertence) e confira a data, o valor e o estabelecimento.</li><li>Toque em <b>Lançar o gasto</b>. Repita para cada gasto.</li></ol>" +
+        '<div class="vg-grade" style="margin-top:8px">' +
+        '<label class="vg-campo largo"><span>Comprovante (foto ou PDF) *</span><input type="file" id="vgGsArq" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,application/pdf,image/*" onchange="VgT_gastoArquivo_(this)"></label>' +
+        (p.iaDisponivel ? '<div class="vg-campo largo"><button type="button" class="cadx-btn" id="vgGsLerBt" onclick="VgT_gastoLer_()">Ler o comprovante (sugestão automática)</button><span class="vg-dica">A leitura só preenche os campos vazios; o que você já digitou não muda.</span></div>' : '<p class="vg-sub vg-campo largo">Leitura automática do comprovante desligada (sem a chave da IA): preencha olhando o papel.</p>') +
+        '<div class="vg-campo largo" id="vgGsIa"></div>' +
+        '<label class="vg-campo largo"><span>Categoria e linha do orçamento *</span><select id="vgGsCat">' + opts + '</select><span class="vg-dica">Gasto de categoria sem linha no orçamento entra marcado "fora do orçado" para o Financeiro conferir.</span></label>' +
+        '<label class="vg-campo"><span>Data do gasto *</span><input type="date" id="vgGsData" max="' + VgT_hojeIso_() + '"></label>' +
+        '<label class="vg-campo"><span>Valor pago (R$) *</span><input type="text" inputmode="decimal" id="vgGsValor" placeholder="Ex.: 250,00"></label>' +
+        '<label class="vg-campo"><span>Estabelecimento *</span><input type="text" id="vgGsEstab" placeholder="Ex.: Hotel Centro"></label>' +
+        '<label class="vg-campo"><span>CNPJ (se tiver no comprovante)</span><input type="text" inputmode="numeric" id="vgGsCnpj" placeholder="só os números"></label>' +
+        '<label class="vg-campo"><span>Pago com *</span><select id="vgGsPago">' + Object.keys(pago).map(function (k2) { return '<option value="' + k2 + '">' + VgT_esc_(pago[k2]) + "</option>"; }).join("") + "</select></label>" +
+        '<label class="vg-campo largo"><span>Para que foi o gasto *</span><input type="text" id="vgGsDesc" maxlength="300" placeholder="Ex.: ' + VgT_esc_((VG.opcoes && VG.opcoes.prestacao && VG.opcoes.prestacao.descricaoExemplo) || "almoço da equipe no atendimento do Hospital X, O.S. 123") + '"><span class="vg-dica">Obrigatório (' + ((VG.opcoes && VG.opcoes.prestacao && VG.opcoes.prestacao.descricaoMin) || 10) + ' letras ou mais): diga o que foi e para qual atendimento, cliente ou O.S. O Financeiro confere com o comprovante.</span></label>' +
+        (p.limiteSemComprovante ? '<label class="vg-campo largo" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="vgGsSem" style="width:18px;min-height:18px" onchange="VgT_$(\'vgGsSemJ\').style.display=this.checked?\'\':\'none\'"><span>Não tenho o comprovante (só com justificativa, até ' + VgT_esc_(p.limiteSemComprovanteTxt) + " por viagem somando todos os gastos sem comprovante)</span></label>" +
+          '<label class="vg-campo largo" id="vgGsSemJ" style="display:none"><span>Por que não há comprovante *</span><textarea id="vgGsJust" placeholder="Ex.: estacionamento de rua sem emissão de recibo"></textarea><span class="vg-dica">20 letras ou mais. O Financeiro confere.</span></label>' : "") +
+        '</div><div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_gastoLancar_()">Lançar o gasto</button></div>' +
+        (p.limiteSemComprovante ? "" : '<p class="vg-sub" style="margin-top:6px">A política de viagem não aceita gasto sem comprovante: sem o papel, peça a segunda via ou um recibo ao estabelecimento.</p>') + "</div>";
+      h += "<h4>Enviar a prestação ao Financeiro</h4>";
+      if (ac.enviarPrestacao && ac.enviarPrestacao.pode) {
+        h += '<p class="vg-sub">Envie quando todos os gastos estiverem lançados. Depois de enviada, a prestação não muda (o Financeiro pode devolver para ajuste). ' + (p.itens.length ? "Hoje: " + p.itens.length + (p.itens.length === 1 ? " gasto" : " gastos") + ", " + VgT_esc_(p.contas.gastoTxt) + "." : "Sem gastos lançados: escreva na observação por que (por exemplo, a viagem não aconteceu).") + "</p>" +
+          '<label class="vg-campo largo"><span>Observação ' + (p.itens.length ? "(opcional)" : "*") + '</span><textarea id="vgPrObs" placeholder="Ex.: um jantar foi pago pela empresa do cliente"></textarea></label>' +
+          '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_prestacaoEnviar_()">Enviar a prestação ao Financeiro</button></div>';
+      } else h += '<p class="vg-sub">' + VgT_esc_((ac.enviarPrestacao && ac.enviarPrestacao.motivo) || "") + "</p>";
+    }
+    if (ac.conferir && ac.conferir.pode) {
+      var falta = p.itens.filter(function (i) { return i.situacao === "LANCADO"; }).length;
+      h += '<h4>Conferir a prestação</h4><ol class="vg-check" style="margin-top:0"><li>No quadro <b>Prestação de contas</b> (abaixo), abra o comprovante de cada gasto e confira a data, o valor, o estabelecimento e a categoria.</li>' +
+        "<li>Toque em <b>Aceitar</b>, ou em <b>Glosar</b> com o motivo (a glosa pode ser de parte do valor). O glosado vira valor a devolver.</li><li>Se faltar comprovante ou algo estiver errado, devolva a prestação para ajuste com o que corrigir.</li><li>Toque em <b>Concluir a conferência</b>: o sistema calcula o que devolver ou reembolsar.</li></ol>" +
+        '<p class="vg-sub">' + (falta ? "Falta conferir " + falta + (falta === 1 ? " gasto." : " gastos.") : "Todos os gastos foram conferidos.") + "</p>" +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_conferenciaConcluir_()">Concluir a conferência</button><button type="button" class="cadx-btn cadx-btn-grande" onclick="VgT_prestacaoDevolverAbrir_()">Devolver para ajuste</button></div><div id="vgPrDev"></div>';
+    }
+    if (ac.acerto && ac.acerto.pode) {
+      var dev = p.contas.aDevolver > 0, resta = dev ? p.contas.aDevolver : p.contas.aReembolsar, formas = p.formasAcerto || {};
+      h += "<h4>Acerto do saldo: " + (dev ? "devolução de " + VgT_esc_(p.contas.aDevolverTxt) : "reembolso de " + VgT_esc_(p.contas.aReembolsarTxt)) + "</h4>" +
+        '<ol class="vg-check" style="margin-top:0">' + (dev ? "<li>No portal do Caju, recolha o saldo da carteira de despesas de <b>" + VgT_esc_(p.responsavelNome) + "</b> (estorno), centro de custo <b>" + VgT_esc_(p.centroCaju) + "</b>. Se o cartão não tem saldo (gasto glosado), combine o depósito ou o PIX da pessoa.</li>" : "<li>Faça o reembolso a <b>" + VgT_esc_(p.responsavelNome) + "</b> (PIX ou carga no cartão Caju).</li>") +
+        "<li>Tire o print ou baixe o comprovante.</li><li>Preencha abaixo e toque em <b>Registrar o acerto</b>. Acerto parcial pede a observação; o restante continua pendente.</li></ol><div class=\"vg-grade\">" +
+        '<label class="vg-campo"><span>Como foi feito *</span><select id="vgAcForma">' + Object.keys(formas).map(function (k2) { return '<option value="' + k2 + '">' + VgT_esc_(formas[k2]) + "</option>"; }).join("") + "</select></label>" +
+        '<label class="vg-campo"><span>Data *</span><input type="date" id="vgAcData" value="' + VgT_hojeIso_() + '" max="' + VgT_hojeIso_() + '"></label>' +
+        '<label class="vg-campo"><span>Valor (R$) *</span><input type="text" inputmode="decimal" id="vgAcValor" value="' + VgT_esc_(VgT_valorCampo_(resta)) + '"><span class="vg-dica">Nunca passa de ' + VgT_esc_(VgT_moeda_(resta)) + ".</span></label>" +
+        '<label class="vg-campo"><span>Comprovante (PDF ou imagem) *</span><input type="file" id="vgAcArq" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,application/pdf,image/*"></label>' +
+        '<label class="vg-campo largo"><span>Observação</span><textarea id="vgAcObs" placeholder="Obrigatória se o acerto for parcial"></textarea></label></div>' +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_acertoRegistrar_(\'' + (dev ? "DEVOLUCAO" : "REEMBOLSO") + '\')">Registrar o acerto</button></div>';
+    }
+    if (ac.ciencia && ac.ciencia.pode) {
+      h += '<h4>Ciência do fechamento</h4><p class="vg-texto">Toque em <b>Ver o A4 de fechamento</b> e confira: orçado, aprovado, carregado, gasto, aceito, glosado e devolvido, por categoria, com os comprovantes e as glosas. A ciência fecha as contas da viagem e fica no A4.</p>' +
+        '<label class="vg-campo largo"><span>Comentário (opcional)</span><textarea id="vgCiCom" placeholder="Ex.: ciente; atenção às notas de hotel no CNPJ da empresa"></textarea></label>' +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn" onclick="VgT_fechamentoA4_()">Ver o A4 de fechamento</button><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_cienciaDar_()">Dar ciência</button></div>';
+    }
+    if (ac.liberarTrava && ac.liberarTrava.pode) {
+      h += '<h4>Liberar a trava (Diretoria)</h4><p class="vg-texto">A prestação desta viagem está vencida: <b>' + VgT_esc_(p.responsavelNome) + "</b> não pode ser o responsável pelo dinheiro de outra viagem nem receber carga. Em caso excepcional, libere por alguns dias, com o motivo. A prestação continua devida e os avisos continuam.</p>" +
+        '<div class="vg-grade"><label class="vg-campo largo"><span>Motivo *</span><textarea id="vgLbMot" placeholder="Ex.: viagem urgente ao cliente X; a prestação será entregue na volta"></textarea><span class="vg-dica">20 letras ou mais. Fica no histórico com o seu nome.</span></label>' +
+        '<label class="vg-campo"><span>Vale por quantos dias *</span><input type="text" inputmode="numeric" id="vgLbDias" value="7"><span class="vg-dica">De 1 a 30.</span></label></div>' +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-risco cadx-btn-grande" data-vg-acao="1" onclick="VgT_travaLiberar_()">Liberar a trava</button></div>';
+    }
+    return h;
+  }
+  function VgT_gastoSujo_() { VG.gasto.sujo = true; var g = VgT_$("vgGasto"); if (g) g.setAttribute("data-sgo-sujo", "1"); }
+  function VgT_gastoArquivo_(input) {
+    VG.gasto.arq = null;
+    if (!input || !input.files || !input.files[0]) return;
+    VgT_lerArquivo_(input, function (arq) { VG.gasto.arq = arq; VgT_gastoSujo_(); });
+  }
+  function VgT_gastoLer_() {
+    var s = VG.atual, el = VgT_$("vgGsIa");
+    if (!VG.gasto.arq) return VgT_erro_("Escolha primeiro a foto ou o PDF do comprovante e toque de novo em Ler o comprovante.");
+    if (el) el.innerHTML = '<div class="vg-ia">Lendo o comprovante…</div>';
+    VgT_chamar_("lerComprovante", { id: s.id, arquivo: VG.gasto.arq }, function (r) {
+      if (!el) return;
+      if (!r.leitura) { el.innerHTML = '<div class="vg-ia">' + VgT_esc_(r.mensagem) + "</div>"; return; }
+      var l = r.leitura, feitos = [];
+      var por = function (id, v, rot) { var e = VgT_$(id); if (e && v !== null && v !== undefined && v !== "" && !String(e.value || "").trim()) { e.value = v; feitos.push(rot); } };
+      por("vgGsValor", l.valor !== null && l.valor !== undefined ? VgT_valorCampo_(l.valor) : "", "valor"); por("vgGsData", l.data, "data"); por("vgGsEstab", l.estabelecimento, "estabelecimento"); por("vgGsCnpj", l.cnpj, "CNPJ");
+      var sel = VgT_$("vgGsCat");
+      if (sel && l.categoria && !sel.value) { var op = Array.prototype.filter.call(sel.options, function (o) { return o.value.indexOf(l.categoria + "|") === 0; })[0]; if (op) { sel.value = op.value; feitos.push("categoria"); } }
+      var lido = [l.valor !== null && l.valor !== undefined ? VgT_moeda_(l.valor) : "", l.data ? l.data.split("-").reverse().join("/") : "", l.estabelecimento || "", l.cnpj ? "CNPJ " + l.cnpj : ""].filter(Boolean).join(" · ");
+      el.innerHTML = '<div class="vg-ia"><b>Leitura do comprovante:</b> ' + VgT_esc_(lido || "nada legível") + ". " + (feitos.length ? "Preenchido: " + VgT_esc_(feitos.join(", ")) + ". " : "Os campos já tinham valor e não foram trocados. ") + VgT_esc_(r.mensagem) + "</div>";
+      if (feitos.length) VgT_gastoSujo_();
+    }, function (m) { if (el) el.innerHTML = ""; VgT_erro_(m); }, { livre: true });
+  }
+  function VgT_gastoLancar_() {
+    var s = VG.atual, v = function (id) { var e = VgT_$(id); return e ? String(e.value || "").trim() : ""; };
+    var cat = v("vgGsCat").split("|"), sem = !!(VgT_$("vgGsSem") && VgT_$("vgGsSem").checked);
+    if (!cat[0]) { VgT_erro_("Escolha a categoria do gasto (e a linha do orçamento)."); try { VgT_$("vgGsCat").focus(); } catch (e) {} return; }
+    if (!sem && !VG.gasto.arq) { VgT_erro_("Escolha a foto ou o PDF do comprovante deste gasto." + (VgT_$("vgGsSem") ? " Sem o comprovante, marque \"Não tenho o comprovante\" e escreva a justificativa." : "")); return; }
+    var minDesc = (VG.opcoes && VG.opcoes.prestacao && VG.opcoes.prestacao.descricaoMin) || 10, letras = v("vgGsDesc").replace(/[^0-9A-Za-zÀ-ÿ]/g, "").length;
+    if (letras < minDesc) { VgT_erro_("Escreva para que foi o gasto (" + minDesc + " letras ou mais; foram " + letras + "), por exemplo \"almoço da equipe no atendimento do Hospital X, O.S. 123\"."); try { VgT_$("vgGsDesc").focus(); } catch (e) {} return; }
+    VgT_chamar_("lancarGasto", { id: s.id, categoria: cat[0], linhaId: cat[1] || "", data: v("vgGsData"), valor: v("vgGsValor"), estabelecimento: v("vgGsEstab"), cnpj: v("vgGsCnpj"), descricao: v("vgGsDesc"),
+      pagoCom: v("vgGsPago"), semComprovante: sem, justificativa: v("vgGsJust"), arquivo: sem ? null : VG.gasto.arq },
+      function (r) { VG.gasto = { arq: null, sujo: false }; VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); });
+  }
+  function VgT_gastoTirar_(itemId, n) {
+    var s = VG.atual;
+    VgT_perguntar_("Tirar o gasto nº " + n + "?", "O gasto sai da prestação (o comprovante continua guardado). Para corrigir um dado, tire e lance de novo.",
+      [{ rotulo: "Tirar o gasto", perigo: true, fn: function () { VgT_chamar_("removerGasto", { id: s.id, itemId: itemId }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); }); } }, { rotulo: "Manter", prim: true }]);
+  }
+  function VgT_prestacaoEnviar_() {
+    var s = VG.atual, obs = String((VgT_$("vgPrObs") || {}).value || "").trim(), p = s.prestacao;
+    var ir = function () { VgT_chamar_("enviarPrestacao", { id: s.id, observacao: obs }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); }); };
+    VgT_perguntar_("Enviar a prestação ao Financeiro?", "Vão " + p.itens.length + (p.itens.length === 1 ? " gasto" : " gastos") + " (" + p.contas.gastoTxt + "). Depois de enviada, a prestação não muda; se faltar algo, o Financeiro devolve para ajuste.",
+      [{ rotulo: "Enviar", prim: true, fn: ir }, { rotulo: "Voltar e revisar" }]);
+  }
+  function VgT_itemAceitar_(itemId) {
+    var s = VG.atual;
+    VgT_chamar_("conferirItem", { id: s.id, itemId: itemId, decisao: "ACEITAR" }, function (r) { VgT_mostrarDetalheMantendo_(r.solicitacao, r.message); });
+  }
+  function VgT_itemGlosarAbrir_(itemId, valor) {
+    var el = VgT_$("vgGl_" + itemId); if (!el) return;
+    var min = (VG.opcoes && VG.opcoes.prestacao && VG.opcoes.prestacao.glosaMin) || 15;
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:8px"><div class="vg-grade"><label class="vg-campo"><span>Valor glosado (R$)</span><input type="text" inputmode="decimal" id="vgGlV_' + itemId + '" placeholder="vazio = o gasto inteiro (' + VgT_esc_(VgT_moeda_(valor)) + ')"><span class="vg-dica">Glosa parcial: só a parte não aceita (ex.: o que passou do teto).</span></label>' +
+      '<label class="vg-campo largo"><span>Motivo da glosa *</span><textarea id="vgGlM_' + itemId + '" placeholder="Ex.: nota em nome de pessoa física; consumo de bebida alcoólica"></textarea><span class="vg-dica">' + min + " letras ou mais. Vai para quem prestou contas e para o A4 de fechamento.</span></label></div>" +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-risco-cheio" data-vg-acao="1" onclick="VgT_itemGlosar_(\'' + itemId + '\')">Confirmar a glosa</button><button type="button" class="cadx-btn" onclick="document.getElementById(\'vgGl_' + itemId + '\').innerHTML=\'\'">Desistir</button></div></div>';
+    try { VgT_$("vgGlM_" + itemId).focus(); } catch (e) {}
+  }
+  function VgT_itemGlosar_(itemId) {
+    var s = VG.atual, mot = String((VgT_$("vgGlM_" + itemId) || {}).value || "").trim(), min = (VG.opcoes && VG.opcoes.prestacao && VG.opcoes.prestacao.glosaMin) || 15;
+    if (mot.length < min) return VgT_erro_("Escreva o motivo da glosa (" + min + " letras ou mais; foram " + mot.length + ").");
+    VgT_chamar_("conferirItem", { id: s.id, itemId: itemId, decisao: "GLOSAR", valorGlosado: String((VgT_$("vgGlV_" + itemId) || {}).value || "").trim(), motivo: mot }, function (r) { VgT_mostrarDetalheMantendo_(r.solicitacao, r.message); });
+  }
+  /** Redesenho pedido pela própria pessoa (conferir um gasto), mantendo a rolagem para ela seguir para o próximo. */
+  function VgT_mostrarDetalheMantendo_(s, msg) { var y = window.scrollY || 0; VgT_mostrarDetalhe_(s, ""); try { window.scrollTo(0, y); } catch (e) {} if (msg) { var el = VgT_$("vgMsg"); if (el) el.innerHTML = '<div class="vg-faixa is-ok" role="status">' + VgT_esc_(msg) + "</div>"; } }
+  function VgT_prestacaoDevolverAbrir_() {
+    var el = VgT_$("vgPrDev"); if (!el) return;
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:10px"><label class="vg-campo largo"><span>O que precisa ser ajustado *</span><textarea id="vgPrDevMot" placeholder="Ex.: falta o comprovante do hotel da segunda noite; o gasto nº 3 está em duplicidade"></textarea><span class="vg-dica">15 letras ou mais. Vai para quem prestou contas; o prazo recomeça.</span></label>' +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-risco-cheio cadx-btn-grande" data-vg-acao="1" onclick="VgT_prestacaoDevolver_()">Devolver para ajuste</button><button type="button" class="cadx-btn cadx-btn-grande" onclick="document.getElementById(\'vgPrDev\').innerHTML=\'\'">Desistir</button></div></div>';
+    try { VgT_$("vgPrDevMot").focus(); } catch (e) {}
+  }
+  function VgT_prestacaoDevolver_() {
+    var s = VG.atual, m = String((VgT_$("vgPrDevMot") || {}).value || "").trim();
+    if (m.length < 15) return VgT_erro_("Escreva o que precisa ser ajustado (15 letras ou mais; foram " + m.length + ").");
+    VgT_chamar_("devolverPrestacao", { id: s.id, motivo: m }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); });
+  }
+  function VgT_conferenciaConcluir_() {
+    var s = VG.atual;
+    VgT_perguntar_("Concluir a conferência?", "O sistema calcula o que devolver ou reembolsar com os gastos aceitos e as glosas. Depois disso, as decisões dos gastos não mudam.",
+      [{ rotulo: "Concluir", prim: true, fn: function () { VgT_chamar_("concluirConferencia", { id: s.id }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); }); } }, { rotulo: "Voltar" }]);
+  }
+  function VgT_acertoRegistrar_(tipo) {
+    var s = VG.atual, inp = VgT_$("vgAcArq");
+    if (!inp || !inp.files || !inp.files[0]) return VgT_erro_("Anexe o comprovante do acerto (print do recolhimento no Caju, do PIX ou da carga). Sem o comprovante o acerto não é registrado.");
+    VgT_lerArquivo_(inp, function (arq) {
+      VgT_chamar_("registrarAcerto", { id: s.id, tipo: tipo, forma: VgT_$("vgAcForma").value, data: VgT_$("vgAcData").value, valor: VgT_$("vgAcValor").value, observacao: VgT_$("vgAcObs").value, comprovante: arq },
+        function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); });
+    });
+  }
+  function VgT_cienciaDar_() {
+    var s = VG.atual;
+    VgT_chamar_("darCiencia", { id: s.id, comentario: String((VgT_$("vgCiCom") || {}).value || "").trim() }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); VgT_atualizarContagens_(); });
+  }
+  function VgT_travaLiberar_() {
+    var s = VG.atual, m = String((VgT_$("vgLbMot") || {}).value || "").trim();
+    if (m.length < 20) return VgT_erro_("Escreva o motivo da liberação (20 letras ou mais; foram " + m.length + ").");
+    VgT_chamar_("liberarTrava", { id: s.id, motivo: m, dias: VgT_$("vgLbDias").value }, function (r) { VgT_mostrarDetalhe_(r.solicitacao, r.message); });
+  }
+  function VgT_fechamentoA4_() { var s = VG.atual; if (s) VgT_abrirHtml_("fechamento", { id: s.id }); }
+
+  // ---------- Kanban e Gantt (componentes comuns do SGO+: PnA_kanbanHtml_ e PnA_ganttHtml_) ----------
+  function VgT_painel_() {
+    var corpo = VgT_$("vgCorpo");
+    if (VG.painel) return VgT_desenharPainel_();
+    corpo.innerHTML = '<p class="vg-sub">Carregando…</p>';
+    VgT_chamar_("painel", {}, function (r) { VG.painel = r; if (typeof PnA_prepararGantt_ === "function") PnA_prepararGantt_(r.ganttJs); VgT_desenharPainel_(); }, function (m) { corpo.innerHTML = '<div class="vg-faixa is-erro">' + VgT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  /** Período do filtro -> { de, ate } (aaaa-mm-dd) e a janela do Gantt em dias (para trás e para a frente de hoje). */
+  function VgT_periodo_(cod) {
+    var hoje = VgT_hojeIso_();
+    if (cod === "proximos") return { de: hoje, ate: VgT_somarDias_(hoje, 30), tras: 3, frente: 31 };
+    if (cod === "mes") { var ini = hoje.slice(0, 8) + "01", fim = VgT_somarDias_(VgT_somarDias_(hoje.slice(0, 8) + "28", 4).slice(0, 8) + "01", -1); return { de: ini, ate: fim, tras: Math.round((Date.parse(hoje) - Date.parse(ini)) / 864e5) + 1, frente: Math.round((Date.parse(fim) - Date.parse(hoje)) / 864e5) + 1 }; }
+    if (cod === "trimestre") return { de: VgT_somarDias_(hoje, -90), ate: VgT_somarDias_(hoje, 30), tras: 90, frente: 31 };
+    if (cod === "ano") return { de: VgT_somarDias_(hoje, -365), ate: VgT_somarDias_(hoje, 30), tras: 365, frente: 31 };
+    return { de: "", ate: "", tras: 30, frente: 60 };
+  }
+  /** Mesma regra de Via_filtrar_ (SGO_Viagem_Painel.js). */
+  function VgT_filtrar_(itens) {
+    var f = VG.filtro, p = VgT_periodo_(f.periodo);
+    return itens.filter(function (x) {
+      if (f.centro && x.centro !== f.centro) return false;
+      if (f.pessoa && x.solicitanteId !== f.pessoa && !x.equipe.some(function (e) { return e.id === f.pessoa; })) return false;
+      if (p.de || p.ate) { if (!x.saidaDia || !x.chegadaDia) return false; if (p.ate && x.saidaDia > p.ate) return false; if (p.de && x.chegadaDia < p.de) return false; }
+      return true;
+    });
+  }
+  function VgT_filtrosHtml_(gantt) {
+    var P = VG.painel, f = VG.filtro;
+    return '<div class="vg-filtros" role="group" aria-label="Filtros">' +
+      '<label class="vg-campo"><span>Centro de custo</span><select onchange="VG.filtro.centro=this.value;VgT_desenharPainel_()">' + VgT_opcoesSel_(P.centros.map(function (c) { return [c.codigo, c.codigo + (c.nome ? " · " + c.nome : "")]; }), f.centro, "Todos") + "</select></label>" +
+      '<label class="vg-campo"><span>Pessoa (quem pediu ou viaja)</span><select onchange="VG.filtro.pessoa=this.value;VgT_desenharPainel_()">' + VgT_opcoesSel_(P.pessoas.map(function (p) { return [p.id, p.nome]; }), f.pessoa, "Todas") + "</select></label>" +
+      '<label class="vg-campo"><span>Período da viagem</span><select onchange="VG.filtro.periodo=this.value;VgT_desenharPainel_()">' + VgT_opcoesSel_([["proximos", "Próximos 30 dias"], ["mes", "Este mês"], ["trimestre", "Últimos 90 dias e próximos 30"], ["ano", "Últimos 12 meses"]], f.periodo === "todas" ? "" : f.periodo, gantt ? "Padrão (30 dias atrás e 60 à frente)" : "Todas as datas") + "</select></label>" +
+      (gantt ? '<label class="vg-campo"><span>Uma linha por</span><select onchange="VG.gAgrupar=this.value;VgT_desenharPainel_()"><option value="pessoa"' + (VG.gAgrupar === "pessoa" ? " selected" : "") + '>Pessoa que viaja</option><option value="centro"' + (VG.gAgrupar === "centro" ? " selected" : "") + ">Centro de custo</option></select></label>" : "") +
+      ((f.centro || f.pessoa || f.periodo !== "todas") ? '<button type="button" class="cadx-btn" onclick="VG.filtro={centro:\'\',pessoa:\'\',periodo:\'todas\'};VgT_desenharPainel_()">Limpar filtros</button>' : "") + "</div>";
+  }
+  function VgT_legendaHtml_() {
+    return '<div class="vg-legenda" aria-label="Cores das situações">' + ["RASCUNHO", "DEVOLVIDA", "AGUARDANDO_APROVACAO", "AGUARDANDO_DIRETORIA", "APROVADA", "CARGA_FEITA", "PRESTACAO_PENDENTE", "PRESTACAO_ENVIADA", "ACERTO_PENDENTE", "AGUARDANDO_CIENCIA", "ENCERRADA", "NEGADA", "CANCELADA"].map(function (k) { return VgT_selo_(k); }).join("") + "</div>";
+  }
+  function VgT_desenharPainel_() {
+    var corpo = VgT_$("vgCorpo"), P = VG.painel; if (!corpo || !P) return;
+    var gantt = VG.aba === "gantt", l = VgT_filtrar_(P.itens);
+    var esc = P.escopo === "todas" ? "Você vê <b>todas</b> as solicitações da empresa." : "Você vê só as solicitações que <b>pediu</b> ou em que <b>viaja</b>.";
+    var h = '<div class="vg-faixa is-neutra">' + (gantt ? "<b>Gantt:</b> cada barra é uma viagem, da saída à chegada, na cor da situação. A linha azul é hoje. Barras uma embaixo da outra na mesma linha são viagens ao mesmo tempo; contorno vermelho é a <b>mesma pessoa em duas viagens</b>. Negadas e canceladas não aparecem aqui (estão no Kanban). Toque numa barra para abrir a solicitação."
+      : "<b>Kanban:</b> cada coluna é uma etapa do caminho da solicitação; cada cartão é uma solicitação. Mostra onde cada uma está parada e quem age agora. Toque no cartão para abrir.") + " " + esc + "</div>";
+    h += VgT_filtrosHtml_(gantt) + '<div id="vgPainelCorpo"></div>';
+    corpo.innerHTML = h;
+    var alvo = VgT_$("vgPainelCorpo");
+    var tit = function (x) { return x.numero + " · " + (x.destino || "sem destino") + (x.saida ? " · " + x.saida + " a " + x.chegada : "") + " · " + x.situacaoNome + " · " + x.equipe.map(function (p) { return p.nome; }).join(", ") + " · " + x.totalTxt; };
+    if (!gantt) {
+      // negadas e canceladas só aparecem quando há alguma (a coluna fechada do componente diria "30 dias", que não vale aqui)
+      var cols = P.colunas.map(function (c) { var its = l.filter(function (x) { return x.coluna === c.cod; }); return { n: c.cod, nome: c.nome, fechada: false, qtd: its.length, itens: its, encerrada: c.fechada }; })
+        .filter(function (c) { return !c.encerrada || c.qtd; });
+      alvo.innerHTML = typeof PnA_kanbanHtml_ === "function" ? PnA_kanbanHtml_(cols, {
+        vazio: "Nenhuma solicitação com estes filtros. Troque os filtros ou monte uma solicitação em Minhas solicitações.",
+        cor: function (x) { return x.cor; }, legenda: "",
+        cartao: function (x) {
+          return '<div class="vg-kcard-rod" style="margin-top:0"><span class="vg-mono" style="font-size:11.5px;font-weight:600">' + VgT_esc_(x.numero) + "</span>" + (x.urgente ? '<span class="vg-selo urgente">Urgente</span>' : "") + "</div>" +
+            '<div class="vg-kcard-dest">' + VgT_esc_(x.destino || "Destino a definir") + "</div>" +
+            '<div class="vg-kcard-lin">' + (x.saida ? VgT_esc_(x.saida.slice(0, 5)) + " a " + VgT_esc_(x.chegada.slice(0, 5)) + (x.dias ? " · " + x.dias + (x.dias === 1 ? " dia" : " dias") : "") : "sem datas") + "</div>" +
+            '<div class="vg-kcard-lin">' + VgT_esc_(x.equipe.map(function (p) { return p.nome.split(" ")[0]; }).join(", ") || "sem equipe") + "</div>" +
+            (x.conflitos.length ? '<div class="vg-conflito">Mesma pessoa em ' + VgT_esc_(x.conflitos.map(function (c) { return c.numero; }).join(", ")) + "</div>" : "") +
+            (x.vencida ? '<div class="vg-conflito">Prestação vencida em ' + VgT_esc_(x.prazo) + "</div>" : x.prazo ? '<div class="vg-kcard-lin">Prestação até ' + VgT_esc_(x.prazo) + "</div>" : "") +
+            (x.aDevolver ? '<div class="vg-kcard-lin">A devolver ' + VgT_esc_(VgT_moeda_(x.aDevolver)) + "</div>" : x.aReembolsar ? '<div class="vg-kcard-lin">A reembolsar ' + VgT_esc_(VgT_moeda_(x.aReembolsar)) + "</div>" : "") +
+            '<div class="vg-kcard-rod"><span class="vg-chip">' + VgT_esc_(x.centro || "sem centro") + '</span><span class="vg-valor" style="font-size:13px">' + VgT_esc_(x.totalTxt) + "</span></div>";
+        }
+      }) : "";
+      if (typeof PnA_ligar_ === "function") PnA_ligar_(alvo, function (tipo, id) { VgT_abrir_(id); });
+      alvo.querySelectorAll(".atv-kcard").forEach(function (k) { var x = l.filter(function (i) { return i.id === k.getAttribute("data-pna-id"); })[0]; if (x) { k.setAttribute("title", tit(x)); k.setAttribute("aria-label", "Abrir " + tit(x)); } });
+      return;
+    }
+    var p = VgT_periodo_(VG.filtro.periodo), porPessoa = VG.gAgrupar !== "centro", itens = [], cont = {};
+    // o Gantt mostra viagens: negadas e canceladas ficam de fora (estão no Kanban)
+    l.filter(function (x) { return x.saidaMs && x.chegadaMs && x.situacao !== "NEGADA" && x.situacao !== "CANCELADA"; }).forEach(function (x) {
+      var chaves = porPessoa ? x.equipe.map(function (e) { return [e.id, e.nome]; }) : [[x.centro || "-", (x.centro || "Sem centro") + (x.centroNome ? " · " + x.centroNome : "")]];
+      chaves.forEach(function (k) { cont[k[0]] = (cont[k[0]] || 0) + 1; itens.push(Object.assign({}, x, { enviadoMs: x.saidaMs, fimMs: x.chegadaMs, aberto: false, _k: k[0], _r: k[1], prazo: x.conflitos.length ? { estado: "VENCIDO" } : null })); }); // prazo VENCIDO: só o contorno vermelho do componente
+    });
+    var largura = alvo.clientWidth || corpo.clientWidth || 1000;
+    alvo.innerHTML = VgT_legendaHtml_() + (typeof PnA_ganttHtml_ === "function" ? PnA_ganttHtml_(itens, {
+      largura: largura, dias: p.tras, diasFrente: p.frente, agoraMs: Date.now(), cor: function (x) { return x.cor; },
+      agrupar: function (x) { return { chave: x._k, rotulo: porPessoa ? x._r : x._r, sub: cont[x._k] + (cont[x._k] === 1 ? " viagem" : " viagens") }; },
+      rotulo: function (x) { return x.numero.replace(/^VIA-\d{4}-/, "") + " " + (x.destino || ""); }, tip: tit
+    }) : "") .replace("Nenhum chamado nesta janela. Aumente a janela ou veja o Kanban.", "Nenhuma viagem com datas neste período. Troque o período ou os filtros; rascunhos sem datas aparecem só no Kanban.");
+    var conf = l.filter(function (x) { return x.conflitos.length; });
+    if (conf.length) alvo.innerHTML += '<div class="vg-faixa is-erro" style="margin-top:12px"><b>Mesma pessoa em duas viagens ao mesmo tempo:</b><ul>' + conf.map(function (x) { return "<li>" + VgT_esc_(x.numero + " (" + x.destino + ", " + x.saida + " a " + x.chegada + ") com " + x.conflitos.map(function (c) { return c.numero + ": " + c.pessoas.join(", "); }).join("; ")) + "</li>"; }).join("") + "</ul></div>";
+    if (typeof PnA_ligar_ === "function") PnA_ligar_(alvo, function (tipo, id) { VgT_abrir_(id); });
+  }
+
+  // ---------- relatórios A4 ----------
+  function VgT_relatorios_() {
+    var corpo = VgT_$("vgCorpo");
+    corpo.innerHTML = '<p class="vg-sub">Carregando…</p>';
+    VgT_comOpcoes_(function () { VgT_desenharRelatorios_(); });
+  }
+  function VgT_desenharRelatorios_() {
+    var corpo = VgT_$("vgCorpo"), o = VG.opcoes, r = VG.rel, hoje = VgT_hojeIso_();
+    if (!r.de) { r.de = hoje.slice(0, 8) + "01"; r.ate = VgT_somarDias_(VgT_somarDias_(hoje.slice(0, 8) + "28", 4).slice(0, 8) + "01", -1); }
+    var tipos = [["PERIODO", "Viagens do período por centro de custo", "Quanto foi pedido, aprovado, carregado no Caju, gasto, aceito, glosado e devolvido em cada centro de custo e por pessoa, com as prestações em aberto. É o relatório do mês para o Financeiro e a Diretoria."],
+      ["KANBAN", "Kanban (resumo por etapa)", "Quantas solicitações estão em cada etapa (até a prestação, a conferência e o fechamento) e quais são, com as prestações vencidas."],
+      ["GANTT", "Gantt (linha do tempo)", "As viagens no calendário, por pessoa ou por centro de custo, com as sobreposições da mesma pessoa."],
+      // 11/11/2026 (pedido do dono): relatórios da Conciliação Caju também aqui. O individual cada um gera o seu; o geral é do Financeiro e da Diretoria.
+      ["INDIVIDUAL", "Relatório individual (por colaborador)", "Todas as viagens em que a pessoa levou o dinheiro no período: carregado, gasto por categoria, cada comprovante com para que foi, glosas, devolvido ou reembolsado, pendências e a situação da conciliação com o extrato do Caju." + (VgT_cajuVer_() ? "" : " Você gera o seu.")]];
+    if (VgT_cajuVer_()) tipos.push(["GERAL", "Relatório geral do período (Conciliação Caju)", "Por colaborador, por centro de custo, por cliente ou O.S. e por categoria, com totais, gráficos, divergências abertas e índice."]);
+    var h = '<div class="vg-faixa">Para que serve: gera o relatório em folha A4 (HTML), para abrir, imprimir ou baixar e mandar a quem precisa. ' +
+      (VgT_pode_("VIAGEM_VER_TODAS") ? "Entram todas as solicitações da empresa que passam nos filtros." : "Entram só as solicitações que você pediu ou em que viaja.") + "</div>";
+    h += '<div class="vg-bloco"><h3>1. Escolha o relatório</h3><div class="vg-tipos" role="radiogroup">' + tipos.map(function (t) {
+      return '<label class="vg-tipo' + (r.tipo === t[0] ? " is-sel" : "") + '"><input type="radio" name="vgRelTipo" value="' + t[0] + '"' + (r.tipo === t[0] ? " checked" : "") + ' onchange="VG.rel.tipo=this.value;VgT_lerRel_();VgT_desenharRelatorios_()"><span><b>' + VgT_esc_(t[1]) + "</b>" + VgT_esc_(t[2]) + "</span></label>";
+    }).join("") + "</div>";
+    h += '<h3 class="vg-tit">2. Escolha o período e os filtros</h3><div class="vg-grade">' +
+      '<label class="vg-campo"><span>De *</span><input type="date" id="vgRelDe" value="' + VgT_esc_(r.de) + '"></label>' +
+      '<label class="vg-campo"><span>Até *</span><input type="date" id="vgRelAte" value="' + VgT_esc_(r.ate) + '"><span class="vg-dica">Entra a viagem que toca o período (saída ou chegada dentro dele).</span></label>' +
+      '<label class="vg-campo"><span>Centro de custo</span><select id="vgRelCentro">' + VgT_opcoesSel_(o.centros.map(function (c) { return [c.codigo, c.codigo + " · " + c.nome]; }), r.centro || "", "Todos") + "</select></label>" +
+      (r.tipo === "INDIVIDUAL" ? (VgT_cajuVer_() ? '<label class="vg-campo"><span>Colaborador *</span><select id="vgRelPessoa">' + VgT_opcoesSel_(o.pessoas.map(function (p) { return [p.id, p.nome]; }), r.pessoa || (VG.ini && VG.ini.eu ? VG.ini.eu.id : ""), "") + "</select></label>" : '<p class="vg-sub vg-campo">Colaborador: <b>' + VgT_esc_(VG.ini && VG.ini.eu ? VG.ini.eu.nome : "") + "</b> (o seu relatório).</p>")
+        : r.tipo === "GERAL" ? "" : '<label class="vg-campo"><span>Pessoa (quem pediu ou viaja)</span><select id="vgRelPessoa">' + VgT_opcoesSel_(o.pessoas.map(function (p) { return [p.id, p.nome]; }), r.pessoa || "", "Todas") + "</select></label>") +
+      (r.tipo === "GANTT" ? '<label class="vg-campo"><span>Uma linha por</span><select id="vgRelAgr"><option value="PESSOA"' + (r.agrupar !== "CENTRO" ? " selected" : "") + '>Pessoa que viaja</option><option value="CENTRO"' + (r.agrupar === "CENTRO" ? " selected" : "") + ">Centro de custo</option></select></label>" : "") +
+      "</div>";
+    h += '<h3 class="vg-tit" style="margin-top:16px">3. Gere o relatório</h3><div class="vg-acoes" style="margin-top:0"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_gerarRel_(false)">Gerar e abrir o A4</button>' +
+      '<button type="button" class="cadx-btn cadx-btn-grande" data-vg-acao="1" onclick="VgT_gerarRel_(true)">Baixar o arquivo (.html)</button></div>' +
+      '<p class="vg-sub" style="margin-top:8px">No A4 aberto, use Imprimir do navegador para imprimir ou salvar em PDF. O arquivo baixado abre em qualquer navegador e pode ser mandado por e-mail.</p></div>';
+    corpo.innerHTML = h;
+  }
+  // ---------- relatórios e carga pela Conciliação Caju (CajuConc_api, SGO_Caju*.js) ----------
+  function VgT_cajuVer_() { return !!(VG.ini && VG.ini.caju && VG.ini.caju.ver); }
+  function VgT_cajuChamar_(acao, dados, ok, erro, opcoes) {
+    opcoes = opcoes || {};
+    if (VG.ocupado && !opcoes.livre) return;
+    if (!opcoes.livre) { VG.ocupado = true; VgT_travarBotoes_(true); }
+    var fim = function () { if (!opcoes.livre) { VG.ocupado = false; VgT_travarBotoes_(false); } };
+    google.script.run
+      .withSuccessHandler(function (r) { fim(); if (!r || !r.ok) { (erro || VgT_erro_)((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e confira antes de tentar de novo."); return; } try { ok(r); } catch (e) { console.error("Caju:", e); VgT_erro_("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5)."); } })
+      .withFailureHandler(function (e) { fim(); (erro || VgT_erro_)(String((e && e.message) || "Não foi possível falar com o servidor. Confira a conexão; antes de repetir, toque em Atualizar para ver se o pedido já foi feito.")); })
+      .CajuConc_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function VgT_relCaju_(dados, baixar) {
+    var d = { tipo: dados.tipo, de: dados.de, ate: dados.ate, centro: dados.centro, pessoa: dados.tipo === "INDIVIDUAL" ? (VgT_$("vgRelPessoa") ? VgT_$("vgRelPessoa").value : "") : "" };
+    var w = baixar ? null : window.open("", "_blank");
+    if (w) { try { w.document.write('<p style="font-family:sans-serif;padding:24px">Gerando o relatório A4…</p>'); } catch (e) {} }
+    VgT_cajuChamar_("relatorio", d, function (res) {
+      if (!baixar) { if (w) { w.document.open(); w.document.write(res.html); w.document.close(); } else VgT_erro_("O navegador bloqueou a janela do relatório. Permita janelas do SGO+ e toque de novo."); return; }
+      try {
+        var blob = new Blob([res.html], { type: "text/html;charset=utf-8" }), url = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = url; a.download = res.nomeArquivo || "relatorio.html"; document.body.appendChild(a); a.click();
+        setTimeout(function () { try { URL.revokeObjectURL(url); a.remove(); } catch (e) {} }, 1500);
+        VgT_msg_("O arquivo " + (res.nomeArquivo || "") + " foi baixado (veja a pasta Downloads).", "ok");
+      } catch (e) { VgT_erro_("O navegador não deixou baixar o arquivo. Use \"Gerar e abrir o A4\" e salve pelo Imprimir do navegador."); }
+    }, function (m) { if (w) try { w.close(); } catch (e) {} VgT_erro_(m); }, { livre: true });
+  }
+  function VgT_lerRel_() {
+    var v = function (id) { var e = VgT_$(id); return e ? e.value : undefined; };
+    if (v("vgRelDe") !== undefined) { VG.rel.de = v("vgRelDe"); VG.rel.ate = v("vgRelAte"); VG.rel.centro = v("vgRelCentro"); VG.rel.pessoa = v("vgRelPessoa"); }
+    if (v("vgRelAgr") !== undefined) VG.rel.agrupar = v("vgRelAgr");
+  }
+  function VgT_gerarRel_(baixar) {
+    VgT_lerRel_();
+    var r = VG.rel, dados = { tipo: r.tipo, de: r.de, ate: r.ate, centro: r.centro || "", pessoa: r.pessoa || "", agrupar: r.agrupar || "PESSOA" };
+    if (!r.de || !r.ate) return VgT_erro_("Escolha as datas De e Até do período e toque de novo.");
+    if (r.tipo === "INDIVIDUAL" || r.tipo === "GERAL") return VgT_relCaju_(dados, baixar);
+    if (!baixar) return VgT_abrirHtml_("relatorio", dados, true);
+    VgT_chamar_("relatorio", dados, function (res) {
+      try {
+        var blob = new Blob([res.html], { type: "text/html;charset=utf-8" }), url = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = url; a.download = res.nomeArquivo || "deposito-de-viagem.html"; document.body.appendChild(a); a.click();
+        setTimeout(function () { try { URL.revokeObjectURL(url); a.remove(); } catch (e) {} }, 1500);
+        VgT_msg_(res.message + " O arquivo " + (res.nomeArquivo || "") + " foi baixado (veja a pasta Downloads).", "ok");
+      } catch (e) { VgT_erro_("O navegador não deixou baixar o arquivo. Use \"Gerar e abrir o A4\" e salve pelo Imprimir do navegador."); }
+    });
+  }
+
+  // ---------- política de viagem ----------
+  function VgT_politica_() {
+    var corpo = VgT_$("vgCorpo");
+    corpo.innerHTML = '<p class="vg-sub">Carregando…</p>';
+    VgT_comOpcoes_(function () { VgT_chamar_("politica", {}, function (r) { VG.polSel = null; VgT_desenharPolitica_(r); }, function (m) { corpo.innerHTML = '<div class="vg-faixa is-erro">' + VgT_esc_(m) + "</div>"; }, { livre: true }); });
+  }
+  var VG_TETO_EXPLICA = {
+    HOSPEDAGEM: ["diária por quarto", "Ex.: 150,00. Uma diária de hotel acima disso pede justificativa na linha e leva a solicitação também à Diretoria."],
+    ALIMENTACAO: ["por pessoa por dia", "Ex.: 100,00. Um valor por pessoa por dia acima disso pede justificativa e leva a solicitação também à Diretoria."]
+  };
+  function VgT_desenharPolitica_(r) {
+    var p = r.politica, corpo = VgT_$("vgCorpo"), pode = !!r.podeAlterar;
+    VG.polDados = r;
+    var h = '<div class="vg-faixa">Para que serve: são as regras que o sistema usa para conferir cada solicitação e decidir quem aprova. Toda solicitação enviada guarda a versão da política com que foi conferida.</div>';
+    h += '<div class="vg-bloco"><h3>Política de viagem em vigor (versão ' + VgT_esc_(p.versao) + ")</h3>" +
+      '<p class="vg-sub">' + (p.versao ? "Gravada em " + VgT_esc_(p.em) + " por " + VgT_esc_(p.por) + ". " : "") + "Motivo: " + VgT_esc_(p.motivo) + "</p>" +
+      '<dl class="vg-pares" style="margin-top:10px"><dt>Quem aprova (gerência)</dt><dd>' + VgT_esc_(p.aprovadores.map(function (a) { return a.nome; }).join(", ")) + "</dd><dt>A Diretoria também aprova acima de</dt><dd>" + VgT_esc_(p.limiteTxt) +
+      "</dd><dt>Urgente (aviso a qualquer hora)</dt><dd>viagem que começa em menos de " + VgT_esc_(p.urgenteDiasUteis) + " dias úteis</dd>" +
+      p.tetos.map(function (t) { return "<dt>Teto de " + VgT_esc_(t.nome.toLowerCase()) + "</dt><dd>" + (t.valor ? VgT_esc_(t.valorTxt + " " + t.rot) : '<span class="vg-sub">sem teto (não é conferido)</span>') + "</dd>"; }).join("") +
+      "<dt>Outras categorias</dt><dd>Combustível, pedágio, estacionamento, passagens, transporte local e outros não têm teto: são conferidos pela base de cálculo e pelos orçamentos anexados.</dd>" +
+      "<dt>Prazo da prestação de contas</dt><dd>" + VgT_esc_(p.prazoPrestacaoDiasUteis) + " dias úteis depois da volta. Vencida, a pessoa não recebe dinheiro de outra viagem até prestar contas (ou a Diretoria liberar).</dd>" +
+      "<dt>Gasto sem comprovante</dt><dd>" + (p.limiteSemComprovante ? "aceito com justificativa, até " + VgT_esc_(p.limiteSemComprovanteTxt) + " por viagem" : '<span class="vg-sub">não aceito (o limite está vazio)</span>') + "</dd></dl>" +
+      (p.semTetos ? '<div class="vg-faixa is-alerta" style="margin-top:12px">Os tetos de hospedagem e de alimentação ainda estão vazios: as solicitações não são conferidas contra teto.</div>' : "") + "</div>";
+    if (pode) {
+      if (!VG.polSel) VG.polSel = p.aprovadores.map(function (a) { return a.id; }).filter(Boolean);
+      h += '<div class="vg-bloco is-acao"><h3>Alterar a política (Diretoria)</h3>' +
+        '<h4 style="margin-top:4px">Quem aprova (gerência) *</h4><p class="vg-texto">É quem recebe o aviso de cada solicitação nova e decide: aprova, devolve para ajuste ou nega. Pode marcar mais de uma pessoa: qualquer uma delas decide, e a primeira decisão vale. Quem aprova nunca decide a solicitação que pediu ou em que viaja: nesse caso ela vai direto à Diretoria.</p>' +
+        '<div class="vg-campo"><span>Escolhidos</span><div class="vg-escolhidos" id="vgPolEscolhidos"></div></div>' +
+        '<label class="vg-campo" style="margin-top:10px"><span>Procurar pessoa para marcar</span><input type="search" id="vgPolBusca" placeholder="Digite parte do nome" value="' + VgT_esc_(VG.polBusca) + '" oninput="VG.polBusca=this.value;VgT_polLista_()"></label>' +
+        '<div class="vg-marcar" id="vgPolLista" style="margin-top:6px"></div>' +
+        '<h4>Limites</h4><div class="vg-grade">' +
+        '<label class="vg-campo"><span>Diretoria também aprova acima de (R$) *</span><input type="text" inputmode="decimal" id="vgPolLim" value="' + VgT_esc_(VgT_valorCampo_(p.limiteDiretoria)) + '"><span class="vg-dica">Solicitação com total acima deste valor passa pela gerência e depois pela Diretoria. Ex.: 5.000,00.</span></label>' +
+        '<label class="vg-campo"><span>Urgente: viagem que começa em menos de quantos dias úteis *</span><input type="text" inputmode="numeric" id="vgPolUrg" value="' + VgT_esc_(p.urgenteDiasUteis) + '"><span class="vg-dica">Solicitação urgente avisa quem aprova na hora, a qualquer horário (as outras, no expediente). Número inteiro de 0 a 15.</span></label></div>' +
+        '<h4>Tetos (só hospedagem e alimentação)</h4><p class="vg-texto"><b>Vazio = sem conferência</b>: qualquer valor passa sem pedir justificativa. <b>Preenchido</b>: a linha acima do teto pede justificativa de quem pede e a solicitação vai também à Diretoria. As demais categorias não têm teto.</p><div class="vg-grade">' +
+        p.tetos.map(function (t) { var ex = VG_TETO_EXPLICA[t.cod] || [t.rot, ""]; return '<label class="vg-campo vg-teto"><span>Teto de ' + VgT_esc_(t.nome.toLowerCase()) + " (R$, " + VgT_esc_(ex[0]) + ')</span><input type="text" inputmode="decimal" data-teto="' + t.cod + '" value="' + VgT_esc_(VgT_valorCampo_(t.valor)) + '" placeholder="vazio = sem conferência"><span class="vg-dica">' + VgT_esc_(ex[1]) + "</span></label>"; }).join("") + "</div>" +
+        '<h4>Prestação de contas</h4><div class="vg-grade">' +
+        '<label class="vg-campo"><span>Prazo da prestação (dias úteis depois da volta) *</span><input type="text" inputmode="numeric" id="vgPolPrazo" value="' + VgT_esc_(p.prazoPrestacaoDiasUteis) + '"><span class="vg-dica">Número inteiro de 1 a 30 (padrão 3). Vencida, a pessoa não recebe dinheiro de outra viagem até prestar contas.</span></label>' +
+        '<label class="vg-campo"><span>Gasto sem comprovante: limite por viagem (R$)</span><input type="text" inputmode="decimal" id="vgPolSemComp" value="' + VgT_esc_(VgT_valorCampo_(p.limiteSemComprovante)) + '" placeholder="vazio = não aceito"><span class="vg-dica">Vazio = gasto sem comprovante não é aceito. Preenchido: aceito só com justificativa, somando até este valor por viagem.</span></label></div>' +
+        '<label class="vg-campo largo" style="margin-top:12px"><span>Motivo da mudança *</span><textarea id="vgPolMot" placeholder="Ex.: tetos de hotel e alimentação decididos pela Diretoria em novembro"></textarea><span class="vg-dica">10 letras ou mais. Cada gravação vira uma versão nova, com o seu nome.</span></label>' +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_salvarPolitica_()">Gravar nova versão</button></div></div>';
+    } else h += '<p class="vg-sub">A política é alterada pela Diretoria. Para pedir uma mudança, fale com ela.</p>';
+    if ((r.versoes || []).length) h += '<details class="vg-det"><summary><h3>Versões anteriores</h3><span class="vg-sum-res">' + r.versoes.length + (r.versoes.length === 1 ? " versão" : " versões") + '</span></summary><div class="vg-det-corpo">' + r.versoes.map(function (v) { return '<p class="vg-texto"><b>Versão ' + VgT_esc_(v.versao) + "</b> · " + VgT_esc_(v.em) + " · " + VgT_esc_(v.por) + ". Aprovadores: " + VgT_esc_(v.aprovadores) + "; Diretoria acima de " + VgT_esc_(v.limiteTxt) + "; " + VgT_esc_(v.tetos) + "; prestação em " + VgT_esc_(v.prazoPrestacaoDiasUteis) + " dias úteis; " + VgT_esc_(v.semComprovante) + ". Motivo: " + VgT_esc_(v.motivo) + "</p>"; }).join("") + "</div></details>";
+    corpo.innerHTML = h;
+    if (pode) { VgT_polEscolhidos_(); VgT_polLista_(); }
+  }
+  function VgT_polNome_(id) { var p = ((VG.opcoes && VG.opcoes.pessoas) || []).filter(function (x) { return x.id === id; })[0]; return p ? p.nome : id; }
+  function VgT_polEscolhidos_() {
+    var el = VgT_$("vgPolEscolhidos"); if (!el) return;
+    el.innerHTML = VG.polSel.length ? VG.polSel.map(function (id) { return '<span class="vg-escolhido">' + VgT_esc_(VgT_polNome_(id)) + '<button type="button" aria-label="Tirar ' + VgT_esc_(VgT_polNome_(id)) + '" onclick="VgT_polMarcar_(\'' + VgT_esc_(id) + '\', false)">×</button></span>'; }).join("")
+      : '<span class="vg-erro">Ninguém escolhido. Marque pelo menos uma pessoa na lista abaixo.</span>';
+  }
+  function VgT_polLista_() {
+    var el = VgT_$("vgPolLista"); if (!el) return;
+    var t = VgT_norm_(VG.polBusca), l = ((VG.opcoes && VG.opcoes.pessoas) || []).filter(function (p) { return !t || VgT_norm_(p.nome).indexOf(t) >= 0; });
+    l = l.slice().sort(function (a, b) { return (VG.polSel.indexOf(b.id) >= 0) - (VG.polSel.indexOf(a.id) >= 0) || a.nome.localeCompare(b.nome, "pt-BR"); });
+    el.innerHTML = l.length ? l.map(function (p) {
+      return '<label><input type="checkbox" value="' + VgT_esc_(p.id) + '"' + (VG.polSel.indexOf(p.id) >= 0 ? " checked" : "") + ' onchange="VgT_polMarcar_(this.value, this.checked)"><span>' + VgT_esc_(p.nome) + '</span><span class="vg-sub">' + VgT_esc_(String(p.perfil || "").toLowerCase()) + "</span></label>";
+    }).join("") : '<p class="vg-sub" style="padding:10px 12px;margin:0">Ninguém com esse nome.</p>';
+  }
+  function VgT_polMarcar_(id, sim) {
+    VG.polSel = VG.polSel.filter(function (x) { return x !== id; });
+    if (sim) VG.polSel.push(id);
+    VgT_polEscolhidos_(); VgT_polLista_();
+  }
+  function VgT_salvarPolitica_() {
+    var tetos = {};
+    document.querySelectorAll("#vgCorpo [data-teto]").forEach(function (i) { tetos[i.getAttribute("data-teto")] = i.value; });
+    if (!VG.polSel || !VG.polSel.length) return VgT_erro_("Escolha pelo menos uma pessoa em \"Quem aprova\". Sem aprovador, toda solicitação iria direto à Diretoria.");
+    VgT_chamar_("salvarPolitica", { politica: { aprovadores: VG.polSel.slice(), limiteDiretoria: VgT_$("vgPolLim").value, urgenteDiasUteis: VgT_$("vgPolUrg").value, tetos: tetos, prazoPrestacaoDiasUteis: VgT_$("vgPolPrazo") ? VgT_$("vgPolPrazo").value : "", limiteSemComprovante: VgT_$("vgPolSemComp") ? VgT_$("vgPolSemComp").value : "" }, motivo: VgT_$("vgPolMot").value },
+      function (r) { VG.opcoes = null; VG.polSel = null; VgT_comOpcoes_(function () { VgT_desenharPolitica_(r); VgT_msg_(r.message, "ok"); }); VgT_atualizarContagens_(); });
+  }
+
+  // ---------- centros de custo (com a conferência guiada do Financeiro) ----------
+  function VgT_centros_() {
+    var corpo = VgT_$("vgCorpo");
+    corpo.innerHTML = '<p class="vg-sub">Carregando…</p>';
+    VgT_comOpcoes_(function () { VgT_chamar_("centros", {}, function (r) { VgT_desenharCentros_(r); }, function (m) { corpo.innerHTML = '<div class="vg-faixa is-erro">' + VgT_esc_(m) + "</div>"; }, { livre: true }); });
+  }
+  function VgT_desenharCentros_(r) {
+    VG.centros = r; VG.guiado = null;
+    var corpo = VgT_$("vgCorpo"), pode = !!r.podeAlterar, rs = r.resumo || { total: r.centros.length, ativos: 0, conferidos: 0, semConferir: 0, ativosComCaju: 0, inativos: 0 };
+    var h = '<div class="vg-bloco"><h3>O que é centro de custo</h3><p class="vg-texto">É a "etiqueta" que diz <b>de qual unidade e de qual área</b> é o gasto da viagem. Serve para saber quanto cada unidade e cada área gasta com viagem. Toda solicitação tem um, e o código é o mesmo usado na carga do cartão Caju, para o Financeiro conferir o que foi aprovado com o que foi gasto.</p>' +
+      '<div class="vg-exemplos"><div><b>GO-TECNICA</b><br>Goiânia · Técnica/Campo</div><div><b>RJ-COMERCIAL</b><br>Rio de Janeiro · Comercial</div><div><b>GO-FROTA</b><br>Goiânia · Frota</div></div></div>';
+    if (pode) {
+      var pct = rs.total ? Math.round(rs.conferidos * 100 / rs.total) : 0;
+      h += '<div class="vg-bloco is-acao"><h3>Conferência inicial da lista (Financeiro e Diretoria)</h3>' +
+        '<p class="vg-texto">A lista começou com ' + rs.total + ' centros montados pelo sistema (cada unidade com cada área, mais Frota e Sede). Confira uma vez, com calma, e deixe a lista igual à usada no Caju.</p>' +
+        '<div class="vg-cat-cab"><span class="vg-sub"><b>' + rs.conferidos + " de " + rs.total + "</b> conferidos · " + rs.ativos + " ativos, " + rs.inativos + " inativos · " + rs.ativosComCaju + " de " + rs.ativos + ' ativos com o código do Caju</span></div><div class="vg-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '"><div style="width:' + pct + '%"></div></div>' +
+        '<ol class="vg-check">' +
+        '<li class="' + (rs.semConferir === 0 ? "ok" : "") + '"><b>Confira cada centro da lista</b> (conferência guiada: um por vez).</li>' +
+        "<li><b>Renomeie</b> o que tem o nome diferente do que a empresa usa (o código não muda).</li>" +
+        "<li><b>Desative</b> o que não serve. Nada é apagado: ele só some da lista de escolha.</li>" +
+        "<li><b>Inclua</b> o que falta, com o botão Novo centro de custo.</li>" +
+        '<li class="' + (rs.ativos && rs.ativosComCaju === rs.ativos ? "ok" : "") + '"><b>Use o mesmo código do Caju</b>: preencha o "Código no Caju" de cada centro ativo exatamente como está no portal do Caju.</li></ol>' +
+        '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" onclick="VgT_guiado_(0)">' + (rs.semConferir === 0 ? "Conferir de novo, um por um" : rs.conferidos ? "Continuar a conferência guiada (faltam " + rs.semConferir + ")" : "Começar a conferência guiada") + '</button>' +
+        '<button type="button" class="cadx-btn cadx-btn-grande" onclick="VgT_formCentro_(\'\')">Novo centro de custo</button></div></div>';
+    } else h += '<div class="vg-faixa is-neutra">Só o Financeiro e a Diretoria alteram os centros de custo. Para pedir uma mudança, fale com eles.</div>';
+    h += '<div id="vgGuiado"></div><div id="vgCentroForm"></div>';
+    h += '<div class="vg-bloco"><div class="vg-cat-cab" style="margin-bottom:8px"><h3 style="margin:0">Lista dos centros de custo</h3><label class="vg-campo" style="flex:0 1 280px"><input type="search" placeholder="Procurar código ou nome" oninput="VgT_filtrarCentros_(this.value)" aria-label="Procurar centro de custo"></label></div>' +
+      '<table class="vg-tabela" id="vgCcTabela"><thead><tr><th>Código</th><th>Nome</th><th>Código no Caju</th><th>Situação</th><th>Conferência</th>' + (pode ? "<th></th>" : "") + "</tr></thead><tbody>" + r.centros.map(function (c) {
+      return '<tr data-busca="' + VgT_esc_(VgT_norm_(c.codigo + " " + c.nome)) + '"><td data-r="Código"><b class="vg-mono">' + VgT_esc_(c.codigo) + '</b></td><td data-r="Nome">' + VgT_esc_(c.nome) + (c.responsavelNome ? '<br><span class="vg-sub">Responsável: ' + VgT_esc_(c.responsavelNome) + "</span>" : "") + '</td><td data-r="Caju">' + (c.codigoCaju ? '<span class="vg-mono">' + VgT_esc_(c.codigoCaju) + "</span>" : '<span class="vg-sub">não preenchido</span>') + '</td><td data-r="Situação">' + (c.ativo ? '<span class="vg-selo s-CARGA_FEITA">Ativo</span>' : '<span class="vg-selo s-CANCELADA">Inativo</span>') + "</td>" +
+        '<td data-r="Conferência">' + (c.conferido ? '<span class="vg-sub">conferido por ' + VgT_esc_(c.conferidoPor) + " em " + VgT_esc_(c.conferidoEm) + "</span>" : '<span class="vg-selo s-AGUARDANDO_APROVACAO">a conferir</span>') + "</td>" +
+        (pode ? '<td><button type="button" class="cadx-btn" onclick="VgT_formCentro_(\'' + VgT_esc_(c.id) + '\')">Alterar</button></td>' : "") + "</tr>";
+    }).join("") + "</tbody></table></div>";
+    corpo.innerHTML = h;
+  }
+  function VgT_filtrarCentros_(t) { t = VgT_norm_(t); document.querySelectorAll("#vgCcTabela tbody tr").forEach(function (tr) { tr.style.display = !t || String(tr.getAttribute("data-busca")).indexOf(t) >= 0 ? "" : "none"; }); }
+  /** Conferência guiada: um centro por vez, começando pelos que ainda não foram conferidos. */
+  function VgT_guiado_(passo) {
+    var r = VG.centros; if (!r) return;
+    var ordem = r.centros.filter(function (c) { return !c.conferido; }).concat(r.centros.filter(function (c) { return c.conferido; }));
+    if (!VG.guiado) VG.guiado = { ordem: ordem.map(function (c) { return c.id; }), i: 0 };
+    VG.guiado.i = Math.max(0, VG.guiado.i + (passo || 0));
+    var el = VgT_$("vgGuiado"); if (!el) return;
+    var id = VG.guiado.ordem[VG.guiado.i], c = r.centros.filter(function (x) { return x.id === id; })[0];
+    if (!c) {
+      el.innerHTML = '<div class="vg-bloco vg-guiado"><h3>Conferência guiada concluída</h3><p class="vg-texto">Você passou por todos os centros da lista. Faltou algum que a empresa usa? Inclua com o botão abaixo, usando o mesmo código do Caju.</p><div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" onclick="VgT_formCentro_(\'\')">Novo centro de custo</button><button type="button" class="cadx-btn cadx-btn-grande" onclick="VgT_centros_()">Fechar a conferência</button></div></div>';
+      try { el.scrollIntoView({ block: "start" }); } catch (e) {}
+      return;
+    }
+    el.innerHTML = '<div class="vg-bloco vg-guiado" aria-live="polite"><div class="vg-cat-cab"><h3 style="margin:0">Conferência guiada · centro ' + (VG.guiado.i + 1) + " de " + VG.guiado.ordem.length + "</h3>" + (c.conferido ? '<span class="vg-sub">já conferido por ' + VgT_esc_(c.conferidoPor) + "</span>" : '<span class="vg-selo s-AGUARDANDO_APROVACAO">a conferir</span>') + "</div>" +
+      '<p style="margin:10px 0 2px"><span class="vg-cc-cod">' + VgT_esc_(c.codigo) + '</span></p><p class="vg-texto" style="font-size:15px;margin:0 0 6px"><b>' + VgT_esc_(c.nome) + "</b> · " + (c.ativo ? "ativo" : "inativo") + "</p>" +
+      '<p class="vg-texto">Pergunta: <b>a empresa usa este centro de custo?</b> Se usa e o nome está certo, preencha o código que ele tem no Caju e marque como conferido. Se o nome está errado, toque em Mudar o nome. Se não usa, desative.</p>' +
+      '<label class="vg-campo" style="max-width:420px"><span>Código deste centro no Caju</span><input type="text" id="vgGuiCaju" value="' + VgT_esc_(c.codigoCaju) + '" placeholder="Copie exatamente como está no portal do Caju"><span class="vg-dica">Pode deixar vazio se o centro ainda não existe no Caju.</span></label>' +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_guiadoConferir_(\'' + VgT_esc_(c.id) + '\')">Está certo: marcar como conferido</button>' +
+      '<button type="button" class="cadx-btn cadx-btn-grande" onclick="VgT_formCentro_(\'' + VgT_esc_(c.id) + '\')">Mudar o nome ou a área</button>' +
+      (c.ativo ? '<button type="button" class="cadx-btn cadx-btn-risco cadx-btn-grande" data-vg-acao="1" onclick="VgT_guiadoDesativar_(\'' + VgT_esc_(c.id) + '\')">Não usamos: desativar</button>' : "") + "</div>" +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn"' + (VG.guiado.i ? "" : " disabled") + ' onclick="VgT_guiado_(-1)">← Anterior</button><button type="button" class="cadx-btn" onclick="VgT_guiado_(1)">Pular por agora →</button><button type="button" class="cadx-btn cadx-btn-link" onclick="VgT_centros_()">Sair da conferência</button></div></div>';
+    try { el.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {}
+  }
+  function VgT_guiadoAtualizar_(r) {
+    var g = VG.guiado; VG.centros = r;
+    var corpoG = g; VgT_desenharCentros_(r); VG.guiado = corpoG; VgT_msg_(r.message, "ok"); VgT_guiado_(1);
+  }
+  function VgT_guiadoConferir_(id) {
+    var caju = VgT_$("vgGuiCaju") ? VgT_$("vgGuiCaju").value : null;
+    VgT_chamar_("conferirCentro", { id: id, codigoCaju: caju }, function (r) { VG.opcoes = null; VgT_guiadoAtualizar_(r); });
+  }
+  function VgT_guiadoDesativar_(id) {
+    var c = VG.centros.centros.filter(function (x) { return x.id === id; })[0]; if (!c) return;
+    VgT_perguntar_("Desativar " + c.codigo + "?", "O centro sai da lista de escolha das solicitações novas. Nada é apagado: as solicitações antigas continuam ligadas a ele, e dá para reativar depois em Alterar.",
+      [{ rotulo: "Desativar", perigo: true, fn: function () {
+        VgT_chamar_("salvarCentro", { id: c.id, nome: c.nome, unidade: c.unidade, area: c.area, responsavelId: c.responsavelId, codigoCaju: VgT_$("vgGuiCaju") ? VgT_$("vgGuiCaju").value : c.codigoCaju, codigoOmie: c.codigoOmie, ativo: "NAO", motivo: "Desativado na conferência guiada: a empresa não usa este centro." },
+          function (r) { VG.opcoes = null; VgT_guiadoAtualizar_(r); });
+      } }, { rotulo: "Manter ativo", prim: true }]);
+  }
+  function VgT_formCentro_(id) {
+    var r = VG.centros, c = r.centros.filter(function (x) { return x.id === id; })[0] || { id: "", codigo: "", nome: "", unidade: "", area: "", responsavelId: "", codigoCaju: "", codigoOmie: "", ativo: true };
+    var o = VG.opcoes, el = VgT_$("vgCentroForm");
+    el.innerHTML = '<div class="vg-bloco is-acao"><h3>' + (id ? "Alterar " + VgT_esc_(c.codigo) : "Novo centro de custo") + '</h3><div class="vg-grade">' +
+      (id ? "" : '<label class="vg-campo"><span>Código *</span><input type="text" id="vgCcCod" placeholder="Ex.: GO-TECNICA"><span class="vg-dica">Letras, números e hífen. Use o mesmo do Caju quando der. Depois de criado, o código não muda.</span></label>') +
+      '<label class="vg-campo"><span>Nome *</span><input type="text" id="vgCcNome" value="' + VgT_esc_(c.nome) + '" placeholder="Ex.: Goiânia · Técnica/Campo"></label>' +
+      '<label class="vg-campo"><span>Unidade</span><select id="vgCcUn">' + VgT_opcoesSel_(r.unidades, c.unidade, "Sem unidade") + "</select></label>" +
+      '<label class="vg-campo"><span>Área</span><select id="vgCcArea">' + VgT_opcoesSel_(r.areas.concat([["FROTA", "Frota"], ["SEDE", "Sede"]]), c.area, "Sem área") + "</select></label>" +
+      '<label class="vg-campo"><span>Responsável</span><select id="vgCcResp">' + VgT_opcoesSel_(o.pessoas.map(function (p) { return [p.id, p.nome]; }), c.responsavelId, "Sem responsável") + '</select><span class="vg-dica">Opcional: quem responde pelos gastos deste centro.</span></label>' +
+      '<label class="vg-campo"><span>Código no Caju</span><input type="text" id="vgCcCaju" value="' + VgT_esc_(c.codigoCaju) + '"><span class="vg-dica">Exatamente como está no portal do Caju.</span></label>' +
+      '<label class="vg-campo"><span>Código no Omie</span><input type="text" id="vgCcOmie" value="' + VgT_esc_(c.codigoOmie) + '"><span class="vg-dica">Opcional.</span></label>' +
+      '<label class="vg-campo"><span>Situação</span><select id="vgCcAtivo"><option value="SIM"' + (c.ativo ? " selected" : "") + '>Ativo</option><option value="NAO"' + (!c.ativo ? " selected" : "") + ">Inativo (sai da lista de escolha)</option></select></label>" +
+      '<label class="vg-campo largo"><span>Motivo *</span><input type="text" id="vgCcMot" placeholder="Ex.: nome conferido com o Financeiro"><span class="vg-dica">5 letras ou mais. Fica no histórico com o seu nome.</span></label></div>' +
+      '<div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-primario cadx-btn-grande" data-vg-acao="1" onclick="VgT_salvarCentro_(\'' + VgT_esc_(c.id) + '\')">Gravar</button><button type="button" class="cadx-btn cadx-btn-grande" onclick="document.getElementById(\'vgCentroForm\').innerHTML=\'\'">Fechar</button></div></div>';
+    try { el.scrollIntoView({ block: "start", behavior: "smooth" }); VgT_$(id ? "vgCcNome" : "vgCcCod").focus({ preventScroll: true }); } catch (e) {}
+  }
+  function VgT_salvarCentro_(id) {
+    var v = function (k) { var e = VgT_$(k); return e ? e.value : ""; };
+    var g = VG.guiado;
+    VgT_chamar_("salvarCentro", { id: id, codigo: v("vgCcCod"), nome: v("vgCcNome"), unidade: v("vgCcUn"), area: v("vgCcArea"), responsavelId: v("vgCcResp"), codigoCaju: v("vgCcCaju"), codigoOmie: v("vgCcOmie"), ativo: v("vgCcAtivo"), motivo: v("vgCcMot") },
+      function (r) { VG.opcoes = null; if (g && id) { VgT_guiadoAtualizar_(r); return; } VgT_desenharCentros_(r); VgT_msg_(r.message, "ok"); });
+  }
+</script>

@@ -1,0 +1,14 @@
+Painel financeiro — ordem das consultas da Visão geral — publicado em 14/11/2026 23:56 BRT
+
+Imagem: metrolabs/sgo:financeiro-ordem-20261115
+        sha256:015919f985ed490084a4f02c403daf82ad47d31f1670f89bbf18eafdc701fa7e
+Base:   metrolabs/sgo:financeiro-posicao-20261115 (sha256:52e704ff…), 1 arquivo conferido; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-ordem-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Achado no ensaio real em paralelo (ensaio/paralelo.json, 3 processos como na produção): ao abrir a Visão geral, o resumo do
+mês e a agenda chamavam ListarMovimentos ao mesmo tempo e o Omie recusou o resumo ("ocupado"). Correção: a agenda começa
+quando o resumo termina (com sucesso ou não); a posição usa outro método e segue junto. OmieGest_chamar_ ganhou o "fim".
+Arquivo: JS_Omie_Gestao.html. Teste: financeiro-omie-20261114 11/11; a verificação de ordem FALHA na versão anterior
+("resumo-inicio > agenda-inicio > resumo-fim") e passa na nova. No ar: saudável, GET 200, 0 erros, HTML encadeado.
+Limite que continua: duas pessoas abrindo a mesma consulta no mesmo segundo ainda podem receber "o Omie estava ocupado"
+(a mensagem diz para aguardar e repetir).

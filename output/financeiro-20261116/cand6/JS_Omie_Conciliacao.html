@@ -1,0 +1,82 @@
+<script>
+var OMIE_CONC_UI = { pedido: 0, token: '', linhas: [] };
+function OmieConc_render_() {
+  var alvo = document.getElementById('omieCorpo'); if (!alvo) return;
+  OMIE_CONC_UI.pedido++; OMIE_CONC_UI.token = ''; OMIE_CONC_UI.linhas = [];
+  // 16/11/2026 (design): campos em grade com rótulo em cima (antes, numa barra que quebrava no celular) e "Gerar prévia" como botão principal.
+  // Os limites (100 movimentos, 500 KB, 94 dias) já estão na explicação de cada campo; aqui fica só o formato do CSV.
+  alvo.innerHTML = '<section class="omie-bloco"><h3>Conciliação bancária</h3><p>Importe o extrato do banco (OFX ou CSV) e revise as correspondências com o extrato do Omie. A confirmação registra uma conferência local; não muda a situação no Omie.</p>' +
+    '<div class="omie-grade"><label class="cadx-campo">Conta corrente<select class="cadx-input" id="omieConcConta"><option value="">Carregando contas…</option></select></label>' +
+    '<label class="cadx-campo">De<input class="cadx-input" type="date" id="omieConcInicio"></label><label class="cadx-campo">Até<input class="cadx-input" type="date" id="omieConcFim"></label>' +
+    '<label class="cadx-campo">Formato<select class="cadx-input" id="omieConcFormato"><option>OFX</option><option>CSV</option></select></label>' +
+    '<label class="cadx-campo">Arquivo<input class="cadx-input" type="file" id="omieConcArquivo" accept=".ofx,.csv"></label></div>' +
+    '<p class="cadx-sub">Planilha CSV em UTF-8, com as colunas Data; Valor; Descricao; Identificador; Tipo, nessa ordem e separadas por ponto e vírgula (Identificador e Tipo são opcionais). Saída com valor negativo ou Tipo D/C.</p>' +
+    '<div class="omie-acoes"><button type="button" class="cadx-btn cadx-btn-primario" id="omieConcPrever" onclick="OmieConc_prever_()">Gerar prévia</button>' +
+    '<button type="button" class="cadx-btn" onclick="OmieConc_historico_()">Histórico da conta</button></div></section>' +
+    '<div id="omieConcResultado" aria-live="polite"></div>';
+  var partes = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()), data = {};
+  partes.forEach(function(p) { data[p.type] = p.value; });
+  var fim = [data.year, data.month, data.day].join('-');
+  document.getElementById('omieConcFim').value = fim; document.getElementById('omieConcInicio').value = fim.slice(0, 8) + '01';
+  var select = document.getElementById('omieConcConta'), sessao = SGO_getSessionId();
+  function carregar(pagina) {
+    google.script.run.withSuccessHandler(function(r) {
+      if (document.getElementById('omieConcConta') !== select || SGO_getSessionId() !== sessao) return;
+      if (!r || !r.ok) { select.innerHTML = '<option value="">Não foi possível carregar</option>'; OmieConc_mensagem_(r && r.mensagem || 'Falha ao carregar contas.'); return; }
+      if (pagina === 1) select.innerHTML = '<option value="">Selecione a conta</option>';
+      r.contas.forEach(function(c) { var o = document.createElement('option'); o.value = c.id; o.textContent = c.descricao; select.appendChild(o); });
+      if (pagina < r.paginas && pagina < 100) carregar(pagina + 1);
+    }).withFailureHandler(function() { if (document.getElementById('omieConcConta') === select) OmieConc_mensagem_('Falha ao consultar contas.'); }).Omie_apiConciliacaoContas(sessao, pagina);
+  }
+  carregar(1);
+  ['omieConcConta', 'omieConcInicio', 'omieConcFim', 'omieConcFormato', 'omieConcArquivo'].forEach(function(id) { document.getElementById(id).addEventListener('change', function() { OMIE_CONC_UI.pedido++; OMIE_CONC_UI.token = ''; OmieConc_mensagem_('Gere uma prévia com os dados selecionados.'); }); });
+}
+function OmieConc_mensagem_(texto) { var a = document.getElementById('omieConcResultado'); if (a) { a.textContent = texto; } }
+function OmieConc_chamar_(metodo, dados, callback) {
+  var alvo = document.getElementById('omieConcResultado'), pedido = ++OMIE_CONC_UI.pedido, sessao = SGO_getSessionId();
+  if (!alvo) return;
+  alvo.textContent = 'Carregando…';
+  var runner = google.script.run.withSuccessHandler(function(r) {
+    if (pedido !== OMIE_CONC_UI.pedido || document.getElementById('omieConcResultado') !== alvo || SGO_getSessionId() !== sessao) return;
+    if (!r || !r.ok) { OmieConc_mensagem_(r && r.mensagem || 'Não foi possível concluir.'); return; }
+    callback(r);
+  }).withFailureHandler(function() { if (pedido === OMIE_CONC_UI.pedido && document.getElementById('omieConcResultado') === alvo) OmieConc_mensagem_('Falha de comunicação. Tente novamente.'); });
+  runner[metodo](sessao, dados);
+}
+function OmieConc_prever_() {
+  var input = document.getElementById('omieConcArquivo'), f = input && input.files[0];
+  OMIE_CONC_UI.token = '';
+  if (!f || f.size > 500000) { OmieConc_mensagem_('Selecione um arquivo de até 500 KB.'); return; }
+  var p = { contaId: document.getElementById('omieConcConta').value, inicio: document.getElementById('omieConcInicio').value, fim: document.getElementById('omieConcFim').value, formato: document.getElementById('omieConcFormato').value };
+  if (!p.contaId || !p.inicio || !p.fim) { OmieConc_mensagem_('Selecione conta e período.'); return; }
+  var reader = new FileReader(), pedido = ++OMIE_CONC_UI.pedido, sessao = SGO_getSessionId();
+  reader.onload = function() {
+    if (pedido !== OMIE_CONC_UI.pedido || document.getElementById('omieConcArquivo') !== input || SGO_getSessionId() !== sessao) return;
+    p.texto = String(reader.result);
+    OmieConc_chamar_('Omie_apiConciliarPrevia', p, function(r) {
+      OMIE_CONC_UI.token = r.token; OMIE_CONC_UI.linhas = r.linhas;
+      var esc = CadUI_esc_;
+      document.getElementById('omieConcResultado').innerHTML = '<p>' + esc(r.aviso) + '</p><div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Revisado</th><th>Data</th><th>Banco</th><th>Valor</th><th>Omie</th><th>Resultado</th></tr></thead><tbody>' + r.linhas.map(function(l) {
+        return '<tr><td data-r="Revisado">' + (l.elegivel ? '<label class="omie-conc-alvo"><input type="checkbox" class="omie-conc-check" aria-label="Revisar movimento ' + (l.indice + 1) + '" value="' + l.indice + '"></label>' : '—') + '</td><td data-r="Data">' + esc(l.banco.data) + '</td><td data-r="Banco">' + esc(l.banco.descricao) + '</td><td data-r="Valor"><strong class="omie-num">' + esc((l.banco.centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })) + '</strong></td><td data-r="Omie">' + esc(l.omie ? l.omie.id + ' · ' + l.omie.descricao : '—') + '</td><td data-r="Resultado">' + esc(l.status) + '</td></tr>';
+      }).join('') + '</tbody></table></div><p>Marque somente os movimentos que conferiu. Correspondências ambíguas devem ser verificadas no Omie.</p><div class="omie-acoes"><button type="button" class="cadx-btn cadx-btn-primario" onclick="OmieConc_confirmar_()">Registrar conferências selecionadas</button></div>';
+    });
+  };
+  reader.onerror = function() { if (pedido === OMIE_CONC_UI.pedido) OmieConc_mensagem_('Não foi possível ler o arquivo.'); };
+  reader.readAsText(f, 'UTF-8');
+}
+function OmieConc_confirmar_() {
+  var selecionados = Array.prototype.map.call(document.querySelectorAll('.omie-conc-check:checked'), function(c) { return Number(c.value); });
+  if (!OMIE_CONC_UI.token || !selecionados.length) { OmieConc_mensagem_('Gere a prévia e marque as correspondências revisadas.'); return; }
+  OmieConc_chamar_('Omie_apiConciliarConfirmar', { token: OMIE_CONC_UI.token, linhas: selecionados }, function(r) {
+    OMIE_CONC_UI.token = ''; OmieConc_mensagem_(r.mensagem + ' Novos registros: ' + r.registrados + '. Já registrados: ' + r.repetidos + '.');
+  });
+}
+function OmieConc_historico_() {
+  var c = document.getElementById('omieConcConta'); if (!c || !c.value) { OmieConc_mensagem_('Selecione a conta.'); return; }
+  OMIE_CONC_UI.token = '';
+  OmieConc_chamar_('Omie_apiConciliacaoHistorico', { contaId: c.value }, function(r) {
+    var esc = CadUI_esc_;
+    document.getElementById('omieConcResultado').innerHTML = '<p>Últimas ' + r.itens.length + ' de ' + r.total + ' conferências locais. Este histórico não representa o status de conciliação no Omie.</p><div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Registro</th><th>Movimento</th><th>Valor</th><th>Omie</th><th>Responsável</th></tr></thead><tbody>' + r.itens.map(function(i) { return '<tr><td data-r="Registro">' + esc(i.em) + '</td><td data-r="Movimento">' + esc(i.banco.data + ' · ' + i.banco.descricao) + '</td><td data-r="Valor">' + esc((i.banco.centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })) + '</td><td data-r="Omie">' + esc(i.omie.id) + '</td><td data-r="Responsável">' + esc(i.usuario) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  });
+}
+</script>

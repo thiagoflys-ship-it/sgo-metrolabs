@@ -98,20 +98,23 @@ test('revisão: deslocamento digitado abaixo de custo + impostos sai da sobra (o
   assert.equal(analise(amb, p.id).margemPct, 42.75);
 });
 
-test('viagem diluída no preço dos serviços: o custo entra na sobra e a sobra mínima tem que cobrir', () => {
+// 13/11/2026 (caso PROP-2026-0071, RIO MED): a regra de 01/11 deixava o diluído sem item: o total caía pelo valor da viagem e o custo dela
+// entrava na sobra (a tela pedia para subir os serviços em custo ÷ (1 − impostos − comissão − 35%)). Agora os dois modos cobram o mesmo valor.
+test('viagem diluída no preço dos serviços: o mesmo valor do item separado, distribuído nos serviços; fora da sobra (13/11/2026)', () => {
   const amb = amb0();
   const srv = produto(amb, 'SRV-1', 'SERVICO', '1.000,00', '400,00');
   const d = proposta(amb, [item(srv)], Object.assign({ repasse: 'DILUIDO' }, VIAGEM_RV));
-  assert.equal(JSON.parse(reg(amb, d.id).ITENS_JSON).filter((i) => i.auto).length, 0, 'diluído não cria item');
+  const its = JSON.parse(reg(amb, d.id).ITENS_JSON), auto = its.find((i) => i.auto);
+  assert.equal(auto.diluido, true, 'diluído guarda o item por dentro'); assert.equal(auto.precoUnitario, 2650, 'o mesmo preço do item separado');
+  assert.equal(its.find((i) => !i.auto).acrescimoRepasse, 2650, 'toda a parte da viagem no único serviço');
   const a = analise(amb, d.id);
-  assert.equal(a.custoDiluido, 2271.25); assert.equal(a.margemValor, -1843.75, '1.000 − 142,50 − 30 − 400 − 2.271,25'); assert.equal(a.abaixoMin, true);
-  assert.equal(d.salvo.politica.exigeDiretoria, true);
+  assert.equal(a.custoDiluido, 0); assert.equal(a.margemValor, 427.5, '1.000 − 142,50 − 30 − 400: a viagem fica fora da sobra'); assert.equal(a.abaixoMin, false);
+  assert.equal(reg(amb, d.id).TOTAL, 3650, 'o mesmo total do item separado');
   const g = ok(amb.api('s_gaspar', 'proposta', { id: d.id })).proposta.deslocamento;
-  assert.equal(g.diluir, 4756.54, 'quanto somar aos serviços: 2.271,25 ÷ (1 − 14,25% − 3% − 35%)');
-  // com o preço dos serviços cobrindo a viagem com a sobra mínima, conclui direto
-  ok(amb.api('s_vera', 'salvarProposta', { id: d.id, itens: [item(srv, '5.900,00')] }));
-  assert.equal(analise(amb, d.id).abaixoMin, false);
-  assert.equal(ok(amb.api('s_vera', 'concluirProposta', { id: d.id })).proposta.situacao, 'PRONTA', 'acima da tabela não é desconto e a sobra cobre a viagem');
+  assert.equal(g.diluir, 0, 'nada a subir à mão'); assert.equal(g.precoRepasse, 2650);
+  const cli = amb.ctx.ComPr_itensCliente_(its);
+  assert.deepEqual(cli.map((i) => [i.quantidade, i.precoUnitario]), [[1, 3650]], 'o cliente vê o serviço a 3.650, sem a linha de deslocamento');
+  assert.equal(ok(amb.api('s_vera', 'concluirProposta', { id: d.id })).proposta.situacao, 'PRONTA');
 });
 
 test('taxa por viagem não soma mais; Incentivo de Missão só a partir de 200 km, por executante', () => {

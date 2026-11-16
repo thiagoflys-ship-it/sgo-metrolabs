@@ -1,0 +1,145 @@
+<script>
+/*
+ * Painel financeiro: busca de cliente ou fornecedor no Omie por CNPJ/CPF ou nome e "Cadastrar no Omie" (16/11/2026,
+ * especificação do Financeiro, seção 2 e achado B9). Servidor: SGO_Omie_Cadastro.js (OmieCad_apiBuscar, OmieCad_apiPrevia,
+ * OmieCad_apiConfirmar). Usado no formulário de lançamento (JS_Omie_Operacoes.html) e no lançamento de nota recebida
+ * (JS_Omie_Notas.html). A trava fica no servidor; a tela só mostra o que ele devolve.
+ */
+var OMIE_CAD = { geracao: 0, token: '', aoConcluir: null, area: '' };
+function OmieCad_esc_(v) { return typeof CadUI_esc_ === 'function' ? CadUI_esc_(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function OmieCad_rpc_(nome, dados, ok, erro) {
+  var geracao = OMIE_CAD.geracao, sessao = SGO_getSessionId(), pedido = typeof OMIE_TELA !== 'undefined' ? OMIE_TELA.pedido : null;
+  function atual() { return geracao === OMIE_CAD.geracao && sessao === SGO_getSessionId() && (typeof OMIE_TELA === 'undefined' || pedido === OMIE_TELA.pedido); }
+  google.script.run.withSuccessHandler(function (r) { if (!atual()) return; if (!r || !r.ok) { erro(r && r.mensagem || 'Não foi possível concluir.'); return; } ok(r); })
+    .withFailureHandler(function () { if (atual()) erro('A comunicação foi interrompida. Se confirmou um cadastro, busque o CNPJ de novo antes de repetir.'); })[nome](sessao, dados || {});
+}
+/** Campo de escolha do cliente ou fornecedor (substitui a lista de 100 em 100). valor/nome: o já escolhido, se houver. */
+function OmieCad_campoPessoa_(rotulo, valor, nome) {
+  return '<div class="omie-pessoa"><input type="hidden" name="pessoaId" id="omieOpsPessoaId" value="' + OmieCad_esc_(valor || '') + '">' +
+    '<label class="cadx-campo">' + OmieCad_esc_(rotulo) + '<span class="omie-pessoa-busca"><input type="search" class="cadx-input" id="omieCadBusca" autocomplete="off" placeholder="CNPJ, CPF ou parte do nome" onkeydown="if(event.key===\'Enter\'){event.preventDefault();OmieCad_buscar_();}">' +
+    '<button type="button" class="cadx-btn" onclick="OmieCad_buscar_()">Buscar</button></span></label>' +
+    '<p class="omie-pessoa-escolhido" id="omieCadEscolhido" role="status">' + (valor ? 'Escolhido: <strong>' + OmieCad_esc_(nome || ('código Omie ' + valor)) + '</strong>' : 'Nenhum escolhido ainda.') + '</p>' +
+    '<div id="omieCadResultado" aria-live="polite"></div></div>'; // o formulário de cadastro abre em #omieCadArea, fora deste formulário
+
+}
+function OmieCad_escolher_(id, nome) {
+  var h = document.getElementById('omieOpsPessoaId'), e = document.getElementById('omieCadEscolhido'), r = document.getElementById('omieCadResultado');
+  if (h) h.value = String(id); if (e) e.innerHTML = 'Escolhido: <strong>' + OmieCad_esc_(nome) + '</strong>'; if (r) r.innerHTML = '';
+  var a = document.getElementById('omieCadArea'); if (a) a.innerHTML = '';
+}
+function OmieCad_tipoPadrao_() { return typeof OMIE_OPS_UI !== 'undefined' && OMIE_OPS_UI.tipo === 'pagar' ? 'fornecedor' : 'cliente'; }
+function OmieCad_buscar_() {
+  var b = document.getElementById('omieCadBusca'), alvo = document.getElementById('omieCadResultado'); if (!b || !alvo) return;
+  var texto = String(b.value || '').trim(); OMIE_CAD.geracao++;
+  alvo.textContent = 'Buscando no Omie…';
+  OmieCad_rpc_('OmieCad_apiBuscar', { texto: texto }, function (r) {
+    var doc = r.porDocumento ? r.documento.replace(/\D/g, '') : '';
+    var botaoCad = '<button type="button" class="cadx-btn" onclick="OmieCad_abrirForm_({ documento: \'' + OmieCad_esc_(doc) + '\', tipo: OmieCad_tipoPadrao_() })">Cadastrar no Omie</button>';
+    if (!r.itens.length) { alvo.innerHTML = '<div class="cadx-vazio bc-vazio"><strong>Nenhum cadastro encontrado no Omie.</strong><p>Confira o número ou o nome. Se a empresa ou pessoa ainda não está no Omie, cadastre aqui.</p>' + botaoCad + '</div>'; return; }
+    alvo.innerHTML = '<ul class="omie-pessoa-lista">' + r.itens.map(function (i) {
+      var nome = i.razao || i.fantasia || ('código ' + i.id);
+      return '<li><div><strong>' + OmieCad_esc_(nome) + '</strong>' + (i.fantasia && i.fantasia !== i.razao ? ' · ' + OmieCad_esc_(i.fantasia) : '') + '<br><span class="cadx-sub">' + OmieCad_esc_([i.documento, [i.cidade, i.uf].filter(Boolean).join('/'), i.tags.join(', ')].filter(Boolean).join(' · ')) + '</span>' +
+        (i.inativo ? '<br><span class="omie-pessoa-inativo">Inativo no Omie: reative no Omie antes de usar.</span>' : '') + '</div>' +
+        (i.inativo ? '' : '<button type="button" class="cadx-btn" data-omie-cad-id="' + OmieCad_esc_(i.id) + '" data-omie-cad-nome="' + OmieCad_esc_(nome) + '" onclick="OmieCad_escolher_(this.getAttribute(\'data-omie-cad-id\'), this.getAttribute(\'data-omie-cad-nome\'))">Usar este</button>') + '</li>';
+    }).join('') + '</ul><p class="cadx-sub">Não é nenhum destes? ' + botaoCad + '</p>';
+  }, function (m) { alvo.textContent = m; });
+}
+var OMIE_CAD_CAMPOS = [['documento', 'CNPJ ou CPF'], ['razao', 'Razão social'], ['fantasia', 'Nome fantasia'], ['endereco', 'Rua (logradouro)'], ['numero', 'Número'], ['complemento', 'Complemento'], ['bairro', 'Bairro'], ['cidade', 'Cidade'], ['uf', 'UF'], ['cep', 'CEP'], ['email', 'E-mail'], ['telefone', 'Telefone com DDD']];
+function OmieCad_camposHtml_(nomes, previo) {
+  var curtos = { numero: 1, complemento: 1, uf: 1, cep: 1 };
+  return OMIE_CAD_CAMPOS.filter(function (c) { return nomes.indexOf(c[0]) >= 0; }).map(function (c) {
+    return '<label class="cadx-campo' + (curtos[c[0]] ? ' omie-cad-curto' : '') + '">' + c[1] + '<input class="cadx-input" name="' + c[0] + '"' + (c[0] === 'documento' || c[0] === 'razao' ? ' required' : '') + (c[0] === 'uf' ? ' maxlength="2" autocapitalize="characters"' : '') + (c[0] === 'email' ? ' type="email" autocomplete="off"' : '') + (c[0] === 'telefone' || c[0] === 'cep' || c[0] === 'documento' ? ' inputmode="numeric"' : '') + ' value="' + OmieCad_esc_(c[0] === 'documento' ? previo.documento || '' : '') + '"></label>';
+  }).join('');
+}
+/** Formulário de cadastro. previo: { documento, tipo }. aoConcluir({ codigo, nome }) é chamado depois de cadastrar (ou se já existir). */
+function OmieCad_abrirForm_(previo, aoConcluir, alvoId) {
+  previo = previo || {}; OMIE_CAD.geracao++; OMIE_CAD.token = ''; OMIE_CAD.aoConcluir = aoConcluir || function (r) { OmieCad_escolher_(r.codigo, r.nome); };
+  OMIE_CAD.area = alvoId || 'omieCadArea';
+  var area = document.getElementById(OMIE_CAD.area); if (!area) return;
+  var tipo = previo.tipo || OmieCad_tipoPadrao_();
+  area.innerHTML = '<section class="chvx-grupo omie-cad-caixa"><h4>Cadastrar no Omie</h4><p class="cadx-sub">O SGO+ procura o documento no Omie antes de cadastrar. Se já existir, só acrescenta o que falta (cliente ou fornecedor). Os campos vazios são completados pelo cadastro do SGO+, quando houver.</p>' +
+    // 16/11/2026 (design): campos em três grupos (quem é, endereço, contato); número, UF e CEP lado a lado também no celular
+    '<form id="omieCadForm" onsubmit="event.preventDefault();OmieCad_previa_()">' +
+    '<fieldset class="omie-cad-grupo"><legend>Quem é</legend><div class="omie-cad-grade">' +
+    '<label class="cadx-campo">Cadastrar como<select class="cadx-input" name="tipo"><option value="cliente"' + (tipo === 'cliente' ? ' selected' : '') + '>Cliente</option><option value="fornecedor"' + (tipo === 'fornecedor' ? ' selected' : '') + '>Fornecedor</option><option value="ambos"' + (tipo === 'ambos' ? ' selected' : '') + '>Cliente e fornecedor</option></select></label>' +
+    OmieCad_camposHtml_(['documento', 'razao', 'fantasia'], previo) + '</div></fieldset>' +
+    '<fieldset class="omie-cad-grupo"><legend>Endereço</legend><div class="omie-cad-grade">' + OmieCad_camposHtml_(['endereco', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep'], previo) + '</div></fieldset>' +
+    '<fieldset class="omie-cad-grupo"><legend>Contato</legend><div class="omie-cad-grade">' + OmieCad_camposHtml_(['email', 'telefone'], previo) + '</div></fieldset>' +
+    '<div class="omie-acoes"><button class="cadx-btn cadx-btn-primario" type="submit" id="omieCadPrever">Conferir prévia</button> <button type="button" class="cadx-btn" onclick="OmieCad_fechar_()">Cancelar</button></div></form><p id="omieCadAviso" role="status" aria-live="polite"></p><div id="omieCadPrevia"></div></section>';
+  try { area.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+}
+function OmieCad_fechar_() { OMIE_CAD.geracao++; OMIE_CAD.token = ''; var a = document.getElementById(OMIE_CAD.area || 'omieCadArea'); if (a) a.innerHTML = ''; }
+function OmieCad_aviso_(m) { var e = document.getElementById('omieCadAviso'); if (e) e.textContent = m; }
+function OmieCad_previa_(dados) {
+  var form = document.getElementById('omieCadForm'), p;
+  if (dados) p = dados;
+  else {
+    if (!form || !form.reportValidity()) return;
+    var d = {}; new FormData(form).forEach(function (v, k) { d[k] = String(v); });
+    p = { tipo: d.tipo, origem: 'manual', dados: { documento: d.documento, razao: d.razao, fantasia: d.fantasia, logradouro: d.endereco, numero: d.numero, complemento: d.complemento, bairro: d.bairro, cidade: d.cidade, uf: d.uf, cep: d.cep, email: d.email, telefone: d.telefone } };
+  }
+  OMIE_CAD.token = ''; OMIE_CAD.geracao++; OmieCad_aviso_('Procurando no Omie e conferindo os dados…');
+  var b = document.getElementById('omieCadPrever'); if (b) b.disabled = true;
+  OmieCad_rpc_('OmieCad_apiPrevia', p, function (r) {
+    OmieCad_aviso_('');
+    if (r.jaCadastrado) { OmieCad_aviso_(r.mensagem); var f = OMIE_CAD.aoConcluir; OmieCad_fechar_(); if (f) f({ codigo: r.codigo, nome: r.nome }); return; }
+    OMIE_CAD.token = r.token;
+    if (form) Array.from(form.elements).forEach(function (e) { e.disabled = true; });
+    // 16/11/2026 (design): prévia em caixa; no celular cada linha vira "campo / valor / origem" sem rótulos repetidos; vazio = "—"
+    var pv = document.getElementById('omieCadPrevia'); pv.className = 'omie-previa-caixa';
+    pv.innerHTML = '<h4 class="omie-previa-tit">Confira antes de confirmar</h4><div class="omie-lista"><table class="cadx-tabela omie-cad-previa"><thead><tr><th>Campo</th><th>Vai para o Omie</th><th>De onde veio</th></tr></thead><tbody>' +
+      r.resumo.map(function (l) { return '<tr><td data-r="Campo">' + OmieCad_esc_(l[0]) + '</td><td data-r="Vai para o Omie"><strong>' + OmieCad_esc_(l[1] || '—') + '</strong></td><td data-r="De onde veio"' + (l[2] ? '' : ' class="omie-vazio"') + '>' + OmieCad_esc_(l[2] || '') + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      (r.avisos && r.avisos.length ? '<ul class="omie-cad-avisos">' + r.avisos.map(function (a) { return '<li>' + OmieCad_esc_(a) + '</li>'; }).join('') + '</ul>' : '') +
+      '<p class="omie-previa-validade">Prévia válida por ' + OmieCad_esc_(r.expiraEm) + '. Nada foi enviado ainda.</p><div class="omie-previa-acoes"><button type="button" class="cadx-btn cadx-btn-primario" id="omieCadConfirmar" onclick="OmieCad_confirmar_()">Confirmar no Omie</button> <button type="button" class="cadx-btn" onclick="OmieCad_revisar_()">Revisar campos</button></div>';
+  }, function (m) { if (b) b.disabled = false; OmieCad_aviso_(m); });
+}
+function OmieCad_revisar_() { OMIE_CAD.token = ''; var f = document.getElementById('omieCadForm'); if (f) Array.from(f.elements).forEach(function (e) { e.disabled = false; }); var p = document.getElementById('omieCadPrevia'); if (p) { p.innerHTML = ''; p.className = ''; } }
+function OmieCad_confirmar_() {
+  var b = document.getElementById('omieCadConfirmar'), token = OMIE_CAD.token; if (!b || b.disabled || !token) return; b.disabled = true; OMIE_CAD.token = '';
+  OmieCad_aviso_('Enviando ao Omie…');
+  OmieCad_rpc_('OmieCad_apiConfirmar', { token: token }, function (r) {
+    var f = OMIE_CAD.aoConcluir, m = r.mensagem; OmieCad_fechar_(); if (f) f({ codigo: r.codigo, nome: r.nome, mensagem: m });
+    var e = document.getElementById('omieCadEscolhido'); if (e && m) e.insertAdjacentHTML('beforeend', '<br><span class="cadx-sub">' + OmieCad_esc_(m) + '</span>');
+  }, function (m) { OmieCad_aviso_(m); b.disabled = false; OMIE_CAD.token = token; });
+}
+/** A partir de uma nota recebida: os dados do fornecedor vêm do XML, lidos no servidor. */
+function OmieCad_daNota_(xml, tipoNota, aoConcluir, alvoId) {
+  OMIE_CAD.geracao++; OMIE_CAD.token = ''; OMIE_CAD.aoConcluir = aoConcluir; OMIE_CAD.area = alvoId;
+  var area = document.getElementById(alvoId); if (!area) return;
+  area.innerHTML = '<section class="chvx-grupo omie-cad-caixa"><h4>Cadastrar o fornecedor no Omie</h4><p class="cadx-sub">Os dados vêm da própria nota (o documento mais confiável, assinado pelo fornecedor). O SGO+ procura o CNPJ no Omie antes.</p><p id="omieCadAviso" role="status" aria-live="polite"></p><div id="omieCadPrevia"></div><button type="button" class="cadx-btn" onclick="OmieCad_fechar_()">Cancelar</button></section>';
+  OmieCad_previa_({ tipo: 'fornecedor', origem: 'nota', xml: xml, tipoNota: tipoNota });
+}
+</script>
+<style>
+  #omieTela .omie-pessoa-busca { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  #omieTela .omie-pessoa-busca input { flex:1 1 180px; min-width:0; }
+  #omieTela .omie-pessoa-escolhido { margin:6px 0; text-align:justify; }
+  #omieTela .omie-pessoa-lista { list-style:none; margin:8px 0; padding:0; }
+  #omieTela .omie-pessoa-lista li { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--bc-line, #e2e8f0); overflow-wrap:anywhere; }
+  #omieTela .omie-pessoa-lista li > div { flex:1 1 200px; min-width:0; }
+  #omieTela .omie-pessoa-inativo { color:var(--bc-danger, #a3261b); font-weight:600; }
+  #omieTela .omie-cad-caixa { padding:14px; margin-top:12px; }
+  #omieTela .omie-cad-grade { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:12px; }
+  #omieTela .omie-cad-avisos li, #omieTela .omie-cad-caixa p { text-align:justify; }
+  /* lançamentos e baixas (16/11/2026): aviso da baixa sem acréscimo e envios a conferir (JS_Omie_Operacoes.html) */
+  #omieTela .omie-aviso-baixa { grid-column:1 / -1; margin:0; text-align:justify; font-size:13px; }
+  /* 16/11/2026 (design) */
+  #omieTela .omie-pessoa { grid-column:1 / -1; }
+  #omieTela .omie-pessoa-escolhido strong { color:var(--bc-action, #1F6B2A); }
+  #omieTela .omie-pessoa-lista li .cadx-btn { min-height:44px; }
+  #omieTela .omie-cad-grupo { border:0; border-top:1px solid var(--bc-line, #E2E0D8); margin:12px 0 0; padding:10px 0 0; min-width:0; }
+  #omieTela .omie-cad-grupo legend { font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:.03em; color:var(--bc-text-3, #5F645F); padding:0 6px 0 0; }
+  @media(max-width:700px) { #omieTela .omie-cad-grade { grid-template-columns:repeat(2, minmax(0, 1fr)); } #omieTela .omie-cad-grade > label:not(.omie-cad-curto) { grid-column:1 / -1; } }
+  @media(max-width:700px) {
+    #omieTela .omie-cad-previa td[data-r="Campo"] { font-size:12.5px; color:var(--bc-text-3, #5F645F); padding-bottom:0; }
+    #omieTela .omie-cad-previa td[data-r]:before { content:none; }
+    #omieTela .omie-cad-previa td[data-r="De onde veio"] { font-size:12.5px; color:var(--bc-text-3, #5F645F); padding-top:0; }
+    #omieTela .omie-cad-previa td[data-r="De onde veio"]:not(.omie-vazio):before { content:'origem: '; font-weight:400; }
+    #omieTela .omie-cad-previa td.omie-vazio { display:none; }
+    #omieTela .omie-cad-previa tr { margin-bottom:6px; }
+  }
+  #omieTela .omie-incertos { margin-top:18px; border:1px solid var(--bc-line, #cbd5e1); border-radius:8px; padding:8px 12px; }
+  #omieTela .omie-incertos summary { cursor:pointer; font-weight:600; }
+  #omieTela .omie-incerto { border-top:1px solid var(--bc-line, #e2e8f0); padding:8px 0; overflow-wrap:anywhere; }
+  #omieTela .omie-incerto p, #omieTela .omie-incertos > div > p { text-align:justify; }
+</style>

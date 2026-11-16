@@ -1,0 +1,1145 @@
+<style>
+  /* CAIXA DE DECISÕES E DESEMPENHO DA GESTÃO (20/10/2026) — servidor: SGO_Gestao_Decisoes.js, SGO_Gestao_Escada.js, SGO_Gestao_Avaliacao.js */
+  .gd-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .gd-tab { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; min-height: 40px; }
+  .gd-tab.active { background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-color: transparent; }
+  .gd-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .gd-kpi { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info, #1f5fa8); border-radius: var(--radius, 8px); padding: 10px 12px; }
+  .gd-kpi .v { display: block; font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; }
+  .gd-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .gd-kpi.critico { border-top-color: var(--danger); } .gd-kpi.critico .v { color: var(--danger); }
+  .gd-kpi.aviso { border-top-color: var(--warning); } .gd-kpi.aviso .v { color: var(--warning); }
+  .gd-kpi.ok { border-top-color: var(--success); }
+  .gd-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--bc-line-2, var(--border)); border-left: 4px solid var(--warning); border-radius: 8px; background: var(--bc-surface-2, var(--card)); font-size: 13px; line-height: 1.5; }
+  .gd-faixa.info { border-left-color: var(--info, #1f5fa8); }
+  /* Etapa 5 (01/11/2026): "Como funciona" recolhido, para a lista aparecer mais cedo no celular */
+  details.gd-como { padding: 0; }
+  details.gd-como > summary { cursor: pointer; font-weight: 700; padding: 12px 14px; min-height: 44px; box-sizing: border-box; line-height: 20px; } /* mantém o triângulo de abrir */
+  details.gd-como > div { padding: 0 14px 10px; }
+  .gd-lista { display: flex; flex-direction: column; gap: 10px; }
+  .gd-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: var(--radius, 8px); padding: 12px 14px; }
+  .gd-card.DIRETORIA { border-left-color: var(--danger); } .gd-card.WHATSAPP { border-left-color: var(--warning); }
+  .gd-card.PAUSADO { border-left-color: var(--success); } .gd-card.ACOMPANHAMENTO { border-left-color: var(--muted); }
+  .gd-card-tit { font-weight: 700; font-size: 14px; color: var(--text-strong, var(--text)); margin: 0 0 4px; overflow-wrap: anywhere; }
+  .gd-meta { font-size: 12px; color: var(--muted); margin: 0 0 6px; overflow-wrap: anywhere; }
+  .gd-txt { font-size: 13px; line-height: 1.5; margin: 0 0 6px; overflow-wrap: anywhere; }
+  .gd-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin-right: 6px; white-space: nowrap; }
+  .gd-selo.DIRETORIA { color: var(--danger); background: var(--danger-bg); } .gd-selo.WHATSAPP { color: var(--warning); background: var(--warning-bg); }
+  .gd-selo.EMAIL, .gd-selo.NA_HORA { color: var(--info, #1f5fa8); background: var(--info-bg, transparent); } .gd-selo.PAUSADO { color: var(--success); background: var(--success-bg); }
+  .gd-selo.ACOMPANHAMENTO, .gd-selo.neutro { color: var(--muted); }
+  .gd-selo.vencido { color: var(--danger); }
+  .gd-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .gd-form { margin-top: 10px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; background: var(--bc-surface-2, transparent); }
+  .gd-form label { display: block; font-size: 12.5px; font-weight: 700; margin: 6px 0 4px; }
+  .gd-form textarea { width: 100%; box-sizing: border-box; min-height: 64px; font: inherit; }
+  .gd-form input[type=date] { min-height: 40px; }
+  .gd-msg { margin: 8px 0; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; }
+  .gd-msg.erro { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+  .gd-msg.ok { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+  .gd-vazio { padding: 22px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  .gd-regras { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .gd-caixa { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 12px 14px; }
+  .gd-caixa h3 { margin: 0 0 8px; font-size: 14px; }
+  .gd-area { border-bottom: 1px solid var(--border); padding: 8px 0; }
+  .gd-area:last-child { border-bottom: 0; }
+  .gd-area b { display: block; font-size: 13px; margin-bottom: 4px; }
+  .gd-checks { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .gd-checks label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; }
+  .gd-linha { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+  .gd-linha input[type=number], .gd-linha input[type=time], .gd-linha select { min-height: 36px; max-width: 180px; }
+  .gd-tabela-rolagem { overflow-x: auto; }
+  .gd-sedna { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 6px; }
+  .gd-sedna th, .gd-sedna td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+  .gd-sedna input[type=number] { width: 80px; min-height: 34px; }
+  .gd-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .gd-tabela th, .gd-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+  .gd-tabela td.n, .gd-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .gd-farol { display: inline-block; padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 12px; }
+  .gd-farol.VERDE { background: var(--success-bg); color: var(--success); } .gd-farol.AMARELO { background: var(--warning-bg); color: var(--warning); }
+  .gd-farol.VERMELHO { background: var(--danger-bg); color: var(--danger); } .gd-farol.SEM_DADOS { color: var(--muted); border: 1px solid var(--border); }
+  .gd-gestor { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius, 8px); padding: 12px 14px; margin-bottom: 12px; }
+  .gd-gestor-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .gd-nota { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .gd-comp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .gd-comp > div { border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 12px; }
+  .gd-comp b { display: block; font-size: 15px; }
+  .gd-barra { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .gd-barra > i { display: block; height: 100%; background: var(--info, #1f5fa8); }
+  .gd-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  .gd-filtros label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .gd-filtros select { min-height: 38px; }
+  /* 11/11/2026: Caixa agrupada, saneamento e painel do Desempenho (padrão do relatório diário: cartões, barras sóbrias, tabelas que viram cartões no celular) */
+  .gd-just { text-align: justify; line-height: 1.55; font-size: 13px; margin: 0 0 8px; }
+  .gd-resumo { background: var(--bc-surface-2, var(--card)); border: 1px solid var(--bc-line, var(--border)); border-radius: 8px; padding: 10px 14px; }
+  button.gd-kpi { text-align: left; font: inherit; cursor: pointer; width: 100%; color: inherit; }
+  button.gd-kpi:hover { border-color: var(--bc-line-2, var(--border)); }
+  button.gd-kpi.sel { outline: 2px solid var(--bc-info, #1f5fa8); outline-offset: 1px; }
+  .gd-kpi.neutro { border-top-color: var(--bc-line-2, var(--border)); }
+  .gd-kpi.neutro .v { color: var(--bc-text-2, var(--muted)); }
+  .gd-kpis:empty, .gd-tabs:empty, .gd-filtros:empty { display: none; }
+  .gd-kpi.txt .v { font-size: 16px; }
+  .gd-tabela-rolar { overflow-x: auto; max-width: 100%; }
+  .gd-tabela th.n { white-space: normal; } .gd-tabela td.n .gd-meta { white-space: normal; }
+  .gd-tabela td[data-r="Gestor"] { min-width: 170px; }
+  .gd-kpis-8 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .gd-kpis-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .gd-filtros select, .gd-filtros input[type=search] { min-height: 38px; max-width: 100%; box-sizing: border-box; }
+  .gd-filtros > div { min-width: 0; }
+  .gd-f-busca input { width: 190px; }
+  .gd-f-st { flex-basis: 100%; }
+  .gd-rot { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .gd-seg { display: inline-flex; border: 1px solid var(--bc-line-2, var(--border)); border-radius: 8px; overflow: hidden; }
+  .gd-seg button { border: 0; background: var(--card); padding: 8px 12px; min-height: 38px; font: inherit; font-size: 13px; cursor: pointer; color: var(--text); }
+  .gd-seg button + button { border-left: 1px solid var(--bc-line, var(--border)); }
+  .gd-seg button.active { background: var(--bc-text, #1c1f1d); color: #fff; font-weight: 700; }
+  .gd-san-faixa { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; border-left-color: var(--bc-text-3, var(--muted)); }
+  .gd-san-faixa > div { flex: 1 1 320px; text-align: justify; }
+  .gd-grupos { display: flex; flex-direction: column; gap: 8px; }
+  details.gd-grupo { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--bc-info, #1f5fa8); border-radius: 8px; margin-bottom: 8px; }
+  details.gd-grupo.venc { border-left-color: var(--danger); }
+  details.gd-grupo.esc { border-left-color: var(--warning); }
+  details.gd-grupo > summary { display: flex; gap: 12px; align-items: center; padding: 10px 12px; cursor: pointer; min-height: 44px; box-sizing: border-box; flex-wrap: wrap; list-style: none; }
+  details.gd-grupo > summary::-webkit-details-marker { display: none; }
+  details.gd-grupo > summary::before { content: "\25B8"; color: var(--muted); }
+  details.gd-grupo[open] > summary::before { content: "\25BE"; }
+  .gd-g-n { font-size: 20px; font-weight: 800; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-strong, var(--text)); }
+  .gd-g-t { flex: 1 1 220px; min-width: 0; }
+  .gd-g-t b { display: block; font-size: 14px; overflow-wrap: anywhere; }
+  .gd-g-t .gd-meta { margin: 0; }
+  .gd-g-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .gd-chip { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--bc-line-2, var(--border)); color: var(--bc-text-2, var(--text)); background: var(--bc-surface-2, transparent); white-space: nowrap; }
+  .gd-chip.critico { color: var(--danger); border-color: var(--bc-danger-line, var(--danger)); background: var(--danger-bg); }
+  .gd-chip.aviso { color: var(--warning); border-color: var(--bc-warn-line, var(--warning)); background: var(--warning-bg); }
+  .gd-chip.neutro { font-weight: 500; }
+  .gd-g-corpo { padding: 0 12px 12px; }
+  details.gd-grupo.mini > summary { padding: 6px 10px; min-height: 40px; }
+  details.gd-grupo.mini .gd-g-n { font-size: 15px; min-width: 32px; }
+  .gd-ul { margin: 4px 0 0 18px; padding: 0; font-size: 12.5px; line-height: 1.5; }
+  .gd-sub > b { display: block; font-size: 13px; margin-bottom: 6px; }
+  .gd-kanban { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .gd-kb-col { background: var(--bc-surface-2, var(--card)); border: 1px solid var(--border); border-top: 3px solid var(--bc-info, #1f5fa8); border-radius: 8px; padding: 8px; min-width: 0; }
+  .gd-kb-col.WHATSAPP { border-top-color: var(--warning); }
+  .gd-kb-col.DIRETORIA { border-top-color: var(--danger); }
+  .gd-kb-col.PAUSADO { border-top-color: var(--success); }
+  .gd-kb-col h4 { margin: 2px 2px 8px; font-size: 13px; }
+  .gd-kb-tipo { display: flex; justify-content: space-between; gap: 8px; width: 100%; text-align: left; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font: inherit; font-size: 12.5px; cursor: pointer; min-height: 40px; color: var(--text); }
+  .gd-kb-tipo span { overflow-wrap: anywhere; }
+  .gd-kb-velhos { margin-top: 8px; }
+  .gd-kb-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; font-size: 12px; }
+  .gd-kb-card b { display: block; overflow-wrap: anywhere; }
+  .gd-kb-card span { color: var(--muted); }
+  .gd-dois { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+  .gd-graf { margin: 0; }
+  .gd-leg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--bc-text-2, var(--muted)); margin-bottom: 8px; }
+  .gd-leg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .gd-leg i.s1, .gd-b2.s1 i { background: #2a78d6; }
+  .gd-leg i.s2, .gd-b2.s2 i { background: #eb6834; }
+  .gd-b2-linha { display: grid; grid-template-columns: minmax(90px, 34%) minmax(0, 1fr); gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--bc-line-soft, var(--border)); }
+  .gd-b2-linha .n { font-size: 12.5px; overflow-wrap: anywhere; }
+  .gd-b2-linha .bs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .gd-b2 { display: flex; align-items: center; gap: 6px; }
+  .gd-b2 i { display: block; height: 9px; border-radius: 0 4px 4px 0; }
+  .gd-b2 em { flex: 0 0 auto; white-space: nowrap; font-style: normal; font-size: 11.5px; color: var(--bc-text-2, var(--text)); font-variant-numeric: tabular-nums; }
+  .gd-graf figcaption { margin-top: 6px; }
+  .gd-barras { display: flex; flex-direction: column; gap: 4px; }
+  .gd-barra-l { display: grid; grid-template-columns: minmax(90px, 40%) minmax(0, 1fr) 44px; gap: 8px; align-items: center; font-size: 12.5px; }
+  .gd-barra-l .n { overflow-wrap: anywhere; }
+  .gd-barra-l .b { background: var(--bc-surface-3, #f1efe9); border-radius: 0 4px 4px 0; height: 10px; }
+  .gd-barra-l .b i { display: block; height: 10px; background: #2a78d6; border-radius: 0 4px 4px 0; }
+  .gd-barra-l .v { text-align: right; font-variant-numeric: tabular-nums; }
+  .gd-todas { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; font-size: 13px; margin: 6px 0; min-height: 40px; }
+  .gd-san-lote { position: sticky; bottom: 0; background: var(--card); }
+  .gd-msg.aviso { background: var(--warning-bg); color: var(--text); border: 1px solid var(--warning); }
+  a.gd-link { display: inline-block; text-decoration: none; padding: 8px 10px; white-space: nowrap; }
+  details.gd-gestor > summary { cursor: pointer; list-style: none; }
+  details.gd-gestor > summary::-webkit-details-marker { display: none; }
+  .gd-caixa-san { border-left: 4px solid var(--bc-text-3, var(--muted)); }
+  .gd-tabela input[type=checkbox], .gd-todas input { width: 20px; height: 20px; }
+  @media (max-width: 1100px) {
+    .gd-kanban { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gd-kpis-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 700px) {
+    .gd-dois { grid-template-columns: minmax(0, 1fr); }
+    .gd-kanban { grid-template-columns: minmax(0, 1fr); }
+    .gd-filtros > div { flex: 1 1 46%; }
+    .gd-filtros select, .gd-f-busca input { width: 100%; }
+    .gd-seg { display: flex; }
+    .gd-seg button { flex: 1; white-space: nowrap; }
+    .gd-filtros > div.gd-f-ver { flex-basis: 100%; }
+    table.gd-san-tab td[data-r="Marcar"], table.gd-san-tab td[data-r="O.S."] { display: inline-block; width: auto; margin-right: 10px; vertical-align: middle; }
+    table.gd-san-tab td[data-r="O.S."]::before { content: "O.S. "; }
+    /* tabelas viram cartões no celular */
+    table.gd-cartoes-cel thead { display: none; }
+    table.gd-cartoes-cel, table.gd-cartoes-cel tbody, table.gd-cartoes-cel tr, table.gd-cartoes-cel td { display: block; width: 100%; box-sizing: border-box; }
+    table.gd-cartoes-cel tr { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; background: var(--card); }
+    table.gd-cartoes-cel td { border: 0; padding: 3px 0; text-align: left !important; white-space: normal !important; }
+    table.gd-cartoes-cel td[data-r]::before { content: attr(data-r) ": "; font-weight: 700; color: var(--muted); font-size: 11.5px; }
+    table.gd-cartoes-cel td[data-r="Gestor"]::before, table.gd-cartoes-cel td[data-r="Item"]::before, table.gd-cartoes-cel td[data-r="Área"]::before, table.gd-cartoes-cel td[data-r="Marcar"]::before { content: ""; }
+    .gd-g-n { min-width: 34px; font-size: 17px; }
+  }
+  @media (max-width: 900px) {
+    .gd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gd-regras { grid-template-columns: 1fr; }
+    .gd-comp { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .gd-tabela-rolar { overflow-x: auto; }
+  }
+</style>
+
+<script>
+  // ==========================================================
+  // CAIXA DE DECISÕES DA GESTÃO E DESEMPENHO DA GESTÃO (20/10/2026)
+  // Telas: abrir('gestao_decisoes') -> Gestao_renderCaixa_; abrir('gestao_desempenho') -> Gestao_renderDesempenho_.
+  // Ganchos na casca (JS_Core): Gestao_iniciar_ no login, Gestao_parar_ no logout.
+  // Atualização: o balão do menu a cada 5 min (só com a aba visível). A tela não se redesenha sozinha
+  // (formulário de providência nunca é apagado no meio da digitação): recarrega depois de cada ação ou em "Atualizar".
+  // ==========================================================
+  var GD = { aba: "minhas", dados: null, timer: null, regras: null, aval: null, avalComp: "", avalGestor: "", abaDes: "notas", gerados: null };
+  var GD_ETAPA = { NA_HORA: "Novo", EMAIL: "No e-mail diário", WHATSAPP: "Parado: cobrado no WhatsApp", DIRETORIA: "Com a Diretoria", PAUSADO: "Providência registrada", ACOMPANHAMENTO: "Acompanhamento" };
+
+  function Gestao_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Gestao_perfil_() { return USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : ""; }
+  // 21/10/2026: a Caixa de decisões abre também para RH e Financeiro (itens das áreas deles). O Desempenho da gestão
+  // (avaliação do gestor) continua com quem é avaliado e com a Diretoria (Gestao_ehGestaoDecisao_).
+  function Gestao_ehGestao_() { var p = Gestao_perfil_(); return ["ADMIN", "GESTOR", "DIRETORIA", "RH", "FINANCEIRO"].indexOf(p) !== -1; }
+  function Gestao_ehGestaoDecisao_() { var p = Gestao_perfil_(); return p === "ADMIN" || p === "GESTOR" || p === "DIRETORIA"; }
+  function Gestao_ehDiretoriaTela_() { return Gestao_perfil_() === "DIRETORIA" || !!(USER_CONTEXT && USER_CONTEXT.dono); }
+
+  function Gestao_chamar_(fn, payload, ok, erro, opcoes) {
+    var o = opcoes || {};
+    if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+    var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+    var falhou = function (msg) { fim(); if (erro) erro(msg); else if (!o.silencioso) Gestao_avisoTela_(msg); };
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.ok) { falhou((res && res.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
+        fim();
+        try { if (ok) ok(res); } catch (e) { console.error("Gestão " + fn + ":", e); if (!o.silencioso) Gestao_avisoTela_("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+      })
+      .withFailureHandler(function (err) { falhou("Não foi possível falar com o servidor (" + ((err && err.message) || err) + "). Verifique a conexão e tente de novo; nada foi alterado."); })[fn](SGO_getSessionId(), payload || {});
+  }
+
+  /** 11/11/2026: aviso de erro na própria tela (no lugar da janela alert do navegador), com botão de fechar. */
+  function Gestao_avisoTela_(msg) {
+    var casca = document.querySelector("#conteudo .module-shell") || document.getElementById("conteudo");
+    if (!casca) { console.error(msg); return; }
+    var d = document.createElement("div");
+    d.className = "gd-msg erro"; d.setAttribute("role", "alert");
+    d.innerHTML = Gestao_esc_(msg) + ' <button type="button" class="btn-secondary" style="margin-left:8px" onclick="this.parentNode.remove()">Fechar</button>';
+    casca.insertBefore(d, casca.firstChild);
+    try { d.scrollIntoView({ block: "nearest" }); } catch (e) {}
+  }
+
+  // ---------------- casca: menu e balão ----------------
+  function Gestao_iniciar_() {
+    var g = Gestao_ehGestao_();
+    var bDec = document.getElementById("menu-btn-gestao-decisoes"); if (bDec) bDec.style.display = g ? "" : "none";
+    var bDes = document.getElementById("menu-btn-gestao-desempenho"); if (bDes) bDes.style.display = Gestao_ehGestaoDecisao_() ? "" : "none";
+    // 11/11/2026: relatório diário da empresa: Diretoria e dono no menu; quem recebeu a caixa vê o botão ao abrir a Caixa de decisões
+    var bRel = document.getElementById("menu-btn-gestao-relatorio-dia"); if (bRel) bRel.style.display = Gestao_ehDiretoriaTela_() ? "" : "none";
+    if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
+    if (!g) return;
+    Gestao_atualizarBalao_();
+    if (GD.timer) clearInterval(GD.timer);
+    GD.timer = setInterval(function () { if (document.visibilityState === "visible") Gestao_atualizarBalao_(); }, 5 * 60 * 1000);
+  }
+  function Gestao_parar_() { if (GD.timer) clearInterval(GD.timer); GD.timer = null; GD.dados = null; GD.aval = null; }
+  function Gestao_atualizarBalao_() {
+    google.script.run.withSuccessHandler(function (r) {
+      var b = document.getElementById("menuBadgeDecisoes");
+      if (!b || !r || !r.ok || !r.gestao) return;
+      b.textContent = r.total ? String(r.total) : "";
+      b.title = r.total ? r.total + " decisão(ões) esperando por você" + (r.parados ? ", " + r.parados + " parada(s) há 2 dias úteis ou mais" : "") : "";
+      b.style.background = r.escalados ? "var(--danger)" : (r.parados ? "var(--warning)" : "");
+    }).withFailureHandler(function () {}).Gestao_apiResumo(SGO_getSessionId());
+  }
+
+  // ---------------- Caixa de decisões ----------------
+  function Gestao_cabecalho_(titulo, subtitulo, botoes) {
+    return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">' + Gestao_esc_(titulo) + '</h2><p class="content-subtitle">' + Gestao_esc_(subtitulo) + '</p></div>' +
+      '<div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap">' + botoes + '</div></div>';
+  }
+
+  // 11/11/2026 (pedido do dono: "Caixa de decisões, fazer o mesmo"): a caixa deixa de ser uma lista única de centenas de cartões.
+  // Números do topo só das decisões; filtros (área, responsável, tipo, prazo, busca); visão em grupos (padrão), lista ou Kanban;
+  // O.S. antigas do Auvo e O.S. sem vínculo ficam num bloco de saneamento à parte (SGO_Gestao_Painel.js). Trocar filtro não apaga
+  // providência em digitação: com texto escrito, a troca é recusada com o aviso.
+  function Gestao_renderCaixa_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    GD.modoRegras = false; GD.modoSan = false;
+    if (ehMobileModo_()) atualizarTituloMobile_("Caixa de decisões");
+    if (!Gestao_ehGestao_()) {
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Caixa de decisões</h2><div class="gd-faixa">A Caixa de decisões é da gestão (Administrador, Diretoria, Gestor, RH e Financeiro). O que depende de você aparece no Início e em Minhas atividades.</div></div>';
+      return;
+    }
+    div.innerHTML = '<div class="module-shell">' +
+      Gestao_cabecalho_("Caixa de decisões", "Tudo o que depende da gestão, de todos os módulos, agrupado por assunto: quem decide, o prazo, há quanto tempo está parado e o botão que leva à tela de resolver.",
+        '<button type="button" class="btn-secondary" onclick="Gestao_carregarCaixa_(true)"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+        '<button type="button" class="btn-secondary" onclick="Gestao_abrirSaneamento_()"><i class="fas fa-broom" aria-hidden="true"></i>&nbsp;Saneamento</button>' +
+        '<button type="button" class="btn-secondary" onclick="Gestao_abrirRegras_()"><i class="fas fa-sliders" aria-hidden="true"></i>&nbsp;Regras e responsáveis</button>' +
+        '<button type="button" class="btn-secondary" onclick="abrir(\'gestao_desempenho\')"><i class="fas fa-chart-line" aria-hidden="true"></i>&nbsp;Desempenho da gestão</button>') +
+      '<div id="gdAviso"></div><div id="gdKpis" class="gd-kpis"></div>' +
+      '<div class="gd-tabs" id="gdTabs"></div><div id="gdFiltros" class="gd-filtros"></div><div id="gdSan"></div>' +
+      '<div id="gdCorpo"><div class="gd-vazio">Carregando...</div></div></div>';
+    if (GD.abrirSan) { GD.abrirSan = false; Gestao_abrirSaneamento_(); return; }
+    Gestao_carregarCaixa_();
+  }
+
+  function Gestao_carregarCaixa_(comAviso) {
+    Gestao_chamar_("Gestao_apiCaixa", { filtro: GD.aba }, function (res) {
+      GD.dados = res;
+      Gestao_desenharCaixa_();
+      Gestao_atualizarBalao_();
+    }, function (m) {
+      var c = document.getElementById("gdCorpo");
+      if (c) c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div><p><button type="button" class="btn-secondary" onclick="Gestao_carregarCaixa_(true)">Tentar de novo</button></p>';
+    }, comAviso ? { carregando: "Atualizando a caixa" } : {});
+  }
+
+  /** Há providência ou recusa sendo digitada? (não redesenhar por cima) */
+  function Gestao_temRascunho_() {
+    var c = document.getElementById("gdCorpo");
+    if (!c) return false;
+    return Array.prototype.some.call(c.querySelectorAll(".gd-form textarea"), function (t) { return String(t.value || "").trim().length > 0; });
+  }
+  function Gestao_avisoRascunho_() {
+    var a = document.getElementById("gdFiltrosSt");
+    if (a) a.innerHTML = '<div class="gd-msg erro">Há uma providência sendo escrita. Toque em "Registrar" ou em "Cancelar" nela antes de trocar a visão; nada foi apagado.</div>';
+  }
+
+  function Gestao_trocarAba_(aba) {
+    if (Gestao_temRascunho_()) { Gestao_avisoRascunho_(); return; }
+    GD.modoRegras = false; GD.modoSan = false; GD.aba = aba;
+    var c = document.getElementById("gdCorpo"); if (c) c.innerHTML = '<div class="gd-vazio">Carregando...</div>';
+    Gestao_carregarCaixa_();
+  }
+
+  var GD_CX_F = { area: "", resp: "", tipo: "", prazo: "", busca: "", agrupar: "tipo", vis: "grupos" };
+  GD.grupoQtd = {}; GD.grupoAberto = {};
+
+  function Gestao_cxFiltro_(campo, valor) {
+    if (Gestao_temRascunho_()) { Gestao_desenharFiltrosCaixa_(); Gestao_avisoRascunho_(); return; } // volta o filtro ao que estava e avisa
+    GD_CX_F[campo] = valor;
+    if (campo !== "busca") Gestao_desenharFiltrosCaixa_();
+    Gestao_desenharCorpoCaixa_();
+  }
+  function Gestao_cxLimpar_() {
+    if (Gestao_temRascunho_()) { Gestao_avisoRascunho_(); return; }
+    GD_CX_F.area = GD_CX_F.resp = GD_CX_F.tipo = GD_CX_F.prazo = GD_CX_F.busca = "";
+    Gestao_desenharFiltrosCaixa_(); Gestao_desenharCorpoCaixa_();
+  }
+
+  /** Itens de decisão da aba, com os filtros: [{ i, k }] (k = posição em GD.dados.itens, usada pelos botões do cartão). */
+  function Gestao_cxFiltrados_() {
+    var f = GD_CX_F, b = String(f.busca || "").toLowerCase().trim(), out = [];
+    (GD.dados.itens || []).forEach(function (i, k) {
+      if (i.classe && i.classe !== "DECISAO") return;
+      if (f.area && i.area !== f.area) return;
+      if (f.resp && (i.responsaveisNomes || []).indexOf(f.resp) < 0) return;
+      if (f.tipo && i.tipo !== f.tipo) return;
+      if (f.prazo === "vencido" && !i.prazoVencido) return;
+      if (f.prazo === "escalado" && !i.escalado) return;
+      if (f.prazo === "noprazo" && (i.prazoVencido || i.escalado)) return;
+      if (f.prazo === "novo" && i.etapa !== "NA_HORA") return;
+      if (f.prazo === "diretoria" && !i.daDiretoria) return;
+      if (b && (String(i.titulo) + " " + String(i.detalhe || "") + " " + (i.responsaveisNomes || []).join(" ") + " " + String(i.envolvido || "")).toLowerCase().indexOf(b) < 0) return;
+      out.push({ i: i, k: k });
+    });
+    return out;
+  }
+
+  function Gestao_desenharCaixa_() {
+    var d = GD.dados;
+    if (!d || GD.modoRegras || GD.modoSan || !document.getElementById("gdCorpo")) return;
+    var r = d.resumo, R = d.regras, T = d.resumoTodas;
+    var av = [];
+    if (!d.configurado) av.push('<div class="gd-faixa">Nenhum gestor responsável por área foi configurado: tudo fica com a Diretoria. O Administrador ou a Diretoria escolhe os responsáveis em "Regras e responsáveis".</div>');
+    if (d.naoVerificado && d.naoVerificado.length) av.push('<div class="gd-faixa">Não foi possível conferir agora: ' + Gestao_esc_(d.naoVerificado.join(", ")) + '. Os itens dessas fontes podem estar faltando; toque em "Atualizar" daqui a pouco.</div>');
+    av.push('<details class="gd-faixa info gd-como"' + (ehMobileModo_() ? '' : ' open') + '><summary>Como funciona a caixa</summary><div class="gd-just">O item entra aqui na hora. Todo dia útil, a partir das ' + Gestao_esc_(R.horaEmail) + ', sai um e-mail com o resumo. Parado há ' + R.whatsDiasUteis + ' dias úteis, entra no resumo do WhatsApp (no máximo um por dia, só no horário de trabalho). Parado há ' + R.diretoriaDiasUteis +
+      ' dias úteis, vai para a Diretoria com o nome de quem está com ele' + (R.diretoriaResumo && R.diretoriaResumo.ligado !== false ? ' (a Diretoria é informada no resumo diário das ' + Gestao_esc_(R.diretoriaResumo.hora) + ', sem aviso item a item)' : '') + '. Resolvido na tela de origem, sai sozinho. "Registrar providência" pausa a cobrança por até ' + R.pausaMaxDias + ' dias. ' +
+      'O.S. do Auvo que chegou à caixa com mais de ' + Gestao_esc_(d.saneamentoDias || 30) + ' dias em aberto e O.S. sem vínculo de técnico ficam no bloco de saneamento: não são decisão parada do gestor e não entram na avaliação.' + (d.eu.areas && d.eu.areas.length ? ' Você responde por: ' + Gestao_esc_(d.eu.areas.join(", ")) + '.' : '') + '</div></details>');
+    if (d.eu && d.eu.relatorioDia) av.push('<div class="gd-faixa info"><button type="button" class="btn-secondary" onclick="abrir(\'gestao_relatorio_dia\')"><i class="fas fa-file-lines" aria-hidden="true"></i>&nbsp;Relatório diário da empresa</button> Todos os setores: o que está parado, com quem e há quantos dias.</div>');
+    try { var bRel2 = document.getElementById("menu-btn-gestao-relatorio-dia"); if (bRel2 && d.eu && d.eu.relatorioDia) bRel2.style.display = ""; } catch (eR) {}
+    document.getElementById("gdAviso").innerHTML = av.join("");
+    // texto da lista vazia de cada aba (usado em Gestao_desenharCorpoCaixa_)
+    GD.vazioAba = GD.aba === "minhas" ? "Nada esperando pela sua decisão agora. Quando um módulo precisar de você, o item aparece aqui na hora; para ver o resto da gestão, toque em «Toda a gestão»." :
+      GD.aba === "acompanhamento" ? "Nenhum vencimento de cliente para acompanhar. Quando um documento de cliente estiver perto de vencer, ele aparece aqui." : "Nenhum item nesta lista. Toque em outra aba acima para ver os demais.";
+    var dec = function (x) { return x.decisao === undefined ? x.total : x.decisao; };
+    var abas = [["minhas", "Para mim (" + dec(r) + ")"], ["todas", "Toda a gestão (" + dec(T) + ")"], ["escalados", "Com a Diretoria (" + (T.decEscalados === undefined ? T.escalados : T.decEscalados) + ")"], ["acompanhamento", "Acompanhamento (" + d.acompanhamento + ")"]];
+    document.getElementById("gdTabs").innerHTML = abas.map(function (a) { return '<button type="button" class="gd-tab' + (GD.aba === a[0] ? " active" : "") + '" onclick="Gestao_trocarAba_(\'' + a[0] + '\')">' + Gestao_esc_(a[1]) + '</button>'; }).join("");
+    // filtro que não existe mais na aba (ex.: área sem item) volta a "Todos"
+    var tem = function (campo, fn) { if (GD_CX_F[campo] && !(d.itens || []).some(fn)) GD_CX_F[campo] = ""; };
+    tem("area", function (i) { return i.area === GD_CX_F.area; }); tem("tipo", function (i) { return i.tipo === GD_CX_F.tipo; }); tem("resp", function (i) { return (i.responsaveisNomes || []).indexOf(GD_CX_F.resp) >= 0; });
+    Gestao_desenharFiltrosCaixa_();
+    // bloco do saneamento (fora da avaliação)
+    var san = (d.itens || []).filter(function (i) { return i.classe === "SANEAMENTO"; }).length, cad = (d.itens || []).filter(function (i) { return i.classe === "CADASTRO"; }).length;
+    document.getElementById("gdSan").innerHTML = san + cad ? '<div class="gd-faixa gd-san-faixa"><div><strong>Saneamento (fora da avaliação):</strong> ' +
+      (san ? Gestao_esc_(san) + (san === 1 ? ' O.S. do Auvo chegou' : ' O.S. do Auvo chegaram') + ' à caixa com mais de ' + Gestao_esc_(d.saneamentoDias || 30) + ' dias em aberto' : '') + (san && cad ? ' e ' : '') +
+      (cad ? Gestao_esc_(cad) + (cad === 1 ? ' O.S. está' : ' O.S. estão') + ' sem vínculo de técnico ou cliente' : '') + '. Não aparecem na lista de decisões abaixo.</div>' +
+      '<button type="button" class="btn-primary" onclick="Gestao_abrirSaneamento_()">Ver e sanear</button></div>' : '';
+    Gestao_desenharCorpoCaixa_();
+  }
+
+  function Gestao_desenharFiltrosCaixa_() {
+    var d = GD.dados, el = document.getElementById("gdFiltros");
+    if (!d || !el) return;
+    var itens = (d.itens || []).filter(function (i) { return !i.classe || i.classe === "DECISAO"; });
+    var uniq = function (fn) { var m = {}; itens.forEach(function (i) { [].concat(fn(i)).forEach(function (v) { if (v && v[0]) m[v[0]] = v[1]; }); }); return Object.keys(m).map(function (k) { return [k, m[k]]; }).sort(function (a, b) { return String(a[1]).localeCompare(String(b[1]), "pt-BR"); }); };
+    var sel = function (id, rot, campo, ops, todos) {
+      return '<div><label for="' + id + '">' + Gestao_esc_(rot) + '</label><select id="' + id + '" onchange="Gestao_cxFiltro_(\'' + campo + '\', this.value)">' + (todos ? '<option value="">' + Gestao_esc_(todos) + '</option>' : '') +
+        ops.map(function (o) { return '<option value="' + Gestao_esc_(o[0]) + '"' + (GD_CX_F[campo] === o[0] ? " selected" : "") + '>' + Gestao_esc_(o[1]) + '</option>'; }).join("") + '</select></div>';
+    };
+    el.innerHTML = sel("gdFArea", "Área", "area", uniq(function (i) { return [[i.area, i.areaNome]]; }), "Todas") +
+      sel("gdFResp", "Responsável", "resp", uniq(function (i) { return (i.responsaveisNomes || []).map(function (n) { return [n, n]; }); }), "Todos") +
+      sel("gdFTipo", "Tipo", "tipo", uniq(function (i) { return [[i.tipo, i.tipoNome || i.tipo]]; }), "Todos") +
+      sel("gdFPrazo", "Prazo", "prazo", [["vencido", "Prazo vencido"], ["escalado", "Escalado"], ["noprazo", "No prazo"], ["novo", "Novo"], ["diretoria", "Decisão da Diretoria"]], "Todos") +
+      '<div class="gd-f-busca"><label for="gdFBusca">Buscar</label><input type="search" id="gdFBusca" value="' + Gestao_esc_(GD_CX_F.busca) + '" placeholder="O.S., nome, placa..." oninput="Gestao_cxFiltro_(\'busca\', this.value)"></div>' +
+      sel("gdFAgr", "Agrupar por", "agrupar", [["tipo", "Tipo"], ["area", "Área"], ["resp", "Responsável"]], "") +
+      '<div class="gd-f-ver"><span class="gd-rot">Ver como</span><div class="gd-seg" role="group" aria-label="Ver como">' + [["grupos", "Grupos"], ["lista", "Lista"], ["kanban", "Kanban"]].map(function (v) {
+        return '<button type="button" class="' + (GD_CX_F.vis === v[0] ? "active" : "") + '" aria-pressed="' + (GD_CX_F.vis === v[0]) + '" onclick="Gestao_cxFiltro_(\'vis\', \'' + v[0] + '\')">' + v[1] + '</button>';
+      }).join("") + '</div></div>' +
+      ((GD_CX_F.area || GD_CX_F.resp || GD_CX_F.tipo || GD_CX_F.prazo || GD_CX_F.busca) ? '<div><span class="gd-rot">&nbsp;</span><button type="button" class="btn-secondary" onclick="Gestao_cxLimpar_()">Limpar filtros</button></div>' : '') +
+      '<div id="gdFiltrosSt" class="gd-f-st"></div>';
+  }
+
+  function Gestao_kpiCaixa_(l) {
+    var kp = function (v, rot, cls, prazo) { return '<button type="button" class="gd-kpi ' + (cls || "") + (prazo && GD_CX_F.prazo === prazo ? " sel" : "") + '" onclick="Gestao_cxFiltro_(\'prazo\', \'' + (GD_CX_F.prazo === prazo ? "" : prazo) + '\')" title="Filtrar a lista"><span class="v">' + Gestao_esc_(v) + '</span><span class="r">' + Gestao_esc_(rot) + '</span></button>'; };
+    var n = function (fn) { return l.filter(function (x) { return fn(x.i); }).length; };
+    var venc = n(function (i) { return i.prazoVencido; }), esc = n(function (i) { return i.escalado; }), dir = n(function (i) { return i.daDiretoria; });
+    return kp(l.length, "Aguardando decisão", l.length ? "" : "ok", "") + kp(n(function (i) { return !i.prazoVencido && !i.escalado; }), "No prazo", "ok", "noprazo") +
+      kp(venc, "Prazo vencido", venc ? "critico" : "ok", "vencido") + kp(esc, "Escalados", esc ? "aviso" : "ok", "escalado") + kp(dir, "Decisão da Diretoria", "", "diretoria");
+  }
+
+  function Gestao_desenharCorpoCaixa_() {
+    var d = GD.dados, c = document.getElementById("gdCorpo");
+    if (!d || !c || GD.modoRegras || GD.modoSan) return;
+    var l = Gestao_cxFiltrados_();
+    document.getElementById("gdKpis").innerHTML = Gestao_kpiCaixa_(l);
+    if (!l.length) {
+      var temDec = (d.itens || []).some(function (i) { return !i.classe || i.classe === "DECISAO"; });
+      c.innerHTML = '<div class="gd-vazio">' + Gestao_esc_(temDec ? 'Nenhuma decisão com estes filtros. Toque em "Limpar filtros" para ver todas.' : GD.vazioAba) + '</div>';
+      return;
+    }
+    var html = GD_CX_F.vis === "lista" ? Gestao_cxLista_(l) : GD_CX_F.vis === "kanban" ? Gestao_cxKanban_(l) : Gestao_cxGrupos_(l);
+    c.innerHTML = html + (d.cortado ? '<p class="gd-meta">A caixa tem mais de 3.000 itens: mostrando os 3.000 primeiros. Use os filtros.</p>' : '') + '<p class="gd-meta">Atualizado em ' + Gestao_esc_(d.geradoEm) + '.</p>';
+  }
+
+  function Gestao_cxChave_(i) {
+    var a = GD_CX_F.agrupar;
+    if (a === "area") return [i.area || "-", i.areaNome || "Sem área", ""];
+    if (a === "resp") { var n = (i.responsaveisNomes || []).join(", ") || "ninguém"; return [n, n, ""]; }
+    return [i.tipo + "|" + (i.area || "-"), i.tipoNome || i.tipo, i.areaNome || ""];
+  }
+
+  function Gestao_cxGrupos_(l) {
+    var g = {}, ordem = [];
+    l.forEach(function (x) {
+      var ch = Gestao_cxChave_(x.i), k = GD_CX_F.agrupar + ":" + ch[0];
+      if (!g[k]) { g[k] = { k: k, nome: ch[1], sub: ch[2], l: [], venc: 0, esc: 0, rep: 0, antigo: "" }; ordem.push(k); }
+      var y = g[k]; y.l.push(x);
+      if (x.i.prazoVencido) y.venc++; if (x.i.escalado) y.esc++; if (x.i.repetidos) y.rep++;
+      if (x.i.entrouDia && (!y.antigo || x.i.entrouDia < y.antigo)) y.antigo = x.i.entrouDia;
+    });
+    var gs = ordem.map(function (k) { return g[k]; }).sort(function (a, b) { return b.esc - a.esc || b.venc - a.venc || b.l.length - a.l.length || String(a.nome).localeCompare(String(b.nome), "pt-BR"); });
+    GD.gruposCx = gs;
+    var br = function (iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? m[3] + "/" + m[2] + "/" + m[1] : ""; };
+    return '<div class="gd-grupos">' + gs.map(function (y, n) {
+      var aberto = GD.grupoAberto[y.k] || (gs.length === 1), qtd = GD.grupoQtd[y.k] || 10;
+      var com = GD_CX_F.agrupar === "resp" ? "" : (function () { var m = {}; y.l.forEach(function (x) { (x.i.responsaveisNomes || []).forEach(function (p) { m[p] = 1; }); }); var ks = Object.keys(m); return ks.length ? "com " + ks.slice(0, 3).join(", ") + (ks.length > 3 ? " e mais " + (ks.length - 3) : "") : ""; })();
+      return '<details class="gd-grupo' + (y.esc ? " esc" : y.venc ? " venc" : "") + '"' + (aberto ? " open" : "") + ' ontoggle="Gestao_grupoToggle_(' + n + ', this.open)">' +
+        '<summary><span class="gd-g-n">' + Gestao_esc_(y.l.length) + '</span><span class="gd-g-t"><b>' + Gestao_esc_(y.nome) + '</b><span class="gd-meta">' + Gestao_esc_([y.sub, com].filter(Boolean).join(" · ")) + '</span></span>' +
+        '<span class="gd-g-chips">' + (y.venc ? '<span class="gd-chip critico">' + y.venc + ' vencido' + (y.venc === 1 ? "" : "s") + '</span>' : '') + (y.esc ? '<span class="gd-chip aviso">' + y.esc + ' escalado' + (y.esc === 1 ? "" : "s") + '</span>' : '') +
+        (y.rep ? '<span class="gd-chip">' + y.rep + ' do mesmo fato</span>' : '') + (y.antigo ? '<span class="gd-chip neutro">desde ' + br(y.antigo) + '</span>' : '') + '</span></summary>' +
+        '<div class="gd-g-corpo">' + (aberto ? Gestao_cxCartoes_(y.l, qtd, y.k) : '') + '</div></details>';
+    }).join("") + '</div>';
+  }
+
+  function Gestao_cxCartoes_(l, qtd, chave) {
+    var falta = l.length - qtd;
+    return '<div class="gd-lista">' + l.slice(0, qtd).map(function (x) { return Gestao_cartao_(x.i, x.k); }).join("") + '</div>' +
+      (falta > 0 ? '<p><button type="button" class="btn-secondary" onclick="Gestao_cxMais_(\'' + Gestao_esc_(chave).replace(/'/g, "\\'") + '\')">Mostrar mais ' + Math.min(falta, 20) + ' (faltam ' + falta + ')</button></p>' : '');
+  }
+  function Gestao_grupoToggle_(n, aberto) {
+    var y = (GD.gruposCx || [])[n];
+    if (!y) return;
+    GD.grupoAberto[y.k] = !!aberto;
+    var det = document.querySelectorAll(".gd-grupo")[n], corpo = det && det.querySelector(".gd-g-corpo");
+    if (aberto && corpo && !corpo.innerHTML) corpo.innerHTML = Gestao_cxCartoes_(y.l, GD.grupoQtd[y.k] || 10, y.k);
+  }
+  function Gestao_cxMais_(chave) {
+    if (Gestao_temRascunho_()) { Gestao_avisoRascunho_(); return; }
+    GD.grupoQtd[chave] = (GD.grupoQtd[chave] || 10) + 20;
+    if (chave === "lista") { Gestao_desenharCorpoCaixa_(); return; }
+    var n = (GD.gruposCx || []).map(function (y) { return y.k; }).indexOf(chave), y = GD.gruposCx[n], det = document.querySelectorAll(".gd-grupo")[n];
+    if (y && det) det.querySelector(".gd-g-corpo").innerHTML = Gestao_cxCartoes_(y.l, GD.grupoQtd[chave], chave);
+  }
+
+  function Gestao_cxLista_(l) {
+    return Gestao_cxCartoes_(l, GD.grupoQtd.lista || 20, "lista");
+  }
+
+  /** Kanban pela etapa da escada: em cada coluna, os assuntos com a contagem (tocar filtra) e os mais antigos. */
+  function Gestao_cxKanban_(l) {
+    var cols = [["NOVO", "Novo ou no e-mail", ["NA_HORA", "EMAIL"]], ["WHATSAPP", "Parado: WhatsApp", ["WHATSAPP"]], ["DIRETORIA", "Com a Diretoria", ["DIRETORIA"]], ["PAUSADO", "Providência registrada", ["PAUSADO"]]];
+    return '<div class="gd-kanban">' + cols.map(function (c) {
+      var its = l.filter(function (x) { return c[2].indexOf(x.i.etapa) >= 0; }), t = {};
+      its.forEach(function (x) { var k = x.i.tipo; t[k] = t[k] || { tipo: k, nome: x.i.tipoNome || k, n: 0 }; t[k].n++; });
+      var tipos = Object.keys(t).map(function (k) { return t[k]; }).sort(function (a, b) { return b.n - a.n; });
+      var velhos = its.slice().sort(function (a, b) { return (b.i.diasParado || 0) - (a.i.diasParado || 0); }).slice(0, 4);
+      return '<section class="gd-kb-col ' + c[0] + '"><h4>' + Gestao_esc_(c[1]) + ' <span class="gd-meta">(' + its.length + ')</span></h4>' +
+        (its.length ? tipos.map(function (x) { return '<button type="button" class="gd-kb-tipo" onclick="GD_CX_F.vis=\'grupos\';Gestao_cxFiltro_(\'tipo\', \'' + Gestao_esc_(x.tipo) + '\')"><span>' + Gestao_esc_(x.nome) + '</span><b>' + x.n + '</b></button>'; }).join("") +
+          '<div class="gd-kb-velhos">' + velhos.map(function (x) { return '<div class="gd-kb-card"><b>' + Gestao_esc_(x.i.titulo) + '</b><span>' + Gestao_esc_("com " + ((x.i.responsaveisNomes || []).join(", ") || "ninguém") + (x.i.diasParado ? " · parado há " + x.i.diasParado + (x.i.diasParado === 1 ? " dia útil" : " dias úteis") : "")) + '</span></div>'; }).join("") + '</div>'
+          : '<div class="gd-meta">nenhum</div>') + '</section>';
+    }).join("") + '</div>';
+  }
+
+  // ---------------- Saneamento do acúmulo (11/11/2026, SGO_Gestao_Painel.js) ----------------
+  // O.S. do Auvo que chegou à caixa com mais de N dias em aberto e O.S. sem vínculo: marcar em lote, com motivo, sem apagar nada.
+  var GD_SAN_F = { tec: "", epoca: "", qtd: 50 };
+  function Gestao_abrirSaneamento_() {
+    if (!document.getElementById("gdCorpo")) { GD.abrirSan = true; abrir("gestao_decisoes"); return; }
+    if (Gestao_temRascunho_()) { Gestao_avisoRascunho_(); return; }
+    if (window.SGO_NAV) SGO_NAV.empilhar("Saneamento da caixa", function () { Gestao_renderCaixa_(); });
+    GD.modoSan = true; GD.modoRegras = false; GD.sanSel = {}; GD_SAN_F.qtd = 50;
+    ["gdAviso", "gdKpis", "gdTabs", "gdFiltros", "gdSan"].forEach(function (id) { var e = document.getElementById(id); if (e) e.innerHTML = ""; });
+    var c = document.getElementById("gdCorpo");
+    c.innerHTML = '<div class="gd-vazio">Carregando o saneamento...</div>';
+    Gestao_chamar_("Gestao_apiSaneamento", {}, function (res) { GD.san = res; Gestao_desenharSaneamento_(); },
+      function (m) { c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div><p><button type="button" class="btn-secondary" onclick="Gestao_abrirSaneamento_()">Tentar de novo</button></p>'; }, { carregando: "Abrindo o saneamento" });
+  }
+
+  function Gestao_barrasHtml_(l, rotulo) {
+    var max = Math.max.apply(null, l.map(function (x) { return x.qtd; }).concat([1]));
+    return '<div class="gd-barras" role="img" aria-label="' + Gestao_esc_(rotulo) + '">' + l.map(function (x) {
+      return '<div class="gd-barra-l" title="' + Gestao_esc_(x.nome + ": " + x.qtd) + '"><span class="n">' + Gestao_esc_(x.nome) + '</span><span class="b"><i style="width:' + Math.max(1, Math.round(x.qtd / max * 100)) + '%"></i></span><span class="v">' + Gestao_esc_(x.qtd) + '</span></div>';
+    }).join("") + '</div>';
+  }
+
+  function Gestao_desenharSaneamento_(msg, tipoMsg) {
+    var s = GD.san, c = document.getElementById("gdCorpo");
+    if (!s || !c || !GD.modoSan) return;
+    var os = s.os, sv = s.semVinculo;
+    // filtro que ficou sem O.S. (por exemplo, a época inteira saneada) volta a "todos"
+    if (GD_SAN_F.tec && !os.porTecnico.some(function (t) { return t.nome === GD_SAN_F.tec; })) GD_SAN_F.tec = "";
+    if (GD_SAN_F.epoca && !os.epocas.some(function (e) { return e.mes === GD_SAN_F.epoca; })) GD_SAN_F.epoca = "";
+    var kp = function (v, rot, cls) { return '<div class="gd-kpi ' + (cls || "") + '"><span class="v">' + Gestao_esc_(v) + '</span><span class="r">' + Gestao_esc_(rot) + '</span></div>'; };
+    c.innerHTML = '<div class="gd-caixa"><h3>Saneamento do acúmulo</h3><p class="gd-just">Aqui ficam as O.S. do Auvo que chegaram à caixa com mais de ' + Gestao_esc_(s.corte) + ' dias em aberto no Auvo e as O.S. sem vínculo de técnico ou cliente. ' +
+      'São acúmulo de origem externa, não decisão parada do gestor: não entram na avaliação. Confira no Auvo pelo link de cada O.S.; se o atendimento já foi feito (ou não vai acontecer), marque em lote como "encerrada fora do SGO+" com o motivo. ' +
+      'Nada é apagado e nada muda no Auvo: o registro guarda quem marcou, quando e por quê, e "Desfazer" devolve a O.S. à caixa.</p>' +
+      '<div class="gd-kpis">' + kp(os.total, "O.S. antigas do Auvo", os.total ? "aviso" : "ok") + kp(os.total ? os.maisAntiga + " a " + os.maisNova : "—", "Abertas no Auvo entre", "txt") +
+      kp(sv.total, "O.S. sem vínculo", sv.total ? "aviso" : "ok") + kp(sv.porTecnico.length, "Técnicos do Auvo sem cadastro") + kp(s.saneadasEmVigor, "Já saneadas (em vigor)") + '</div>' +
+      (msg ? '<div class="gd-msg ' + (tipoMsg === "erro" ? "erro" : "ok") + '">' + Gestao_esc_(msg) + '</div>' : '') + '</div>' +
+      // A. O.S. antigas
+      '<div class="gd-caixa" style="margin-top:14px"><h3>O.S. do Auvo abertas há mais de ' + Gestao_esc_(s.corte) + ' dias (' + os.total + ')</h3>' +
+      (os.total ? '<div class="gd-dois"><div><p class="gd-meta"><b>De quando são</b> (mês de abertura no Auvo)</p>' + Gestao_barrasHtml_(os.epocas, "O.S. antigas por mês de abertura") + '</div>' +
+        '<div><p class="gd-meta"><b>De qual técnico</b></p>' + Gestao_barrasHtml_(os.porTecnico, "O.S. antigas por técnico") + '</div></div>' +
+        '<div class="gd-filtros"><div><label for="gdSanTec">Técnico</label><select id="gdSanTec" onchange="GD_SAN_F.tec=this.value;GD_SAN_F.qtd=50;Gestao_sanLista_()"><option value="">Todos</option>' + os.porTecnico.map(function (t) { return '<option' + (GD_SAN_F.tec === t.nome ? " selected" : "") + '>' + Gestao_esc_(t.nome) + '</option>'; }).join("") + '</select></div>' +
+        '<div><label for="gdSanEp">Aberta em</label><select id="gdSanEp" onchange="GD_SAN_F.epoca=this.value;GD_SAN_F.qtd=50;Gestao_sanLista_()"><option value="">Qualquer mês</option>' + os.epocas.map(function (e) { return '<option value="' + Gestao_esc_(e.mes) + '"' + (GD_SAN_F.epoca === e.mes ? " selected" : "") + '>' + Gestao_esc_(e.nome) + ' (' + e.qtd + ')</option>'; }).join("") + '</select></div></div>' +
+        '<div id="gdSanLista"></div>' +
+        '<div class="gd-form gd-san-lote"><div id="gdSanConta" class="gd-meta"></div><label for="gdSanMotivo">Motivo (vale para todas as marcadas)</label><textarea id="gdSanMotivo" maxlength="600" placeholder="Ex.: atendimentos de 2025 já faturados; as O.S. ficaram sem finalizar no Auvo"></textarea>' +
+        '<div class="gd-acoes"><button type="button" class="btn-primary" onclick="Gestao_sanearPreparar_(\'ENCERRADA_FORA\')">Marcar como encerradas fora do SGO+</button></div><div id="gdSanSt_ENCERRADA_FORA"></div></div>'
+        : '<div class="gd-vazio">Nenhuma O.S. antiga do Auvo na caixa.</div>') + '</div>' +
+      // B. Sem vínculo
+      '<div class="gd-caixa" style="margin-top:14px"><h3>O.S. sem vínculo de técnico ou cliente (' + sv.total + ')</h3>' +
+      (sv.total ? '<p class="gd-just">A causa é uma por técnico do Auvo sem cadastro no SGO+. O jeito certo é vincular o técnico (pelo e-mail do usuário) em Integração Auvo: as O.S. dele saem sozinhas na próxima sincronização. Se o técnico não vai ter cadastro (por exemplo, terceirizado que já saiu), dispense o vínculo com o motivo.</p>' +
+        '<div class="gd-tabela-rolar"><table class="gd-tabela gd-cartoes-cel"><thead><tr><th>Técnico no Auvo</th><th class="n">O.S.</th><th>O que fazer</th></tr></thead><tbody>' + sv.porTecnico.map(function (t, n) {
+          return '<tr><td data-r="Técnico no Auvo"><label><input type="checkbox" onchange="Gestao_sanSelTec_(' + n + ', this.checked)"> ' + Gestao_esc_(t.nome) + '</label></td><td class="n" data-r="O.S.">' + t.qtd + '</td>' +
+            '<td data-r="O que fazer"><button type="button" class="btn-secondary" onclick="abrir(\'auvo\')">Vincular em Integração Auvo</button></td></tr>';
+        }).join("") + '</tbody></table></div>' +
+        '<div class="gd-form gd-san-lote"><div id="gdSanContaSv" class="gd-meta"></div><label for="gdSanMotivoSv">Motivo para dispensar o vínculo dos técnicos marcados</label><textarea id="gdSanMotivoSv" maxlength="600" placeholder="Ex.: técnico terceirizado que não terá acesso ao SGO+"></textarea>' +
+        '<div class="gd-acoes"><button type="button" class="btn-secondary" onclick="Gestao_sanearPreparar_(\'VINCULO_DISPENSADO\')">Dispensar o vínculo das O.S. marcadas</button></div><div id="gdSanSt_VINCULO_DISPENSADO"></div></div>'
+        : '<div class="gd-vazio">Nenhuma O.S. sem vínculo.</div>') + '</div>' +
+      // C. Histórico
+      '<div class="gd-caixa" style="margin-top:14px"><h3>O que já foi saneado</h3>' + (s.historico.length ? '<div class="gd-tabela-rolar"><table class="gd-tabela gd-cartoes-cel"><thead><tr><th>O.S.</th><th>Marcada como</th><th>Motivo</th><th>Por</th><th></th></tr></thead><tbody>' +
+        s.historico.slice(0, 60).map(function (h, n) {
+          return '<tr><td data-r="O.S.">' + Gestao_esc_(h.os || h.titulo) + (h.origem ? '<div class="gd-meta">aberta em ' + Gestao_esc_(h.origem) + '</div>' : '') + '</td><td data-r="Marcada como">' + Gestao_esc_(h.acao) + '</td><td data-r="Motivo">' + Gestao_esc_(h.motivo) + (h.desfeito ? '<div class="gd-meta">' + Gestao_esc_(h.desfeito) + '</div>' : '') + '</td>' +
+            '<td data-r="Por">' + Gestao_esc_(h.por) + '<div class="gd-meta">' + Gestao_esc_(h.em) + '</div></td><td>' + (h.podeDesfazer ? '<button type="button" class="btn-secondary" onclick="Gestao_desfazerForm_(' + n + ')">Desfazer</button><div id="gdDesf' + n + '"></div>' : '') + '</td></tr>';
+        }).join("") + '</tbody></table></div>' : '<div class="gd-vazio">Nada saneado ainda.</div>') + '</div>' +
+      '<div class="gd-acoes"><button type="button" class="btn-secondary" onclick="SGO_voltarOu_(Gestao_renderCaixa_)">Voltar à caixa</button></div>';
+    if (os.total) Gestao_sanLista_();
+    Gestao_sanConta_();
+  }
+
+  function Gestao_sanFiltradas_() {
+    return GD.san.os.itens.filter(function (x) { return (!GD_SAN_F.tec || x.tecnico === GD_SAN_F.tec) && (!GD_SAN_F.epoca || String(x.origemDia).slice(0, 7) === GD_SAN_F.epoca); });
+  }
+  function Gestao_sanLista_() {
+    var el = document.getElementById("gdSanLista");
+    if (!el) return;
+    var l = Gestao_sanFiltradas_(), q = GD_SAN_F.qtd, marcadas = l.filter(function (x) { return GD.sanSel[x.id]; }).length;
+    el.innerHTML = '<label class="gd-todas"><input type="checkbox" id="gdSanTodas"' + (l.length && marcadas === l.length ? " checked" : "") + ' onchange="Gestao_sanTodas_(this.checked)"> Marcar as ' + l.length + ' O.S. deste filtro</label>' +
+      '<div class="gd-tabela-rolar"><table class="gd-tabela gd-cartoes-cel gd-san-tab"><thead><tr><th></th><th>O.S.</th><th>Técnico</th><th>Aberta no Auvo</th><th>Com quem na caixa</th><th></th></tr></thead><tbody>' +
+      l.slice(0, q).map(function (x) {
+        return '<tr><td data-r="Marcar"><input type="checkbox" aria-label="Marcar a O.S. ' + Gestao_esc_(x.os) + '" data-san="' + Gestao_esc_(x.id) + '"' + (GD.sanSel[x.id] ? " checked" : "") + (x.pode ? "" : " disabled") + ' onchange="Gestao_sanMarca_(this)"></td>' +
+          '<td data-r="O.S."><b>' + Gestao_esc_(x.os) + '</b></td><td data-r="Técnico">' + Gestao_esc_(x.tecnico) + '</td><td data-r="Aberta no Auvo">' + Gestao_esc_(x.origemBr) + (x.diasOrigem !== null ? ' <span class="gd-meta">(há ' + x.diasOrigem + ' dias)</span>' : '') + '</td>' +
+          '<td data-r="Com quem">' + Gestao_esc_(x.com) + (x.pode ? '' : '<div class="gd-meta">só o responsável ou a Diretoria marca</div>') + '</td><td>' + (x.url ? '<a class="btn-secondary gd-link" href="' + Gestao_esc_(x.url) + '" target="_blank" rel="noopener">Conferir no Auvo</a>' : '') + '</td></tr>';
+      }).join("") + '</tbody></table></div>' + (l.length > q ? '<p><button type="button" class="btn-secondary" onclick="GD_SAN_F.qtd+=100;Gestao_sanLista_()">Mostrar mais 100 (faltam ' + (l.length - q) + ')</button></p>' : '');
+  }
+  function Gestao_sanMarca_(cb) { var id = cb.getAttribute("data-san"); if (cb.checked) GD.sanSel[id] = "ENCERRADA_FORA"; else delete GD.sanSel[id]; Gestao_sanConta_(); }
+  function Gestao_sanTodas_(v) {
+    Gestao_sanFiltradas_().forEach(function (x) { if (!x.pode) return; if (v) GD.sanSel[x.id] = "ENCERRADA_FORA"; else delete GD.sanSel[x.id]; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-san]"), function (cb) { if (!cb.disabled) cb.checked = !!v; });
+    Gestao_sanConta_();
+  }
+  function Gestao_sanSelTec_(n, v) {
+    var t = GD.san.semVinculo.porTecnico[n];
+    GD.san.semVinculo.itens.forEach(function (x) { if (x.tecnico === t.nome && x.pode) { if (v) GD.sanSel[x.id] = "VINCULO_DISPENSADO"; else delete GD.sanSel[x.id]; } });
+    Gestao_sanConta_();
+  }
+  function Gestao_sanIds_(acao) { return Object.keys(GD.sanSel).filter(function (k) { return GD.sanSel[k] === acao; }); }
+  function Gestao_sanConta_() {
+    var a = document.getElementById("gdSanConta"), b = document.getElementById("gdSanContaSv"), n = Gestao_sanIds_("ENCERRADA_FORA").length, m = Gestao_sanIds_("VINCULO_DISPENSADO").length;
+    if (a) a.textContent = n ? n + (n === 1 ? " O.S. marcada." : " O.S. marcadas.") : "Nenhuma O.S. marcada. Marque na lista acima (ou use \"Marcar as O.S. deste filtro\").";
+    if (b) b.textContent = m ? m + (m === 1 ? " O.S. marcada." : " O.S. marcadas.") : "Nenhum técnico marcado.";
+  }
+
+  /** Primeiro toque: mostra o resumo e pede a confirmação na própria tela (sem janela do navegador). */
+  function Gestao_sanearPreparar_(acao) {
+    var st = document.getElementById("gdSanSt_" + acao), ids = Gestao_sanIds_(acao);
+    var motivo = String((document.getElementById(acao === "ENCERRADA_FORA" ? "gdSanMotivo" : "gdSanMotivoSv") || {}).value || "").replace(/\s+/g, " ").trim();
+    if (!st) return;
+    if (!ids.length) { st.innerHTML = '<div class="gd-msg erro">Nenhuma O.S. marcada. Marque as O.S. na lista e toque de novo.</div>'; return; }
+    if (motivo.length < 15) { st.innerHTML = '<div class="gd-msg erro">Escreva o motivo (pelo menos 15 letras) e toque de novo. Ele fica registrado com o seu nome.</div>'; return; }
+    st.innerHTML = '<div class="gd-msg aviso"><b>Confirme:</b> ' + ids.length + (ids.length === 1 ? ' O.S. será marcada' : ' O.S. serão marcadas') + ' como "' + (acao === "ENCERRADA_FORA" ? "encerrada fora do SGO+" : "vínculo dispensado") + '" com o motivo "' + Gestao_esc_(motivo) + '". ' +
+      (ids.length === 1 ? 'Ela sai' : 'Elas saem') + ' da caixa e da avaliação; nada é apagado e nada muda no Auvo.<div class="gd-acoes"><button type="button" class="btn-primary" id="gdSanOk_' + acao + '" onclick="Gestao_sanear_(\'' + acao + '\')">Confirmar</button>' +
+      '<button type="button" class="btn-secondary" onclick="document.getElementById(\'gdSanSt_' + acao + '\').innerHTML=\'\'">Voltar</button></div></div>';
+  }
+  function Gestao_sanear_(acao) {
+    var ids = Gestao_sanIds_(acao), st = document.getElementById("gdSanSt_" + acao), bt = document.getElementById("gdSanOk_" + acao);
+    var motivo = String((document.getElementById(acao === "ENCERRADA_FORA" ? "gdSanMotivo" : "gdSanMotivoSv") || {}).value || "");
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Gestao_apiSanear", { acao: acao, itemIds: ids, motivo: motivo }, function (res) {
+      GD.sanSel = {};
+      Gestao_chamar_("Gestao_apiSaneamento", {}, function (r2) { GD.san = r2; Gestao_desenharSaneamento_(res.message, "ok"); }, function (m) { Gestao_desenharSaneamento_(res.message + " (A lista não atualizou: " + m + ")", "ok"); });
+    }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; }, { carregando: "Registrando o saneamento" });
+  }
+  function Gestao_desfazerForm_(n) {
+    var box = document.getElementById("gdDesf" + n);
+    if (!box) return;
+    if (box.innerHTML) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="gd-form"><label for="gdDesfTxt' + n + '">Por que volta para a caixa?</label><textarea id="gdDesfTxt' + n + '" maxlength="600"></textarea><div class="gd-acoes"><button type="button" class="btn-primary" onclick="Gestao_desfazer_(' + n + ')">Desfazer</button>' +
+      '<button type="button" class="btn-secondary" onclick="document.getElementById(\'gdDesf' + n + '\').innerHTML=\'\'">Cancelar</button></div><div id="gdDesfSt' + n + '"></div></div>';
+  }
+  function Gestao_desfazer_(n) {
+    var h = GD.san.historico[n], st = document.getElementById("gdDesfSt" + n);
+    Gestao_chamar_("Gestao_apiDesfazerSaneamento", { registroId: h.id, motivo: (document.getElementById("gdDesfTxt" + n) || {}).value || "" }, function (res) {
+      Gestao_chamar_("Gestao_apiSaneamento", {}, function (r2) { GD.san = r2; Gestao_desenharSaneamento_(res.message, "ok"); }, function (m2) { if (st) st.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + ' (A lista não atualizou: ' + Gestao_esc_(m2) + ')</div>'; });
+    }, function (m) { if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_cartao_(i, k) {
+    var podeAgir = i.meu || (GD.dados.eu.diretoria) || Gestao_perfil_() === "ADMIN";
+    var meta = [i.moduloNome, "área " + i.areaNome, (i.reserva ? "com a Diretoria (a área não tem gestor)" : "com " + (i.responsaveisNomes.join(", ") || "ninguém")), i.envolvido ? "envolve " + i.envolvido : ""].filter(Boolean).join(" · ");
+    var tempo = "Na caixa desde " + i.entrouEm + " · " + (i.prazo ? "prazo de decisão " + i.prazo : "sem prazo") + (i.diasParado ? " · parado há " + i.diasParado + (i.diasParado === 1 ? " dia útil" : " dias úteis") : "");
+    return '<div class="gd-card ' + Gestao_esc_(i.etapa) + '" id="gdItem' + k + '">' +
+      '<div class="gd-card-tit"><span class="gd-selo ' + Gestao_esc_(i.etapa) + '">' + Gestao_esc_(GD_ETAPA[i.etapa] || i.etapa) + '</span>' + (i.prazoVencido ? '<span class="gd-selo vencido">Prazo vencido</span>' : '') +
+        (i.repetidos ? '<span class="gd-selo neutro" title="Há ' + i.repetidos + ' itens com o mesmo assunto (por exemplo a avaria e a sugestão de ocorrência do mesmo fato)">Mesmo fato (' + i.repetidos + ')</span>' : '') + Gestao_esc_(i.titulo) + '</div>' +
+      '<div class="gd-meta">' + Gestao_esc_(meta) + '</div>' +
+      (i.detalhe ? '<div class="gd-txt">' + Gestao_esc_(i.detalhe) + '</div>' : '') +
+      (i.oQueFazer ? '<div class="gd-txt"><strong>O que fazer:</strong> ' + Gestao_esc_(i.oQueFazer) + '</div>' : '') +
+      '<div class="gd-meta">' + Gestao_esc_(tempo) + (i.reserva && i.motivoRota ? ' · ' + Gestao_esc_(String(i.motivoRota).replace(/: reserva da Diretoria\./, ": fica com a Diretoria.")) : '') + '</div>' +
+      (i.providencia ? '<div class="gd-txt"><strong>Providência</strong> (' + Gestao_esc_(i.providenciaPor) + ', ' + Gestao_esc_(i.providenciaEm) + (i.pausadoAte ? '; acompanhar até ' + Gestao_esc_(i.pausadoAte) : '') + '): ' + Gestao_esc_(i.providencia) + '</div>' : '') +
+      // 31/10/2026: pedido de nova data de uma atividade: aceitar com um toque ou recusar com o motivo, aqui mesmo
+      // revisão 01/11/2026: data proposta que já passou não pode ser aceita (o servidor barra): ficam Recusar e Abrir a atividade
+      (i.pedido && podeAgir ? '<div class="gd-acoes">' + (i.pedido.passou ? '' : '<button type="button" class="btn-primary" id="gdAceita' + k + '" onclick="Gestao_aceitarPedido_(' + k + ')">Aceitar nova data (' + Gestao_esc_(i.pedido.dataBr) + ')</button>') +
+        '<button type="button" class="btn-secondary" onclick="Gestao_formRecusa_(' + k + ')">Recusar</button>' +
+        (i.tela ? '<button type="button" class="btn-secondary" onclick="Gestao_abrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Abrir a atividade") + '</button>' : '') + '</div>' :
+      '<div class="gd-acoes">' + (i.tela ? '<button type="button" class="btn-primary" onclick="Gestao_abrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Abrir a tela de resolver") + '</button>' : '') +
+      (podeAgir && !i.acompanhamento ? (i.resolveNaCaixa ? '<button type="button" class="btn-secondary" onclick="Gestao_formProvidencia_(' + k + ', true)">Ciente</button>' : '') +
+        '<button type="button" class="btn-secondary" onclick="Gestao_formProvidencia_(' + k + ', false)">Registrar providência</button>' : '') + '</div>') +
+      '<div id="gdForm' + k + '"></div></div>';
+  }
+
+  /** Pedido de nova data: a data proposta vira a previsão de entrega da atividade (servidor: Atividades_apiDecidirPedido). */
+  function Gestao_aceitarPedido_(k) {
+    var i = GD.dados && GD.dados.itens[k], box = document.getElementById("gdForm" + k), bt = document.getElementById("gdAceita" + k);
+    if (!i || !i.pedido) return;
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Atividades_apiDecidirPedido", { id: i.pedido.atividadeId, decisao: "ACEITAR" }, function (res) {
+      if (box) box.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarCaixa_(); }, 900);
+    }, function (m) { if (bt) bt.disabled = false; if (box) box.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; }, { carregando: "Aceitando a nova data" });
+  }
+
+  /** Pedido de nova data: recusar com um motivo curto (a pessoa lê e propõe outra data ou conclui). */
+  function Gestao_formRecusa_(k) {
+    var box = document.getElementById("gdForm" + k), i = GD.dados.itens[k];
+    if (!box || !i) return;
+    if (box.querySelector("#gdRecTxt" + k)) { box.innerHTML = ""; return; }
+    box.innerHTML = '<div class="gd-form">' +
+      '<label for="gdRecTxt' + k + '">Por que a data não serve? (curto; ' + Gestao_esc_(i.pedido.responsavel || "a pessoa") + ' vai ler)</label>' +
+      '<textarea id="gdRecTxt' + k + '" maxlength="300" placeholder="Ex.: o cliente precisa até sexta"></textarea>' +
+      '<div class="gd-acoes"><button type="button" class="btn-danger" id="gdRecOk' + k + '" onclick="Gestao_recusarPedido_(' + k + ')">Confirmar recusa</button>' +
+      '<button type="button" class="btn-secondary" onclick="document.getElementById(\'gdForm' + k + '\').innerHTML=\'\'">Voltar</button></div><div id="gdSt' + k + '"></div>' +
+      '<div class="gd-meta">A previsão continua a vencida: a pessoa é avisada com o motivo e volta a ser cobrada até pedir outra data ou concluir.</div></div>';
+    var t = document.getElementById("gdRecTxt" + k); if (t) t.focus();
+  }
+
+  function Gestao_recusarPedido_(k) {
+    var i = GD.dados.itens[k], st = document.getElementById("gdSt" + k), bt = document.getElementById("gdRecOk" + k);
+    var texto = String((document.getElementById("gdRecTxt" + k) || {}).value || "").replace(/\s+/g, " ").trim();
+    if (texto.length < 5) { if (st) st.innerHTML = '<div class="gd-msg erro">Não foi possível recusar: escreva em poucas palavras por que a data não serve (mínimo 5 letras). A pessoa vai ler e propor outra data.</div>'; return; }
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Atividades_apiDecidirPedido", { id: i.pedido.atividadeId, decisao: "RECUSAR", motivo: texto }, function (res) {
+      if (st) st.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarCaixa_(); }, 900);
+    }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_abrirItem_(k) {
+    var i = GD.dados && GD.dados.itens[k];
+    if (!i || !i.tela) return;
+    if (typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(i.tela);
+    else if (i.tela.mod) abrir(i.tela.mod);
+  }
+
+  function Gestao_hojeMais_(dias) { var d = new Date(); d.setDate(d.getDate() + dias); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+
+  function Gestao_formProvidencia_(k, ciente) {
+    var box = document.getElementById("gdForm" + k), i = GD.dados.itens[k];
+    if (!box || !i) return;
+    if (box.innerHTML) { box.innerHTML = ""; return; }
+    var max = GD.dados.regras.pausaMaxDias;
+    box.innerHTML = '<div class="gd-form">' +
+      '<label for="gdTxt' + k + '">' + (ciente ? "Avaliação da justificativa" : "O que foi feito") + '</label>' +
+      '<textarea id="gdTxt' + k + '" maxlength="900" placeholder="' + (ciente ? "Ex.: Justificativa procede; a peça chegou hoje." : "Ex.: Liguei para o condutor; ele devolve hoje às 17h.") + '"></textarea>' +
+      (ciente ? '' : '<label for="gdAte' + k + '">Acompanhar até (até ' + max + ' dias)</label><input type="date" id="gdAte' + k + '" min="' + Gestao_hojeMais_(0) + '" max="' + Gestao_hojeMais_(max) + '" value="' + Gestao_hojeMais_(3) + '">') +
+      '<div class="gd-acoes"><button type="button" class="btn-primary" id="gdOk' + k + '" onclick="Gestao_registrar_(' + k + ', ' + (ciente ? "true" : "false") + ')">' + (ciente ? "Confirmar ciente" : "Registrar") + '</button>' +
+      '<button type="button" class="btn-secondary" onclick="document.getElementById(\'gdForm' + k + '\').innerHTML=\'\'">Cancelar</button></div><div id="gdSt' + k + '"></div>' +
+      '<div class="gd-meta">' + (ciente ? "O item sai da caixa e a avaliação fica registrada com o seu nome." : "Conta como decisão tomada. O item continua na caixa até ser resolvido na tela de origem; a cobrança volta a contar depois da data.") + '</div></div>';
+    var t = document.getElementById("gdTxt" + k); if (t) t.focus();
+  }
+
+  function Gestao_registrar_(k, ciente) {
+    var i = GD.dados.itens[k], st = document.getElementById("gdSt" + k), bt = document.getElementById("gdOk" + k);
+    var texto = (document.getElementById("gdTxt" + k) || {}).value || "", ate = ciente ? "" : ((document.getElementById("gdAte" + k) || {}).value || "");
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Gestao_apiProvidencia", { itemId: i.id, texto: texto, acompanharAte: ate, ciente: !!ciente }, function (res) {
+      if (st) st.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarCaixa_(); }, 900);
+    }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  // ---------------- Regras e responsáveis ----------------
+  function Gestao_abrirRegras_() {
+    var c = document.getElementById("gdCorpo");
+    if (!c) return;
+    if (window.SGO_NAV) SGO_NAV.empilhar("Regras e responsáveis", function () { Gestao_renderCaixa_(); }); // voltar volta à caixa (Etapa 1)
+    GD.modoRegras = true; GD.modoSan = false;
+    ["gdKpis", "gdTabs", "gdFiltros", "gdSan"].forEach(function (id) { var e = document.getElementById(id); if (e) e.innerHTML = ""; });
+    c.innerHTML = '<div class="gd-vazio">Carregando as regras...</div>';
+    Gestao_chamar_("Gestao_apiConfig", {}, function (res) { GD.regras = res; Gestao_desenharRegras_(); },
+      function (m) { c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_desenharRegras_() {
+    var r = GD.regras, c = document.getElementById("gdCorpo");
+    if (!r || !c) return;
+    var dis = r.podeConfigurar ? "" : " disabled";
+    var e = r.cfg.escada, au = r.cfg.automacoes;
+    var areas = r.areas.map(function (a) {
+      var sel = r.cfg.gestoresPorArea[a.codigo] || [];
+      return '<div class="gd-area"><b>' + Gestao_esc_(a.nome) + '</b><div class="gd-checks">' + (r.gestao.length ? r.gestao.map(function (p) {
+        return '<label><input type="checkbox" data-gd-area="' + Gestao_esc_(a.codigo) + '" value="' + Gestao_esc_(p.id) + '"' + (sel.indexOf(p.id) >= 0 ? " checked" : "") + dis + '> ' + Gestao_esc_(p.nome) + '</label>';
+      }).join("") : '<span class="gd-meta">Ninguém com perfil de gestão ativo.</span>') + (sel.length ? '' : '<span class="gd-meta">Sem responsável: fica com a Diretoria.</span>') + '</div></div>';
+    }).join("");
+    var mods = r.modulos.map(function (m) {
+      var atual = r.cfg.areaPorModulo[m.chave] || r.areaPadrao[m.chave] || "";
+      return '<div class="gd-linha"><span>' + Gestao_esc_(m.nome) + '</span><select data-gd-mod="' + Gestao_esc_(m.chave) + '"' + dis + '>' + r.areas.map(function (a) { return '<option value="' + Gestao_esc_(a.codigo) + '"' + (a.codigo === atual ? " selected" : "") + '>' + Gestao_esc_(a.nome) + '</option>'; }).join("") + '</select></div>';
+    }).join("");
+    var chk = function (id, rot, v) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="checkbox" id="' + id + '"' + (v ? " checked" : "") + dis + '></div>'; };
+    var num = function (id, rot, v, min, max) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="number" id="' + id + '" min="' + min + '" max="' + max + '" value="' + Gestao_esc_(v) + '"' + dis + '></div>'; };
+    var hora = function (id, rot, v) { return '<div class="gd-linha"><label for="' + id + '">' + Gestao_esc_(rot) + '</label><input type="time" id="' + id + '" value="' + Gestao_esc_(v) + '"' + dis + '></div>'; };
+    c.innerHTML = (r.podeConfigurar ? '' : '<div class="gd-faixa">Só o Administrador e a Diretoria mudam estas regras. Você vê como estão.</div>') +
+      '<div class="gd-regras"><div class="gd-caixa"><h3>Gestor responsável por área</h3><p class="gd-meta">Quem recebe os itens de cada área. Área sem responsável fica com a Diretoria (' + Gestao_esc_(r.diretoria.join(", ") || "ninguém com perfil Diretoria") + '). Ninguém decide sobre si mesmo: o item da própria pessoa vai para outro responsável ou para a Diretoria.</p>' + areas + '</div>' +
+      '<div><div class="gd-caixa"><h3>Área de cada módulo</h3><p class="gd-meta">Usada quando o item não é de uma pessoa (padrão, veículo, documento). Item de uma pessoa vai para a área dela (Administração > Usuários > Áreas).</p>' + mods + '</div>' +
+      '<div class="gd-caixa" style="margin-top:14px"><h3>Escada de cobrança</h3><p class="gd-meta">Sempre só em dia útil e no horário de trabalho (' + Gestao_esc_(r.expediente.ini) + ' a ' + Gestao_esc_(r.expediente.fim) + ', em Atividades da equipe > Avisos e horários).</p>' +
+        chk("gdEmail", "E-mail diário com o resumo", e.emailDiario) + hora("gdHoraEmail", "Hora do e-mail diário", e.horaEmail) +
+        chk("gdWhats", "Resumo pelo WhatsApp (um por dia, vínculo liberado)", e.whatsapp) + num("gdWhatsDias", "WhatsApp depois de quantos dias úteis parado", e.whatsDiasUteis, 1, 20) +
+        num("gdDirDias", "Diretoria depois de quantos dias úteis parado", e.diretoriaDiasUteis, 2, 30) +
+        chk("gdSemanal", "Relatório semanal à Diretoria (primeiro dia útil da semana)", e.semanal) + hora("gdHoraSemanal", "Hora do semanal", e.horaSemanal) +
+        chk("gdMensal", "Relatórios do mês à Diretoria (primeiro dia útil do mês)", e.mensal) + '</div>' +
+      '<div class="gd-caixa" style="margin-top:14px"><h3>Diretoria informada (resumo diário)</h3><p class="gd-meta">Decisão do dono (11/11/2026): a Diretoria é informada, não cobrada. Ligado, o que escala ou cai na Diretoria não vira aviso item a item: vai num resumo por dia útil (e-mail com a lista e o relatório diário da empresa, WhatsApp curto e alerta na tela), e a atividade vencida da Diretoria vira lembrete, sem justificativa obrigatória. O que só a Diretoria decide e os atos irreversíveis continuam na hora.</p>' +
+        chk("gdDirResumo", "Resumo diário da Diretoria (no lugar dos avisos item a item)", !r.cfg.diretoriaResumo || r.cfg.diretoriaResumo.ligado !== false) + hora("gdDirHora", "Hora do resumo da Diretoria (dia útil)", (r.cfg.diretoriaResumo && r.cfg.diretoriaResumo.hora) || "08:30") + '</div>' +
+      '<div class="gd-caixa" style="margin-top:14px"><h3>Automações</h3>' +
+        chk("gdAutoCnh", "CNH: avisar o condutor com 30, 15 e 7 dias", au.cnhCondutor) + chk("gdAutoMan", "Manutenção prevista vira atividade do gestor da Frota", au.manutencaoAgenda) +
+        chk("gdAutoSem", "Atividade sem responsável ativo volta para quem lançou", au.atividadeSemResponsavel) + chk("gdAutoRel", "Gerar os relatórios do mês sozinho", au.relatoriosMensais) + '</div>' +
+      Gestao_htmlSedna_(r.sedna, dis, chk, hora) + '</div></div>' +
+      '<div class="gd-acoes">' + (r.podeConfigurar ? '<button type="button" class="btn-primary" id="gdSalvarRegras" onclick="Gestao_salvarRegras_()">Salvar regras</button>' : '') +
+      '<button type="button" class="btn-secondary" onclick="SGO_voltarOu_(Gestao_renderCaixa_)">Voltar à caixa</button></div><div id="gdRegrasSt"></div>';
+  }
+
+  // 26/10/2026: escalonamento das atividades atrasadas por prioridade e resumo do dia da gestão (SGO_Sedna.js)
+  var GD_SEDNA_PRI = ["Urgente", "Alta", "Normal", "Baixa"];
+  function Gestao_htmlSedna_(sd, dis, chk, hora) {
+    if (!sd) return "";
+    var linhas = GD_SEDNA_PRI.map(function (p) {
+      var h = (sd.escalonamento.horas || {})[p] || [];
+      return '<tr><th scope="row">' + Gestao_esc_(p) + '</th>' + [0, 1, 2].map(function (i) {
+        return '<td><input type="number" step="0.25" min="0.25" max="720" data-gd-sed="' + p + '" data-gd-sed-i="' + i + '" value="' + Gestao_esc_(h[i]) + '" aria-label="' + Gestao_esc_(p + ", " + ["responsável", "gestor da área", "Diretoria"][i] + " (horas)") + '"' + dis + '></td>';
+      }).join("") + '</tr>';
+    }).join("");
+    return '<div class="gd-caixa" style="margin-top:14px"><h3>Atividade atrasada: escalonamento por prioridade</h3>' +
+      '<p class="gd-meta">Horas corridas depois da previsão vencer. Cada nível avisa uma vez por atividade e por previsão, só no horário de trabalho (o que passar à noite sai no começo do expediente). Canais em Administração > Matriz de avisos (S71, S72 e S73).</p>' +
+      chk("gdSedEsc", "Escalonar as atividades atrasadas", sd.escalonamento.ligado) +
+      '<div class="gd-tabela-rolagem"><table class="gd-sedna"><thead><tr><th scope="col">Prioridade</th><th scope="col">Responsável</th><th scope="col">Gestor da área</th><th scope="col">Diretoria</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
+      '<h3 style="margin-top:14px">Resumo do dia da gestão</h3><p class="gd-meta">No Início de cada pessoa da gestão, uma vez por dia: o que começar primeiro, atrasadas da equipe, as dela e a central de pendências.</p>' +
+      chk("gdSedBrief", "Mostrar o resumo do dia no Início", sd.briefing.ligado) + hora("gdSedHora", "A partir de que hora", sd.briefing.hora) +
+      chk("gdSedIA", "Texto reescrito pela IA (conferido com os dados; se não passar, vale o texto das regras)", sd.briefing.ia) + '</div>';
+  }
+
+  function Gestao_lerSedna_() {
+    if (!document.getElementById("gdSedEsc")) return null;
+    var horas = {};
+    GD_SEDNA_PRI.forEach(function (p) { horas[p] = [0, 1, 2].map(function (i) { var e = document.querySelector('[data-gd-sed="' + p + '"][data-gd-sed-i="' + i + '"]'); return e ? Number(String(e.value).replace(",", ".")) : NaN; }); });
+    var ck = function (id) { var e = document.getElementById(id); return !!(e && e.checked); };
+    return { escalonamento: { ligado: ck("gdSedEsc"), horas: horas }, briefing: { ligado: ck("gdSedBrief"), hora: (document.getElementById("gdSedHora") || {}).value || "", ia: ck("gdSedIA") } };
+  }
+
+  function Gestao_salvarRegras_() {
+    var gpa = {}, apm = {};
+    document.querySelectorAll("[data-gd-area]").forEach(function (cb) { if (cb.checked) (gpa[cb.getAttribute("data-gd-area")] = gpa[cb.getAttribute("data-gd-area")] || []).push(cb.value); });
+    document.querySelectorAll("[data-gd-mod]").forEach(function (s) { apm[s.getAttribute("data-gd-mod")] = s.value; });
+    var v = function (id) { var e = document.getElementById(id); return e ? e.value : ""; }, ck = function (id) { var e = document.getElementById(id); return !!(e && e.checked); };
+    var st = document.getElementById("gdRegrasSt"), bt = document.getElementById("gdSalvarRegras");
+    if (bt) bt.disabled = true;
+    Gestao_chamar_("Gestao_apiConfig", { salvar: { gestoresPorArea: gpa, areaPorModulo: apm,
+      escada: { emailDiario: ck("gdEmail"), horaEmail: v("gdHoraEmail"), whatsapp: ck("gdWhats"), whatsDiasUteis: Number(v("gdWhatsDias")), diretoriaDiasUteis: Number(v("gdDirDias")), semanal: ck("gdSemanal"), horaSemanal: v("gdHoraSemanal"), mensal: ck("gdMensal") },
+      automacoes: { cnhCondutor: ck("gdAutoCnh"), manutencaoAgenda: ck("gdAutoMan"), atividadeSemResponsavel: ck("gdAutoSem"), relatoriosMensais: ck("gdAutoRel") }, sedna: Gestao_lerSedna_(),
+      diretoriaResumo: document.getElementById("gdDirResumo") ? { ligado: ck("gdDirResumo"), hora: v("gdDirHora") } : undefined } }, function (res) {
+      GD.regras = res; Gestao_desenharRegras_();
+      var s2 = document.getElementById("gdRegrasSt"); if (s2) s2.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+    }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  // ---------------- Relatório diário da empresa (11/11/2026) ----------------
+  // O servidor gera o HTML A4 (SGO_Gestao_RelatorioDiario.js) e confere a caixa «Ver o relatório diário da empresa» em toda chamada.
+  var GD_REL = { html: "", nome: "" };
+  function Gestao_renderRelatorioDia_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (ehMobileModo_()) atualizarTituloMobile_("Relatório diário da empresa");
+    div.innerHTML = '<div class="module-shell"><h2 class="content-title">Relatório diário da empresa</h2>' +
+      '<p class="content-subtitle" style="text-align:justify">Todos os setores num documento A4: índice, visão geral com gráficos, Kanban da empresa, uma seção por setor (o que está parado, com quem e há quantos dias), ranking de atrasos por pessoa e o que está com a Diretoria. É o mesmo relatório do link do resumo diário da Diretoria.</p>' +
+      '<div class="gd-acoes" style="flex-wrap:wrap"><button type="button" class="btn-primary" onclick="Gestao_relatorioDiaGerar_()"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Gerar agora</button>' +
+      '<button type="button" class="btn-secondary" id="gdRelBaixar" disabled onclick="Gestao_relatorioDiaBaixar_()"><i class="fas fa-download" aria-hidden="true"></i>&nbsp;Baixar (HTML)</button>' +
+      '<button type="button" class="btn-secondary" id="gdRelImprimir" disabled onclick="Gestao_relatorioDiaImprimir_()"><i class="fas fa-print" aria-hidden="true"></i>&nbsp;Imprimir ou salvar em PDF</button></div>' +
+      '<div id="gdRelSt"></div><iframe id="gdRelQuadro" title="Relatório diário da empresa" style="width:100%;max-width:100%;min-height:70vh;border:1px solid var(--border);background:#fff;margin-top:10px"></iframe></div>';
+    Gestao_relatorioDiaGerar_();
+  }
+  function Gestao_relatorioDiaGerar_() {
+    var st = document.getElementById("gdRelSt");
+    if (st) st.innerHTML = '<div class="gd-msg">Gerando o relatório com os dados de agora...</div>';
+    Gestao_chamar_("Gestao_apiRelatorioDiario", {}, function (res) {
+      GD_REL.html = res.html || ""; GD_REL.nome = res.nome || "Relatorio diario da empresa";
+      var q = document.getElementById("gdRelQuadro"); if (q) q.srcdoc = GD_REL.html;
+      ["gdRelBaixar", "gdRelImprimir"].forEach(function (id) { var b = document.getElementById(id); if (b) b.disabled = !GD_REL.html; });
+      var s2 = document.getElementById("gdRelSt"); if (s2) s2.innerHTML = '<div class="gd-msg ok">Relatório gerado em ' + Gestao_esc_(res.geradoEm || "") + '.</div>';
+    }, function (m) { var s3 = document.getElementById("gdRelSt"); if (s3) s3.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; }, { carregando: "Gerando o relatório diário..." });
+  }
+  function Gestao_relatorioDiaBaixar_() {
+    if (!GD_REL.html) return;
+    try {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([GD_REL.html], { type: "text/html;charset=utf-8" }));
+      a.download = GD_REL.nome.replace(/[^\w\- ]+/g, "") + ".html";
+      document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    } catch (e) { var st = document.getElementById("gdRelSt"); if (st) st.innerHTML = '<div class="gd-msg erro">Não foi possível baixar: ' + Gestao_esc_(e && e.message ? e.message : e) + '. Use "Imprimir ou salvar em PDF".</div>'; }
+  }
+  function Gestao_relatorioDiaImprimir_() {
+    var q = document.getElementById("gdRelQuadro");
+    try { if (q && q.contentWindow) { q.contentWindow.focus(); q.contentWindow.print(); } }
+    catch (e) { var st = document.getElementById("gdRelSt"); if (st) st.innerHTML = '<div class="gd-msg erro">Não foi possível abrir a impressão: ' + Gestao_esc_(e && e.message ? e.message : e) + '. Baixe o HTML e imprima pelo navegador.</div>'; }
+  }
+
+  // ---------------- Desempenho da gestão ----------------
+  // 11/11/2026 (pedido do dono: "desempenho da gestão, isso está horrível"): painel no lugar do texto corrido. Filtros (mês, área,
+  // gestor, tipo), números do mês (recebidos, resolvidos, taxa de resolução, no prazo, vencidos, tempo médio, escalados), gráficos
+  // de barras, tabela de gestores que vira cartões no celular, o que está aberto agrupado por tipo e área (com expandir e o botão
+  // de resolver) e o saneamento à parte. Servidor: Gestao_apiPainelDesempenho (SGO_Gestao_Painel.js); a nota oficial não muda.
+  GD.desF = { area: "", tipo: "", gestorId: "" }; GD.abaDes = "visao";
+  function Gestao_renderDesempenho_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (ehMobileModo_()) atualizarTituloMobile_("Desempenho da gestão");
+    if (["visao", "gestores", "abertos", "regra", "relatorios"].indexOf(GD.abaDes) < 0) GD.abaDes = "visao";
+    div.innerHTML = '<div class="module-shell">' +
+      Gestao_cabecalho_("Desempenho da gestão", "Como cada gestor responde ao que depende dele: quanto recebeu e resolveu, se decidiu no prazo, quanto tempo levou e o que subiu para a Diretoria. O acúmulo antigo do Auvo fica à parte, no saneamento. Cada gestor vê os próprios números; a Diretoria vê todos.",
+        '<button type="button" class="btn-secondary" onclick="Gestao_carregarDesempenho_(true)"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
+        '<button type="button" class="btn-secondary" onclick="abrir(\'gestao_decisoes\')"><i class="fas fa-inbox" aria-hidden="true"></i>&nbsp;Caixa de decisões</button>' +
+        (Gestao_ehGestao_() ? '<button type="button" class="btn-secondary" onclick="Gestao_abrirSaneamento_()"><i class="fas fa-broom" aria-hidden="true"></i>&nbsp;Saneamento</button>' : '')) +
+      '<div id="gdDesFiltros" class="gd-filtros"></div><div class="gd-tabs" id="gdDesTabs"></div><div id="gdDesCorpo"><div class="gd-vazio">Carregando...</div></div></div>';
+    Gestao_carregarDesempenho_();
+  }
+
+  function Gestao_carregarDesempenho_(comAviso) {
+    var f = GD.desF;
+    Gestao_chamar_("Gestao_apiPainelDesempenho", { competencia: GD.avalComp, area: f.area, tipo: f.tipo, gestorId: f.gestorId }, function (res) {
+      GD.painel = res; GD.aval = res; GD.avalComp = res.competencia;
+      Gestao_desenharDesempenho_();
+    }, function (m) {
+      var c = document.getElementById("gdDesCorpo");
+      if (c) c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div><p><button type="button" class="btn-secondary" onclick="Gestao_carregarDesempenho_(true)">Tentar de novo</button></p>';
+    }, comAviso ? { carregando: "Calculando o desempenho" } : {});
+  }
+  function Gestao_desFiltro_(campo, valor) { GD.desF[campo] = valor; Gestao_carregarDesempenho_(true); }
+
+  function Gestao_desenharDesempenho_() {
+    var a = GD.painel, c = document.getElementById("gdDesCorpo");
+    if (!a || !c) return;
+    var sel = function (id, rot, ops, atual, onchange, todos) {
+      return '<div><label for="' + id + '">' + Gestao_esc_(rot) + '</label><select id="' + id + '" onchange="' + onchange + '">' + (todos ? '<option value="">' + Gestao_esc_(todos) + '</option>' : '') +
+        ops.map(function (o) { return '<option value="' + Gestao_esc_(o.valor) + '"' + (o.valor === atual ? " selected" : "") + '>' + Gestao_esc_(o.nome) + '</option>'; }).join("") + '</select></div>';
+    };
+    document.getElementById("gdDesFiltros").innerHTML = sel("gdDesMes", "Mês", a.meses, a.competencia, "GD.avalComp=this.value;Gestao_carregarDesempenho_(true)") +
+      sel("gdDesArea", "Área", a.opcoes.areas, a.filtros.area, "Gestao_desFiltro_('area', this.value)", "Todas") +
+      (a.diretoria ? sel("gdDesGestor", "Gestor", a.opcoes.gestores.map(function (g) { return { valor: g.id, nome: g.nome }; }), a.filtros.gestorId, "Gestao_desFiltro_('gestorId', this.value)", "Todos") : '') +
+      sel("gdDesTipo", "Tipo", a.opcoes.tipos, a.filtros.tipo, "Gestao_desFiltro_('tipo', this.value)", "Todos") +
+      '<div class="gd-meta gd-f-st">' + (a.congelada ? "Mês fechado: nota congelada; números do painel calculados dos registros." : a.parcial ? "Mês em curso: números até agora." : "Mês fechado.") + ' Calculado em ' + Gestao_esc_(a.geradoEm) + '.</div>';
+    var abas = [["visao", "Visão geral"], ["gestores", a.diretoria ? "Gestores" : "Minha avaliação"], ["abertos", "Abertos agora"], ["regra", "Regra da nota"]].concat(a.diretoria ? [["relatorios", "Relatórios"]] : []);
+    document.getElementById("gdDesTabs").innerHTML = abas.map(function (x) { return '<button type="button" class="gd-tab' + (GD.abaDes === x[0] ? " active" : "") + '" onclick="GD.abaDes=\'' + x[0] + '\';Gestao_desenharDesempenho_()">' + Gestao_esc_(x[1]) + '</button>'; }).join("");
+    if (GD.abaDes === "regra") { c.innerHTML = Gestao_htmlRegraNota_(a); return; }
+    if (GD.abaDes === "relatorios") { Gestao_desenharRelatorios_(); return; }
+    if (GD.abaDes === "abertos") { c.innerHTML = Gestao_htmlAbertos_(a); return; }
+    if (GD.abaDes === "gestores") { c.innerHTML = Gestao_htmlBotoesRel_(a) + (a.gestores.length ? a.gestores.map(Gestao_cartaoGestor_).join("") : Gestao_semGestor_()); return; }
+    c.innerHTML = Gestao_htmlVisao_(a);
+  }
+
+  function Gestao_semGestor_() { return '<div class="gd-vazio">Nenhum gestor avaliado com estes filtros. A avaliação conta quem tem o perfil Gestor e quem responde por uma área em Caixa de decisões > Regras e responsáveis.</div>'; }
+  function Gestao_htmlBotoesRel_(a) {
+    if (a.diretoria) return '<div class="gd-acoes" style="margin-bottom:10px"><button type="button" class="btn-primary" onclick="Gestao_gerarRelatorio_(\'desempenho\', GD.desF.gestorId)">Gerar relatório A4 do mês</button>' +
+      '<button type="button" class="btn-secondary" onclick="Gestao_gerarRelatorio_(\'semanal\')">Relatório semanal A4</button><button type="button" class="btn-secondary" onclick="Gestao_gerarRelatorio_(\'atividades\')">Atividades da equipe A4</button></div>';
+    return a.gestores.length ? '<div class="gd-acoes" style="margin-bottom:10px"><button type="button" class="btn-primary" onclick="Gestao_gerarRelatorio_(\'desempenho\', \'' + Gestao_esc_(a.gestores[0].id) + '\')">Gerar meu relatório A4</button></div>' : '';
+  }
+
+  function Gestao_n_(v, c) { if (v === null || v === undefined || !isFinite(Number(v))) return "—"; return Number(v).toLocaleString("pt-BR", { minimumFractionDigits: c || 0, maximumFractionDigits: c || 0 }); }
+  function Gestao_pct_(v) { return v === null || v === undefined ? "—" : Gestao_n_(v, 1) + "%"; }
+  function Gestao_tempo_(v) { return v === null || v === undefined ? "—" : Gestao_n_(v, 1) + (Number(v) === 1 ? " dia útil" : " dias úteis"); }
+
+  /** Barras agrupadas (duas séries) em HTML: rótulo, barra de cada série com o valor ao lado. Legenda acima; o valor está no title. */
+  function Gestao_barras2_(linhas, s1, s2, rotulo) {
+    var max = Math.max.apply(null, linhas.map(function (l) { return Math.max(l.a, l.b); }).concat([1]));
+    var barra = function (v, cls, nome, serie) { return '<span class="gd-b2 ' + cls + '" title="' + Gestao_esc_(nome + " · " + serie + ": " + v) + '"><i style="width:' + (v ? Math.max(1.5, v / max * 86) : 0) + '%"></i><em>' + Gestao_esc_(Gestao_n_(v)) + '</em></span>'; };
+    return '<figure class="gd-graf" aria-label="' + Gestao_esc_(rotulo) + '"><div class="gd-leg"><span><i class="s1"></i>' + Gestao_esc_(s1) + '</span><span><i class="s2"></i>' + Gestao_esc_(s2) + '</span></div>' +
+      linhas.map(function (l) { return '<div class="gd-b2-linha"><span class="n">' + Gestao_esc_(l.nome) + '</span><span class="bs">' + barra(l.a, "s1", l.nome, s1) + barra(l.b, "s2", l.nome, s2) + '</span></div>'; }).join("") +
+      '<figcaption class="gd-meta">' + Gestao_esc_(rotulo) + '</figcaption></figure>';
+  }
+
+  function Gestao_htmlVisao_(a) {
+    var t = a.totais, s = a.saneamento;
+    var kp = function (v, rot, cls, dica) { return '<div class="gd-kpi ' + (cls || "") + '"' + (dica ? ' title="' + Gestao_esc_(dica) + '"' : '') + '><span class="v">' + Gestao_esc_(v) + '</span><span class="r">' + Gestao_esc_(rot) + '</span></div>'; };
+    var fora = t.saneamento + t.cadastro;
+    var resumo = 'Em ' + a.nomeCompetencia + (a.parcial ? ' (até agora)' : '') + ', a gestão recebeu ' + t.recebidos + (t.recebidos === 1 ? ' decisão' : ' decisões') + ' e resolveu ' + t.resolvidos + '. ' +
+      (t.basePrazo ? Gestao_pct_(t.pctPrazo) + ' das decisões com prazo foram tomadas no prazo' + (t.tempoMedio !== null ? ', em ' + Gestao_tempo_(t.tempoMedio) + ' em média' : '') + '. ' : 'Ainda não houve decisão com prazo no mês. ') +
+      t.escalados + (t.escalados === 1 ? ' item subiu' : ' itens subiram') + ' para a Diretoria por ficar parado. Agora há ' + t.abertos + (t.abertos === 1 ? ' decisão aberta' : ' decisões abertas') + ', ' + t.vencidosAbertos + ' com o prazo vencido.' +
+      (fora ? ' Fora da avaliação: ' + (t.saneamento ? t.saneamento + ' O.S. antigas do Auvo' : '') + (t.saneamento && t.cadastro ? ' e ' : '') + (t.cadastro ? t.cadastro + ' O.S. sem vínculo de técnico' : '') + ', tratadas no saneamento.' : '');
+    var h = '<p class="gd-just gd-resumo">' + Gestao_esc_(resumo) + '</p><div class="gd-kpis gd-kpis-8">' +
+      kp(t.recebidos, "Recebidos no mês", "", "Decisões que entraram na caixa no mês") + kp(t.resolvidos, "Resolvidos no mês", "ok") +
+      kp(Gestao_pct_(t.pctPrazo), "Decididos no prazo", t.pctPrazo !== null && t.pctPrazo < 70 ? "aviso" : "ok", t.noPrazo + " de " + t.basePrazo + " decisões com prazo") +
+      kp(Gestao_tempo_(t.tempoMedio), "Tempo médio de decisão") + kp(t.escalados, "Escalados no mês", t.escalados ? "aviso" : "ok") +
+      kp(t.abertos, "Decisões abertas agora") + kp(t.vencidosAbertos, "Abertas com prazo vencido", t.vencidosAbertos ? "critico" : "ok") +
+      kp(fora, "Fora da avaliação (saneamento)", fora ? "neutro" : "ok", "O.S. antigas do Auvo e O.S. sem vínculo") + '</div>';
+    if (fora && Gestao_ehGestao_()) h += '<div class="gd-faixa gd-san-faixa"><div><strong>Saneamento:</strong> ' + (s.os ? s.os + ' O.S. do Auvo chegaram à caixa com mais de ' + s.corte + ' dias em aberto' + (s.epocas.length ? ' (abertas entre ' + Gestao_esc_(s.epocas[0].nome) + ' e ' + Gestao_esc_(s.epocas[s.epocas.length - 1].nome) + ')' : '') : '') +
+      (s.os && s.cadastro ? '; ' : '') + (s.cadastro ? s.cadastro + ' O.S. sem vínculo de técnico' : '') + '. Não pesam na nota.</div><button type="button" class="btn-primary" onclick="Gestao_abrirSaneamento_()">Ver e sanear</button></div>';
+    if (!a.gestores.length) return h + Gestao_semGestor_();
+    h += '<div class="gd-dois">' + '<div class="gd-caixa"><h3>Recebidos e resolvidos por gestor</h3>' + Gestao_barras2_(a.gestores.map(function (g) { return { nome: g.nome, a: g.recebidos, b: g.resolvidos }; }), "Recebidos", "Resolvidos", "Decisões do mês, sem o saneamento") + '</div>' +
+      '<div class="gd-caixa"><h3>Abertos agora por área</h3>' + Gestao_barras2_(a.areas.map(function (x) { return { nome: x.nome, a: x.abertos, b: x.foraDaNota }; }), "Decisões abertas", "Saneamento (fora da nota)", "Itens abertos na caixa por área") + '</div></div>';
+    h += '<div class="gd-caixa" style="margin-top:14px"><h3>Gestores no mês</h3><div class="gd-tabela-rolar"><table class="gd-tabela gd-cartoes-cel"><thead><tr><th>Gestor</th><th class="n">Nota</th><th class="n">Recebidos</th><th class="n">Resolvidos</th><th class="n">Taxa de resolução</th><th class="n">No prazo</th><th class="n">Prazos vencidos</th><th class="n">Tempo médio</th><th class="n">Escalados</th><th class="n">Abertos</th><th></th></tr></thead><tbody>' +
+      a.gestores.map(function (g) {
+        return '<tr><td data-r="Gestor"><b>' + Gestao_esc_(g.nome) + '</b><div class="gd-meta">' + Gestao_esc_(g.areas.join(", ") || "sem área") + '</div></td>' +
+          '<td class="n" data-r="Nota">' + (g.nota === null ? '—' : Gestao_n_(g.nota, 1)) + ' <span class="gd-farol ' + Gestao_esc_(g.farol) + '">' + Gestao_esc_(g.farolTexto) + '</span></td>' +
+          '<td class="n" data-r="Recebidos">' + g.recebidos + '</td><td class="n" data-r="Resolvidos">' + g.resolvidos + '</td><td class="n" data-r="Taxa de resolução">' + Gestao_pct_(g.taxaResolucao) + '<div class="gd-meta">de ' + g.carteira + ' na carteira</div></td>' +
+          '<td class="n" data-r="No prazo">' + Gestao_pct_(g.pctPrazo) + '</td><td class="n" data-r="Prazos vencidos">' + g.vencidos + '</td><td class="n" data-r="Tempo médio">' + Gestao_tempo_(g.tempoMedio) + '</td>' +
+          '<td class="n" data-r="Escalados">' + g.escalados + (g.pctEscalados !== null ? '<div class="gd-meta">' + Gestao_pct_(g.pctEscalados) + ' dos recebidos</div>' : '') + '</td><td class="n" data-r="Abertos">' + g.abertos + (g.foraDaNota ? '<div class="gd-meta">+' + g.foraDaNota + ' no saneamento</div>' : '') + '</td>' +
+          '<td><button type="button" class="btn-secondary" onclick="GD.abaDes=\'gestores\';GD.desAberto=\'' + Gestao_esc_(g.id) + '\';Gestao_desenharDesempenho_()">Detalhe</button></td></tr>';
+      }).join("") + '</tbody></table></div><p class="gd-meta">Taxa de resolução: resolvidos no mês sobre a carteira do mês (o que estava aberto no começo do mês mais o que entrou). Nota: a oficial do mês, pela regra publicada em "Regra da nota".</p></div>';
+    if (a.areas.length) h += '<div class="gd-caixa" style="margin-top:14px"><h3>Áreas</h3><div class="gd-tabela-rolar"><table class="gd-tabela gd-cartoes-cel"><thead><tr><th>Área</th><th class="n">Recebidos</th><th class="n">Resolvidos</th><th class="n">Escalados no mês</th><th class="n">Abertos</th><th class="n">Abertos com prazo vencido</th><th class="n">Saneamento</th></tr></thead><tbody>' +
+      a.areas.map(function (x) { return '<tr><td data-r="Área"><b>' + Gestao_esc_(x.nome) + '</b></td><td class="n" data-r="Recebidos">' + x.recebidos + '</td><td class="n" data-r="Resolvidos">' + x.resolvidos + '</td><td class="n" data-r="Escalados">' + x.escalados + '</td><td class="n" data-r="Abertos">' + x.abertos + '</td><td class="n" data-r="Prazo vencido">' + x.vencidosAbertos + '</td><td class="n" data-r="Saneamento">' + x.foraDaNota + '</td></tr>'; }).join("") +
+      '</tbody></table></div></div>';
+    return h;
+  }
+
+  /** Lista agrupada por tipo (escalados ou vencidos do gestor): contagem e expandir; sigilo só conta. */
+  function Gestao_gruposTipo_(titulo, l) {
+    if (!l || !l.length) return '<div class="gd-meta">' + Gestao_esc_(titulo) + ': nenhum.</div>';
+    var tot = l.reduce(function (s, x) { return s + x.qtd; }, 0);
+    return '<div class="gd-sub"><b>' + Gestao_esc_(titulo) + ' (' + tot + ')</b>' + l.map(function (x) {
+      return '<details class="gd-grupo mini"><summary><span class="gd-g-n">' + x.qtd + '</span><span class="gd-g-t"><b>' + Gestao_esc_(x.nome) + '</b></span></summary><div class="gd-g-corpo">' +
+        (x.sigilo ? '<div class="gd-meta">Programa de conduta e Qualidade: só a contagem (sigilo). O detalhe fica no módulo, para quem pode ver.</div>' :
+          '<ul class="gd-ul">' + x.itens.map(function (i) { return '<li>' + Gestao_esc_(i.titulo) + ' <span class="gd-meta">(entrou ' + Gestao_esc_(i.entrou) + (i.prazo ? ', prazo ' + Gestao_esc_(i.prazo) : '') + ')</span></li>'; }).join("") + '</ul>' + (x.qtd > x.itens.length ? '<div class="gd-meta">e mais ' + (x.qtd - x.itens.length) + '.</div>' : '')) + '</div></details>';
+    }).join("") + '</div>';
+  }
+
+  function Gestao_cartaoGestor_(g) {
+    // mês congelado com registro antigo ilegível: zeros no lugar de "undefined"
+    var i = g.indicadoresNota || { escalonamentos: 0, revertidas: 0, homologou: 0, vencidos: 0, diasSemAcesso: 0, diasUteis: 0, pctPrazo: null, tempoMedio: null, pctEquipe: null, pctPlanos: null }, comp = g.componentes || {};
+    var item = function (rot, valor, nota) {
+      return '<div><span class="gd-meta">' + Gestao_esc_(rot) + '</span><b>' + Gestao_esc_(valor) + '</b>' + (nota === null || nota === undefined ? '<span class="gd-meta">não entra na nota: sem dado no mês</span>' : '<div class="gd-barra" title="Nota do componente: ' + Gestao_n_(nota) + '"><i style="width:' + Math.max(2, Math.min(100, nota)) + '%"></i></div>') + '</div>';
+    };
+    var v = function (x, fn) { return x === null || x === undefined ? "—" : fn(x); };
+    var aberto = !GD.desAberto || GD.desAberto === g.id || (GD.painel && GD.painel.gestores.length === 1);
+    return '<details class="gd-gestor" id="gdGestor_' + Gestao_esc_(g.id) + '"' + (aberto ? " open" : "") + '><summary class="gd-gestor-cab"><div><div class="gd-card-tit">' + Gestao_esc_(g.nome) + '</div><div class="gd-meta">' + Gestao_esc_(g.areas && g.areas.length ? "Responde por: " + g.areas.join(", ") : "Sem área configurada em Regras e responsáveis") + '</div></div>' +
+      '<div style="text-align:right"><div class="gd-nota">' + (g.nota === null ? "—" : Gestao_n_(g.nota, 1)) + '</div><span class="gd-farol ' + Gestao_esc_(g.farol) + '">' + Gestao_esc_(g.farolTexto) + '</span></div></summary>' +
+      '<div class="gd-kpis gd-kpis-6">' + [[g.recebidos, "Recebidos"], [g.resolvidos, "Resolvidos"], [Gestao_pct_(g.taxaResolucao), "Taxa de resolução"], [Gestao_pct_(g.pctPrazo), "No prazo"], [Gestao_tempo_(g.tempoMedio), "Tempo médio"], [g.escalados, "Escalados"]].map(function (k) {
+        return '<div class="gd-kpi"><span class="v">' + Gestao_esc_(k[0]) + '</span><span class="r">' + Gestao_esc_(k[1]) + '</span></div>'; }).join("") + '</div>' +
+      '<p class="gd-meta"><b>Itens da nota oficial do mês</b></p><div class="gd-comp">' +
+        item("Decidido no prazo", v(i.pctPrazo, function (x) { return Gestao_n_(x, 1) + "% (" + i.noPrazo + " de " + i.basePrazo + ")"; }), comp.prazo) +
+        item("Tempo médio de decisão", Gestao_tempo_(i.tempoMedio), comp.tempo) +
+        item("Prazos vencidos sem decisão", String(i.vencidos), comp.vencidos) + item("Vezes que subiu para a Diretoria", String(i.escalonamentos), comp.escalonamentos) +
+        item("Dias úteis sem acessar", i.diasSemAcesso + " de " + i.diasUteis, comp.acesso) + item("Decisões desfeitas na conferência", i.revertidas + " de " + i.homologou + " conferidas", comp.revertidas) +
+        item("Atividades da equipe sem atraso", v(i.pctEquipe, function (x) { return Gestao_n_(x, 1) + "% (" + (i.equipe - i.equipeAtrasadas) + " de " + i.equipe + ")"; }), comp.equipe) +
+        item("Planos de ação no prazo", v(i.pctPlanos, function (x) { return Gestao_n_(x, 1) + "% (" + i.planosOk + " de " + i.planos + ")"; }), comp.planos) +
+      '</div><div class="gd-dois" style="margin-top:10px"><div>' + Gestao_gruposTipo_("Chegaram à Diretoria no mês", g.grupos.escalados) + '</div><div>' + Gestao_gruposTipo_("Prazos vencidos no mês", g.grupos.vencidos) + '</div></div>' +
+      (g.foraDaNota ? '<p class="gd-meta">Fora da nota: ' + g.foraDaNota + ' O.S. do Auvo no saneamento (antigas ou sem vínculo).</p>' : '') + '</details>';
+  }
+
+  /** O que está aberto agora, agrupado por tipo e área. Saneamento e cadastro à parte; sigilo só conta. */
+  function Gestao_htmlAbertos_(a) {
+    GD.desItens = [];
+    var classes = [["DECISAO", "Decisões abertas", "Contam no desempenho. Toque no grupo para ver os itens e o botão de resolver."],
+      ["SANEAMENTO", "Saneamento: O.S. do Auvo abertas há mais de " + a.saneamento.corte + " dias", "Acúmulo antigo: fora da avaliação. Confira no Auvo e marque em lote no saneamento."],
+      ["CADASTRO", "Cadastro: O.S. sem vínculo de técnico ou cliente", "Uma causa por técnico do Auvo sem cadastro: vincule em Integração Auvo. Fora da avaliação."]];
+    var h = '';
+    classes.forEach(function (cl) {
+      var gs = a.grupos.filter(function (g) { return g.classe === cl[0]; });
+      if (!gs.length) return;
+      var tot = gs.reduce(function (s, g) { return s + g.qtd; }, 0);
+      h += '<div class="gd-caixa' + (cl[0] !== "DECISAO" ? " gd-caixa-san" : "") + '" style="margin-bottom:14px"><h3>' + Gestao_esc_(cl[1]) + ' (' + tot + ')</h3><p class="gd-meta">' + Gestao_esc_(cl[2]) + '</p>' +
+        (cl[0] !== "DECISAO" && Gestao_ehGestao_() ? '<div class="gd-acoes" style="margin:0 0 8px"><button type="button" class="btn-primary" onclick="Gestao_abrirSaneamento_()">Ver e sanear</button></div>' : '') +
+        gs.map(function (g) {
+          return '<details class="gd-grupo' + (g.escalados ? " esc" : g.vencidos ? " venc" : "") + '"><summary><span class="gd-g-n">' + g.qtd + '</span><span class="gd-g-t"><b>' + Gestao_esc_(g.nome) + '</b><span class="gd-meta">' + Gestao_esc_(g.areaNome) + '</span></span><span class="gd-g-chips">' +
+            (g.vencidos ? '<span class="gd-chip critico">' + g.vencidos + ' vencido' + (g.vencidos === 1 ? '' : 's') + '</span>' : '') + (g.escalados ? '<span class="gd-chip aviso">' + g.escalados + ' escalado' + (g.escalados === 1 ? '' : 's') + '</span>' : '') +
+            (g.repetidos ? '<span class="gd-chip">' + g.repetidos + ' do mesmo fato</span>' : '') + (g.origemMaisAntigaBr ? '<span class="gd-chip neutro">aberta no Auvo desde ' + Gestao_esc_(g.origemMaisAntigaBr) + '</span>' : g.maisAntigoBr ? '<span class="gd-chip neutro">na caixa desde ' + Gestao_esc_(g.maisAntigoBr) + '</span>' : '') + '</span></summary>' +
+            '<div class="gd-g-corpo">' + (g.sigilo ? '<div class="gd-meta">Programa de conduta e Qualidade: só a contagem (sigilo). Quem pode ver resolve na Caixa de decisões.</div>' :
+              '<div class="gd-tabela-rolar"><table class="gd-tabela gd-cartoes-cel"><thead><tr><th>Item</th><th>Com quem</th><th>Na caixa</th><th>Prazo</th><th></th></tr></thead><tbody>' + g.itens.map(function (i) {
+                var k = GD.desItens.push(i) - 1;
+                return '<tr><td data-r="Item">' + Gestao_esc_(i.titulo) + (i.repetido ? ' <span class="gd-chip">mesmo fato</span>' : '') + '</td><td data-r="Com quem">' + Gestao_esc_(i.com) + '</td><td data-r="Na caixa">desde ' + Gestao_esc_(i.entrou) + (i.dias !== null ? ' <span class="gd-meta">(' + i.dias + ' dias)</span>' : '') + '</td>' +
+                  '<td data-r="Prazo">' + Gestao_esc_(i.prazo || "—") + (i.escalado ? ' <span class="gd-selo DIRETORIA">Escalado</span>' : i.vencido ? ' <span class="gd-selo vencido">Vencido</span>' : '') + '</td><td>' +
+                  (i.tela ? '<button type="button" class="btn-secondary" onclick="Gestao_desAbrirItem_(' + k + ')">' + Gestao_esc_((i.tela && i.tela.rotulo) || "Resolver") + '</button>' : '') + '</td></tr>';
+              }).join("") + '</tbody></table></div>' + (g.mais ? '<p class="gd-meta">e mais ' + g.mais + '. Use os filtros ou a Caixa de decisões para ver todos.</p>' : '')) + '</div></details>';
+        }).join("") + '</div>';
+    });
+    return h || '<div class="gd-vazio">Nada aberto com estes filtros.</div>';
+  }
+  function Gestao_desAbrirItem_(k) {
+    var i = (GD.desItens || [])[k];
+    if (!i || !i.tela) return;
+    if (i.tela.tipo === "link" && i.tela.url) { try { window.open(i.tela.url, "_blank", "noopener"); } catch (e) {} return; }
+    if (typeof Inicio_executarAcao_ === "function") Inicio_executarAcao_(i.tela); else if (i.tela.mod) abrir(i.tela.mod);
+  }
+
+  function Gestao_htmlRegraNota_(a) {
+    var r = a.regras;
+    var h = '<div class="gd-caixa"><h3>Como a nota é calculada</h3><p class="gd-txt">Cada item vira uma nota de 0 a 100 e a nota do mês é a média dos itens que tiveram dado, cada um com o seu peso. Item sem dado no mês fica de fora e os pesos dos outros são ajustados. Faixa verde a partir de ' + r.farol.verde + ', amarela a partir de ' + r.farol.amarelo + ', vermelha abaixo. Vencimentos de clientes (acompanhamento) não entram. Dias sem acesso contam desde ' + Gestao_esc_(r.implantadoEm || "a ligação da caixa") + '.</p>' +
+      '<div class="gd-tabela-rolar"><table class="gd-tabela"><thead><tr><th>Item</th><th class="n">Peso</th><th>Como é contado</th></tr></thead><tbody>' +
+      r.componentes.map(function (k) { return '<tr><td>' + Gestao_esc_(k.nome) + '</td><td class="n">' + Gestao_esc_(r.pesos[k.chave]) + '</td><td>' + Gestao_esc_(r.textos[k.chave]) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+      '<p class="gd-just">Fora da nota (11/11/2026): O.S. do Auvo que chegou à Caixa com mais de ' + Gestao_esc_(r.saneamentoDias || 30) + ' dias em aberto no Auvo (acúmulo antigo), O.S. sem vínculo de técnico ou cliente (cadastro) e O.S. saneadas. Elas ficam no saneamento da Caixa. A O.S. que entrou nova e envelheceu na Caixa continua contando: aí o atraso é da gestão.</p>' +
+      '<p class="gd-meta">Falha grave recorrente (faixa vermelha dois meses seguidos, ou 3 vezes ou mais no mês em que o assunto subiu para a Diretoria) vira sugestão no Programa de conduta só para a Diretoria decidir. Nunca vira ocorrência sozinha.</p></div>';
+    if (a.podeConfigurar) {
+      h += '<div class="gd-caixa" style="margin-top:14px"><h3>Pesos e faixas (Diretoria)</h3>' + r.componentes.map(function (k) {
+        return '<div class="gd-linha"><label for="gdPeso_' + k.chave + '">' + Gestao_esc_(k.nome) + '</label><input type="number" min="0" max="100" id="gdPeso_' + k.chave + '" value="' + Gestao_esc_(r.pesos[k.chave]) + '"></div>';
+      }).join("") + '<div class="gd-linha"><label for="gdVerde">Verde a partir de</label><input type="number" min="1" max="100" id="gdVerde" value="' + r.farol.verde + '"></div>' +
+        '<div class="gd-linha"><label for="gdAmarelo">Amarelo a partir de</label><input type="number" min="0" max="99" id="gdAmarelo" value="' + r.farol.amarelo + '"></div>' +
+        '<div class="gd-linha"><label for="gdSanDias">O.S. do Auvo fica fora da nota quando chega à Caixa com mais de quantos dias em aberto (7 a 365)</label><input type="number" min="7" max="365" id="gdSanDias" value="' + Gestao_esc_(r.saneamentoDias || 30) + '"></div>' +
+        '<div class="gd-linha"><label for="gdSug">Gerar sugestão no Programa de conduta para falha grave recorrente</label><input type="checkbox" id="gdSug"' + (r.sugestaoConduta === false ? '' : ' checked') + '></div>' +
+        '<div class="gd-acoes"><button type="button" class="btn-primary" onclick="Gestao_salvarPesos_()">Salvar pesos</button></div><div id="gdPesosSt"></div></div>';
+    }
+    return h;
+  }
+
+  function Gestao_salvarPesos_() {
+    var pesos = {};
+    GD.aval.regras.componentes.forEach(function (k) { pesos[k.chave] = Number((document.getElementById("gdPeso_" + k.chave) || {}).value); });
+    var st = document.getElementById("gdPesosSt");
+    Gestao_chamar_("Gestao_apiConfigAvaliacao", { salvar: { pesos: pesos, farol: { verde: Number(document.getElementById("gdVerde").value), amarelo: Number(document.getElementById("gdAmarelo").value) }, sugestaoConduta: !!document.getElementById("gdSug").checked, saneamentoDias: Number((document.getElementById("gdSanDias") || {}).value || 30) } }, function (res) {
+      if (st) st.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+      setTimeout(function () { Gestao_carregarDesempenho_(); }, 800);
+    }, function (m) { if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  // 29/10/2026: relatórios da empresa (SGO_Gestao_RelatoriosEmpresa.js): quem recebe, ligar/desligar e envio de teste
+  function Gestao_desenharRelatorios_() {
+    var corpo = document.getElementById("gdDesCorpo");
+    corpo.innerHTML = '<div id="gdEmpresa"><div class="gd-vazio">Carregando os relatórios da empresa...</div></div>' +
+      '<div class="gd-caixa" style="margin-top:14px"><h3>Relatórios gerados pela rotina</h3><div id="gdRelLista"><div class="gd-vazio">Carregando a lista...</div></div></div>';
+    Gestao_carregarRelEmpresa_();
+    var c = document.getElementById("gdRelLista");
+    Gestao_chamar_("Gestao_apiRelatoriosGerados", {}, function (res) {
+      if (!res.itens.length) { c.innerHTML = '<div class="gd-vazio">Os relatórios automáticos aparecem aqui depois do primeiro dia útil da semana (semanal) e do mês (mensais).</div>'; return; }
+      c.innerHTML = '<div class="gd-tabela-rolar"><table class="gd-tabela"><thead><tr><th>Relatório</th><th>Gerado em</th><th>Situação</th><th></th></tr></thead><tbody>' + res.itens.map(function (r) {
+        return '<tr><td>' + Gestao_esc_(r.nome) + (r.motivo && r.situacao !== "Gerado" ? '<div class="gd-meta">' + Gestao_esc_(r.motivo) + '</div>' : '') + '</td><td>' + Gestao_esc_(r.dia) + '</td><td>' + Gestao_esc_(r.situacao) + '</td><td>' +
+          (r.link && /^https?:\/\//i.test(r.link) ? '<a href="' + Gestao_esc_(r.link) + '" target="_blank" rel="noopener">Abrir o PDF</a>' : '') + '</td></tr>';
+      }).join("") + '</tbody></table></div>';
+    }, function (m) { c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });
+  }
+
+  function Gestao_carregarRelEmpresa_(payload, aviso) {
+    var c = document.getElementById("gdEmpresa");
+    if (!c) return;
+    Gestao_chamar_("Gestao_apiRelatoriosEmpresa", payload || {}, function (res) {
+      GD.relEmp = res;
+      Gestao_desenharRelEmpresa_(res.message || aviso || "", "ok");
+    }, function (m) {
+      if (GD.relEmp && payload && payload.salvar) { Gestao_desenharRelEmpresa_(m, "erro"); return; }
+      c.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>';
+    }, payload && payload.salvar ? { carregando: "Salvando a lista" } : {});
+  }
+
+  function Gestao_desenharRelEmpresa_(msg, tipoMsg) {
+    var r = GD.relEmp, c = document.getElementById("gdEmpresa");
+    if (!r || !c) return;
+    var dis = r.podeConfigurar ? "" : " disabled";
+    var pessoa = function (p) {
+      return '<label><input type="checkbox" class="gdEmpDest" value="' + Gestao_esc_(p.id) + '"' + (p.marcado ? " checked" : "") + dis + '> ' + Gestao_esc_(p.nome) +
+        ' <span class="gd-meta">(' + Gestao_esc_(p.perfil) + (p.area ? ", " + Gestao_esc_(p.area) : "") + (p.diretoria ? ", Diretoria" : p.veNomes ? ", vê nomes da Conduta" : "") + ')</span></label>';
+    };
+    var hist = (r.historico || []).slice(0, 25);
+    c.innerHTML = '<div class="gd-caixa"><h3>Relatórios da empresa</h3>' +
+      '<p class="gd-txt">No primeiro dia útil da semana (a partir das ' + Gestao_esc_(r.hora) + ') e no primeiro dia útil do mês, o SGO+ gera sozinho os relatórios e manda um e-mail só para cada pessoa da lista. ' +
+      'Semanal: gestão, Programa de conduta (equipe e missões), Frota, Comercial e SEDNA da semana anterior. Mensal: Saúde da empresa (primeira página), os mensais da gestão e o fechamento do Programa de conduta. ' +
+      'O e-mail sai quando tudo fica pronto ou às ' + Gestao_esc_(r.horaLimite) + ', com o que ficou pronto e o motivo do resto.</p>' +
+      '<p class="gd-meta">Próximo pacote semanal: ' + Gestao_esc_(r.proximoSemanal || "—") + '. Próximo mensal: ' + Gestao_esc_(r.proximoMensal || "—") + '. Relatório com nomes do Programa de conduta vai só para quem vê o envolvido (Diretoria e Gestor de Qualidade); a avaliação dos gestores, só para a Diretoria.</p>' +
+      (msg ? '<div class="gd-msg ' + (tipoMsg === "erro" ? "erro" : "ok") + '">' + Gestao_esc_(msg) + '</div>' : '') +
+      '<div class="gd-linha"><label for="gdEmpLigado">Enviar os relatórios da empresa em e-mail próprio (desligado: os links voltam ao e-mail diário da Diretoria)</label><input type="checkbox" id="gdEmpLigado"' + (r.ligado ? " checked" : "") + dis + '></div>' +
+      '<label class="gd-meta" style="display:block;margin:8px 0 4px;font-weight:700">Quem recebe os relatórios da empresa' + (r.padrao ? " (padrão: Diretoria e gestor da Qualidade)" : "") + '</label>' +
+      '<div class="gd-checks">' + (r.candidatos || []).map(pessoa).join("") + '</div>' +
+      (r.atualizadoPor ? '<p class="gd-meta">Última alteração: ' + Gestao_esc_(r.atualizadoPor) + ' em ' + Gestao_esc_(r.atualizadoEm) + '.</p>' : '') +
+      (r.podeConfigurar ? '<div class="gd-acoes"><button type="button" class="btn-primary" onclick="Gestao_salvarRelEmpresa_(false)">Salvar lista</button><button type="button" class="btn-secondary" onclick="Gestao_salvarRelEmpresa_(true)">Voltar ao padrão</button>' +
+        '<button type="button" class="btn-secondary" onclick="Gestao_testeRelEmpresa_(\'semanal\')">Gerar e enviar agora (teste): semanal</button><button type="button" class="btn-secondary" onclick="Gestao_testeRelEmpresa_(\'mensal\')">Gerar e enviar agora (teste): mensal</button></div>' +
+        '<p class="gd-meta">O teste gera o que ainda falta e manda o pacote só para você (pode levar alguns minutos). Não conta como envio do pacote de verdade.</p>'
+        : '<p class="gd-meta">Só a Diretoria e o Administrador mudam a lista.</p>') +
+      '<div id="gdEmpSt"></div>' +
+      (hist.length ? '<div class="gd-tabela-rolar" style="margin-top:10px"><table class="gd-tabela"><thead><tr><th>Dia</th><th>Pacote</th><th>O quê</th><th>Situação</th><th></th></tr></thead><tbody>' + hist.map(function (h) {
+        return '<tr><td>' + Gestao_esc_(h.dia) + '</td><td>' + Gestao_esc_(h.referencia) + '</td><td>' + Gestao_esc_(h.tipo) + ': ' + Gestao_esc_(h.nome) + (h.motivo && h.situacao !== "OK" ? '<div class="gd-meta">' + Gestao_esc_(h.motivo) + '</div>' : '') + '</td><td>' +
+          Gestao_esc_(h.situacao === "OK" ? "Feito" : h.situacao === "SEM_DADO" ? "Sem dado" : h.situacao === "PULADO" ? "Não saiu" : "Falhou") + '</td><td>' +
+          (h.link && /^https?:\/\//i.test(h.link) ? '<a href="' + Gestao_esc_(h.link) + '" target="_blank" rel="noopener">Abrir o PDF</a>' : '') + '</td></tr>';
+      }).join("") + '</tbody></table></div>' : '<p class="gd-meta">Nenhum pacote gerado ainda.</p>') + '</div>';
+  }
+
+  function Gestao_salvarRelEmpresa_(padrao) {
+    var ids = Array.prototype.slice.call(document.querySelectorAll(".gdEmpDest")).filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+    var ligado = !!(document.getElementById("gdEmpLigado") || {}).checked;
+    Gestao_carregarRelEmpresa_({ salvar: { ligado: ligado, destinatarios: padrao ? [] : ids, padrao: !!padrao } });
+  }
+
+  function Gestao_testeRelEmpresa_(tipo) {
+    var st = document.getElementById("gdEmpSt");
+    if (st) st.innerHTML = '<div class="gd-msg ok">Gerando e enviando o pacote de teste. Pode levar alguns minutos; não feche a tela.</div>';
+    Gestao_chamar_("Gestao_apiRelatoriosEmpresaTeste", { tipo: tipo }, function (res) {
+      Gestao_carregarRelEmpresa_(null, res.message);
+    }, function (m) { if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; }, { carregando: "Gerando o pacote de teste" });
+  }
+
+  function Gestao_gerarRelatorio_(tipo, gestorId) {
+    var w = window.open("", "_blank");
+    try { if (w) w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#374151;font-size:16px'>Montando o relatório, aguarde...</p>"); } catch (e) {}
+    Gestao_chamar_("Gestao_apiRelatorio", { tipo: tipo, competencia: GD.avalComp, gestorId: gestorId || "" }, function (res) {
+      if (w && !w.closed) { w.document.open(); w.document.write(res.html); w.document.close(); }
+      else Gestao_avisoTela_("O navegador bloqueou a janela do relatório. Libere as janelas do SGO+ e toque de novo." + (res.link ? " O PDF também ficou guardado na pasta." : ""));
+    }, function (m) {
+      if (w && !w.closed) w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#7f1d1d;font-size:16px'>" + Gestao_esc_(m) + "</p>");
+      else Gestao_avisoTela_(m);
+    });
+  }
+</script>

@@ -1,0 +1,19 @@
+Painel financeiro — correções da 2ª revisão independente — publicado em 15/11/2026 00:54 BRT
+
+Imagem: metrolabs/sgo:financeiro-revisao2-20261115
+        sha256:3ed18d844c2691d989a5e09817f93874be4fd90162d73e484dfae81275b50fc1
+Base:   metrolabs/sgo:financeiro-faixas-20261115 (sha256:f810538b…), 3 arquivos conferidos; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-revisao2-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+2ª revisão (somente leitura) das mudanças posteriores à 1ª: 7 achados. Corrigidos 6:
+1) fila presa ao trocar de aba durante a consulta (a resposta para tela antiga não liberava) -> libera sempre;
+2) erro ao desenhar o resumo prendia a fila; resumo na fila rodava em outra aba -> libera mesmo com erro e só roda se o bloco existe;
+3) CSV: número negativo virava texto ('-1234,50) -> a proteção contra fórmula não atinge números;
+4) tempo de segurança da fila 90 s -> 300 s (limite das chamadas do servidor), para não soltar consulta longa em andamento;
+6) Ganhos: referência antiga OMIE:<título> escondia o pagamento seguinte -> só a referência exata marca "já lançado"; a antiga
+   desconta; título coberto mostra o último lançamento (proposta e quem lançou);
+7) gravação: nova confirmação depois de "ocupado" respeita 1 minuto da última releitura.
+Não corrigido (limite do Omie, já documentado): 5) pagamento parcial em meses diferentes conta no mês do último pagamento.
+Arquivos: JS_Omie_Gestao.html, SGO_Omie_Ganhos.js, SGO_Omie_Operacoes.js. Patch: patch-revisao2.cjs (+ último lançamento do título).
+Testes: financeiro-omie-20261114 17/17 (novo: troca de aba + CSV negativo; FALHA na versão anterior), ganhos-omie-20261115 6/6
+(novo: referência antiga), omie-operacoes 20/20, omie-financeiro 13/13. No ar: saudável, GET 200, 0 erros.

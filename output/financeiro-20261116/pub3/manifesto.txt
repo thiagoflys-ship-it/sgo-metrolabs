@@ -1,0 +1,12 @@
+ALTERADO Index.html
+ALTERADO JS_Compras.html
+NOVO JS_Omie_Ajuda.html
+ALTERADO SGO_Ajuda_Compras.js
+ALTERADO SGO_Ajuda_ConciliacaoCaju.js
+ALTERADO SGO_Ajuda_Financeiro.js
+ALTERADO SGO_Compras_Config.js
+ALTERADO SGO_Compras_Faturas.js
+ALTERADO SGO_Compras_Financeiro.js
+ALTERADO SGO_Compras_Relatorios.js
+ALTERADO SGO_Gestao_RelatorioDiario.js
+ALTERADO SGO_Poderes.js

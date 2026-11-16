@@ -1,0 +1,29 @@
+== 1. base
+base conferida
+== 2. backup
+total 156652
+-rw-r--r-- 1 root root 160405096 Nov 14 23:44 banco-antes.dump
+-rw-r--r-- 1 root root      1677 Nov 14 23:44 compose.antes.yml
+== 3. imagem
+sha256:c4470129ef533e3b2b0bb2f82eb990df2778704659ee4c49d6a775c3f4cbdafa
+pwuser
+489
+77597ebcbdc2a4e89930203dfd7dee3743f41bbeb1e38dbae6c12ec7e24dbd3f  Index.html
+imagem conferida
+== 4. troca
+ Container sgo-db-1 Running 
+ Container sgo-app-1 Recreate 
+ Container sgo-app-1 Recreated 
+ Container sgo-db-1 Waiting 
+ Container sgo-db-1 Healthy 
+ Container sgo-app-1 Starting 
+ Container sgo-app-1 Started 
+saudável
+== 5. no ar
+GET / 200
+metrolabs/sgo:financeiro-pedidos-20261115 sha256:c4470129ef533e3b2b0bb2f82eb990df2778704659ee4c49d6a775c3f4cbdafa
+erros no log desde a troca: 0
+validating /opt/metrolabs/sgo/docker-compose.yml: error in parsing "compose-spec.json": getwd: no such file or directory
+Error response from daemon: No such container: node
+14/11 23:45
+Error response from daemon: No such container: node

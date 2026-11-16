@@ -1,0 +1,24 @@
+Painel financeiro — Agenda de vencimentos — publicado em 14/11/2026 ~23:30 BRT (relógio do servidor)
+
+Imagem: metrolabs/sgo:financeiro-agenda-20261115
+        sha256:945c2b2605d47242a80b3ddee0815dec37001a5d9af703cd1a55e321c4980c5c
+Base:   metrolabs/sgo:financeiro-omie-20261114 (sha256:3330c214…), 4 arquivos conferidos; imagem pwuser, 486 arquivos, 4 hashes.
+Backup: /opt/metrolabs/backup/financeiro-agenda-20261115 (compose.antes.yml + banco-antes.dump).
+Reversão: cp /opt/metrolabs/backup/financeiro-agenda-20261115/compose.antes.yml /opt/metrolabs/sgo/docker-compose.yml && docker compose up -d app
+
+O que mudou (somente leitura do Omie; gravação continua DESLIGADA):
+- Visão geral ganhou a "Agenda de vencimentos": títulos com saldo em aberto que vencem nos próximos 7, 15 ou 30 dias, em ordem
+  de data, agrupados por dia (total a pagar/a receber do dia), com o nome do cliente ou fornecedor, documento/parcela, valor em
+  aberto e situação; filtro a pagar / a receber. Cancelados e já quitados ficam fora. Abre junto com a visão geral (7 dias).
+- Nomes: ListarClientes com clientesPorCodigo (50 códigos por chamada), conferido no Omie real (27 de 27).
+- ListarMovimentos sem a espera de 5 s entre páginas (páginas seguidas passaram no Omie real).
+- Ajuda atualizada.
+Arquivos: SGO_Omie.js, SGO_Omie_Gestao.js, JS_Omie_Gestao.html, SGO_Ajuda_Financeiro.js. Patch: patch-agenda.cjs (+ "—" no
+documento vazio e texto da ajuda).
+
+Testes (DEST=cand): financeiro-omie-20261114 8/8 (novo: agenda; página completa 1366/390/320 com a agenda), omie-financeiro
+13/13, omie-operacoes 20/20, omie-conciliacao 9/9, omie-faturamento 12/12, ajuda-sem-recurso-admin 1/1.
+Ensaio com o Omie REAL, somente leitura (ensaio/agenda.json): 7 dias 65 títulos em 1 s; 30 dias 304 títulos em 15 s; 30 dias
+só a pagar 240; todos com nome, em ordem de data. Nada gravado; pasta temporária removida com a recriação do contêiner.
+No ar: saudável, GET 200, 0 erros no log, HTML com a agenda, função publicada.
+Não verificado: operador real usando a agenda.

@@ -1,0 +1,64 @@
+<script>
+  // 15/11/2026: Painel financeiro > Pedidos aprovados (SGO_Omie_Pedidos.js). Lista as propostas aprovadas pelo cliente e prepara a
+  // conta a receber no Omie com o formulário de "Novo lançamento" preenchido; o envio segue a prévia e a confirmação de sempre.
+  var OMIE_PED = { serial: 0, q: '', soPendentes: false };
+  function OmiePed_rpc_(fn, payload, ok, falha) {
+    var serial = ++OMIE_PED.serial, pedido = OMIE_TELA.pedido, sessao = SGO_getSessionId();
+    function atual() { return serial === OMIE_PED.serial && pedido === OMIE_TELA.pedido && sessao === SGO_getSessionId(); }
+    google.script.run.withSuccessHandler(function (r) { if (!atual()) return; if (!r || !r.ok) { falha((r && r.mensagem) || 'Não foi possível concluir.'); return; } ok(r); })
+      .withFailureHandler(function () { if (atual()) falha('Não foi possível comunicar com o servidor. Tente novamente.'); })[fn](sessao, payload);
+  }
+  function OmiePed_render_() {
+    var c = document.getElementById('omieCorpo'); if (!c) return;
+    c.innerHTML = '<section><h3>Pedidos aprovados</h3><p>Propostas aprovadas pelo cliente no Comercial, das mais recentes para as mais antigas. "Preparar conta a receber" abre o novo lançamento no Omie já preenchido (cliente pelo CNPJ, documento, valor e observação com a condição de pagamento) e mostra os títulos que o cliente já tem no Omie, para não lançar em dobro.</p>' +
+      '<form class="omie-barra" onsubmit="event.preventDefault();OmiePed_listar_()"><label for="omiePedBusca">Buscar<input class="cadx-input" id="omiePedBusca" maxlength="80" placeholder="Número, cliente, título ou OC" value="' + CadUI_esc_(OMIE_PED.q) + '"></label><label class="omie-ped-filtro"><input type="checkbox" id="omiePedPend"' + (OMIE_PED.soPendentes ? ' checked' : '') + ' onchange="OmiePed_listar_()"> Só os sem conta a receber pelo SGO+</label><button class="cadx-btn" type="submit">Buscar</button></form>' +
+      '<p id="omiePedStatus" role="status" aria-live="polite"></p><div id="omiePedLista"></div></section>';
+    OmiePed_listar_();
+  }
+  function OmiePed_listar_() {
+    var lista = document.getElementById('omiePedLista'), st = document.getElementById('omiePedStatus'); if (!lista) return;
+    OMIE_PED.q = (document.getElementById('omiePedBusca') || {}).value || '';
+    OMIE_PED.soPendentes = !!(document.getElementById('omiePedPend') || {}).checked;
+    st.textContent = 'Carregando…'; lista.innerHTML = CadUI_esqueleto_(3);
+    OmiePed_rpc_('OmiePed_apiListar', { q: OMIE_PED.q, soPendentes: OMIE_PED.soPendentes }, function (r) {
+      st.textContent = r.total ? (r.total > r.pedidos.length ? 'Mostrando ' + r.pedidos.length + ' de ' + r.total + '. Use a busca para achar os demais.' : r.total + ' pedido(s).') : '';
+      if (!r.pedidos.length) { lista.innerHTML = '<div class="cadx-vazio bc-vazio">Nenhuma proposta aprovada' + (OMIE_PED.q ? ' com esta busca' : '') + '.</div>'; return; }
+      var esc = CadUI_esc_, pode = typeof OmieTela_pode_ === 'function' && OmieTela_pode_('FIN_OMIE_LANCAR');
+      lista.innerHTML = r.pedidos.map(function (p) {
+        return '<article class="omie-ped"><div class="omie-ped-cab"><b>' + esc(p.numero) + '</b> · ' + esc(OmieGest_moeda_(p.total)) + (p.aprovadaEm ? ' · aprovada em ' + esc(p.aprovadaEm) : '') + '</div>' +
+          '<div>' + esc(p.cliente) + (p.cnpj ? ' · ' + esc(p.cnpj) : ' · <b>sem CNPJ no cadastro</b>') + '</div>' +
+          '<div class="cadx-sub">' + esc(p.titulo) + (p.oc ? ' · OC ' + esc(p.oc) : '') + (p.vendedor ? ' · vendedor ' + esc(p.vendedor) : '') + '</div>' +
+          (p.pagamento ? '<div class="cadx-sub">Pagamento: ' + esc(p.pagamento) + '</div>' : '') +
+          (p.lancado ? '<div class="omie-ped-ok">Lançado no Omie pelo SGO+: ' + p.lancado.titulos + ' título(s), ' + esc(OmieGest_moeda_(p.lancado.valor)) + (p.lancado.ultimoEm ? ', último em ' + esc(p.lancado.ultimoEm) : '') + (p.lancado.por ? ' por ' + esc(p.lancado.por) : '') + '.</div>' : '') +
+          (pode ? '<div><button type="button" class="cadx-btn" data-omie-ped="' + esc(p.id) + '">Preparar conta a receber</button></div>' : '') + '</article>';
+      }).join('');
+      Array.prototype.forEach.call(lista.querySelectorAll('[data-omie-ped]'), function (b) { b.onclick = function () { OmiePed_preparar_(b.getAttribute('data-omie-ped'), b); }; });
+    }, function (m) { st.textContent = m; lista.innerHTML = ''; });
+  }
+  function OmiePed_preparar_(id, botao) {
+    var st = document.getElementById('omiePedStatus'); if (botao) botao.disabled = true; st.textContent = 'Procurando o cliente no Omie…';
+    OmiePed_rpc_('OmiePed_apiPreparar', { id: id }, function (r) {
+      var esc = CadUI_esc_;
+      OMIE_OPS_UI.tipo = 'receber'; OMIE_OPS_UI.semListaUmaVez = true;
+      OmieTela_abrir_('lancamentos');
+      OmieOps_form_('criar', 0, r.previo);
+      var ed = document.getElementById('omieOpsEditor'); if (!ed) return;
+      var ex = r.existentes;
+      var box = '<section class="omie-ped-aviso"><h4>Conta a receber da proposta ' + esc(r.proposta.numero) + '</h4><p>Cliente no Omie: <b>' + esc(r.previo.pessoaNome) + '</b>. Valor da proposta: ' + esc(OmieGest_moeda_(r.proposta.total)) + '. ' +
+        (r.proposta.pagamento ? 'Condição de pagamento: ' + esc(r.proposta.pagamento) + '. Ajuste o valor e o vencimento conforme a condição (parcelas são lançadas uma a uma, com a referência terminada em -1, -2…).' : 'Informe o vencimento.') + ' Escolha a categoria e a conta corrente.</p>' +
+        (r.jaComReferencia ? '<p class="omie-ped-alerta"><b>Já existe no Omie um título com a referência ' + esc(r.previo.referencia) + '.</b> Confira antes de lançar de novo.</p>' : '') +
+        (ex === null ? '<p>Não foi possível listar os títulos que o cliente já tem no Omie. Confira no Omie antes de lançar.</p>' :
+          ex.length ? '<p>Últimos títulos deste cliente no Omie (' + r.totalExistentes + ' no total):</p><ul>' + ex.map(function (x) { return '<li>' + esc(x.documento || 'sem documento') + ' · venc. ' + esc(x.vencimento) + ' · ' + esc(OmieGest_moeda_(x.valor)) + ' · ' + esc(x.situacao) + '</li>'; }).join('') + '</ul>' : '<p>O cliente ainda não tem títulos a receber no Omie.</p>') + '</section>';
+      ed.insertAdjacentHTML('afterbegin', box);
+    }, function (m) { st.textContent = m; if (botao) botao.disabled = false; });
+  }
+</script>
+<style>
+  #omieTela .omie-ped { border:1px solid var(--bc-line, #e2e8f0); border-radius:8px; padding:12px; margin-bottom:10px; display:grid; gap:6px; overflow-wrap:anywhere; }
+  #omieTela .omie-ped button { min-height:44px; margin-top:4px; }
+  #omieTela .omie-ped-aviso { border:1px solid var(--bc-line, #e2e8f0); border-radius:8px; padding:12px 16px; margin-top:16px; background:var(--bc-soft, #f8fafc); overflow-wrap:anywhere; }
+  #omieTela .omie-ped-alerta { color:#9b1c1c; }
+  #omieTela .omie-ped-ok { color:#1e6b3a; font-weight:600; }
+  #omieTela .omie-ped-filtro { display:flex; flex-direction:row; align-items:center; gap:6px; white-space:normal; }
+  #omieTela .omie-ped-filtro input { min-height:0; width:auto; }
+</style>

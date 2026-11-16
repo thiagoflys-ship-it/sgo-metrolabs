@@ -1,0 +1,9 @@
+ALTERADO JS_Omie_Regras.html
+ALTERADO SGO_Ajuda_Compras.js
+ALTERADO SGO_Ajuda_DepositoViagem.js
+ALTERADO SGO_Chaves.js
+ALTERADO SGO_Compras_Config.js
+ALTERADO SGO_Compras_Cotacoes.js
+ALTERADO SGO_Omie_Regras.js
+ALTERADO SGO_Utilis.js
+ALTERADO SGO_Viagem.js

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cadastro nas plataformas de compras</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; color: #1d2430; line-height: 1.45; margin: 0; }
+  h1 { font-size: 17pt; margin: 0 0 2mm; color: #0d3b66; }
+  h2 { font-size: 12.5pt; color: #0d3b66; border-bottom: 1.5px solid #0d3b66; padding-bottom: 1mm; margin: 7mm 0 3mm; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm; }
+  .sub { color: #555; margin-bottom: 4mm; }
+  .caixa { border: 1px solid #c9d3df; background: #f4f7fb; padding: 3mm 4mm; border-radius: 2mm; margin: 3mm 0; }
+  .alerta { border-color: #e0b44c; background: #fff8e6; }
+  ol, ul { margin: 1mm 0 2mm 5mm; padding-left: 4mm; }
+  li { margin: 0.8mm 0; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm; font-size: 9.3pt; }
+  th, td { border: 1px solid #b9c4d0; padding: 1.6mm 2mm; vertical-align: top; text-align: left; }
+  th { background: #e3eaf2; }
+  td.n { width: 7mm; text-align: center; }
+  td.mk { width: 22mm; }
+  .texto { border-left: 3px solid #0d3b66; background: #fafbfd; padding: 2.5mm 4mm; margin: 2mm 0 3mm; font-size: 9.8pt; white-space: pre-line; }
+  .quebra { page-break-before: always; }
+  .pe { color: #666; font-size: 8.5pt; margin-top: 6mm; }
+  a { color: #0d3b66; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<h1>Cadastro e pedidos de integração nas plataformas de compras</h1>
+<div class="sub">Metrolabs Soluções em Engenharia Clínica — CNPJ 32.487.278/0001-21<br>
+Responsável pela tarefa: <b>Matheus</b> · Solicitante: <b>Thiago (Diretoria)</b> · Emitido em 03/11/2026</div>
+
+<h2>1. Objetivo</h2>
+<p>O SGO+ já encontra sozinho as licitações publicadas no PNCP e no Compras.gov.br. Esta tarefa serve para que as <b>demais plataformas</b> também passem a avisar a Metrolabs das oportunidades, por dois caminhos:</p>
+<ul>
+  <li><b>Pedido de integração (API):</b> autorização para o nosso sistema <b>consultar</b> processos, editais, mensagens e resultados. Não pedimos envio de proposta nem de lance.</li>
+  <li><b>Avisos por e-mail:</b> onde não houver integração, ativar no cadastro da Metrolabs os avisos de novas oportunidades.</li>
+</ul>
+
+<h2>2. Antes de começar</h2>
+<ol>
+  <li>Peça ao Thiago <b>qual e-mail da empresa</b> deve ser usado em todos os cadastros e avisos (de preferência um e-mail só para licitações). Use sempre o mesmo.</li>
+  <li>Tenha em mãos: CNPJ, razão social, endereço da matriz, telefone comercial e o seu nome como contato.</li>
+  <li>Se alguma plataforma já tiver cadastro da Metrolabs, <b>não crie outro</b>: peça o acesso ao Thiago e use o existente.</li>
+</ol>
+
+<div class="caixa alerta"><b>Regras importantes</b>
+<ul>
+  <li><b>Não aceite nenhum plano pago, taxa ou contrato.</b> Se a plataforma cobrar, anote o valor e as condições e passe para o Thiago decidir.</li>
+  <li><b>Chaves, senhas e credenciais recebidas não vão por WhatsApp nem por e-mail encaminhado.</b> Avise o Thiago e entregue pessoalmente; ele cadastra no SGO+ em "Chaves e senhas".</li>
+  <li>Não envie documentos da empresa (contrato social, certidões, balanço) sem o Thiago autorizar.</li>
+  <li>Anote tudo na tabela da seção 6: data, número de protocolo, nome de quem respondeu e o que respondeu.</li>
+</ul></div>
+
+<h2>3. Passo a passo para cada plataforma</h2>
+<ol>
+  <li>Abra o site indicado na tabela e localize o canal (formulário, área do fornecedor, contato comercial).</li>
+  <li>Se a plataforma pedir cadastro de fornecedor gratuito, faça o cadastro com os dados da empresa.</li>
+  <li>Envie o texto indicado (A, B, C ou D, na seção 5), trocando os campos entre colchetes.</li>
+  <li>No cadastro, ative os <b>avisos por e-mail</b> de novas oportunidades para os nossos serviços: calibração, qualificação térmica, manutenção de equipamentos hospitalares e de laboratório, engenharia clínica e inspeção NR-13.</li>
+  <li>Guarde o protocolo ou faça uma captura de tela do envio.</li>
+  <li>Sem resposta em 7 dias úteis, reenvie uma vez e marque "cobrado" na tabela.</li>
+</ol>
+
+<h2>4. Plataformas (todas)</h2>
+
+<h3>Grupo 1 — Prioridade: plataformas com integração conhecida</h3>
+<table>
+<tr><th>#</th><th>Plataforma</th><th>Onde fazer</th><th>Texto</th></tr>
+<tr><td class="n">1</td><td><b>Portal de Compras Públicas</b> (gratuito; mais usado por prefeituras)</td><td><a href="https://www.portaldecompraspublicas.com.br">portaldecompraspublicas.com.br</a> → formulário de atendimento, setor "Relações Institucionais", área "ERP", assunto "Solicitação de integração com ERP"</td><td>A</td></tr>
+<tr><td class="n">2</td><td><b>Bionexo</b> (cotações de hospitais)</td><td><a href="https://bionexo.com">bionexo.com</a> → contato comercial, área de fornecedores</td><td>B</td></tr>
+<tr><td class="n">3</td><td><b>Petronect</b> (Petrobras)</td><td><a href="https://www.petronect.com.br">petronect.com.br</a> → "Minha Petronect" com login de fornecedor; sem cadastro ativo, atendimento ao fornecedor</td><td>B</td></tr>
+<tr><td class="n">4</td><td><b>Mercado Eletrônico (ME)</b></td><td><a href="https://partner.me.com.br">partner.me.com.br</a> (portal de parceiros) ou <a href="https://institucional.me.com.br">institucional.me.com.br</a> (comercial)</td><td>B</td></tr>
+<tr><td class="n">5</td><td><b>SmartCompras</b></td><td><a href="https://smartcompras.com.br/integracao">smartcompras.com.br/integracao</a> → contato comercial</td><td>B</td></tr>
+</table>
+
+<h3>Grupo 2 — Plataformas públicas de pregão</h3>
+<p>Os editais delas já chegam pelo PNCP. O pedido aqui serve para receber também mensagens do pregoeiro, convocações e resultado. Ative os avisos por e-mail em todas.</p>
+<table>
+<tr><th>#</th><th>Plataforma</th><th>Onde fazer</th><th>Texto</th></tr>
+<tr><td class="n">6</td><td><b>BLL Compras</b></td><td><a href="https://bllcompras.com">bllcompras.com</a> → entrar como fornecedor → atendimento</td><td>C</td></tr>
+<tr><td class="n">7</td><td><b>BNC Compras</b> (mesmo grupo da BLL; pode ser o mesmo contato)</td><td><a href="https://bnccompras.com">bnccompras.com</a> → atendimento ao fornecedor</td><td>C</td></tr>
+<tr><td class="n">8</td><td><b>Licitanet</b></td><td><a href="https://licitanet.com.br">licitanet.com.br</a> → contato / atendimento</td><td>C</td></tr>
+<tr><td class="n">9</td><td><b>Licitações-e</b> (Banco do Brasil)</td><td><a href="https://www.licitacoes-e.com.br">licitacoes-e.com.br</a> → central de atendimento ao fornecedor</td><td>C</td></tr>
+<tr><td class="n">10</td><td><b>BBMNET</b> (os termos citam API para sistemas: perguntar se vale para fornecedor)</td><td><a href="https://bbmnet.com.br">bbmnet.com.br</a> → contato</td><td>C</td></tr>
+<tr><td class="n">11</td><td><b>Licitar Digital</b></td><td><a href="https://www.licitardigital.com.br">licitardigital.com.br</a> → contato</td><td>C</td></tr>
+<tr><td class="n">12</td><td><b>Compras BR</b></td><td><a href="https://comprasbr.com.br/fornecedor/">comprasbr.com.br/fornecedor</a></td><td>C</td></tr>
+<tr><td class="n">13</td><td><b>Portal de Compras MG / Marketplace Fhemig</b> (insumos hospitalares em Minas)</td><td>Portal de Compras MG → cadastro de fornecedor (CAGEF) e avisos</td><td>C</td></tr>
+</table>
+
+<h3>Grupo 3 — Cotações de saúde privada (hospitais, clínicas, operadoras)</h3>
+<p>Estas cotações <b>não</b> passam pelo PNCP. Sem cadastro e aviso por e-mail, a Metrolabs não fica sabendo delas.</p>
+<table>
+<tr><th>#</th><th>Plataforma</th><th>Onde fazer</th><th>Texto</th></tr>
+<tr><td class="n">14</td><td><b>Central de compras do SINDHOESG / Hum@ Tecnologia</b> (Goiânia)</td><td>Ligar ou escrever para o SINDHOESG e perguntar se a central de compras está ativa e como o fornecedor se cadastra</td><td>D</td></tr>
+<tr><td class="n">15</td><td><b>Apoio Cotações</b> (ligada ao sistema MV)</td><td><a href="https://www.apoiocotacoes.com.br">apoiocotacoes.com.br</a> → contato / cadastro de fornecedor</td><td>C</td></tr>
+<tr><td class="n">16</td><td><b>GTPLAN</b></td><td><a href="https://gtplan.net">gtplan.net</a> → contato comercial</td><td>C</td></tr>
+<tr><td class="n">17</td><td><b>UNIDAS Saúde</b> (operadoras de autogestão)</td><td><a href="https://www.portalunidas.com.br">portalunidas.com.br</a> → pré-cadastro de fornecedor</td><td>C</td></tr>
+<tr><td class="n">18</td><td><b>GC Cotações</b> (gratuito para fornecedor)</td><td><a href="https://www.gccotacoes.com.br">gccotacoes.com.br</a> → cadastro de fornecedor</td><td>C</td></tr>
+<tr><td class="n">19</td><td><b>Gênesis Next</b></td><td><a href="https://www.genesisnext.com.br">genesisnext.com.br</a> → contato comercial</td><td>C</td></tr>
+<tr><td class="n">20</td><td><b>Compra Ágil</b></td><td><a href="https://www.compragil.com.br">compragil.com.br</a> → contato comercial</td><td>C</td></tr>
+<tr><td class="n">21</td><td><b>Plataforma de Compras da Unimed</b> (Central de Serviços)</td><td><a href="https://www.unimed.coop.br/site/web/centralrs/ab/plataforma-de-compras">site da Unimed Central RS → Plataforma de Compras</a>; perguntar também à Unimed Goiânia se usa plataforma própria</td><td>C</td></tr>
+</table>
+
+<h3>Grupo 4 — Portais corporativos (só cadastro de fornecedor; não pedir API)</h3>
+<table>
+<tr><th>#</th><th>Plataforma</th><th>O que fazer</th><th>Texto</th></tr>
+<tr><td class="n">22</td><td><b>SAP Ariba</b> (SAP Business Network)</td><td>Criar a conta <b>gratuita</b> de fornecedor (SAP Business Network Discovery), com os serviços da Metrolabs, para receber as publicações por e-mail. Não contratar plano pago.</td><td>—</td></tr>
+<tr><td class="n">23</td><td><b>Nimbi</b></td><td>Fazer o cadastro de fornecedor no portal Nimbi de cada cliente grande que usa (ex.: Vale). Pergunte ao Thiago quais clientes priorizar.</td><td>—</td></tr>
+<tr><td class="n">24</td><td><b>Senior</b></td><td>Cadastro de fornecedor nos clientes que usam o sistema Senior (o portal deles usa a Nimbi).</td><td>—</td></tr>
+</table>
+
+<div class="caixa"><b>Também perguntar ao Thiago e à equipe comercial:</b> se algum cliente privado manda cotação por <b>outra plataforma</b> que não está nesta lista. Se aparecer alguma, acrescente na tabela e use o texto C.</div>
+
+<h2 class="quebra">5. Textos para enviar</h2>
+<p>Troque o que está entre colchetes. No texto C, troque [PLATAFORMA] pelo nome da plataforma.</p>
+
+<h3>Texto A — Portal de Compras Públicas</h3>
+<div class="texto">Prezados,
+
+A Metrolabs Soluções em Engenharia Clínica, CNPJ 32.487.278/0001-21, fornecedora cadastrada em processos públicos de calibração, qualificação térmica, manutenção de equipamentos hospitalares e inspeções NR-13, solicita a chave de acesso (publicKey) da API do Portal de Compras Públicas para integração com o nosso sistema de gestão (ERP próprio, SGO+).
+
+Uso pretendido: consulta de processos recebendo propostas, anexos, itens em disputa, situação do processo, chat do processo e atas, para acompanhamento interno dos processos em que participamos. Não haverá envio automatizado de propostas ou lances.
+
+Pedimos também que nos informem, por escrito: (1) se o uso da chave por fornecedor é permitido; (2) os limites de requisições por minuto e por dia; (3) o ambiente de testes, se houver.
+
+Contato: [nome], [telefone], [e-mail].
+
+Atenciosamente,
+[nome] — Metrolabs</div>
+
+<h3>Texto B — Bionexo, Petronect, Mercado Eletrônico e SmartCompras</h3>
+<div class="texto">Prezados,
+
+A Metrolabs Soluções em Engenharia Clínica, CNPJ 32.487.278/0001-21, empresa de engenharia clínica, metrologia, qualificação e manutenção de equipamentos hospitalares e de laboratório, tem interesse em integrar o nosso sistema de gestão à [PLATAFORMA] como fornecedora, para receber oportunidades e cotações e acompanhar os processos em que participamos.
+
+Pedimos: (1) como obter a integração ou as credenciais de API para fornecedor; (2) condições comerciais e custo, se houver; (3) documentação técnica, forma de autenticação e limites de uso; (4) se a integração cobre cotações de serviços técnicos, além de materiais; (5) ambiente de testes e prazo de implantação.
+
+Uso pretendido: consulta. Não haverá envio automatizado de propostas ou lances.
+
+Contato: [nome], [telefone], [e-mail].
+
+Atenciosamente,
+[nome] — Metrolabs</div>
+
+<h3>Texto C — Demais plataformas</h3>
+<div class="texto">Prezados,
+
+A Metrolabs Soluções em Engenharia Clínica, CNPJ 32.487.278/0001-21, fornecedora de serviços de calibração, qualificação térmica, manutenção de equipamentos hospitalares e de laboratório e inspeções NR-13, gostaria de saber se a [PLATAFORMA] oferece API ou outra forma de integração para fornecedores com o nosso sistema de gestão.
+
+Uso pretendido: somente consulta — processos e cotações abertas, edital e anexos, itens, situação do processo, mensagens do pregoeiro ou do comprador, convocações e resultado. Não haverá envio automatizado de propostas ou lances.
+
+Pedimos que nos informem, por escrito: (1) se existe essa integração para fornecedor e como solicitá-la; (2) custo, se houver; (3) documentação técnica, autenticação e limites de uso; (4) ambiente de testes, se houver. Caso não exista, pedimos confirmar quais avisos por e-mail podemos ativar no nosso cadastro.
+
+Contato: [nome], [telefone], [e-mail].
+
+Atenciosamente,
+[nome] — Metrolabs</div>
+
+<h3>Texto D — SINDHOESG (contato por telefone ou e-mail)</h3>
+<div class="texto">Bom dia. Sou [nome], da Metrolabs Soluções em Engenharia Clínica, de Goiânia, CNPJ 32.487.278/0001-21. Prestamos serviços de calibração, qualificação térmica e manutenção de equipamentos hospitalares.
+
+Gostaríamos de saber se a central de compras do SINDHOESG para os hospitais filiados está ativa, qual plataforma é usada hoje e como uma empresa de serviços se cadastra como fornecedora para receber as cotações. Se houver aviso por e-mail ou integração com sistema, pedimos também essa informação.
+
+Contato: [telefone], [e-mail].</div>
+
+<h2 class="quebra">6. Controle (preencher e devolver ao Thiago)</h2>
+<table>
+<tr><th>#</th><th>Plataforma</th><th class="mk">Cadastro feito</th><th class="mk">Pedido enviado (data / protocolo)</th><th class="mk">Avisos por e-mail ativos</th><th>Resposta / custo / observação</th></tr>
+<tr><td class="n">1</td><td>Portal de Compras Públicas</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">2</td><td>Bionexo</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">3</td><td>Petronect</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">4</td><td>Mercado Eletrônico</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">5</td><td>SmartCompras</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">6</td><td>BLL Compras</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">7</td><td>BNC Compras</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">8</td><td>Licitanet</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">9</td><td>Licitações-e (BB)</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">10</td><td>BBMNET</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">11</td><td>Licitar Digital</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">12</td><td>Compras BR</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">13</td><td>Portal de Compras MG / Fhemig</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">14</td><td>SINDHOESG / Hum@</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">15</td><td>Apoio Cotações</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">16</td><td>GTPLAN</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">17</td><td>UNIDAS Saúde</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">18</td><td>GC Cotações</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">19</td><td>Gênesis Next</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">20</td><td>Compra Ágil</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">21</td><td>Unimed (Plataforma de Compras)</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">22</td><td>SAP Ariba</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">23</td><td>Nimbi</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">24</td><td>Senior</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">25</td><td>Outra: ____________________</td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="n">26</td><td>Outra: ____________________</td><td></td><td></td><td></td><td></td></tr>
+</table>
+
+<h2>7. Ao terminar</h2>
+<ol>
+  <li>Devolva a tabela preenchida ao Thiago.</li>
+  <li>Avise quais plataformas mandaram chave ou credencial (entregar pessoalmente, nunca por mensagem).</li>
+  <li>Avise quais cobram e quanto, para decisão.</li>
+  <li>Informe o e-mail em que os avisos foram ativados.</li>
+</ol>
+<p><b>Já cobertos, não precisa fazer nada:</b> PNCP e Compras.gov.br. O SGO+ já lê os dois automaticamente.</p>
+
+<div class="pe">Metrolabs Soluções em Engenharia Clínica · Documento interno · 03/11/2026</div>
+</body>
+</html>

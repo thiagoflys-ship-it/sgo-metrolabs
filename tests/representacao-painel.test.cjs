@@ -9,7 +9,8 @@ const path = require('node:path');
 const { ambiente, ok, FOTO, em } = require('./_assistencia_ambiente.cjs');
 
 const pasta = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
-const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js'];
+// 11/11/2026: o servidor carrega todos os arquivos do legado; a régua de prazos da representada (SGO_Representacao_Regua.js) entra como em produção
+const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js', 'SGO_Representacao_Regua.js'];
 const CNPJ_B = '04.252.011/0001-10';
 const foto = (nome) => ({ nome: nome || 'foto.jpg', tipo: 'image/jpeg', base64: FOTO });
 
@@ -124,7 +125,9 @@ test('ficha do chamado da representada: marcos previsto x realizado (envio, acei
   const a = amb();
   const k = carteira(a);
   const f = ok(a.rep('s_beto.beta', 'chamado', { tipo: 'CHAMADO', id: k.c2.id }));
-  assert.deepEqual(f.marcos.map((m) => m.nome), ['Pedido enviado', 'Aceite pela Metrolabs', 'Visita', 'Conclusão']);
+  // 11/11/2026 (régua de prazos): o marco do agendamento (prazo para estudar o caso e agendar) entra depois do aceite
+  assert.deepEqual(f.marcos.map((m) => m.nome), ['Pedido enviado', 'Aceite pela Metrolabs', 'Agendamento do atendimento', 'Visita', 'Conclusão']);
+  assert.equal(f.marcos[2].previstoMs, a.ctx.Ast_somarMinUteis_(em('2026-10-20T15:00:00-03:00'), 1710)); assert.equal(f.marcos[2].realizadoMs, null);
   const ac = f.marcos[1];
   assert.equal(ac.realizadoMs, em('2026-10-20T15:00:00-03:00'));
   assert.equal(ac.previstoMs, a.ctx.Ast_somarMinUteis_(em('2026-10-19T11:00:00-03:00'), 240));

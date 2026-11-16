@@ -423,13 +423,13 @@ test('etapa 4 · Financeiro: pagamento com comprovante, conferência por outra p
   const pf = pend(amb, 's_fabio').filter((i) => i.tipo === 'compras_conferir');
   assert.equal(pf.length, 1);
   semValor(pf[0].titulo + pf[0].detalhe, 'pendência do Financeiro');
-  assert.match(amb.api('s_tiago', 'financeiro', {}).message, /conferência das compras é do Financeiro/);
+  assert.match(amb.api('s_tiago', 'financeiro', {}).message, /Financeiro, que é sigiloso/);
   const l = ok(amb.api('s_fabio', 'financeiro', { mes: '2026-10', cartaoFinal: '4321', situacao: 'AGUARDANDO' }));
   assert.equal(l.compras.length, 1);
   assert.equal(l.compras[0].diferenca, true, 'valor pago diferente do pedido');
   assert.equal(ok(amb.api('s_fabio', 'financeiro', { mes: '2026-10', cartaoFinal: '9999' })).compras.length, 0);
   // quem registrou não confere a própria (Diretoria registrando e conferindo)
-  assert.match(amb.api('s_carlos', 'conferir', { pedidoId: l.compras[0].id, resultado: 'CONFERIDA' }).message, /conferência das compras é do Financeiro/);
+  assert.match(amb.api('s_carlos', 'conferir', { pedidoId: l.compras[0].id, resultado: 'CONFERIDA' }).message, /Financeiro, que é sigiloso/);
   const pedRow = amb.tabelas.CMP_PEDIDOS[0], quem = pedRow.PAGAMENTO_POR_ID; pedRow.PAGAMENTO_POR_ID = 'u_fin';
   assert.match(amb.api('s_fabio', 'conferir', { pedidoId: l.compras[0].id, resultado: 'CONFERIDA' }).message, /Quem registra não confere a própria/);
   pedRow.PAGAMENTO_POR_ID = quem;
@@ -491,4 +491,25 @@ test('etapa 4 · painel e relatório mensal A4: gasto por vínculo, área e forn
   assert.ok(amb.ctx.Compras_rotina_(null, true).relatorioMensal.feito, 'uma vez só');
   assert.ok(pend(amb, 's_dora').some((i) => i.tipo === 'compras_aviso' && /Relatório mensal de compras/.test(i.titulo)));
   assert.ok(Object.values(amb.pastas).some((x) => x.nome === 'Compras - Relatórios'));
+});
+
+// 11/11/2026 (decisão do dono): quem PEDIU a compra é avisado da decisão na hora (alerta na tela e e-mail, sem WhatsApp)
+test('decisão da compra: quem pediu recebe o alerta na tela e o e-mail (aprovada e reprovada)', () => {
+  for (const aprovar of [true, false]) {
+    const amb = ambiente();
+    regrasDeTeste(amb);
+    const fs = fornecedoresDeTeste(amb);
+    const q = emCotacao(amb, 'Analisador de segurança elétrica');
+    const t = cotar(amb, q, fs[0], '5.000,00');
+    ok(amb.api('s_carlos', 'escolher', { requisicaoId: q.id, cotacaoId: t.cotacoes[0].id, justificativaMinimo: 'Fornecedor único autorizado do analisador' }));
+    const antes = amb.emails.length;
+    ok(amb.api('s_gil', 'decidir', { requisicaoId: q.id, aprovar, texto: aprovar ? 'Necessário para a manutenção preventiva' : 'Peça outra cotação com prazo menor' }));
+    const req = amb.tabelas.CMP_REQUISICOES.find((x) => x.ID === q.id);
+    const quem = req.SOLICITANTE_ID;
+    const toast = (amb.tabelas.ATV_AVISOS || []).filter((v) => v.DESTINATARIO_ID === quem && /Sua compra foi (aprovada|reprovada)/.test(v.TITULO));
+    assert.equal(toast.length, 1, 'alerta na tela para quem pediu');
+    const usuario = amb.tabelas.CAD_USUARIOS.find((u) => u.ID === quem);
+    const em = amb.emails.slice(antes).filter((m) => String(m.to) === usuario.EMAIL && /Sua compra foi/.test(m.subject));
+    assert.equal(em.length, 1, 'e-mail para quem pediu (' + (aprovar ? 'aprovada' : 'reprovada') + ')');
+  }
 });

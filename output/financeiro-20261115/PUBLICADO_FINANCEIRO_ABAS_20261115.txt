@@ -1,0 +1,14 @@
+Painel financeiro — varredura das 12 abas — publicado em 15/11/2026 00:07 BRT
+
+Imagem: metrolabs/sgo:financeiro-abas-20261115
+        sha256:ac60b5cb3cc1959829270f188e1373b94dce24ceccc9d53adf85f35ebb8ef3ad
+Base:   metrolabs/sgo:financeiro-vinculo-20261115 (sha256:deb3ff21…), 1 arquivo conferido; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-abas-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Teste novo abre as 12 abas na página completa (1366 e 390 px). Achados e correções (JS_Omie_Gestao.html):
+1) Provisões quebrava com "crypto.randomUUID is not a function" fora de conexão segura (http, ex.: acesso pelo IP). Produção
+   usa https (sgo.metrolabs.com.br), onde funcionava; agora há reserva compatível (OmieGest_uuid_, mesmo formato).
+   Fora do escopo, sem mexer: JS_Assistencia.html:865 usa window.crypto.randomUUID() sem reserva (mesmo risco só em http).
+2) A aba aberta não aparecia destacada (o estilo padrão do botão encobria). Agora usa a cor do botão principal do sistema.
+Testes: financeiro-omie-20261114 13/13 (novo: todas as abas sem erro, sem rolagem lateral, aba aberta destacada).
+Capturas: output/financeiro-20261115/capturas/390-aba-*.png. No ar: saudável, GET 200, 0 erros.

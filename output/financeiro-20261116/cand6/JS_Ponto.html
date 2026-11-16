@@ -1,0 +1,610 @@
+<style>
+  /* ASSISTENTE DO PONTO (21/10/2026) — servidor: SGO_Ponto_*.js (uma porta: Ponto_api). Celular sem rolagem lateral: tabelas viram cartões. */
+  .pt-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .pt-tab { border: 1px solid var(--border); background: var(--card); color: var(--text); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 13px; cursor: pointer; min-height: 40px; }
+  .pt-tab.active { background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-color: transparent; }
+  .pt-tab .pt-n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px; background: var(--danger); color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+  .pt-faixa { margin: 8px 0 12px; padding: 10px 14px; border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; background: var(--card); font-size: 13px; line-height: 1.5; }
+  .pt-faixa.aviso { border-left-color: var(--warning); } .pt-faixa.erro { border-left-color: var(--danger); background: var(--danger-bg); } .pt-faixa.ok { border-left-color: var(--success); }
+  .pt-caixa { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; overflow-wrap: anywhere; }
+  .pt-caixa h3 { margin: 0 0 8px; font-size: 14px; }
+  .pt-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 10px 0 14px; }
+  .pt-kpi { background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info, #1f5fa8); border-radius: 8px; padding: 10px 12px; }
+  .pt-kpi .v { display: block; font-size: 20px; font-weight: 800; color: var(--text-strong, var(--text)); font-variant-numeric: tabular-nums; }
+  .pt-kpi .r { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .pt-kpi.ok { border-top-color: var(--success); } .pt-kpi.aviso { border-top-color: var(--warning); } .pt-kpi.critico { border-top-color: var(--danger); }
+  .pt-tabela { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .pt-tabela th, .pt-tabela td { border-bottom: 1px solid var(--border); padding: 7px 6px; text-align: left; vertical-align: top; }
+  .pt-tabela td.n, .pt-tabela th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pt-selo { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; border: 1px solid currentColor; margin: 0 4px 2px 0; white-space: nowrap; }
+  .pt-selo.verde { color: var(--success); background: var(--success-bg); } .pt-selo.laranja { color: var(--warning); background: var(--warning-bg); }
+  .pt-selo.vermelho { color: var(--danger); background: var(--danger-bg); } .pt-selo.azul { color: var(--info, #1f5fa8); } .pt-selo.cinza { color: var(--muted); }
+  .pt-filtros { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin: 6px 0 12px; }
+  .pt-filtros label, .pt-campo label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 3px; color: var(--muted); }
+  .pt-filtros select, .pt-filtros input { min-height: 40px; max-width: 100%; }
+  .pt-grade2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; } .pt-grade3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 12px; }
+  .pt-campo { margin-bottom: 10px; min-width: 0; }
+  .pt-campo input, .pt-campo select, .pt-campo textarea { width: 100%; box-sizing: border-box; min-height: 40px; font: inherit; }
+  .pt-campo textarea { min-height: 70px; resize: vertical; }
+  .pt-ajuda-campo { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .pt-acoes { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; } .pt-acoes button { min-height: 40px; }
+  .pt-vazio { padding: 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; }
+  .pt-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin: 6px 0; } .pt-check input { width: auto; min-height: 0; margin-top: 3px; }
+  .pt-modelo { white-space: pre-wrap; font-size: 12.5px; line-height: 1.5; background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; padding: 8px 10px; margin: 6px 0; }
+  .pt-mini { font-size: 12px; color: var(--muted); }
+  .pt-tabela.pt-dia { table-layout: fixed; } .pt-tabela.pt-dia th:first-child { width: 24%; }
+  .pt-tabela.pt-dia td { overflow-wrap: anywhere; } .pt-tabela.pt-dia .pt-selo { white-space: normal; }
+  @media (max-width: 900px) {
+    .pt-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pt-grade2, .pt-grade3 { grid-template-columns: 1fr; }
+    .pt-tabela thead { display: none; }
+    .pt-tabela, .pt-tabela tbody, .pt-tabela tr, .pt-tabela td { display: block; width: 100%; box-sizing: border-box; }
+    .pt-tabela tr { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; background: var(--card); }
+    .pt-tabela td { border: 0; padding: 3px 0; text-align: left !important; }
+    .pt-tabela td[data-r]::before { content: attr(data-r) ": "; color: var(--muted); font-weight: 700; }
+    .pt-filtros > div { flex: 1 1 140px; }
+    .pt-tab { flex: 1 1 auto; }
+  }
+  /* Pessoas: lista compacta e editor individual, com a mesma hierarquia no computador e no celular. */
+  .pt-pessoas { --pt-accent: var(--success, #26745c); color: var(--text, #25312c); }
+  .pt-pessoas-cab { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:6px 0 20px; }
+  .pt-eyebrow { color:var(--muted, #68746d); font-size:10px; font-weight:800; letter-spacing:.1em; margin:0 0 7px; }
+  .pt-pessoas-cab h3 { font-size:23px; line-height:1.2; margin:0 0 7px; letter-spacing:-.02em; }
+  .pt-pessoas-cab p { color:var(--muted, #68746d); font-size:13px; margin:0; }
+  .pt-pessoas-total { display:flex; flex-direction:column; gap:3px; text-align:right; flex-shrink:0; }
+  .pt-pessoas-total strong { font-size:28px; line-height:1; color:var(--pt-accent); font-variant-numeric:tabular-nums; }
+  .pt-pessoas-total span { color:var(--muted, #68746d); font-size:11px; }
+  .pt-pessoas-layout { display:grid; grid-template-columns:minmax(260px,.85fr) minmax(0,1.4fr); gap:18px; align-items:start; }
+  .pt-pessoas-lista-painel, .pt-pessoa-editor { min-width:0; border:1px solid var(--border, #dce4df); background:var(--card, #fff); border-radius:16px; }
+  .pt-pessoas-lista-painel { padding:14px; }
+  .pt-pessoas-filtros { display:grid; gap:8px; }
+  .pt-pessoas-filtros .pt-campo { margin:0; }
+  .pt-pessoas-filtros input, .pt-pessoas-filtros select { font-size:13px; min-height:44px; border-radius:8px; }
+  .pt-pessoas-lista { display:grid; gap:7px; max-height:660px; overflow-y:auto; margin-top:14px; padding:1px; }
+  .pt-pessoa-item { display:flex; align-items:center; gap:10px; width:100%; min-width:0; text-align:left; font:inherit; background:var(--card, #fff); color:var(--text, #25312c); border:1px solid var(--border, #dce4df); padding:12px; border-radius:10px; cursor:pointer; }
+  .pt-pessoa-item:hover { background:var(--bg, #f3f6f4); }
+  .pt-pessoa-item.ativo { border-color:var(--pt-accent); box-shadow:inset 3px 0 var(--pt-accent); background:color-mix(in srgb, var(--pt-accent) 5%, var(--card, #fff)); }
+  .pt-pessoa-avatar { width:33px; height:33px; border-radius:10px; display:grid; place-items:center; flex-shrink:0; background:var(--bg, #f1f5f2); color:var(--muted, #68746d); font-size:11px; font-weight:700; }
+  .pt-pessoa-textos { flex:1; min-width:0; display:grid; gap:3px; }
+  .pt-pessoa-textos strong { font-size:13px; font-weight:700; line-height:1.35; overflow-wrap:anywhere; }
+  .pt-pessoa-area { font-size:11px; color:var(--muted, #68746d); }
+  .pt-pessoa-resumo { font-size:11px; line-height:1.35; }
+  .pt-pessoa-estado { font-size:10px; color:var(--muted, #68746d); }
+  .pt-pessoa-estado.pendente { color:var(--warning, #9c6209); font-weight:700; }
+  .pt-pessoa-seta { font-size:24px; font-weight:400; color:var(--muted, #68746d); }
+  .pt-pessoa-editor { padding:22px; }
+  .pt-pessoa-escolher { min-height:340px; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:20px; }
+  .pt-pessoa-escolher > span { background:var(--bg, #f1f5f2); border:1px solid var(--border, #dce4df); border-radius:16px; width:55px; height:55px; display:grid; place-items:center; color:var(--pt-accent); font-size:24px; }
+  .pt-pessoa-escolher h4 { font-size:18px; margin:18px 0 8px; }
+  .pt-pessoa-escolher p { max-width:300px; font-size:13px; line-height:1.6; color:var(--muted, #68746d); }
+  .pt-pessoa-voltar { display:none; }
+  .pt-pessoa-editor-cab { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; padding-bottom:20px; border-bottom:1px solid var(--border, #dce4df); margin-bottom:20px; }
+  .pt-pessoa-editor-cab > div { min-width:0; }
+  .pt-pessoa-editor-cab h4 { font-size:19px; line-height:1.35; margin:0 0 5px; overflow-wrap:anywhere; }
+  .pt-pessoa-editor-cab p:not(.pt-eyebrow) { font-size:12px; color:var(--muted, #68746d); margin:0; }
+  .pt-pessoa-editor-cab .pt-selo { flex-shrink:0; margin:0; font-size:10px; }
+  .pt-pessoa-impedimento { border-left:3px solid var(--warning, #b57a20); background:var(--warning-bg, #fff7e9); border-radius:8px; padding:12px; font-size:12px; line-height:1.5; margin-bottom:18px; }
+  .pt-pessoa-impedimento p { margin:4px 0 0; }
+  .pt-aviso-fieldset { min-width:0; padding:0; margin:0; border:0; }
+  .pt-aviso-fieldset legend { font-weight:700; font-size:16px; padding:0; }
+  .pt-pessoa-lead { margin:6px 0 16px; font-size:12px; color:var(--muted, #68746d); }
+  .pt-aviso-tiles { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+  .pt-aviso-tile { display:flex; flex-direction:column; min-width:0; min-height:114px; padding:13px; box-sizing:border-box; border:1px solid var(--border, #dce4df); background:var(--card, #fff); border-radius:12px; cursor:pointer; }
+  .pt-aviso-tile.selecionado { border-color:var(--pt-accent); background:color-mix(in srgb, var(--pt-accent) 5%, var(--card, #fff)); }
+  .pt-aviso-tile-topo { display:flex; align-items:center; justify-content:space-between; gap:4px; font-size:12px; font-weight:700; }
+  .pt-aviso-tile-topo { position:relative; }
+  .pt-aviso-tile input[type=checkbox] { position:absolute; opacity:0; width:1px !important; height:1px !important; min-width:0 !important; min-height:0 !important; max-width:1px !important; max-height:1px !important; padding:0; margin:0; }
+  .pt-aviso-chave { display:inline-block; position:relative; width:34px; height:22px; border-radius:20px; border:1px solid var(--border, #cfd9d2); background:var(--border, #cfd9d2); flex-shrink:0; box-sizing:border-box; }
+  .pt-aviso-chave::before { content:""; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 2px #0002; transition:transform .15s ease; }
+  .pt-aviso-tile input:checked + .pt-aviso-chave { background:var(--pt-accent); border-color:var(--pt-accent); }
+  .pt-aviso-tile input:checked + .pt-aviso-chave::before { transform:translateX(12px); }
+  .pt-aviso-tile input:focus-visible + .pt-aviso-chave { outline:3px solid var(--info, #1f5fa8); outline-offset:3px; }
+  .pt-aviso-hora { display:block; margin-top:12px; font-size:21px; line-height:1.1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .pt-aviso-tile-estado { color:var(--muted, #68746d); font-size:10px; margin-top:5px; }
+  .pt-aviso-tile.indisponivel { opacity:.65; cursor:default; background:var(--bg, #f1f5f2); }
+  .pt-aviso-tile.indisponivel .pt-aviso-hora { font-size:14px; }
+  .pt-aviso-nota { color:var(--muted, #68746d); font-size:11px; line-height:1.55; margin:12px 0 16px; }
+  .pt-aviso-presets { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:11px; }
+  .pt-aviso-presets > span { color:var(--muted, #68746d); }
+  .pt-aviso-presets button, .pt-aviso-origem button { font:inherit; font-size:11px; color:var(--text, #25312c); background:var(--bg, #f1f5f2); border:1px solid var(--border, #dce4df); border-radius:7px; padding:7px 9px; min-height:40px; cursor:pointer; }
+  .pt-aviso-origem { display:flex; justify-content:space-between; align-items:center; gap:8px; border-top:1px solid var(--border, #dce4df); margin-top:18px; padding-top:14px; font-size:12px; font-weight:600; }
+  .pt-aviso-origem button { background:transparent; color:var(--pt-accent); }
+  .pt-aviso-rodape { display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border, #dce4df); padding-top:16px; margin-top:16px; background:var(--card, #fff); }
+  .pt-aviso-rodape > div { display:flex; justify-content:flex-end; gap:8px; }
+  .pt-aviso-rodape button { min-height:44px; font-size:12px; }
+  .pt-pessoa-detalhes, .pt-pessoas-ajuda, .pt-pessoas-dispensas { margin-top:18px; border-top:1px solid var(--border, #dce4df); padding-top:14px; font-size:12px; line-height:1.6; }
+  .pt-pessoa-detalhes summary, .pt-pessoas-ajuda summary, .pt-pessoas-dispensas > summary { cursor:pointer; min-height:44px; font-weight:600; }
+  .pt-pessoa-detalhes p, .pt-pessoas-ajuda p { margin:10px 0; color:var(--muted, #68746d); }
+  .pt-pessoas-dispensas > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .pt-pessoas-dispensas .pt-caixa { margin-top:8px; }
+  .pt-pessoas button:focus-visible, .pt-pessoas input:focus-visible, .pt-pessoas select:focus-visible, .pt-pessoas summary:focus-visible { outline:3px solid var(--info, #1f5fa8); outline-offset:3px; }
+  .pt-pessoas button:disabled { opacity:.5; cursor:not-allowed; }
+  @media (max-width:899px) {
+    .pt-pessoas-cab { align-items:flex-start; gap:10px; margin-bottom:16px; }
+    .pt-pessoas-cab h3 { font-size:21px; }
+    .pt-pessoas-cab p { max-width:240px; font-size:12px; line-height:1.5; }
+    .pt-pessoas-total { padding-top:3px; }
+    .pt-pessoas-total strong { font-size:24px; }
+    .pt-pessoas-total span { max-width:70px; line-height:1.35; }
+    .pt-shell-pessoas > .pt-tabs { flex-wrap:nowrap; overflow-x:auto; gap:6px; padding:3px 2px 7px; margin-bottom:0; }
+    .pt-shell-pessoas > .pt-tabs .pt-tab { flex:0 0 auto; white-space:nowrap; min-height:44px; }
+    .pt-shell-pessoas > .module-header { margin-bottom:0; }
+    .pt-pessoas:has(.editando) > .pt-pessoas-cab { display:none; }
+    .pt-pessoas-layout { display:block; }
+    .pt-pessoas-lista-painel { padding:12px; }
+    .pt-pessoas-lista { max-height:none; }
+    .pt-pessoas-filtros { grid-template-columns:minmax(0,1fr); }
+    .pt-pessoa-editor { display:none; padding:16px 16px 120px; scroll-margin-top:76px; }
+    #ptAvisoBusca { scroll-margin-top:76px; }
+    .pt-pessoas-layout.editando .pt-pessoas-lista-painel { display:none; }
+    .pt-pessoas-layout.editando .pt-pessoa-editor { display:block; }
+    .pt-pessoa-voltar { display:inline-flex; align-items:center; min-height:44px; color:var(--pt-accent); background:transparent; border:0; padding:0; margin-bottom:10px; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+    .pt-pessoa-editor-cab { display:block; margin-bottom:18px; padding-bottom:16px; }
+    .pt-pessoa-editor-cab h4 { font-size:18px; }
+    .pt-pessoa-editor-cab .pt-selo { margin-top:9px; }
+    .pt-aviso-rodape { position:fixed; left:0; right:0; bottom:0; z-index:40; margin:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow:0 -6px 18px #00000008; box-sizing:border-box; }
+    .pt-aviso-rodape > div { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); }
+    .pt-aviso-rodape button { width:100%; padding-left:8px; padding-right:8px; }
+    .pt-pessoas-dispensas > summary { display:block; }
+    .pt-pessoas-dispensas > summary span { display:block; }
+  }
+  @media (max-width:360px) {
+    .pt-pessoa-editor { padding:12px 12px 120px; }
+    .pt-aviso-tiles { gap:8px; }
+    .pt-aviso-tile { padding:10px; min-height:110px; }
+    .pt-aviso-tile-topo { font-size:11px; }
+    .pt-aviso-chave { width:30px; height:20px; }
+    .pt-aviso-chave::before { width:12px; height:12px; }
+    .pt-aviso-tile input:checked + .pt-aviso-chave::before { transform:translateX(10px); }
+    .pt-aviso-rodape { padding-left:12px; padding-right:12px; }
+    .pt-aviso-origem { align-items:flex-start; }
+    .pt-aviso-origem button { max-width:120px; }
+  }
+</style>
+
+<script>
+  // ==========================================================
+  // ASSISTENTE DO PONTO NATIVO (21/10/2026) — abrir('ponto') -> Ponto_render_().
+  // Uma chamada só no servidor: Ponto_api(sessionId, acao, dados). O servidor confere o papel em toda chamada.
+  // A tela não se redesenha sozinha (formulário aberto nunca é apagado): recarrega depois de cada ação ou em "Atualizar".
+  // ==========================================================
+  var PT = { ini: null, aba: "", dia: "", mes: "", filtro: "PENDENTE", cache: {} };
+  var PT_SIT_COR = { CONFIRMADO: "verde", LEMBRADO: "laranja", ENVIANDO: "laranja", ESQUECI: "azul", NAO_CONFIRMADO: "vermelho", DISPENSADO: "cinza", NAO_ENVIADO: "cinza" };
+  var PT_AJ_COR = { PENDENTE: "laranja", LANCADO: "verde", RECUSADO: "vermelho" };
+  var PT_MARCS = [["ENTRADA", "Entrada"], ["ALMOCO", "Saída para o almoço"], ["RETORNO", "Volta do almoço"], ["SAIDA", "Saída"]];
+
+  function Pto_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+  function Pto_$_(id) { return document.getElementById(id); }
+  function Pto_chamar_(acao, dados, ok, erro, carregando) {
+    if (carregando) SGO_iniciarCarregamento_(carregando);
+    var fim = function () { if (carregando) SGO_finalizarCarregamento_(); };
+    google.script.run.withSuccessHandler(function (r) {
+      fim();
+      if (!r || !r.ok) { var m = (r && r.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."; if (erro) erro(m); else alert(m); return; }
+      try { if (ok) ok(r); } catch (e) { console.error("Ponto " + acao + ":", e); alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+    }).withFailureHandler(function (e) { fim(); var m = "Não foi possível falar com o servidor (" + ((e && e.message) || e) + "). Verifique a conexão e tente de novo; nada foi alterado."; if (erro) erro(m); else alert(m); })
+      .Ponto_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function Pto_msg_(id, texto, tipo) { var el = Pto_$_(id); if (el) el.innerHTML = texto ? '<div class="pt-faixa ' + (tipo || "erro") + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + Pto_esc_(texto) + "</div>" : ""; }
+  function Pto_hoje_() { var d = new Date(); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function Pto_meses_() { var l = []; for (var k = 0; k < 12; k++) { var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - k); var v = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2); l.push([v, ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear()]); } return l; }
+  function Pto_opcoes_(lista, atual, vazio) { return (vazio !== undefined ? '<option value="">' + Pto_esc_(vazio) + "</option>" : "") + lista.map(function (o) { return '<option value="' + Pto_esc_(o[0]) + '"' + (String(o[0]) === String(atual) ? " selected" : "") + ">" + Pto_esc_(o[1]) + "</option>"; }).join(""); }
+  function Pto_selo_(texto, cor) { return '<span class="pt-selo ' + (cor || "cinza") + '">' + Pto_esc_(texto) + "</span>"; }
+  // Vínculo de trabalho como rótulo (22/10/2026): CLT, PJ, Diretoria ou o texto de vazio pedido.
+  function Pto_vinculo_(v, vazio) { var k = String(v || "").replace(/\s+/g, "").toUpperCase(); return ({ CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" })[k] || vazio || "não informado"; }
+
+  // ---------------- menu ----------------
+  function Ponto_iniciar_() {
+    var p = USER_CONTEXT ? String(USER_CONTEXT.perfil || "").toUpperCase() : "";
+    var btn = Pto_$_("menu-btn-ponto");
+    if (!p || p === "CLIENTE") { if (btn) btn.style.display = "none"; return; }
+    Pto_chamar_("acesso", {}, function (r) {
+      PT.acesso = r;
+      if (btn) btn.style.display = r.verMenu ? "" : "none";
+      if (typeof Menu_iniciar_ === "function") { try { Menu_iniciar_(); } catch (e) {} }
+      if (r.verMenu && window.SGO_MODULO_ATUAL === "mobile_home" && typeof renderMobileHome_ === "function") { try { renderMobileHome_(); } catch (e) {} }
+    }, function () { if (btn) btn.style.display = "none"; });
+  }
+  function Ponto_parar_() { if (typeof PT_AVISOS !== "undefined") PT_AVISOS = { selecionado: null, busca: "", filtro: "TODOS", rascunhos: {}, enviando: false }; PT.ini = null; PT.acesso = null; PT.aba = ""; var b = Pto_$_("menu-btn-ponto"); if (b) b.style.display = "none"; }
+
+  function Ponto_cabecalho_(sub) {
+    return '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Assistente do ponto</h2><p class="content-subtitle">' + Pto_esc_(sub) + "</p></div>" +
+      '<div class="module-header-right" style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn-secondary" onclick="Ponto_render_()"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button></div></div>';
+  }
+  function Ponto_abas_(ini) {
+    var l = [];
+    if (ini.equipe) l.push(["hoje", ini.pessoas ? "Hoje" : "Hoje da equipe"]);
+    // colaborador: os pedidos dele já estão em "Meus lembretes" (sem aba repetida)
+    if (ini.tratar || ini.equipe) l.push(["pedidos", ini.tratar ? "Pedidos de ajuste" : "Pedidos da equipe"]);
+    if (ini.equipe) l.push(["mes", "Mês"]);
+    l.push(["meus", "Meus lembretes"]);
+    if (ini.pessoas) l.push(["pessoas", "Pessoas e jornadas"]);
+    if (ini.configurar) l.push(["config", "Configuração"]);
+    return l;
+  }
+
+  /** Ponto de entrada de abrir('ponto'). */
+  function Ponto_render_() {
+    if (typeof PT_AVISOS !== "undefined" && PT_AVISOS.enviando) return;
+    var div = Pto_$_("conteudo");
+    if (!div) return;
+    if (typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Assistente do ponto");
+    div.innerHTML = '<div class="module-shell"><div class="pt-vazio">Carregando o assistente do ponto…</div></div>';
+    Pto_chamar_("iniciar", {}, function (ini) {
+      PT.ini = ini;
+      var abas = Ponto_abas_(ini);
+      if (!PT.aba || !abas.some(function (a) { return a[0] === PT.aba; })) PT.aba = ini.tratar && ini.pendentes ? "pedidos" : ini.equipe ? "hoje" : "meus";
+      var sub = ini.ligado ? "Ligado: um lembrete por marcação (" + ini.marcacoes.join(", ").toLowerCase() + "), só em dia útil e no horário da pessoa." : "Desligado: nenhum lembrete sai.";
+      if (PT.aba === "pessoas") sub = ini.ligado ? "Avisos ativos. Ajuste os lembretes de cada pessoa." : "Avisos pausados. Você pode preparar as escolhas por pessoa.";
+      var h = '<div class="module-shell' + (PT.aba === 'pessoas' ? ' pt-shell-pessoas' : '') + '">' + Ponto_cabecalho_(sub);
+      if (!ini.ligado && PT.aba === "pessoas") h += '<div class="pt-faixa aviso"><b>Assistente desligado.</b> As escolhas podem ser salvas, mas nenhum aviso é enviado.</div>';
+      else if (!ini.ligado) h += '<div class="pt-faixa aviso"><b>O assistente está desligado.</b> Nenhuma mensagem sai e ninguém recebe lembrete. ' + (ini.configurar ? "Para ligar, abra a aba Configuração, confira a jornada e o RH, marque «Assistente ligado» e toque em «Salvar configuração»." : "Quem liga é o Administrador ou a Diretoria.") + "</div>";
+      if (PT.aba !== "pessoas") h += '<div class="pt-faixa">O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O assistente só lembra, recebe a confirmação de um toque e leva o "Esqueci de bater" ao RH. "Não confirmado" não é prova de falta.</div>';
+      if (ini.avisos && ini.avisos.length) {
+        h += '<div class="pt-caixa"><h3>Avisos para você (' + ini.avisos.length + ")</h3>" + ini.avisos.slice(0, 3).map(function (a) {
+          return '<div style="border-top:1px solid var(--border);padding:8px 0"><b>' + Pto_esc_(a.titulo) + '</b> <span class="pt-mini">' + Pto_esc_(a.data) + '</span><div style="white-space:pre-wrap;font-size:13px;margin:4px 0">' + Pto_esc_(a.texto) + '</div><button type="button" class="btn-secondary" onclick="Ponto_ciente_(\'' + Pto_esc_(a.id) + '\')">Ciente</button></div>';
+        }).join("") + (ini.avisos.length > 3 ? '<p class="pt-mini">E mais ' + (ini.avisos.length - 3) + ' aviso(s).</p>' : "") +
+          (ini.avisos.length > 1 ? '<div class="pt-acoes"><button type="button" class="btn-secondary" onclick="Ponto_cienteTodos_()">Ciente em todos</button></div>' : "") + "</div>";
+      }
+      h += '<div class="pt-tabs" role="tablist">' + abas.map(function (a) {
+        var n = a[0] === "pedidos" && ini.tratar && ini.pendentes ? '<span class="pt-n">' + ini.pendentes + "</span>" : "";
+        return '<button type="button" role="tab" aria-selected="' + (PT.aba === a[0]) + '" class="pt-tab' + (PT.aba === a[0] ? " active" : "") + '" onclick="Ponto_aba_(\'' + a[0] + '\')">' + Pto_esc_(a[1]) + n + "</button>";
+      }).join("") + '</div><div id="ptMsg"></div><div id="ptCorpo"><div class="pt-vazio">Carregando…</div></div></div>';
+      div.innerHTML = h;
+      Ponto_desenharAba_();
+    }, function (m) { div.innerHTML = '<div class="module-shell">' + Ponto_cabecalho_("") + '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div></div>"; });
+  }
+  // Etapa 3 (01/11/2026): trocar de aba é um passo do voltar (volta à aba de antes, em vez de sair do módulo)
+  function Ponto_aba_(a) {
+    if (typeof PT_AVISOS !== "undefined" && PT_AVISOS.enviando) return;
+    var de = PT.aba;
+    if (de && de !== a && window.SGO_NAV && SGO_NAV.empilhar) SGO_NAV.empilhar("Ponto: " + a, function () { if (Pto_$_("ptCorpo")) Ponto_aba_(de); });
+    PT.aba = a; document.querySelectorAll(".pt-tab").forEach(function (b) { b.classList.toggle("active", b.getAttribute("onclick").indexOf("'" + a + "'") > 0); b.setAttribute("aria-selected", b.classList.contains("active")); }); Pto_msg_("ptMsg", ""); Ponto_desenharAba_(); }
+  function Ponto_desenharAba_() {
+    var alvo = Pto_$_("ptCorpo");
+    if (!alvo) return;
+    alvo.innerHTML = '<div class="pt-vazio">Carregando…</div>';
+    ({ hoje: Ponto_abaHoje_, pedidos: Ponto_abaPedidos_, mes: Ponto_abaMes_, meus: Ponto_abaMeus_, pessoas: Ponto_abaPessoas_, config: Ponto_abaConfig_ }[PT.aba] || Ponto_abaMeus_)(alvo);
+  }
+  function Ponto_ciente_(id) { Pto_chamar_("ciente", { id: id }, function () { Ponto_render_(); }); }
+  function Ponto_cienteTodos_() { Pto_chamar_("cienteTodos", {}, function () { Ponto_render_(); }); }
+
+  // ---------------- Hoje ----------------
+  function Ponto_celulaMarc_(x) {
+    if (!x) return '<span class="pt-mini">—</span>';
+    var t = x.situacaoTexto + (x.confirmadoAs && x.situacao === "CONFIRMADO" ? " às " + x.confirmadoAs : "") + (x.horarioInformado && x.situacao === "ESQUECI" ? " (" + x.horarioInformado + ")" : "");
+    var canal = x.canal === "WHATSAPP" ? "WhatsApp" : x.canal === "EMAIL" ? "e-mail" : "";
+    return Pto_selo_(t, PT_SIT_COR[x.situacao]) + '<div class="pt-mini">' + (x.previsto ? "previsto " + Pto_esc_(x.previsto) : "") + (canal ? " · por " + canal : "") + "</div>" +
+      (x.obs && x.situacao === "DISPENSADO" ? '<div class="pt-mini">' + Pto_esc_(x.obs) + "</div>" : "") +
+      // motivo técnico do envio: resumido na tela, inteiro ao passar o mouse (title)
+      (x.situacao === "NAO_ENVIADO" && x.envioMotivo ? '<div class="pt-mini" title="' + Pto_esc_(x.envioMotivo) + '">' + Pto_esc_(x.envioMotivo.length > 90 ? x.envioMotivo.slice(0, 87) + "..." : x.envioMotivo) + "</div>" : "");
+  }
+  function Ponto_abaHoje_(alvo) {
+    PT.dia = PT.dia || Pto_hoje_();
+    Pto_chamar_("dia", { dia: PT.dia }, function (r) {
+      var p = r.painel, c = p.conta;
+      var h = '<div class="pt-filtros"><div><label for="ptDia">Dia</label><input type="date" id="ptDia" value="' + Pto_esc_(p.dia) + '"></div></div>';
+      if (p.motivoDia) h += '<div class="pt-faixa">' + Pto_esc_(p.diaSemana + ", " + p.diaBr) + ": sem lembretes (" + Pto_esc_(p.motivoDia) + ").</div>";
+      h += '<div class="pt-kpis"><div class="pt-kpi"><span class="v">' + c.lembradas + '</span><span class="r">Lembradas</span></div><div class="pt-kpi ok"><span class="v">' + c.confirmadas + '</span><span class="r">Confirmadas</span></div>' +
+        '<div class="pt-kpi aviso"><span class="v">' + c.pendentes + '</span><span class="r">Lembradas, sem confirmação</span></div><div class="pt-kpi"><span class="v">' + c.esqueci + '</span><span class="r">"Esqueci de bater"</span></div></div>';
+      // Etapa 3 (01/11/2026): o estado vazio diz por quê e o que fazer
+      if (!p.linhas.length) h += '<div class="pt-vazio">Ninguém para mostrar neste dia. ' + (p.motivoDia ? "Por quê: " + Pto_esc_(p.motivoDia) + ", sem lembretes." : (PT.ini && PT.ini.ligado === false ? "Por quê: o assistente está desligado, então ninguém foi lembrado." : "Por quê: ninguém da equipe tem jornada com marcação neste dia.")) + " O que fazer: escolha outro dia no campo Dia" + (PT.ini && PT.ini.configurar ? ', ou confira a jornada de cada pessoa em "Pessoas e jornadas"' : "") + ".</div>";
+      else h += '<div class="pt-caixa"><table class="pt-tabela pt-dia"><thead><tr><th>Colaborador</th>' + PT_MARCS.map(function (m) { return "<th>" + m[1] + "</th>"; }).join("") + "</tr></thead><tbody>" +
+        p.linhas.map(function (l) {
+          return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(l.pessoa) + '</b><div class="pt-mini">' + Pto_esc_(l.area) + " · " + Pto_esc_(l.jornada) + "</div>" + (l.fora ? '<div class="pt-mini">Fora do assistente: ' + Pto_esc_(l.foraTexto) + "</div>" : "") + "</td>" +
+            l.marcacoes.map(function (x, k) { return '<td data-r="' + PT_MARCS[k][1] + '">' + Ponto_celulaMarc_(x) + "</td>"; }).join("") + "</tr>";
+        }).join("") + "</tbody></table></div>";
+      h += '<p class="pt-mini">"Lembrada, sem confirmação" não é prova de falta: a pessoa pode ter batido o ponto sem tocar no botão. Ao fim do dia vira "não confirmado".</p>';
+      alvo.innerHTML = h;
+      Pto_$_("ptDia").onchange = function () { PT.dia = this.value || Pto_hoje_(); Ponto_abaHoje_(alvo); };
+    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div>"; });
+  }
+
+  // ---------------- Pedidos de ajuste ----------------
+  function Ponto_abaPedidos_(alvo) {
+    Pto_chamar_("pedidos", { situacao: PT.filtro }, function (r) {
+      var ini = PT.ini || {};
+      var h = '<div class="pt-filtros"><div><label for="ptFiltro">Situação</label><select id="ptFiltro">' + Pto_opcoes_([["PENDENTE", "Pendentes"], ["LANCADO", "Lançados no ponto"], ["RECUSADO", "Não lançados"], ["", "Todos"]], PT.filtro) + "</select></div></div>";
+      h += '<p class="pt-mini">' + (r.podeTratar ? "Cada pedido traz o horário informado, a frase da pessoa e a evidência automática (só os horários de check-in e check-out do Auvo). Lance no relógio ou no sistema de ponto e marque aqui. Quem pediu não trata o próprio pedido." :
+        "A gestão acompanha; quem trata é o RH. A justificativa fica com o RH.") + "</p>";
+      if (!r.pedidos.length) h += '<div class="pt-vazio">Nenhum pedido ' + (PT.filtro === "PENDENTE" ? "pendente. Quando alguém tocar em \"Esqueci de bater\", o pedido aparece aqui para o RH lançar." : "nesta situação. Troque a situação no campo acima para ver os outros.") + "</div>";
+      else h += '<div class="pt-caixa"><table class="pt-tabela"><thead><tr><th>Pedido</th><th>Colaborador</th><th>Marcação</th><th>Horário informado</th><th>O que aconteceu</th><th>Situação</th><th></th></tr></thead><tbody>' +
+        r.pedidos.map(function (p) {
+          var pode = r.podeTratar && p.situacao === "PENDENTE" && p.usuarioId !== (ini.eu || {}).id;
+          return '<tr><td data-r="Pedido"><b>' + Pto_esc_(p.codigo) + '</b><div class="pt-mini">' + Pto_esc_(p.criadoEm) + " · " + Pto_esc_(p.origem) + '</div></td><td data-r="Colaborador">' + Pto_esc_(p.pessoa) + "</td>" +
+            '<td data-r="Marcação">' + Pto_esc_(p.rotulo) + " de " + Pto_esc_(p.diaBr) + '</td><td data-r="Horário informado">' + Pto_esc_(p.horario) + "</td>" +
+            '<td data-r="O que aconteceu">' + Pto_esc_(p.justificativa || "—") + (p.evidencia ? '<div class="pt-mini">Evidência: ' + Pto_esc_(p.evidencia) + "</div>" : "") + "</td>" +
+            '<td data-r="Situação">' + Pto_selo_(p.situacaoTexto, PT_AJ_COR[p.situacao]) + (p.tratadoPor ? '<div class="pt-mini">' + Pto_esc_(p.tratadoPor + " em " + p.tratadoEm) + "</div>" : "") + (p.observacao ? '<div class="pt-mini">' + Pto_esc_(p.observacao) + "</div>" : "") + "</td>" +
+            "<td>" + (pode ? '<div class="pt-acoes"><button type="button" class="btn-primary" onclick="Ponto_tratar_(\'' + Pto_esc_(p.id) + '\',\'LANCADO\')">Lançado no ponto</button><button type="button" class="btn-secondary" onclick="Ponto_tratar_(\'' + Pto_esc_(p.id) + '\',\'RECUSADO\')">Não lançado</button></div>' : "") + "</td></tr>";
+        }).join("") + "</tbody></table></div>";
+      alvo.innerHTML = h;
+      Pto_$_("ptFiltro").onchange = function () { PT.filtro = this.value; Ponto_abaPedidos_(alvo); };
+    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div>"; });
+  }
+  function Ponto_tratar_(id, decisao) {
+    var ov = document.createElement("div");
+    ov.className = "atv-overlay";
+    var rec = decisao === "RECUSADO";
+    ov.innerHTML = '<div class="atv-modal" style="max-width:520px"><div class="atv-modal-cab"><h3>' + (rec ? "Pedido não lançado" : "Marcar como lançado no ponto") + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div>' +
+      '<div class="atv-modal-corpo"><p style="font-size:13px">' + (rec ? "Escreva o motivo. A pessoa recebe no SGO+ e por e-mail." : "Confirme depois de lançar no relógio ou no sistema de ponto. A pessoa é avisada no SGO+ e por e-mail.") + '</p>' +
+      '<div class="pt-campo"><label for="ptObs">' + (rec ? "Motivo (obrigatório)" : "Observação (opcional)") + '</label><textarea id="ptObs" maxlength="300"></textarea></div><div id="ptObsMsg"></div></div>' +
+      '<div class="atv-modal-rod"><button type="button" class="btn-secondary" data-f>Cancelar</button> <button type="button" class="btn-primary" data-ok>' + (rec ? "Registrar como não lançado" : "Lançado no ponto") + "</button></div></div>";
+    var fechar = function () { ov.remove(); };
+    ov.querySelector(".atv-fechar").onclick = fechar; ov.querySelector("[data-f]").onclick = fechar;
+    ov.querySelector("[data-ok]").onclick = function () {
+      var b = this; b.disabled = true;
+      Pto_chamar_("tratar", { id: id, decisao: decisao, observacao: Pto_$_("ptObs").value }, function (r) { fechar(); Pto_msg_("ptMsg", r.message, "ok"); PT.ini = null; Ponto_render_(); },
+        function (m) { b.disabled = false; Pto_msg_("ptObsMsg", m); }, "Registrando…");
+    };
+    document.body.appendChild(ov);
+    Pto_$_("ptObs").focus();
+  }
+
+  // ---------------- Mês ----------------
+  function Ponto_abaMes_(alvo) {
+    PT.mes = PT.mes || Pto_hoje_().slice(0, 7);
+    Pto_chamar_("mes", { mes: PT.mes }, function (r) {
+      var p = r.painel, t = p.total, ini = PT.ini || {};
+      var h = '<div class="pt-filtros"><div><label for="ptMes">Mês</label><select id="ptMes">' + Pto_opcoes_(Pto_meses_(), PT.mes) + "</select></div>" +
+        (ini.pessoas ? '<div><button type="button" class="btn-secondary" id="ptA4"><i class="fas fa-file-pdf" aria-hidden="true"></i>&nbsp;Resumo A4 / PDF</button></div>' : "") + "</div>";
+      h += '<div class="pt-kpis"><div class="pt-kpi"><span class="v">' + t.lembradas + '</span><span class="r">Lembretes enviados</span></div><div class="pt-kpi ok"><span class="v">' + (t.pct === null ? "—" : t.pct + "%") + '</span><span class="r">Avisos confirmados</span></div>' +
+        '<div class="pt-kpi aviso"><span class="v">' + t.esqueci + '</span><span class="r">"Esqueci de bater"</span></div><div class="pt-kpi ' + (t.ajPendentes ? "critico" : "ok") + '"><span class="v">' + t.ajPendentes + '</span><span class="r">Pedidos pendentes</span></div></div>';
+      if (!p.pessoas.length) h += '<div class="pt-vazio">Nenhuma marcação em ' + Pto_esc_(p.mesNome) + ". " + (PT.ini && PT.ini.ligado === false ? "Por quê: o assistente está desligado; nenhum lembrete saiu no mês." : "Escolha outro mês para ver o resumo.") + "</div>";
+      else h += '<div class="pt-caixa"><table class="pt-tabela"><thead><tr><th>Colaborador</th><th class="n">Lembretes</th><th class="n">Avisos confirmados</th><th class="n">Esqueci de bater</th><th class="n">Avisos não confirmados</th><th class="n">Não lembrados</th><th class="n">Ajustes</th></tr></thead><tbody>' +
+        p.pessoas.map(function (l) {
+          return '<tr><td data-r="Colaborador"><b>' + Pto_esc_(l.pessoa) + "</b>" + (l.resumo ? " " + Pto_selo_(l.esquecimentos + " declarados: resumo ao RH", "laranja") : "") + (l.vinculo !== "CLT" ? '<div class="pt-mini">' + Pto_esc_(Pto_vinculo_(l.vinculo, "sem vínculo")) + ": não conta esquecimento</div>" : "") + "</td>" +
+            '<td class="n" data-r="Lembretes">' + l.lembradas + '</td><td class="n" data-r="Avisos confirmados">' + l.confirmadas + (l.pct !== null ? " (" + l.pct + "%)" : "") + '</td><td class="n" data-r="Esqueci de bater">' + l.esqueci + "</td>" +
+            '<td class="n" data-r="Avisos não confirmados">' + l.naoConfirmadas + '</td><td class="n" data-r="Não lembrados">' + l.dispensadas + '</td><td class="n" data-r="Ajustes">' + l.ajLancados + " lançado(s), " + l.ajPendentes + " pendente(s)</td></tr>";
+        }).join("") + "</tbody></table></div>";
+      h += '<p class="pt-mini">A partir do ' + p.resumoAPartir + 'º esquecimento declarado no mês (somente "Esqueci de bater"), o RH e a gestão da pessoa recebem um resumo no SGO+ e por e-mail e o Programa de conduta recebe uma sugestão informativa. Avisos não confirmados são apenas informativos: não entram nessa contagem, não comprovam falta e não geram resumo ou sugestão por si só. Nenhuma medida é automática: a gestão decide.</p>';
+      alvo.innerHTML = h;
+      Pto_$_("ptMes").onchange = function () { PT.mes = this.value; Ponto_abaMes_(alvo); };
+      if (Pto_$_("ptA4")) Pto_$_("ptA4").onclick = function () {
+        var w = window.open("", "_blank"); if (w) w.document.write("<p style='font-family:Arial'>Montando o resumo do mês…</p>");
+        Pto_chamar_("resumoA4", { mes: PT.mes }, function (x) { if (w) { w.document.open(); w.document.write(x.html); w.document.close(); } }, function (m) { if (w) w.close(); alert(m); }, "Montando o resumo A4…");
+      };
+    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div>"; });
+  }
+
+  // ---------------- Meus lembretes ----------------
+  function Ponto_abaMeus_(alvo) {
+    var mes = PT.mesMeu || Pto_hoje_().slice(0, 7);
+    Pto_chamar_("meus", { mes: mes }, function (r) {
+      var h = "";
+      if (!r.participa) h += '<div class="pt-faixa aviso">Você não recebe os lembretes: ' + Pto_esc_(r.foraTexto) + ". O registro oficial continua sendo o relógio ou o aplicativo de ponto.</div>";
+      else h += '<div class="pt-faixa ok">Você recebe ' + (r.ligado ? "" : "(quando o assistente for ligado) ") + "um lembrete por marcação: " + Pto_esc_(r.marcacoesLembradas.join(", ").toLowerCase()) + ". Sua jornada: " + Pto_esc_(r.jornada) + ".</div>";
+      var deHoje = r.marcacoes.filter(function (x) { return x.dia === r.hoje && (x.situacao === "LEMBRADO" || x.situacao === "ENVIANDO" || x.situacao === "NAO_ENVIADO"); });
+      if (deHoje.length) h += '<div class="pt-caixa"><h3>Hoje</h3>' + deHoje.map(function (x) { return '<div class="pt-acoes" style="align-items:center"><span>' + Pto_esc_(x.rotulo) + (x.previsto ? " (" + Pto_esc_(x.previsto) + ")" : "") + '</span><button type="button" class="btn-primary" onclick="Ponto_confirmarMeu_(\'' + Pto_esc_(x.id) + '\')">Já bati</button></div>'; }).join("") + "</div>";
+      h += '<div class="pt-caixa"><h3>Pedir ajuste ao RH ("Esqueci de bater")</h3><p class="pt-mini">Para um dia de hoje até ' + r.prazoDias + ' dias atrás. O RH lança no relógio ou no sistema de ponto e a resposta aparece aqui e no seu e-mail.</p>' +
+        '<div class="pt-grade3"><div class="pt-campo"><label for="ptAjDia">Dia</label><input type="date" id="ptAjDia" value="' + Pto_esc_(r.hoje) + '" max="' + Pto_esc_(r.hoje) + '"></div>' +
+        '<div class="pt-campo"><label for="ptAjMarc">Marcação</label><select id="ptAjMarc">' + Pto_opcoes_(PT_MARCS, "ENTRADA") + '</select></div><div class="pt-campo"><label for="ptAjHora">Horário em que bateu (ou deveria)</label><input type="time" id="ptAjHora"></div></div>' +
+        '<div class="pt-campo"><label for="ptAjTxt">O que aconteceu? (uma frase curta)</label><textarea id="ptAjTxt" maxlength="200" placeholder="Ex.: cheguei no horário, mas o relógio estava com fila."></textarea></div><div id="ptAjMsg"></div>' +
+        '<div class="pt-acoes"><button type="button" class="btn-primary" id="ptAjEnviar">Enviar ao RH</button></div></div>';
+      h += '<div class="pt-filtros"><div><label for="ptMesMeu">Mês</label><select id="ptMesMeu">' + Pto_opcoes_(Pto_meses_(), r.mes) + "</select></div></div>";
+      h += '<div class="pt-caixa"><h3>Meus lembretes em ' + Pto_esc_(r.mesNome) + "</h3>" + (r.marcacoes.length ? '<table class="pt-tabela"><thead><tr><th>Dia</th><th>Marcação</th><th>Situação</th></tr></thead><tbody>' +
+        r.marcacoes.map(function (x) { return '<tr><td data-r="Dia">' + Pto_esc_(x.dia.split("-").reverse().join("/")) + '</td><td data-r="Marcação">' + Pto_esc_(x.rotulo) + '</td><td data-r="Situação">' + Ponto_celulaMarc_(x) + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="pt-vazio">Nenhum lembrete neste mês.</div>') + "</div>";
+      h += '<div class="pt-caixa"><h3>Meus pedidos de ajuste</h3>' + (r.pedidos.length ? '<table class="pt-tabela"><thead><tr><th>Pedido</th><th>Marcação</th><th>Horário</th><th>Situação</th></tr></thead><tbody>' +
+        r.pedidos.map(function (p) { return '<tr><td data-r="Pedido">' + Pto_esc_(p.codigo) + '</td><td data-r="Marcação">' + Pto_esc_(p.rotulo + " de " + p.diaBr) + '</td><td data-r="Horário">' + Pto_esc_(p.horario) + '</td><td data-r="Situação">' + Pto_selo_(p.situacaoTexto, PT_AJ_COR[p.situacao]) + (p.observacao ? '<div class="pt-mini">' + Pto_esc_(p.observacao) + "</div>" : "") + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="pt-vazio">Nenhum pedido.</div>') + "</div>";
+      alvo.innerHTML = h;
+      Pto_$_("ptMesMeu").onchange = function () { PT.mesMeu = this.value; Ponto_abaMeus_(alvo); };
+      Pto_$_("ptAjEnviar").onclick = function () {
+        var b = this; b.disabled = true;
+        Pto_chamar_("pedirAjuste", { dia: Pto_$_("ptAjDia").value, marcacao: Pto_$_("ptAjMarc").value, horario: Pto_$_("ptAjHora").value, justificativa: Pto_$_("ptAjTxt").value },
+          function (x) { Pto_msg_("ptMsg", x.message, "ok"); Ponto_abaMeus_(alvo); }, function (m) { b.disabled = false; Pto_msg_("ptAjMsg", m); }, "Enviando ao RH…");
+      };
+    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div>"; });
+  }
+  function Ponto_confirmarMeu_(id) { Pto_chamar_("confirmarMeu", { id: id }, function (r) { Pto_msg_("ptMsg", r.message, "ok"); Ponto_desenharAba_(); }, function (m) { Pto_msg_("ptMsg", m); }); }
+
+  // ---------------- Pessoas e jornadas ----------------
+  var PT_AVISOS = { selecionado: null, busca: "", filtro: "TODOS", rascunhos: {}, enviando: false };
+  var PT_AVISOS_TIPOS = ["ENTRADA", "ALMOCO", "RETORNO", "SAIDA"];
+  var PT_AVISOS_NOMES = ["Entrada", "Almoço", "Retorno", "Saída"];
+  function Ponto_avisosPessoa_(id) { return (PT.cache.pessoas ? PT.cache.pessoas.pessoas : []).filter(function (p) { return p.id === id; })[0]; }
+  function Ponto_avisosRascunho_(p) {
+    return PT_AVISOS.rascunhos[p.id] || (PT_AVISOS.rascunhos[p.id] = { marcacoes: p.marcacoes.slice(), padrao: !p.avisosProprios });
+  }
+  function Ponto_avisosSujo_(p) {
+    var d = PT_AVISOS.rascunhos[p.id];
+    return !!d && (d.padrao !== !p.avisosProprios || (!d.padrao && PT_AVISOS_TIPOS.some(function (m) { return (d.marcacoes.indexOf(m) >= 0) !== (p.marcacoes.indexOf(m) >= 0); })));
+  }
+  function Ponto_avisosTemRascunhos_() { return !!PT.cache.pessoas && PT.cache.pessoas.pessoas.some(Ponto_avisosSujo_); }
+  window.addEventListener("beforeunload", function (e) { if (Ponto_avisosTemRascunhos_()) { e.preventDefault(); e.returnValue = ""; } });
+  function Ponto_avisosResumo_(marcacoes) {
+    if (!marcacoes.length) return "Nenhum aviso";
+    if (marcacoes.length === 4) return "Os quatro avisos";
+    return PT_AVISOS_TIPOS.filter(function (m) { return marcacoes.indexOf(m) >= 0; }).map(function (m) { return PT_AVISOS_NOMES[PT_AVISOS_TIPOS.indexOf(m)]; }).join(" · ");
+  }
+  function Ponto_avisosNormalizar_(s) { return String(s || "").toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+  function Ponto_abaPessoas_(alvo) {
+    if (PT_AVISOS.enviando) { PT_AVISOS.recarregar = alvo; return; }
+    Pto_chamar_("pessoas", {}, function (r) {
+      if (PT_AVISOS.enviando) { PT_AVISOS.recarregar = alvo; return; }
+      PT.cache.pessoas = r;
+      var h = '<section class="pt-pessoas" aria-labelledby="ptPessoasTitulo"><header class="pt-pessoas-cab"><div><span class="pt-eyebrow">AVISOS DO PONTO</span><h3 id="ptPessoasTitulo">Cada pessoa, os avisos certos</h3><p>Escolha uma pessoa e ative só os avisos necessários.</p></div><div class="pt-pessoas-total"><strong id="ptAvisoContagem">' + r.aptos + '</strong><span>habilitados de ' + r.pessoas.length + '</span></div></header>';
+      h += '<div class="pt-pessoas-layout" id="ptPessoasLayout"><section class="pt-pessoas-lista-painel" aria-label="Pessoas"><div class="pt-pessoas-filtros"><div class="pt-campo"><label for="ptAvisoBusca">Buscar pessoa ou área</label><input type="search" id="ptAvisoBusca" placeholder="Digite um nome ou área" autocomplete="off" value="' + Pto_esc_(PT_AVISOS.busca) + '"></div><div class="pt-campo"><label for="ptAvisoFiltro">Mostrar</label><select id="ptAvisoFiltro">' + Pto_opcoes_([["TODOS","Todas as pessoas"],["HABILITADOS","Habilitados para avisos"],["NAO_HABILITADOS","Não habilitados"],["INDIVIDUAL","Escolha individual"],["RASCUNHOS","Alterações não salvas"]], PT_AVISOS.filtro) + '</select></div></div><div id="ptAvisoLista" class="pt-pessoas-lista"></div><p id="ptAvisoResultados" class="pt-mini" role="status"></p></section><section id="ptAvisoEditor" class="pt-pessoa-editor" aria-label="Configurar avisos da pessoa"></section></div>';
+      h += '<details class="pt-pessoas-ajuda"><summary>Como os avisos funcionam</summary><div><p>O registro oficial é o do relógio ou do aplicativo de ponto (Portaria MTP 671/2021). O assistente só lembra; “não confirmado” não é prova de falta. As escolhas mudam os avisos, sem alterar a jornada. Entrada e saída são lembradas 5 minutos antes. Almoço é lembrado na hora; o retorno se ajusta pela saída confirmada para o intervalo.</p><p>Habilitado significa que a pessoa atende às regras do cadastro. O envio ainda depende de o assistente estar ligado, do expediente, de feriados, folgas, afastamentos e atendimentos. Só CLT recebe' + (r.piloto.ligado ? ', respeitando a lista do piloto do WhatsApp' : '') + '.</p><p>Desmarcar todos desliga os avisos dessa pessoa. Usar o padrão geral acompanha a escolha feita em Configuração. Jornada geral: ' + Pto_esc_(r.jornadaGeral) + '.</p></div></details></section>';
+      h += '<details class="pt-pessoas-dispensas"><summary><span>Folgas e dispensas</span><span class="pt-mini">Dias em que não é preciso lembrar</span></summary>' + Ponto_dispensasHtml_(r) + '</details>';
+      alvo.innerHTML = h;
+      Pto_$_("ptAvisoBusca").oninput = function () { PT_AVISOS.busca = this.value; Ponto_avisosLista_(); };
+      Pto_$_("ptAvisoFiltro").onchange = function () { PT_AVISOS.filtro = this.value; Ponto_avisosLista_(); };
+      Ponto_avisosLista_();
+      if (PT_AVISOS.selecionado && Ponto_avisosPessoa_(PT_AVISOS.selecionado)) Ponto_abrirAvisos_(PT_AVISOS.selecionado, false); else Ponto_avisosVazio_();
+      Pto_$_("ptDsSalvar").onclick = function () {
+        if (PT_AVISOS.enviando) return;
+        var b = this; b.disabled = true;
+        Pto_chamar_("salvarDispensa", { usuarioId: Pto_$_("ptDsPessoa").value, de: Pto_$_("ptDsDe").value, ate: Pto_$_("ptDsAte").value, motivo: Pto_$_("ptDsMot").value, observacao: Pto_$_("ptDsObs").value },
+          function (x) { Pto_msg_("ptMsg", x.message, "ok"); Ponto_abaPessoas_(alvo); }, function (m) { b.disabled = false; Pto_msg_("ptDsMsg", m); });
+      };
+    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + '</div>'; });
+  }
+  function Ponto_avisosLista_() {
+    var lista = Pto_$_("ptAvisoLista"); if (!lista) return;
+    var busca = Ponto_avisosNormalizar_(PT_AVISOS.busca), filtro = PT_AVISOS.filtro;
+    var pessoas = PT.cache.pessoas.pessoas.filter(function (p) {
+      return Ponto_avisosNormalizar_(p.nome + " " + p.area).indexOf(busca) >= 0 && (filtro === "TODOS" || filtro === "HABILITADOS" && p.apto || filtro === "NAO_HABILITADOS" && !p.apto || filtro === "INDIVIDUAL" && p.avisosProprios || filtro === "RASCUNHOS" && Ponto_avisosSujo_(p));
+    });
+    lista.innerHTML = pessoas.map(function (p) {
+      var sujo = Ponto_avisosSujo_(p), d = sujo ? Ponto_avisosRascunho_(p) : p;
+      var efetivas = p.sem_almoco ? d.marcacoes.filter(function (m) { return m !== "ALMOCO" && m !== "RETORNO"; }) : d.marcacoes;
+      var iniciais = p.nome.split(/\s+/).filter(Boolean).slice(0, 2).map(function (s) { return s.charAt(0); }).join("");
+      return '<button type="button" class="pt-pessoa-item' + (PT_AVISOS.selecionado === p.id ? ' ativo' : '') + '" data-pessoa="' + Pto_esc_(p.id) + '" aria-label="Configurar avisos de ' + Pto_esc_(p.nome) + '" aria-pressed="' + (PT_AVISOS.selecionado === p.id) + '"><span class="pt-pessoa-avatar" aria-hidden="true">' + Pto_esc_(iniciais) + '</span><span class="pt-pessoa-textos"><strong>' + Pto_esc_(p.nome) + '</strong><span class="pt-pessoa-area">' + Pto_esc_(p.area || "Área não informada") + '</span><span class="pt-pessoa-resumo">' + Pto_esc_(Ponto_avisosResumo_(efetivas)) + '</span><span class="pt-pessoa-estado' + (sujo ? ' pendente' : '') + '">' + (sujo ? 'Alterações não salvas' : p.apto ? 'Habilitado para avisos' : 'Não habilitado') + '</span></span><span class="pt-pessoa-seta" aria-hidden="true">›</span></button>';
+    }).join("") || '<div class="pt-vazio">Nenhuma pessoa encontrada. Tente outro nome ou filtro.</div>';
+    Array.prototype.forEach.call(lista.querySelectorAll("[data-pessoa]"), function (b) { b.onclick = function () { Ponto_abrirAvisos_(this.getAttribute("data-pessoa"), true); }; });
+    Pto_$_("ptAvisoResultados").textContent = pessoas.length + (pessoas.length === 1 ? " pessoa encontrada" : " pessoas encontradas");
+  }
+  function Ponto_avisosVazio_() {
+    Pto_$_("ptAvisoEditor").innerHTML = '<div class="pt-pessoa-escolher"><span aria-hidden="true">✓</span><h4>Comece por uma pessoa</h4><p>Os horários e as opções de aviso aparecem aqui. Você pode deixar almoço e retorno desligados para quem não precisa.</p></div>';
+    Pto_$_("ptPessoasLayout").classList.remove("editando");
+  }
+  function Ponto_avisosPadrao_() {
+    if (!PT.ini || (PT.ini.conjunto !== "PADRAO" && PT.ini.conjunto !== "ENTRADA_SAIDA")) return null;
+    return PT.ini.conjunto === "ENTRADA_SAIDA" ? ["ENTRADA", "SAIDA"] : PT_AVISOS_TIPOS.slice();
+  }
+  function Ponto_abrirAvisos_(id, foco) {
+    if (PT_AVISOS.enviando) return;
+    var p = Ponto_avisosPessoa_(id); if (!p) return;
+    PT_AVISOS.selecionado = id;
+    var d = Ponto_avisosRascunho_(p), editor = Pto_$_("ptAvisoEditor"), padrao = Ponto_avisosPadrao_();
+    var k = PT.cache.pessoas.pessoas.indexOf(p);
+    editor.innerHTML = '<button type="button" class="pt-pessoa-voltar" id="ptAvisoVoltar">‹ Voltar para pessoas</button><div class="pt-pessoa-editor-cab"><div><p class="pt-eyebrow">CONFIGURAR AVISOS</p><h4 id="ptAvisoNome" tabindex="-1">' + Pto_esc_(p.nome) + '</h4><p>' + Pto_esc_(p.area || "Área não informada") + ' · ' + Pto_esc_(Pto_vinculo_(p.vinculo, "Vínculo não informado")) + '</p></div>' + Pto_selo_(p.apto ? "Habilitado" : "Não habilitado", p.apto ? "verde" : "cinza") + '</div>' +
+      (!p.apto ? '<div class="pt-pessoa-impedimento"><b>O envio está bloqueado para esta pessoa.</b><p>' + Pto_esc_(p.foraTexto) + '. As escolhas abaixo não removem esse impedimento.</p></div>' : '') +
+      '<form id="ptAvisoForm"><fieldset class="pt-aviso-fieldset" id="ptAvisoCampos"><legend>Quais avisos enviar?</legend><p class="pt-pessoa-lead">Ative os momentos que fazem sentido para esta pessoa.</p><div class="pt-aviso-tiles">' + PT_AVISOS_TIPOS.map(function (m, i) {
+        var sem = p.sem_almoco && (m === "ALMOCO" || m === "RETORNO"), hora = String(p.horasAvisos[m] || "");
+        var principal = hora.split(" (")[0];
+        return '<label class="pt-aviso-tile' + (d.marcacoes.indexOf(m) >= 0 ? ' selecionado' : '') + (sem ? ' indisponivel' : '') + '"><span class="pt-aviso-tile-topo"><span>' + PT_AVISOS_NOMES[i] + '</span><input type="checkbox" role="switch" id="ptAv' + m + '"' + (d.marcacoes.indexOf(m) >= 0 ? ' checked' : '') + (sem ? ' disabled' : '') + ' aria-label="' + Pto_esc_(PT_AVISOS_NOMES[i] + " — " + p.nome) + '"><span class="pt-aviso-chave" aria-hidden="true"></span></span><strong class="pt-aviso-hora">' + Pto_esc_(sem ? 'Não se aplica' : principal) + '</strong><span class="pt-aviso-tile-estado">' + (sem ? 'Sem intervalo na jornada' : d.marcacoes.indexOf(m) >= 0 ? 'Ativado' : 'Desativado') + '</span></label>';
+      }).join("") + '</div><p class="pt-aviso-nota">Entrada e saída: 5 minutos antes da jornada. Retorno: horário previsto, ajustado após confirmar o almoço.' + (p.horasAvisos.SAIDA.indexOf("(") >= 0 ? ' Saída na ' + Pto_esc_(p.horasAvisos.SAIDA.slice(p.horasAvisos.SAIDA.indexOf('(') + 1).replace(/\)$/, '')) + '.' : '') + '</p><div class="pt-aviso-presets"><span>Preencher:</span><button type="button" data-preset="TODOS">' + (p.sem_almoco ? 'Todos disponíveis' : 'Todos') + '</button><button type="button" data-preset="ENTRADA_SAIDA">Entrada e saída</button><button type="button" data-preset="NENHUM">Nenhum</button></div><div class="pt-aviso-origem"><span id="ptAvisoOrigemTexto">' + (d.padrao ? 'Segue o padrão geral' : 'Escolha individual') + '</span><button type="button" id="ptAvisoPadrao"' + (!padrao ? ' disabled' : '') + '>Usar padrão geral</button></div>' + (padrao ? '<p class="pt-mini">Padrão atual: ' + Pto_esc_(Ponto_avisosResumo_(padrao)) + '. Só é aplicado ao salvar.</p>' : '<p class="pt-mini">Atualize a página para consultar o padrão geral antes de usá-lo.</p>') + '</fieldset><div id="ptAvisosMsg" role="status"></div><footer class="pt-aviso-rodape"><span id="ptAvisoPendente" class="pt-mini"></span><div><button type="button" class="btn-secondary" id="ptAvisoDescartar">Cancelar alterações</button><button type="submit" class="btn-primary" id="ptAvisoSalvar">Salvar avisos</button></div></footer></form><details class="pt-pessoa-detalhes"><summary>Jornada e contato</summary><p>' + Pto_esc_(p.jornada) + '</p><p>' + Pto_esc_(p.celular ? "Celular " + p.celular : "Sem celular no cadastro") + (p.temEmail ? ' · Com e-mail' : ' · Sem e-mail') + '</p>' + (p.observacao ? '<p>' + Pto_esc_(p.observacao) + '</p>' : '') + '<button type="button" class="btn-secondary" id="ptAvisoJornada">Ajustar jornada</button></details>';
+    var rodape = editor.querySelector(".pt-aviso-rodape");
+    editor.appendChild(rodape);
+    Pto_$_("ptAvisoSalvar").setAttribute("form", "ptAvisoForm");
+    Pto_$_("ptPessoasLayout").classList.add("editando");
+    Pto_$_("ptAvisoVoltar").onclick = function () { if (PT_AVISOS.enviando) return; PT_AVISOS.selecionado = null; Ponto_avisosVazio_(); Ponto_avisosLista_(); var item = Array.prototype.filter.call(Pto_$_("ptAvisoLista").querySelectorAll("[data-pessoa]"), function (b) { return b.getAttribute("data-pessoa") === p.id; })[0]; (item || Pto_$_("ptAvisoBusca")).focus(); };
+    PT_AVISOS_TIPOS.forEach(function (m) { Pto_$_("ptAv" + m).onchange = function () { d.marcacoes = PT_AVISOS_TIPOS.filter(function (tipo) { return Pto_$_("ptAv" + tipo).checked; }); d.padrao = false; Ponto_avisosAtualizarEstado_(); }; });
+    Array.prototype.forEach.call(editor.querySelectorAll("[data-preset]"), function (b) { b.onclick = function () { var tipo = this.getAttribute("data-preset"); var escolhidas = tipo === "TODOS" ? PT_AVISOS_TIPOS.slice() : tipo === "ENTRADA_SAIDA" ? ["ENTRADA","SAIDA"] : []; d.marcacoes = escolhidas.filter(function (m) { return !p.sem_almoco || (m !== "ALMOCO" && m !== "RETORNO"); }); d.padrao = false; Ponto_avisosAtualizarEstado_(true); }; });
+    Pto_$_("ptAvisoPadrao").onclick = function () { if (!padrao) return; d.marcacoes = padrao.slice(); d.padrao = true; Ponto_avisosAtualizarEstado_(true); };
+    Pto_$_("ptAvisoDescartar").onclick = function () { delete PT_AVISOS.rascunhos[p.id]; Ponto_abrirAvisos_(p.id, false); Pto_$_("ptAvisoNome").focus({ preventScroll: true }); };
+    Pto_$_("ptAvisoJornada").onclick = function () { if (!PT_AVISOS.enviando) Ponto_editarPessoa_(k); };
+    Pto_$_("ptAvisoForm").onsubmit = function (e) { e.preventDefault(); Ponto_salvarAvisosEditor_(); };
+    Ponto_avisosAtualizarEstado_(); Ponto_avisosLista_();
+    if (foco) { Pto_$_("ptAvisoNome").focus({ preventScroll: true }); if (window.matchMedia("(max-width: 899px)").matches) editor.scrollIntoView({ block: "start", behavior: "auto" }); }
+  }
+  function Ponto_avisosAtualizarEstado_(campos) {
+    var p = Ponto_avisosPessoa_(PT_AVISOS.selecionado); if (!p || !Pto_$_("ptAvisoSalvar")) return;
+    var d = Ponto_avisosRascunho_(p), sujo = Ponto_avisosSujo_(p);
+    PT_AVISOS_TIPOS.forEach(function (m) { var input = Pto_$_("ptAv" + m); if (campos) input.checked = d.marcacoes.indexOf(m) >= 0; var tile = input.closest("label"); tile.classList.toggle("selecionado", input.checked); if (!input.disabled) tile.querySelector(".pt-aviso-tile-estado").textContent = input.checked ? "Ativado" : "Desativado"; });
+    Pto_$_("ptAvisoSalvar").disabled = !sujo || PT_AVISOS.enviando;
+    Pto_$_("ptAvisoDescartar").disabled = !sujo || PT_AVISOS.enviando;
+    Pto_$_("ptAvisoPendente").textContent = PT_AVISOS.enviando ? "Salvando…" : sujo ? "Alterações não salvas" : "Tudo salvo";
+    Pto_$_("ptAvisoOrigemTexto").textContent = d.padrao ? "Segue o padrão geral" : "Escolha individual";
+    Ponto_avisosLista_();
+  }
+  function Ponto_salvarAvisosEditor_() {
+    var p = Ponto_avisosPessoa_(PT_AVISOS.selecionado); if (!p || PT_AVISOS.enviando || !Ponto_avisosSujo_(p)) return;
+    var estado = PT_AVISOS;
+    var d = Ponto_avisosRascunho_(p), enviada = d.padrao ? null : d.marcacoes.slice();
+    PT_AVISOS.enviando = true; Pto_$_("ptAvisoCampos").disabled = true;
+    if (Pto_$_("ptDsSalvar")) Pto_$_("ptDsSalvar").disabled = true;
+    ["ptAvisoVoltar","ptAvisoJornada"].forEach(function (id) { Pto_$_(id).disabled = true; });
+    Ponto_avisosAtualizarEstado_();
+    Pto_chamar_("salvarLembretes", { usuarioId: p.id, marcacoes: enviada }, function (r) {
+      if (PT_AVISOS !== estado) return;
+      p.marcacoes = r.marcacoes; p.avisosProprios = enviada !== null; p.apto = r.apto; p.foraTexto = r.foraTexto;
+      delete PT_AVISOS.rascunhos[p.id]; PT_AVISOS.enviando = false;
+      if (Pto_$_("ptDsSalvar")) Pto_$_("ptDsSalvar").disabled = false;
+      if (PT_AVISOS.recarregar) { var alvo = PT_AVISOS.recarregar; delete PT_AVISOS.recarregar; Ponto_abaPessoas_(alvo); Pto_msg_("ptMsg", "Avisos salvos para " + p.nome + ".", "ok"); return; }
+      if (!Pto_$_("ptAvisoEditor")) return;
+      Ponto_abrirAvisos_(p.id, false);
+      Pto_$_("ptAvisoContagem").textContent = PT.cache.pessoas.pessoas.filter(function (x) { return x.apto; }).length;
+      Pto_msg_("ptAvisosMsg", "Avisos salvos para " + p.nome + ". A jornada foi mantida.", "ok");
+      Pto_$_("ptAvisosMsg").setAttribute("tabindex", "-1"); Pto_$_("ptAvisosMsg").focus({ preventScroll: true });
+    }, function (m) {
+      if (PT_AVISOS !== estado) return;
+      PT_AVISOS.enviando = false;
+      if (Pto_$_("ptDsSalvar")) Pto_$_("ptDsSalvar").disabled = false;
+      if (PT_AVISOS.recarregar) { var alvo = PT_AVISOS.recarregar; delete PT_AVISOS.recarregar; Ponto_abaPessoas_(alvo); Pto_msg_("ptMsg", m + " Suas alterações continuam no editor.", "erro"); return; }
+      if (!Pto_$_("ptAvisoEditor")) return; Pto_$_("ptAvisoCampos").disabled = false;
+      ["ptAvisoVoltar","ptAvisoJornada"].forEach(function (id) { Pto_$_(id).disabled = false; });
+      Ponto_avisosAtualizarEstado_(); Pto_msg_("ptAvisosMsg", m + " Suas alterações continuam aqui.", "erro");
+    });
+  }
+  function Ponto_dispensasHtml_(r) {
+    var h = "";
+    h += '<div class="pt-caixa"><p class="pt-mini">Férias e afastamentos lançados no Programa de conduta já valem sozinhos. Aqui o RH lança folga, atestado, consulta ou viagem sem marcação de ponto. Nada é apagado: "Retirar" só marca a dispensa como retirada.</p>' +
+        '<div class="pt-grade3"><div class="pt-campo"><label for="ptDsPessoa">Colaborador</label><select id="ptDsPessoa">' + Pto_opcoes_(r.pessoas.map(function (p) { return [p.id, p.nome]; }), "", "Escolha") + "</select></div>" +
+        '<div class="pt-campo"><label for="ptDsDe">De</label><input type="date" id="ptDsDe"></div><div class="pt-campo"><label for="ptDsAte">Até</label><input type="date" id="ptDsAte"></div></div>' +
+        '<div class="pt-grade2"><div class="pt-campo"><label for="ptDsMot">Motivo</label><select id="ptDsMot">' + Pto_opcoes_(Object.keys(r.motivosDispensa).map(function (k) { return [k, r.motivosDispensa[k]]; }), "FOLGA") + '</select></div><div class="pt-campo"><label for="ptDsObs">Observação (opcional)</label><input id="ptDsObs" maxlength="200"></div></div>' +
+        '<div id="ptDsMsg"></div><div class="pt-acoes"><button type="button" class="btn-primary" id="ptDsSalvar">Lançar dispensa</button></div>' +
+        (r.dispensas.length ? '<table class="pt-tabela" style="margin-top:10px"><thead><tr><th>Colaborador</th><th>Período</th><th>Motivo</th><th></th></tr></thead><tbody>' + r.dispensas.map(function (x) {
+          return '<tr><td data-r="Colaborador">' + Pto_esc_(x.pessoa) + '</td><td data-r="Período">' + Pto_esc_(x.deBr + (x.ateBr !== x.deBr ? " a " + x.ateBr : "")) + '</td><td data-r="Motivo">' + Pto_esc_(x.motivo) + (x.observacao ? '<div class="pt-mini">' + Pto_esc_(x.observacao) + "</div>" : "") + '</td><td><button type="button" class="btn-secondary" onclick="Ponto_removerDispensa_(\'' + Pto_esc_(x.id) + '\')">Retirar</button></td></tr>';
+        }).join("") + "</tbody></table>" : "") + "</div>";
+    return h;
+  }
+  function Ponto_removerDispensa_(id) { if (PT_AVISOS.enviando) return; if (!confirm("Retirar esta dispensa? Os lembretes voltam para esses dias.")) return; Pto_chamar_("removerDispensa", { id: id }, function (r) { Pto_msg_("ptMsg", r.message, "ok"); Ponto_desenharAba_(); }); }
+  function Ponto_editarPessoa_(k) {
+    if (PT_AVISOS.enviando) return;
+    var p = PT.cache.pessoas.pessoas[k];
+    var ov = document.createElement("div");
+    ov.className = "atv-overlay";
+    var campo = function (id, rot, val, tipo, ajuda) { return '<div class="pt-campo"><label for="' + id + '">' + rot + '</label><input id="' + id + '" type="' + (tipo || "time") + '" value="' + Pto_esc_(val) + '">' + (ajuda ? '<div class="pt-ajuda-campo">' + ajuda + "</div>" : "") + "</div>"; };
+    ov.innerHTML = '<div class="atv-modal" style="max-width:600px"><div class="atv-modal-cab"><h3>' + Pto_esc_(p.nome) + '</h3><button type="button" class="atv-fechar" aria-label="Fechar">&times;</button></div><div class="atv-modal-corpo">' +
+      '<label class="pt-check"><input type="checkbox" id="ptPsPart"' + (p.participa ? " checked" : "") + "> Participa dos avisos do ponto</label>" +
+      (p.apto || p.fora === "NAO_PARTICIPA" ? "" : '<div class="pt-faixa aviso">Esta pessoa não está habilitada: ' + Pto_esc_(p.foraTexto) + ".</div>") +
+      '<p class="pt-mini">Deixe vazio para seguir a jornada geral (' + Pto_esc_(PT.cache.pessoas.jornadaGeral) + ").</p>" +
+      '<div class="pt-grade2">' + campo("ptPsEnt", "Entrada", p.entrada) + campo("ptPsSai", "Saída (segunda a quinta)", p.saida) + campo("ptPsAlm", "Saída para o almoço", p.almoco) +
+      campo("ptPsRet", "Pausa do almoço (minutos)", p.retorno_min, "number", "De 15 a 240. A volta é lembrada na saída + a pausa.") + campo("ptPsSex", "Saída na sexta", p.saida_sexta) + "</div>" +
+      '<label class="pt-check"><input type="checkbox" id="ptPsSem"' + (p.sem_almoco ? " checked" : "") + "> Sem intervalo registrado no ponto (não lembra almoço nem volta)</label>" +
+      '<div class="pt-campo"><label for="ptPsObs">Observação (opcional)</label><input id="ptPsObs" maxlength="200" value="' + Pto_esc_(p.observacao) + '"></div><div id="ptPsMsg"></div></div>' +
+      '<div class="atv-modal-rod"><button type="button" class="btn-secondary" data-f>Cancelar</button> <button type="button" class="btn-primary" data-ok>Salvar</button></div></div>';
+    var fechar = function () { ov.remove(); };
+    ov.querySelector(".atv-fechar").onclick = fechar; ov.querySelector("[data-f]").onclick = fechar;
+    ov.querySelector("[data-ok]").onclick = function () {
+      var b = this; b.disabled = true;
+      Pto_chamar_("salvarPessoa", { usuarioId: p.id, participa: Pto_$_("ptPsPart").checked, entrada: Pto_$_("ptPsEnt").value, saida: Pto_$_("ptPsSai").value, almoco: Pto_$_("ptPsAlm").value,
+        retorno_min: Pto_$_("ptPsRet").value, saida_sexta: Pto_$_("ptPsSex").value, sem_almoco: Pto_$_("ptPsSem").checked, observacao: Pto_$_("ptPsObs").value },
+        function (r) { fechar(); Pto_msg_("ptMsg", r.message, "ok"); Ponto_desenharAba_(); }, function (m) { b.disabled = false; Pto_msg_("ptPsMsg", m); });
+    };
+    document.body.appendChild(ov);
+  }
+
+  // ---------------- Configuração (Administrador e Diretoria) ----------------
+  function Ponto_abaConfig_(alvo) {
+    Pto_chamar_("config", {}, function (r) {
+      var c = r.config, j = c.jornada, pr = r.prontidao;
+      var h = '<div class="pt-caixa"><h3>Ligar e desligar</h3><label class="pt-check"><input type="checkbox" id="ptCfgLig"' + (c.ligado ? " checked" : "") + "> <b>Assistente ligado</b> (com ele desligado nada sai)</label>" +
+        '<p class="pt-mini">Ao ligar, a rotina de 5 minutos é instalada. Com o assistente do SGO+ ligado, o do COMMAND não manda nada (sem mensagem em dobro).' + (pr.piloto.ligado ? " O piloto do WhatsApp está ligado: só quem está na lista do piloto participa." : "") + "</p>" +
+        '<div class="pt-campo"><label for="ptCfgConj">Marcações padrão (pessoas sem escolha individual)</label><select id="ptCfgConj">' + Pto_opcoes_(r.conjuntos.map(function (x) { return [x.codigo, x.nome]; }), c.conjunto) + "</select></div></div>";
+      h += '<div class="pt-caixa"><h3>Jornada geral</h3><p class="pt-mini">Os dias úteis e os feriados vêm do expediente comum do SGO+ (' + Pto_esc_(r.expediente.ini + "–" + r.expediente.fim) + "). Entrada vazia = início do expediente comum. Cada pessoa pode ter outro horário em Pessoas e jornadas.</p>" +
+        '<div class="pt-grade3"><div class="pt-campo"><label for="ptCfgEnt">Entrada</label><input type="time" id="ptCfgEnt" value="' + Pto_esc_(j.entrada) + '"><div class="pt-ajuda-campo">Lembrete 5 minutos antes.</div></div>' +
+        '<div class="pt-campo"><label for="ptCfgAlm">Saída para o almoço</label><input type="time" id="ptCfgAlm" value="' + Pto_esc_(j.almoco) + '"><div class="pt-ajuda-campo">Lembrete na hora.</div></div>' +
+        '<div class="pt-campo"><label for="ptCfgRet">Pausa do almoço (minutos)</label><input type="number" id="ptCfgRet" min="15" max="240" value="' + Pto_esc_(j.retorno_min) + '"><div class="pt-ajuda-campo">A volta é lembrada na saída confirmada + a pausa.</div></div>' +
+        '<div class="pt-campo"><label for="ptCfgSai">Saída (segunda a quinta)</label><input type="time" id="ptCfgSai" value="' + Pto_esc_(j.saida) + '"><div class="pt-ajuda-campo">Lembrete 5 minutos antes.</div></div>' +
+        '<div class="pt-campo"><label for="ptCfgSex">Saída na sexta</label><input type="time" id="ptCfgSex" value="' + Pto_esc_(j.saida_sexta) + '"></div></div>' +
+        '<p class="pt-mini">Hoje: ' + Pto_esc_(r.jornadaEfetiva) + "; na sexta: " + Pto_esc_(r.jornadaSexta) + ".</p></div>";
+      h += '<div class="pt-caixa"><h3>RH e avisos</h3><p class="pt-mini">Quem tem o perfil RH ou a área RH no cadastro já é RH do assistente. Marque aqui outras pessoas que tratam os pedidos.</p><div style="max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:6px;padding:6px 10px">' +
+        r.candidatosRh.map(function (u) { return '<label class="pt-check"><input type="checkbox" class="ptCfgRh" value="' + Pto_esc_(u.id) + '"' + (u.marcado || u.rhAutomatico ? " checked" : "") + (u.rhAutomatico ? " disabled" : "") + "> " + Pto_esc_(u.nome) + (u.rhAutomatico ? ' <span class="pt-mini">(RH pelo cadastro)</span>' : "") + "</label>"; }).join("") + "</div>" +
+        '<label class="pt-check"><input type="checkbox" id="ptCfgEmail"' + (c.emailReserva ? " checked" : "") + "> Sem WhatsApp (modelo não aprovado ou sem celular), mandar o lembrete por e-mail</label>" +
+        '<label class="pt-check"><input type="checkbox" id="ptCfgAtv"' + (c.atividadeRh ? " checked" : "") + "> Pedido de ajuste vira atividade do RH em Minhas atividades</label>" +
+        '<div class="pt-campo" style="max-width:260px"><label for="ptCfgRes">Resumo ao RH e à gestão a partir do</label><select id="ptCfgRes">' + Pto_opcoes_([2, 3, 4, 5, 6].map(function (n) { return [n, n + "º esquecimento declarado no mês"]; }), c.resumoAPartir) + "</select></div></div>";
+      h += '<div id="ptCfgMsg"></div><div class="pt-acoes" style="margin-bottom:14px"><button type="button" class="btn-primary" id="ptCfgSalvar">Salvar configuração</button><button type="button" class="btn-secondary" id="ptCfgPrevia">Pré-visualizar a página do link</button></div>';
+      h += '<div class="pt-caixa"><h3>Feriados (expediente comum)</h3><p class="pt-mini">Feriados nacionais, Carnaval, Sexta-feira Santa e Corpus Christi já estão no sistema. Escreva os estaduais, municipais e recessos (dd/mm ou dd/mm/aaaa, separados por vírgula). Valem para todos os avisos automáticos do SGO+.</p>' +
+        '<div class="pt-campo"><label for="ptCfgFer">Feriados extras</label><input id="ptCfgFer" value="' + Pto_esc_(r.expediente.feriados) + '" placeholder="24/10, 08/12"></div><div id="ptFerMsg"></div><div class="pt-acoes"><button type="button" class="btn-secondary" id="ptFerSalvar">Salvar feriados</button></div></div>';
+      h += '<div class="pt-caixa"><h3>Modelos do WhatsApp (Meta) — ' + pr.aprovados + " de 4 aprovados</h3>" +
+        '<p class="pt-mini">O WhatsApp oficial só entrega mensagem por modelo aprovado. Cadastre em Administração > Chaves e senhas > Cadastrar modelos na Meta e confira em Situação dos modelos. Até aprovar, o lembrete vai por e-mail (se a opção acima estiver marcada).</p>' +
+        pr.modelos.map(function (m) { return "<div style='margin-top:8px'><b>" + Pto_esc_(m.nome) + "</b> " + Pto_selo_(m.situacao, m.status === "APPROVED" ? "verde" : "laranja") + (m.usado ? "" : Pto_selo_("não usado no conjunto atual", "cinza")) + '<div class="pt-modelo">' + Pto_esc_(m.texto) + "</div><div class='pt-mini'>Botão: " + Pto_esc_(m.botao) + "</div></div>"; }).join("") + "</div>";
+      h += '<div class="pt-caixa"><h3>Situação</h3><p class="pt-mini">Rotina de 5 minutos: ' + (pr.rotina ? "instalada" : "não instalada (instala ao ligar)") + ". Última rodada: " + (pr.ultima ? Pto_esc_(String(pr.ultima.em).replace("T", " ").slice(0, 16) + " — " + (pr.ultima.res.motivo || (pr.ultima.res.lembretes + " lembrete(s)"))) : "nenhuma") + ".</p></div>";
+      alvo.innerHTML = h;
+      Pto_$_("ptCfgSalvar").onclick = function () {
+        var b = this;
+        var lig = Pto_$_("ptCfgLig").checked;
+        if (lig && !(r.config.ligado) && !confirm("Ligar o assistente do ponto? Os lembretes começam na próxima marcação de dia útil, para quem participa.")) return;
+        b.disabled = true;
+        var rh = Array.prototype.map.call(document.querySelectorAll(".ptCfgRh:checked:not(:disabled)"), function (x) { return x.value; });
+        Pto_chamar_("salvarConfig", { ligado: lig, conjunto: Pto_$_("ptCfgConj").value, rhIds: rh, emailReserva: Pto_$_("ptCfgEmail").checked, atividadeRh: Pto_$_("ptCfgAtv").checked, resumoAPartir: Pto_$_("ptCfgRes").value,
+          jornada: { entrada: Pto_$_("ptCfgEnt").value, almoco: Pto_$_("ptCfgAlm").value, retorno_min: Pto_$_("ptCfgRet").value, saida: Pto_$_("ptCfgSai").value, saida_sexta: Pto_$_("ptCfgSex").value } },
+          function (x) { b.disabled = false; PT.ini = null; Pto_msg_("ptMsg", x.message + (x.aviso ? " " + x.aviso : ""), x.aviso ? "aviso" : "ok"); Ponto_iniciar_(); Ponto_render_(); }, function (m) { b.disabled = false; Pto_msg_("ptCfgMsg", m); }, "Salvando…");
+      };
+      Pto_$_("ptCfgPrevia").onclick = function () { Pto_chamar_("previa", { marcacao: "ENTRADA" }, function (x) { window.open(x.link, "_blank"); }); };
+      Pto_$_("ptFerSalvar").onclick = function () { Pto_chamar_("salvarFeriados", { feriados: Pto_$_("ptCfgFer").value }, function (x) { Pto_msg_("ptFerMsg", x.message, "ok"); }, function (m) { Pto_msg_("ptFerMsg", m); }); };
+    }, function (m) { alvo.innerHTML = '<div class="pt-faixa erro">' + Pto_esc_(m) + "</div>"; });
+  }
+</script>

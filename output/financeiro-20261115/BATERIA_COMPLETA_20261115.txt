@@ -1,0 +1,11 @@
+Bateria completa de testes — início x fim da noite (15/11/2026 ~00:47 BRT)
+
+Mesmo executor (rodar-suite-dest.cjs, 238 arquivos tests/*.test.cjs), código apontado por DEST:
+- início da noite = produção conduta-motivo-20261114 (output/conduta-motivo-20261114/cand): 35 arquivos com saída não zero,
+  2.097 testes passando, 124 falhando;
+- fim da noite = produção financeiro-faixas-20261115 (output/financeiro-20261115/cand): 27 arquivos com saída não zero,
+  2.177 passando, 71 falhando.
+Comparação arquivo a arquivo: 0 pioraram; 8 melhoraram (todos do trabalho da noite: financeiro-omie-20261114, ganhos-omie-20261115,
+omie-conciliacao, omie-faturamento, omie-financeiro, omie-operacoes, poderes-lote0, poderes-lote3).
+As falhas restantes são as mesmas do início da noite (dívida conhecida, fora do Financeiro; ver suite-*.txt).
+Placar por arquivo: suite-inicio-noite.txt e suite-fim-noite.txt nesta pasta.

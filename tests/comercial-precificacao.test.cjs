@@ -53,29 +53,30 @@ test('cálculo da viagem: engenheiro + técnico a Rio Verde (228 km), 2 dias e 1
   assert.equal(l.KM.total, 1140, '228 x 2 x 2,50');
   assert.equal(l.PEDAGIO.total, 45);
   assert.equal(l.ALIMENTACAO.total, 240, '2 pessoas x 2 dias x 60');
-  assert.equal(l.DIARIA.total, 800, '(150 + 250) x 2 dias');
+  // 13/11/2026 (dono: "não pagamos diárias a colaboradores"): a diária da política não entra mais
+  assert.equal(l.DIARIA.nsa, true); assert.equal(l.DIARIA.total, 0); assert.match(l.DIARIA.motivo, /não paga diária a colaboradores/);
   assert.equal(l.HOSPEDAGEM.total, 360, '2 pessoas x 1 noite x 180');
   assert.equal(l.CONDUTA.total, 600, 'R$ 300 por colaborador por viagem: dois colaboradores dobram');
   assert.equal(l.COMBUSTIVEL.nsa, true); assert.match(l.COMBUSTIVEL.motivo, /Veículo da empresa: o valor por km rodado já cobre o combustível/);
-  assert.equal(d.calculo.custo, 3185);
+  assert.equal(d.calculo.custo, 2385);
   assert.equal(d.checklist.ok, true, JSON.stringify(d.checklist.faltas));
   const item = reg(amb, id) && JSON.parse(reg(amb, id).ITENS_JSON).find((i) => i.auto === 'DESLOCAMENTO');
   assert.equal(item.descricao, 'Despesas de deslocamento e estadia');
-  assert.equal(item.precoUnitario, 3750, '3.185 / (1 - 15%) = 3.747,06, arredondado para cima a R$ 10');
-  assert.equal(item.custoUnitario, 3185);
+  assert.equal(item.precoUnitario, 2810, '2.385 / (1 - 15%) = 2.805,88, arredondado para cima a R$ 10');
+  assert.equal(item.custoUnitario, 2385);
   assert.equal(salvo.proposta.tipoOrcamento, 'SERVICOS', 'o item automático não muda o tipo de orçamento');
-  assert.equal(reg(amb, id).TOTAL, 12750);
+  assert.equal(reg(amb, id).TOTAL, 11810);
   // documento ao cliente: o item aparece; o benefício da Conduta nunca aparece com esse nome
   ok(amb.api('s_vera', 'concluirProposta', { id }));
   const g = ok(amb.api('s_vera', 'gerarDocumento', { id }));
   const t = textoDe(amb.arquivos[g.htmlId].bytes.toString('utf8'));
   assert.match(t, /Despesas de deslocamento e estadia/);
-  assert.match(t, /Equipe de 2 profissionais \(1 engenheiro e 1 técnico\); 1 viagem de Goiânia\/GO a Rio Verde\/GO; 2 dias e 1 noite por viagem\. Inclui deslocamento, pedágios, alimentação, hospedagem e diárias\./);
-  assert.match(t, /R\$ 3\.750,00/);
-  assert.doesNotMatch(t, /conduta|benef[ií]cio|incentivo|\bmiss[ãa]o|3\.185/i);
+  assert.match(t, /Equipe de 2 profissionais \(1 engenheiro e 1 técnico\); 1 viagem de Goiânia\/GO a Rio Verde\/GO; 2 dias e 1 noite por viagem\. Inclui deslocamento, pedágios, alimentação e hospedagem./);
+  assert.match(t, /R\$ 2\.810,00/);
+  assert.doesNotMatch(t, /conduta|benef[ií]cio|incentivo|\bmiss[ãa]o|2\.385|diária/i);
   // fotografia da precificação gravada ao concluir
   const f = JSON.parse(reg(amb, id).PRECIFICACAO_JSON);
-  assert.equal(f.custoViagem, 3185); assert.equal(f.beneficio, 600); assert.equal(f.repasse, 'ITEM'); assert.equal(f.viagem, true);
+  assert.equal(f.custoViagem, 2385); assert.equal(f.beneficio, 600); assert.equal(f.repasse, 'ITEM'); assert.equal(f.viagem, true);
 });
 
 test('checklist obrigatório: serviço sem resposta sobre a viagem não conclui; valor sem padrão na política é cobrado; "não se aplica" exige motivo; sem viagem exige motivo', () => {
@@ -94,7 +95,7 @@ test('checklist obrigatório: serviço sem resposta sobre a viagem não conclui;
   r = amb.api('s_vera', 'concluirProposta', { id: a.id });
   assert.equal(r.ok, false);
   assert.match(r.message, /Alimentação: sem valor; informe o valor por pessoa por dia ou marque "não se aplica" com o motivo/);
-  assert.match(r.message, /Diária do engenheiro: sem valor \(a política ainda não tem o valor padrão\)/); assert.doesNotMatch(r.message, /Diária do técnico/);
+  assert.doesNotMatch(r.message, /Diária/, '13/11/2026: a empresa não paga diária; a linha nunca falta no checklist');
   assert.match(r.message, /Hospedagem: sem valor/);
   assert.doesNotMatch(r.message, /Km rodado/, 'o km tem padrão na política (R$ 2,50)');
   // "não se aplica" sem motivo continua travando
@@ -124,7 +125,7 @@ test('edge cases: atendimento local (0 km), trecho abaixo do mínimo da Conduta,
   assert.equal(l.KM.nsa, true); assert.match(l.KM.motivo, /Atendimento local/);
   assert.equal(l.PEDAGIO.nsa, true); assert.equal(l.HOSPEDAGEM.nsa, true); assert.match(l.HOSPEDAGEM.motivo, /Sem pernoite/);
   assert.equal(l.CONDUTA.nsa, true); assert.match(l.CONDUTA.motivo, /Trecho de 0 km, abaixo do mínimo de 200 km do Programa de conduta/);
-  assert.equal(a.salvo.proposta.deslocamento.calculo.custo, 210, 'alimentação 60 + diária 150');
+  assert.equal(a.salvo.proposta.deslocamento.calculo.custo, 60, 'alimentação 60 (sem diária desde 13/11/2026)');
   assert.equal(a.salvo.proposta.deslocamento.checklist.ok, true);
   // Anápolis (57 km): abaixo do mínimo; benefício sai mesmo que o vendedor tente marcar valor
   const b = rascunho(amb, { deslocamento: { viagem: { ha: 'SIM', tecnicos: 3, destino: 'Anapolis/GO', kmTrecho: '57', dias: 1, noites: 0, linhas: { PEDAGIO: { nsa: true, motivo: 'Sem pedágio no trajeto' }, CONDUTA: { valor: '300' } } } } });
@@ -141,17 +142,17 @@ test('edge cases: atendimento local (0 km), trecho abaixo do mínimo da Conduta,
   const dd = ok(amb.api('s_vera', 'proposta', { id: d.id })).proposta.deslocamento;
   assert.equal(dd.calculo.linhas.find((x) => x.codigo === 'COMBUSTIVEL').total, 1800);
   assert.equal(dd.calculo.linhas.find((x) => x.codigo === 'CONDUTA').total, 300, 'engenheiro sozinho a 830 km');
-  // diluído: sem item automático; o custo entra na margem
+  // 13/11/2026 (caso PROP-2026-0071): diluído guarda o mesmo item (custo mais impostos) marcado diluído; o cliente não vê a linha
   const e = rascunho(amb, { deslocamento: { viagem: VIAGEM, repasse: 'DILUIDO' } });
-  assert.equal(JSON.parse(reg(amb, e.id).ITENS_JSON).filter((i) => i.auto).length, 0);
+  assert.deepEqual(JSON.parse(reg(amb, e.id).ITENS_JSON).filter((i) => i.auto).map((i) => [i.auto, i.diluido]), [['DESLOCAMENTO', true]]);
   const ge = ok(amb.api('s_gaspar', 'proposta', { id: e.id })).proposta.deslocamento;
-  assert.equal(ge.analise.custoDeslocamento, 3185);
-  // 01/11/2026 (decisão do dono): diluído, o custo da viagem entra no custo dos serviços e a sobra mínima tem que cobrir:
-  // 3.185 ÷ (1 − 15% − 0% − 25%) = 5.308,33 (antes: só custo mais impostos, 3.747,06)
-  assert.equal(ge.diluir, 5308.33, 'quanto diluir nos serviços: custo ÷ (1 − impostos − comissão − sobra mínima)');
-  // trocar para item cria o item; voltar para diluído tira
+  assert.equal(ge.analise.custoDeslocamento, 2385); assert.equal(ge.analise.custoDiluido, 0);
+  assert.equal(ge.diluir, 0, 'nada a subir à mão'); assert.equal(ge.precoRepasse, 2810, '2.385 ÷ (1 − 15%) = 2.805,88, para cima a R$ 10');
+  // trocar para item: a mesma linha, agora visível; o total não muda
+  const totDil = reg(amb, e.id).TOTAL;
   ok(amb.api('s_vera', 'salvarProposta', { id: e.id, itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00' }], deslocamento: { repasse: 'ITEM' } }));
-  assert.equal(JSON.parse(reg(amb, e.id).ITENS_JSON).filter((i) => i.auto === 'DESLOCAMENTO').length, 1);
+  assert.deepEqual(JSON.parse(reg(amb, e.id).ITENS_JSON).filter((i) => i.auto).map((i) => [i.auto, !!i.diluido]), [['DESLOCAMENTO', false]]);
+  assert.equal(reg(amb, e.id).TOTAL, totDil);
 });
 
 test('margem e alçada: abaixo da mínima vai para aprovação e só a Diretoria aprova (o gestor comercial pode negar); vendedor vê só a situação da margem', () => {
@@ -159,15 +160,16 @@ test('margem e alçada: abaixo da mínima vai para aprovação e só a Diretoria
   ok(politica(amb, POL));
   ok(amb.api('s_gaspar', 'salvarProduto', { codigo: 'QT-AC', nome: 'Qualificação térmica de autoclave', tipo: 'SERVICO', preco: '6.000,00', custo: '3.000,00' }));
   const prod = ok(amb.api('s_gaspar', 'catalogo')).produtos[0];
-  const a = rascunho(amb, { deslocamento: { viagem: VIAGEM, repasse: 'DILUIDO' } }, [{ produtoId: prod.id, descricao: prod.nome, quantidade: 1, precoUnitario: '6.000,00' }]);
-  // 6.000 - 900 (15%) - 3.000 - 3.185 = -1.085: abaixo da mínima
+  // 13/11/2026: a viagem (separada ou diluída) fica fora da sobra; abaixo da mínima pelo preço do serviço:
+  // 4.000 - 600 (15%) - 3.000 = 400 (10%): abaixo da mínima de 25%
+  const a = rascunho(amb, { deslocamento: { viagem: VIAGEM, repasse: 'DILUIDO' } }, [{ produtoId: prod.id, descricao: prod.nome, quantidade: 1, precoUnitario: '4.000,00' }]);
   const vv = ok(amb.api('s_vera', 'proposta', { id: a.id })).proposta;
   assert.equal(vv.deslocamento.analise, undefined, 'vendedor não vê custo e margem em número');
   assert.equal(vv.deslocamento.margem.situacao, 'ABAIXO_MIN');
   assert.equal(vv.politica.exigeDiretoria, true);
   const gg = ok(amb.api('s_gaspar', 'proposta', { id: a.id })).proposta.deslocamento;
-  assert.equal(gg.analise.custoTotal, 6185); assert.equal(gg.analise.impostos, 900); assert.equal(gg.analise.margemPct, -18.08);
-  assert.equal(gg.analise.precoMinimo, 10308.33, '6.185 / (1 - 15% - 25%)');
+  assert.equal(gg.analise.custoTotal, 5385); assert.equal(gg.analise.impostos, 1021.5, '600 do serviço + 421,50 do repasse de 2.810'); assert.equal(gg.analise.margemPct, 10);
+  assert.equal(gg.analise.precoMinimo, 7810, '3.000 / (1 - 15% - 25%) + 2.810 do repasse');
   let r = amb.api('s_vera', 'concluirProposta', { id: a.id });
   assert.match(r.message, /abaixo da mínima de 25,0% da política de precificação; só a Diretoria aprova/);
   assert.match(r.message, /precisa da aprovação da Diretoria/);
@@ -181,7 +183,7 @@ test('margem e alçada: abaixo da mínima vai para aprovação e só a Diretoria
   ok(amb.api('s_dora', 'decidirDesconto', { id: a.id, aprovar: true, texto: 'Aprovado pela Diretoria: contrato anual' }));
   assert.equal(reg(amb, a.id).SITUACAO, 'PRONTA');
   // o gestor comercial nega: volta para rascunho
-  const b = rascunho(amb, { deslocamento: { viagem: VIAGEM, repasse: 'DILUIDO' } }, [{ produtoId: prod.id, descricao: prod.nome, quantidade: 1, precoUnitario: '6.000,00' }]);
+  const b = rascunho(amb, { deslocamento: { viagem: VIAGEM, repasse: 'DILUIDO' } }, [{ produtoId: prod.id, descricao: prod.nome, quantidade: 1, precoUnitario: '4.000,00' }]);
   ok(amb.api('s_vera', 'concluirProposta', { id: b.id, justificativa: 'Cliente estratégico; abre contrato anual' }));
   ok(amb.api('s_gaspar', 'decidirDesconto', { id: b.id, aprovar: false, texto: 'Suba o preço dos serviços: a viagem está diluída' }));
   assert.equal(reg(amb, b.id).SITUACAO, 'RASCUNHO');
@@ -199,9 +201,9 @@ test('desconto geral não reduz o deslocamento (sai só dos serviços); revisão
   const rv = ok(amb.api('s_vera', 'revisarProposta', { id: a.id, comIA: false }));
   assert.ok(!rv.alertas.some((x) => /não volta no preço/.test(x)), rv.alertas.join(' | '));
   const an = ok(amb.api('s_gaspar', 'proposta', { id: a.id })).proposta.deslocamento.analise;
-  assert.equal(an.receitaDeslocamento, 3750, 'o item de deslocamento fica com o preço inteiro');
+  assert.equal(an.receitaDeslocamento, 2810, 'o item de deslocamento fica com o preço inteiro');
   assert.equal(an.naoRepassado, 0); assert.equal(an.receitaItens, 8000, '9.000 de serviço menos os 1.000 de desconto');
-  assert.equal(reg(amb, a.id).TOTAL, 11750); assert.equal(reg(amb, a.id).DESCONTO_PCT, 11.11, '1.000 sobre os 9.000 do serviço (o deslocamento não entra na base)');
+  assert.equal(reg(amb, a.id).TOTAL, 10810); assert.equal(reg(amb, a.id).DESCONTO_PCT, 11.11, '1.000 sobre os 9.000 do serviço (o deslocamento não entra na base)');
   // o desconto não pode passar da soma dos serviços e produtos (o deslocamento não absorve desconto)
   const muito = amb.api('s_vera', 'salvarProposta', { id: a.id, descontoGeral: '9.500,00', itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00', equipamentoId: 'eq1' }] });
   assert.equal(muito.ok, false); assert.match(muito.message, /maior que a soma dos serviços e produtos \(R\$ 9\.000,00\)\. O deslocamento e o frete são repasse de custo e não recebem desconto/);
@@ -212,7 +214,7 @@ test('desconto geral não reduz o deslocamento (sai só dos serviços); revisão
   const nr = ok(amb.api('s_vera', 'novaRevisao', { id: a.id }));
   const nova = reg(amb, nr.proposta.id);
   assert.equal(nova.DESLOCAMENTO_JSON, reg(amb, a.id).DESLOCAMENTO_JSON, 'a revisão copia os custos da viagem');
-  assert.equal(nr.proposta.deslocamento.calculo.custo, 3185);
+  assert.equal(nr.proposta.deslocamento.calculo.custo, 2385);
   assert.ok(JSON.parse(nova.ITENS_JSON).some((i) => i.auto === 'DESLOCAMENTO'));
   // a nova revisão conclui e segue até a passagem aos setores
   ok(amb.api('s_vera', 'salvarProposta', { id: nova.ID, descontoGeral: '0', itens: JSON.parse(nova.ITENS_JSON) }));
@@ -224,7 +226,8 @@ test('desconto geral não reduz o deslocamento (sai só dos serviços); revisão
   ok(amb.api('s_vera', 'passarSetores', { id: nova.ID }));
   const tec = amb.tabelas.ATV_ATIVIDADES.find((x) => /Área técnica/.test(x.TITULO));
   assert.match(tec.DESCRICAO, /Viagem prevista na proposta: 1 engenheiro e 1 técnico; 1 viagem a Rio Verde\/GO \(228 km o trecho\); 2 dias e 1 noite por viagem/);
-  assert.match(tec.DESCRICAO, /incentivo de missão do Programa de conduta para cada colaborador/);
+  // 13/11/2026 (dono): um incentivo por O.S. de campo e por executante; a conferência fica na Conduta
+  assert.match(tec.DESCRICAO, /Incentivo de missão do Programa de conduta: um por O\.S\. de campo e por executante \(uma missão por O\.S\.; 1 viagem\)\. A conferência fica em Programa de conduta > Missões > Incentivo por O\.S\./);
   const fin = amb.tabelas.ATV_ATIVIDADES.find((x) => /Financeiro/.test(x.TITULO));
   assert.match(fin.DESCRICAO, /Viagem prevista/);
   [tec, fin].forEach((x) => assert.doesNotMatch(x.DESCRICAO, /R\$\s?\d/));
@@ -352,14 +355,19 @@ test('especialista contínuo: lista do vendedor cobra o checklist; panorama da g
   // benefício tirado à mão numa viagem de 228 km
   ok(politica(amb, POL));
   ok(amb.api('s_vera', 'salvarProposta', { id: a.id, itens: [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '9.000,00' }], deslocamento: { viagem: { linhas: { ALIMENTACAO: { nsa: false }, CONDUTA: { nsa: true, motivo: 'Cliente não paga benefício' } } } } }));
-  ok(amb.api('s_vera', 'concluirProposta', { id: a.id }));
+  // 13/11/2026 (MAN-VIA-001 §6, etapa 2 do incentivo): a 200 km ou mais a linha do incentivo é obrigatória; o rascunho não conclui sem ela
+  const semIncentivo = amb.api('s_vera', 'concluirProposta', { id: a.id });
+  assert.equal(semIncentivo.ok, false);
+  assert.match(semIncentivo.message, /Incentivo de Missão: a distância cadastral do cliente \(Rio Verde\/GO\) é de 228 km \(mínimo 200 km\): a linha é obrigatória e não pode ficar "não se aplica"/);
+  // proposta concluída ANTES desta regra (o banco tem casos assim): continua com o alerta grave na revisão, no panorama e no painel
+  reg(amb, a.id).SITUACAO = 'PRONTA';
   // item do catálogo sem reajuste há mais de 12 meses
   ok(amb.api('s_gaspar', 'salvarProduto', { codigo: 'SRV-9', nome: 'Manutenção preventiva de autoclave', tipo: 'SERVICO', preco: '2.000,00' }));
   amb.tabelas.COM_PRODUTOS.find((p) => p.CODIGO === 'SRV-9').PRECO_DESDE = '2025-09-01';
   pan = ok(amb.api('s_gaspar', 'hoje', { papel: 'GESTAO' }));
   const conduta = pan.itens.find((i) => i.regra === 'PRECIFICACAO');
   assert.ok(conduta, pan.itens.map((i) => i.regra).join(','));
-  assert.match(conduta.titulo, /o Incentivo de Missão ficou "não se aplica" numa viagem de 228 km/);
+  assert.match(conduta.titulo, /o Incentivo de Missão ficou "não se aplica" numa viagem de 228 km \(distância cadastral\)/);
   assert.ok(pan.itens.some((i) => i.regra === 'CATALOGO_SEM_REAJUSTE' && /1 item do catálogo está sem reajuste há mais de 12 meses/.test(i.titulo)));
   assert.ok(!pan.itens.some((i) => i.regra === 'POLITICA_INCOMPLETA'), 'a política foi preenchida');
   const rv = ok(amb.api('s_vera', 'revisarProposta', { id: a.id, comIA: false }));
@@ -369,10 +377,11 @@ test('especialista contínuo: lista do vendedor cobra o checklist; panorama da g
   assert.deepEqual(cat.produtos.map((p) => p.codigo), ['SRV-9']); assert.equal(cat.semReajuste, 1); assert.equal(cat.produtos[0].semReajuste, true);
   assert.equal(ok(amb.api('s_vera', 'catalogo', { situacao: 'SEM_REAJUSTE' })).produtos.length, 1, 'vendedor não tem o filtro: vê os ativos');
   // painel: quadro de precificação só para a gestão
-  ok(amb.api('s_vera', 'gerarDocumento', { id: a.id }));
-  ok(amb.api('s_vera', 'marcarEnviada', { id: a.id, como: 'Entregue em mãos na reunião com a CME' }));
+  // 13/11/2026 (MAN-VIA-001 §6): proposta sem a linha do incentivo a 200 km ou mais também não gera o documento (seria a COM-02)
+  const doc = amb.api('s_vera', 'gerarDocumento', { id: a.id });
+  assert.equal(doc.ok, false); assert.match(doc.message, /a linha é obrigatória e não pode ficar "não se aplica"/);
   const pn = ok(amb.api('s_gaspar', 'painel', { competencia: '2026-10' })).precificacao;
-  assert.equal(pn.enviadas, 1); assert.equal(pn.viagens, 1); assert.equal(pn.custoViagem, 2585, '3.185 sem os 600 do benefício tirado'); assert.equal(pn.semReajuste, 1);
+  assert.equal(pn.semReajuste, 1);
   assert.ok(pn.estrategia.some((x) => /sem reajuste há mais de 12 meses/.test(x)));
   assert.equal(pn.abertasComProblema, 1);
   assert.equal(ok(amb.api('s_vera', 'painel', { competencia: '2026-10' })).precificacao, null);
@@ -403,7 +412,7 @@ test('telas: caixa de custos no rascunho, resumo fora dele, política na Metodol
   const pv = ok(amb.api('s_vera', 'proposta', { id: a.id })).proposta;
   const cx = tela.Comercial_editorCustos_(pv);
   assert.match(cx, /Ver a conta linha por linha e ajustar/); assert.match(cx, /id="cmCvPed"/);
-  assert.match(cx, /data-cvl="CONDUTA"/); assert.match(cx, /R\$ 3\.185,00/); assert.match(cx, /R\$ 3\.750,00/);
+  assert.match(cx, /data-cvl="CONDUTA"/); assert.match(cx, /R\$ 2\.385,00/); assert.match(cx, /R\$ 2\.810,00/);
   assert.match(cx, /Tabela de distâncias: Rio Verde\/GO, 228 km/);
   assert.doesNotMatch(cx, /Precificação \(só gestão\)/, 'vendedor não vê a margem em número');
   const pg = ok(amb.api('s_gaspar', 'proposta', { id: a.id })).proposta;

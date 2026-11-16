@@ -1,0 +1,14 @@
+Página antiga /financeiro aposentada — publicado em 14/11/2026 23:39 BRT
+
+Imagem: metrolabs/sgo:financeiro-pagina-antiga-20261115
+        sha256:65b6e961af11b1a1fceae118fc5afcadbaba3ff7a86d7f4847cea2856d00c462
+Base:   metrolabs/sgo:ganhos-omie-20261115 (sha256:fa003bf6…), 2 arquivos do servidor conferidos (dist e src).
+Backup: /opt/metrolabs/backup/financeiro-pagina-antiga-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Achado PEN-09 da Missão 01 (duas implementações do Omie). A página /financeiro (consultas e conciliação OFX, fora do menu,
+0 conciliações) virou um aviso: "substituída pelo Painel financeiro (menu Financeiro > Painel financeiro)", com link ao SGO+.
+POST /financeiro/consulta responde 410 com a mesma orientação. A tabela financeiro_conciliacoes ficou intacta (0 linhas).
+Arquivos: /app/dist/servicos/financeiro.js e /app/src/servicos/financeiro.ts (mesmo conteúdo; o .map antigo ficou e não é usado).
+Cópias anteriores: output/financeiro-20261115/node/antes-financeiro.{js,ts}.
+Teste: node/teste-rota.mjs (GET 200 com aviso, POST 410). No ar: saudável, GET / 200, GET /financeiro 200 com o aviso,
+POST 410, 0 erros no log. As caixas FIN_VER_CONTAS/FIN_CONCILIAR_BANCO (lote 3, desligadas) citam a página antiga: sem efeito.

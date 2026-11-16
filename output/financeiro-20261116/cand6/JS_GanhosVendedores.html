@@ -1,0 +1,584 @@
+<style>
+  /* GANHOS DOS VENDEDORES (12/11/2026): menu Ganhos dos vendedores. Servidor: SGO_Ganhos_Vendedores.js (GanhosVendedores_api).
+     Visual do SGO+: tokens --bc-*, componentes cadx-* (UI_Estilos.html) e as classes vg-* do Depósito de viagem
+     (JS_DepositoViagem.html, sempre incluído na página). Gráficos: Chart.js da casca (carregarChartJs_, JS_Core.html). */
+  #gvTela { --vg-gap: 14px; }
+  #gvTela .cadx-btn { min-height: 40px; height: auto; padding: 6px 14px; white-space: normal; text-align: center; line-height: 1.25; font-size: 13px; }
+  #gvTela .cadx-btn:focus-visible, #gvTela .vg-aba:focus-visible { outline: 2px solid var(--bc-info, #1E4F7A); outline-offset: 2px; }
+  #gvTela p, #gvTela .gv-just { text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; }
+  .gv-filtros { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; margin: 0 0 12px; }
+  .gv-filtros label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--bc-text-2, #4A4F4B); }
+  .gv-filtros select, .gv-filtros input { min-height: 40px; min-width: 180px; }
+  .gv-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 10px; margin: 0 0 14px; }
+  .gv-card { padding: 11px 13px; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; background: var(--bc-surface, #fff); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .gv-card span { font-size: 11.5px; font-weight: 600; color: var(--bc-text-3, #5F645F); }
+  .gv-card b { font-family: var(--bc-mono, monospace); font-size: 17px; font-weight: 600; color: var(--bc-text, #1C1F1D); overflow-wrap: anywhere; }
+  .gv-card small { font-size: 11.5px; color: var(--bc-text-3, #5F645F); line-height: 1.4; }
+  .gv-card.destaque { border-color: var(--bc-action-line, #B9D3B3); background: var(--bc-action-bg, #E8F2E5); }
+  .gv-regua { display: flex; gap: 3px; margin: 6px 0 4px; }
+  .gv-regua div { flex: 1; min-width: 0; padding: 6px 6px; border-radius: 5px; background: var(--bc-surface-2, #FAF9F6); border: 1px solid var(--bc-line, #E2E0D8); font-size: 11.5px; line-height: 1.35; }
+  .gv-regua div.is-atual { background: var(--bc-action-bg, #E8F2E5); border-color: var(--bc-action, #1F6B2A); font-weight: 700; }
+  .gv-regua b { display: block; font-size: 14px; }
+  .gv-grafico { position: relative; height: 260px; }
+  .gv-barras { display: flex; align-items: flex-end; gap: 4px; height: 180px; padding-top: 8px; }
+  .gv-barras div { flex: 1; background: var(--bc-info, #1E4F7A); opacity: .75; border-radius: 3px 3px 0 0; min-height: 1px; }
+  .gv-sit { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  .gv-sit.s-EM_ANDAMENTO { color: #4A4F4B; } .gv-sit.s-ABERTO, .gv-sit.s-CONTESTADO, .gv-sit.s-DEVOLVIDO { color: #8A3D00; }
+  .gv-sit.s-CONFERIDO, .gv-sit.s-FECHADO { color: #1A4F8C; } .gv-sit.s-APROVADO, .gv-sit.s-PAGO { color: #1D6B3F; }
+  .gv-sit.s-VALIDO { color: #1D6B3F; } .gv-sit.s-A_CLASSIFICAR { color: #8A3D00; } .gv-sit.s-ANULADO { color: #4A4F4B; }
+  .gv-passos { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin: 0 0 12px; }
+  .gv-passo { border: 1px solid var(--bc-line, #E2E0D8); border-left: 4px solid #C9CDD2; border-radius: 6px; padding: 9px 11px; background: #fff; font-size: 12.5px; line-height: 1.45; min-width: 0; }
+  .gv-passo.feito { border-left-color: #1D6B3F; } .gv-passo.atual { border-left-color: #A87406; background: #FFFBF2; }
+  .gv-passo b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .gv-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 14px; margin: 8px 0; }
+  .gv-form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--bc-text-2, #4A4F4B); min-width: 0; }
+  .gv-form label.inteiro { grid-column: 1 / -1; }
+  .gv-form input, .gv-form select, .gv-form textarea { min-height: 40px; font: inherit; font-size: 13.5px; width: 100%; box-sizing: border-box; }
+  .gv-form textarea { min-height: 70px; resize: vertical; }
+  .gv-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .gv-pode { list-style: none; padding: 0; margin: 0 0 10px; font-size: 13px; line-height: 1.5; }
+  .gv-pode li { padding: 3px 0; }
+  .gv-pode li.nao { color: var(--bc-text-3, #5F645F); }
+  .gv-faixas-ed { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .gv-faixas-ed td, .gv-faixas-ed th { padding: 5px 6px; border-bottom: 1px solid var(--bc-line, #E2E0D8); text-align: left; }
+  .gv-faixas-ed input { min-height: 38px; width: 100%; box-sizing: border-box; }
+  .gv-props { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; margin: 6px 0; }
+  .gv-prop { text-align: left !important; justify-content: flex-start !important; }
+  .gv-ia-txt { font-size: 14px; line-height: 1.65; text-align: justify; margin: 8px 0 4px; }
+  .gv-num { font-family: var(--bc-mono, monospace); white-space: nowrap; }
+  .gv-pend { display: grid; gap: 6px; margin: 0 0 12px; }
+  /* no celular o SGO+ esconde .cadx-tabela-caixa (lá usa cartões): estas tabelas curtas rolam dentro da caixa, sem rolar a página */
+  .gv-tabela-caixa { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .gv-tabela-caixa .cadx-tabela td, .gv-tabela-caixa .cadx-tabela th { white-space: nowrap; }
+  @media (max-width: 760px) { #gvTela .cadx-btn { min-height: 44px; } .gv-regua { flex-direction: column; } .gv-filtros select, .gv-filtros input { min-width: 0; width: 100%; } .gv-filtros label { flex: 1 1 100%; } }
+</style>
+<script>
+  // ==========================================================
+  // GANHOS DOS VENDEDORES (12/11/2026, pedido do dono). Servidor: SGO_Ganhos_Vendedores.js.
+  // Ganchos na casca (JS_Core.html): Ganhos_iniciar_ no login mostra o menu (vendedor, Financeiro e Diretoria);
+  // abrir('ganhos_vendedores') -> Ganhos_render_. O servidor confere sessão, caixa e proteções em toda chamada. Sem
+  // window.confirm/prompt/alert: confirmações pela caixa da casca (fsPerguntar_) e campos na própria tela. Sem atualização
+  // automática: a tela só redesenha quando a pessoa pede (nada rouba foco nem apaga o que está sendo digitado).
+  // ==========================================================
+  var GV = { ini: null, aba: "painel", vend: "", comp: "", ocupado: false, painel: null, graf: null, grafCmp: null, rec: { prop: null, filtroComp: "", filtroSit: "", classificar: "" }, ct: { faixas: [] } };
+  function GvT_esc_(v) { return String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function GvT_$(id) { return document.getElementById(id); }
+  function GvT_v_(id) { var e = GvT_$(id); return e ? String(e.value || "").trim() : ""; }
+  function GvT_pode_(c) { return !!(GV.ini && GV.ini.poderes && GV.ini.poderes[c]); }
+  function GvT_verTodos_() { return GvT_pode_("GANHOS_VER_TODOS") || GvT_pode_("GANHOS_CONTRATOS") || GvT_pode_("GANHOS_RECEBIMENTOS"); }
+  function GvT_hoje_() { var d = new Date(), p = function (n) { return ("0" + n).slice(-2); }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+  function GvT_compBr_(c) { var m = /^(\d{4})-(\d{2})$/.exec(String(c || "")); return m ? m[2] + "/" + m[1] : String(c || ""); }
+  function GvT_numBr_(n, casas) { var f = Math.abs(Number(n) || 0).toFixed(casas).split("."); return (Number(n) < 0 ? "-" : "") + f[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (casas ? "," + f[1] : ""); }
+  function GvT_moeda_(n) { return "R$ " + GvT_numBr_(Math.round((Number(n) || 0) * 100) / 100, 2); }
+  function GvT_num_(v) { var s = String(v || "").replace(/R\$|%|\s/g, ""); if (!s) return null; if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", "."); else if (/^-?\d+,\d+$/.test(s)) s = s.replace(",", "."); else if (!/^-?\d+(\.\d+)?$/.test(s)) return null; var n = Number(s); return isFinite(n) ? n : null; }
+  function GvT_bt_(rot, acao, id, cls, extra) { return '<button type="button" class="cadx-btn' + (cls ? " " + cls : "") + '" data-gv="' + acao + '" data-id="' + GvT_esc_(id || "") + '"' + (extra || "") + ">" + GvT_esc_(rot) + "</button>"; }
+  function GvT_vazio_(t, x) { return '<div class="vg-vazio"><b>' + GvT_esc_(t) + "</b>" + GvT_esc_(x || "") + "</div>"; }
+  function GvT_sit_(s, nome) { return '<span class="gv-sit s-' + GvT_esc_(s) + '">' + GvT_esc_(nome || s) + "</span>"; }
+
+  // ---------- ganchos da casca ----------
+  function Ganhos_mostrarMenu_() {
+    var ver = !!(GV.ini && GV.ini.ver), b = GvT_$("menu-btn-ganhos_vendedores");
+    if (b) b.style.display = ver ? "" : "none";
+    var badge = GvT_$("menuBadgeGanhos"), c = (GV.ini && GV.ini.contagens) || {};
+    if (badge) { var n = ver ? (c.conferir || 0) + (c.fechar || 0) + (c.aprovar || 0) + (c.pagar || 0) + (c.classificar || 0) : 0; badge.textContent = n ? String(n) : ""; }
+  }
+  function Ganhos_iniciar_() {
+    GV.ini = null; Ganhos_mostrarMenu_();
+    if (typeof SGO_getSessionId !== "function" || !SGO_getSessionId()) return;
+    google.script.run.withSuccessHandler(function (r) { GV.ini = r && r.ok ? r : null; Ganhos_mostrarMenu_(); }).withFailureHandler(function () { GV.ini = null; Ganhos_mostrarMenu_(); })
+      .GanhosVendedores_api(SGO_getSessionId(), "iniciar", {});
+  }
+  function GvT_chamar_(acao, dados, ok, erro, opcoes) {
+    opcoes = opcoes || {};
+    if (GV.ocupado && !opcoes.livre) return;
+    if (!opcoes.livre) { GV.ocupado = true; GvT_travar_(true); }
+    var fim = function () { if (!opcoes.livre) { GV.ocupado = false; GvT_travar_(false); } };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        fim();
+        if (!r || !r.ok) { (erro || GvT_erro_)((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e confira se a mudança foi gravada antes de tentar de novo."); return; }
+        try { ok(r); } catch (e) { console.error("Ganhos dos vendedores:", e); GvT_erro_("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5); o que foi gravado está guardado."); }
+      })
+      .withFailureHandler(function (e) { fim(); (erro || GvT_erro_)(String((e && e.message) || "Não foi possível falar com o servidor. Verifique a conexão; antes de repetir, confira se a mudança já foi gravada.")); })
+      .GanhosVendedores_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function GvT_travar_(sim) { var t = GvT_$("gvTela"); if (t) t.querySelectorAll("button[data-gv]").forEach(function (b) { if (!b.hasAttribute("data-livre")) b.disabled = !!sim; }); }
+  function GvT_msg_(texto, tipo) {
+    var el = GvT_$("gvMsg"); if (!el) return;
+    el.innerHTML = texto ? '<div class="vg-faixa ' + (tipo === "erro" ? "is-erro" : tipo === "ok" ? "is-ok" : tipo === "alerta" ? "is-alerta" : "") + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + GvT_esc_(texto) + "</div>" : "";
+    if (texto) { try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
+  }
+  function GvT_erro_(m) { GvT_msg_(m, "erro"); }
+  function GvT_perguntar_(titulo, texto, sim) {
+    if (typeof fsPerguntar_ === "function") { fsPerguntar_(titulo, texto, [{ rotulo: "Voltar", fn: function () {} }, { rotulo: "Confirmar", prim: true, fn: sim }]); return; }
+    sim();
+  }
+
+  function Ganhos_render_() {
+    var div = GvT_$("conteudo"); if (!div) return;
+    try { if (typeof atualizarTituloMobile_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Ganhos dos vendedores"); } catch (e) {}
+    div.innerHTML = '<div class="module-shell cadx" id="gvTela"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Ganhos dos vendedores</h2>' +
+      '<p class="content-subtitle">Contrato de cada vendedor, comissão sobre o valor recebido no mês (faixa cheia), fechamento mensal, pagamento, painel e avaliação.</p></div><div class="module-header-right"></div></div>' +
+      '<div id="gvFiltros"></div><div id="gvAgora"></div><div class="vg-abas" id="gvAbas" role="tablist" aria-label="Partes de Ganhos dos vendedores"></div><div id="gvMsg" aria-live="polite"></div><div id="gvCorpo"><p class="vg-sub">Carregando…</p></div></div>';
+    var tela = GvT_$("gvTela");
+    tela.addEventListener("click", GvT_clique_);
+    tela.addEventListener("change", GvT_mudou_);
+    GvT_chamar_("iniciar", {}, function (r) {
+      GV.ini = r; Ganhos_mostrarMenu_();
+      if (!r.ver) { GvT_$("gvCorpo").innerHTML = '<div class="vg-faixa is-erro">Ganhos dos vendedores é dos vendedores (cada um vê os próprios ganhos), do Financeiro e da Diretoria. Esta conta não tem contrato de ganhos nem permissão no módulo. Se você é vendedor, peça ao Financeiro para cadastrar o seu contrato.</div>'; return; }
+      if (!GV.comp) GV.comp = GvT_mesAnterior_(r.competenciaAtual);
+      if (!GV.vend) GV.vend = r.souVendedor || !GvT_verTodos_() ? r.eu.id : ((r.vendedores || []).filter(function (v) { return v.temContrato; })[0] || (r.vendedores || [])[0] || { id: r.eu.id }).id;
+      GvT_filtros_(); GvT_agora_(); GvT_irAba_(GV.aba || "painel");
+    }, function (m) { GvT_$("gvCorpo").innerHTML = '<div class="vg-faixa is-erro"><b>A tela não abriu.</b> ' + GvT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  function GvT_mesAnterior_(c) { var m = /^(\d{4})-(\d{2})$/.exec(String(c || "")); if (!m) return ""; var t = Number(m[1]) * 12 + Number(m[2]) - 2; return Math.floor(t / 12) + "-" + ("0" + ((t % 12) + 1)).slice(-2); }
+  function GvT_filtros_() {
+    var el = GvT_$("gvFiltros"); if (!el) return;
+    var h = '<div class="gv-filtros">';
+    if (GvT_verTodos_()) {
+      h += '<label for="gvVend">Vendedor<select id="gvVend" data-gvmuda="vend">' + (GV.ini.vendedores || []).map(function (v) { return '<option value="' + GvT_esc_(v.id) + '"' + (v.id === GV.vend ? " selected" : "") + ">" + GvT_esc_(v.nome) + (v.temContrato ? "" : " (sem contrato)") + "</option>"; }).join("") +
+        (GV.ini.souVendedor && !(GV.ini.vendedores || []).some(function (v) { return v.id === GV.ini.eu.id; }) ? '<option value="' + GvT_esc_(GV.ini.eu.id) + '"' + (GV.ini.eu.id === GV.vend ? " selected" : "") + ">" + GvT_esc_(GV.ini.eu.nome) + "</option>" : "") + "</select></label>";
+    } else h += '<div class="vg-sub" style="align-self:center">Seus ganhos, ' + GvT_esc_(GV.ini.eu.nome) + "</div>";
+    h += '<label for="gvComp">Mês<input type="month" id="gvComp" data-gvmuda="comp" value="' + GvT_esc_(GV.comp) + '" max="' + GvT_esc_(GV.ini.competenciaAtual) + '"></label>';
+    h += GvT_bt_("Atualizar", "atualizar", "", "", ' data-livre="1"') + "</div>";
+    el.innerHTML = h;
+  }
+  function GvT_agora_() {
+    var g = GvT_$("gvAgora"); if (!g) return;
+    var l = ((GV.ini && GV.ini.contagens) || {}).lista || [];
+    if (!l.length) { g.innerHTML = ""; return; }
+    var nomes = { conferir: "Conferir", fechar: "Fechar", aprovar: "Aprovar", pagar: "Pagar", classificar: "Classificar" };
+    g.innerHTML = '<div class="vg-faixa is-alerta"><b>Para você agora</b><div class="gv-pend">' + l.slice(0, 12).map(function (x) {
+      return '<button type="button" class="cadx-btn gv-prop" data-gv="irPend" data-id="' + GvT_esc_(x.tipo) + '" data-vend="' + GvT_esc_(x.vendedorId) + '" data-comp="' + GvT_esc_(x.competencia) + '" data-livre="1">' + GvT_esc_(nomes[x.tipo] || x.tipo) + ": " + GvT_esc_(x.titulo) + "</button>";
+    }).join("") + (l.length > 12 ? '<div class="vg-sub">e mais ' + (l.length - 12) + ".</div>" : "") + "</div></div>";
+  }
+  function GvT_abas_() {
+    var a = [["painel", "Painel"], ["fechamento", "Fechamento do mês"], ["recebimentos", "Recebimentos"], ["contratos", "Contratos"]];
+    if (GvT_pode_("GANHOS_VER_TODOS")) a.push(["comparativo", "Comparativo"]);
+    a.push(["guia", "Como funciona"]);
+    return a;
+  }
+  function GvT_desenharAbas_() {
+    var el = GvT_$("gvAbas"); if (!el) return;
+    var c = (GV.ini && GV.ini.contagens) || {}, n = { fechamento: (c.conferir || 0) + (c.fechar || 0) + (c.aprovar || 0) + (c.pagar || 0), recebimentos: c.classificar || 0 };
+    el.innerHTML = GvT_abas_().map(function (a) { var at = GV.aba === a[0]; return '<button type="button" role="tab" class="vg-aba' + (at ? " is-atual" : "") + '" aria-selected="' + at + '" data-gv="aba" data-id="' + a[0] + '" data-livre="1">' + GvT_esc_(a[1]) + (n[a[0]] ? '<span class="vg-n">' + n[a[0]] + "</span>" : "") + "</button>"; }).join("");
+  }
+  function GvT_irAba_(aba) {
+    GV.aba = aba; GvT_desenharAbas_(); GvT_msg_("");
+    var f = { painel: GvT_painel_, fechamento: GvT_fechamento_, recebimentos: GvT_recebimentos_, contratos: GvT_contratos_, comparativo: GvT_comparativo_, guia: GvT_guia_ }[aba];
+    (f || GvT_painel_)();
+  }
+  function GvT_carregando_() { var c = GvT_$("gvCorpo"); if (c) c.innerHTML = '<p class="vg-sub">Carregando…</p>'; }
+  function GvT_falhou_(m) { var c = GvT_$("gvCorpo"); if (c) c.innerHTML = '<div class="vg-faixa is-erro">' + GvT_esc_(m) + "</div>"; }
+  function GvT_reiniciar_(depois) {
+    GvT_chamar_("iniciar", {}, function (r) { GV.ini = r; Ganhos_mostrarMenu_(); GvT_agora_(); GvT_desenharAbas_(); if (depois) depois(); }, function () { if (depois) depois(); }, { livre: true });
+  }
+
+  // ---------- painel ----------
+  function GvT_carregarPainel_(fn) {
+    GvT_carregando_();
+    GvT_chamar_("painel", { vendedorId: GV.vend, competencia: GV.comp }, function (r) { GV.painel = r; fn(r); }, GvT_falhou_, { livre: true });
+  }
+  function GvT_cards_(p, quantos) {
+    var a = p.apuracao, i = p.indices, card = function (rot, val, sub, cls) { return '<div class="gv-card' + (cls ? " " + cls : "") + '"><span>' + GvT_esc_(rot) + "</span><b>" + GvT_esc_(val) + "</b>" + (sub ? "<small>" + GvT_esc_(sub) + "</small>" : "") + "</div>"; };
+    var h = '<div class="gv-cards">', lista = [];
+    lista.push(card("Recebido no mês", a.totalBr, a.recebimentos.length + (a.recebimentos.length === 1 ? " recebimento" : " recebimentos") + (a.congelado ? " (congelado)" : "")));
+    lista.push(card("Faixa atingida", a.temContrato ? a.pctBr : "—", a.faixa ? "faixa " + a.faixa.numero + " de " + a.faixa.de + ": " + a.faixa.rotulo : "sem contrato neste mês"));
+    lista.push(card("Comissão do mês", a.comissaoBr, a.temContrato ? "faixa cheia sobre o recebido" : "", "destaque"));
+    lista.push(card("Falta para a próxima faixa", a.proxima ? a.proxima.faltaBr : "—", a.proxima ? "para " + a.proxima.pctBr + " (a partir de " + a.proxima.aPartirDeBr + ")" : (a.temContrato ? "já está na faixa mais alta" : "")));
+    lista.push(card("Recebido em 12 meses", i.recebido12Br, i.periodo));
+    lista.push(card("Ticket médio", i.ticketMedioBr, "recebido por proposta com recebimento, 12 meses"));
+    lista.push(card("Propostas ganhas × recebidas", i.ganhas + " × " + i.ganhasRecebidas, "ganhas em 12 meses e as que já tiveram recebimento"));
+    lista.push(card("Prazo médio ganho → recebimento", i.prazoMedioDias === null ? "—" : i.prazoMedioDias + " dias", i.prazoBase ? "média de " + i.prazoBase + (i.prazoBase === 1 ? " proposta" : " propostas") : "sem base ainda"));
+    return h + lista.slice(0, quantos || lista.length).join("") + "</div>";
+  }
+  function GvT_regua_(a) {
+    if (!a.temContrato) return '<div class="vg-faixa is-alerta">Não há contrato de ganhos valendo em ' + GvT_esc_(a.rotulo) + ". Sem contrato, o sistema não calcula a faixa nem a comissão. " + (GvT_pode_("GANHOS_CONTRATOS") ? "Cadastre na aba Contratos." : "Peça ao Financeiro para cadastrar o contrato.") + "</div>";
+    var f = a.contrato.faixas;
+    return '<div class="vg-bloco"><h3>Faixas do contrato (início em ' + GvT_esc_(a.contrato.vigenciaBr) + ")</h3>" + '<div class="gv-regua">' + f.map(function (x, i) {
+      return '<div class="' + (a.faixa && a.faixa.indice === i ? "is-atual" : "") + '"><b>' + GvT_esc_(String(x.pct).replace(".", ",")) + "%</b>" + GvT_esc_(a.contrato.faixasTexto[i].replace(/:\s*[\d,]+%$/, "")) + "</div>";
+    }).join("") + '</div><p class="vg-sub">Faixa cheia: o percentual da faixa atingida no mês vale sobre todo o valor recebido no mês.</p></div>';
+  }
+  function GvT_tabelaRec_(lista) {
+    if (!lista.length) return GvT_vazio_("Nenhum recebimento neste mês.", " Recebimentos entram pelo lançamento do Financeiro, ligados à proposta.");
+    return '<div class="gv-tabela-caixa"><table class="cadx-tabela"><thead><tr><th>Data</th><th>Cliente</th><th>Proposta</th><th>Documento</th><th>Valor</th></tr></thead><tbody>' + lista.map(function (r) {
+      return "<tr><td>" + GvT_esc_(r.dataBr) + "</td><td>" + GvT_esc_(r.cliente) + "</td><td>" + GvT_esc_(r.proposta) + "</td><td>" + GvT_esc_(r.documento) + '</td><td class="gv-num">' + GvT_esc_(r.valorBr) + "</td></tr>";
+    }).join("") + "</tbody></table></div>";
+  }
+  function GvT_painel_() {
+    GvT_carregarPainel_(function (p) {
+      var a = p.apuracao, h = "";
+      h += '<div class="vg-sub" style="margin:0 0 8px">' + GvT_esc_(p.vendedor.nome) + ", " + GvT_esc_(a.nome) + ": " + GvT_sit_(p.fechamento.situacao, p.fechamento.situacaoNome) + "</div>";
+      h += GvT_cards_(p) + GvT_regua_(a);
+      h += '<div class="vg-bloco"><h3>Recebido e comissão nos últimos 12 meses</h3><div class="gv-grafico"><canvas id="gvGraf" aria-label="Gráfico do recebido e da comissão por mês" role="img"></canvas></div></div>';
+      h += '<div class="vg-bloco"><h3>Avaliação do mês</h3><p class="vg-sub">A avaliação usa só os números apurados acima. Sem a chave da IA, ou se o texto da IA citar algo fora desses números, vale a análise pelas regras do sistema.</p><div id="gvIa">' + GvT_iaHtml_(p.ultimaAvaliacao) + "</div>" +
+        '<div class="gv-acoes">' + GvT_bt_("Avaliação da IA", "ia") + "</div></div>";
+      if (p.indices.topClientes.length) h += '<div class="vg-bloco"><h3>Clientes que mais pagaram (12 meses)</h3><ul class="gv-pode">' + p.indices.topClientes.map(function (c) { return "<li>" + GvT_esc_(c.nome) + ': <span class="gv-num">' + GvT_esc_(c.valorBr) + "</span> (" + GvT_esc_(String(c.pct).replace(".", ",")) + "%)</li>"; }).join("") + "</ul></div>";
+      h += '<div class="vg-bloco"><h3>Recebimentos que entraram no mês</h3>' + GvT_tabelaRec_(a.recebimentos) + "</div>";
+      GvT_$("gvCorpo").innerHTML = h;
+      GvT_grafico_(p.serie);
+    });
+  }
+  function GvT_iaHtml_(av) {
+    if (!av) return '<p class="vg-sub">Nenhuma avaliação gerada para este mês.</p>';
+    return (av.aviso ? '<div class="vg-faixa is-neutra">' + GvT_esc_(av.aviso) + "</div>" : "") + '<p class="gv-ia-txt">' + GvT_esc_(av.texto) + '</p><p class="vg-sub">' + GvT_esc_(av.origemNome) + (av.em ? ", " + GvT_esc_(av.em) : "") + (av.por ? ", pedida por " + GvT_esc_(av.por) : "") + ".</p>";
+  }
+  function GvT_grafico_(serie) {
+    var canvas = GvT_$("gvGraf"); if (!canvas) return;
+    var labels = serie.map(function (m) { return m.rotulo; }), rec = serie.map(function (m) { return m.recebido; }), com = serie.map(function (m) { return m.comissao === null ? null : m.comissao; });
+    var semChart = function () {
+      var max = Math.max.apply(null, rec.concat([1]));
+      canvas.parentNode.innerHTML = '<div class="gv-barras" role="img" aria-label="Recebido por mês">' + rec.map(function (v, i) { return '<div title="' + GvT_esc_(labels[i] + ": " + GvT_moeda_(v)) + '" style="height:' + Math.max(1, Math.round(v * 100 / max)) + '%"></div>'; }).join("") + '</div><p class="vg-sub">Recebido por mês (' + GvT_esc_(labels[0]) + " a " + GvT_esc_(labels[labels.length - 1]) + "). Passe o dedo ou o mouse na barra para ver o valor.</p>";
+    };
+    if (typeof carregarChartJs_ !== "function") { semChart(); return; }
+    // sem a biblioteca de gráficos (CDN fora do ar ou bloqueado), as barras simples aparecem no lugar
+    setTimeout(function () { if (!window.Chart && document.body.contains(canvas)) semChart(); }, 5000);
+    carregarChartJs_(function () {
+      if (!window.Chart || !document.body.contains(canvas)) { if (document.body.contains(canvas)) semChart(); return; }
+      try { if (GV.graf) GV.graf.destroy(); } catch (e) {}
+      GV.graf = new Chart(canvas, {
+        type: "bar",
+        data: { labels: labels, datasets: [
+          { label: "Recebido", data: rec, backgroundColor: "rgba(30,79,122,.70)", yAxisID: "y", order: 2 },
+          { label: "Comissão", data: com, type: "line", borderColor: "#1D6B3F", backgroundColor: "#1D6B3F", tension: 0.25, yAxisID: "y1", order: 1, spanGaps: true }
+        ] },
+        options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: "index", intersect: false },
+          plugins: { tooltip: { callbacks: { label: function (c) { return c.dataset.label + ": " + (c.raw === null ? "sem contrato" : GvT_moeda_(c.raw)); } } } },
+          scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return GvT_moeda_(v).replace(",00", ""); } } }, y1: { beginAtZero: true, position: "right", grid: { drawOnChartArea: false }, ticks: { callback: function (v) { return GvT_moeda_(v).replace(",00", ""); } } } } }
+      });
+    });
+  }
+  function GvT_avaliar_() {
+    var alvo = GvT_$("gvIa"); if (alvo) alvo.innerHTML = '<p class="vg-sub">Preparando a avaliação com os números do mês…</p>';
+    GvT_chamar_("avaliacao", { vendedorId: GV.vend, competencia: GV.comp }, function (r) { var a = GvT_$("gvIa"); if (a) a.innerHTML = GvT_iaHtml_(r); }, function (m) { var a = GvT_$("gvIa"); if (a) a.innerHTML = '<div class="vg-faixa is-erro">' + GvT_esc_(m) + "</div>"; });
+  }
+
+  // ---------- fechamento ----------
+  function GvT_passoHtml_(tit, p, feito, atual, extra) {
+    return '<div class="gv-passo' + (feito ? " feito" : atual ? " atual" : "") + '"><b>' + GvT_esc_(tit) + "</b>" + (p ? GvT_esc_(p.por) + ", " + GvT_esc_(p.em) + (p.texto ? '<br><span class="vg-sub">' + GvT_esc_(p.texto) + "</span>" : "") : '<span class="vg-sub">' + (atual ? "aguardando" : "—") + "</span>") + (extra || "") + "</div>";
+  }
+  function GvT_fechamento_() {
+    GvT_carregarPainel_(function (p) {
+      var a = p.apuracao, f = p.fechamento, ac = p.acoes, s = f.situacao, h = "";
+      var ordem = ["ABERTO", "CONFERIDO", "FECHADO", "APROVADO", "PAGO"], pos = Math.max(0, ordem.indexOf(s === "CONTESTADO" ? "CONFERIDO" : s === "DEVOLVIDO" ? "CONFERIDO" : s));
+      h += '<div class="vg-sub" style="margin:0 0 8px">' + GvT_esc_(p.vendedor.nome) + ", " + GvT_esc_(a.nome) + ": " + GvT_sit_(s, f.situacaoNome) + (f.reaberturas ? " · reaberto " + f.reaberturas + (f.reaberturas === 1 ? " vez" : " vezes") : "") + "</div>";
+      if (p.mudouDepoisDaConferencia) h += '<div class="vg-faixa is-alerta">Os números mudaram depois da conferência do vendedor. Ele precisa conferir de novo.</div>';
+      h += '<div class="gv-passos">' +
+        GvT_passoHtml_("1. Vendedor confere", f.contestado && s === "CONTESTADO" ? f.contestado : f.conferido, pos >= 1 && s !== "CONTESTADO", s === "ABERTO" || s === "CONTESTADO", f.contestado ? '<br><span class="vg-sub">Contestação: ' + GvT_esc_(f.contestado.texto) + "</span>" + (f.resposta ? '<br><span class="vg-sub">Resposta do Financeiro: ' + GvT_esc_(f.resposta) + "</span>" : "") : "") +
+        GvT_passoHtml_("2. Financeiro fecha", f.fechado, pos >= 2, s === "CONFERIDO" || s === "CONTESTADO" || s === "DEVOLVIDO", f.devolvido ? '<br><span class="vg-sub">Devolvido por ' + GvT_esc_(f.devolvido.por) + ": " + GvT_esc_(f.devolvido.texto) + "</span>" : "") +
+        GvT_passoHtml_("3. Diretoria aprova", f.aprovado, pos >= 3, s === "FECHADO") +
+        GvT_passoHtml_("4. Financeiro paga", f.pago ? { por: f.pago.por, em: f.pago.em, texto: f.pago.valorBr + " em " + f.pago.data + " (" + f.pago.forma + ")" + (f.pago.obs ? ". " + f.pago.obs : "") } : null, pos >= 4, s === "APROVADO",
+          f.pago && f.pago.comprovanteUrl ? '<br><a href="' + GvT_esc_(f.pago.comprovanteUrl) + '" target="_blank" rel="noopener">Ver o comprovante</a>' : "") + "</div>";
+      if (s === "EM_ANDAMENTO") h += '<div class="vg-faixa is-neutra">O mês está em andamento: os números abaixo são parciais. A conferência abre no dia 1º do mês seguinte.</div>';
+      h += GvT_cards_(p, 4);
+      h += '<div class="vg-bloco"><h3>Apuração' + (a.congelado ? " (cópia congelada no fechamento)" : "") + "</h3>" + (a.temContrato ? '<p class="vg-sub">Contrato com início em ' + GvT_esc_(a.contrato.vigenciaBr) + ": " + GvT_esc_(a.contrato.faixasTexto.join("; ")) + ".</p>" : "") + GvT_tabelaRec_(a.recebimentos) + "</div>";
+      h += '<div class="vg-bloco is-acao"><h3>O que você pode fazer agora</h3>' + GvT_podeHtml_(ac) + GvT_formsFech_(p) + "</div>";
+      h += '<div class="vg-bloco"><h3>Histórico do mês</h3>' + (p.historico.length ? '<ul class="gv-pode">' + p.historico.map(function (x) { return "<li><b>" + GvT_esc_(x.em) + "</b> · " + GvT_esc_(x.por) + " · " + GvT_esc_(GvT_nomeAcao_(x.acao)) + (x.texto ? ": " + GvT_esc_(x.texto) : "") + "</li>"; }).join("") + "</ul>" : '<p class="vg-sub">Nada registrado neste mês ainda.</p>') + "</div>";
+      GvT_$("gvCorpo").innerHTML = h;
+      var dp = GvT_$("gvPagData"); if (dp && !dp.value) dp.value = GvT_hoje_();
+    });
+  }
+  function GvT_nomeAcao_(a) {
+    return { CONFERIDO: "conferiu", CONTESTADO: "contestou", FECHADO: "fechou o mês", APROVADO: "aprovou", DEVOLVIDO: "devolveu ao Financeiro", PAGO: "registrou o pagamento", REABERTO: "reabriu o mês",
+      VOLTOU_PARA_CONFERENCIA: "o mês voltou para a conferência", RECEBIMENTO_LANCADO: "lançou recebimento", RECEBIMENTO_ANULADO: "anulou recebimento", RECEBIMENTO_CLASSIFICADO: "classificou recebimento",
+      CONTRATO_CRIADO: "cadastrou contrato", CONTRATO_CANCELADO: "cancelou contrato" }[a] || a;
+  }
+  function GvT_podeHtml_(ac) {
+    var nomes = [["conferir", "Conferir o mês"], ["contestar", "Contestar"], ["fechar", "Fechar o mês"], ["aprovar", "Aprovar o fechamento"], ["pagar", "Registrar o pagamento"], ["reabrir", "Reabrir o mês"]];
+    return '<ul class="gv-pode">' + nomes.map(function (n) { var x = ac[n[0]] || {}; return '<li class="' + (x.pode ? "sim" : "nao") + '">' + (x.pode ? "✓ " : "· ") + "<b>" + GvT_esc_(n[1]) + "</b>" + (x.pode ? "" : ": " + GvT_esc_(x.motivo)) + "</li>"; }).join("") + "</ul>";
+  }
+  function GvT_formsFech_(p) {
+    var ac = p.acoes, h = "";
+    if (ac.conferir.pode || ac.contestar.pode) {
+      h += '<div class="gv-form"><label class="inteiro" for="gvObs">Observação (opcional na conferência; obrigatória na contestação: diga o que está errado ou faltando)<textarea id="gvObs" maxlength="2000"></textarea></label></div><div class="gv-acoes">' +
+        (ac.conferir.pode ? GvT_bt_("Conferi: está certo", "conferir", "", "cadx-btn-primario") : "") + (ac.contestar.pode ? GvT_bt_("Contestar", "contestar", "", "cadx-btn-risco") : "") + "</div>";
+    }
+    if (ac.fechar.pode) {
+      h += (ac.fecharPedeResposta ? '<div class="gv-form"><label class="inteiro" for="gvResp">Resposta à contestação (obrigatória para fechar sem mudar os números)<textarea id="gvResp" maxlength="2000"></textarea></label></div>' : "") +
+        '<div class="gv-acoes">' + GvT_bt_("Fechar o mês (congela os números)", "fechar", "", "cadx-btn-primario") + "</div>";
+    }
+    if (ac.aprovar.pode) {
+      h += '<div class="gv-form"><label class="inteiro" for="gvDir">Observação ao aprovar (opcional) ou motivo da devolução (obrigatório para devolver)<textarea id="gvDir" maxlength="2000"></textarea></label></div><div class="gv-acoes">' +
+        GvT_bt_("Aprovar", "aprovar", "", "cadx-btn-primario") + GvT_bt_("Devolver ao Financeiro", "devolver", "", "cadx-btn-risco") + "</div>";
+    }
+    if (ac.pagar.pode) {
+      var formas = (GV.ini && GV.ini.formas) || {};
+      h += '<div class="gv-form"><label for="gvPagData">Data do pagamento<input type="date" id="gvPagData" max="' + GvT_esc_(GvT_hoje_()) + '"></label>' +
+        '<label for="gvPagForma">Forma<select id="gvPagForma"><option value="">Escolha</option>' + Object.keys(formas).map(function (k) { return '<option value="' + k + '">' + GvT_esc_(formas[k]) + "</option>"; }).join("") + "</select></label>" +
+        '<label for="gvPagValor">Valor (igual à comissão aprovada)<input id="gvPagValor" inputmode="decimal" value="' + GvT_esc_(p.apuracao.comissaoBr.replace("R$ ", "")) + '"></label>' +
+        '<label for="gvPagArq">Comprovante (opcional, PDF ou imagem)<input type="file" id="gvPagArq" accept=".pdf,.png,.jpg,.jpeg,.webp,.heic"></label>' +
+        '<label class="inteiro" for="gvPagObs">Observação<textarea id="gvPagObs" maxlength="1000"></textarea></label></div><div class="gv-acoes">' + GvT_bt_("Registrar o pagamento", "pagar", "", "cadx-btn-primario") + "</div>";
+    }
+    if (ac.reabrir.pode) {
+      h += '<details style="margin-top:10px"><summary>Reabrir o mês (Diretoria)</summary><div class="gv-form"><label class="inteiro" for="gvReab">Motivo da reabertura<textarea id="gvReab" maxlength="2000"></textarea></label></div><div class="gv-acoes">' + GvT_bt_("Reabrir o mês", "reabrir", "", "cadx-btn-risco") + "</div></details>";
+    }
+    return h;
+  }
+  function GvT_passo_(acao, dados, msgOk) {
+    var d = Object.assign({ vendedorId: GV.vend, competencia: GV.comp }, dados || {});
+    GvT_chamar_(acao, d, function () { GvT_reiniciar_(function () { GvT_fechamento_(); setTimeout(function () { GvT_msg_(msgOk, "ok"); }, 50); }); });
+  }
+  function GvT_lerArquivo_(input, fn) {
+    var f = input && input.files && input.files[0];
+    if (!f) { fn(null); return; }
+    var leitor = new FileReader();
+    leitor.onload = function () { fn({ nome: f.name, tipo: f.type || "application/octet-stream", base64: String(leitor.result || "").replace(/^data:[^,]+,/, "") }); };
+    leitor.onerror = function () { GvT_erro_("Não foi possível ler o arquivo do comprovante. Escolha de novo ou registre sem comprovante."); };
+    leitor.readAsDataURL(f);
+  }
+
+  // ---------- recebimentos ----------
+  function GvT_recebimentos_() {
+    GV.rec.omieRef = ""; // 15/11/2026: a referência do Omie vale só para o formulário preenchido por "Usar esta proposta"
+    GvT_carregando_();
+    var filtro = { competencia: GV.rec.filtroComp, situacao: GV.rec.filtroSit };
+    if (GvT_verTodos_() && GV.rec.soVend) filtro.vendedorId = GV.vend;
+    GvT_chamar_("recebimentos", filtro, function (r) {
+      var h = "";
+      if (r.podeLancar) h += '<div class="vg-bloco"><h3>Lançar recebimento</h3><p class="vg-sub">O recebimento entra na comissão pelo mês da data em que o dinheiro entrou na conta. O vendedor é o responsável pela proposta no Comercial; sem responsável, fica "a classificar".</p>' + GvT_formRec_() + "</div>";
+      // 15/11/2026: recebimentos do Omie como sugestões (o lançamento continua sendo feito e conferido pelo Financeiro)
+      if (r.podeLancar && r.omie) h += '<div class="vg-bloco" id="gvOmieBloco"><h3>Recebimentos do Omie</h3><p class="vg-sub">O que entrou na conta pelo Omie no mês, com as propostas aprovadas do mesmo cliente (pelo CNPJ). Toque em "Usar esta proposta" para preencher o formulário acima; confira e toque em Lançar. Nada é lançado sozinho.</p>' +
+        '<div class="gv-filtros"><label for="gvOmieComp">Mês do pagamento<input type="month" id="gvOmieComp" value="' + GvT_esc_(GV.rec.omieComp || (GV.ini && GV.ini.competenciaAtual) || "") + '"></label>' + GvT_bt_("Ver recebimentos do Omie", "omieVer", "", "", ' data-livre="1"') + '</div><div id="gvOmieLista">' + GvT_omieHtml_() + '</div></div>';
+      if (r.aClassificar) h += '<div class="vg-faixa is-alerta">' + r.aClassificar + (r.aClassificar === 1 ? " recebimento está" : " recebimentos estão") + ' "a classificar": não entram em comissão até serem ligados a uma proposta com vendedor. ' + GvT_bt_("Ver os recebimentos a classificar", "filtroClass", "", "", ' data-livre="1"') + "</div>";
+      h += '<div class="vg-bloco"><h3>Recebimentos lançados</h3><div class="gv-filtros"><label for="gvRecComp">Mês<input type="month" id="gvRecComp" value="' + GvT_esc_(GV.rec.filtroComp) + '"></label>' +
+        '<label for="gvRecSit">Situação<select id="gvRecSit">' + [["", "Todas"], ["VALIDO", "Válidos"], ["A_CLASSIFICAR", "A classificar"], ["ANULADO", "Anulados"]].map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === GV.rec.filtroSit ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select></label>" +
+        (GvT_verTodos_() ? '<label for="gvRecSoVend" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="gvRecSoVend" style="min-width:0;min-height:0"' + (GV.rec.soVend ? " checked" : "") + "> Só o vendedor escolhido</label>" : "") +
+        GvT_bt_("Filtrar", "filtrarRec", "", "", ' data-livre="1"') + "</div>";
+      h += r.recebimentos.length ? r.recebimentos.map(function (x) { return GvT_recItem_(x, r.podeLancar); }).join("") : GvT_vazio_("Nenhum recebimento com estes filtros.", "");
+      if (r.total > r.recebimentos.length) h += '<p class="vg-sub">Mostrando ' + r.recebimentos.length + " de " + r.total + ". Use os filtros para achar os demais.</p>";
+      GvT_$("gvCorpo").innerHTML = h + "</div>";
+    }, GvT_falhou_, { livre: true });
+  }
+  // 15/11/2026: lista dos recebimentos do Omie (GV.rec.omie guarda a última consulta, para sobreviver ao redesenho da aba)
+  function GvT_omieHtml_() {
+    var o = GV.rec.omie; if (!o) return "";
+    var h = '<p class="vg-sub">' + GvT_esc_(o.de) + " a " + GvT_esc_(o.ate) + ": recebido " + GvT_esc_(o.totais.recebidoBr) + ", já lançado " + GvT_esc_(o.totais.lancadoBr) + ", falta lançar " + GvT_esc_(o.totais.pendenteBr) + " (" + o.pendentes + "). Consultado em " + GvT_esc_(o.atualizadoEm) + ".</p>";
+    if (!o.itens.length) return h + GvT_vazio_("Nenhum recebimento no Omie neste mês.", "");
+    return h + o.itens.map(function (i, k) {
+      var cab = '<div class="vg-item-cab"><b>' + GvT_esc_(i.dataBr) + ' · <span class="gv-num">' + GvT_esc_(i.valorBr) + "</span></b>" + (i.jaLancado ? GvT_sit_("VALIDO", "Já lançado") : GvT_sit_("A_CLASSIFICAR", "Falta lançar")) + "</div>";
+      var sub = '<div class="vg-sub">' + GvT_esc_(i.cliente || "cliente sem nome no Omie") + " · " + GvT_esc_(i.documento) + (i.retencoesBr ? " · retenções " + GvT_esc_(i.retencoesBr) : "") + (i.jaLancadoAntes ? " · já lançado antes deste título: " + GvT_esc_(i.jaLancadoAntes) + " (descontado)" : "") + (i.parcial ? " · pagamento parcial" : "") + "</div>";
+      var corpo = "";
+      if (i.jaLancado) corpo = '<div class="vg-sub">' + (i.jaLancado.proposta ? "Proposta " + GvT_esc_(i.jaLancado.proposta) : "Sem proposta") + " · " + GvT_esc_(i.jaLancado.situacao) + " · lançado por " + GvT_esc_(i.jaLancado.lancadoPor) + "</div>";
+      else if (i.propostas.length) corpo = '<div class="gv-props">' + i.propostas.map(function (p) {
+        return '<button type="button" class="cadx-btn gv-prop" data-gv="omieUsar" data-id="' + k + ":" + GvT_esc_(p.id) + '" data-livre="1"><span>Usar esta proposta: <b>' + GvT_esc_(p.numero) + "</b> · saldo " + GvT_esc_(p.saldoBr) + (p.cabe ? "" : " (menor que o valor)") + " · " + GvT_esc_(p.semVendedor ? "sem vendedor responsável" : "vendedor " + p.vendedor) + "</span></button>";
+      }).join("") + "</div>";
+      else corpo = '<div class="vg-sub">' + (i.clienteNoSgo ? "O cliente não tem proposta aprovada no SGO+." : "O CNPJ deste cliente não está no cadastro de clientes do SGO+.") + " Busque a proposta no formulário ou lance sem proposta.</div>" +
+        '<div class="gv-acoes">' + GvT_bt_("Preencher o formulário sem proposta", "omieSemProp", String(k), "", ' data-livre="1"') + "</div>";
+      return '<div class="vg-item" style="margin-bottom:8px">' + cab + sub + corpo + "</div>";
+    }).join("");
+  }
+  function GvT_omieVer_() {
+    GV.rec.omieComp = GvT_v_("gvOmieComp");
+    var alvo = GvT_$("gvOmieLista"); if (alvo) alvo.innerHTML = '<p class="vg-sub">Consultando o Omie…</p>';
+    GvT_chamar_("omieRecebimentos", { competencia: GV.rec.omieComp }, function (r) { GV.rec.omie = r; var a = GvT_$("gvOmieLista"); if (a) a.innerHTML = GvT_omieHtml_(); },
+      function (m) { var a = GvT_$("gvOmieLista"); if (a) a.innerHTML = '<div class="vg-faixa is-erro">' + GvT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  /** Preenche o formulário de lançamento com o recebimento do Omie (e a proposta escolhida, se houver). */
+  function GvT_omiePreencher_(k, propId) {
+    var i = GV.rec.omie && GV.rec.omie.itens[Number(k)]; if (!i) return;
+    var form = GvT_$("gvRecData"), bl = form ? form.closest(".vg-bloco") : null; if (!bl) return;
+    GV.rec.semProp = !propId; GV.rec.prop = propId ? (i.propostas.filter(function (p) { return p.id === propId; })[0] || null) : null; GV.rec.omieRef = i.ref;
+    bl.innerHTML = '<h3>Lançar recebimento</h3><div class="vg-faixa is-ok">Preenchido com o recebimento do Omie: ' + GvT_esc_(i.documento) + ", " + GvT_esc_(i.valorBr) + " em " + GvT_esc_(i.dataBr) + ". Confira e toque em Lançar.</div>" + GvT_formRec_();
+    GvT_$("gvRecData").value = i.data; GvT_$("gvRecValor").value = GvT_numBr_(i.valor, 2); GvT_$("gvRecDoc").value = i.documento;
+    if (!propId && GvT_$("gvRecCli")) GvT_$("gvRecCli").value = i.cliente;
+    if (!propId) GvT_$("gvRecObs").value = "Recebimento do Omie sem proposta encontrada no SGO+ (" + i.documento + ").";
+    try { bl.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (e) {}
+  }
+  function GvT_formRec_() {
+    var p = GV.rec.prop;
+    return '<label style="display:flex;gap:6px;align-items:center;font-size:13px;margin:4px 0 8px"><input type="checkbox" id="gvSemProp"' + (GV.rec.semProp ? " checked" : "") + "> Recebimento sem proposta (fica a classificar)</label>" +
+      (GV.rec.semProp ? '<div class="gv-form"><label class="inteiro" for="gvRecCli">Cliente que pagou<input id="gvRecCli" maxlength="200"></label></div>' :
+        '<div class="gv-form"><label class="inteiro" for="gvBusca">Proposta (número, cliente ou título)<input id="gvBusca" maxlength="120" placeholder="Ex.: PROP-2026-0042 ou nome do cliente"></label></div><div class="gv-acoes">' + GvT_bt_("Buscar proposta", "buscarProp", "", "", ' data-livre="1"') + '</div><div id="gvProps" class="gv-props"></div>' +
+        (p ? '<div class="vg-faixa is-ok">Proposta escolhida: <b>' + GvT_esc_(p.numero) + "</b>, " + GvT_esc_(p.cliente) + ". Total " + GvT_esc_(p.totalBr) + ", já recebido " + GvT_esc_(p.recebidoBr) + ", saldo " + GvT_esc_(p.saldoBr) + ". Vendedor: " + GvT_esc_(p.vendedor || "sem responsável (ficará a classificar)") + ".</div>" : "")) +
+      '<div class="gv-form"><label for="gvRecData">Data em que o dinheiro entrou<input type="date" id="gvRecData" max="' + GvT_esc_(GvT_hoje_()) + '"></label>' +
+      '<label for="gvRecValor">Valor recebido<input id="gvRecValor" inputmode="decimal" placeholder="12.500,00"></label>' +
+      '<label for="gvRecDoc">Documento (nota, boleto ou título)<input id="gvRecDoc" maxlength="120"></label>' +
+      '<label class="inteiro" for="gvRecObs">Observação' + (GV.rec.semProp ? " (obrigatória: por que não há proposta)" : "") + '<textarea id="gvRecObs" maxlength="1000"></textarea></label>' +
+      (GV.rec.semProp ? "" : '<label class="inteiro" for="gvRecJust">Justificativa, só se o valor passar do total da proposta (juros, multa, reajuste)<textarea id="gvRecJust" maxlength="600"></textarea></label>') +
+      '</div><div class="gv-acoes">' + GvT_bt_("Lançar", "lancar", "", "cadx-btn-primario") + "</div>";
+  }
+  function GvT_recItem_(x, podeLancar) {
+    var h = '<div class="vg-item" style="margin-bottom:8px"><div class="vg-item-cab"><b>' + GvT_esc_(x.dataBr) + ' · <span class="gv-num">' + GvT_esc_(x.valorBr) + "</span></b>" + GvT_sit_(x.situacao, x.situacaoNome) + "</div>" +
+      '<div class="vg-sub">' + GvT_esc_(x.clienteNome || "cliente não informado") + (x.proposta ? " · proposta " + GvT_esc_(x.proposta) : " · sem proposta") + " · documento " + GvT_esc_(x.documento) + (x.vendedorNome ? " · vendedor " + GvT_esc_(x.vendedorNome) : "") + "</div>" +
+      '<div class="vg-sub">Lançado por ' + GvT_esc_(x.lancadoPor) + " em " + GvT_esc_(x.lancadoEm) + (x.observacao ? ". " + GvT_esc_(x.observacao) : "") + (x.justificativaAcima ? ". Acima do total: " + GvT_esc_(x.justificativaAcima) : "") +
+      (x.classificadoPor ? ". Classificado por " + GvT_esc_(x.classificadoPor) + " em " + GvT_esc_(x.classificadoEm) : "") + (x.anuladoEm ? ". Anulado por " + GvT_esc_(x.anuladoPor) + " em " + GvT_esc_(x.anuladoEm) + ": " + GvT_esc_(x.anuladoMotivo) : "") + "</div>";
+    if (podeLancar && x.situacao !== "ANULADO") {
+      h += '<div class="gv-acoes">' + (x.situacao === "A_CLASSIFICAR" ? GvT_bt_("Classificar", "abrirClass", x.id, "", ' data-livre="1"') : "") + GvT_bt_("Anular", "abrirAnular", x.id, "cadx-btn-risco", ' data-livre="1"') + "</div>" +
+        '<div id="gvRecAcao_' + GvT_esc_(x.id) + '"></div>';
+    }
+    return h + "</div>";
+  }
+  function GvT_buscarProp_(destino, escolher) {
+    var q = GvT_v_(destino === "gvProps" ? "gvBusca" : "gvBuscaClass");
+    var alvo = GvT_$(destino); if (alvo) alvo.innerHTML = '<p class="vg-sub">Buscando…</p>';
+    GvT_chamar_("propostas", { q: q }, function (r) {
+      var a = GvT_$(destino); if (!a) return;
+      GV.rec.lista = r.propostas;
+      a.innerHTML = r.propostas.length ? r.propostas.map(function (p) {
+        return '<button type="button" class="cadx-btn gv-prop" data-gv="' + escolher + '" data-id="' + GvT_esc_(p.id) + '" data-livre="1"><span><b>' + GvT_esc_(p.numero) + "</b> · " + GvT_esc_(p.cliente) + " · total " + GvT_esc_(p.totalBr) + ", recebido " + GvT_esc_(p.recebidoBr) + " · " + GvT_esc_(p.semVendedor ? "sem vendedor responsável" : "vendedor " + p.vendedor) + "</span></button>";
+      }).join("") + (r.total > r.propostas.length ? '<p class="vg-sub">Mostrando ' + r.propostas.length + " de " + r.total + ". Refine a busca.</p>" : "") : '<p class="vg-sub">Nenhuma proposta aprovada pelo cliente com este texto.</p>';
+    }, function (m) { var a = GvT_$(destino); if (a) a.innerHTML = '<div class="vg-faixa is-erro">' + GvT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  function GvT_lancar_() {
+    var d = { data: GvT_v_("gvRecData"), valor: GvT_v_("gvRecValor"), documento: GvT_v_("gvRecDoc"), observacao: GvT_v_("gvRecObs") };
+    if (GV.rec.omieRef) d.refExterna = GV.rec.omieRef; // 15/11/2026: recebimento sugerido pelo Omie
+    if (GV.rec.semProp) { d.semProposta = true; d.clienteNome = GvT_v_("gvRecCli"); }
+    else { if (!GV.rec.prop) { GvT_erro_("Escolha a proposta: busque pelo número, cliente ou título e toque na proposta certa. Se não há proposta, marque \"Recebimento sem proposta\"."); return; } d.propostaId = GV.rec.prop.id; d.justificativaAcima = GvT_v_("gvRecJust"); }
+    GvT_chamar_("lancarRecebimento", d, function (r) {
+      GV.rec.prop = null; GV.rec.omieRef = ""; GV.rec.omie = null; GV.rec.semProp = false;
+      var extra = r.conferenciasReabertas ? " O mês do vendedor voltou para a conferência, porque os números mudaram." : "";
+      GvT_reiniciar_(function () { GvT_recebimentos_(); setTimeout(function () { GvT_msg_("Recebimento lançado: " + r.recebimento.valorBr + " em " + r.recebimento.dataBr + (r.recebimento.situacao === "A_CLASSIFICAR" ? ", a classificar." : ", para " + r.recebimento.vendedorNome + ".") + extra, "ok"); }, 50); });
+    });
+  }
+
+  // ---------- contratos ----------
+  function GvT_contratos_() {
+    GvT_carregando_();
+    GvT_chamar_("contratos", {}, function (r) {
+      GV.ct.modelo = r.modelo;
+      var h = "";
+      if (r.podeAlterar) h += '<div class="vg-bloco"><h3>Novo contrato de ganhos</h3><p class="vg-sub">O contrato vale do mês de início em diante e não altera mês já fechado. Para mudar o contrato de um vendedor, cadastre um novo com o início no mês certo e o motivo. Ninguém cadastra o próprio contrato.</p>' + GvT_formContrato_() + "</div>";
+      var grupos = {};
+      r.contratos.forEach(function (c) { (grupos[c.vendedorNome] = grupos[c.vendedorNome] || []).push(c); });
+      h += '<div class="vg-bloco"><h3>Contratos cadastrados</h3>' + (r.contratos.length ? Object.keys(grupos).map(function (nome) {
+        return "<h4>" + GvT_esc_(nome) + "</h4>" + grupos[nome].map(function (c) {
+          return '<div class="vg-item" style="margin-bottom:8px"><div class="vg-item-cab"><b>Início em ' + GvT_esc_(c.vigenciaBr) + "</b>" + GvT_sit_(c.situacao === "ATIVO" ? (c.vigenteHoje ? "APROVADO" : "CONFERIDO") : "ANULADO", c.situacao === "ATIVO" ? (c.vigenteHoje ? "Vale hoje" : "Ativo") : "Cancelado") + "</div>" +
+            '<div class="vg-sub">' + GvT_esc_(c.faixasTexto.join("; ")) + ". Base: " + GvT_esc_(c.base) + ". Regra: " + GvT_esc_(c.regra) + ".</div>" +
+            '<div class="vg-sub">Cadastrado por ' + GvT_esc_(c.criadoPor) + " em " + GvT_esc_(c.criadoEm) + (c.motivo ? ". Motivo: " + GvT_esc_(c.motivo) : "") + (c.observacao ? ". Observação: " + GvT_esc_(c.observacao) : "") + (c.canceladoEm ? ". Cancelado por " + GvT_esc_(c.canceladoPor) + " em " + GvT_esc_(c.canceladoEm) + ": " + GvT_esc_(c.canceladoMotivo) : "") + "</div>" +
+            (r.podeAlterar && c.situacao === "ATIVO" ? '<details><summary>Cancelar este contrato</summary><div class="gv-form"><label class="inteiro" for="gvCanc_' + GvT_esc_(c.id) + '">Motivo do cancelamento<textarea id="gvCanc_' + GvT_esc_(c.id) + '" maxlength="1000"></textarea></label></div><div class="gv-acoes">' + GvT_bt_("Cancelar o contrato", "cancelarContrato", c.id, "cadx-btn-risco") + "</div></details>" : "") + "</div>";
+        }).join("");
+      }).join("") : GvT_vazio_("Nenhum contrato cadastrado.", r.podeAlterar ? " Cadastre o primeiro acima." : " Peça ao Financeiro para cadastrar o seu contrato.")) + "</div>";
+      GvT_$("gvCorpo").innerHTML = h;
+      if (r.podeAlterar) { if (!GV.ct.faixas.length) GV.ct.faixas = [{ ate: "", pct: "" }]; GvT_desenharFaixas_(); }
+    }, GvT_falhou_, { livre: true });
+  }
+  function GvT_formContrato_() {
+    var vs = (GV.ini && GV.ini.vendedores) || [];
+    return '<div class="gv-form"><label for="gvCtVend">Vendedor<select id="gvCtVend"><option value="">Escolha</option>' + vs.filter(function (v) { return v.id !== GV.ini.eu.id; }).map(function (v) { return '<option value="' + GvT_esc_(v.id) + '"' + (v.id === GV.vend ? " selected" : "") + ">" + GvT_esc_(v.nome) + "</option>"; }).join("") + "</select></label>" +
+      '<label for="gvCtVig">Começa a valer em (mês)<input type="month" id="gvCtVig"></label></div>' +
+      '<div class="vg-faixa is-neutra"><b>Modelo disponível:</b> ' + GvT_esc_((GV.ct.modelo || {}).nome || "") + ". " + GvT_esc_((GV.ct.modelo || {}).texto || "") + '<div class="gv-acoes">' + GvT_bt_("Usar o modelo da negociação da Mônica", "modelo", "", "", ' data-livre="1"') + "</div></div>" +
+      '<div id="gvFaixasEd"></div><div class="gv-acoes">' + GvT_bt_("Acrescentar faixa", "maisFaixa", "", "", ' data-livre="1"') + "</div>" +
+      '<div class="gv-form"><label for="gvSimValor">Simular: recebido no mês<input id="gvSimValor" inputmode="decimal" placeholder="50.000,00"></label><div id="gvSim" class="vg-sub" style="align-self:end"></div></div>' +
+      '<div class="gv-form"><label class="inteiro" for="gvCtObs">Observação (opcional)<textarea id="gvCtObs" maxlength="2000"></textarea></label><label class="inteiro" for="gvCtMot">Motivo da mudança (obrigatório se o vendedor já tem contrato)<textarea id="gvCtMot" maxlength="1000"></textarea></label></div>' +
+      '<div class="gv-acoes">' + GvT_bt_("Gravar o contrato", "gravarContrato", "", "cadx-btn-primario") + "</div>";
+  }
+  function GvT_lerFaixasTela_() {
+    var l = []; document.querySelectorAll("#gvFaixasEd tr[data-i]").forEach(function (tr) { var i = tr.getAttribute("data-i"); l.push({ ate: GvT_v_("gvFxAte_" + i), pct: GvT_v_("gvFxPct_" + i) }); });
+    if (l.length) GV.ct.faixas = l;
+    return GV.ct.faixas;
+  }
+  function GvT_desenharFaixas_() {
+    var el = GvT_$("gvFaixasEd"); if (!el) return;
+    var f = GV.ct.faixas;
+    el.innerHTML = '<table class="gv-faixas-ed"><thead><tr><th>Faixa</th><th>Até (R$)</th><th>Percentual (%)</th><th></th></tr></thead><tbody>' + f.map(function (x, i) {
+      var ultima = i === f.length - 1;
+      return '<tr data-i="' + i + '"><td>' + (i + 1) + '</td><td><input id="gvFxAte_' + i + '" inputmode="decimal" value="' + GvT_esc_(ultima ? "" : x.ate) + '"' + (ultima ? ' disabled placeholder="acima da faixa anterior"' : ' placeholder="30.000,00"') + ' aria-label="Até que valor vai a faixa ' + (i + 1) + '"></td>' +
+        '<td><input id="gvFxPct_' + i + '" inputmode="decimal" value="' + GvT_esc_(x.pct) + '" placeholder="2" aria-label="Percentual da faixa ' + (i + 1) + '"></td><td>' + (f.length > 1 ? GvT_bt_("Tirar", "menosFaixa", String(i), "cadx-btn-link", ' data-livre="1"') : "") + "</td></tr>";
+    }).join("") + '</tbody></table><p class="vg-sub">"Até" inclui o próprio valor: até 30.000,00 a 2% significa que 30.000,00 ainda é 2% e 30.000,01 já é a faixa seguinte. A última faixa não tem valor final.</p>';
+    GvT_simular_();
+  }
+  /** Simulação na tela com a mesma regra do servidor (faixa cheia, em centavos). O cálculo oficial é sempre o do servidor. */
+  function GvT_simular_() {
+    var el = GvT_$("gvSim"); if (!el) return;
+    var v = GvT_num_(GvT_v_("gvSimValor")); if (v === null) { el.textContent = "Informe um valor para ver a faixa e a comissão."; return; }
+    var f = GvT_lerFaixasTela_(), tc = Math.round(v * 100), i = 0;
+    while (i < f.length - 1 && GvT_num_(f[i].ate) !== null && tc > Math.round(GvT_num_(f[i].ate) * 100)) i++;
+    var pct = GvT_num_(f[i] && f[i].pct); if (pct === null) { el.textContent = "Preencha o percentual de cada faixa."; return; }
+    el.textContent = "Faixa " + (i + 1) + " (" + String(pct).replace(".", ",") + "%): comissão de " + GvT_moeda_(Math.round(tc * Math.round(pct * 100) / 10000) / 100) + " sobre " + GvT_moeda_(v) + ". Simulação na tela; o cálculo oficial é feito pelo servidor.";
+  }
+
+  // ---------- comparativo e guia ----------
+  function GvT_comparativo_() {
+    GvT_carregando_();
+    GvT_chamar_("comparativo", { competencia: GV.comp }, function (r) {
+      var h = '<div class="vg-bloco"><h3>Comparativo de ' + GvT_esc_(GvT_compBr_(r.competencia)) + "</h3>";
+      h += r.linhas.length ? '<div class="gv-tabela-caixa"><table class="cadx-tabela"><thead><tr><th>Vendedor</th><th>Recebido</th><th>Faixa</th><th>%</th><th>Comissão</th><th>Falta p/ próxima</th><th>Prazo médio</th><th>Situação</th></tr></thead><tbody>' + r.linhas.map(function (l) {
+        return '<tr><td><button type="button" class="cadx-btn-link" data-gv="verVend" data-id="' + GvT_esc_(l.id) + '" data-livre="1">' + GvT_esc_(l.nome) + "</button>" + (l.temContrato ? "" : ' <span class="vg-sub">(sem contrato)</span>') + '</td><td class="gv-num">' + GvT_esc_(l.recebidoBr) + "</td><td>" + GvT_esc_(l.faixaNumero) + "</td><td>" + GvT_esc_(l.pctBr) + '</td><td class="gv-num">' + GvT_esc_(l.comissaoBr) + '</td><td class="gv-num">' + GvT_esc_(l.faltaBr) + "</td><td>" + (l.prazoMedioDias === null ? "—" : l.prazoMedioDias + " dias") + "</td><td>" + GvT_sit_(l.situacao, l.situacaoNome) + "</td></tr>";
+      }).join("") + '</tbody><tfoot><tr><th>Total</th><th class="gv-num">' + GvT_esc_(r.totalRecebidoBr) + '</th><th></th><th></th><th class="gv-num">' + GvT_esc_(r.totalComissaoBr) + "</th><th></th><th></th><th></th></tr></tfoot></table></div>" : GvT_vazio_("Nenhum vendedor encontrado.", "");
+      if (r.aClassificar) h += '<div class="vg-faixa is-alerta" style="margin-top:10px">' + r.aClassificar + (r.aClassificar === 1 ? " recebimento" : " recebimentos") + " deste mês (" + GvT_esc_(r.aClassificarBr) + ') ainda "a classificar": fora de qualquer comissão.</div>';
+      h += '<div class="gv-grafico" style="margin-top:12px"><canvas id="gvGrafCmp" role="img" aria-label="Recebido e comissão por vendedor"></canvas></div></div>';
+      GvT_$("gvCorpo").innerHTML = h;
+      var c = GvT_$("gvGrafCmp"); if (!c || typeof carregarChartJs_ !== "function") { if (c) c.parentNode.remove(); return; }
+      setTimeout(function () { if (!window.Chart && document.body.contains(c)) c.parentNode.remove(); }, 5000);
+      carregarChartJs_(function () {
+        if (!window.Chart || !document.body.contains(c)) return;
+        try { if (GV.grafCmp) GV.grafCmp.destroy(); } catch (e) {}
+        GV.grafCmp = new Chart(c, { type: "bar", data: { labels: r.linhas.map(function (l) { return l.nome.split(" ")[0]; }), datasets: [{ label: "Recebido", data: r.linhas.map(function (l) { return l.recebido; }), backgroundColor: "rgba(30,79,122,.70)" }, { label: "Comissão", data: r.linhas.map(function (l) { return l.comissao || 0; }), backgroundColor: "rgba(29,107,63,.80)" }] },
+          options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { tooltip: { callbacks: { label: function (x) { return x.dataset.label + ": " + GvT_moeda_(x.raw); } } } }, scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return GvT_moeda_(v).replace(",00", ""); } } } } } });
+      });
+    }, GvT_falhou_, { livre: true });
+  }
+  function GvT_guia_() {
+    GvT_$("gvCorpo").innerHTML = '<div class="vg-bloco"><h3>Como funciona</h3>' +
+      '<p class="vg-texto">Cada vendedor tem o próprio contrato de ganhos: faixas de valor com um percentual cada, e o mês em que o contrato começa a valer. A comissão é calculada sobre o valor recebido do cliente no mês, pela data em que o dinheiro entrou na conta. Vale a regra da faixa cheia: a faixa atingida no mês vale sobre todo o recebido no mês.</p>' +
+      '<p class="vg-texto">O Financeiro lança cada recebimento ligado à proposta aprovada pelo cliente; o vendedor é o responsável pela proposta no Comercial. Recebimento sem proposta, ou de proposta sem responsável, fica "a classificar" e não entra em comissão de ninguém até ser ligado à proposta certa.</p>' +
+      '<p class="vg-texto">No começo do mês seguinte, o vendedor confere o mês (ou contesta, dizendo o que está errado). O Financeiro fecha, e os números ficam congelados: o sistema guarda a cópia do cálculo. A Diretoria aprova ou devolve com o motivo. Depois da aprovação, o Financeiro paga e registra o pagamento. Se os números mudarem antes do fechamento, o mês volta para o vendedor conferir de novo. Mês fechado só é reaberto pela Diretoria, com o motivo; mês pago não é reaberto nesta etapa.</p>' +
+      '<p class="vg-texto">Proteções fixas: ninguém mantém o próprio contrato, lança recebimento da própria venda, fecha, aprova, paga ou reabre o próprio mês; quem fechou não aprova o mesmo fechamento; quem aprovou não registra o pagamento. Cada passo grava quem fez, quando e a observação, e nada é apagado.</p></div>';
+  }
+
+  // ---------- cliques e mudanças ----------
+  function GvT_mudou_(ev) {
+    var t = ev.target; if (!t) return;
+    var m = t.getAttribute && t.getAttribute("data-gvmuda");
+    if (m === "vend") { GV.vend = t.value; GV.rec.prop = null; GvT_irAba_(GV.aba); return; }
+    if (m === "comp") { if (/^\d{4}-\d{2}$/.test(t.value)) { GV.comp = t.value; GvT_irAba_(GV.aba); } return; }
+    if (t.id === "gvSemProp") { GV.rec.semProp = !!t.checked; GV.rec.prop = null; GV.rec.omieRef = ""; var b = t.closest(".vg-bloco"); if (b) b.innerHTML = '<h3>Lançar recebimento</h3><p class="vg-sub">O recebimento entra na comissão pelo mês da data em que o dinheiro entrou na conta.</p>' + GvT_formRec_(); return; }
+    if (t.id === "gvSimValor" || /^gvFx(Ate|Pct)_/.test(t.id || "")) GvT_simular_();
+  }
+  function GvT_clique_(ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest("[data-gv]") : null; if (!b || b.disabled) return;
+    var acao = b.getAttribute("data-gv"), id = b.getAttribute("data-id") || "";
+    switch (acao) {
+      case "aba": GvT_irAba_(id); break;
+      case "atualizar": GvT_reiniciar_(function () { GvT_irAba_(GV.aba); }); break;
+      case "irPend": {
+        if (b.getAttribute("data-vend")) GV.vend = b.getAttribute("data-vend");
+        if (b.getAttribute("data-comp")) GV.comp = b.getAttribute("data-comp");
+        GvT_filtros_();
+        if (id === "classificar") { GV.rec.filtroSit = "A_CLASSIFICAR"; GV.rec.filtroComp = ""; GvT_irAba_("recebimentos"); } else GvT_irAba_("fechamento");
+        break;
+      }
+      case "verVend": GV.vend = id; GvT_filtros_(); GvT_irAba_("painel"); break;
+      case "ia": GvT_avaliar_(); break;
+      case "conferir": GvT_passo_("conferir", { observacao: GvT_v_("gvObs") }, "Conferência registrada. O Financeiro fecha o mês."); break;
+      case "contestar": GvT_passo_("contestar", { motivo: GvT_v_("gvObs") }, "Contestação registrada. O Financeiro corrige os recebimentos ou responde."); break;
+      case "fechar": GvT_perguntar_("Fechar o mês", "Ao fechar, os números deste mês ficam congelados e o mês vai para a aprovação da Diretoria. Confirma?", function () { GvT_passo_("fechar", { resposta: GvT_v_("gvResp") }, "Mês fechado. A Diretoria foi chamada para aprovar."); }); break;
+      case "aprovar": GvT_passo_("aprovar", { observacao: GvT_v_("gvDir"), hash: (GV.painel && GV.painel.fechamento && GV.painel.fechamento.hash) || "" }, "Fechamento aprovado. O Financeiro registra o pagamento."); break;
+      case "devolver": GvT_passo_("devolver", { motivo: GvT_v_("gvDir") }, "Fechamento devolvido ao Financeiro com o motivo."); break;
+      case "pagar": GvT_lerArquivo_(GvT_$("gvPagArq"), function (arq) { GvT_passo_("pagar", { data: GvT_v_("gvPagData"), forma: GvT_v_("gvPagForma"), valor: GvT_v_("gvPagValor"), observacao: GvT_v_("gvPagObs"), comprovante: arq }, "Pagamento registrado."); }); break;
+      case "reabrir": GvT_perguntar_("Reabrir o mês", "O mês volta para a conferência do vendedor e o cálculo congelado fica no histórico. Confirma?", function () { GvT_passo_("reabrir", { motivo: GvT_v_("gvReab") }, "Mês reaberto. O vendedor confere de novo."); }); break;
+      case "buscarProp": GvT_buscarProp_("gvProps", "escolherProp"); break;
+      case "escolherProp": { GV.rec.omieRef = ""; GV.rec.prop = (GV.rec.lista || []).filter(function (p) { return p.id === id; })[0] || null; var bl = b.closest(".vg-bloco"); if (bl) { var vals = { d: GvT_v_("gvRecData"), v: GvT_v_("gvRecValor"), doc: GvT_v_("gvRecDoc"), o: GvT_v_("gvRecObs") }; bl.innerHTML = '<h3>Lançar recebimento</h3>' + GvT_formRec_(); GvT_$("gvRecData").value = vals.d; GvT_$("gvRecValor").value = vals.v; GvT_$("gvRecDoc").value = vals.doc; GvT_$("gvRecObs").value = vals.o; } break; }
+      case "lancar": GvT_lancar_(); break;
+      case "omieVer": GvT_omieVer_(); break;
+      case "omieUsar": { var pp = id.split(":"); GvT_omiePreencher_(pp[0], pp.slice(1).join(":")); break; }
+      case "omieSemProp": GvT_omiePreencher_(id, ""); break;
+      case "filtroClass": GV.rec.filtroSit = "A_CLASSIFICAR"; GV.rec.filtroComp = ""; GvT_recebimentos_(); break;
+      case "filtrarRec": GV.rec.filtroComp = GvT_v_("gvRecComp"); GV.rec.filtroSit = GvT_v_("gvRecSit"); GV.rec.soVend = !!(GvT_$("gvRecSoVend") && GvT_$("gvRecSoVend").checked); GvT_recebimentos_(); break;
+      case "abrirClass": { var a1 = GvT_$("gvRecAcao_" + id); if (a1) a1.innerHTML = '<div class="gv-form"><label class="inteiro" for="gvBuscaClass">Proposta deste recebimento<input id="gvBuscaClass" maxlength="120"></label><label class="inteiro" for="gvJustClass">Justificativa, só se passar do total da proposta<input id="gvJustClass" maxlength="600"></label></div><div class="gv-acoes">' + GvT_bt_("Buscar proposta", "buscarClass", id, "", ' data-livre="1"') + '</div><div id="gvPropsClass_' + GvT_esc_(id) + '" class="gv-props"></div>'; GV.rec.classificar = id; break; }
+      case "buscarClass": { var dest = "gvPropsClass_" + id; var q = GvT_v_("gvBuscaClass"); var alvo = GvT_$(dest); if (alvo) alvo.id = "gvPropsTmp"; GvT_buscarPropCls_(q, id); break; }
+      case "classificar": GvT_chamar_("classificarRecebimento", { id: GV.rec.classificar, propostaId: id, justificativaAcima: GvT_v_("gvJustClass") }, function (r) { GvT_reiniciar_(function () { GvT_recebimentos_(); setTimeout(function () { GvT_msg_("Recebimento classificado para " + r.recebimento.vendedorNome + ".", "ok"); }, 50); }); }); break;
+      case "abrirAnular": { var a2 = GvT_$("gvRecAcao_" + id); if (a2) a2.innerHTML = '<div class="gv-form"><label class="inteiro" for="gvAnul_' + GvT_esc_(id) + '">Motivo da anulação<textarea id="gvAnul_' + GvT_esc_(id) + '" maxlength="1000"></textarea></label></div><div class="gv-acoes">' + GvT_bt_("Anular o recebimento", "anular", id, "cadx-btn-risco") + "</div>"; break; }
+      case "anular": GvT_perguntar_("Anular o recebimento", "O lançamento continua na lista, marcado como anulado, e sai da apuração. Confirma?", function () { GvT_chamar_("anularRecebimento", { id: id, motivo: GvT_v_("gvAnul_" + id) }, function () { GvT_reiniciar_(function () { GvT_recebimentos_(); setTimeout(function () { GvT_msg_("Recebimento anulado.", "ok"); }, 50); }); }); }); break;
+      case "modelo": { var mo = GV.ct.modelo || (GV.ini && GV.ini.modelo); if (!mo) break; GV.ct.faixas = mo.faixas.map(function (f) { return { ate: f.ate === null ? "" : GvT_numBr_(f.ate, 2), pct: String(f.pct).replace(".", ",") }; }); GvT_desenharFaixas_(); GvT_msg_("Faixas do modelo preenchidas. Escolha o vendedor e o mês de início, confira e toque em \"Gravar o contrato\". Nada foi gravado ainda.", "alerta"); break; }
+      case "maisFaixa": GvT_lerFaixasTela_(); GV.ct.faixas.push({ ate: "", pct: "" }); GvT_desenharFaixas_(); break;
+      case "menosFaixa": GvT_lerFaixasTela_(); GV.ct.faixas.splice(Number(id), 1); GvT_desenharFaixas_(); break;
+      case "gravarContrato": {
+        var faixas = GvT_lerFaixasTela_().map(function (f, i, l) { return { ate: i === l.length - 1 ? "" : f.ate, pct: f.pct }; });
+        GvT_chamar_("salvarContrato", { vendedorId: GvT_v_("gvCtVend"), vigencia: GvT_v_("gvCtVig"), faixas: faixas, observacao: GvT_v_("gvCtObs"), motivo: GvT_v_("gvCtMot") }, function (r) {
+          GV.ct.faixas = [];
+          GvT_reiniciar_(function () { GvT_contratos_(); setTimeout(function () { GvT_msg_("Contrato gravado para " + r.contrato.vendedorNome + ", com início em " + r.contrato.vigenciaBr + "." + (r.conferenciasReabertas ? " Meses já conferidos voltaram para a conferência, porque o cálculo mudou." : ""), "ok"); }, 50); });
+        });
+        break;
+      }
+      case "cancelarContrato": GvT_perguntar_("Cancelar o contrato", "O contrato não é apagado: fica no histórico como cancelado. Confirma?", function () { GvT_chamar_("cancelarContrato", { id: id, motivo: GvT_v_("gvCanc_" + id) }, function () { GvT_reiniciar_(function () { GvT_contratos_(); setTimeout(function () { GvT_msg_("Contrato cancelado.", "ok"); }, 50); }); }); }); break;
+    }
+  }
+  function GvT_buscarPropCls_(q, recId) {
+    var alvo = GvT_$("gvPropsTmp"); if (alvo) { alvo.id = "gvPropsClass_" + recId; alvo.innerHTML = '<p class="vg-sub">Buscando…</p>'; }
+    GvT_chamar_("propostas", { q: q }, function (r) {
+      var a = GvT_$("gvPropsClass_" + recId); if (!a) return;
+      a.innerHTML = r.propostas.length ? r.propostas.map(function (p) { return '<button type="button" class="cadx-btn gv-prop" data-gv="classificar" data-id="' + GvT_esc_(p.id) + '"><span><b>' + GvT_esc_(p.numero) + "</b> · " + GvT_esc_(p.cliente) + " · " + GvT_esc_(p.semVendedor ? "sem vendedor responsável" : "vendedor " + p.vendedor) + "</span></button>"; }).join("") : '<p class="vg-sub">Nenhuma proposta aprovada pelo cliente com este texto.</p>';
+    }, function (m) { var a = GvT_$("gvPropsClass_" + recId); if (a) a.innerHTML = '<div class="vg-faixa is-erro">' + GvT_esc_(m) + "</div>"; }, { livre: true });
+  }
+</script>

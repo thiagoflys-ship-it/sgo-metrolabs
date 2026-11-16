@@ -1,0 +1,7 @@
+Ensaio final somente leitura com o código PUBLICADO (financeiro-revisao2-20261115) e o Omie real — 15/11/2026 ~00:58 BRT
+Cópia do /app/legado do contêiner + função de ensaio (sessão simulada), em pasta temporária apagada ao fim. Nada gravado.
+Todas as 15 rotinas OK (ensaio/final2.json): posição (10 dias, 0,6 s), resumo do mês (415 títulos, 6,0 s), agenda 7 dias (66, 1,6 s),
+vencidos por cliente (80, 4,9 s), resultado do mês (410, 16,4 s), contas a pagar vencidas (96, 1,1 s), lançamentos a receber a
+vencer (50, 5,0 s com o espaço entre chamadas), pedidos aprovados (34, 0,4 s), preparo de pedido (cliente achado, 36 títulos do
+cliente, 5,0 s), Ganhos recebimentos do Omie (49, 4,6 s), contas correntes (16), fluxo da 1ª conta (16 movimentos), orçamento
+(196 categorias), previsões (0), faturamento de serviços (0).

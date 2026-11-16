@@ -1,0 +1,62 @@
+<script>
+/*
+ * Financeiro: marca d'água e impressão identificada (16/11/2026, especificação do Financeiro, seção 5).
+ * O navegador não impede foto de tela; o que funciona é identificar quem está vendo. Sobre os dados do Financeiro (Painel
+ * financeiro, Conferência do Financeiro, Cartões, Conciliação das faturas e A pagar em Compras, Conciliação Caju) fica um texto
+ * discreto em diagonal, repetido: "Nome · login · dd/mm/aaaa hh:mm · SIGILOSO". Não recebe clique (pointer-events: none), não
+ * cria rolagem lateral e é atualizado a cada minuto. O nome e o login vêm da sessão conferida no servidor (campo "marca" do
+ * início de cada módulo), nunca de campo digitado; a hora parte da hora do servidor.
+ * Na impressão, a marca sai junto e há um rodapé "Impresso por ... em ...".
+ */
+var FIN_MARCA = { lista: [], timer: null };
+function FinMarca_esc_(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function FinMarca_hora_(m) {
+  var base = Number(m && m.agoraMs) || 0, d = new Date(base ? base + (Date.now() - (m._recebidoEm || Date.now())) : Date.now());
+  try { return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ''); }
+  catch (e) { var p = function (n) { return ('0' + n).slice(-2); }; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+}
+function FinMarca_texto_(m) { return [m.nome, m.usuario, FinMarca_hora_(m), 'SIGILOSO'].filter(Boolean).join(' · '); }
+function FinMarca_fundo_(texto) {
+  // 16/11/2026 (design): o ladrilho acompanha o tamanho do texto; com 440 px fixos, nomes longos saíam cortados ("ANESSA FINANCEIRO")
+  var l = Math.max(440, Math.round(String(texto).length * 8.6) + 80), a = Math.round(l * 0.5) + 40, cx = Math.round(l / 2), cy = Math.round(a / 2);
+  var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='" + l + "' height='" + a + "'><text x='" + cx + "' y='" + (cy + 5) + "' text-anchor='middle' transform='rotate(-24 " + cx + " " + cy + ")' font-family='Arial, sans-serif' font-size='15' font-weight='600' fill='#1f2937'>" + FinMarca_esc_(texto) + "</text></svg>";
+  return 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
+}
+function FinMarca_atualizar_(item) {
+  var t = FinMarca_texto_(item.marca);
+  item.camada.style.backgroundImage = FinMarca_fundo_(t);
+  item.camada.setAttribute('data-texto', t);
+  item.rodape.textContent = 'Impresso por ' + [item.marca.nome, item.marca.usuario ? '(' + item.marca.usuario + ')' : ''].filter(Boolean).join(' ') + ' em ' + FinMarca_hora_(item.marca) + ' · documento de uso interno do Financeiro · SIGILOSO';
+}
+function FinMarca_relogio_() {
+  FIN_MARCA.lista = FIN_MARCA.lista.filter(function (i) { return i.camada.isConnected; });
+  FIN_MARCA.lista.forEach(FinMarca_atualizar_);
+  if (!FIN_MARCA.lista.length && FIN_MARCA.timer) { clearInterval(FIN_MARCA.timer); FIN_MARCA.timer = null; }
+}
+/** Põe (ou atualiza) a marca sobre o elemento. marca = { nome, usuario, agoraMs } vindo do servidor. Sem marca, não faz nada. */
+function FinMarca_aplicar_(alvo, marca) {
+  if (!alvo || !marca || !marca.nome) return null;
+  if (!marca._recebidoEm) marca._recebidoEm = Date.now();
+  var camada = null, rodape = null;
+  for (var i = 0; i < alvo.children.length; i++) { var c = alvo.children[i]; if (c.classList.contains('fin-marca')) camada = c; else if (c.classList.contains('fin-marca-rodape')) rodape = c; }
+  if (!camada) {
+    camada = document.createElement('div'); camada.className = 'fin-marca'; camada.setAttribute('aria-hidden', 'true');
+    rodape = document.createElement('div'); rodape.className = 'fin-marca-rodape';
+    try { if (getComputedStyle(alvo).position === 'static') alvo.style.position = 'relative'; } catch (e) { alvo.style.position = 'relative'; }
+    alvo.appendChild(camada); alvo.appendChild(rodape);
+  }
+  var item = FIN_MARCA.lista.filter(function (x) { return x.camada === camada; })[0];
+  if (!item) { item = { camada: camada, rodape: rodape, marca: marca }; FIN_MARCA.lista.push(item); } else item.marca = marca;
+  FinMarca_atualizar_(item);
+  if (!FIN_MARCA.timer) FIN_MARCA.timer = setInterval(FinMarca_relogio_, 60000);
+  return camada;
+}
+</script>
+<style>
+  .fin-marca { position: absolute; inset: 0; pointer-events: none; z-index: 4; opacity: .07; background-repeat: repeat; background-position: 0 0; overflow: hidden; }
+  .fin-marca-rodape { display: none; }
+  @media print {
+    .fin-marca { opacity: .12 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .fin-marca-rodape { display: block !important; margin-top: 16px; padding-top: 6px; border-top: 1px solid #94a3b8; font-size: 10pt; color: #334155; text-align: justify; }
+  }
+</style>

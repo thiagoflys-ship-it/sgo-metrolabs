@@ -1,0 +1,6 @@
+ALTERADO Index.html
+NOVO JS_Omie_Cliente.html
+ALTERADO JS_Omie_Gestao.html
+ALTERADO SGO_Ajuda_Financeiro.js
+NOVO SGO_Omie_Cliente.js
+ALTERADO SGO_Omie_Sigilo.js

@@ -1,0 +1,677 @@
+<style>
+  /* CONCILIAÇÃO CAJU (11/11/2026): menu Financeiro > Conciliação Caju. Servidor: SGO_Caju*.js (CajuConc_api).
+     Visual do SGO+: tokens --bc-*, componentes cadx-* (UI_Estilos.html) e as mesmas classes vg-* do Depósito de viagem
+     (JS_DepositoViagem.html, sempre incluído na página), Kanban e Gantt comuns (JS_PainelAtendimento.html). */
+  #cjTela .cadx-btn { min-height: 40px; height: auto; padding: 6px 14px; white-space: normal; text-align: center; line-height: 1.25; font-size: 13px; }
+  #cjTela .cadx-btn:focus-visible, #cjTela .vg-aba:focus-visible, #cjTela summary:focus-visible { outline: 2px solid var(--bc-info, #1E4F7A); outline-offset: 2px; }
+  .cj-amb { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 8px 14px; border-radius: 6px; margin: 0 0 12px; font-size: 13px; font-weight: 600; border: 1px solid; }
+  .cj-amb.producao { background: #E8F2E5; border-color: #B9D3B3; color: #1D6B3F; }
+  .cj-amb.homologacao { background: #FAF0D7; border-color: #E6D3A2; color: #7A5200; }
+  .cj-amb.desligada { background: #F1F2F4; border-color: #C9CDD2; color: #3E4852; }
+  .cj-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; margin: 0 0 12px; }
+  .cj-card { padding: 10px 12px; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 6px; background: #fff; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cj-card span { font-size: 11.5px; font-weight: 600; color: var(--bc-text-3, #5F645F); }
+  .cj-card b { font-family: var(--bc-mono, monospace); font-size: 16px; font-weight: 600; }
+  .cj-card.alerta { border-color: var(--bc-warn-line, #E6D3A2); background: var(--bc-warn-bg, #FAF0D7); }
+  .cj-sit { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  .cj-sit.s-CONCILIADO { color: #1D6B3F; } .cj-sit.s-DIVERGENTE { color: #A3261B; } .cj-sit.s-PENDENTE { color: #7A5200; } .cj-sit.s-RESOLVIDO, .cj-sit.s-IGNORADO { color: #3E4852; }
+  .cj-sit.s-ABERTA { color: #A3261B; } .cj-sit.s-RESOLVIDA { color: #1D6B3F; } .cj-sit.s-SANADA { color: #3E4852; }
+  .cj-mapa { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 14px; }
+  .cj-rolar { overflow-x: auto; max-width: 100%; }
+  .cj-pix { font-family: var(--bc-mono, monospace); font-size: 12px; }
+  /* 16/11/2026 (design): campo de arquivo com área de toque de 44 px, como os demais */
+  #cjTela input[type="file"] { min-height: 44px; height: auto; max-width: 100%; }
+  #cjTela input[type="file"]::file-selector-button { min-height: 40px; padding: 0 14px; margin-right: 10px; cursor: pointer; }
+  .cj-lado { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  @media (max-width: 760px) { #cjTela .cadx-btn { min-height: 44px; } .cj-lado { grid-template-columns: 1fr; } .cj-mapa { grid-template-columns: 1fr; } }
+</style>
+<script>
+  // ==========================================================
+  // CONCILIAÇÃO CAJU (11/11/2026, pedido do dono: "quero que o Financeiro tenha total controle"). Servidor: SGO_Caju*.js.
+  // Ganchos na casca (JS_Core.html): Caju_iniciar_ no login mostra Financeiro > Conciliação Caju (Financeiro, Diretoria e
+  // Administrador); abrir('conciliacao_caju') -> Caju_render_; Início/avisos -> Caju_irPara_. O servidor confere sessão, caixa e
+  // proteções em toda chamada. Sem window.confirm/prompt/alert: as confirmações são caixas da casca (fsPerguntar_) ou na própria
+  // tela. Sem atualização automática: a tela só redesenha quando a pessoa pede. Cliques por delegação (data-cj).
+  // ==========================================================
+  var CJ = { ini: null, aba: "guia", vista: "lista", ocupado: false, painel: null, filtro: { centro: "", pessoa: "" }, ext: { arq: null, previa: null }, rel: { tipo: "INDIVIDUAL" }, abrirId: "", divSit: "ABERTA", linSit: "" };
+  function CjT_esc_(v) { return String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function CjT_$(id) { return document.getElementById(id); }
+  function CjT_v_(id) { var e = CjT_$(id); return e ? String(e.value || "").trim() : ""; }
+  function CjT_pode_(c) { return !!(CJ.ini && CJ.ini.poderes && CJ.ini.poderes[c]); }
+  function CjT_hoje_() { var d = new Date(), p = function (n) { return ("0" + n).slice(-2); }; return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()); }
+  function CjT_opcoes_(lista, atual, vazio) { return (vazio !== undefined ? '<option value="">' + CjT_esc_(vazio) + "</option>" : "") + lista.map(function (o) { return '<option value="' + CjT_esc_(o[0]) + '"' + (String(o[0]) === String(atual) ? " selected" : "") + ">" + CjT_esc_(o[1]) + "</option>"; }).join(""); }
+  function CjT_vazio_(t, x) { return '<div class="vg-vazio"><b>' + CjT_esc_(t) + "</b>" + CjT_esc_(x || "") + "</div>"; }
+  function CjT_bt_(rot, acao, id, cls, extra) { return '<button type="button" class="cadx-btn' + (cls ? " " + cls : "") + '" data-cj="' + acao + '" data-id="' + CjT_esc_(id || "") + '"' + (extra || "") + ">" + CjT_esc_(rot) + "</button>"; }
+
+  // ---------- ganchos da casca ----------
+  function Caju_mostrarMenu_() {
+    var ver = !!(CJ.ini && CJ.ini.ver), g = CjT_$("menu-secao-financeiro"), b = CjT_$("menu-btn-conciliacao_caju");
+    if (g) g.style.display = ver ? "" : "none";
+    if (b) b.style.display = ver ? "" : "none";
+    if (typeof Financeiro_grupoMenu_ === "function") Financeiro_grupoMenu_(); // 14/11/2026: o grupo aparece se qualquer item dele aparecer
+    var badge = CjT_$("menuBadgeCaju"), c = (CJ.ini && CJ.ini.contagens) || {};
+    if (badge) { var n = ver ? (c.pedidosAcao || 0) + (c.divergencias || 0) : 0; badge.textContent = n ? String(n) : ""; }
+  }
+  function Caju_iniciar_() {
+    CJ.ini = null; Caju_mostrarMenu_();
+    if (typeof SGO_getSessionId !== "function" || !SGO_getSessionId()) return;
+    google.script.run.withSuccessHandler(function (r) { CJ.ini = r && r.ok ? r : null; Caju_mostrarMenu_(); }).withFailureHandler(function () { CJ.ini = null; Caju_mostrarMenu_(); })
+      .CajuConc_api(SGO_getSessionId(), "iniciar", {});
+  }
+  function CjT_chamar_(acao, dados, ok, erro, opcoes) {
+    opcoes = opcoes || {};
+    if (CJ.ocupado && !opcoes.livre) return;
+    if (!opcoes.livre) { CJ.ocupado = true; CjT_travar_(true); }
+    var fim = function () { if (!opcoes.livre) { CJ.ocupado = false; CjT_travar_(false); } };
+    google.script.run
+      .withSuccessHandler(function (r) {
+        fim();
+        if (!r || !r.ok) { (erro || CjT_erro_)((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e confira se a mudança foi gravada antes de tentar de novo."); return; }
+        try { ok(r); } catch (e) { console.error("Conciliação Caju:", e); CjT_erro_("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5); o que foi gravado está guardado."); }
+      })
+      .withFailureHandler(function (e) { fim(); (erro || CjT_erro_)(String((e && e.message) || "Não foi possível falar com o servidor. Verifique a conexão; antes de repetir, confira se a mudança já foi gravada.")); })
+      .CajuConc_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function CjT_travar_(sim) { var t = CjT_$("cjTela"); if (t) t.querySelectorAll("button[data-cj]").forEach(function (b) { if (!b.hasAttribute("data-livre")) b.disabled = !!sim; }); }
+  function CjT_msg_(texto, tipo) {
+    var el = CjT_$("cjMsg"); if (!el) return;
+    el.innerHTML = texto ? '<div class="vg-faixa ' + (tipo === "erro" ? "is-erro" : tipo === "ok" ? "is-ok" : tipo === "alerta" ? "is-alerta" : "") + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + CjT_esc_(texto) + "</div>" : "";
+    if (texto) { try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {} }
+  }
+  function CjT_erro_(m) { CjT_msg_(m, "erro"); }
+  function CjT_perguntar_(titulo, texto, opcoes) {
+    if (typeof fsPerguntar_ === "function") { fsPerguntar_(titulo, texto, opcoes); return; }
+    var o = (opcoes || []).filter(function (x) { return x.prim; })[0]; if (o && o.fn) o.fn();
+  }
+  function Caju_render_() {
+    var div = CjT_$("conteudo"); if (!div) return;
+    try { if (typeof atualizarTituloMobile_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Conciliação Caju"); } catch (e) {}
+    CJ.vista = "lista"; CJ.painel = null;
+    div.innerHTML = '<div class="module-shell cadx" id="cjTela"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Conciliação Caju</h2>' +
+      '<p class="content-subtitle">Cargas do depósito de viagem pelo Caju, extrato do cartão, cruzamento com a prestação de contas, divergências, fechamento e relatórios A4.</p></div><div class="module-header-right"></div></div>' +
+      '<div id="cjAmb"></div><div id="cjAgora"></div><div class="vg-abas" id="cjAbas" role="tablist" aria-label="Partes da Conciliação Caju"></div><div id="cjMsg" aria-live="polite"></div><div id="cjCorpo"><p class="vg-sub">Carregando…</p></div></div>';
+    var tela = CjT_$("cjTela");
+    tela.addEventListener("click", CjT_clique_);
+    var abrirId = CJ.abrirId, abrirAba = CJ.abrirAba; CJ.abrirId = ""; CJ.abrirAba = "";
+    CjT_vigiarDicas_(tela);
+    CjT_chamar_("iniciar", {}, function (r) {
+      CJ.ini = r; Caju_mostrarMenu_();
+      if (r.ver && typeof FinMarca_aplicar_ === "function") FinMarca_aplicar_(CjT_$("cjTela"), r.marca); // 16/11/2026: marca d'água (seção 5)
+      if (!r.ver) { CjT_$("cjCorpo").innerHTML = '<div class="vg-faixa is-erro">A Conciliação Caju é do Financeiro (a Diretoria acompanha). Para as suas viagens e o seu relatório individual, use Operação de campo > Depósito de viagem.</div>'; return; }
+      CjT_topo_();
+      if (abrirId) CjT_viagem_(abrirId); else CjT_irAba_(abrirAba || CJ.aba || "guia");
+    }, function (m) { CjT_$("cjCorpo").innerHTML = '<div class="vg-faixa is-erro"><b>A tela não abriu.</b> ' + CjT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  /** Do Início, de um aviso ou da Caixa de decisões. */
+  function Caju_irPara_(acao) {
+    var tela = (acao && acao.tela) || acao || {};
+    CJ.abrirAba = String(tela.aba || ""); CJ.abrirId = tela.aba === "divergencias" ? "" : String(tela.id || "");
+    if (tela.aba === "divergencias") CJ.aba = "divergencias";
+    if (window.SGO_MODULO_ATUAL === "conciliacao_caju" && CjT_$("cjTela")) { var id = CJ.abrirId, ab = CJ.abrirAba; CJ.abrirId = ""; CJ.abrirAba = ""; if (id) CjT_viagem_(id); else CjT_irAba_(ab || "painel"); return; }
+    abrir("conciliacao_caju");
+  }
+  function CjT_topo_() {
+    var i = (CJ.ini && CJ.ini.integracao) || {}, a = CjT_$("cjAmb");
+    if (a) a.innerHTML = !i.configurada ? '<div class="cj-amb desligada">Integração com o Caju ainda não configurada (falta: ' + CjT_esc_((i.faltam || []).join(", ")) + '). A conciliação do extrato pelo CSV funciona; a carga pelo Caju liga quando o responsável pelo sistema gravar as credenciais em Chaves e senhas.</div>'
+      : '<div class="cj-amb ' + CjT_esc_(i.ambiente) + '">Caju: ' + CjT_esc_(i.ambienteNome) + (i.producao ? " — as cargas pela API são dinheiro de verdade." : " — crédito fictício; a carga não entra no depósito.") + "</div>";
+    var mc = (CJ.ini && CJ.ini.modoCarga) || {};
+    if (a) a.innerHTML += '<div class="vg-faixa is-neutra" style="margin:-4px 0 12px"><b>Modo da carga: ' + (mc.modo === "API" ? "pelo Caju (pedido de benefício pela API)" : "manual (Caju Despesas ou outro)") + ".</b> " + CjT_esc_(mc.modo === "API" ? "" : mc.motivo || "") + (CjT_pode_("CAJU_CONFIGURAR") ? " Muda em Configuração." : "") + "</div>";
+    var c = (CJ.ini && CJ.ini.contagens) || {}, it = [];
+    if (c.pedidosAcao) it.push(["creditos", c.pedidosAcao, c.pedidosAcao === 1 ? "pedido de crédito esperando você" : "pedidos de crédito esperando você", "tom-perigo"]);
+    if (c.aguardandoCarga) it.push(["creditos", c.aguardandoCarga, c.aguardandoCarga === 1 ? "viagem aprovada aguardando a carga" : "viagens aprovadas aguardando a carga", "tom-alerta"]);
+    if (c.divergencias) it.push(["divergencias", c.divergencias, c.divergencias === 1 ? "divergência aberta" : "divergências abertas", "tom-alerta"]);
+    if (c.pendentes) it.push(["transacoes", c.pendentes, c.pendentes === 1 ? "transação a conciliar" : "transações a conciliar", "tom-alerta"]);
+    var g = CjT_$("cjAgora");
+    if (g) g.innerHTML = it.length ? '<div class="vg-agora">' + it.map(function (x) { return '<button type="button" class="cadx-num ' + x[3] + '" data-cj="aba" data-id="' + x[0] + '"><span class="cadx-num-valor">' + x[1] + '</span><span class="cadx-num-rotulo">' + CjT_esc_(x[2]) + "</span></button>"; }).join("") + "</div>" : "";
+  }
+  function CjT_abas_() {
+    var a = [["guia", "Comece por aqui"], ["painel", "Painel e Kanban"], ["tempo", "Linha do tempo"], ["creditos", "Créditos"], ["extrato", "Importar extrato"], ["transacoes", "Transações"], ["divergencias", "Divergências"], ["fechamento", "Fechamento"], ["relatorios", "Relatórios A4"], ["colaboradores", "Colaboradores"]];
+    a.push(["config", "Configuração"]);
+    return a;
+  }
+  function CjT_desenharAbas_() {
+    var el = CjT_$("cjAbas"); if (!el) return;
+    var c = (CJ.ini && CJ.ini.contagens) || {}, n = { creditos: c.pedidosAcao, divergencias: c.divergencias, transacoes: c.pendentes };
+    el.innerHTML = CjT_abas_().map(function (a) { var at = CJ.aba === a[0] && CJ.vista === "lista"; return '<button type="button" role="tab" class="vg-aba' + (at ? " is-atual" : "") + (a[0] === "guia" ? " is-guia" : "") + '" aria-selected="' + at + '" data-cj="aba" data-id="' + a[0] + '" data-livre="1">' + CjT_esc_(a[1]) + (n[a[0]] ? '<span class="vg-n">' + n[a[0]] + "</span>" : "") + "</button>"; }).join("");
+  }
+  function CjT_atualizarIni_() { CjT_chamar_("iniciar", {}, function (r) { CJ.ini = r; Caju_mostrarMenu_(); CjT_topo_(); CjT_desenharAbas_(); }, function () {}, { livre: true }); }
+  function CjT_irAba_(aba) {
+    CJ.aba = aba; CJ.vista = "lista"; CjT_desenharAbas_(); CjT_msg_("");
+    var corpo = CjT_$("cjCorpo"); if (!corpo) return;
+    var f = { guia: CjT_guia_, painel: CjT_painel_, tempo: CjT_painel_, creditos: CjT_creditos_, extrato: CjT_extrato_, transacoes: CjT_transacoes_, divergencias: CjT_divergencias_, fechamento: CjT_fechamento_, relatorios: CjT_relatorios_, colaboradores: CjT_colaboradores_, config: CjT_config_ }[aba];
+    (f || CjT_guia_)();
+  }
+  function CjT_carregando_() { CjT_$("cjCorpo").innerHTML = '<p class="vg-sub">Carregando…</p>'; }
+  function CjT_falhou_(m) { CjT_$("cjCorpo").innerHTML = '<div class="vg-faixa is-erro">' + CjT_esc_(m) + "</div>"; }
+
+  // ---------- delegação dos cliques ----------
+  function CjT_clique_(ev) {
+    var b = ev.target.closest("[data-cj]"); if (!b || b.disabled) return;
+    var a = b.getAttribute("data-cj"), id = b.getAttribute("data-id") || "", x = b.getAttribute("data-x") || "";
+    var mapa = {
+      aba: function () { CjT_irAba_(id); }, viagem: function () { CjT_viagem_(id); }, abrirViagem: function () { if (typeof Viagem_irPara_ === "function") Viagem_irPara_({ id: id }); else abrir("deposito_viagem"); },
+      ped: function () { CjT_pedidoAcao_(x, id); }, pedCancelar: function () { CjT_pedidoCancelarAbrir_(id); }, pedTodos: function () { CjT_chamar_("pedidoAtualizarTodos", {}, function (r) { CjT_msg_(r.message, "ok"); CjT_creditos_(); CjT_atualizarIni_(); }); },
+      copiarPix: function () { CjT_copiar_(id); }, conciliar: function () { CjT_chamar_("conciliar", {}, function (r) { CjT_msg_(r.message, "ok"); CjT_atualizarIni_(); CjT_irAba_(CJ.aba); }); },
+      extPrevia: function () { CjT_extPrevia_(false); }, extImportar: CjT_extImportar_, impDesfazer: function () { CjT_desfazerAbrir_(id); }, impDesfazerOk: function () { CjT_chamar_("importacaoDesfazer", { id: id, motivo: CjT_v_("cjDesM_" + id) }, function (r) { CjT_msg_(r.message, "ok"); CjT_extrato_(); CjT_atualizarIni_(); }); },
+      linIgnorar: function () { CjT_caixaMotivo_("cjLin_" + id, "Por que desconsiderar esta transação *", "Ex.: compra pessoal já descontada com acordo", "linIgnorarOk", id); },
+      linIgnorarOk: function () { CjT_acaoLinha_("ignorarLinha", { linhaId: id, motivo: CjT_v_("cjMot_" + id) }); }, linDesligar: function () { CjT_acaoLinha_("desligar", { linhaId: id }); },
+      linPessoa: function () { CjT_acaoLinha_("definirPessoa", { linhaId: id, usuarioId: CjT_v_("cjPes_" + id), lembrar: !!(CjT_$("cjLem_" + id) || {}).checked }); },
+      ligar: function () { CjT_acaoLinha_("ligar", { linhaId: id, gastoId: CjT_v_("cjLig_" + id), motivo: CjT_v_("cjLigM_" + id) }, true); },
+      divResolver: function () { CjT_divResolverAbrir_(id); }, divResolverOk: function () { CjT_chamar_("resolverDivergencia", { id: id, resolucao: CjT_v_("cjRes_" + id), motivo: CjT_v_("cjMot_" + id), voltarPara: CJ.divSit }, function (r) { CjT_msg_(r.message, "ok"); CjT_atualizarIni_(); CJ.vista === "viagem" ? CjT_viagem_(CJ.viagemId) : CjT_divergencias_(); }); },
+      divReabrir: function () { CjT_caixaMotivo_("cjDiv_" + id, "Por que reabrir *", "Ex.: o comprovante apresentado não confere", "divReabrirOk", id); },
+      divReabrirOk: function () { CjT_chamar_("reabrirDivergencia", { id: id, motivo: CjT_v_("cjMot_" + id) }, function (r) { CjT_msg_(r.message, "ok"); CjT_divergencias_(); CjT_atualizarIni_(); }); },
+      divAvisar: function () { CjT_chamar_("avisarDono", { id: id }, function (r) { CjT_msg_(r.message, "ok"); CjT_divergencias_(); }); },
+      fechPrevia: CjT_fechPrevia_, fechar: CjT_fechar_, fechReabrir: function () { CjT_caixaMotivo_("cjFech_" + id, "Por que reabrir o fechamento *", "Ex.: comprovante do hotel chegou depois", "fechReabrirOk", id); },
+      fechReabrirOk: function () { CjT_chamar_("reabrirFechamento", { id: id, motivo: CjT_v_("cjMot_" + id) }, function (r) { CjT_msg_(r.message, "ok"); CjT_fechamento_(); CjT_atualizarIni_(); }); },
+      rel: function () { CjT_relatorio_(x || CJ.rel.tipo, id, false); }, relBaixar: function () { CjT_relatorio_(x || CJ.rel.tipo, id, true); },
+      colLer: function () { CjT_chamar_("lerColaboradoresCaju", {}, function (r) { CjT_desenharColab_(r); CjT_msg_(r.message, "ok"); }); },
+      colVincular: function () { CjT_chamar_("vincular", { usuarioId: id, cpf: CjT_v_("cjCpf_" + id) }, function (r) { CjT_desenharColab_(r); CjT_msg_(r.message, r.naoEncontrado ? "alerta" : "ok"); if (r.naoEncontrado) CjT_cadastrarAbrir_(id); }); },
+      colSugestao: function () { CjT_chamar_("vincular", { usuarioId: id, employeeId: x }, function (r) { CjT_desenharColab_(r); CjT_msg_(r.message, "ok"); }); },
+      colCadastrar: function () { CjT_cadastrarAbrir_(id); }, colCadastrarOk: function () { CjT_cadastrarConfirmar_(id); },
+      colArquivar: function () { CjT_caixaMotivo_("cjCol_" + id, (x === "1" ? "Por que arquivar no Caju *" : "Por que desarquivar *"), x === "1" ? "Ex.: saiu da empresa" : "Ex.: voltou a viajar", "colArquivarOk", id, x); },
+      colArquivarOk: function () { CjT_chamar_("arquivarColaborador", { usuarioId: id, arquivar: x === "1", motivo: CjT_v_("cjMot_" + id) }, function (r) { CjT_desenharColab_(r); CjT_msg_(r.message, "ok"); }); },
+      colDesfazer: function () { CjT_caixaMotivo_("cjCol_" + id, "Por que desfazer o vínculo *", "Ex.: CPF informado errado", "colDesfazerOk", id); },
+      colDesfazerOk: function () { CjT_chamar_("desvincular", { usuarioId: id, motivo: CjT_v_("cjMot_" + id) }, function (r) { CjT_desenharColab_(r); CjT_msg_(r.message, "ok"); }); },
+      cfgSalvar: CjT_cfgSalvar_, cfgTestar: function () { CjT_chamar_("testarConexao", {}, function (r) { CjT_msg_(r.message, "ok"); }); }, cfgChamadas: CjT_chamadas_,
+      fechaCaixa: function () { var el = CjT_$(id); if (el) el.innerHTML = ""; }
+    };
+    if (mapa[a]) { ev.preventDefault(); mapa[a](); }
+  }
+  /** Caixa de motivo na própria tela (sem window.prompt). */
+  function CjT_caixaMotivo_(alvo, rotulo, ex, acaoOk, id, x) {
+    var el = CjT_$(alvo); if (!el) return;
+    // 16/11/2026 (especificação do Financeiro, 4.5): a explicação do motivo depende da ação (desconsiderar, reabrir, arquivar...)
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:8px"><label class="vg-campo largo"><span>' + CjT_esc_(rotulo) + '</span><textarea id="cjMot_' + CjT_esc_(id) + '" placeholder="' + CjT_esc_(ex) + '" data-cj-dica="1"></textarea><span class="vg-dica">' + CjT_esc_(CJ_DICAS_MOTIVO[acaoOk === "colArquivarOk" && x !== "1" ? "colDesarquivarOk" : acaoOk] || "Vai para o histórico (e para o A4, quando for o caso).") + '</span></label>' +
+      '<div class="vg-acoes">' + CjT_bt_("Confirmar", acaoOk, id, "cadx-btn-primario", x ? ' data-x="' + CjT_esc_(x) + '"' : "") + CjT_bt_("Desistir", "fechaCaixa", alvo) + "</div></div>";
+    try { CjT_$("cjMot_" + id).focus(); } catch (e) {}
+  }
+
+  // ---------- Comece por aqui ----------
+  function CjT_guia_() {
+    var i = (CJ.ini && CJ.ini.integracao) || {}, c = (CJ.ini && CJ.ini.contagens) || {};
+    var passo = function (ok, txt) { return '<li class="' + (ok ? "ok" : "") + '">' + txt + "</li>"; };
+    CjT_$("cjCorpo").innerHTML = '<div class="vg-bloco"><h3>Para que serve</h3><p class="vg-texto">O dinheiro da viagem vai para o cartão Caju de quem viaja. Este módulo dá ao Financeiro o controle de tudo: <b>faz a carga pelo Caju</b> (sem entrar no portal), acompanha até o dinheiro cair no cartão e confere, gasto a gasto, se o que foi pago no cartão bate com a prestação de contas (comprovante e para que foi). O que não bate vira <b>divergência</b>, com o dono (quem precisa agir) e o motivo. No fim do mês, o Financeiro <b>fecha o período</b> por centro de custo, com o relatório A4.</p>' +
+      '<p class="vg-sub" style="margin:8px 0 0">O caminho de cada viagem:</p><div class="vg-fluxo"><span class="vg-selo s-APROVADA">Aprovada</span><i>→</i><span class="vg-selo s-PRESTACAO_ENVIADA">Crédito no Caju</span><i>→</i><span class="vg-selo s-CARGA_FEITA">Em viagem</span><i>→</i><span class="vg-selo s-AGUARDANDO_APROVACAO">Extrato importado</span><i>→</i><span class="vg-selo s-NEGADA">Divergências tratadas</span><i>→</i><span class="vg-selo s-ENCERRADA">Conciliada e fechada</span></div></div>' +
+      '<div class="vg-bloco is-acao"><h3>Primeira vez (Wanessa): siga na ordem</h3><ol class="vg-check">' +
+      passo(i.configurada, "<b>Credenciais do Caju</b>: o responsável pelo sistema grava em Administração > Chaves e senhas, grupo Caju (ambiente homologação para testar). " + (i.configurada ? "Feito: " + CjT_esc_(i.ambienteNome) + "." : "Ainda falta.")) +
+      passo((CJ.ini && CJ.ini.modoCarga && CJ.ini.modoCarga.modo === "API"), "Em <b>Configuração</b>, escolha o <b>modo da carga</b>: <b>pelo Caju</b> (pedido de benefício pela API: o SGO+ cria, paga e registra) ou <b>manual</b> (Caju Despesas ou outro: você carrega fora e registra com o comprovante). O padrão é manual; a carga pelo Caju precisa das credenciais. No modo pelo Caju, toque em <b>Testar a conexão</b> e escolha a <b>categoria do crédito</b>.") +
+      passo(false, "Em <b>Colaboradores</b>, toque em <b>Atualizar a lista do Caju</b> e vincule cada pessoa que viaja pelo CPF (ou confirme a sugestão pelo nome). Quem não está no Caju, cadastre lá por aqui.") +
+      passo(false, "Na viagem aprovada (Depósito de viagem > Carga no cartão): no modo pelo Caju, toque em <b>Fazer a carga pelo Caju</b> (paga com o saldo da conta Caju; faltando saldo, mostra o PIX); no modo manual, registre a carga feita com o comprovante.") +
+      passo(c.importacoes > 0, "No fim do mês (ou quando quiser), exporte o <b>extrato de despesas em CSV</b> no Portal do RH do Caju e importe em <b>Importar extrato</b>: confira a prévia das colunas e importe.") +
+      passo(false, "Trate cada <b>divergência</b> (resolver com o motivo, avisar o dono, ligar à mão) e, com tudo conferido, faça o <b>Fechamento</b> do período por centro de custo e gere o A4.") + "</ol>" +
+      '<div class="vg-acoes">' + CjT_bt_("Ir para Colaboradores", "aba", "colaboradores") + CjT_bt_("Ir para Importar extrato", "aba", "extrato") + CjT_bt_("Ir para Divergências", "aba", "divergencias") + "</div></div>" +
+      '<div class="vg-papeis"><div class="vg-papel' + (CjT_pode_("CAJU_CONCILIAR") ? " is-meu" : "") + '"><h4>Financeiro' + (CjT_pode_("CAJU_CONCILIAR") ? ' <span class="vg-meu">seu papel</span>' : "") + "</h4><ol><li>Faz a carga pelo Caju e acompanha o crédito.</li><li>Importa o extrato e trata as divergências, sempre com o motivo.</li><li>Fecha o período e gera os relatórios A4 (individual e geral).</li></ol></div>" +
+      '<div class="vg-papel' + (!CjT_pode_("CAJU_CONCILIAR") ? " is-meu" : "") + '"><h4>Diretoria' + (!CjT_pode_("CAJU_CONCILIAR") ? ' <span class="vg-meu">seu papel</span>' : "") + "</h4><ol><li>Acompanha o painel, as divergências e os fechamentos.</li><li>Gera os relatórios A4 do período e de cada colaborador.</li></ol></div>" +
+      '<div class="vg-papel"><h4>Quem viaja</h4><ol><li>Gasta no cartão Caju e lança cada gasto na prestação, com o comprovante e <b>para que foi</b>.</li><li>Recebe o aviso quando o Financeiro encontra algo a explicar.</li><li>Gera o próprio relatório individual em Depósito de viagem > Relatórios A4.</li></ol></div></div>';
+  }
+
+  // ---------- Painel (Kanban) e Linha do tempo (Gantt) ----------
+  function CjT_painel_() {
+    CjT_carregando_();
+    CjT_chamar_("painel", { centro: CJ.filtro.centro, pessoa: CJ.filtro.pessoa }, function (r) { CJ.painel = r; if (typeof PnA_prepararGantt_ === "function") PnA_prepararGantt_(r.ganttJs); CjT_desenharPainel_(); }, CjT_falhou_, { livre: true });
+  }
+  function CjT_desenharPainel_() {
+    var P = CJ.painel, t = P.totais, gantt = CJ.aba === "tempo", corpo = CjT_$("cjCorpo");
+    var h = '<div class="cj-cards">' + [["Viagens", t.viagens], ["Aprovado", t.aprovadoTxt], ["Carregado", t.carregadoTxt], ["Taxas do Caju", t.taxaTxt], ["Gasto no cartão", t.gastoCartaoTxt], ["Saldo nos cartões", t.saldoCartaoTxt], ["Divergências abertas", t.divAbertas, t.divAbertas > 0]].map(function (c) { return '<div class="cj-card' + (c[2] ? " alerta" : "") + '"><span>' + CjT_esc_(c[0]) + "</span><b>" + CjT_esc_(c[1]) + "</b></div>"; }).join("") + "</div>";
+    h += '<div class="vg-filtros"><label class="vg-campo"><span>Centro de custo</span><select id="cjFCentro">' + CjT_opcoes_(P.centros.map(function (c) { return [c, c]; }), CJ.filtro.centro, "Todos") + "</select></label>" +
+      '<label class="vg-campo"><span>Colaborador (dinheiro)</span><select id="cjFPessoa">' + CjT_opcoes_(P.pessoas.map(function (p) { return [p.id, p.nome]; }), CJ.filtro.pessoa, "Todos") + "</select></label>" +
+      '<button type="button" class="cadx-btn" id="cjFAplicar">Aplicar</button>' + (CjT_pode_("CAJU_CONCILIAR") ? CjT_bt_("Conciliar agora", "conciliar", "", "cadx-btn-primario") : "") + "</div>";
+    h += '<div class="vg-faixa is-neutra">' + (gantt ? "<b>Linha do tempo:</b> cada barra é uma viagem, da saída à chegada, na cor da situação da conciliação. Toque numa barra para abrir a conciliação da viagem." : "<b>Kanban:</b> cada coluna é uma etapa da conciliação; cada cartão é uma viagem com dinheiro. Toque no cartão para ver a conciliação dela.") + "</div>";
+    h += '<div class="vg-legenda">' + P.colunas.map(function (c) { return '<span class="vg-selo" style="color:' + CjT_esc_(c.cor) + '">' + CjT_esc_(c.nome) + "</span>"; }).join("") + '</div><div id="cjPainelCorpo"></div>';
+    corpo.innerHTML = h;
+    CjT_$("cjFAplicar").onclick = function () { CJ.filtro.centro = CjT_v_("cjFCentro"); CJ.filtro.pessoa = CjT_v_("cjFPessoa"); CjT_painel_(); };
+    var alvo = CjT_$("cjPainelCorpo"), l = P.viagens;
+    if (!gantt) {
+      var cols = P.colunas.map(function (c) { var its = l.filter(function (x) { return x.coluna === c.cod; }); return { n: c.cod, nome: c.nome, fechada: false, qtd: its.length, itens: its.map(function (x) { return Object.assign({ tipo: "caju" }, x); }) }; });
+      alvo.innerHTML = typeof PnA_kanbanHtml_ === "function" ? PnA_kanbanHtml_(cols, { vazio: "Nenhuma viagem com dinheiro ainda. Quando uma viagem for aprovada, ela aparece aqui.", cor: function (x) { return x.cor; },
+        cartao: function (x) {
+          return '<div class="vg-kcard-rod" style="margin-top:0"><span class="vg-mono" style="font-size:11.5px;font-weight:600">' + CjT_esc_(x.numero) + "</span>" + (x.divAbertas ? '<span class="vg-selo urgente">' + x.divAbertas + " div.</span>" : "") + "</div>" +
+            '<div class="vg-kcard-dest">' + CjT_esc_(x.pessoa) + '</div><div class="vg-kcard-lin">' + CjT_esc_(x.destino) + " · " + CjT_esc_(String(x.saida).slice(0, 5)) + " a " + CjT_esc_(String(x.chegada).slice(0, 5)) + "</div>" +
+            '<div class="vg-kcard-lin">Carregado ' + CjT_esc_(x.carregadoTxt) + " · cartão " + CjT_esc_(x.gastoCartaoTxt) + "</div>" + '<div class="vg-kcard-rod"><span class="vg-chip">' + CjT_esc_(x.centro) + "</span>" + (x.coberta ? '<span class="vg-sub">saldo ' + CjT_esc_(x.saldoCartaoTxt) + "</span>" : '<span class="vg-sub">sem extrato</span>') + "</div>";
+        } }) : "";
+    } else {
+      var itens = l.filter(function (x) { return x.saidaIso && x.chegadaIso; }).map(function (x) { return Object.assign({ tipo: "caju", enviadoMs: Date.parse(x.saidaIso), fimMs: Date.parse(x.chegadaIso), aberto: false }, x); });
+      alvo.innerHTML = typeof PnA_ganttHtml_ === "function" ? PnA_ganttHtml_(itens, { largura: alvo.clientWidth || 1000, dias: 60, diasFrente: 30, agoraMs: Date.now(), cor: function (x) { return x.cor; },
+        agrupar: function (x) { return { chave: x.pessoaId || x.pessoa, rotulo: x.pessoa, sub: "" }; }, rotulo: function (x) { return x.numero.replace(/^VIA-\d{4}-/, "") + " " + x.destino; },
+        tip: function (x) { return x.numero + " · " + x.pessoa + " · " + x.colunaNome + " · carregado " + x.carregadoTxt; } }).replace("Nenhum chamado nesta janela. Aumente a janela ou veja o Kanban.", "Nenhuma viagem nos últimos 60 dias nem nos próximos 30. Veja o Kanban.") : "";
+    }
+    if (typeof PnA_ligar_ === "function") PnA_ligar_(alvo, function (tipo, id) { CjT_viagem_(id); });
+  }
+
+  // ---------- Conciliação de uma viagem ----------
+  function CjT_viagem_(id) {
+    CJ.vista = "viagem"; CJ.viagemId = id; CjT_desenharAbas_(); CjT_carregando_();
+    CjT_chamar_("viagem", { id: id }, CjT_desenharViagem_, CjT_falhou_, { livre: true });
+  }
+  function CjT_linhaHtml_(l, gastos, envolvido, extra) {
+    var id = CjT_esc_(l.id), h = '<div class="vg-item" id="cjLin_' + id + '" style="--vg-item:' + (l.situacao === "CONCILIADO" ? "#1d6b3f" : l.situacao === "DIVERGENTE" ? "#a61b1b" : "#a87406") + '"><div class="vg-item-cab"><b>' + CjT_esc_(l.data) + " · " + CjT_esc_(l.estabelecimento || l.descricao) + '</b><span><span class="vg-valor">' + CjT_esc_(l.valorTxt) + '</span> <span class="cj-sit s-' + CjT_esc_(l.situacao) + '">' + CjT_esc_(l.situacaoNome) + "</span></span></div>" +
+      '<div class="vg-sub">' + CjT_esc_(l.tipoNome) + " · " + CjT_esc_(l.usuarioNome || ("pessoa do extrato: " + l.pessoaTexto)) + (l.centroCaju ? " · centro " + CjT_esc_(l.centroCaju) : "") + (l.numero ? " · viagem " + CjT_esc_(l.numero) : "") + (l.regra === "MANUAL" ? " · ligada à mão" : "") + (l.motivo ? " · " + CjT_esc_(l.motivo) : "") + (l.fechada ? " · período fechado" : "") + "</div>";
+    if (!CjT_pode_("CAJU_CONCILIAR") || l.fechada || envolvido) return h + (extra ? '<div class="vg-acoes" style="margin-top:6px">' + extra + "</div>" : "") + "</div>";
+    var bt = extra ? [extra] : [];
+    if (!l.usuarioId) h += '<div class="vg-grade" style="margin-top:8px"><label class="vg-campo"><span>De quem é esta transação?</span><select id="cjPes_' + id + '">' + CjT_opcoes_((CJ.pessoas || []).map(function (p) { return [p.id, p.nome]; }), "", "Escolha") + '</select></label><label class="vg-campo" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="cjLem_' + id + '" checked style="width:18px;min-height:18px"><span>Lembrar este nome nas próximas importações</span></label></div>', bt.push(CjT_bt_("Definir a pessoa", "linPessoa", l.id));
+    if (gastos && l.tipo === "GASTO" && !l.gastoId && l.usuarioId) {
+      h += '<div class="vg-grade" style="margin-top:8px"><label class="vg-campo"><span>Ligar a um gasto da prestação</span><select id="cjLig_' + id + '">' + CjT_opcoes_(gastos.filter(function (g) { return !g.transacaoId && g.pagoCom !== "PROPRIO"; }).map(function (g) { return [g.id, "nº " + g.item + " · " + g.data + " · " + g.valorTxt + " · " + g.estabelecimento]; }), "", "Escolha o gasto") + '</select></label><label class="vg-campo"><span>Motivo (obrigatório se o valor for diferente)</span><input type="text" id="cjLigM_' + id + '" placeholder="Ex.: gorjeta paga à parte"></label></div>';
+      bt.push(CjT_bt_("Ligar ao gasto", "ligar", l.id, "cadx-btn-primario"));
+    }
+    if (l.regra === "MANUAL" || l.regra === "IGNORADA") bt.push(CjT_bt_(l.regra === "MANUAL" ? "Desfazer a ligação" : "Voltar a considerar", "linDesligar", l.id));
+    else if (l.situacao !== "IGNORADO" && l.situacao !== "CONCILIADO") bt.push(CjT_bt_("Desconsiderar (com motivo)", "linIgnorar", l.id, "cadx-btn-risco"));
+    return h + (bt.length ? '<div class="vg-acoes" style="margin-top:8px">' + bt.join("") + "</div>" : "") + "</div>";
+  }
+  function CjT_desenharViagem_(r) {
+    var v = r.viagem;
+    var h = '<div class="vg-acoes" style="margin:0 0 10px">' + CjT_bt_("Voltar", "aba", CJ.aba || "painel") + CjT_bt_("Abrir no Depósito de viagem", "abrirViagem", v.id) + "</div>" +
+      '<div class="vg-bloco"><div class="vg-topo"><div><span class="vg-num vg-mono">' + CjT_esc_(v.numero) + '</span><div class="vg-dest">' + CjT_esc_(v.pessoa) + " · " + CjT_esc_(v.destino || "") + '</div><span class="vg-sub">' + CjT_esc_(v.saida || "") + " a " + CjT_esc_(v.chegada || "") + " · " + CjT_esc_(v.centro || "") + " · " + CjT_esc_(v.vinculo || "") + '</span></div><div><span class="vg-selo" style="color:' + CjT_esc_(v.cor || "#555") + '">' + CjT_esc_(v.colunaNome) + "</span></div></div>" +
+      '<div class="cj-cards" style="margin-top:10px">' + [["Aprovado", v.aprovadoTxt], ["Carregado", v.carregadoTxt], ["Gasto no cartão", v.gastoCartaoTxt], ["Gasto lançado", v.gastoLancadoTxt || "—"], ["Saldo no cartão", v.coberta ? v.saldoCartaoTxt : "sem extrato"], ["Divergências abertas", v.divAbertas, v.divAbertas > 0]].map(function (c) { return '<div class="cj-card' + (c[2] ? " alerta" : "") + '"><span>' + CjT_esc_(c[0]) + "</span><b>" + CjT_esc_(c[1]) + "</b></div>"; }).join("") + "</div>" +
+      (r.envolvido ? '<div class="vg-faixa is-alerta">Você viaja ou pediu esta viagem: a conciliação dela é feita por outra pessoa do Financeiro (você só vê).</div>' : "") + "</div>";
+    h += '<div class="cj-lado"><div class="vg-bloco"><h3>Transações do cartão (' + r.linhas.length + ")</h3>" + (r.linhas.length ? r.linhas.map(function (l) { return CjT_linhaHtml_(l, r.gastos, r.envolvido); }).join("") : '<p class="vg-sub">Nenhuma transação do extrato ligada a esta viagem ainda.</p>') + "</div>" +
+      '<div class="vg-bloco"><h3>Gastos da prestação (' + r.gastos.length + ")</h3>" + (r.gastos.length ? r.gastos.map(function (g) {
+        var st = g.pagoCom === "PROPRIO" ? ["Dinheiro próprio", "#3E4852"] : g.conciliacao === "CONCILIADO" ? ["No extrato", "#1D6B3F"] : g.conciliacao === "DIVERGENTE" ? ["Divergente", "#A3261B"] : g.conciliacao === "SEM_TRANSACAO" ? ["Não está no extrato", "#A3261B"] : ["A conciliar", "#7A5200"];
+        return '<div class="vg-item"><div class="vg-item-cab"><b>Nº ' + CjT_esc_(g.item) + " · " + CjT_esc_(g.categoriaNome) + '</b><span><span class="vg-valor">' + CjT_esc_(g.valorTxt) + '</span> <span class="cj-sit" style="color:' + st[1] + '">' + CjT_esc_(st[0]) + "</span></span></div>" +
+          (g.semDescricao ? '<div class="vg-erro">Sem descrição de para que foi.</div>' : '<div class="vg-texto" style="margin:2px 0"><b>Para que foi:</b> ' + CjT_esc_(g.descricao) + "</div>") +
+          '<div class="vg-sub">' + CjT_esc_(g.data) + " · " + CjT_esc_(g.estabelecimento) + " · " + CjT_esc_(g.situacaoNome) + (g.comprovante && g.comprovante.url ? ' · <a href="' + CjT_esc_(g.comprovante.url) + '" target="_blank" rel="noopener">comprovante</a>' : "") + "</div></div>";
+      }).join("") : '<p class="vg-sub">Nenhum gasto lançado na prestação.</p>') + "</div></div>";
+    h += '<div class="vg-bloco"><h3>Créditos e acertos</h3>' + (r.cargas.length ? '<table class="vg-tabela"><thead><tr><th>Carga</th><th class="num">Valor</th><th>Como</th><th>Extrato</th></tr></thead><tbody>' + r.cargas.map(function (c) { return '<tr><td data-r="Carga">' + CjT_esc_(c.data) + '</td><td class="num" data-r="Valor">' + CjT_esc_(c.valorTxt) + '</td><td data-r="Como">' + CjT_esc_(c.origem) + '</td><td data-r="Extrato">' + (c.noExtrato ? "Conferida" : "Ainda não aparece") + "</td></tr>"; }).join("") + "</tbody></table>" : '<p class="vg-sub">Sem carga ainda.</p>') +
+      (r.acertos.length ? "<h4>Acertos</h4>" + r.acertos.map(function (a) { return '<p class="vg-texto">' + CjT_esc_(a.tipo) + " · " + CjT_esc_(a.data) + " · " + CjT_esc_(a.valorTxt) + " · " + (a.noExtrato ? "conferido no extrato" : "ainda não aparece no extrato") + "</p>"; }).join("") : "") + "</div>";
+    h += '<div class="vg-bloco"><h3>Divergências desta viagem (' + r.divergencias.length + ")</h3>" + (r.divergencias.length ? r.divergencias.map(function (d) { return CjT_divHtml_(d, r.envolvido); }).join("") : '<p class="vg-sub">Nenhuma.</p>') + "</div>";
+    CjT_$("cjCorpo").innerHTML = h;
+    if (!CJ.pessoas) CjT_chamar_("linhas", { situacao: "NENHUMA" }, function (x) { CJ.pessoas = x.pessoas; }, function () {}, { livre: true });
+    try { window.scrollTo(0, 0); } catch (e) {}
+  }
+
+  // ---------- Créditos ----------
+  function CjT_creditos_() { CjT_carregando_(); CjT_chamar_("creditos", {}, CjT_desenharCreditos_, CjT_falhou_, { livre: true }); }
+  function CjT_pedidoHtml_(p) {
+    var id = CjT_esc_(p.id), h = '<div class="vg-item" style="--vg-item:' + CjT_esc_(p.cor) + '"><div class="vg-item-cab"><b>' + CjT_esc_(p.numero) + " · " + CjT_esc_(p.pessoa) + '</b><span class="vg-item-sit" style="color:' + CjT_esc_(p.cor) + '">' + CjT_esc_(p.situacaoNome) + "</span></div>" +
+      '<div class="vg-sub">Crédito ' + CjT_esc_(p.valorTxt) + (p.taxaTxt ? " · taxa " + CjT_esc_(p.taxaTxt) : "") + (p.totalTxt ? " · total " + CjT_esc_(p.totalTxt) : "") + " · " + CjT_esc_(p.categoria) + (p.pedidoCaju ? " · pedido " + CjT_esc_(p.pedidoCaju) : "") + (p.ambiente !== "producao" ? " · HOMOLOGAÇÃO" : "") + " · por " + CjT_esc_(p.criadoPor) + " em " + CjT_esc_(p.criadoEm) + "</div>" +
+      (p.mensagem ? '<div class="vg-faixa is-alerta" style="margin:8px 0 0">' + CjT_esc_(p.mensagem) + "</div>" : "");
+    if (p.pix) h += '<label class="vg-campo largo" style="margin-top:8px"><span>Código PIX (copia e cola)</span><textarea class="cj-pix" id="cjPix_' + id + '" readonly rows="3">' + CjT_esc_(p.pix) + "</textarea></label>";
+    var bt = [];
+    if (CjT_pode_("CAJU_CARGA")) {
+      if (p.pix) bt.push(CjT_bt_("Copiar o código PIX", "copiarPix", p.id));
+      if (p.podeAtualizar) bt.push(CjT_bt_("Atualizar", "ped", p.id, "", ' data-x="pedidoAtualizar"'));
+      if (p.podePagarSaldo) bt.push(CjT_bt_(p.situacao === "SALDO_INSUFICIENTE" ? "Tentar de novo com o saldo" : "Pagar com o saldo", "ped", p.id, "cadx-btn-primario", ' data-x="pedidoPagarSaldo"'));
+      if (p.podePix) bt.push(CjT_bt_("Pagar por PIX", "ped", p.id, "", ' data-x="pedidoPagarPix"'));
+      if (p.podeCancelar) bt.push(CjT_bt_("Cancelar o pedido", "pedCancelar", p.id, "cadx-btn-risco"));
+    }
+    if (p.verificar) bt.push(CjT_bt_("Abrir a viagem para conferir", "abrirViagem", p.solicitacaoId, "cadx-btn-primario"));
+    return h + (bt.length ? '<div class="vg-acoes" style="margin-top:8px">' + bt.join("") + "</div>" : "") + '<div id="cjPed_' + id + '"></div></div>';
+  }
+  function CjT_desenharCreditos_(r) {
+    var h = '<div class="vg-faixa">Para que serve: <b>aprovado no SGO+ × pedido no Caju × creditado</b>. A carga é feita na própria viagem (Depósito de viagem > Carga no cartão > Fazer a carga pelo Caju); aqui ficam todos os pedidos, com pagamento, PIX, cancelamento e o acompanhamento. O SGO+ consulta o Caju sozinho a cada 15 minutos; "Atualizar todos" consulta agora.</div>';
+    h += '<div class="vg-bloco"><h3>Aprovadas aguardando a carga (' + r.aguardando.length + ")</h3>" + (r.aguardando.length ? '<table class="vg-tabela"><thead><tr><th>Viagem</th><th>Colaborador</th><th class="num">Falta carregar</th><th>Caju</th><th></th></tr></thead><tbody>' + r.aguardando.map(function (x) {
+      return '<tr><td data-r="Viagem">' + CjT_esc_(x.numero) + " · " + CjT_esc_(x.destino) + " · saída " + CjT_esc_(x.saida) + '</td><td data-r="Colaborador">' + CjT_esc_(x.pessoa) + '</td><td class="num" data-r="Falta">' + CjT_esc_(x.faltaTxt) + '</td><td data-r="Caju">' + (x.pedido ? CjT_esc_(x.pedido.situacaoNome) : x.vinculado ? "Vinculado" : '<span class="vg-erro">Sem vínculo no Caju</span>') + '</td><td data-r="">' + CjT_bt_("Abrir para fazer a carga", "abrirViagem", x.id) + "</td></tr>";
+    }).join("") + "</tbody></table>" : '<p class="vg-sub">Nenhuma viagem aprovada esperando a carga.</p>') + "</div>";
+    var vivos = r.pedidos.filter(function (p) { return !p.final; }), finais = r.pedidos.filter(function (p) { return p.final; });
+    h += '<div class="vg-bloco"><div class="vg-cat-cab"><h3 style="margin:0">Pedidos em andamento (' + vivos.length + ")</h3>" + (CjT_pode_("CAJU_CARGA") ? CjT_bt_("Atualizar todos", "pedTodos", "") : "") + "</div>" + (vivos.length ? '<div class="vg-itens" style="margin-top:10px">' + vivos.map(CjT_pedidoHtml_).join("") + "</div>" : '<p class="vg-sub">Nenhum pedido em andamento.</p>') + "</div>";
+    h += '<div class="vg-bloco"><h3>Aprovado × carregado × conferido no extrato</h3>' + (r.viagens.length ? '<div class="cj-rolar"><table class="vg-tabela"><thead><tr><th>Viagem</th><th>Colaborador</th><th class="num">Aprovado</th><th class="num">Carregado</th><th class="num">Pelo Caju</th><th class="num">Manual</th><th class="num">Taxas</th><th class="num">No extrato</th><th>Situação</th></tr></thead><tbody>' + r.viagens.map(function (v) {
+      return '<tr><td data-r="Viagem">' + CjT_esc_(v.numero) + " · " + CjT_esc_(v.centro) + '</td><td data-r="Colaborador">' + CjT_esc_(v.pessoa) + '</td><td class="num" data-r="Aprovado">' + CjT_esc_(v.aprovadoTxt) + '</td><td class="num" data-r="Carregado">' + CjT_esc_(v.carregadoTxt) + '</td><td class="num" data-r="Pelo Caju">' + CjT_esc_(v.cajuTxt) + '</td><td class="num" data-r="Manual">' + CjT_esc_(v.manualTxt) + '</td><td class="num" data-r="Taxas">' + CjT_esc_(v.taxaTxt) + '</td><td class="num" data-r="No extrato">' + CjT_esc_(v.noExtratoTxt) + '</td><td data-r="Situação">' + (v.situacao === "ACIMA" ? '<span class="vg-erro">' + CjT_esc_(v.situacaoNome) + "</span>" : CjT_esc_(v.situacaoNome)) + (v.conferidoNoExtrato ? " · conferido no extrato" : "") + "</td></tr>";
+    }).join("") + "</tbody></table></div>" : '<p class="vg-sub">Nenhuma carga ainda.</p>') + "</div>";
+    if (finais.length) h += '<details class="vg-det"><summary><h3>Pedidos encerrados (' + finais.length + ')</h3></summary><div class="vg-det-corpo"><div class="vg-itens">' + finais.map(CjT_pedidoHtml_).join("") + "</div></div></details>";
+    CjT_$("cjCorpo").innerHTML = h;
+  }
+  function CjT_pedidoAcao_(acao, id) { CjT_chamar_(acao, { pedidoId: id }, function (r) { CjT_msg_(r.message, "ok"); CjT_creditos_(); CjT_atualizarIni_(); }); }
+  function CjT_pedidoCancelarAbrir_(id) {
+    var el = CjT_$("cjPed_" + id); if (!el) return;
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:8px"><label class="vg-campo largo"><span>Motivo do cancelamento *</span><textarea id="cjCancM_' + CjT_esc_(id) + '" placeholder="Ex.: viagem adiada pelo cliente"></textarea><span class="vg-dica">O pedido é cancelado também no Caju.</span></label><div class="vg-acoes"><button type="button" class="cadx-btn cadx-btn-risco-cheio" id="cjCancOk_' + CjT_esc_(id) + '">Confirmar o cancelamento</button>' + CjT_bt_("Desistir", "fechaCaixa", "cjPed_" + id) + "</div></div>";
+    CjT_$("cjCancOk_" + id).onclick = function () { CjT_chamar_("pedidoCancelar", { pedidoId: id, motivo: CjT_v_("cjCancM_" + id) }, function (r) { CjT_msg_(r.message, "ok"); CjT_creditos_(); CjT_atualizarIni_(); }); };
+  }
+  function CjT_copiar_(id) {
+    var t = CjT_$("cjPix_" + id); if (!t) return;
+    var ok = function () { CjT_msg_("Código PIX copiado. Cole no aplicativo do banco da empresa.", "ok"); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(t.value).then(ok, function () { t.select(); document.execCommand("copy"); ok(); }); return; } } catch (e) {}
+    try { t.select(); document.execCommand("copy"); ok(); } catch (e) { CjT_erro_("O navegador não deixou copiar: selecione o código e copie à mão."); }
+  }
+
+  // ---------- Importar extrato ----------
+  function CjT_extrato_() {
+    var corpo = CjT_$("cjCorpo");
+    corpo.innerHTML = '<div class="vg-faixa">Para que serve: trazer para o SGO+ o que foi gasto nos cartões Caju. No <b>Portal do RH do Caju</b>, exporte o <b>extrato de despesas em CSV</b> do período e escolha o arquivo aqui. O SGO+ mostra a <b>prévia</b>: confira se cada informação está na coluna certa (dá para trocar) e importe. O arquivo original fica guardado; linha já importada não entra duas vezes; depois de importar, a conciliação roda sozinha.</div>' +
+      (CjT_pode_("CAJU_CONCILIAR") ? '<div class="vg-bloco is-acao"><h3>1. Escolha o arquivo CSV</h3><label class="vg-campo largo"><span>Extrato do Caju (CSV)</span><input type="file" id="cjArq" accept=".csv,.txt,text/csv,text/plain"></label><div id="cjPrevia"></div></div>' : '<div class="vg-faixa is-neutra">A importação é do Financeiro. Você vê as importações feitas.</div>') +
+      '<div class="vg-bloco"><h3>Importações</h3><div id="cjImps"><p class="vg-sub">Carregando…</p></div></div>';
+    var inp = CjT_$("cjArq");
+    if (inp) inp.onchange = function () {
+      var f = inp.files && inp.files[0]; if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { CjT_erro_("O arquivo passa de 5 MB. Exporte um período menor (por exemplo, um mês)."); return; }
+      var rd = new FileReader();
+      rd.onload = function () { CJ.ext = { arq: { nome: f.name, tipo: f.type || "text/csv", base64: String(rd.result || "").replace(/^data:[^,]*,/, "") }, previa: null }; CjT_extPrevia_(true); };
+      rd.onerror = function () { CjT_erro_("O navegador não conseguiu ler o arquivo. Escolha de novo."); };
+      rd.readAsDataURL(f);
+    };
+    CjT_chamar_("importacoes", {}, function (r) { CjT_desenharImps_(r.importacoes); }, function (m) { CjT_$("cjImps").innerHTML = '<div class="vg-faixa is-erro">' + CjT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  function CjT_mapaDaTela_() {
+    var m = {}; ((CJ.ext.previa && CJ.ext.previa.campos) || []).forEach(function (c) { var v = CjT_v_("cjMap_" + c.cod); if (v !== "") m[c.cod] = Number(v); }); return m;
+  }
+  function CjT_extPrevia_(primeira) {
+    if (!CJ.ext.arq) return CjT_erro_("Escolha o arquivo CSV do extrato.");
+    var d = { arquivo: CJ.ext.arq };
+    if (!primeira && CJ.ext.previa) { d.mapa = CjT_mapaDaTela_(); d.sinal = CjT_v_("cjSinal"); }
+    CjT_chamar_("extratoPrevia", d, function (r) { CJ.ext.previa = r; CjT_desenharPrevia_(r); });
+  }
+  function CjT_desenharPrevia_(p) {
+    var el = CjT_$("cjPrevia"); if (!el) return;
+    var cols = p.cabecalho.map(function (c) { return [c.indice, (c.indice + 1) + ". " + c.nome]; });
+    var h = '<h3 class="vg-tit" style="margin-top:14px">2. Confira a prévia</h3>' + (p.jaImportado ? '<div class="vg-faixa is-erro">' + CjT_esc_(p.jaImportado) + "</div>" : "") +
+      '<p class="vg-texto">Cabeçalho na linha ' + p.linhaCabecalho + ", separador " + CjT_esc_(p.separador) + ". " + p.total + " linhas: " + p.validas + " legíveis" + (p.invalidas ? ", " + p.invalidas + " com erro" : "") + (p.repetidas ? ", " + p.repetidas + " já importadas (serão puladas)" : "") + (p.semPessoa ? ", " + p.semPessoa + " sem pessoa reconhecida" : "") + ". Período: " + CjT_esc_(p.de) + " a " + CjT_esc_(p.ate) + ". " + (p.mapaGuardado ? "Mapeamento lembrado da última importação deste formato." : "Mapeamento sugerido pelo nome das colunas: confira.") + "</p>" +
+      '<div class="cj-mapa">' + p.campos.map(function (c) { return '<label class="vg-campo"><span>' + CjT_esc_(c.nome) + (c.obrig ? " *" : "") + '</span><select id="cjMap_' + c.cod + '">' + CjT_opcoes_(cols, p.mapa[c.cod] === undefined ? "" : p.mapa[c.cod], "(não tem)") + "</select></label>"; }).join("") +
+      '<label class="vg-campo"><span>Sinal do valor</span><select id="cjSinal">' + CjT_opcoes_(Object.keys(p.sinais).map(function (k) { return [k, p.sinais[k]]; }), p.sinal) + "</select></label></div>" +
+      (p.faltas.length ? '<div class="vg-faixa is-erro" style="margin-top:8px">Falta escolher ' + CjT_esc_(p.faltas.join(", ")) + ".</div>" : "") +
+      '<div class="cj-rolar" style="margin-top:10px"><table class="vg-tabela"><thead><tr><th>Linha</th><th>Data</th><th>Tipo</th><th>Estabelecimento</th><th>Pessoa</th><th class="num">Valor</th><th>Situação</th></tr></thead><tbody>' + p.amostra.map(function (l) {
+        return '<tr><td data-r="Linha">' + l.n + '</td><td data-r="Data">' + CjT_esc_(l.data) + '</td><td data-r="Tipo">' + CjT_esc_(l.tipoNome) + '</td><td data-r="Estabelecimento">' + CjT_esc_(l.estabelecimento) + '</td><td data-r="Pessoa">' + CjT_esc_(l.pessoa) + (l.reconhecida ? " → " + CjT_esc_(l.reconhecida) : l.ok ? ' <span class="vg-erro">(não reconhecida)</span>' : "") + '</td><td class="num" data-r="Valor">' + CjT_esc_(l.valorTxt) + '</td><td data-r="Situação">' + (l.ok ? (l.repetida ? "já importada" : "ok") : '<span class="vg-erro">' + CjT_esc_(l.erros.join(", ")) + "</span>") + "</td></tr>";
+      }).join("") + "</tbody></table></div>" + (p.total > p.amostra.length ? '<p class="vg-sub">Mostrando as ' + p.amostra.length + " primeiras linhas.</p>" : "") +
+      '<div class="vg-acoes">' + CjT_bt_("Ver a prévia de novo com este mapeamento", "extPrevia", "") + CjT_bt_("Importar estas linhas", "extImportar", "", "cadx-btn-primario cadx-btn-grande", p.faltas.length || p.jaImportado ? " disabled" : "") + "</div>";
+    el.innerHTML = h;
+  }
+  function CjT_extImportar_() {
+    var p = CJ.ext.previa; if (!p) return;
+    CjT_perguntar_("Importar o extrato?", "Entram as linhas legíveis que ainda não foram importadas (" + (p.validas - p.repetidas) + "). O arquivo original fica guardado e a conciliação roda em seguida.",
+      [{ rotulo: "Importar", prim: true, fn: function () { CjT_chamar_("extratoImportar", { arquivo: CJ.ext.arq, mapa: CjT_mapaDaTela_(), sinal: CjT_v_("cjSinal"), confirmar: true }, function (r) { CJ.ext = { arq: null, previa: null }; CjT_extrato_(); CjT_msg_(r.message, "ok"); CjT_atualizarIni_(); }); } }, { rotulo: "Voltar" }]);
+  }
+  function CjT_desenharImps_(l) {
+    var el = CjT_$("cjImps"); if (!el) return;
+    el.innerHTML = l.length ? l.map(function (x) {
+      return '<div class="vg-item" style="--vg-item:' + (x.desfeita ? "#52606d" : "#1d6b3f") + '"><div class="vg-item-cab"><b>' + CjT_esc_(x.arquivo) + "</b><span>" + (x.desfeita ? '<span class="cj-sit s-IGNORADO">Desfeita</span>' : "") + "</span></div>" +
+        '<div class="vg-sub">' + CjT_esc_(x.em) + " · " + CjT_esc_(x.por) + " · " + x.importadas + " linhas novas, " + x.repetidas + " repetidas, " + x.ignoradas + " com erro · " + CjT_esc_(x.de) + " a " + CjT_esc_(x.ate) + " · gastos " + CjT_esc_(x.gastosTxt) + (x.url ? ' · <a href="' + CjT_esc_(x.url) + '" target="_blank" rel="noopener">arquivo original</a>' : "") + "</div>" +
+        (x.desfeita ? '<div class="vg-sub">Desfeita por ' + CjT_esc_(x.desfeitaPor) + " em " + CjT_esc_(x.desfeitaEm) + ": " + CjT_esc_(x.desfeitaMotivo) + "</div>" : CjT_pode_("CAJU_CONCILIAR") ? '<div class="vg-acoes" style="margin-top:6px">' + CjT_bt_("Desfazer esta importação", "impDesfazer", x.id, "cadx-btn-risco") + "</div>" : "") + '<div id="cjDes_' + CjT_esc_(x.id) + '"></div></div>';
+    }).join("") : '<p class="vg-sub">Nenhum extrato importado ainda.</p>';
+  }
+  function CjT_desfazerAbrir_(id) {
+    var el = CjT_$("cjDes_" + id); if (!el) return;
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:8px"><label class="vg-campo largo"><span>Por que desfazer *</span><textarea id="cjDesM_' + CjT_esc_(id) + '" placeholder="Ex.: arquivo do mês errado"></textarea><span class="vg-dica">15 letras ou mais. As linhas saem da conciliação; o arquivo original continua guardado.</span></label><div class="vg-acoes">' + CjT_bt_("Confirmar", "impDesfazerOk", id, "cadx-btn-risco-cheio") + CjT_bt_("Desistir", "fechaCaixa", "cjDes_" + id) + "</div></div>";
+  }
+
+  // ---------- Transações ----------
+  function CjT_transacoes_() {
+    CjT_carregando_();
+    CjT_chamar_("linhas", { situacao: CJ.linSit }, function (r) {
+      CJ.pessoas = r.pessoas;
+      var h = '<div class="vg-faixa">Para que serve: cada linha do extrato importado e como ela foi conciliada. Ligada ao gasto da prestação = conciliada. O que não casou tem divergência (veja a aba Divergências). Para ligar uma transação a um gasto, abra a viagem.</div>' +
+        '<div class="vg-filtros"><label class="vg-campo"><span>Situação</span><select id="cjLinSit">' + CjT_opcoes_(Object.keys(r.situacoes).map(function (k) { return [k, r.situacoes[k]]; }), CJ.linSit, "Todas") + '</select></label><button type="button" class="cadx-btn" id="cjLinAplicar">Aplicar</button>' + (CjT_pode_("CAJU_CONCILIAR") ? CjT_bt_("Conciliar agora", "conciliar", "", "cadx-btn-primario") : "") + "</div>";
+      h += r.linhas.length ? '<div class="vg-itens">' + r.linhas.map(function (l) { return CjT_linhaHtml_(l, null, false, l.solicitacaoId ? CjT_bt_("Ver a conciliação da viagem", "viagem", l.solicitacaoId) : ""); }).join("") + "</div>" + (r.total > r.linhas.length ? '<p class="vg-sub">Mostrando ' + r.linhas.length + " de " + r.total + ".</p>" : "") : CjT_vazio_("Nenhuma transação.", " Importe o extrato do Caju na aba Importar extrato.");
+      CjT_$("cjCorpo").innerHTML = h;
+      CjT_$("cjLinAplicar").onclick = function () { CJ.linSit = CjT_v_("cjLinSit"); CjT_transacoes_(); };
+    }, CjT_falhou_, { livre: true });
+  }
+  function CjT_acaoLinha_(acao, dados, daViagem) {
+    CjT_chamar_(acao, dados, function (r) { CjT_msg_(r.message, "ok"); CjT_atualizarIni_(); if (CJ.vista === "viagem") CjT_viagem_(CJ.viagemId); else CjT_irAba_(CJ.aba); });
+  }
+
+  // ---------- Divergências ----------
+  function CjT_divHtml_(d, envolvido) {
+    var id = CjT_esc_(d.id), h = '<div class="vg-item" id="cjDiv_' + id + '" style="--vg-item:' + (d.situacao === "ABERTA" ? "#a61b1b" : "#1d6b3f") + '"><div class="vg-item-cab"><b>' + CjT_esc_(d.tipoNome) + (d.numero ? " · " + CjT_esc_(d.numero) : "") + '</b><span><span class="vg-valor">' + CjT_esc_(d.valorTxt) + '</span> <span class="cj-sit s-' + CjT_esc_(d.situacao) + '">' + CjT_esc_(d.situacaoNome) + "</span></span></div>" +
+      '<p class="vg-texto" style="margin:4px 0">' + CjT_esc_(d.descricao) + "</p>" + '<div class="vg-sub"><b>Dono:</b> ' + CjT_esc_(d.dono) + (d.avisadoEm ? " (avisado em " + CjT_esc_(d.avisadoEm) + " por " + CjT_esc_(d.avisadoPor) + ")" : "") + " · desde " + CjT_esc_(d.criada) + (d.centro ? " · " + CjT_esc_(d.centro) : "") + (d.fechada ? " · período fechado" : "") + "</div>" +
+      (d.situacao === "ABERTA" ? '<div class="vg-sub"><b>O que fazer:</b> ' + CjT_esc_(d.oQueFazer) + "</div>" : '<div class="vg-sub"><b>' + CjT_esc_(d.resolucaoNome) + ":</b> " + CjT_esc_(d.motivo) + (d.resolvidaPor ? " (" + CjT_esc_(d.resolvidaPor) + ", " + CjT_esc_(d.resolvidaEm) + ")" : "") + "</div>");
+    var bt = [];
+    if (d.solicitacaoId && CJ.vista !== "viagem") bt.push(CjT_bt_("Ver a viagem", "viagem", d.solicitacaoId));
+    if (CjT_pode_("CAJU_CONCILIAR") && !d.fechada && !envolvido) {
+      if (d.situacao === "ABERTA") { bt.push(CjT_bt_("Resolver (com motivo)", "divResolver", d.id, "cadx-btn-primario")); if (d.donoId) bt.push(CjT_bt_("Avisar " + d.dono.split(" ")[0], "divAvisar", d.id)); }
+      else if (d.situacao === "RESOLVIDA") bt.push(CjT_bt_("Reabrir", "divReabrir", d.id));
+    }
+    return h + (bt.length ? '<div class="vg-acoes" style="margin-top:8px">' + bt.join("") + "</div>" : "") + '<div id="cjDivR_' + id + '"></div></div>';
+  }
+  function CjT_divResolverAbrir_(id) {
+    var el = CjT_$("cjDivR_" + id) || CjT_$("cjDiv_" + id); if (!el) return;
+    var res = CJ.resolucoes || { JUSTIFICADA: "Aceita com justificativa", CORRIGIDA: "Corrigida", GLOSA: "Vai para glosa", DESCONSIDERADA: "Não é gasto de viagem" };
+    el.innerHTML = '<div class="vg-faixa is-alerta" style="margin-top:8px"><div class="vg-grade"><label class="vg-campo"><span>Como foi resolvida *</span><select id="cjRes_' + CjT_esc_(id) + '">' + CjT_opcoes_(Object.keys(res).map(function (k) { return [k, res[k]]; }), "", "Escolha") + '</select></label>' +
+      '<label class="vg-campo largo"><span>Motivo *</span><textarea id="cjMot_' + CjT_esc_(id) + '" placeholder="Ex.: gorjeta paga à parte; comprovante apresentado"></textarea><span class="vg-dica">15 letras ou mais. Vai para o histórico e para o A4 do fechamento.</span></label></div>' +
+      '<div class="vg-acoes">' + CjT_bt_("Confirmar", "divResolverOk", id, "cadx-btn-primario") + CjT_bt_("Desistir", "fechaCaixa", "cjDivR_" + id) + "</div></div>";
+  }
+  function CjT_divergencias_() {
+    CjT_carregando_();
+    CjT_chamar_("divergencias", { situacao: CJ.divSit }, function (r) {
+      CJ.resolucoes = r.resolucoes;
+      var h = '<div class="vg-faixa">Para que serve: o que o cruzamento do extrato com a prestação encontrou. Cada divergência tem o <b>dono</b> (quem precisa agir) e <b>o que fazer</b>. Resolva com o motivo, avise o dono ou corrija na prestação: quando a condição deixa de existir, ela é sanada sozinha na próxima conciliação.</div>' +
+        '<div class="vg-filtros"><label class="vg-campo"><span>Situação</span><select id="cjDivSit">' + CjT_opcoes_([["ABERTA", "Abertas"], ["RESOLVIDA", "Resolvidas com motivo"], ["SANADA", "Sanadas sozinhas"], ["TODAS", "Todas"]], CJ.divSit) + '</select></label><button type="button" class="cadx-btn" id="cjDivAplicar">Aplicar</button></div>' +
+        '<div class="vg-chips" style="margin:0 0 10px">' + r.tipos.filter(function (t) { return t.abertas; }).map(function (t) { return '<span class="vg-chip">' + CjT_esc_(t.nome) + ": " + t.abertas + "</span>"; }).join("") + "</div>";
+      h += r.divergencias.length ? '<div class="vg-itens">' + r.divergencias.map(function (d) { return CjT_divHtml_(d, false); }).join("") + "</div>" : CjT_vazio_(CJ.divSit === "ABERTA" ? "Nenhuma divergência aberta." : "Nenhuma divergência.", CJ.divSit === "ABERTA" ? " Tudo o que foi importado bate com a prestação, ou ainda não há extrato importado." : "");
+      CjT_$("cjCorpo").innerHTML = h;
+      CjT_$("cjDivAplicar").onclick = function () { CJ.divSit = CjT_v_("cjDivSit"); CjT_divergencias_(); };
+    }, CjT_falhou_, { livre: true });
+  }
+
+  // ---------- Fechamento ----------
+  function CjT_periodoPadrao_() { var h = CjT_hoje_(), d = new Date(h.slice(0, 4), Number(h.slice(5, 7)) - 1, 0); var p = function (n) { return ("0" + n).slice(-2); }; return { de: d.getFullYear() + "-" + p(d.getMonth() + 1) + "-01", ate: d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) }; }
+  function CjT_fechamento_() {
+    var pp = CJ.fech || CjT_periodoPadrao_();
+    CjT_$("cjCorpo").innerHTML = '<div class="vg-faixa">Para que serve: fechar o período (normalmente o mês) por centro de custo, com o A4. Depois de fechado, as transações e divergências do período não mudam mais (só reabrindo, com o motivo). Entram as viagens que chegaram no período.</div>' +
+      '<div class="vg-bloco is-acao"><h3>1. Período e centro de custo</h3><div class="vg-grade"><label class="vg-campo"><span>De *</span><input type="date" id="cjFDe" value="' + CjT_esc_(pp.de) + '"></label><label class="vg-campo"><span>Até *</span><input type="date" id="cjFAte" value="' + CjT_esc_(pp.ate) + '"></label>' +
+      '<label class="vg-campo"><span>Centro de custo</span><input type="text" id="cjFCc" value="' + CjT_esc_(pp.centro || "") + '" placeholder="Vazio = todos (ex.: GO-TECNICA)"></label></div><div class="vg-acoes">' + CjT_bt_("Ver a prévia", "fechPrevia", "", "cadx-btn-primario") + CjT_bt_("A4 da prévia", "rel", "", "", ' data-x="FECHAMENTO"') + '</div><div id="cjFPrev"></div></div>' +
+      '<div class="vg-bloco"><h3>Fechamentos</h3><div id="cjFLista"><p class="vg-sub">Carregando…</p></div></div>';
+    CjT_chamar_("fechamentos", {}, function (r) {
+      CjT_$("cjFLista").innerHTML = r.fechamentos.length ? r.fechamentos.map(function (f) {
+        return '<div class="vg-item" style="--vg-item:' + (f.situacao === "FECHADO" ? "#1f2933" : "#a87406") + '"><div class="vg-item-cab"><b>' + CjT_esc_(f.numero) + " · " + CjT_esc_(f.de) + " a " + CjT_esc_(f.ate) + " · " + CjT_esc_(f.centro) + '</b><span class="cj-sit">' + (f.situacao === "FECHADO" ? "Fechado" : "Reaberto") + "</span></div>" +
+          '<div class="vg-sub">' + f.viagens + " viagens · carregado " + CjT_esc_(f.carregadoTxt) + " · gasto no cartão " + CjT_esc_(f.gastoCartaoTxt) + " · por " + CjT_esc_(f.por) + " em " + CjT_esc_(f.em) + (f.ressalva ? " · com ressalva: " + CjT_esc_(f.ressalva) : "") + (f.reabertoEm ? " · reaberto por " + CjT_esc_(f.reabertoPor) + " em " + CjT_esc_(f.reabertoEm) + ": " + CjT_esc_(f.reabertoMotivo) : "") + "</div>" +
+          '<div class="vg-acoes" style="margin-top:6px">' + CjT_bt_("Abrir o A4", "rel", f.id, "", ' data-x="FECHAMENTO"') + CjT_bt_("Baixar o A4", "relBaixar", f.id, "", ' data-x="FECHAMENTO"') + (f.situacao === "FECHADO" && CjT_pode_("CAJU_FECHAR") ? CjT_bt_("Reabrir (com motivo)", "fechReabrir", f.id, "cadx-btn-risco") : "") + '</div><div id="cjFech_' + CjT_esc_(f.id) + '"></div></div>';
+      }).join("") : '<p class="vg-sub">Nenhum período fechado ainda.</p>';
+    }, function (m) { CjT_$("cjFLista").innerHTML = '<div class="vg-faixa is-erro">' + CjT_esc_(m) + "</div>"; }, { livre: true });
+  }
+  function CjT_lerFech_() { CJ.fech = { de: CjT_v_("cjFDe"), ate: CjT_v_("cjFAte"), centro: CjT_v_("cjFCc").toUpperCase() }; return CJ.fech; }
+  function CjT_fechPrevia_() {
+    var p = CjT_lerFech_();
+    CjT_chamar_("fechamentoPrevia", p, function (r) {
+      var s = r.resumo, h = '<h3 class="vg-tit" style="margin-top:14px">2. Prévia: ' + CjT_esc_(s.de) + " a " + CjT_esc_(s.ate) + " · " + CjT_esc_(s.centro) + "</h3>" +
+        '<div class="cj-cards">' + [["Viagens", s.viagens], ["Transações", s.transacoes], ["Aprovado", s.aprovadoTxt], ["Carregado", s.carregadoTxt], ["Taxas", s.taxaTxt], ["Gasto no cartão", s.gastoCartaoTxt], ["Lançado", s.gastoLancadoTxt], ["Aceito", s.aceitoTxt], ["Devolvido", s.devolvidoTxt], ["Saldo no cartão", s.saldoCartaoTxt], ["Divergências abertas", s.divAbertas, s.divAbertas > 0]].map(function (c) { return '<div class="cj-card' + (c[2] ? " alerta" : "") + '"><span>' + CjT_esc_(c[0]) + "</span><b>" + CjT_esc_(c[1]) + "</b></div>"; }).join("") + "</div>";
+      if (r.sobrepostos.length) h += '<div class="vg-faixa is-erro">O período se sobrepõe a: ' + CjT_esc_(r.sobrepostos.join("; ")) + ". Escolha outro período ou reabra aquele.</div>";
+      if (s.pendencias.length) h += '<div class="vg-faixa is-alerta"><b>Pendências:</b><ul>' + s.pendencias.map(function (x) { return "<li>" + CjT_esc_(x) + "</li>"; }).join("") + "</ul>O melhor é resolver antes. Se precisar fechar assim, escreva a ressalva: ela sai no A4.</div>";
+      if (r.podeFechar) h += (r.exigeRessalva ? '<label class="vg-campo largo"><span>Ressalva *</span><textarea id="cjFRess" placeholder="Ex.: divergências repassadas ao gestor para cobrança dos comprovantes"></textarea><span class="vg-dica">20 letras ou mais.</span></label>' : "") + '<div class="vg-acoes">' + CjT_bt_("Fechar o período", "fechar", "", "cadx-btn-primario cadx-btn-grande") + "</div>";
+      else if (!CjT_pode_("CAJU_FECHAR")) h += '<p class="vg-sub">O fechamento é do Financeiro.</p>';
+      CjT_$("cjFPrev").innerHTML = h;
+    });
+  }
+  function CjT_fechar_() {
+    var p = CjT_lerFech_(); p.ressalva = CjT_v_("cjFRess");
+    CjT_perguntar_("Fechar o período?", "Depois de fechado, as transações e divergências do período não mudam mais (só reabrindo, com o motivo). O A4 do fechamento fica na lista.",
+      [{ rotulo: "Fechar", prim: true, fn: function () { CjT_chamar_("fechar", p, function (r) { CjT_fechamento_(); CjT_msg_(r.message, "ok"); CjT_atualizarIni_(); }); } }, { rotulo: "Voltar" }]);
+  }
+
+  // ---------- Relatórios A4 ----------
+  function CjT_relatorios_() {
+    var r = CJ.rel, pp = CjT_periodoPadrao_(); if (!r.de) { r.de = pp.de; r.ate = pp.ate; }
+    var tipos = [["INDIVIDUAL", "Individual (por colaborador)", "Todas as viagens em que a pessoa levou o dinheiro: carregado, gasto por categoria, cada comprovante com para que foi, glosas, devolvido, pendências e a conciliação."],
+      ["GERAL", "Geral do período", "Por colaborador, por centro de custo, por cliente ou O.S. e por categoria, com totais, gráficos, divergências abertas e índice."],
+      ["DIVERGENCIAS", "Divergências", "Todas as divergências do período, com o dono, o que fazer e como foram resolvidas."], ["CREDITOS", "Créditos pedidos ao Caju", "Pedidos de crédito pela API: situação, valor, taxa e total cobrado."], ["FECHAMENTO", "Prévia do fechamento", "O A4 do fechamento antes de fechar (o fechado está na aba Fechamento)."]];
+    var h = '<div class="vg-faixa">Para que serve: os relatórios em folha A4 (HTML), para abrir, imprimir, salvar em PDF ou baixar e mandar. O colaborador gera o próprio relatório individual em Depósito de viagem > Relatórios A4.</div>' +
+      '<div class="vg-bloco"><h3>1. Escolha o relatório</h3><div class="vg-tipos" role="radiogroup">' + tipos.map(function (t) { return '<label class="vg-tipo' + (r.tipo === t[0] ? " is-sel" : "") + '"><input type="radio" name="cjRelTipo" value="' + t[0] + '"' + (r.tipo === t[0] ? " checked" : "") + '><span><b>' + CjT_esc_(t[1]) + "</b>" + CjT_esc_(t[2]) + "</span></label>"; }).join("") + "</div>" +
+      '<h3 class="vg-tit">2. Período e filtros</h3><div class="vg-grade"><label class="vg-campo"><span>De *</span><input type="date" id="cjRDe" value="' + CjT_esc_(r.de) + '"></label><label class="vg-campo"><span>Até *</span><input type="date" id="cjRAte" value="' + CjT_esc_(r.ate) + '"></label>' +
+      '<label class="vg-campo"><span>Centro de custo</span><input type="text" id="cjRCc" value="' + CjT_esc_(r.centro || "") + '" placeholder="Vazio = todos"></label>' +
+      (r.tipo === "INDIVIDUAL" ? '<label class="vg-campo"><span>Colaborador *</span><select id="cjRPes">' + CjT_opcoes_((CJ.pessoas || []).map(function (p) { return [p.id, p.nome]; }), r.pessoa || "", "Escolha") + "</select></label>" : "") + "</div>" +
+      '<h3 class="vg-tit" style="margin-top:16px">3. Gere</h3><div class="vg-acoes" style="margin-top:0">' + CjT_bt_("Gerar e abrir o A4", "rel", "", "cadx-btn-primario cadx-btn-grande") + CjT_bt_("Baixar o arquivo (.html)", "relBaixar", "", "cadx-btn-grande") + "</div></div>";
+    CjT_$("cjCorpo").innerHTML = h;
+    CjT_$("cjCorpo").querySelectorAll('input[name="cjRelTipo"]').forEach(function (i) { i.onchange = function () { CjT_lerRel_(); CJ.rel.tipo = i.value; CjT_relatorios_(); }; });
+    if (!CJ.pessoas) CjT_chamar_("linhas", { situacao: "NENHUMA" }, function (x) { CJ.pessoas = x.pessoas; if (CJ.aba === "relatorios" && CJ.rel.tipo === "INDIVIDUAL") CjT_relatorios_(); }, function () {}, { livre: true });
+  }
+  function CjT_lerRel_() { if (CjT_$("cjRDe")) { CJ.rel.de = CjT_v_("cjRDe"); CJ.rel.ate = CjT_v_("cjRAte"); CJ.rel.centro = CjT_v_("cjRCc").toUpperCase(); CJ.rel.pessoa = CjT_v_("cjRPes"); } }
+  function CjT_relatorio_(tipo, id, baixar) {
+    var d;
+    if (tipo === "FECHAMENTO" && id) d = { tipo: "FECHAMENTO", id: id };
+    else if (tipo === "FECHAMENTO" && CjT_$("cjFDe")) { var f = CjT_lerFech_(); d = { tipo: "FECHAMENTO", de: f.de, ate: f.ate, centro: f.centro }; }
+    else { CjT_lerRel_(); var r = CJ.rel; d = { tipo: r.tipo, de: r.de, ate: r.ate, centro: r.centro, pessoa: r.pessoa }; if (!d.de || !d.ate) return CjT_erro_("Escolha o período (De e Até)."); if (d.tipo === "INDIVIDUAL" && !d.pessoa) return CjT_erro_("Escolha o colaborador."); }
+    var w = baixar ? null : window.open("", "_blank");
+    if (w) { try { w.document.write('<p style="font-family:sans-serif;padding:24px">Gerando o relatório A4…</p>'); } catch (e) {} }
+    CjT_chamar_("relatorio", d, function (res) {
+      if (!baixar) { if (w) { w.document.open(); w.document.write(res.html); w.document.close(); } else CjT_erro_("O navegador bloqueou a janela do relatório. Permita janelas do SGO+ e toque de novo."); return; }
+      try {
+        var blob = new Blob([res.html], { type: "text/html;charset=utf-8" }), url = URL.createObjectURL(blob), a = document.createElement("a");
+        a.href = url; a.download = res.nomeArquivo || "relatorio-caju.html"; document.body.appendChild(a); a.click();
+        setTimeout(function () { try { URL.revokeObjectURL(url); a.remove(); } catch (e) {} }, 1500);
+        CjT_msg_("O arquivo " + (res.nomeArquivo || "") + " foi baixado (veja a pasta Downloads).", "ok");
+      } catch (e) { CjT_erro_("O navegador não deixou baixar. Use \"Gerar e abrir o A4\" e salve pelo Imprimir do navegador."); }
+    }, function (m) { if (w) try { w.close(); } catch (e) {} CjT_erro_(m); }, { livre: true });
+  }
+
+  // ---------- Colaboradores ----------
+  function CjT_colaboradores_() { CjT_carregando_(); CjT_chamar_("colaboradores", {}, CjT_desenharColab_, CjT_falhou_, { livre: true }); }
+  function CjT_desenharColab_(r) {
+    CJ.colab = r;
+    var pode = r.podeAlterar && r.integracao.configurada;
+    var h = '<div class="vg-faixa">Para que serve: ligar cada pessoa do SGO+ ao cadastro dela no Caju, pelo <b>CPF</b>. Sem o vínculo, a carga pelo Caju não sai e o extrato não reconhece a pessoa. O CPF aparece sempre mascarado.</div>' +
+      '<div class="cj-cards">' + [["Pessoas ativas", r.resumo.total], ["Vinculadas ao Caju", r.resumo.vinculados], ["Com alerta", r.resumo.alertas, r.resumo.alertas > 0], ["Lidas do Caju", r.lidos + (r.lidoEm ? " (" + r.lidoEm + ")" : "")]].map(function (c) { return '<div class="cj-card' + (c[2] ? " alerta" : "") + '"><span>' + CjT_esc_(c[0]) + "</span><b>" + CjT_esc_(c[1]) + "</b></div>"; }).join("") + "</div>" +
+      (pode ? '<div class="vg-acoes" style="margin:0 0 12px">' + CjT_bt_("Atualizar a lista do Caju", "colLer", "", "cadx-btn-primario") + "</div>" : !r.integracao.configurada ? '<div class="vg-faixa is-alerta">A integração com o Caju ainda não está configurada: os vínculos ficam disponíveis quando as credenciais forem gravadas.</div>' : "");
+    h += '<div class="vg-itens">' + r.pessoas.map(function (p) {
+      var id = CjT_esc_(p.usuarioId), x = '<div class="vg-item" style="--vg-item:' + (p.alerta ? "#a61b1b" : p.vinculado ? "#1d6b3f" : "#a87406") + '"><div class="vg-item-cab"><b>' + CjT_esc_(p.nome) + (p.ativo ? "" : " (inativo no SGO+)") + "</b><span>" + (p.vinculado ? '<span class="cj-sit s-CONCILIADO">' + (p.arquivado ? "Arquivado no Caju" : "Vinculado") + "</span>" : '<span class="cj-sit s-PENDENTE">Sem vínculo</span>') + "</span></div>" +
+        '<div class="vg-sub">' + CjT_esc_(p.perfil) + (p.area ? " · " + CjT_esc_(p.area) : "") + (p.vinculado ? " · CPF " + CjT_esc_(p.cpf) + " · no Caju: " + CjT_esc_(p.cajuNome) + " (…" + CjT_esc_(p.employeeFinal) + ") · " + CjT_esc_(p.origem) + " · " + CjT_esc_(p.por) + " em " + CjT_esc_(p.em) : "") + "</div>" + (p.alerta ? '<div class="vg-erro">' + CjT_esc_(p.alerta) + "</div>" : "");
+      if (pode) {
+        var bt = [];
+        if (!p.vinculado && p.ativo) {
+          x += '<div class="vg-grade" style="margin-top:8px"><label class="vg-campo"><span>CPF</span><input type="text" inputmode="numeric" id="cjCpf_' + id + '" placeholder="só os números"></label></div>';
+          bt.push(CjT_bt_("Vincular pelo CPF", "colVincular", p.usuarioId, "cadx-btn-primario"));
+          p.sugestoes.forEach(function (s) { bt.push(CjT_bt_("Vincular a " + s.nome + " (" + s.cpf + ")", "colSugestao", p.usuarioId, "", ' data-x="' + CjT_esc_(s.employeeId) + '"')); });
+          bt.push(CjT_bt_("Cadastrar no Caju", "colCadastrar", p.usuarioId));
+        } else if (p.vinculado) {
+          bt.push(CjT_bt_(p.arquivado ? "Desarquivar no Caju" : "Arquivar no Caju", "colArquivar", p.usuarioId, p.arquivado ? "" : "cadx-btn-risco", ' data-x="' + (p.arquivado ? "0" : "1") + '"'));
+          bt.push(CjT_bt_("Desfazer o vínculo", "colDesfazer", p.usuarioId));
+        }
+        if (bt.length) x += '<div class="vg-acoes" style="margin-top:8px">' + bt.join("") + "</div>";
+      }
+      return x + '<div id="cjCol_' + id + '"></div></div>';
+    }).join("") + "</div>";
+    if (r.semVinculo.length) h += '<div class="vg-bloco" style="margin-top:12px"><h3>No Caju sem vínculo no SGO+ (' + r.semVinculo.length + ")</h3>" + r.semVinculo.map(function (s) { return '<p class="vg-texto">' + CjT_esc_(s.nome) + " · CPF " + CjT_esc_(s.cpf) + (s.arquivado ? " · arquivado" : "") + (s.sugestao && pode ? " " + CjT_bt_("Vincular a " + s.sugestao.nome, "colSugestao", s.sugestao.usuarioId, "", ' data-x="' + CjT_esc_(s.employeeId) + '"') : "") + "</p>"; }).join("") + "</div>";
+    CjT_$("cjCorpo").innerHTML = h;
+  }
+  function CjT_cadastrarAbrir_(id) {
+    var p = ((CJ.colab && CJ.colab.pessoas) || []).filter(function (x) { return x.usuarioId === id; })[0] || {}, el = CjT_$("cjCol_" + id); if (!el) return;
+    el.innerHTML = '<div class="vg-faixa is-neutra" style="margin-top:8px"><b>Cadastrar ' + CjT_esc_(p.nome) + ' no Caju</b><div class="vg-grade" style="margin-top:8px">' +
+      '<label class="vg-campo"><span>CPF *</span><input type="text" inputmode="numeric" id="cjNcpf_' + id + '" value="' + CjT_esc_(CjT_v_("cjCpf_" + id)) + '"></label>' +
+      '<label class="vg-campo"><span>Nome completo (como no documento) *</span><input type="text" id="cjNnome_' + id + '" value="' + CjT_esc_(p.nome) + '"></label>' +
+      '<label class="vg-campo"><span>E-mail</span><input type="email" id="cjNmail_' + id + '" value="' + CjT_esc_(p.email || "") + '"></label>' +
+      '<label class="vg-campo"><span>Celular (DDD + 9 + número)</span><input type="text" inputmode="numeric" id="cjNcel_' + id + '" placeholder="62988887777"></label>' +
+      '<label class="vg-campo"><span>Nascimento</span><input type="date" id="cjNnasc_' + id + '"></label></div><p class="vg-sub">O Caju exige o e-mail ou o celular. O cadastro vai para o Caju de verdade; o primeiro cartão é pedido pelo portal do Caju.</p>' +
+      '<div class="vg-acoes">' + CjT_bt_("Conferi, cadastrar no Caju", "colCadastrarOk", id, "cadx-btn-primario") + CjT_bt_("Desistir", "fechaCaixa", "cjCol_" + id) + "</div></div>";
+  }
+  function CjT_cadastrarConfirmar_(id) {
+    CjT_chamar_("cadastrarColaborador", { usuarioId: id, cpf: CjT_v_("cjNcpf_" + id), nome: CjT_v_("cjNnome_" + id), email: CjT_v_("cjNmail_" + id), celular: CjT_v_("cjNcel_" + id), nascimento: CjT_v_("cjNnasc_" + id), confirmar: true },
+      function (r) { CjT_desenharColab_(r); CjT_msg_(r.message, "ok"); });
+  }
+
+  // ---------- Configuração ----------
+  function CjT_config_() { CjT_carregando_(); CjT_chamar_("config", {}, CjT_desenharConfig_, CjT_falhou_, { livre: true }); }
+  function CjT_desenharConfig_(r) {
+    var c = r.config, i = r.integracao, ed = r.podeAlterar;
+    var h = '<div class="vg-bloco"><h3>Integração com o Caju</h3><dl class="vg-pares"><dt>Situação</dt><dd>' + (i.configurada ? "Configurada" : "Falta: " + CjT_esc_(i.faltam.join(", "))) + "</dd><dt>Ambiente</dt><dd>" + CjT_esc_(i.ambienteNome || "não escolhido") + "</dd><dt>Endereço de acesso</dt><dd>" + CjT_esc_(i.urlAuth || "—") + "</dd><dt>Endereço da API</dt><dd>" + CjT_esc_(i.urlApi || "—") + "</dd></dl>" +
+      '<p class="vg-sub">As credenciais (Client ID, Client Secret, ID e senha da integração) e o ambiente ficam em Administração > Chaves e senhas, grupo Caju, gravadas só pelo responsável pelo sistema. Elas nunca aparecem aqui.</p>' +
+      (ed ? '<div class="vg-acoes">' + CjT_bt_("Testar a conexão", "cfgTestar", "", "cadx-btn-primario") + CjT_bt_("Ver o registro das chamadas", "cfgChamadas", "") + "</div>" : "") + '<div id="cjChamadas"></div></div>';
+    h += '<div class="vg-bloco' + (ed ? " is-acao" : "") + '"><h3>Modo da carga do depósito de viagem</h3><div class="vg-tipos" role="radiogroup">' + ["MANUAL", "API"].map(function (k) {
+        var sel = (c.modoEscolhido || "MANUAL") === k;
+        return '<label class="vg-tipo' + (sel ? " is-sel" : "") + '"><input type="radio" name="cjModo" value="' + k + '"' + (sel ? " checked" : "") + (ed ? "" : " disabled") + '><span><b>' + (k === "API" ? "Carga pelo Caju (pedido de benefício via API)" : "Carga manual (Caju Despesas ou outro)") + "</b>" + CjT_esc_(String(c.modos[k]).replace(/^[^:]+:\s*/, "")) + "</span></label>";
+      }).join("") + '</div><p class="vg-sub">Em vigor: <b>' + (c.modoCarga === "API" ? "carga pelo Caju" : "carga manual") + "</b>. " + CjT_esc_(c.modoCarga === "API" ? "" : c.modoMotivo) + " A API do Caju contempla pedidos de benefício, não o módulo de Despesas (resposta do Caju, protocolo 02527150).</p></div>";
+    h += '<div class="vg-bloco' + (ed ? " is-acao" : "") + '"><h3>Regras da carga e da conciliação</h3><div class="vg-grade">' +
+      '<label class="vg-campo largo"><span>Categoria do crédito no Caju</span><select id="cjCfgCat"' + (ed ? "" : " disabled") + ">" + CjT_opcoes_(c.categorias, c.categoria, "Ainda não escolhida") + '</select><span class="vg-dica">Em que saldo do Caju o dinheiro da viagem cai. Sem padrão: escolha uma vez (confirme com o Caju qual vale para despesas de viagem).</span></label>' +
+      '<label class="vg-campo"><span>Tolerância de datas (dias)</span><input type="number" min="0" max="10" id="cjCfgTol" value="' + c.toleranciaDias + '"' + (ed ? "" : " disabled") + '><span class="vg-dica">Diferença aceita entre a data do cartão e a do comprovante (0 a 10).</span></label>' +
+      '<label class="vg-campo"><span>Dias antes da saída</span><input type="number" min="0" max="10" id="cjCfgAntes" value="' + c.janelaAntesDias + '"' + (ed ? "" : " disabled") + '><span class="vg-dica">Gasto até N dias antes da saída conta como da viagem.</span></label>' +
+      '<label class="vg-campo"><span>Dias depois da chegada</span><input type="number" min="0" max="15" id="cjCfgDepois" value="' + c.janelaDepoisDias + '"' + (ed ? "" : " disabled") + "></label>" +
+      '<label class="vg-campo"><span>Alerta de crédito parado (horas)</span><input type="number" min="4" max="240" id="cjCfgHoras" value="' + c.pedidoAlertaHoras + '"' + (ed ? "" : " disabled") + '><span class="vg-dica">Pedido pago e não creditado depois disso vira divergência.</span></label>' +
+      (ed ? '<label class="vg-campo largo"><span>Motivo da mudança *</span><input type="text" id="cjCfgMot" placeholder="Ex.: categoria confirmada com o Caju"></label>' : "") + "</div>" +
+      (ed ? '<div class="vg-acoes">' + CjT_bt_("Gravar a configuração", "cfgSalvar", "", "cadx-btn-primario") + "</div>" : "") +
+      (c.versoes.length ? '<h4>Versões</h4>' + c.versoes.map(function (v) { return '<p class="vg-texto">Versão ' + v.versao + " · " + CjT_esc_(v.em) + " · " + CjT_esc_(v.por) + " · " + CjT_esc_(v.motivo) + (v.categoria ? " · categoria " + CjT_esc_(v.categoria) : "") + "</p>"; }).join("") : "") + "</div>";
+    CjT_$("cjCorpo").innerHTML = h;
+  }
+  function CjT_cfgSalvar_() {
+    var modo = (document.querySelector('input[name="cjModo"]:checked') || {}).value || "";
+    CjT_chamar_("salvarConfig", { modoCarga: modo, categoria: CjT_v_("cjCfgCat") || undefined, toleranciaDias: CjT_v_("cjCfgTol"), janelaAntesDias: CjT_v_("cjCfgAntes"), janelaDepoisDias: CjT_v_("cjCfgDepois"), pedidoAlertaHoras: CjT_v_("cjCfgHoras"), motivo: CjT_v_("cjCfgMot") },
+      function (r) { CjT_config_(); CjT_atualizarIni_(); setTimeout(function () { CjT_msg_(r.message, "ok"); }, 0); });
+  }
+  function CjT_chamadas_() {
+    CjT_chamar_("chamadas", { limite: 100 }, function (r) {
+      CjT_$("cjChamadas").innerHTML = '<h4>Registro das chamadas ao Caju (últimas ' + r.chamadas.length + ')</h4><p class="vg-sub">Sem corpo, sem CPF e sem segredo: quando, o quê, o resultado e quem.</p>' + (r.chamadas.length ? '<div class="cj-rolar"><table class="vg-tabela"><thead><tr><th>Quando</th><th>Chamada</th><th>Resultado</th><th>Origem</th></tr></thead><tbody>' + r.chamadas.map(function (c) {
+        return '<tr><td data-r="Quando">' + CjT_esc_(c.em) + '</td><td data-r="Chamada">' + CjT_esc_(c.metodo + " " + c.caminho) + " (" + CjT_esc_(c.ambiente) + ')</td><td data-r="Resultado">' + (c.ok ? "OK" : '<span class="vg-erro">Erro</span>') + " " + c.http + " · " + c.ms + " ms" + (c.mensagem ? " · " + CjT_esc_(c.mensagem) : "") + '</td><td data-r="Origem">' + CjT_esc_(c.origem) + (c.por ? " · " + CjT_esc_(c.por) : "") + "</td></tr>";
+      }).join("") + "</tbody></table></div>" : '<p class="vg-sub">Nenhuma chamada ainda.</p>');
+    });
+  }
+  // ==========================================================
+  // 16/11/2026 (especificação do Financeiro, seção 4.5): explicação embaixo de cada campo, no mesmo padrão (<span class="vg-dica">
+  // dentro do <label class="vg-campo">). Funciona sozinho: observa #cjTela e completa o que cada parte desenhar depois. Campos com
+  // número no fim do id (cjPes_<linha>) usam a chave do prefixo. As dicas que a tela já tinha da configuração (categoria,
+  // tolerância, dias antes, alerta de crédito) ficam como estão. Os mesmos textos estão em docs/MANUAL_CONCILIACAO_CAJU.md.
+  // ==========================================================
+  var CJ_DICAS = {
+    cjArq: "Extrato do Caju (CSV): o arquivo de transações exportado no portal do Caju, do período que você quer conferir. Linhas já importadas são puladas.",
+    cjMap_data: "Data da transação: a coluna com o dia da compra ou da carga. Obrigatória.",
+    cjMap_hora: "Hora: a coluna com o horário, se o arquivo tiver. Ajuda a separar duas compras iguais no mesmo dia.",
+    cjMap_valor: "Valor: a coluna com o valor de cada transação. Obrigatória.",
+    cjMap_pessoa: "Colaborador (nome): a coluna com o nome de quem usou o cartão. Usada quando o arquivo não traz o CPF.",
+    cjMap_cpf: "CPF do colaborador: a coluna com o CPF do portador. É a forma mais segura de saber de quem é cada transação.",
+    cjMap_estabelecimento: "Estabelecimento: a coluna com o nome da loja. Ajuda a ligar o gasto ao comprovante da prestação de contas.",
+    cjMap_descricao: "Descrição: a coluna com o histórico da transação.",
+    cjMap_tipo: "Tipo da operação: a coluna que diz se é compra, carga, estorno ou recolhimento. Necessária se o sinal do valor não separar isso.",
+    cjMap_cnpj: "CNPJ do estabelecimento: a coluna com o CNPJ da loja, se houver. Confirma a ligação com o comprovante.",
+    cjMap_cartao: "Final do cartão: a coluna com os últimos números do cartão Caju.",
+    cjMap_centro: "Centro de custo: a coluna com o centro de custo usado no Caju. É comparado com o da viagem.",
+    cjMap_categoria: "Categoria (MCC): a coluna com o tipo de estabelecimento ou a carteira do Caju.",
+    cjMap_identificador: "Identificador da transação: a coluna com o código único (NSU, autorização). Evita importar a mesma transação duas vezes.",
+    cjSinal: "Sinal do valor: como o arquivo mostra gastos e créditos. Confira numa linha de compra conhecida: se a compra aparece negativa, escolha \"Gasto vem com sinal de menos\".",
+    cjDesM_: "Por que desfazer: o motivo de retirar esta importação (ex.: arquivo do mês errado). As linhas saem da conciliação; o arquivo original continua guardado. Mínimo de 15 letras.",
+    cjLinSit: "Situação: filtra as transações por resultado da conciliação (conciliadas, divergentes, pendentes).",
+    cjPes_: "De quem é esta transação: escolha o colaborador dono do cartão quando o arquivo não permitiu reconhecer.",
+    cjLem_: "Lembrar este nome: marcado, as próximas importações reconhecem sozinhas o mesmo nome do extrato como esta pessoa.",
+    cjLig_: "Ligar a um gasto da prestação: escolha o gasto lançado na prestação de contas que corresponde a esta transação do cartão.",
+    cjLigM_: "Motivo: obrigatório se o valor do gasto for diferente do cartão (ex.: gorjeta paga à parte). Fica no histórico.",
+    cjDivSit: "Situação: abertas precisam de ação; resolvidas foram fechadas com motivo; sanadas sumiram sozinhas porque a condição deixou de existir.",
+    cjRes_: "Como foi resolvida: aceita com justificativa, corrigida (na prestação, no extrato ou no cadastro), vai para glosa (desconto do colaborador na conferência) ou não é gasto de viagem.",
+    cjFDe: "De: o primeiro dia do período que será fechado. Depois de fechado, nada do período muda sem reabrir.",
+    cjFAte: "Até: o último dia do período que será fechado. Depois de fechado, nada do período muda sem reabrir.",
+    cjFCc: "Centro de custo: feche um centro de custo por vez ou deixe vazio para fechar todos.",
+    cjFRess: "Ressalva: o que ficou pendente no fechamento e o encaminhamento (ex.: divergências repassadas ao gestor para cobrança dos comprovantes). Mínimo de 20 letras. Sai no A4.",
+    cjFCentro: "Centro de custo: filtra o painel. Em \"Todos\", mostra tudo.",
+    cjFPessoa: "Colaborador: filtra o painel. Em \"Todos\", mostra tudo.",
+    cjRelTipo: "Relatório: escolha o tipo de A4 (fechamento, divergências, créditos, individual ou geral).",
+    cjRDe: "De: o primeiro dia do período do relatório.",
+    cjRAte: "Até: o último dia do período do relatório.",
+    cjRCc: "Centro de custo do relatório. Vazio = todos.",
+    cjRPes: "Colaborador: de quem é o relatório individual.",
+    cjPix_: "Código PIX: o código para pagar o pedido de crédito no banco. Copie e cole no aplicativo do banco da empresa.",
+    cjCancM_: "Motivo do cancelamento: por que o pedido de crédito será cancelado (ex.: viagem adiada pelo cliente). O pedido é cancelado também no Caju.",
+    cjCpf_: "CPF: o CPF do colaborador, só os números. É o que liga a pessoa do SGO+ ao cartão Caju.",
+    cjNcpf_: "CPF: o CPF do colaborador, só os números. É o que liga a pessoa do SGO+ ao cartão Caju.",
+    cjNnome_: "Nome completo: exatamente como no documento. O Caju confere.",
+    cjNmail_: "E-mail: o Caju exige o e-mail ou o celular para o colaborador acessar o app.",
+    cjNcel_: "Celular: o Caju exige o celular ou o e-mail para o colaborador acessar o app. Com DDD e o 9.",
+    cjNnasc_: "Nascimento: data de nascimento do colaborador, se o Caju pedir.",
+    cjModo: "Modo de carga: \"pelo Caju\" cria o pedido de crédito pela integração; \"manual\" é quando o Financeiro carrega direto no portal do Caju e só registra aqui.",
+    cjCfgDepois: "Dias depois da chegada: gasto até N dias depois do retorno ainda conta como da viagem (ex.: estacionamento cobrado no dia seguinte).",
+    cjCfgMot: "Motivo da mudança: por que a configuração mudou (ex.: categoria confirmada com o Caju). Fica no histórico."
+  };
+  var CJ_DICAS_MOTIVO = {
+    linIgnorarOk: "Por que desconsiderar: por que esta transação não é gasto da viagem (ex.: compra pessoal já descontada com acordo). Fica no histórico e no A4.",
+    divReabrirOk: "Por que reabrir: o que mudou (ex.: o comprovante apresentado não confere).",
+    fechReabrirOk: "Por que reabrir o fechamento: o que chegou ou mudou depois (ex.: comprovante do hotel chegou depois).",
+    colArquivarOk: "Motivo: por que arquivar a pessoa no Caju (ex.: saiu da empresa). Fica no histórico.",
+    colDesarquivarOk: "Motivo: por que desarquivar a pessoa no Caju (ex.: voltou a viajar). Fica no histórico.",
+    colDesfazerOk: "Motivo: por que desfazer o vínculo (ex.: CPF informado errado). Fica no histórico.",
+    divResolverOk: "Motivo: o que foi verificado e decidido (ex.: comprovante apresentado; diferença é taxa do estabelecimento). Vai para o histórico e para o A4 do fechamento. Mínimo de 15 letras."
+  };
+  function CjT_chaveDica_(el) {
+    var id = String(el.id || ""), nome = String(el.name || "");
+    if (el.type === "radio") return CJ_DICAS[nome] ? nome : "";
+    if (CJ_DICAS[id]) return id;
+    var m = id.match(/^(cj[A-Za-z]+_)/);
+    if (m && m[1] === "cjMot_") return id.indexOf("cjMot_") === 0 && el.closest(".vg-faixa") && el.closest(".vg-faixa").querySelector('[id^="cjRes_"]') ? "cjMot_resolver" : "";
+    return m && CJ_DICAS[m[1]] ? m[1] : "";
+  }
+  function CjT_dicas_(raiz) {
+    if (!raiz || !raiz.querySelectorAll) return;
+    raiz.querySelectorAll("input, select, textarea").forEach(function (el) {
+      if (el.getAttribute("data-cj-dica")) return;
+      var k = CjT_chaveDica_(el); el.setAttribute("data-cj-dica", "1"); if (!k) return;
+      var t = k === "cjMot_resolver" ? CJ_DICAS_MOTIVO.divResolverOk : CJ_DICAS[k];
+      if (el.type === "radio") {
+        var grupo = el.closest(".vg-tipos") || el.closest("label") || el;
+        if (grupo.nextElementSibling && grupo.nextElementSibling.classList.contains("cj-dica-grupo")) return;
+        grupo.insertAdjacentHTML("afterend", '<span class="vg-dica cj-dica-grupo">' + CjT_esc_(t) + "</span>"); return;
+      }
+      var lab = el.closest("label.vg-campo");
+      if (el.type === "checkbox" || !lab) { var ref = lab || el; ref.insertAdjacentHTML("afterend", '<span class="vg-dica cj-dica-grupo">' + CjT_esc_(t) + "</span>"); return; }
+      var atual = lab.querySelector(".vg-dica");
+      if (atual) atual.textContent = t; else lab.insertAdjacentHTML("beforeend", '<span class="vg-dica">' + CjT_esc_(t) + "</span>");
+    });
+  }
+  function CjT_vigiarDicas_(tela) {
+    if (!tela) return;
+    CjT_dicas_(tela);
+    if (typeof MutationObserver === "undefined") return;
+    var agendado = false, obs = new MutationObserver(function () { if (agendado) return; agendado = true; setTimeout(function () { agendado = false; CjT_dicas_(tela); }, 0); });
+    obs.observe(tela, { childList: true, subtree: true });
+  }
+</script>
+<style>
+  #cjTela .cj-dica-grupo { display: block; margin: 4px 0 8px; font-size: 12px; color: var(--bc-text-3, #5F645F); text-align: justify; line-height: 1.45; }
+</style>

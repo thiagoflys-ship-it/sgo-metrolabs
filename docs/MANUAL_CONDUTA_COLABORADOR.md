@@ -102,12 +102,22 @@ Qualquer pessoa da equipe pode registrar uma ocorrência. É a fiscalização en
 
 Você vê as ocorrências que registrou e as que são em seu nome. Ninguém da equipe vê o seu nome numa ocorrência: o aviso que vai para todos diz o que aconteceu, sem dizer quem foi. Quem sabe é você, quem registrou, a Diretoria e o Gestor de Qualidade. Quando uma ocorrência em seu nome é homologada, aparece um aviso ao entrar no SGO+, com o selo "Requer sua ação".
 
+### Ler o relato de uma ocorrência (16/11/2026)
+
+1. Abra a aba "Ocorrências" (no celular, "Minhas ocorrências recentes").
+2. Na linha da ocorrência, toque em "Ver relato".
+3. Leia o que foi relatado, a regra e o nível aplicados, a data do fato, a foto (toque em "Ver a foto"), o prazo em curso e o histórico (homologação, contestação, julgamento e recurso).
+4. Toque em "Fechar" para voltar.
+
+O relato abre para você nas ocorrências em seu nome e nas que você registrou. Nas ocorrências em seu nome, o nome de quem registrou aparece como "nome preservado": a fiscalização é de todos e não pode virar cobrança pessoal. Ocorrência antiga, gravada antes de existir o campo "O que aconteceu", mostra o aviso "Relato não registrado"; nesse caso, pergunte à Diretoria ou ao Gestor de Qualidade o que foi relatado.
+
 ### Contestar uma ocorrência em seu nome
 
 1. Abra a aba "Ocorrências" (no celular, "Minhas ocorrências recentes").
-2. Na linha da ocorrência, toque em "Contestar". O prazo aparece ao lado.
-3. Escreva o motivo com fatos: o que aconteceu, onde, quem viu.
-4. Toque em "Enviar contestação" (no celular, "Enviar").
+2. Na linha da ocorrência, toque em "Ver relato" e leia o que foi relatado (na janela de contestação há também o botão "Ver o relato completo").
+3. Toque em "Contestar". O prazo aparece ao lado.
+4. Escreva o motivo com fatos: o que aconteceu, onde, quem viu.
+5. Toque em "Enviar contestação" (no celular, "Enviar").
 
 ### Recorrer de uma ocorrência firme
 
@@ -152,6 +162,21 @@ Só perde o incentivo do mês quem tem gravíssima própria no mês.
 5. Toque em "Registrar".
 
 > A missão que você lança vai para a aprovação da gestão. O incentivo só conta depois de aprovada. Você recebe o aviso da decisão.
+
+### O incentivo é por O.S. (desde 13/11/2026)
+
+O dono decidiu: o incentivo conta por O.S., não por deslocamento. Uma O.S. de campo é uma missão, quantas vezes você for ao cliente por ela. Duas O.S. no mesmo dia, na mesma saída (por exemplo, duas cidades na mesma viagem), contam uma vez. Uma missão de vários dias conta uma vez: os dias fora são diárias, hotel e alimentação.
+
+Para receber, a missão precisa cumprir os quatro requisitos do Manual do Incentivo de Missão (MAN-VIA-001):
+
+1. A distância cadastral do cliente é de 200 km ou mais da sede.
+2. A saída é sempre da sede.
+3. A O.S. foi concluída, com o relatório emitido em até 3 dias úteis e pelo menos 2 fotos.
+4. Não há ocorrência sua dentro da missão.
+
+Retorno por erro da equipe (Tipo A) não gera novo incentivo. Retorno por falha do equipamento ou por escopo novo gera. Missão interrompida por causa do cliente é devida; por falha do executante, não.
+
+Para ver as suas O.S.: na aba "Missões", desça até "Incentivo por O.S. (conferência)", escolha o mês e toque em "Conferir". Cada O.S. sua mostra "Incentivo: devido", "não devido" ou "pendente", com o motivo. Se aparecer que não há missão lançada, lance a missão (ou peça à gestão): o pagamento continua pela missão lançada e aprovada.
 
 Se o destino não estiver na lista, peça à gestão para cadastrar.
 
@@ -210,6 +235,8 @@ O sistema guarda quando o aviso apareceu e quando você confirmou. "Fechar sem c
 | "Nenhum destino cadastrado para missões" (celular) | Peça à gestão para cadastrar o destino |
 | "Você pode gerar só o seu próprio extrato." | O extrato de outra pessoa fica com a gestão |
 | "Acesso restrito a Gestor/Administrador/Diretoria." | Esta ação é da gestão. Peça a ela |
+| "Não foi possível abrir o relato desta ocorrência: por sigilo do colaborador..." | O relato abre só para o envolvido, para quem registrou, para a Diretoria e para o Gestor de Qualidade. Peça a eles |
+| "Relato não registrado" (na janela do relato) | A ocorrência é antiga, de antes do campo "O que aconteceu". Pergunte à Diretoria ou ao Gestor de Qualidade |
 
 ### Perguntas
 

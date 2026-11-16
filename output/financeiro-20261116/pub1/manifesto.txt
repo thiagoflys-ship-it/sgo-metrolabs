@@ -1,0 +1,15 @@
+ALTERADO JS_Acessos.html
+ALTERADO JS_Omie.html
+ALTERADO JS_Omie_Gestao.html
+ALTERADO SGO_Ajuda_Financeiro.js
+ALTERADO SGO_Ganhos_Vendedores.js
+ALTERADO SGO_Omie.js
+ALTERADO SGO_Omie_Ganhos.js
+NOVO SGO_Omie_Sigilo.js
+ALTERADO SGO_Poderes.js
+ALTERADO SGO_Ajuda_Financeiro.js
+ALTERADO SGO_Ganhos_Vendedores.js
+ALTERADO SGO_Omie.js
+ALTERADO SGO_Omie_Ganhos.js
+NOVO SGO_Omie_Sigilo.js
+ALTERADO SGO_Poderes.js

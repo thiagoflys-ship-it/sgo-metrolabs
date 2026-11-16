@@ -1,0 +1,15 @@
+Painel financeiro — nomes nas listas de títulos — publicado em 15/11/2026 00:00 BRT
+
+Imagem: metrolabs/sgo:financeiro-nomes-20261115
+        sha256:1e1a198b9e5582961f709590925b52deeed5932d981fc1961a62f6f1271c26f9
+Base:   metrolabs/sgo:financeiro-ordem-20261115 (sha256:015919f9…), 4 arquivos conferidos; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-nomes-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+"Contas a pagar e receber" e "Lançamentos e baixas" mostravam o cliente/fornecedor pelo código numérico do Omie. Agora mostram
+o nome (Omie_comNomes_ em SGO_Omie.js: uma busca em lote ListarClientes por página; sem os nomes, a lista segue com o código).
+Arquivos: SGO_Omie.js, SGO_Omie_Operacoes.js, JS_Omie.html, JS_Omie_Operacoes.html.
+Testes: financeiro-omie-20261114 11/11 (nome nas duas listas), omie-* 13/20/9/12, ganhos-omie 4/4, ajuda 1/1.
+Ensaio REAL somente leitura (ensaio/nomes2.json): 50 de 50 com nome nas duas listas.
+Documentação: docs/MANUAL_PAINEL_FINANCEIRO.md (novo), docs/MANUAL_GANHOS_VENDEDORES.md (recebimentos do Omie),
+output/financeiro-20261115/ROTEIRO_PRIMEIRA_GRAVACAO_OMIE.md (dono + Wanessa).
+No ar: saudável, GET 200, 0 erros, coluna nova no HTML.

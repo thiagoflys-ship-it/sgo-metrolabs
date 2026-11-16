@@ -1,0 +1,270 @@
+<script>
+/*
+ * Painel financeiro — guia de cada aba e explicação de cada campo (16/11/2026, pedido do dono: "onde tiver lugar para
+ * preencher tem que explicar para a pessoa entender o que fazer e para que serve").
+ * - No topo de cada aba: "Como fazer nesta aba" (para que serve e o passo a passo), aberto na primeira vez.
+ * - Abaixo de cada campo de formulário: o que preencher e para que serve. Nas barras de filtro, uma linha com os filtros.
+ * Funciona sozinho: observa #omieCorpo e completa o que cada tela desenhar (formulários abertos depois também).
+ * Os mesmos textos estão no manual (docs/MANUAL_PAINEL_FINANCEIRO.md, seção "O que preencher em cada campo").
+ */
+var OMIE_AJ = { aba: '', obs: null, alvo: null, agendado: false };
+
+// chave = name ou id do campo; "contexto:chave" vale antes (contextos: ops-criar, ops-editar, ops-baixar, ops-prorrogarBoleto, prov)
+var OMIE_DICAS = {
+  // filtros
+  omieTipo: 'Contas: A receber é o que os clientes devem à empresa; A pagar é o que a empresa deve aos fornecedores.',
+  omieOpsTipo: 'Contas: A receber é o que os clientes devem à empresa; A pagar é o que a empresa deve aos fornecedores.',
+  omieSituacao: 'Situação: filtra os títulos por vencimento (vencidos, vencem hoje, a vencer ou todos).',
+  omieOpsSituacao: 'Situação: filtra os títulos por vencimento (vencidos, vencem hoje, a vencer ou todos).',
+  omieGestInicio: 'De: o primeiro dia do período da consulta.',
+  omieGestFim: 'Até: o último dia do período da consulta.',
+  omieGestConta: 'Conta: a conta corrente (banco ou caixa) cadastrada no Omie que você quer consultar.',
+  omieGestMes: 'Mês: o mês do orçamento (o previsto comparado com o realizado, por categoria).',
+  omieGestOrigem: 'Origem: de onde vêm as previsões. As três primeiras são lançadas no Omie (contratos, O.S. e pedidos); "Provisões internas" são as registradas aqui no SGO+.',
+  omieAgDias: 'Período: quantos dias à frente a agenda mostra.',
+  omieAgNat: 'Mostrar: só o que vai entrar, só o que vai sair ou os dois.',
+  omieResMes: 'Mês: o mês do resultado (recebido menos pago, pela data em que o dinheiro entrou ou saiu).',
+  omieCliBusca: 'Cliente: digite pelo menos 3 letras do nome ou os números do CNPJ e toque no cliente da lista.',
+  omiePedBusca: 'Buscar: número da proposta, nome do cliente, título da proposta ou número da ordem de compra.',
+  omieConcConta: 'Conta corrente: a mesma conta do extrato que você baixou do banco.',
+  omieConcInicio: 'De: o primeiro dia do extrato (o período vai até 94 dias).',
+  omieConcFim: 'Até: o último dia do extrato.',
+  omieConcFormato: 'Formato: OFX é o arquivo padrão que os bancos exportam (prefira este); CSV é a planilha do extrato.',
+  omieConcArquivo: 'Arquivo: o extrato baixado no site ou aplicativo do banco, do mesmo período e da mesma conta (até 500 KB e 100 movimentos).',
+  omieFatEtapa: 'Etapa: "A faturar" são os prontos para emitir a nota; "Pedidos / ordens" ainda estão em andamento; "Faturados" já têm nota.',
+  omieFatTipo: 'Documento: "NF-e saída" é uma nota que a empresa emitiu fora do Omie e que entra no Omie; "NF-e compra" e "NFS-e" são notas recebidas, guardadas no SGO+ para conferência.',
+  omieFatArquivo: 'XML: o arquivo .xml da nota (o PDF não serve). Saída até 40 KB; compra e NFS-e até 1 MB. O XML original fica guardado num arquivo da pasta do Financeiro.',
+  omieFatAceite: 'Marque só depois de conferir a prévia acima. É a sua autorização para esta operação ser enviada ao Omie.',
+  omieSigMotivo: 'Motivo: por que a lista muda (ex.: nova pessoa no Financeiro, saída de alguém). Obrigatório; fica no registro de acessos.',
+  // lançamento (novo ou edição)
+  referencia: 'Um código único deste lançamento, criado por você (ex.: PROP-2026-0123-P1). Serve para o Omie recusar o mesmo lançamento se ele for confirmado duas vezes. Não repita o código em outro título.',
+  documento: 'O número do documento que originou o título: nota fiscal, proposta, fatura ou recibo. É por ele que o título é encontrado depois, aqui e no Omie.',
+  'receber:pessoaId': 'Cliente: quem vai pagar. Busque pelo CNPJ (ou CPF) ou por parte do nome e toque em "Usar este". Se não aparecer, use "Cadastrar no Omie".',
+  'pagar:pessoaId': 'Fornecedor: a quem a empresa vai pagar. Busque pelo CNPJ (ou CPF) ou por parte do nome e toque em "Usar este". Se não aparecer, use "Cadastrar no Omie".',
+  omieCadBusca: 'Buscar no Omie: digite o CNPJ (ou CPF) ou parte do nome. Se não aparecer, use "Cadastrar no Omie".',
+  'receber:categoria': 'Categoria: a classificação no plano de contas do Omie (ex.: receita de serviços). Só aparecem categorias de receita, porque é uma conta a receber. Decide em que linha o valor aparece no Resultado do mês e no orçamento. Na dúvida, confirme com a contabilidade.',
+  'pagar:categoria': 'Categoria: a classificação no plano de contas do Omie (ex.: aluguel, combustível, peças). Só aparecem categorias de despesa, porque é uma conta a pagar. Decide em que linha o valor aparece no Resultado do mês e no orçamento. Na dúvida, confirme com a contabilidade.',
+  categoria: 'Categoria: a classificação no plano de contas do Omie (ex.: receita de serviços, aluguel, combustível). Decide em que linha o valor aparece no Resultado do mês e no orçamento. Na dúvida, use a mesma categoria de títulos parecidos ou confirme com a contabilidade.',
+  contaId: 'Conta corrente: o banco ou o caixa onde o dinheiro deve entrar (a receber) ou de onde deve sair (a pagar).',
+  valor: 'Valor do documento: o valor total do título em reais, como está no documento. Use vírgula ou ponto para os centavos.',
+  vencimento: 'Vencimento: a data combinada para o pagamento.',
+  previsao: 'Previsão financeira: preencha só se você espera o dinheiro em outra data (ex.: o cliente costuma pagar alguns dias depois). Deixa o fluxo de caixa mais realista. Em branco, vale o vencimento.',
+  emissao: 'Emissão: a data do documento (nota ou fatura). Em branco, vale a data de hoje.',
+  observacao: 'Observação: o que ajuda quem consultar depois (ex.: parcela 1 de 3, combinado por e-mail com o cliente). Vai junto para o Omie.',
+  // baixa
+  'ops-baixar:contaId': 'Conta corrente da baixa: a conta em que o dinheiro entrou (recebimento) ou de onde saiu (pagamento). Confira no extrato do banco.',
+  'ops-baixar:valor': 'Valor da baixa: o valor que entrou ou saiu da conta, como está no extrato, sem juros, multa ou desconto. Não pode passar do saldo em aberto do título, que aparece na prévia. Se for menor, a baixa é parcial e o restante continua em aberto.',
+  'ops-baixar:data': 'Data da baixa: o dia em que o dinheiro entrou ou saiu da conta (a data do extrato), não necessariamente hoje.',
+  'ops-baixar:desconto': 'Desconto: fica em zero até a primeira baixa acompanhada confirmar como o Omie trata o desconto no saldo do banco. Baixa com desconto, por enquanto, se faz direto no Omie.',
+  'ops-baixar:juros': 'Juros: fica em zero até a primeira baixa acompanhada confirmar como o Omie soma os juros no saldo do banco (para não lançar em dobro). Baixa com juros, por enquanto, se faz direto no Omie.',
+  'ops-baixar:multa': 'Multa: fica em zero pelo mesmo motivo dos juros. Baixa com multa, por enquanto, se faz direto no Omie.',
+  'ops-baixar:observacao': 'Observação: o que identifica o pagamento (ex.: número do comprovante, PIX recebido de quem).',
+  // boleto
+  'ops-prorrogarBoleto:vencimento': 'Novo vencimento: a nova data do boleto, combinada com o cliente. O banco pode cobrar tarifa pela alteração.',
+  // provisão interna
+  'prov:tipo': 'Tipo: "Despesa prevista" para algo que a empresa vai pagar; "Receita prevista" para algo que vai receber.',
+  'prov:descricao': 'Descrição: o que é a provisão (ex.: 13º salário de dezembro, IPVA da frota). Pelo menos 3 letras.',
+  'prov:valor': 'Valor: o valor estimado em reais.',
+  'prov:vencimento': 'Vencimento previsto: quando a empresa espera pagar ou receber.',
+  // envios a conferir (B5)
+  incertoMotivo: 'O que você conferiu no Omie: escreva onde olhou e o que encontrou (ex.: o título não aparece em Contas a receber; a baixa aparece no extrato do Omie). Fica no registro de acessos. Pelo menos 10 letras.',
+  // cadastro de cliente e fornecedor no Omie (16/11/2026)
+  'cad:tipo': 'Cadastrar como: Cliente (quem paga a empresa), Fornecedor (a quem a empresa paga) ou os dois. Se o CNPJ já existe no Omie, o SGO+ só acrescenta o que falta.',
+  'cad:documento': 'CNPJ ou CPF: o documento de quem será cadastrado. O SGO+ confere os dígitos e procura no Omie antes, para não cadastrar duas vezes.',
+  'cad:razao': 'Razão social: o nome oficial, como no cartão CNPJ. O Omie aceita até 60 letras.',
+  'cad:fantasia': 'Nome fantasia: o nome pelo qual a empresa é conhecida. Em branco, vale a razão social.',
+  'cad:endereco': 'Endereço: rua, número, bairro, cidade, UF e CEP. Vem do cadastro do SGO+, da nota fiscal ou da consulta do CNPJ; a origem aparece na prévia.',
+  'cad:numero': 'Número: o número do imóvel no endereço (S/N se não houver).',
+  'cad:complemento': 'Complemento: sala, bloco, galpão (opcional).',
+  'cad:bairro': 'Bairro: como está no cartão CNPJ ou na nota.',
+  'cad:cidade': 'Cidade: o nome da cidade, sem a UF.',
+  'cad:uf': 'UF: a sigla do estado, com 2 letras (ex.: GO).',
+  'cad:cep': 'CEP: só os números ou no formato 00000-000.',
+  'cad:email': 'E-mail: cliente, o e-mail que recebe cobrança e boleto; fornecedor, o de pedidos.',
+  'cad:telefone': 'Telefone: com DDD, só os números.',
+  // nota recebida lançada como conta a pagar (16/11/2026)
+  'nota:tipoNota': 'Tipo da nota: NF-e de compra (modelo 55, produto ou material) ou NFS-e (serviço contratado pela empresa).',
+  'nota:arquivo': 'XML da nota: o arquivo .xml que o fornecedor enviou (o PDF não serve). NF-e de compra ou NFS-e de um serviço contratado pela empresa.',
+  'nota:fornecedor': 'Fornecedor: lido da nota. Se não estiver cadastrado no Omie, cadastre aqui antes de lançar.',
+  'nota:duplicatas': 'Parcelas: os vencimentos e valores que vieram na nota. Confira com o boleto. Se a soma não bate com o total, explique abaixo.',
+  'nota:categoria': 'Categoria: em que despesa esta nota entra no plano de contas (ex.: peças para manutenção, serviços de terceiros). Só aparecem categorias de despesa. Vale para todas as parcelas.',
+  'nota:contaId': 'Conta corrente: de qual banco a empresa vai pagar.',
+  'nota:vencimento': 'Vencimento: a nota não traz parcelas; informe a data do boleto ou a combinada com o fornecedor.',
+  'nota:jaPaga': 'Nota já paga: marque se o pagamento já foi feito (cartão, PIX no ato). O SGO+ lança a conta e, em seguida, oferece registrar o pagamento de cada parcela, cada um com a sua prévia.',
+  'nota:motivoDiferenca': 'Motivo da diferença: por que o valor a pagar difere do total da nota (ex.: desconto negociado após a emissão).',
+  'nota:motivoManual': 'Motivo da conferência manual: por que algum dado foi digitado (ex.: a prefeitura usa um formato próprio; dados conferidos no PDF da nota). Fica registrado junto da nota.',
+  'nfse:manual': 'Campo não lido do XML: a prefeitura usa um formato diferente. Digite o valor como está na nota (PDF) e confira. Fica registrado que foi digitado.',
+  // Regras do Financeiro (16/11/2026): de-para de categorias, aprovações e segunda confirmação
+  regraTipo: 'Tipo de lançamento: em qual lançamento a sugestão vale (NF-e de compra, NFS-e recebida ou conta a receber de proposta aprovada).',
+  regraCnpj: 'CNPJ ou CPF (opcional): preencha para a regra valer só para um fornecedor ou cliente. Em branco, vale para todos daquele tipo; a regra com CNPJ vale antes da regra geral.',
+  regraCategoria: 'Categoria do Omie: a categoria que aparecerá já escolhida no lançamento. Só aparecem as utilizáveis: de despesa para conta a pagar, de receita para conta a receber. A pessoa sempre confere e pode trocar.',
+  regraMotivo: 'Motivo da mudança: por que o de-para mudou (ex.: combinado com o contador; fornecedor novo de peças). Obrigatório, pelo menos 10 letras; fica no histórico.',
+  aprovMotivo: 'Motivo: obrigatório para recusar (ex.: valor diferente do combinado; confirmar a nota antes). Quem preparou vê o motivo ao tentar confirmar. Para aprovar, pode deixar em branco. Só o dono do sistema e a Diretoria aprovam ou recusam; o Financeiro prepara.',
+  valorConfirmado: 'Digite o valor de novo: a operação passa da alçada configurada. Digite o mesmo valor da prévia (ex.: 12.500,00) para confirmar; se não conferir, nada é enviado.',
+  'nfse:retencoes': 'Retenções: impostos que a empresa desconta do prestador e recolhe ela mesma (IR, PIS, COFINS, CSLL, INSS, ISS). O valor a pagar ao prestador é o líquido.',
+  // Indicadores (16/11/2026, Onda 2): o único campo da aba; a explicação de cada índice vem em cada cartão ("O que é e como ler")
+  finIndComparar: 'Comparar com: a fotografia usada para a seta de cada cartão e da nota de saúde. 7 dias mostra a tendência da semana; 30 dias, a do mês. Sem fotografia tão antiga, o cartão mostra só o valor de hoje.'
+};
+
+// para que serve e o passo a passo de cada aba
+var OMIE_GUIAS = {
+  resumo: ['Ver, num só lugar, o que a empresa tem a pagar e a receber, o que já venceu e o que vence nos próximos dias.', [
+    'Confira o período (do dia 1º até hoje) e troque as datas se quiser.',
+    'Os cartões mostram o total em aberto a pagar e a receber e quanto disso já venceu.',
+    'A Agenda de vencimentos, logo abaixo, lista dia a dia o que vai entrar e sair. Use "Período" e "Mostrar" para filtrar.']],
+  contas: ['Consultar os títulos a pagar e a receber, um por um.', [
+    'Escolha A receber ou A pagar e a situação (vencidos, vencem hoje, a vencer ou todos).',
+    'Use Anterior e Próxima para andar pelas páginas (50 títulos por página).',
+    'Para lançar, alterar ou baixar um título, use a aba "Lançamentos e baixas".']],
+  cliente: ['Preparar a cobrança de um cliente: o que ele deve, desde quando e como costuma pagar.', [
+    'Digite parte do nome ou o CNPJ e toque no cliente.',
+    'Os cartões mostram o vencido, o total em aberto, o que ele pagou em 12 meses e o atraso médio.',
+    'Abaixo estão os títulos em aberto e os últimos recebimentos. Baixe a planilha se precisar enviar à Diretoria.']],
+  pedidos: ['Transformar uma proposta aprovada pelo cliente em conta a receber no Omie, sem digitar tudo de novo.', [
+    'Busque a proposta pelo número, cliente, título ou ordem de compra.',
+    'Toque em "Preparar conta a receber": o lançamento abre preenchido com cliente, documento e valor.',
+    'Confira a categoria, a conta e o vencimento, toque em "Conferir prévia" e depois em "Confirmar no Omie".']],
+  lancamentos: ['Cadastrar ou corrigir títulos no Omie e registrar pagamentos e recebimentos (baixas).', [
+    'Para um título novo: toque em "Novo lançamento", preencha os campos na ordem da tela (cada um diz o que é) e toque em "Conferir prévia".',
+    'Cliente ou fornecedor: busque pelo CNPJ ou pelo nome. Se não estiver no Omie, "Cadastrar no Omie" faz o cadastro com prévia, sem sair do lançamento.',
+    'Para corrigir: toque em "Editar" no título. Para registrar um pagamento ou recebimento: toque em "Registrar baixa".',
+    'Leia a prévia com atenção. Estando certa, toque em "Confirmar no Omie". Se algo estiver errado, toque em "Revisar campos".',
+    'Depois de confirmar, toque em Atualizar e confira o título na lista. A baixa registra o pagamento no Omie; ela não transfere dinheiro no banco.',
+    'A baixa confere o saldo em aberto do título e não aceita título já pago ou cancelado. Juros, multa e desconto ficam em zero até a primeira baixa acompanhada.',
+    'Se o Omie não respondeu a um envio, ele aparece em "Envios a conferir no Omie": confira no Omie e registre se foi feito ou não.']],
+  cobrancas: ['Consultar, gerar ou prorrogar o boleto de um título a receber.', [
+    '"Ver boleto" abre o boleto já gerado e mostra o código de barras para enviar ao cliente.',
+    '"Gerar" cria o boleto no banco pelo Omie; "Prorrogar" muda o vencimento. Os dois passam pela prévia.',
+    'O banco pode cobrar tarifa para gerar ou alterar boleto.']],
+  conciliacao: ['Conferir se cada movimento do extrato do banco está lançado no Omie.', [
+    'Baixe o extrato no site do banco (de preferência em OFX).',
+    'Escolha a conta, o período, o formato e o arquivo e toque em "Gerar prévia".',
+    'Cada movimento do banco aparece ao lado do lançamento do Omie com a mesma data e o mesmo valor. Marque os que você conferiu e registre.',
+    'O que ficou sem par é o que falta lançar (ou foi lançado com data ou valor diferente).']],
+  produtos: ['Emitir a nota fiscal de um pedido de venda já cadastrado no Omie.', [
+    'Escolha a etapa (normalmente "A faturar") e toque em "Atualizar lista".',
+    'Toque em "Conferir": o Omie valida o pedido antes da prévia.',
+    'Confira a prévia, marque a autorização e confirme. A nota é emitida pelo Omie; acompanhe a autorização da SEFAZ no Omie.']],
+  servicos: ['Emitir a nota de serviço de uma ordem de serviço já cadastrada no Omie.', [
+    'Escolha a etapa (normalmente "A faturar") e toque em "Atualizar lista".',
+    'Toque em "Conferir": o Omie valida a O.S. antes da prévia.',
+    'Confira a prévia, marque a autorização e confirme. A NFS-e é emitida pelo Omie; acompanhe a autorização da prefeitura no Omie.']],
+  notas: ['Lançar no Omie, como conta a pagar, as notas recebidas de fornecedores, e importar no Omie as notas emitidas fora dele.', [
+    'Para pagar uma NF-e de compra ou uma NFS-e: no primeiro quadro, "Lançar nota recebida no Omie", escolha o tipo e o XML e toque em "Conferir a nota".',
+    'Confira o fornecedor (cadastre se faltar), escolha a categoria de despesa e a conta, toque em "Conferir prévia" e confirme. Sai uma conta a pagar por parcela.',
+    'NF-e de saída emitida fora do Omie: no segundo quadro, escolha o documento e o XML, toque em "Conferir XML" e confirme a importação. Ela não gera título nem mexe no estoque.',
+    'Compra e NFS-e também podem ficar só guardadas no SGO+, sem ir ao Omie (histórico documental), pelo segundo quadro.']],
+  fluxo: ['Ver o saldo e os movimentos de uma conta e o orçamento do mês.', [
+    'Escolha a conta e o período e toque em Consultar: aparecem o saldo anterior, o atual, o previsto e os movimentos.',
+    'No orçamento, escolha o mês para comparar o previsto com o realizado por categoria.']],
+  resultado: ['Saber se o mês fechou positivo: tudo o que entrou menos tudo o que saiu.', [
+    'Escolha o mês. O resultado é pela data em que o dinheiro entrou ou saiu (regime de caixa).',
+    'As tabelas mostram o recebido e o pago por categoria. Transferências entre contas da empresa não contam.']],
+  provisoes: ['Registrar despesas e receitas que ainda não viraram título (ex.: 13º, impostos anuais) para o planejamento.', [
+    'Para consultar, escolha a origem e o período e toque em Consultar.',
+    'Para registrar uma provisão interna, abra o formulário, preencha tipo, descrição, valor e vencimento previsto e toque em "Registrar provisão".',
+    'A provisão interna fica só no SGO+: ela não cria título no Omie.']],
+  comissoes: ['Mostrar onde ficam as comissões dos vendedores.', [
+    'As comissões são calculadas em "Ganhos dos vendedores", com a regra decidida pela gestão.']],
+  regras: ['Ver as regras do Financeiro em vigor, aprovar operações acima da alçada e manter o de-para de categorias.', [
+    'No topo estão as configurações em vigor (NF-e de compra, retenções da NFS-e e as duas alçadas). Elas são alteradas pelo responsável pelo sistema em Chaves e senhas.',
+    'Em "Aprovações pendentes", o dono do sistema ou a Diretoria lê a prévia preparada por outra pessoa e toca em Aprovar ou em Recusar (com o motivo). O Financeiro prepara e acompanha, mas não aprova; quem preparou não aprova a própria operação.',
+    'No de-para, escolha o tipo de lançamento, o CNPJ se a regra for de um fornecedor ou cliente, e a categoria do Omie; toque em "Acrescentar à lista".',
+    'Escreva o motivo e toque em "Gravar o de-para". A categoria sugerida aparece já escolhida nos lançamentos; quem lança sempre confere.']],
+  indicadores: ['Ver, sem consultar o Omie a cada toque, como estão o caixa, a carteira e os pagamentos, a nota de saúde financeira e os gráficos, comparados com a fotografia de 7 ou 30 dias atrás.', [
+    'Leia a faixa do topo: ela diz de quando é a fotografia (feita pela rotina a partir das 06:00, só leitura do Omie) e se ficou completa.',
+    'A nota de saúde (0 a 100) soma seis critérios. Cada linha diz o valor, os pontos e por quê; critério sem dado fica fora e a tela diz o motivo.',
+    'Cada cartão traz o número de hoje, o da fotografia anterior com a seta (verde melhorou, vermelha piorou), "O que é e como ler" e "Como é calculado". "Não calculado" sempre diz o motivo.',
+    'Em "Comparar com", escolha 7 ou 30 dias. Os gráficos ficam abaixo dos cartões, cada um com uma frase dizendo o que mostra.',
+    'Para números mais novos, toque em "Atualizar agora": a fotografia sai na próxima rodada automática (até 15 minutos). Saldo mínimo e pesos da nota mudam em Chaves e senhas > Regras do Financeiro.']],
+  sigilo: ['Ver quem pode acessar o Financeiro e quem consultou o quê.', [
+    'A lista mostra as contas autorizadas. Só o responsável pelo sistema altera, marcando as contas e escrevendo o motivo.',
+    'A Diretoria vê o registro: consultas, planilhas baixadas e tentativas recusadas (em destaque quando houver).']]
+};
+
+function OmieAj_esc_(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function OmieAj_contexto_(el) {
+  if (el.closest && el.closest('#omieOpsForm')) return 'ops-' + (typeof OMIE_OPS_UI !== 'undefined' ? OMIE_OPS_UI.acao : '');
+  if (el.closest && el.closest('#omieProvForm')) return 'prov';
+  if (el.closest && el.closest('#omieCadForm')) return 'cad'; // 16/11/2026: cadastro no Omie
+  if (el.closest && el.closest('#omieNotaSecao')) return 'nota'; // 16/11/2026: nota recebida
+  return '';
+}
+function OmieAj_texto_(el) {
+  var k = el.getAttribute('name') || el.id || '';
+  if (!k) return '';
+  var ctx = OmieAj_contexto_(el), tipo = typeof OMIE_OPS_UI !== 'undefined' ? OMIE_OPS_UI.tipo : '';
+  if (ctx === 'nota' && k.indexOf('manual_') === 0) return OMIE_DICAS['nfse:manual'];
+  if (ctx === 'nota' && el.id === 'omieNotaArquivo') return OMIE_DICAS['nota:arquivo'];
+  return OMIE_DICAS[ctx + ':' + k] || (ctx.indexOf('ops-') === 0 && OMIE_DICAS[tipo + ':' + k]) || OMIE_DICAS[k] || '';
+}
+function OmieAj_guardado_(aba) { try { return localStorage.getItem('omieGuia:' + aba); } catch (e) { return null; } }
+function OmieAj_guardar_(aba, aberto) { try { localStorage.setItem('omieGuia:' + aba, aberto ? '1' : '0'); } catch (e) {} }
+function OmieAj_guiaHtml_(aba) {
+  var g = OMIE_GUIAS[aba]; if (!g) return '';
+  var aberto = OmieAj_guardado_(aba) !== '0';
+  return '<details class="omie-guia" data-omie-guia="' + OmieAj_esc_(aba) + '"' + (aberto ? ' open' : '') + ' ontoggle="OmieAj_guardar_(\'' + OmieAj_esc_(aba) + '\', this.open)"><summary>Como fazer nesta aba</summary>' +
+    '<p><strong>Para que serve:</strong> ' + OmieAj_esc_(g[0]) + '</p><ol>' + g[1].map(function (p) { return '<li>' + OmieAj_esc_(p) + '</li>'; }).join('') + '</ol>' +
+    '<p class="omie-guia-nota">Cada campo tem, logo abaixo, o que preencher. Manual completo: "Como usar esta tela", no topo.</p></details>';
+}
+/** Completa a aba aberta: o guia no topo e as explicações dos campos. Pode ser chamado quantas vezes for preciso. */
+function OmieAj_aplicar_() {
+  OMIE_AJ.agendado = false;
+  var corpo = document.getElementById('omieCorpo'); if (!corpo || !corpo.firstElementChild) return;
+  if (OMIE_AJ.aba && !corpo.querySelector('[data-omie-guia]') && OMIE_GUIAS[OMIE_AJ.aba]) corpo.insertAdjacentHTML('afterbegin', OmieAj_guiaHtml_(OMIE_AJ.aba));
+  var barras = [];
+  corpo.querySelectorAll('input, select, textarea').forEach(function (el) {
+    if (el.getAttribute('data-omie-dica') || el.type === 'hidden' || el.type === 'button' || el.type === 'submit') return;
+    var t = OmieAj_texto_(el); el.setAttribute('data-omie-dica', '1'); if (!t) return;
+    var barra = el.closest('.omie-barra, .cadx-faixa');
+    if (barra) { if (barras.indexOf(barra) < 0) barras.push(barra); (barra._omieDicas = barra._omieDicas || []).push(t); return; }
+    var lab = el.closest('label');
+    var dica = document.createElement('span'); dica.className = 'omie-dica'; dica.textContent = t;
+    var idDica = 'omieDica_' + Math.random().toString(36).slice(2, 9); dica.id = idDica;
+    el.setAttribute('aria-describedby', ((el.getAttribute('aria-describedby') || '') + ' ' + idDica).trim());
+    if (lab && lab.contains(el) && !(el.type === 'checkbox' && !lab.classList.contains('cadx-campo'))) lab.appendChild(dica);
+    else { var ref = el.type === 'checkbox' && lab ? lab : el; ref.parentNode.insertBefore(dica, ref.nextSibling); }
+  });
+  barras.forEach(function (b) {
+    var l = b._omieDicas || []; b._omieDicas = [];
+    if (!l.length) return;
+    var p = b.nextElementSibling && b.nextElementSibling.classList.contains('omie-dica-barra') ? b.nextElementSibling : null;
+    if (!p) { p = document.createElement('p'); p.className = 'omie-dica omie-dica-barra'; b.parentNode.insertBefore(p, b.nextSibling); }
+    p.textContent = (p.textContent ? p.textContent + ' ' : '') + l.join(' ');
+  });
+}
+function OmieAj_agendar_() { if (OMIE_AJ.agendado) return; OMIE_AJ.agendado = true; setTimeout(OmieAj_aplicar_, 0); }
+function OmieAj_vigiar_() {
+  var corpo = document.getElementById('omieCorpo');
+  if (!corpo || typeof MutationObserver === 'undefined') return;
+  if (OMIE_AJ.alvo === corpo && OMIE_AJ.obs) return;
+  try { if (OMIE_AJ.obs) OMIE_AJ.obs.disconnect(); } catch (e) {}
+  OMIE_AJ.alvo = corpo;
+  OMIE_AJ.obs = new MutationObserver(OmieAj_agendar_);
+  OMIE_AJ.obs.observe(corpo, { childList: true, subtree: true });
+}
+function OmieAj_ligar_() {
+  if (typeof OmieTela_abrir_ !== 'function' || OmieTela_abrir_._omieAj) return false;
+  var original = OmieTela_abrir_;
+  OmieTela_abrir_ = function (aba) {
+    OMIE_AJ.aba = String(aba || '');
+    var r = original.apply(this, arguments);
+    OmieAj_vigiar_(); OmieAj_aplicar_();
+    return r;
+  };
+  OmieTela_abrir_._omieAj = true;
+  return true;
+}
+if (!OmieAj_ligar_() && typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', OmieAj_ligar_);
+</script>
+<style>
+  #omieTela .omie-dica { display:block; margin-top:4px; font-size:12.5px; line-height:1.45; font-weight:400; color:var(--bc-muted, #475569); text-align:justify; white-space:normal; }
+  #omieTela .omie-dica-barra { margin:-8px 0 16px; }
+  #omieTela .omie-guia { border:1px solid var(--bc-line, #cbd5e1); border-left:4px solid var(--bc-accent, #1d4ed8); border-radius:8px; padding:10px 14px; margin:0 0 18px; background:var(--bc-surface, transparent); }
+  #omieTela .omie-guia summary { cursor:pointer; font-weight:600; }
+  #omieTela .omie-guia[open] summary { margin-bottom:4px; }
+  @media(max-width:700px) { #omieTela .omie-guia { padding:6px 12px; } #omieTela .omie-guia ol { margin-left:18px; } }
+  #omieTela .omie-guia p, #omieTela .omie-guia li { text-align:justify; line-height:1.5; }
+  #omieTela .omie-guia ol { margin:8px 0 8px 20px; padding:0; }
+  #omieTela .omie-guia-nota { font-size:12.5px; color:var(--bc-muted, #475569); }
+</style>

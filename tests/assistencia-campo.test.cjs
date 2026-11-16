@@ -6,7 +6,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { ambiente, ok, FOTO, ASSINATURA } = require('./_assistencia_ambiente.cjs');
 
-const EXTRAS = ['SGO_Clientes.js', 'SGO_Unidades.js', 'SGO_Equipamentos.js'];
+const EXTRAS = ['SGO_Clientes.js', 'SGO_Unidades.js', 'SGO_Equipamentos.js', 'SGO_CadastroQualidade.js'];
 const amb0 = (o) => ambiente(Object.assign({ extras: EXTRAS }, o || {}));
 const ev = (tipo, osId, n, dados, em) => ({ tipo, osId, idLocal: 'apar9-' + String(n).padStart(4, '0'), em: em || '2026-10-19T10:10:00', dados: dados || {} });
 const sync = (amb, eventos, sid) => amb.app('Ast_appSincronizar', sid || 's_tiago', { pedidoId: 'p-' + Math.random().toString(36).slice(2), eventos });
@@ -163,7 +163,11 @@ test('cadastro em campo: cria pelas funções da tela Cadastros, marcado "criado
 test('O.S. aberta em campo: chamado PRESENCIAL com a triagem feita em campo e a O.S. no nome do técnico, numa trava só; idempotente; mesmo equipamento reaproveita a O.S. aberta', () => {
   const amb = amb0();
   const base = { idLocal: 'nova-os-0001', clienteId: 'c1', unidadeId: 'un1', equipamentoId: 'eq1', tipoCodigo: 'MANUTENCAO_CORRETIVA', sintoma: 'Autoclave apitando erro E04 no fim do ciclo', solicitante: 'Rui Responsável Teste', contato: '62988887777', prioridade: 'P2', parada: 'PARCIAL', em: '2026-10-19T10:02:00' };
-  assert.match(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({}, base, { tipoCodigo: 'ENVIO_ORCAMENTO' })).message, /não tem visita/);
+  // 12/11/2026: pedido sem visita (envio de orçamento) vai para a fila do Comercial, sem executor; atendimento com visita fica com quem abriu
+  const ambF = amb0();
+  const rf = ok(ambF.app('Ast_appAbrirOS', 's_tiago', Object.assign({}, base, { idLocal: 'nova-os-fila-01', tipoCodigo: 'ENVIO_ORCAMENTO' })));
+  assert.match(rf.message, /encaminhada para COMERCIAL/);
+  assert.equal(ambF.tabelas.ATEC_OS[0].TECNICO_ID, '');
   assert.match(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({}, base, { sintoma: 'curto' })).message, /pelo menos 10 letras/);
   assert.equal(amb.app('Ast_appAbrirOS', 's_cliente.alfa', base).codigo, 'SEM_ACESSO');
   const r = ok(amb.app('Ast_appAbrirOS', 's_tiago', base));
@@ -184,7 +188,7 @@ test('O.S. aberta em campo: chamado PRESENCIAL com a triagem feita em campo e a 
   assert.match(aviso.TITULO, /aberto em campo/i);
   assert.match(aviso.TEXTO, /triagem foi feita em campo/);
   assert.ok(!amb.pend('s_gil').some((i) => i.tipo === 'ast_triagem'), 'não há triagem pendente: foi feita em campo');
-  assert.ok(amb.tabelas.ATEC_EVENTOS.some((e) => e.ENTIDADE === 'CHAMADO' && e.TIPO === 'TRIAGEM_INICIADA' && /feita em campo/.test(e.TEXTO)));
+  assert.ok(amb.tabelas.ATEC_EVENTOS.some((e) => e.ENTIDADE === 'CHAMADO' && e.TIPO === 'TRIAGEM_INICIADA' && /feita em campo|Registro de abertura/.test(e.TEXTO)));
   // repetido (mesmo idLocal): a mesma O.S.
   const r2 = ok(amb.app('Ast_appAbrirOS', 's_tiago', base));
   assert.equal(r2.duplicado, true); assert.equal(r2.os.id, r.os.id);
@@ -253,4 +257,41 @@ test('03/11/2026: colaborador de outra área (não técnico) abre em campo a ret
   const md = ok(amb.app('Ast_appMeuDia', 's_mara', {}));
   assert.ok(md.os.some((o) => o.id === os.ID));
   assert.doesNotThrow(() => amb.ctx.AstO_exigirCampo_(amb.ctx.Ast_eu_('s_mara'), os, 'registrar'));
+});
+
+// 12/11/2026 (pedido do dono, caso de duas O.S. abertas em 7 minutos na mesma unidade): não abrir em dobro e quem abriu exclui a O.S.
+const NOVA = { clienteId: 'c1', unidadeId: 'un1', tipoCodigo: 'MANUTENCAO_CORRETIVA', sintoma: 'Autoclave apitando erro E04 no fim do ciclo', solicitante: 'Rui Responsável Teste', contato: '62988887777', prioridade: 'P3', parada: 'NAO', em: '2026-10-19T10:02:00' };
+test('não abre em dobro: outra O.S. em campo na mesma unidade pede confirmação; confirmada, abre; mesmo equipamento reaproveita', () => {
+  const amb = amb0();
+  const r1 = ok(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({ idLocal: 'dup-os-0001', equipamentoId: 'eq1' }, NOVA)));
+  assert.equal(r1.os.podeExcluir, true, 'quem abriu pode excluir antes de começar');
+  const r2 = amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({ idLocal: 'dup-os-0002', equipamentoId: 'eq2' }, NOVA));
+  assert.equal(r2.ok, false); assert.equal(r2.codigo, 'POSSIVEL_DUPLICADO');
+  assert.match(r2.message, /já abriu nesta unidade a O\.S\. OS-2026-0001/);
+  assert.equal(amb.tabelas.ATEC_OS.length, 1, 'nada aberto sem a confirmação');
+  assert.equal(amb.tabelas.ATEC_CHAMADOS.length, 1, 'nem o chamado');
+  const r3 = ok(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({ idLocal: 'dup-os-0003', equipamentoId: 'eq2', confirmarOutra: true }, NOVA)));
+  assert.equal(r3.os.numero, 'OS-2026-0002');
+  // mesmo equipamento: devolve a que já existe, sem perguntar
+  const r4 = ok(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({ idLocal: 'dup-os-0004', equipamentoId: 'eq1' }, NOVA)));
+  assert.equal(r4.existente, true); assert.equal(amb.tabelas.ATEC_OS.length, 2);
+});
+
+test('quem abriu em campo exclui a O.S. aberta por engano antes de começar; outra pessoa, depois de começar ou sem motivo, não', () => {
+  const amb = amb0();
+  const r1 = ok(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({ idLocal: 'exc-os-0001', equipamentoId: 'eq1' }, NOVA)));
+  const id = r1.os.id;
+  assert.match(amb.app('Ast_appExcluirOS', 's_tiago', { osId: id, motivo: 'erro' }).message, /pelo menos 10 letras/);
+  assert.match(amb.app('Ast_appExcluirOS', 's_mara', { osId: id, motivo: 'Abri em dobro por engano' }).message, /só sai a O\.S\. que você mesmo abriu/);
+  const r = ok(amb.app('Ast_appExcluirOS', 's_tiago', { osId: 'exc-os-0001', motivo: 'Abri em dobro por engano' }));   // aceita o id provisório
+  assert.match(r.message, /OS-2026-0001 excluída, junto com o chamado CH-2026-0001/);
+  const os = amb.tabelas.ATEC_OS.find((o) => o.ID === id), c = amb.tabelas.ATEC_CHAMADOS[0];
+  assert.ok(os.EXCLUIDO_EM && c.EXCLUIDO_EM, 'exclusão lógica do chamado e da O.S.');
+  assert.match(c.EXCLUIDO_MOTIVO, /excluída por quem abriu \(TIAGO TECNICO TESTE\).*Abri em dobro por engano/);
+  assert.ok(!ok(amb.app('Ast_appMeuDia', 's_tiago', {})).os.some((o) => o.id === id), 'sai do Meu dia');
+  assert.match(amb.app('Ast_appExcluirOS', 's_tiago', { osId: id, motivo: 'Abri em dobro por engano' }).message, /já foi excluída/);
+  // depois do Cheguei, não
+  const r2 = ok(amb.app('Ast_appAbrirOS', 's_tiago', Object.assign({ idLocal: 'exc-os-0002', equipamentoId: 'eq2', confirmarOutra: true }, NOVA)));
+  amb.ctx.Ast_atualizar_('ATEC_OS', r2.os.id, { CHEGOU_EM: '2026-10-19T10:30:00', SITUACAO: 'NO_LOCAL' });
+  assert.match(amb.app('Ast_appExcluirOS', 's_tiago', { osId: r2.os.id, motivo: 'Abri em dobro por engano' }).message, /já começou/);
 });

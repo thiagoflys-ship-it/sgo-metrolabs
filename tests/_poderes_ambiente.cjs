@@ -63,7 +63,9 @@ function ambiente(opcoes) {
     AUT_DISPOSITIVOS: [], AUT_PERMISSOES: [], REP_REPRESENTADAS: []
   };
   if (o.tabelas) Object.assign(tabelas, o.tabelas);
-  const props = { GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: o.gestoresPorArea || gestoresPorAreaReal() }) };
+  // 16/11/2026 (onda 3, bloco A): os testes antigos rodam com as regras de antes (APROVACAO_SO_DIRETORIA = NAO); a decisão do dono
+  // (SIM, padrão em produção: só o dono e a Diretoria aprovam) é testada em tests/financeiro-onda3-a.test.cjs.
+  const props = { GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: o.gestoresPorArea || gestoresPorAreaReal() }), APROVACAO_SO_DIRETORIA: o.aprovacaoSoDiretoria || 'NAO' };
   if (o.props) Object.assign(props, o.props);
   const cache = {};
   const sessoes = {};
@@ -116,6 +118,8 @@ function ambiente(opcoes) {
   }
   // o SGO_DATA real (SGO_Data.js) não é carregado: o de memória vale; sessão de teste por login
   vm.runInContext('SGO_DATA_REP_VISIVEL = false;', ctx);
+  // 16/11/2026: sigilo do Financeiro com a lista do código (as contas reais); o.sigiloPadrao usa as contas Financeiro/Diretoria/ADMIN
+  if (!(o.semArquivos || []).includes('SGO_Omie_Sigilo.js')) require('./_sigilo_fin.cjs').sigiloFin(ctx, props, () => tabelas.CAD_USUARIOS, o.pasta || pastaLegado, !o.sigiloPadrao);
   ctx.SGO_DATA = sgoData;
   ctx.exigirSessao = (sid) => { if (!sessoes[sid]) throw new Error('Sessão inválida ou expirada.'); return Object.assign({}, sessoes[sid]); };
   ctx.validarSessao = (sid) => (sessoes[sid] ? { valid: true, data: Object.assign({}, sessoes[sid]) } : { valid: false, message: 'Sessão inválida ou expirada.' });

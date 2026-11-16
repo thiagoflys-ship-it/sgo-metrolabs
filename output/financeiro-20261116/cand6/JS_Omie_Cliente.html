@@ -1,0 +1,48 @@
+<script>
+  // 16/11/2026: Painel financeiro > Ficha do cliente (SGO_Omie_Cliente.js). Busca no cadastro do SGO+; a ficha lê o Omie pelo CNPJ.
+  var OMIE_CLI = { q: '' };
+  function OmieCli_render_() {
+    var c = document.getElementById('omieCorpo'); if (!c) return;
+    c.innerHTML = '<section><h3>Ficha do cliente</h3><p>Para a cobrança: o que o cliente tem em aberto e vencido no Omie (valor ainda devido, descontado o que já foi pago em parte) e o que pagou nos últimos 12 meses, com o atraso de cada pagamento. Só consulta; nada é enviado ao Omie.</p>' +
+      '<form class="omie-barra" onsubmit="event.preventDefault();OmieCli_buscar_()"><label for="omieCliBusca">Cliente<input class="cadx-input" id="omieCliBusca" maxlength="80" placeholder="Nome ou CNPJ" value="' + CadUI_esc_(OMIE_CLI.q) + '"></label><button class="cadx-btn" type="submit">Buscar</button></form>' +
+      '<p id="omieGestStatus" role="status" aria-live="polite"></p><div id="omieCliLista"></div><div id="omieCliFicha"></div></section>';
+    if (OMIE_CLI.q) OmieCli_buscar_();
+  }
+  function OmieCli_buscar_() {
+    OMIE_CLI.q = (document.getElementById('omieCliBusca') || {}).value || '';
+    var lista = document.getElementById('omieCliLista'); if (!lista) return;
+    document.getElementById('omieCliFicha').innerHTML = '';
+    OmieGest_chamar_('Omie_apiClienteBuscar', { q: OMIE_CLI.q }, function (r) {
+      var esc = CadUI_esc_;
+      if (!r.clientes.length) { lista.innerHTML = '<div class="cadx-vazio bc-vazio">Nenhum cliente com esta busca no cadastro do SGO+.</div>'; return; }
+      lista.innerHTML = (r.total > r.clientes.length ? '<p>Mostrando ' + r.clientes.length + ' de ' + r.total + '. Refine a busca.</p>' : '') + '<div class="omie-cli-lista">' + r.clientes.map(function (c) {
+        return '<button type="button" class="cadx-btn omie-cli-item"' + (c.cnpj ? ' onclick="OmieCli_ficha_(\'' + esc(c.cnpj) + '\')"' : ' disabled') + '><b>' + esc(c.nome) + '</b><span class="cadx-sub">' + (c.cnpj ? esc(c.cnpj.length === 14 ? c.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : c.cnpj) : 'sem CNPJ no cadastro') + (c.situacao && c.situacao !== 'ATIVO' ? ' · ' + esc(c.situacao) : '') + '</span></button>';
+      }).join('') + '</div>';
+    });
+  }
+  function OmieCli_ficha_(cnpj) {
+    var f = document.getElementById('omieCliFicha'); if (!f) return;
+    f.innerHTML = CadUI_esqueleto_(4);
+    OmieGest_chamar_('Omie_apiClienteFicha', { cnpj: cnpj }, function (r) {
+      var esc = CadUI_esc_, br = function (s) { return s ? s.split('-').reverse().join('/') : ''; };
+      if (r.semCadastroOmie) { f.innerHTML = '<div class="cadx-vazio bc-vazio">' + esc(r.mensagem) + '</div>'; return; }
+      var t = r.totais, card = function (v, rot, sub) { return '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + esc(v) + '</span><span>' + esc(rot) + '</span>' + (sub ? '<span class="cadx-sub">' + esc(sub) + '</span>' : '') + '</div>'; };
+      var h = '<h4>' + esc(r.nomeOmie || 'Cliente') + ' · ' + esc(r.cnpj) + '</h4>' + (r.cadastrosOmie > 1 ? '<p class="vg-faixa is-alerta">Este CNPJ tem ' + r.cadastrosOmie + ' cadastros no Omie; a ficha soma todos.</p>' : '') + (r.inativosOmie ? '<p class="vg-faixa is-alerta">' + (r.inativosOmie === r.cadastrosOmie ? 'O cliente está inativo no Omie' : r.inativosOmie + ' cadastro(s) deste CNPJ estão inativos no Omie') + (r.porDocumento ? ': os títulos dele continuam valendo e aparecem aqui pelo valor do documento (o Omie não informa o saldo em aberto de cliente inativo; confira pagamentos parciais no Omie).' : r.inativosOmie ? '; os títulos do cadastro inativo não entram nesta ficha: confira no Omie.' : '') + '</p>' : '') +
+        (r.cortado ? '<p class="vg-faixa is-alerta">O cliente tem muitos títulos: a ficha mostra os primeiros 500 de cada cadastro. Confira os demais no Omie.</p>' : '') +
+        '<div class="cadx-resumo bc-resumo">' + card(OmieGest_moeda_(t.vencido), 'Vencido', t.titulosVencidos + ' título(s)' + (t.maisAntigo ? ', desde ' + br(t.maisAntigo) + ' (' + t.maiorAtraso + ' dias)' : '')) +
+        card(OmieGest_moeda_(t.aberto), 'Em aberto (vencido + a vencer)', t.titulosAbertos + ' título(s)') +
+        card(OmieGest_moeda_(t.recebido12m), 'Recebido em 12 meses', t.recebimentos12m + ' pagamento(s)') +
+        card(t.recebimentos12m ? t.mediaAtraso + ' dias' : '—', 'Atraso médio ao pagar', t.recebimentos12m ? t.pagosComAtraso + ' de ' + t.recebimentos12m + ' pagos com atraso' : 'sem pagamentos em 12 meses') + '</div>' +
+        (r.propostasAprovadas ? '<p>No SGO+: ' + r.propostasAprovadas + ' proposta(s) aprovada(s), total ' + esc(OmieGest_moeda_(r.totalPropostas)) + '.</p>' : '');
+      h += '<h4>Em aberto</h4>' + (r.abertos.length ? OmieGest_tabela_(['Vencimento', 'Documento', 'Parcela', 'Em aberto', 'Atraso'], r.abertos.map(function (a) { return [br(a.vencimento), a.documento || '—', a.parcela || '—', OmieGest_moeda_(a.aberto) + (a.pagoParcial ? ' (pago em parte)' : ''), a.atraso ? a.atraso + ' dias' : 'a vencer']; })) : '<div class="cadx-vazio bc-vazio">Nada em aberto no Omie.</div>');
+      h += '<h4>Recebimentos dos últimos 12 meses</h4>' + (r.recebidos.length ? OmieGest_tabela_(['Pago em', 'Documento', 'Vencimento', 'Valor', 'Atraso'], r.recebidos.map(function (a) { return [br(a.pagoEm), a.documento || '—', br(a.vencimento), OmieGest_moeda_(a.valor), a.atraso ? a.atraso + ' dias' : 'em dia']; })) : '<div class="cadx-vazio bc-vazio">Nenhum recebimento nos últimos 12 meses.</div>');
+      OMIE_CSV.cliente = { cab: ['Situação', 'Vencimento', 'Documento', 'Parcela', 'Valor', 'Pago em', 'Dias de atraso'],
+        linhas: r.abertos.map(function (a) { return ['Em aberto', br(a.vencimento), a.documento, a.parcela, OmieGest_csvNum_(a.aberto), '', a.atraso]; }).concat(r.recebidos.map(function (a) { return ['Recebido', br(a.vencimento), a.documento, a.parcela, OmieGest_csvNum_(a.valor), br(a.pagoEm), a.atraso]; })) };
+      f.innerHTML = h + OmieGest_botaoCsv_('cliente', 'ficha-cliente-' + r.cnpj.replace(/\D/g, '') + '.csv');
+    });
+  }
+</script>
+<style>
+  #omieTela .omie-cli-lista { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:8px; margin:12px 0 24px; }
+  #omieTela .omie-cli-item { display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:4px; min-height:56px; white-space:normal; }
+</style>

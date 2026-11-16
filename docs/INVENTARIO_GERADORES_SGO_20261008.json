@@ -1,0 +1,882 @@
+{
+  "scope": "C:\\Users\\venda\\projetos\\google-script-dev\\apps-script-imports\\portal_sgo_versao_cnpj_db",
+  "method": "Busca estática; candidatos de função exigem leitura. Arquivos createFile podem ser anexos, não emissão.",
+  "files": [
+    {
+      "file": "AutoclaveCertificado.html",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 200,
+          "functionCandidate": null,
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "CadeiaFrioCertificado.html",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 192,
+          "functionCandidate": null,
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "EstufaBanhoCertificado.html",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 192,
+          "functionCandidate": null,
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "JS_CartaConformidade.html",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 2637,
+          "functionCandidate": "executePhysicalPrint",
+          "excerpt": "contentWindow.print()"
+        }
+      ]
+    },
+    {
+      "file": "JS_Equipamentos.html",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 567,
+          "functionCandidate": "imprimirQRCode_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "JS_Padroes_Documentos.html",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 112,
+          "functionCandidate": "pdDocumentWindow",
+          "excerpt": "w.print()"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 140,
+          "functionCandidate": "pdPrint",
+          "excerpt": "docWindow.print()"
+        }
+      ]
+    },
+    {
+      "file": "LavadoraCertificado.html",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 200,
+          "functionCandidate": null,
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_AutoRel_CertificadoRelatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "template-gas",
+          "line": 273,
+          "functionCandidate": "AutoRel_apiMontarCertificadoFinal",
+          "excerpt": "createTemplateFromFile('AutoclaveCertificado')"
+        }
+      ]
+    },
+    {
+      "file": "SGO_AutoRel_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 245,
+          "functionCandidate": "AutoRel_apiUploadArquivo",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_AutoRel_MemoriaF0.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 176,
+          "functionCandidate": "AutoRel_mf0MontarDocumentoHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Auvo_Relatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 6,
+          "functionCandidate": null,
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 162,
+          "functionCandidate": "Auvo_montarRelatorioHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_CadeiaFrioRel_CertificadoRelatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "template-gas",
+          "line": 260,
+          "functionCandidate": "CadeiaFrioRel_apiMontarCertificadoFinal",
+          "excerpt": "createTemplateFromFile('CadeiaFrioCertificado')"
+        }
+      ]
+    },
+    {
+      "file": "SGO_CadeiaFrioRel_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 233,
+          "functionCandidate": "CadeiaFrioRel_apiUploadArquivo",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_CertCal_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 214,
+          "functionCandidate": "CertCalDoc_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 361,
+          "functionCandidate": "CertCalDoc_montarRelatorioInterpretativoHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_CertCal_GestaoRelatorios.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 45,
+          "functionCandidate": "CertCalGest_baseHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "snapshot",
+          "line": 40,
+          "functionCandidate": "CertCalGest_contextoDesempenho_",
+          "excerpt": "DADOS_JSON"
+        }
+      ]
+    },
+    {
+      "file": "SGO_CertCal_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 715,
+          "functionCandidate": "CertCal_apiGerarCertificado",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "pdf-servidor",
+          "line": 829,
+          "functionCandidate": "CertCal_apiGerarRelatorioInterpretativo",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 410,
+          "functionCandidate": "CertCal_uploadCertificadoPadrao_",
+          "excerpt": ".createFile(blob)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 716,
+          "functionCandidate": "CertCal_apiGerarCertificado",
+          "excerpt": ".createFile(pdfBlob)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 830,
+          "functionCandidate": "CertCal_apiGerarRelatorioInterpretativo",
+          "excerpt": ".createFile(pdfBlob)"
+        },
+        {
+          "kind": "snapshot",
+          "line": 19,
+          "functionCandidate": null,
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 123,
+          "functionCandidate": "CertCal_bootstrap_",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 731,
+          "functionCandidate": "CertCal_apiGerarCertificado",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 731,
+          "functionCandidate": "CertCal_apiGerarCertificado",
+          "excerpt": "JSON.stringify(ctx)"
+        },
+        {
+          "kind": "snapshot",
+          "line": 801,
+          "functionCandidate": "CertCal_dataParaIsoOuVazio_",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 813,
+          "functionCandidate": "CertCal_apiGerarRelatorioInterpretativo",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 890,
+          "functionCandidate": "CertCal_apiReabrirCertificado",
+          "excerpt": "DADOS_JSON"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Conduta_ConteudoModulo.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 1,
+          "functionCandidate": "tplConduta_imprimirPrevia_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Conduta_Ocorrencias.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 311,
+          "functionCandidate": "Conduta_uploadFoto_",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Conduta_Relatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 209,
+          "functionCandidate": "Conduta_montarRelatorioHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "snapshot",
+          "line": 367,
+          "functionCandidate": "Conduta_gerarRelatorio_",
+          "excerpt": "JSON.stringify(ctx)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Conduta_RelatoriosGerenciais.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 29,
+          "functionCandidate": "CondutaRG_base_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "snapshot",
+          "line": 49,
+          "functionCandidate": "CondutaRG_salvar_",
+          "excerpt": "JSON.stringify(ctx)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_CronExec_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 198,
+          "functionCandidate": "CronExec_apiSalvarDocumento",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 73,
+          "functionCandidate": "CronExec_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 204,
+          "functionCandidate": "CronExec_apiSalvarDocumento",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_DeclaracaoExec_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 85,
+          "functionCandidate": "DeclExec_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_DeclaracaoExec_DocumentoQIQO.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 153,
+          "functionCandidate": "DeclExecQIQO_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_DeclaracaoExec_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 530,
+          "functionCandidate": "DeclExec_apiSalvarDocumento",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 113,
+          "functionCandidate": "DeclExec_apiUploadArquivo",
+          "excerpt": ".createFile(blob)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 534,
+          "functionCandidate": "DeclExec_apiSalvarDocumento",
+          "excerpt": ".createFile(pdfBlob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Documentos.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 172,
+          "functionCandidate": "uploadInteligente_",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_EstufaBanhoRel_CertificadoRelatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "template-gas",
+          "line": 258,
+          "functionCandidate": "EstufaBanhoRel_apiMontarCertificadoFinal",
+          "excerpt": "createTemplateFromFile('EstufaBanhoCertificado')"
+        }
+      ]
+    },
+    {
+      "file": "SGO_EstufaBanhoRel_Flex.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "snapshot",
+          "line": 43,
+          "functionCandidate": "EstufaBanhoRel_ebAssinaturaContexto_",
+          "excerpt": "JSON.stringify(ctx)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_EstufaBanhoRel_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 198,
+          "functionCandidate": "EstufaBanhoRel_apiUploadArquivo",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Frota_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 495,
+          "functionCandidate": "Frota_uploadFotoNaPasta_",
+          "excerpt": ".createFile(blob)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 537,
+          "functionCandidate": "Frota_apiUploadFotoVeiculo",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Frota_Relatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 806,
+          "functionCandidate": "Frota_apiGerarRelatorio",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 421,
+          "functionCandidate": "FrotaRel_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 560,
+          "functionCandidate": "FrotaRel_montarDocumentoVeiculoHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 807,
+          "functionCandidate": "Frota_apiGerarRelatorio",
+          "excerpt": ".createFile(pdfBlob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Inventario_ConteudoModulo.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 1,
+          "functionCandidate": "tplInv_executarImpressao_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Inventario_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 257,
+          "functionCandidate": "salvarDocumento",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 261,
+          "functionCandidate": "salvarDocumento",
+          "excerpt": ".createFile(pdfBlob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_LavRel_CertificadoRelatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "template-gas",
+          "line": 215,
+          "functionCandidate": "LavRel_apiMontarCertificadoFinal",
+          "excerpt": "createTemplateFromFile('LavadoraCertificado')"
+        }
+      ]
+    },
+    {
+      "file": "SGO_LavRel_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 140,
+          "functionCandidate": "LavRel_apiUploadArquivo",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "template-gas",
+          "line": 146,
+          "functionCandidate": "medir",
+          "excerpt": "createTemplateFromFile(\"Index\")"
+        }
+      ]
+    },
+    {
+      "file": "SGO_NR13_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 269,
+          "functionCandidate": "NR13Doc_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_NR13_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 704,
+          "functionCandidate": "NR13_apiEmitirLaudo",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 354,
+          "functionCandidate": "NR13_apiUploadFoto",
+          "excerpt": ".createFile(blob)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 705,
+          "functionCandidate": "NR13_apiEmitirLaudo",
+          "excerpt": ".createFile(pdfBlob)"
+        },
+        {
+          "kind": "snapshot",
+          "line": 23,
+          "functionCandidate": null,
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 123,
+          "functionCandidate": "NR13_bootstrap_",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 420,
+          "functionCandidate": "NR13_apiSalvarRascunho",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 718,
+          "functionCandidate": "NR13_apiEmitirLaudo",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 718,
+          "functionCandidate": "NR13_apiEmitirLaudo",
+          "excerpt": "JSON.stringify(ctx)"
+        },
+        {
+          "kind": "snapshot",
+          "line": 845,
+          "functionCandidate": "NR13_apiReabrirLaudo",
+          "excerpt": "DADOS_JSON"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Padroes_Automacao.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 43,
+          "functionCandidate": "CertCal_apiIniciarAtualizacaoPadroes",
+          "excerpt": ".createFile(Utilities.newBlob('{}','application/json','Atualizacao-padroes-'+j.id+'.json'))"
+        },
+        {
+          "kind": "snapshot",
+          "line": 122,
+          "functionCandidate": "checkpoint",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 124,
+          "functionCandidate": "checkpoint",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 125,
+          "functionCandidate": "checkpoint",
+          "excerpt": "DADOS_JSON"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Padroes_Documentos.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "arquivo-drive",
+          "line": 205,
+          "functionCandidate": "CertCal_apiSalvarControlePadrao",
+          "excerpt": ".createFile(blob).getId()"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 247,
+          "functionCandidate": "PadDoc_salvarDocumento_",
+          "excerpt": ".createFile(Utilities.newBlob(JSON.stringify(ctx),'application/json',nome+'.json'))"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 248,
+          "functionCandidate": "PadDoc_salvarDocumento_",
+          "excerpt": ".createFile(Utilities.newBlob(html,'text/html',nome+'.html'))"
+        },
+        {
+          "kind": "snapshot",
+          "line": 20,
+          "functionCandidate": "PadDoc_bootstrap_",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 70,
+          "functionCandidate": "PadDoc_mesclar_",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 206,
+          "functionCandidate": "CertCal_apiSalvarControlePadrao",
+          "excerpt": "DADOS_JSON"
+        },
+        {
+          "kind": "snapshot",
+          "line": 247,
+          "functionCandidate": "PadDoc_salvarDocumento_",
+          "excerpt": "JSON.stringify(ctx)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_PgtPop_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 213,
+          "functionCandidate": "PgtPop_apiSalvarDocumento",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "pdf-servidor",
+          "line": 303,
+          "functionCandidate": "PgtPop_salvarPdfAutomatico_",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 126,
+          "functionCandidate": "PgtPop_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 220,
+          "functionCandidate": "PgtPop_apiSalvarDocumento",
+          "excerpt": ".createFile(blob)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 306,
+          "functionCandidate": "PgtPop_salvarPdfAutomatico_",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_PlanCME_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 280,
+          "functionCandidate": "PlanCME_apiSalvarDocumento",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 95,
+          "functionCandidate": "PlanCME_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 286,
+          "functionCandidate": "PlanCME_apiSalvarDocumento",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Qualidade_Relatorio.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 6,
+          "functionCandidate": null,
+          "excerpt": "window.print()"
+        },
+        {
+          "kind": "impressao-browser",
+          "line": 90,
+          "functionCandidate": "Qualidade_montarRelatorioHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_RegOp_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 95,
+          "functionCandidate": "RegOp_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_RegOp_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 437,
+          "functionCandidate": "RegOp_apiGerarRegistro",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 440,
+          "functionCandidate": "RegOp_apiGerarRegistro",
+          "excerpt": ".createFile(blob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_RelCal_Documento.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "impressao-browser",
+          "line": 218,
+          "functionCandidate": "RelCalDoc_montarDocumentoHtml_",
+          "excerpt": "window.print()"
+        }
+      ]
+    },
+    {
+      "file": "SGO_RelCal_Main.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "pdf-servidor",
+          "line": 273,
+          "functionCandidate": "RelCal_apiSalvarDocumento",
+          "excerpt": "getAs(MimeType.PDF)"
+        },
+        {
+          "kind": "arquivo-drive",
+          "line": 277,
+          "functionCandidate": "RelCal_apiSalvarDocumento",
+          "excerpt": ".createFile(pdfBlob)"
+        }
+      ]
+    },
+    {
+      "file": "SGO_Setup.js",
+      "decodedEmbedded": false,
+      "hits": [
+        {
+          "kind": "snapshot",
+          "line": 203,
+          "functionCandidate": "setupSGO",
+          "excerpt": "DADOS_JSON"
+        }
+      ]
+    }
+  ]
+}

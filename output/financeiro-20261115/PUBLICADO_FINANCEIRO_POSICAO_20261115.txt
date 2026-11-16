@@ -1,0 +1,20 @@
+Painel financeiro — Posição de hoje + correção dos vencidos por cliente — publicado em 14/11/2026 23:53 BRT
+
+Imagem: metrolabs/sgo:financeiro-posicao-20261115
+        sha256:52e704ffed44dbe93020ffa7d6d2628e0fbf45ed702af0053015d8f3cc2d8987
+Base:   metrolabs/sgo:financeiro-vencidos-20261115 (sha256:29fc3df1…), 3 arquivos conferidos pelo hash do contêiner; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-posicao-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+1) CORREÇÃO: "Vencidos a receber por cliente" (publicado às 23:48) somava o VALOR DO DOCUMENTO. Ensaio real: o saldo em aberto
+   é 71% disso (pagamentos parciais e retenções). Agora soma o SALDO EM ABERTO (ListarMovimentos CR, cStatus ATRASADO, mesmos 80
+   títulos; títulos com saldo zero ficam fora). Coluna "Em aberto". Ficou no ar com o valor maior por 5 minutos, sem uso.
+2) "Posição de hoje" no alto da Visão geral, pelo resumo do Omie (ObterResumoFinancas, 1 chamada): saldo somado das contas e
+   fluxo dos próximos 10 dias (a receber, a pagar, saldo previsto ao fim do dia; encadeamento dia a dia conferido no real).
+   NÃO mostra os totais de aberto/atraso do resumo: usam um recorte próprio do Omie (87,5% do saldo em aberto dos vencidos no
+   ensaio real), que não bate com a soma dos títulos; esses números vêm da agenda e dos vencidos por cliente.
+Achado: dos 80 títulos a receber vencidos, 35 venceram entre 2021 e 2024 (4/15/10/6) — para a cobrança e a contabilidade decidirem.
+Arquivos: SGO_Omie_Gestao.js, JS_Omie_Gestao.html, SGO_Ajuda_Financeiro.js. Patch: patch-posicao.cjs (+ vencidos e rótulos à mão).
+Testes: financeiro-omie-20261114 11/11 (novo: posição; vencidos pelo saldo; página completa com a posição), ganhos-omie 4/4,
+omie-financeiro 13/13, ajuda 1/1. Ensaio real (ensaio/final.json, atraso.json, resumo2.json): vencidos 80 títulos/37 clientes
+em 2 s; posição 10 dias a partir de hoje.
+No ar: saudável, GET 200, 0 erros, HTML com a posição e o rótulo novo dos vencidos.

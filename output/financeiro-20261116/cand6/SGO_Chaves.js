@@ -1,0 +1,910 @@
+/****************************************************
+ * CHAVES E SENHAS — servidor (2026-10-16)
+ *
+ * Módulo exclusivo do responsável pelo sistema (lista SGO_DONOS, comparada
+ * com o USUARIO da sessão sem diferenciar maiúsculas). Grava as chaves de
+ * integração e as senhas administrativas em
+ * PropertiesService.getScriptProperties() — no servidor próprio isso é a
+ * tabela "propriedades", escopo 'script', onde o carteiro de e-mail, o envio
+ * de WhatsApp e os demais módulos leem.
+ *
+ *  - O valor gravado nunca volta para a tela: no máximo os 4 últimos
+ *    caracteres de chaves de API ("••••7Q2x"); senhas, nem isso. Os
+ *    identificadores não secretos (provedor, Phone ID, WABA ID) aparecem
+ *    inteiros.
+ *  - Data/hora da alteração em CHV_ALTERADO_<CHAVE> ("aaaa-mm-ddThh:mm:ss",
+ *    horário de Brasília).
+ *  - Auditoria em SYS_LOGS (SGO_DATA.log, módulo CHAVES): quem, quando e
+ *    qual chave — nunca o valor.
+ *  - SIMULADOR_ADMIN_SENHA é comparada em texto puro pelos relatórios
+ *    técnicos (AutoRel/LavRel/CadeiaFrio/EstufaBanho: senha !==
+ *    senhaEsperada); por isso é gravada como texto.
+ *  - 21/10/2026: MODO_PERSONALIZADO_SENHA saiu desta tela. O modo
+ *    personalizado tem senha própria de cada responsável técnico,
+ *    guardada só como resumo com sal (SGO_ModoPersonalizado.js); a
+ *    senha antiga é apagada no primeiro uso do modo novo.
+ *
+ * Tela em JS_Chaves.html. Toda Chaves_api*(sessionId, payload) confere a
+ * sessão e o dono; quem não for dono recebe a mensagem de módulo exclusivo.
+ ****************************************************/
+
+/** Quem pode ver e usar o módulo (login do usuário, sem diferenciar maiúsculas). Troque aqui. */
+var SGO_DONOS = ['admin'];
+
+var CHV_FUSO = 'America/Sao_Paulo';
+var CHV_PREFIXO_ALTERADO = 'CHV_ALTERADO_';
+var CHV_MSG_EXCLUSIVO = 'Não foi possível abrir: este módulo é exclusivo do responsável pelo sistema.';
+
+// 17/10/2026: um grupo por integração (a tela mostra a situação e o teste de cada grupo).
+var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'Omie', 'Regras do Financeiro', 'Conduta', 'E-mail', 'WhatsApp oficial (Meta)', 'Z-API', 'Rastreador da frota', 'Automação predial (Tuya)', 'Caju (cartão de despesas)', 'Relatórios técnicos', 'COMMAND'];
+var CHV_PREFIXO_TESTE = 'CHV_TESTE_';
+var CHV_LIGA_DESLIGA = [['1', 'Ligado'], ['0', 'Desligado']];
+
+/**
+ * tipo: 'chave' (segredo, mostra os 4 últimos), 'senha' (segredo, não mostra nada),
+ *       'aberto' (não secreto, mostra inteiro).
+ * teste: qual botão "Testar" aparece no item.
+ */
+var CHV_ITENS = [
+  { chave: 'FROTA_KM_NOTURNO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Conferência automática do KM às 22h',
+    ajuda: 'Horário de Brasília. Um veículo por rodada do rastreador após 22h. Só ajusta o acumulador GPS dos veículos em modo Ativo, devolvidos, parados, desligados e com sinal, sem uso posterior à foto. Duas leituras da foto precisam confirmar o KM digitado; os demais casos ficam pendentes no painel da frota. Não altera o KM digitado pelo colaborador.' },
+  { chave: 'FROTA_KM_NOTURNO_IA_AUTORIZADA', grupo: 'Rastreador da frota', tipo: 'aberto', opcoes: [['1', 'Autorizado'], ['0', 'Não autorizado']], vazio: 'Não autorizado', nome: 'Autorizar leitura das fotos dos painéis pela IA',
+    ajuda: 'Autoriza enviar somente a foto do painel da última devolução ao Google Gemini, com a chave de IA já configurada. Sem esta autorização, a conferência automática não executa.' },
+  { chave: 'GEMINI_API_KEY', grupo: 'Inteligência artificial', tipo: 'chave', teste: 'gemini', nome: 'Chave da IA (Gemini)',
+    ajuda: 'Google AI Studio → Get API key. Usada nas interpretações técnicas, PGT/POP e leitura de documentos.' },
+  // 11/11/2026 (Comercial, viagem): km do trecho e pedágio calculados pelo servidor (SGO_Comercial_Rotas.js). Sem a chave, o banco de rotas e o vendedor
+  { chave: 'GOOGLE_ROUTES_API_KEY', grupo: 'Comercial', tipo: 'chave', nome: 'Comercial: chave do serviço de rotas (km e pedágio)',
+    ajuda: 'Google Cloud → APIs e serviços → ative a "Routes API" e crie uma chave restrita a ela. Usada pelo servidor para sugerir o km do trecho e o pedágio da viagem da proposta (a chave nunca vai ao navegador). Sem a chave, o sistema usa o banco de rotas conferidas pela equipe e o vendedor informa o que faltar.' },
+  // 01/11/2026 (Comercial C3): busca de preços públicos na internet pelo Orçamentista e pelo Banco de preços (usa a chave da IA)
+  { chave: 'COM_BUSCA_WEB', grupo: 'Inteligência artificial', tipo: 'aberto', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Comercial: buscar preços na internet',
+    ajuda: 'Liga o botão "Buscar na internet" do Orçamentista e do Banco de preços. A pesquisa usa a Chave da IA (Gemini) com a pesquisa do Google, no servidor; a chave nunca vai ao navegador. O que for achado só entra no banco depois que o vendedor ou a gestão confere o link e confirma.' },
+  { chave: 'COM_BUSCA_WEB_PROVEDOR', grupo: 'Inteligência artificial', tipo: 'aberto', exemplo: 'GEMINI_GOOGLE', vazio: 'GEMINI_GOOGLE', nome: 'Comercial: serviço de busca de preços',
+    ajuda: 'Hoje só existe GEMINI_GOOGLE. Outro serviço de busca entra em SGO_Comercial_BancoPrecos.js (COM_BP_PROVEDORES_BUSCA) e é escolhido aqui.' },
+  { chave: 'AUVO_API_KEY', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo: chave de acesso',
+    ajuda: 'No Auvo: Menu → Integrações → API, campo da chave de acesso (API Key).' },
+  { chave: 'AUVO_API_TOKEN', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo: token de acesso',
+    ajuda: 'No Auvo, na mesma tela da chave de acesso, campo do token (API Token).' },
+  { chave: 'AUVO_AVISOS_WHATSAPP', grupo: 'Auvo', tipo: 'aberto', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Avisos de O.S. do Auvo por WhatsApp e e-mail',
+    ajuda: 'Ligado, a sincronização do Auvo avisa o técnico, a gestão e o contato do cliente quando um chamado é aberto e quando é concluído (modelos sgo_chamado_aberto e sgo_chamado_concluido; ligue depois que a Meta aprovar os dois). Cada evento avisa uma vez. Na primeira sincronização com os avisos ligados, o SGO+ grava a data de corte AUVO_AVISOS_DESDE; O.S. abertas ou concluídas antes dela não geram aviso.' },
+  { chave: 'AUVO_AVISAR_GESTAO', grupo: 'Auvo', tipo: 'aberto', exemplo: 'joao, maria', nome: 'Avisos de O.S.: quem da gestão recebe (logins)',
+    ajuda: 'Logins (campo Usuário do cadastro de usuários) separados por vírgula. Vazio = todos os usuários ativos com perfil Gestor ou Diretoria.' },
+  { chave: 'SIMULADOR_ADMIN_SENHA', grupo: 'Relatórios técnicos', tipo: 'senha', nome: 'Senha do Simulador (relatórios)',
+    ajuda: 'A mesma senha usada hoje no Simulador dos relatórios técnicos.' },
+  // 20/10/2026: modelo da planilha de dados da Autoclave (SGO_AutoRel_PlanilhaDados.js). Vazio = modelo novo.
+  { chave: 'AUTOREL_PLANILHA_MODELO', grupo: 'Relatórios técnicos', tipo: 'aberto', exemplo: 'NOVO', opcoes: [['NOVO', 'Modelo novo (A4 paisagem, com aprovação)'], ['ANTERIOR', 'Modelo anterior (Google Planilhas)']], vazio: 'Modelo novo', nome: 'Autoclave: modelo da planilha de dados',
+    ajuda: 'Modelo novo: documento A4 em paisagem com índice, gráficos, memória de cálculo e as leituras do registrador, salvo em HTML e PDF na pasta do cliente e emitido com a aprovação do responsável técnico. Modelo anterior: a planilha antiga, guardada sem mudança; use só se o novo apresentar problema. Documentos já emitidos não mudam.' },
+  { chave: 'SMTP_SENHA', grupo: 'E-mail', tipo: 'senha', teste: 'email', nome: 'Senha do e-mail sistema@metrolabs.com.br',
+    ajuda: 'A senha da caixa sistema@metrolabs.com.br (servidor mail.metrolabs.com.br, porta 465). Os e-mails do SGO+ saem por ela.' },
+  { chave: 'WHATSAPP_PROVEDOR', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', teste: 'whatsapp', exemplo: 'meta', opcoes: [['meta', 'WhatsApp oficial (Meta)'], ['zapi', 'Z-API']], vazio: 'Automático', nome: 'Provedor do WhatsApp em uso',
+    ajuda: 'WhatsApp oficial (Meta): mensagens por modelos aprovados. Z-API: texto pronto pela instância da Z-API, sem modelo a aprovar, com intervalo e limites para proteger o número (grupo Z-API). Automático: usa a Meta se o token da Meta estiver gravado; senão a Z-API, se as 3 chaves dela estiverem gravadas. Vale também para o COMMAND (lembretes do ponto, avisos, demandas), que não tenha provedor próprio gravado.' },
+  { chave: 'META_WA_TOKEN', grupo: 'WhatsApp oficial (Meta)', tipo: 'chave', teste: 'whatsapp', nome: 'WhatsApp oficial (Meta): token permanente',
+    ajuda: 'No Gerenciador de Negócios da Meta: Configurações do negócio → Usuários → Usuários do sistema → crie (ou abra) um usuário do sistema com acesso ao app e à conta do WhatsApp → Gerar novo token, sem validade, com as permissões whatsapp_business_messaging e whatsapp_business_management. Não use o token temporário de 24 h da tela de teste. As mensagens só saem por modelos aprovados (docs/MODELOS_WHATSAPP_META.md).' },
+  { chave: 'META_WA_PHONE_ID', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', exemplo: '1409597008899044', nome: 'WhatsApp oficial (Meta): identificação do número de telefone',
+    ajuda: 'No painel de desenvolvedores da Meta (developers.facebook.com) → seu app → WhatsApp → Configuração da API: campo "Identificação do número de telefone" (Phone Number ID). O da Metrolabs (+55 62 98241-7106) é 1409597008899044. Não é o número de telefone.' },
+  { chave: 'META_WA_WABA_ID', grupo: 'WhatsApp oficial (Meta)', tipo: 'aberto', exemplo: '1406451067859707', nome: 'WhatsApp oficial (Meta): identificação da conta comercial',
+    ajuda: 'Na mesma tela da Configuração da API: "Identificação da conta do WhatsApp Business" (WABA ID). O da Metrolabs é 1406451067859707. Usado para conferir os modelos de mensagem cadastrados.' },
+  // 20/10/2026: com esta chave, o webhook do COMMAND só aceita evento da Meta com a assinatura X-Hub-Signature-256 certa.
+  { chave: 'META_APP_SECRET', grupo: 'WhatsApp oficial (Meta)', tipo: 'chave', nome: 'WhatsApp oficial (Meta): chave secreta do aplicativo',
+    ajuda: 'No painel de desenvolvedores da Meta (developers.facebook.com) → seu app → Configurações do app → Básico → "Chave secreta do aplicativo" → Mostrar. Com ela gravada, o COMMAND confere a assinatura de cada mensagem recebida pelo webhook e recusa o que não veio da Meta. Vazia: vale só o segredo do endereço do webhook, como hoje.' },
+  { chave: 'ZAPI_INSTANCIA', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: identificação da instância',
+    ajuda: 'No painel da Z-API (app.z-api.io): Instâncias → abra a instância do WhatsApp da Metrolabs → copie o campo "ID da instância". Sem as 3 chaves Z-API, o WhatsApp por Z-API fica desligado.' },
+  { chave: 'ZAPI_TOKEN', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token da instância',
+    ajuda: 'Na mesma tela da instância na Z-API, copie o campo "Token da instância" (não é o Client-Token). Se a instância for recriada, o token muda e precisa ser gravado de novo aqui.' },
+  { chave: 'ZAPI_CLIENT_TOKEN', grupo: 'Z-API', tipo: 'chave', teste: 'whatsapp', nome: 'Z-API: token de segurança da conta',
+    ajuda: 'Na Z-API: menu Segurança → "Token de segurança da conta" (Client-Token). Ative o token lá e cole aqui o mesmo valor; sem ele a Z-API recusa os envios.' },
+  // 20/10/2026: proteção do número (SGO_Zapi.js; no servidor a fila é uma só para o SGO+ e o COMMAND). Vazio = padrão.
+  { chave: 'ZAPI_INTERVALO_MIN_S', grupo: 'Z-API', tipo: 'aberto', exemplo: '3', nome: 'Z-API: intervalo mínimo entre mensagens (segundos)',
+    ajuda: 'Proteção do número: entre uma mensagem e a próxima (SGO+ e COMMAND juntos) o sistema espera um tempo sorteado entre o mínimo e o máximo. Vazio = 3. Aceita de 2 a 60.' },
+  { chave: 'ZAPI_INTERVALO_MAX_S', grupo: 'Z-API', tipo: 'aberto', exemplo: '8', nome: 'Z-API: intervalo máximo entre mensagens (segundos)',
+    ajuda: 'Vazio = 8. Aceita de 2 a 120 (menor que o mínimo vale o mínimo). Intervalos variados parecem envio de pessoa, não de robô.' },
+  { chave: 'ZAPI_LIMITE_HORA', grupo: 'Z-API', tipo: 'aberto', exemplo: '40', nome: 'Z-API: limite de mensagens por hora',
+    ajuda: 'Avisos automáticos somados do SGO+ e do COMMAND nos últimos 60 minutos. Passou do limite, o aviso fica no sistema e o envio é registrado como pulado, com o motivo. Respostas a quem escreveu e testes não são barrados. Vazio = 40. Aceita de 1 a 500.' },
+  { chave: 'ZAPI_LIMITE_DIA', grupo: 'Z-API', tipo: 'aberto', exemplo: '200', nome: 'Z-API: limite de mensagens por dia',
+    ajuda: 'O mesmo, nas últimas 24 horas. Número novo na Z-API: comece baixo (100 a 200) e aumente aos poucos. Vazio = 200. Aceita de 1 a 3000.' },
+  { chave: 'ZAPI_LIMITE_PESSOA_HORA', grupo: 'Z-API', tipo: 'aberto', exemplo: '6', nome: 'Z-API: limite por hora para o mesmo celular',
+    ajuda: 'Quantas mensagens automáticas a mesma pessoa pode receber em 60 minutos. Vazio = 6. Aceita de 1 a 60.' },
+  // 17/10/2026: rastreador dos veículos — SGO_Frota_Rastreador.js. 19/10/2026: API real da iTracker (Bearer, somente leitura);
+  // usuário e senha da versão Traccar saíram da tela. Comandos de bloqueio/liberação configuráveis para quando a iTracker liberar.
+  { chave: 'RASTREADOR_URL', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: 'https://api.itrackergo.com.br/v1/', nome: 'Rastreador: endereço da API',
+    ajuda: 'Endereço da API da iTracker. Vazio = https://api.itrackergo.com.br/v1/. Só https (http apenas para testes no próprio servidor).' },
+  { chave: 'RASTREADOR_TOKEN', grupo: 'Rastreador da frota', tipo: 'chave', teste: 'rastreador', nome: 'Chave de acesso (Bearer)',
+    ajuda: 'A chave de acesso que a iTracker enviou para a Metrolabs. Vai no cabeçalho "Authorization: Bearer" de toda consulta. Nunca aparece na tela, em log, e-mail ou aviso.' },
+  { chave: 'RASTREADOR_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Rastreador ligado no SGO+',
+    ajuda: 'Desligado: o SGO+ não faz nenhuma chamada ao rastreador (o botão Testar conexão continua funcionando). Ligado: lê as posições a cada 2 minutos, avisa o uso sem registro, confere o KM e guarda o ponto de chegada de cada devolução.' },
+  { chave: 'RASTREADOR_RETENCAO_DIAS', grupo: 'Rastreador da frota', tipo: 'aberto', exemplo: '90', nome: 'Rastreador: dias de guarda da localização',
+    ajuda: 'LGPD: por quantos dias o SGO+ guarda o ponto de chegada das devoluções e o local dos alertas. Depois disso a localização é apagada sozinha (uma vez por dia). Vazio = 90 dias. Aceita de 7 a 1825.' },
+  // 21/10/2026 (bloqueio da partida, SGO_Frota_Bloqueio.js): comandos em POST /commands da iTracker com a chave própria dos comandos;
+  // os endereços de comando da versão anterior saíram da tela (sem efeito; o valor antigo, se houver, fica guardado e é ignorado).
+  { chave: 'RASTREADOR_BLOQUEIO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', teste: 'rastreador', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Bloqueio da partida pelo SGO+',
+    ajuda: 'Deixe Desligado até a equipe ligar o piloto. Desligado, nenhum comando sai para os carros: cada veículo trabalha em simulação (o SGO+ registra o que teria feito). Ligado (com a chave dos comandos gravada), só os veículos em modo Ativo recebem comandos de verdade; o modo de cada veículo fica no cartão dele, em Frota > Rastreamento > Visão geral. O bloqueio nunca é enviado com o carro andando.' },
+  { chave: 'RASTREADOR_TOKEN_COMANDOS', grupo: 'Rastreador da frota', tipo: 'chave', nome: 'Chave de acesso dos comandos',
+    ajuda: 'A chave nova que a iTracker enviou para os comandos: bloquear e liberar a partida e acertar o odômetro (ela também lê as posições). Grave aqui; não precisa preencher endereço de comando. Gravar a chave não liga o bloqueio: ele continua desligado até "Bloqueio da partida pelo SGO+" = Ligado. Nunca aparece na tela, em log, e-mail ou aviso.' },
+  // 22/10/2026: Segurança e automação predial — portões e porta da Diretoria pela nuvem do Smart Life (SGO_Automacao_Tuya.js).
+  { chave: 'TUYA_ACCESS_ID', grupo: 'Automação predial (Tuya)', tipo: 'chave', teste: 'tuya', nome: 'Tuya: Access ID do projeto cloud',
+    ajuda: 'No portal da Tuya (platform.tuya.com), entre com a conta de desenvolvedor da Metrolabs: Cloud > Development > abra o projeto > aba Overview > "Access ID/Client ID". O projeto precisa ter a conta do aplicativo Smart Life ligada (Devices > Link Tuya App Account, lendo o QR Code no Smart Life) e os serviços IoT Core, Authorization Token Management e, para a fechadura, Smart Lock Open Service autorizados (Service API). O centro de dados do projeto precisa atender a conta do Smart Life (Brasil: Western America ou, nas contas mais novas, Eastern America). Passo a passo no Guia de acesso à Tuya.' },
+  { chave: 'TUYA_ACCESS_SECRET', grupo: 'Automação predial (Tuya)', tipo: 'senha', teste: 'tuya', nome: 'Tuya: Access Secret do projeto cloud',
+    ajuda: 'Na mesma aba Overview do projeto, "Access Secret/Client Secret" (clique em mostrar e copie). Assina cada chamada à Tuya; nunca aparece na tela, em log, e-mail ou aviso. Se a Tuya gerar um segredo novo, grave de novo aqui.' },
+  { chave: 'TUYA_REGIAO', grupo: 'Automação predial (Tuya)', tipo: 'aberto', teste: 'tuya', exemplo: 'us', opcoes: [['us', 'Western America (América Oeste)'], ['ue', 'Eastern America (América Leste)'], ['eu', 'Europa Central'], ['we', 'Europa Ocidental'], ['in', 'Índia'], ['cn', 'China'], ['sg', 'Singapura']], vazio: 'Western America (América Oeste)', nome: 'Tuya: centro de dados do projeto',
+    ajuda: 'O centro de dados ("Data Center") onde os portões e a fechadura apareceram no projeto do portal da Tuya (aba Devices, seletor no canto superior direito). Contas do Smart Life do Brasil ficam em Western America (América Oeste) ou, nas contas mais novas, em Eastern America (América Leste): a Tuya passou o Brasil para Eastern America em 25/11/2025 para os aplicativos registrados depois dessa data. Escolha aqui o mesmo em que os dispositivos aparecem; se o teste de conexão listar 0 dispositivo, troque e teste de novo.' },
+  { chave: 'TUYA_LIGADO', grupo: 'Automação predial (Tuya)', tipo: 'aberto', teste: 'tuya', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Automação predial ligada',
+    ajuda: 'Desligado: o SGO+ não faz nenhuma chamada à Tuya (o botão Testar conexão continua funcionando) e todo comando é registrado em simulação. Ligado: lê os dispositivos e os estados; os comandos só saem de verdade nos dispositivos homologados pela Diretoria em Segurança e automação predial. Deixe Desligado até a homologação.' },
+  // 14/11/2026: Omie — as credenciais ficam no cofre do servidor (/_sgo/segredos#omie); aqui só a chave da gravação e o teste.
+  { chave: 'OMIE_GRAVACAO_LIGADA', grupo: 'Omie', tipo: 'aberto', teste: 'omie', opcoes: [['1', 'Ligada (envia ao Omie)'], ['0', 'Desligada (só prévia)']], vazio: 'Desligada (só prévia)', nome: 'Gravação no Omie pelo Painel financeiro',
+    ajuda: 'Desligada: o Painel financeiro consulta o Omie e mostra a prévia de cada operação, mas não envia nada. Ligada: lançar, alterar e baixar títulos, gerar e prorrogar boletos, faturar pedidos e O.S. (emite nota) e importar NF-e passam a gravar no Omie, sempre com prévia conferida e confirmação. Ligue para a primeira operação acompanhada.' },
+  // 16/11/2026 (especificação do Financeiro, B6): CNPJ da empresa da conta Omie. Confere que a NF-e de saída é da empresa e que a
+  // NF-e de compra e a NFS-e recebidas são para a empresa (destinatário/tomador). Só os 14 números, com dígito verificador.
+  { chave: 'OMIE_EMPRESA_CNPJ', grupo: 'Omie', tipo: 'aberto', exemplo: '00000000000000', nome: 'CNPJ da empresa no Omie',
+    ajuda: 'O CNPJ da empresa da conta Omie (o mesmo do cartão CNPJ e das notas que a empresa emite), só os 14 números. O SGO+ usa para conferir que a NF-e de saída importada foi emitida pela empresa e que a NF-e de compra e a NFS-e lançadas como conta a pagar são para a empresa (destinatário ou tomador). Sem ele, a importação e o lançamento de notas recusam com este aviso. O SGO+ confere os dígitos verificadores; a conferência com o cadastro da empresa no próprio Omie fica para a primeira operação acompanhada.' },
+  // 16/11/2026 (pedido do dono: "deixa tudo organizado de forma que possa ser configurado"): decisões do Financeiro com o padrão
+  // seguro (o comportamento que já existia). Lidas em SGO_Omie_Regras.js; mostradas no Painel financeiro > Regras do Financeiro.
+  { chave: 'OMIE_NFE_COMPRA_DESTINO', grupo: 'Regras do Financeiro', tipo: 'aberto', opcoes: [['FINANCEIRO', 'Só financeiro (conta a pagar)'], ['FINANCEIRO_FISCAL', 'Financeiro e fiscal — combinar com o contador']], vazio: 'Só financeiro (conta a pagar)', nome: 'NF-e de compra: onde entra no Omie',
+    ajuda: 'Só financeiro (padrão): cada parcela da NF-e de compra vira conta a pagar no Omie; a nota não entra no módulo fiscal do Omie. Financeiro e fiscal: combine antes com o contador. O lançamento fiscal pelo SGO+ ainda não existe: com esta opção, a tela da nota mostra um aviso e o lançamento continua só no financeiro.' },
+  { chave: 'OMIE_NFSE_RETENCOES', grupo: 'Regras do Financeiro', tipo: 'aberto', opcoes: [['OBSERVACAO', 'Valor líquido, retenções na observação'], ['CAMPOS_OMIE', 'Retenções nos campos do Omie (a confirmar)']], vazio: 'Valor líquido, retenções na observação', nome: 'NFS-e: como lançar as retenções',
+    ajuda: 'Valor líquido (padrão): a conta a pagar da NFS-e vai pelo valor líquido (o que se paga ao prestador) e as retenções (IR, PIS, COFINS, CSLL, INSS, ISS) ficam escritas na observação. Retenções nos campos do Omie: a conta vai pelo valor do serviço e cada retenção no campo de impostos retidos do Omie, que calcula o líquido. É a forma contabilmente correta, mas está a confirmar na primeira operação acompanhada que o Omie baixa e mostra o saldo pelo líquido. Combine com o contador antes de trocar.' },
+  { chave: 'OMIE_ALCADA_SEGUNDA_CONFIRMACAO', grupo: 'Regras do Financeiro', tipo: 'aberto', exemplo: '10000,00', nome: 'Alçada: digitar o valor de novo acima de (R$)',
+    ajuda: 'Valor em reais. Acima dele, a baixa (a pagar e a receber), o lançamento ou a alteração de conta a pagar e o lançamento de nota recebida só são confirmados se a pessoa digitar o valor de novo na prévia (evita erro de digitação em valor alto). Sem valor (apague) = desligada. Vale só para quem está na lista de sigilo do Financeiro, que é quem usa o Painel.' },
+  { chave: 'OMIE_ALCADA_APROVACAO', grupo: 'Regras do Financeiro', tipo: 'aberto', exemplo: '50000,00', nome: 'Alçada: aprovação de outra pessoa acima de (R$)',
+    ajuda: 'Valor em reais. Acima dele, a prévia fica aguardando aprovação e só pode ser confirmada depois que o dono do sistema ou a Diretoria (dentro da lista de sigilo; nunca quem preparou; o Financeiro prepara e não aprova, por decisão do dono de 16/11/2026) aprovar no Painel financeiro > Regras do Financeiro > Aprovações. A prévia espera até 24 horas pela aprovação; depois de aprovada, vale 10 minutos, como sempre. Sem valor (apague) = desligada.' },
+  // 16/11/2026 (Onda 2 do Financeiro, E3 a E5): fotografia diária, saldo mínimo e nota de saúde. Sem valor = o padrão da
+  // especificação (output/financeiro-20261116/especialistas/ESPEC_ONDA2_FINANCEIRO.md, seções 1.3, 1.6 e 3.3); decisões do dono.
+  // 16/11/2026 (decisão do dono, confirmada): no começo só o dono e a Diretoria aprovam (Omie, Compras, Depósito de viagem, Recarga Caju)
+  { chave: 'APROVACAO_SO_DIRETORIA', grupo: 'Regras do Financeiro', tipo: 'aberto', opcoes: [['SIM', 'Sim: só o dono e a Diretoria aprovam'], ['NAO', 'Não: voltam as regras de cada módulo']], vazio: 'Sim: só o dono e a Diretoria aprovam', nome: 'Aprovação só do dono e da Diretoria',
+    ajuda: 'Sim (padrão, decisão do dono): toda aprovação financeira é do dono do sistema ou da Diretoria — operações do Omie acima da alçada, compras (todas as faixas), depósito de viagem (uma etapa só) e recarga do cartão Caju. Gestores, comprador, gerência e Financeiro deixam de aprovar; quem pediu nunca aprova o próprio pedido (se o pedido for do dono, aprova a Diretoria, e vice-versa). As faixas em R$ de Compras e a lista de aprovadores da política de viagem continuam guardadas. Não: voltam as regras de antes de cada módulo.' },
+  { chave: 'FIN_SALDO_MINIMO', grupo: 'Regras do Financeiro', tipo: 'aberto', exemplo: '50000,00', nome: 'Saldo mínimo de segurança do caixa (R$)',
+    ajuda: 'Valor em reais que o caixa não deve passar para baixo. Aparece no Painel financeiro > Indicadores como "Folga sobre o saldo mínimo" (saldo em contas menos este valor) e, na próxima etapa, como linha de alerta na previsão de caixa. Sem valor (apague) = "a definir": o indicador mostra "a definir" e nada é comparado. Decisão da Diretoria.' },
+  { chave: 'FIN_SAUDE_PESOS', grupo: 'Regras do Financeiro', tipo: 'aberto', exemplo: '25;20;20;20;5;10', nome: 'Nota de saúde: pesos dos seis critérios',
+    ajuda: 'Seis números inteiros separados por ponto e vírgula, na ordem C1 a C6, somando 100: C1 fôlego do caixa, C2 compromissos de 30 dias, C3 inadimplência acima de 30 dias, C4 margem de caixa de 3 meses, C5 concentração de recebíveis, C6 disciplina operacional. Sem valor = 25;20;20;20;5;10 (proposta inicial da especificação, a combinar com o contador). A explicação de cada critério aparece no cartão "Saúde financeira" do Painel.' },
+  { chave: 'FIN_SAUDE_LIMITES', grupo: 'Regras do Financeiro', tipo: 'aberto', exemplo: 'C1: 10 a 60; C2: 0,8 a 1,3', nome: 'Nota de saúde: limites "ruim" e "bom" de cada critério',
+    ajuda: 'Para cada critério que quiser mudar, escreva "Cn: ruim a bom" separado por ponto e vírgula (ex.: C1: 10 a 60; C3: 15 a 3). Abaixo do ruim o critério vale 0 ponto; a partir do bom, a pontuação cheia; entre os dois, proporcional. Padrões: C1 cobertura de caixa 10 a 60 dias; C2 compromissos de 30 dias 0,8 a 1,3 vezes; C3 inadimplência acima de 30 dias 15 a 3 %; C4 margem de caixa 0 a 15 %; C5 concentração dos 5 maiores clientes 70 a 35 %. O C6 (disciplina) é fixo: quatro conferências de 2,5 pontos. Sem valor = todos os padrões.' },
+  { chave: 'FIN_FOTO_HORA', grupo: 'Regras do Financeiro', tipo: 'aberto', exemplo: '06:00', nome: 'Fotografia diária: a partir de que hora',
+    ajuda: 'Hora (hh:mm) a partir da qual a rotina faz a fotografia do dia dos números do Financeiro (leitura do Omie, nada é gravado no Omie). O padrão 06:00 deixa a leitura pronta antes do expediente e longe da tela de quem usa o Painel. Sem valor = 06:00.' },
+  { chave: 'FIN_FOTO_ROTINA', grupo: 'Regras do Financeiro', tipo: 'aberto', opcoes: [['LIGADA', 'Ligada'], ['DESLIGADA', 'Desligada']], vazio: 'Ligada', nome: 'Fotografia diária do Financeiro',
+    ajuda: 'Ligada (padrão): todo dia a rotina lê o Omie (só leitura) e guarda os números agregados para a aba Indicadores, sem nomes nem CNPJ. Desligada: nenhuma fotografia nova; a aba mostra a última que existir. Use para suspender as leituras se o Omie pedir.' },
+  // 16/11/2026: Programa de Conduta — o envolvido vê quem registrou a ocorrência? (SGO_Conduta_Ocorrencias.js, Conduta_envolvidoVeQuemRegistrou_)
+  { chave: 'CONDUTA_ENVOLVIDO_VE_QUEM_REGISTROU', grupo: 'Conduta', tipo: 'aberto', opcoes: [['NAO', 'Não (o envolvido não vê quem registrou)'], ['SIM', 'Sim (o envolvido vê quem registrou)']], vazio: 'Não (o envolvido não vê quem registrou)', nome: 'Ocorrência: o envolvido vê quem registrou',
+    ajuda: 'Não (padrão): quem é citado numa ocorrência lê o relato para poder contestar, mas não vê o nome de quem registrou. Sim: o envolvido vê também quem registrou. A Diretoria, o responsável pelo sistema e quem decide a ocorrência sempre veem.' },
+  // 11/11/2026: Caju (cartão de despesas) — carga do depósito de viagem pela API e Conciliação Caju (SGO_Caju_Api.js). Os valores
+  // nunca voltam para a tela, para o registro das chamadas nem para os avisos.
+  { chave: 'CAJU_AMBIENTE', grupo: 'Caju (cartão de despesas)', tipo: 'aberto', teste: 'caju', opcoes: [['homologacao', 'Homologação (conta fictícia do Caju)'], ['producao', 'Produção (conta real da Metrolabs)']], vazio: 'Não escolhido (integração desligada)', nome: 'Caju: ambiente',
+    ajuda: 'Homologação: a conta fictícia que o Caju cria no setup, para testar (o crédito é fictício e a carga NÃO entra no depósito de viagem). Produção: a conta real; as cargas pela API saem com dinheiro de verdade. Cada ambiente tem as próprias credenciais: ao trocar o ambiente, grave de novo as quatro chaves abaixo.' },
+  { chave: 'CAJU_CLIENT_ID', grupo: 'Caju (cartão de despesas)', tipo: 'chave', teste: 'caju', nome: 'Caju: Client ID da aplicação',
+    ajuda: 'Enviado pelo time do Caju no setup da integração (o Caju registra a aplicação da Metrolabs). É diferente em homologação e em produção.' },
+  { chave: 'CAJU_CLIENT_SECRET', grupo: 'Caju (cartão de despesas)', tipo: 'senha', teste: 'caju', nome: 'Caju: Client Secret da aplicação',
+    ajuda: 'Enviado pelo Caju junto com o Client ID. Nunca aparece na tela, no registro das chamadas, em e-mail ou aviso.' },
+  { chave: 'CAJU_INTEGRACAO_ID', grupo: 'Caju (cartão de despesas)', tipo: 'chave', teste: 'caju', nome: 'Caju: ID da integração',
+    ajuda: 'Produção: gerado no Portal do RH do Caju pelos administradores da conta (Integrações; até 2 credenciais por integração, para trocar sem parar). Homologação: o Caju manda no setup.' },
+  { chave: 'CAJU_INTEGRACAO_SENHA', grupo: 'Caju (cartão de despesas)', tipo: 'senha', teste: 'caju', nome: 'Caju: senha da integração',
+    ajuda: 'A senha da credencial acima (o Portal do RH mostra só uma vez: copie e grave aqui na hora).' },
+  { chave: 'CAJU_URL_AUTH', grupo: 'Caju (cartão de despesas)', tipo: 'aberto', exemplo: 'https://auth-staging.caju.com.br', vazio: 'Padrão do ambiente', nome: 'Caju: endereço de acesso (opcional)',
+    ajuda: 'Vazio = padrão: homologação https://auth-staging.caju.com.br, produção https://auth.caju.com.br. Preencha só se o Caju mandar outro endereço.' },
+  { chave: 'CAJU_URL_API', grupo: 'Caju (cartão de despesas)', tipo: 'aberto', exemplo: 'https://services.caju.com.br/partners', vazio: 'Padrão do ambiente', nome: 'Caju: endereço da API (opcional)',
+    ajuda: 'Vazio = https://services.caju.com.br/partners nos dois ambientes (a documentação lida não traz um endereço próprio de homologação: confirme com o Caju e preencha aqui se for outro).' },
+  { chave: 'PONTE_COMMAND_SEGREDO', grupo: 'COMMAND', tipo: 'chave', nome: 'Segredo da ponte com o COMMAND',
+    ajuda: 'O mesmo valor configurado no COMMAND para falar com o SGO+.' }
+];
+
+// ------------------------------------------------------------
+// INFRA
+// ------------------------------------------------------------
+function Chaves_ehDonoUsuario_(usuario) {
+  var u = String(usuario === null || usuario === undefined ? '' : usuario).trim().toLowerCase();
+  if (!u) return false;
+  return SGO_DONOS.some(function (d) { return String(d || '').trim().toLowerCase() === u; });
+}
+
+/** Sessão válida E dono; senão lança a mensagem certa. */
+function Chaves_exigirDono_(sessionId) {
+  var v = validarSessao(sessionId);
+  if (!v || !v.valid) {
+    throw new Error('Não foi possível abrir: a sua sessão expirou. Saia e entre de novo no SGO+.');
+  }
+  var s = v.data || {};
+  if (!Chaves_ehDonoUsuario_(s.usuario)) {
+    try { SGO_DATA.log('CHAVES_ACESSO_RECUSADO', SGO_UTILS.safe(s.usuario), 'Tentativa de usar o módulo Chaves e senhas.', 'CHAVES'); } catch (e) {}
+    throw new Error(CHV_MSG_EXCLUSIVO);
+  }
+  return { id: SGO_UTILS.safe(s.userId), usuario: SGO_UTILS.safe(s.usuario), nome: SGO_UTILS.safe(s.nome) || SGO_UTILS.safe(s.usuario) };
+}
+
+function Chaves_resposta_(fn) {
+  try {
+    var r = fn();
+    return JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
+  } catch (e) {
+    return { ok: false, message: String((e && e.message) || e) };
+  }
+}
+
+function Chaves_item_(chave) {
+  var k = String(chave || '').trim();
+  for (var i = 0; i < CHV_ITENS.length; i++) if (CHV_ITENS[i].chave === k) return CHV_ITENS[i];
+  return null;
+}
+
+function Chaves_agora_() {
+  return Utilities.formatDate(new Date(), CHV_FUSO, "yyyy-MM-dd'T'HH:mm:ss");
+}
+
+function Chaves_dataBr_(s) {
+  var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : '';
+}
+
+/** O que a tela pode ver do valor gravado. */
+function Chaves_mascara_(item, valor) {
+  var v = String(valor || '');
+  if (!v) return '';
+  if (item.tipo === 'aberto') return v;
+  if (item.tipo === 'senha') return '••••••••';
+  return v.length >= 8 ? '••••' + v.slice(-4) : '••••';
+}
+
+function Chaves_situacao_(item, props) {
+  var valor = String(props[item.chave] || '');
+  var em = Chaves_dataBr_(props[CHV_PREFIXO_ALTERADO + item.chave]);
+  return {
+    chave: item.chave, grupo: item.grupo, nome: item.nome, ajuda: item.ajuda, exemplo: item.exemplo || '',
+    tipo: item.tipo, teste: item.teste || '', opcoes: item.opcoes || null, vazio: item.vazio || '',
+    configurado: !!valor.trim(), alteradoEm: em, alteradoIso: String(props[CHV_PREFIXO_ALTERADO + item.chave] || ''), mascara: Chaves_mascara_(item, valor)
+  };
+}
+
+function Chaves_lerTodas_() {
+  var p = PropertiesService.getScriptProperties();
+  var out = {};
+  CHV_ITENS.forEach(function (it) {
+    out[it.chave] = p.getProperty(it.chave) || '';
+    out[CHV_PREFIXO_ALTERADO + it.chave] = p.getProperty(CHV_PREFIXO_ALTERADO + it.chave) || '';
+  });
+  return out;
+}
+
+/** De um endereço da Z-API colado inteiro, devolve o trecho depois de /instances/ ou de /token/; valor simples volta igual. */
+function Chaves_zapiParte_(v, parte) {
+  var m = String(v || '').match(new RegExp('/' + parte + '/([A-Za-z0-9_-]+)'));
+  return m ? m[1] : String(v || '').trim();
+}
+
+/** Normaliza e confere o valor antes de gravar. Lança erro com o que fazer. */
+function Chaves_validarValor_(item, valor) {
+  var v = String(valor === null || valor === undefined ? '' : valor).trim();
+  if (!v) throw new Error('Não foi possível gravar: o campo está vazio. Cole o valor e clique em Gravar; para remover a chave, use Apagar.');
+  if (/[\r\n\t]/.test(v)) throw new Error('Não foi possível gravar: o valor tem quebra de linha. Copie de novo só o valor, numa linha, e cole.');
+  if (v.length > 4000) throw new Error('Não foi possível gravar: o valor tem mais de 4.000 caracteres. Confira se copiou só a chave.');
+  if (item.chave === 'WHATSAPP_PROVEDOR') {
+    v = v.toLowerCase();
+    if (v !== 'meta' && v !== 'zapi') throw new Error('Não foi possível gravar: o provedor do WhatsApp aceita só meta ou zapi.');
+  }
+  // 20/10/2026: no painel da Z-API é comum copiar o endereço inteiro (https://api.z-api.io/instances/<ID>/token/<TOKEN>/...).
+  // Guarda só a identificação; o token continua sendo gravado no campo dele.
+  if (item.chave === 'ZAPI_INSTANCIA' || item.chave === 'ZAPI_TOKEN') v = Chaves_zapiParte_(v, item.chave === 'ZAPI_INSTANCIA' ? 'instances' : 'token');
+  // 20/10/2026, caso real: o mesmo valor foi colado em dois campos e a Z-API recusou. Os três valores são diferentes.
+  if (/^ZAPI_(INSTANCIA|TOKEN|CLIENT_TOKEN)$/.test(item.chave)) {
+    var nomesZapi = { ZAPI_INSTANCIA: 'identificação da instância', ZAPI_TOKEN: 'token da instância', ZAPI_CLIENT_TOKEN: 'token de segurança da conta' };
+    var pz = PropertiesService.getScriptProperties();
+    Object.keys(nomesZapi).forEach(function (outra) {
+      if (outra !== item.chave && String(pz.getProperty(outra) || '').trim() === v) {
+        throw new Error('Não foi possível gravar: este valor já está gravado em "' + nomesZapi[outra] + '". No painel da Z-API são três valores diferentes: '
+          + 'identificação e token ficam dentro da instância (no endereço, depois de /instances/ e de /token/); o token de segurança fica em Segurança, no menu da conta.');
+      }
+    });
+  }
+  if (item.chave === 'AUVO_AVISOS_WHATSAPP' && v !== '1' && v !== '0') {
+    throw new Error('Não foi possível gravar: os avisos de O.S. aceitam só 1 (liga) ou 0 (desliga).');
+  }
+  if (item.chave === 'AUVO_AVISAR_GESTAO' && !/^[A-Za-z0-9._@-]+([\s,;]+[A-Za-z0-9._@-]+)*$/.test(v)) {
+    throw new Error('Não foi possível gravar: informe os logins separados por vírgula (ex.: joao, maria), sem outros sinais.');
+  }
+  if (item.chave === 'TUYA_REGIAO') {
+    v = v.toLowerCase();
+    if (!/^(us|ue|eu|we|in|cn|sg)$/.test(v)) throw new Error('Não foi possível gravar: escolha o centro de dados na lista (us, ue, eu, we, in, cn ou sg).');
+  }
+  if (item.chave === 'TUYA_ACCESS_ID' || item.chave === 'TUYA_ACCESS_SECRET') {
+    if (!/^[A-Za-z0-9._-]{8,80}$/.test(v)) throw new Error('Não foi possível gravar: copie só o valor (letras e números, sem espaços) da aba Overview do projeto no portal da Tuya.');
+  }
+  if ((item.chave === 'RASTREADOR_LIGADO' || item.chave === 'RASTREADOR_BLOQUEIO_LIGADO' || item.chave === 'TUYA_LIGADO') && v !== '1' && v !== '0') {
+    throw new Error('Não foi possível gravar: este campo aceita só 1 (liga) ou 0 (desliga).');
+  }
+  if (item.chave === 'RASTREADOR_URL') {
+    v = v.replace(/\/+$/, '');
+    if (!/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[^\s?#]*)?$/.test(v) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s?#]*)?$/.test(v)) {
+      throw new Error('Não foi possível gravar: informe o endereço com https://, por exemplo https://api.itrackergo.com.br/v1/ (sem espaços, sem ? e sem #).');
+    }
+  }
+  if (item.chave === 'RASTREADOR_CMD_BLOQUEIO_URL' || item.chave === 'RASTREADOR_CMD_LIBERACAO_URL') {
+    if (!/^\/[^\s?#]*$/.test(v) && !/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[^\s?#]*)?$/.test(v) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s?#]*)?$/.test(v)) {
+      throw new Error('Não foi possível gravar: informe o caminho começando por / (ex.: /commands) ou o endereço completo com https:// (sem espaços, sem ? e sem #).');
+    }
+  }
+  if (typeof ZAPI_PROPS !== 'undefined' && ZAPI_PROPS[item.chave]) {
+    var fx = ZAPI_FAIXA[ZAPI_PROPS[item.chave]];
+    if (!/^\d{1,4}$/.test(v) || Number(v) < fx[0] || Number(v) > fx[1]) throw new Error('Não foi possível gravar: informe um número inteiro de ' + fx[0] + ' a ' + fx[1] + ' (ex.: ' + item.exemplo + ').');
+    v = String(Number(v));
+  }
+  if (item.chave === 'RASTREADOR_RETENCAO_DIAS') {
+    if (!/^\d{1,4}$/.test(v) || Number(v) < 7 || Number(v) > 1825) throw new Error('Não foi possível gravar: informe o número de dias, de 7 a 1825 (ex.: 90).');
+    v = String(Number(v));
+  }
+  if (item.chave === 'OMIE_EMPRESA_CNPJ') {
+    v = v.replace(/\D/g, '');
+    var okCnpj = /^\d{14}$/.test(v) && !/^(\d)\1{13}$/.test(v) && [12, 13].every(function (n) { var p = n === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2], soma = 0; for (var i = 0; i < n; i++) soma += Number(v[i]) * p[i]; var r = soma % 11; return (r < 2 ? 0 : 11 - r) === Number(v[n]); });
+    if (!okCnpj) throw new Error('Não foi possível gravar: o CNPJ precisa ter 14 números e os dígitos verificadores precisam conferir. Copie do cartão CNPJ da empresa.');
+  }
+  // 16/11/2026: Regras do Financeiro e Conduta (opções fechadas e valores em reais)
+  var CHV_FECHADAS = { APROVACAO_SO_DIRETORIA: ['SIM', 'NAO'], OMIE_NFE_COMPRA_DESTINO: ['FINANCEIRO', 'FINANCEIRO_FISCAL'], OMIE_NFSE_RETENCOES: ['OBSERVACAO', 'CAMPOS_OMIE'], CONDUTA_ENVOLVIDO_VE_QUEM_REGISTROU: ['NAO', 'SIM'] };
+  if (CHV_FECHADAS[item.chave]) {
+    v = v.toUpperCase().replace(/Ã/g, 'A');
+    if (CHV_FECHADAS[item.chave].indexOf(v) < 0) throw new Error('Não foi possível gravar: escolha uma das opções da lista (' + CHV_FECHADAS[item.chave].join(' ou ') + ').');
+  }
+  if (item.chave === 'OMIE_ALCADA_SEGUNDA_CONFIRMACAO' || item.chave === 'OMIE_ALCADA_APROVACAO') {
+    var tv = v.replace(/R\$/gi, '').replace(/\s+/g, '');
+    if (tv.indexOf(',') >= 0) tv = tv.replace(/\./g, '').replace(',', '.');
+    if (!/^\d+(\.\d{1,2})?$/.test(tv) || !(Number(tv) > 0) || Number(tv) > 999999999) throw new Error('Não foi possível gravar: informe o valor em reais, maior que zero (ex.: 10000,00). Para desligar a alçada, use Apagar.');
+    v = Number(tv).toFixed(2);
+  }
+  // 16/11/2026 (Onda 2 do Financeiro): saldo mínimo, nota de saúde e fotografia diária
+  if (item.chave === 'FIN_SALDO_MINIMO') {
+    var tm = v.replace(/R\$/gi, '').replace(/\s+/g, '');
+    if (tm.indexOf(',') >= 0) tm = tm.replace(/\./g, '').replace(',', '.');
+    if (!/^\d+(\.\d{1,2})?$/.test(tm) || Number(tm) > 999999999) throw new Error('Não foi possível gravar: informe o saldo mínimo em reais, zero ou mais (ex.: 50000,00). Para deixar "a definir", use Apagar.');
+    v = Number(tm).toFixed(2);
+  }
+  if (item.chave === 'FIN_SAUDE_PESOS') v = FinSaude_validarPesos_(v);
+  if (item.chave === 'FIN_SAUDE_LIMITES') v = FinSaude_validarLimites_(v);
+  if (item.chave === 'FIN_FOTO_HORA') {
+    var hm = /^(\d{1,2})[:h](\d{2})$/.exec(v);
+    if (!hm || Number(hm[1]) > 23 || Number(hm[2]) > 59) throw new Error('Não foi possível gravar: informe a hora como hh:mm (ex.: 06:00).');
+    v = ('0' + Number(hm[1])).slice(-2) + ':' + hm[2];
+  }
+  if (item.chave === 'FIN_FOTO_ROTINA') {
+    v = v.toUpperCase();
+    if (v !== 'LIGADA' && v !== 'DESLIGADA') throw new Error('Não foi possível gravar: escolha Ligada ou Desligada.');
+  }
+  if (item.chave === 'CAJU_AMBIENTE') {
+    v = v.toLowerCase().replace(/ç/g, 'c').replace(/ã/g, 'a');
+    if (v !== 'homologacao' && v !== 'producao') throw new Error('Não foi possível gravar: o ambiente do Caju aceita só homologacao ou producao.');
+  }
+  if (item.chave === 'CAJU_URL_AUTH' || item.chave === 'CAJU_URL_API') {
+    v = v.replace(/\/+$/, '');
+    if (!/^https:\/\/[A-Za-z0-9.-]+(:\d+)?(\/[^\s?#]*)?$/.test(v)) throw new Error('Não foi possível gravar: informe o endereço com https:// (sem espaços, sem ? e sem #), como o Caju mandou.');
+  }
+  if (item.chave === 'META_WA_PHONE_ID' || item.chave === 'META_WA_WABA_ID') {
+    if (!/^\d{6,25}$/.test(v)) throw new Error('Não foi possível gravar: este campo é um número de identificação (só algarismos, ex.: ' + item.exemplo + '), copiado do painel da Meta. Não é o número de telefone.');
+  }
+  return v;
+}
+
+/** Depois de trocar credenciais do Auvo, o token guardado em cache deixa de valer. */
+function Chaves_aposAlterar_(chave) {
+  if (chave === 'AUVO_API_KEY' || chave === 'AUVO_API_TOKEN') {
+    try { if (typeof Auvo_invalidarTokenCache_ === 'function') Auvo_invalidarTokenCache_(); } catch (e) {}
+  }
+  // Tuya: credencial ou região trocada = token guardado em memória não vale mais.
+  if (/^TUYA_/.test(chave)) {
+    try { if (typeof Tuya_esquecerToken_ === 'function') Tuya_esquecerToken_(); } catch (e) {}
+    // 22/10/2026: ligada = garante a rotina de 1 minuto que avisa o pedido de abertura da campainha (SGO_Automacao_Predial.js)
+    if (chave === 'TUYA_LIGADO' && String(PropertiesService.getScriptProperties().getProperty(chave) || '') === '1') {
+      try { if (typeof AutPred_garantirRotina_ === 'function') AutPred_garantirRotina_(); } catch (e2) {}
+    }
+  }
+  // 11/11/2026: Caju — credencial, ambiente ou endereço trocado = o token guardado não vale mais.
+  if (/^CAJU_/.test(chave)) { try { if (typeof CajuApi_esquecerToken_ === 'function') CajuApi_esquecerToken_(); } catch (e) {} }
+  // Rastreador: credencial ou endereço trocado = sessão guardada não vale mais; ligado = garante a rotina de 2 minutos.
+  if (/^RASTREADOR_/.test(chave)) {
+    try { if (typeof Rastreador_esquecerSessao_ === 'function') Rastreador_esquecerSessao_(); } catch (e) {}
+    if (chave === 'RASTREADOR_LIGADO' && String(PropertiesService.getScriptProperties().getProperty(chave) || '') === '1') {
+      try { if (typeof Frota_rastreadorGarantirRotina_ === 'function') Frota_rastreadorGarantirRotina_(); } catch (e) { console.error('Rotina do rastreador: ' + ((e && e.message) || e)); }
+    }
+  }
+}
+
+function Chaves_lista_() {
+  var props = Chaves_lerTodas_();
+  var p = PropertiesService.getScriptProperties(), testes = {};
+  ['gemini', 'auvo', 'omie', 'email', 'whatsapp', 'rastreador', 'tuya', 'caju'].forEach(function (t) {
+    try { var j = p.getProperty(CHV_PREFIXO_TESTE + t); if (j) testes[t] = JSON.parse(j); } catch (e) {}
+  });
+  return { grupos: CHV_GRUPOS, itens: CHV_ITENS.map(function (it) { return Chaves_situacao_(it, props); }), testes: testes };
+}
+
+// ------------------------------------------------------------
+// API
+// ------------------------------------------------------------
+
+/** Configuração de alarme: somente Admin e Diretoria, verificados no servidor. */
+function Chaves_adminAlarme_(s) {
+  return !!s && typeof AutPred_administra_ === 'function' && AutPred_administra_(s);
+}
+
+/** Usado pela casca para mostrar o item do menu. Nunca lança erro; não revela nada além de sim/não. */
+function Chaves_apiEhDono(sessionId, payload) {
+  try {
+    var v = validarSessao(sessionId);
+    return { ok: true, dono: !!(v && v.valid && Chaves_ehDonoUsuario_((v.data || {}).usuario)), alarme: !!(v && v.valid && Chaves_adminAlarme_(v.data)) };
+  } catch (e) {
+    return { ok: true, dono: false };
+  }
+}
+
+function Chaves_apiListar(sessionId, payload) {
+  return Chaves_resposta_(function () {
+    var v = validarSessao(sessionId), s = v && v.valid && v.data;
+    if (!s) throw new Error('Sessão expirada. Entre novamente.');
+    var dono = Chaves_ehDonoUsuario_(s.usuario), alarme = Chaves_adminAlarme_(s);
+    if (!dono && !alarme) throw new Error('Acesso exclusivo de Admin e Diretoria.');
+    var r = dono ? Chaves_lista_() : { grupos: [], itens: [], testes: {} };
+    r.podeConfigurarAlarme = alarme;
+    return r;
+  });
+}
+
+function Chaves_apiGravar(sessionId, payload) {
+  return Chaves_resposta_(function () {
+    var eu = Chaves_exigirDono_(sessionId);
+    var p = payload || {};
+    var item = Chaves_item_(p.chave);
+    if (!item) throw new Error('Não foi possível gravar: chave desconhecida. Atualize a página (F5) e tente de novo.');
+    var valor = Chaves_validarValor_(item, p.valor);
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty(item.chave, valor);
+    props.setProperty(CHV_PREFIXO_ALTERADO + item.chave, Chaves_agora_());
+    Chaves_aposAlterar_(item.chave);
+    SGO_DATA.log('CHAVE_GRAVADA', eu.usuario, 'Chave ' + item.chave + ' gravada (valor não registrado).', 'CHAVES');
+    var r = Chaves_lista_();
+    r.mensagem = item.nome + ': gravado.';
+    return r;
+  });
+}
+
+function Chaves_apiApagar(sessionId, payload) {
+  return Chaves_resposta_(function () {
+    var eu = Chaves_exigirDono_(sessionId);
+    var p = payload || {};
+    var item = Chaves_item_(p.chave);
+    if (!item) throw new Error('Não foi possível apagar: chave desconhecida. Atualize a página (F5) e tente de novo.');
+    var props = PropertiesService.getScriptProperties();
+    props.deleteProperty(item.chave);
+    props.setProperty(CHV_PREFIXO_ALTERADO + item.chave, Chaves_agora_());
+    Chaves_aposAlterar_(item.chave);
+    SGO_DATA.log('CHAVE_APAGADA', eu.usuario, 'Chave ' + item.chave + ' apagada.', 'CHAVES');
+    var r = Chaves_lista_();
+    r.mensagem = item.nome + ': apagado.';
+    return r;
+  });
+}
+
+/**
+ * Testes: payload.tipo = 'gemini' | 'auvo' | 'email' | 'whatsapp' (whatsapp pede payload.telefone).
+ * Devolve { ok:true, funcionou:bool, texto } — o texto já diz o que fazer quando falha.
+ */
+function Chaves_apiTestar(sessionId, payload) {
+  return Chaves_resposta_(function () {
+    var eu = Chaves_exigirDono_(sessionId);
+    var p = payload || {};
+    var tipo = String(p.tipo || '');
+    var r;
+    if (tipo === 'gemini') r = Chaves_testarGemini_();
+    else if (tipo === 'auvo') r = Chaves_testarAuvo_();
+    else if (tipo === 'email') r = Chaves_testarEmail_(eu);
+    else if (tipo === 'whatsapp') r = Chaves_testarWhatsapp_(p.telefone);
+    else if (tipo === 'rastreador') r = typeof Rastreador_testarConexao_ === 'function' ? Rastreador_testarConexao_() : Chaves_falhou_('o módulo do rastreador não está carregado neste sistema', 'avise o suporte do SGO+.');
+    else if (tipo === 'tuya') r = typeof Tuya_testarConexao_ === 'function' ? Tuya_testarConexao_() : Chaves_falhou_('o módulo da automação predial não está carregado neste sistema', 'avise o suporte do SGO+.');
+    else if (tipo === 'caju') r = Chaves_testarCaju_(eu);
+    else if (tipo === 'omie') r = typeof Omie_testarConexao_ === 'function' ? Omie_testarConexao_() : Chaves_falhou_('o módulo do Omie não está carregado neste sistema', 'avise o suporte do SGO+.');
+    else throw new Error('Não foi possível testar: tipo de teste desconhecido. Atualize a página (F5).');
+    try { SGO_DATA.log('CHAVE_TESTADA', eu.usuario, 'Teste ' + tipo + ': ' + (r.funcionou ? 'funcionou' : 'não funcionou') + '.', 'CHAVES'); } catch (e) {}
+    // 17/10/2026: a tela mostra "Com erro no teste" até a próxima troca de chave ou o próximo teste (o texto já vem sem segredo).
+    try { PropertiesService.getScriptProperties().setProperty(CHV_PREFIXO_TESTE + tipo, JSON.stringify({ funcionou: !!r.funcionou, em: Chaves_agora_(), emBr: Chaves_dataBr_(Chaves_agora_()), texto: String(r.texto || '').slice(0, 400) })); } catch (e) {}
+    var saida = { funcionou: !!r.funcionou, texto: String(r.texto || ''), tipo: tipo };
+    // Rastreador: dispositivos encontrados (ID, nome e situação; nenhum segredo).
+    if (tipo === 'rastreador' || tipo === 'tuya') saida.dispositivos = (r.dispositivos || []).map(function (d) { return { id: String(d.id), nome: String(d.nome || ''), situacao: String(d.situacao || '') }; });
+    return saida;
+  });
+}
+
+// ------------------------------------------------------------
+// TESTES
+// ------------------------------------------------------------
+/** 11/11/2026: pede o token ao Caju com as credenciais gravadas (não cria nada, não move dinheiro, não mostra segredo). */
+function Chaves_testarCaju_(eu) {
+  if (typeof CajuApi_testar_ !== 'function') return Chaves_falhou_('o módulo da Conciliação Caju não está carregado neste sistema', 'avise o suporte do SGO+.');
+  try {
+    var t = CajuApi_testar_({ origem: 'chaves', porId: '', porNome: eu && eu.usuario ? String(eu.usuario) : 'dono' });
+    return { funcionou: true, texto: 'Funcionou: o Caju entregou o acesso (' + t.ambienteNome + '). Conta da empresa terminada em ' + t.sponsorFinal + '.' };
+  } catch (e) { return Chaves_falhou_(String((e && e.message) || e).replace(/^Não foi possível [^:]*: /, ''), ''); }
+}
+
+function Chaves_falhou_(motivo, fazer) {
+  return { funcionou: false, texto: 'Não funcionou: ' + motivo + (fazer ? ' — ' + fazer : '') };
+}
+
+function Chaves_semSegredos_(msg, segredos) {
+  var s = String(msg || '');
+  (segredos || []).forEach(function (x) { if (x && String(x).length >= 4) s = s.split(String(x)).join('***'); });
+  return s.slice(0, 400);
+}
+
+function Chaves_testarGemini_() {
+  var chave = String(PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || '').trim();
+  if (!chave) return Chaves_falhou_('a chave da IA não está gravada', 'cole a GEMINI_API_KEY acima e clique em Gravar.');
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(chave);
+  var resp;
+  try {
+    resp = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      payload: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: 'Responda apenas: OK' }] }],
+        generationConfig: { maxOutputTokens: 8, temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+      })
+    });
+  } catch (e) {
+    return Chaves_falhou_('sem resposta do Google (' + Chaves_semSegredos_(e && e.message, [chave]) + ')', 'confira a internet do servidor e tente de novo.');
+  }
+  var codigo = resp.getResponseCode(), j = null;
+  try { j = JSON.parse(resp.getContentText()); } catch (e) {}
+  if (codigo >= 200 && codigo < 300) return { funcionou: true, texto: 'Funcionou: a IA respondeu com esta chave.' };
+  var er = (j && j.error) || {};
+  var motivoGoogle = Chaves_semSegredos_(er.message || '', [chave]);
+  var razao = '';
+  try { razao = String(((er.details || [])[0] || {}).reason || ''); } catch (e) {}
+  if (razao === 'API_KEY_INVALID' || /API key not valid/i.test(motivoGoogle)) return Chaves_falhou_('o Google não reconheceu a chave', 'gere outra no Google AI Studio (Get API key), cole aqui e grave.');
+  if (codigo === 403) return Chaves_falhou_('a chave não tem permissão para a API Gemini (HTTP 403)', 'no Google AI Studio, confira se a chave é do projeto certo e se a API Generative Language está ativa.');
+  if (codigo === 429) return Chaves_falhou_('limite de uso da chave esgotado (HTTP 429)', 'aguarde alguns minutos ou confira o faturamento do projeto no Google AI Studio.');
+  return Chaves_falhou_('o Google respondeu HTTP ' + codigo + (motivoGoogle ? ' (' + motivoGoogle + ')' : ''), 'tente de novo em alguns minutos; se continuar, gere outra chave.');
+}
+
+function Chaves_testarAuvo_() {
+  var props = PropertiesService.getScriptProperties();
+  var falta = ['AUVO_API_KEY', 'AUVO_API_TOKEN'].filter(function (k) { return !String(props.getProperty(k) || '').trim(); });
+  if (falta.length) return Chaves_falhou_('falta gravar ' + falta.join(' e '), 'cole a API Key e o API Token do Auvo acima e clique em Gravar.');
+  if (typeof Auvo_autenticar_ !== 'function') return Chaves_falhou_('o módulo do Auvo não está carregado neste sistema', 'avise o suporte do SGO+.');
+  try {
+    if (typeof Auvo_invalidarTokenCache_ === 'function') Auvo_invalidarTokenCache_();
+    Auvo_autenticar_();
+    return { funcionou: true, texto: 'Funcionou: o Auvo aceitou o login com a API Key e o API Token gravados.' };
+  } catch (e) {
+    var m = Chaves_semSegredos_(e && e.message, [props.getProperty('AUVO_API_KEY'), props.getProperty('AUVO_API_TOKEN')]);
+    if (/inválid|401|403/i.test(m)) return Chaves_falhou_('o Auvo recusou as credenciais', 'no Auvo (Menu → Integrações → API) copie de novo a API Key e o API Token e grave os dois aqui.');
+    return Chaves_falhou_(m, 'tente de novo em alguns minutos; se continuar, confira as credenciais no Auvo.');
+  }
+}
+
+function Chaves_testarEmail_(eu) {
+  var u = null;
+  try { u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, eu.id); } catch (e) {}
+  var email = SGO_UTILS.safeLower(u && u.EMAIL).trim();
+  if (!email || email.indexOf('@') < 1) return Chaves_falhou_('o seu usuário não tem e-mail cadastrado', 'cadastre o seu e-mail em Administração → Usuários e teste de novo.');
+  var noServidor = false;
+  try { noServidor = ScriptApp.getScriptId() === 'sgo-servidor'; } catch (e) {}
+  if (noServidor && !String(PropertiesService.getScriptProperties().getProperty('SMTP_SENHA') || '').trim()) {
+    return Chaves_falhou_('a senha do e-mail do sistema (SMTP_SENHA) não está gravada; sem ela os e-mails ficam parados na fila', 'grave a senha da caixa sistema@metrolabs.com.br acima e teste de novo.');
+  }
+  var quando = Chaves_dataBr_(Chaves_agora_());
+  var texto = 'Este é um e-mail de teste enviado pelo módulo Chaves e senhas em ' + quando + '.\nSe chegou, o envio de e-mails do SGO+ está funcionando.';
+  try {
+    MailApp.sendEmail({
+      to: email, subject: 'SGO+ — teste de e-mail', name: 'SGO+ Metrolabs',
+      body: Notificar_textoEmail_('Teste de e-mail', texto, ''),
+      htmlBody: Notificar_htmlEmail_('Teste de e-mail', texto, '')
+    });
+  } catch (e) {
+    return Chaves_falhou_(Chaves_semSegredos_(e && e.message, []), 'confira a senha do e-mail do sistema e tente de novo.');
+  }
+  return { funcionou: true, texto: 'Funcionou: o e-mail de teste foi entregue ao sistema para ' + email + '. Deve chegar em alguns minutos; confira também o lixo eletrônico. Se não chegar, confira a SMTP_SENHA.' };
+}
+
+function Chaves_testarWhatsapp_(telefone) {
+  var tel = Notificar_normalizarTelefone_(telefone);
+  if (!tel) return Chaves_falhou_('número de celular inválido', 'digite o celular com DDD, ex.: (62) 98241-7106.');
+  var pv = Notificar_provedorWhatsapp_();
+  if (!pv.provedor) return Chaves_falhou_(pv.motivo, '');
+  // 21/10/2026: piloto do WhatsApp — o teste também só vai para celular da lista do piloto
+  if (typeof SGO_waPilotoTelefoneLiberado_ === 'function' && !SGO_waPilotoTelefoneLiberado_(tel)) {
+    return Chaves_falhou_('o piloto do WhatsApp está ligado e este celular não é de nenhuma pessoa da lista', 'teste com o celular de uma pessoa da lista ou inclua a pessoa em Administração > Piloto do WhatsApp.');
+  }
+  var res;
+  try {
+    if (pv.provedor === 'meta') {
+      res = Notificar_enviarMeta_(pv.cred, tel, 'sgo_aviso_geral', [
+        'Teste do SGO+', 'Mensagem de teste enviada pelo módulo Chaves e senhas.', Notificar_linkSgo_() || 'https://sgo.metrolabs.com.br'
+      ]);
+    } else {
+      // 20/10/2026: pelo envio único da Z-API (só celular, fila que protege o número) — SGO_Zapi.js
+      res = typeof SGO_zapiEnviarTexto_ === 'function' ? SGO_zapiEnviarTexto_(tel, 'SGO+ Metrolabs: mensagem de teste enviada pelo módulo Chaves e senhas.', { cred: pv.cred, tipo: 'TESTE' })
+        : Notificar_enviarWhatsapp_(pv.cred, tel, 'SGO+ Metrolabs: mensagem de teste enviada pelo módulo Chaves e senhas.');
+    }
+  } catch (e) {
+    res = { ok: false, motivo: String((e && e.message) || e) };
+  }
+  var nomeProv = pv.provedor === 'meta' ? 'WhatsApp oficial (Meta), modelo sgo_aviso_geral' : 'Z-API';
+  if (res && res.ok) return { funcionou: true, texto: 'Funcionou: mensagem aceita pelo ' + nomeProv + ' para ' + tel + '. Confira no celular.' };
+  return Chaves_falhou_(Notificar_limparSegredos_(res && res.motivo, pv.segredos || []),
+    pv.provedor === 'meta' ? 'confira o token e o Phone Number ID; o modelo sgo_aviso_geral precisa estar aprovado na Meta em pt_BR (use "Cadastrar modelos na Meta" abaixo).' : 'confira as 3 chaves da Z-API e se a instância está conectada ao celular.');
+}
+
+// ------------------------------------------------------------
+// MODELOS DO WHATSAPP OFICIAL (Meta) — cadastro e situação
+// As definições (nome, texto, exemplos) ficam só em NTF_MODELOS_META
+// (SGO_Notificar.js), as mesmas usadas no envio.
+// ------------------------------------------------------------
+
+/** Token e WABA ID gravados; lança erro dizendo o que gravar. Nunca devolve o token para a tela. */
+function Chaves_credMetaGestao_() {
+  var c = Notificar_credenciaisMeta_();
+  var falta = [];
+  if (!c.token) falta.push('META_WA_TOKEN');
+  if (!c.wabaId) falta.push('META_WA_WABA_ID');
+  if (falta.length) throw new Error('Não foi possível falar com a Meta: falta gravar ' + falta.join(' e ') + ' no grupo WhatsApp desta tela.');
+  return c;
+}
+
+function Chaves_urlGraph_(caminho) {
+  return 'https://graph.facebook.com/' + NTF_META_VERSAO + '/' + caminho;
+}
+
+/** Erros que valem para a conta inteira (token, permissão, WABA ID, limite): não adianta tentar os outros modelos. */
+function Chaves_erroMetaGeral_(http, er) {
+  var cod = er && er.code !== undefined ? String(er.code) : '';
+  var sub = er && er.error_subcode !== undefined ? String(er.error_subcode) : '';
+  return http === 401 || http === 403 || http === 429 || ['190', '200', '10', '3', '4', '80008', '613', '368'].indexOf(cod) >= 0 || (cod === '100' && sub === '33');
+}
+
+/** A Meta disse que o modelo já existe neste idioma? */
+function Chaves_erroMetaDuplicado_(er) {
+  var sub = er && er.error_subcode !== undefined ? String(er.error_subcode) : '';
+  var txt = String((er && (er.error_user_title || '')) + ' ' + (er && (er.error_user_msg || '')) + ' ' + (er && er.message || ''));
+  return sub === '2388024' || /already exists|already .{0,40}content|duplicate|já existe|já há conteúdo/i.test(txt);
+}
+
+/** Erro da Meta traduzido: "Meta recusou (HTTP x, código y): mensagem — o que fazer". Sem o token. */
+function Chaves_erroMeta_(http, j, txt, segredos) {
+  var er = (j && j.error) || {};
+  var cod = er.code !== undefined ? String(er.code) : '';
+  var sub = er.error_subcode !== undefined ? String(er.error_subcode) : '';
+  var msg = String(er.message || '');
+  var msgUsuario = String(er.error_user_msg || '');
+  var bruto = Chaves_semSegredos_((msg + (msgUsuario && msg.indexOf(msgUsuario) < 0 ? ' (' + msgUsuario + ')' : '')) || String(txt || '').slice(0, 200), segredos).slice(0, 260);
+  var fazer;
+  if (cod === '190' || http === 401) {
+    fazer = 'o token é inválido ou venceu: gere um token permanente de usuário do sistema (Gerenciador de Negócios → Usuários do sistema → Gerar novo token, sem validade) e grave de novo META_WA_TOKEN.';
+  } else if (/whatsapp_business_management|permission/i.test(msg) || cod === '200' || cod === '10' || cod === '3' || http === 403) {
+    fazer = 'o token precisa da permissão de gerenciar a conta do WhatsApp: gere um token de usuário do sistema com whatsapp_business_management e whatsapp_business_messaging, com a conta do WhatsApp atribuída a esse usuário, e grave de novo META_WA_TOKEN.';
+  } else if (cod === '100' && (sub === '33' || /does not exist|cannot be loaded|Unsupported (get|post) request/i.test(msg))) {
+    fazer = 'a Meta não encontrou a conta do WhatsApp com este WABA ID, ou o token não tem acesso a ela: confira META_WA_WABA_ID (Identificação da conta do WhatsApp Business, não o Phone Number ID) e se a conta está atribuída ao usuário do sistema.';
+  } else if (cod === '4' || cod === '80008' || cod === '613' || http === 429) {
+    fazer = 'limite de chamadas da Meta atingido: aguarde alguns minutos e tente de novo.';
+  } else if (cod === '368') {
+    fazer = 'a conta está bloqueada temporariamente pela Meta por política: veja o aviso no Gerenciador do WhatsApp (Qualidade da conta).';
+  } else if (sub === '2388023') {
+    fazer = 'um modelo com este nome foi apagado há pouco e a Meta ainda não libera o nome (pode levar até 4 semanas): aguarde; se for urgente, avise o suporte do SGO+.';
+  } else if (sub === '2388299' || sub === '2388293' || /variable|parameter/i.test(msg + ' ' + msgUsuario)) {
+    fazer = 'a Meta recusou o texto do modelo (variáveis): avise o suporte do SGO+ para revisar a definição em SGO_Notificar.js (NTF_MODELOS_META).';
+  } else {
+    fazer = 'confira a mensagem da Meta; se continuar, abra o Gerenciador do WhatsApp (Modelos de mensagem) e veja se há aviso na conta.';
+  }
+  return 'Meta recusou (HTTP ' + http + (cod ? ', código ' + cod + (sub ? '/' + sub : '') : '') + '): ' + (bruto || 'sem detalhe') + ' — ' + fazer;
+}
+
+/** Chamada à Graph API: { http, j, txt } ou lança erro de rede (sem segredos). */
+function Chaves_chamarMeta_(cred, url, metodo, corpo) {
+  var op = { method: metodo, muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + cred.token } };
+  if (corpo) { op.contentType = 'application/json'; op.payload = JSON.stringify(corpo); }
+  var r;
+  try { r = UrlFetchApp.fetch(url, op); }
+  catch (e) { throw new Error('sem resposta da Meta (' + Chaves_semSegredos_(e && e.message, [cred.token]) + ')'); }
+  var txt = String(r.getContentText() || ''), j = null;
+  try { j = JSON.parse(txt); } catch (e) {}
+  return { http: r.getResponseCode(), j: j, txt: txt };
+}
+
+var CHV_STATUS_MODELO = {
+  APPROVED: 'Aprovado', PENDING: 'Em análise', IN_APPEAL: 'Em análise', REJECTED: 'Recusado',
+  PAUSED: 'Pausado', DISABLED: 'Desativado', PENDING_DELETION: 'Em exclusão', DELETED: 'Apagado',
+  LIMIT_EXCEEDED: 'Limite de modelos excedido', ARCHIVED: 'Arquivado'
+};
+var CHV_RECUSA_MODELO = {
+  INVALID_FORMAT: 'formato inválido',
+  TAG_CONTENT_MISMATCH: 'o texto não combina com a categoria Utilidade',
+  INCORRECT_CATEGORY: 'categoria incorreta',
+  PROMOTIONAL: 'a Meta considerou o texto promocional',
+  ABUSIVE_CONTENT: 'a Meta considerou o conteúdo abusivo',
+  SCAM: 'a Meta considerou o texto suspeito de golpe'
+};
+
+/** Lista os modelos da conta (até 5 páginas de 100). { ok, lista } ou { ok:false, motivo, geral }. */
+function Chaves_metaListarModelos_(cred) {
+  var url = Chaves_urlGraph_(encodeURIComponent(cred.wabaId) + '/message_templates?fields=name,status,language,category,rejected_reason&limit=100');
+  var lista = [];
+  for (var pag = 0; pag < 5 && url; pag++) {
+    var r;
+    try { r = Chaves_chamarMeta_(cred, url, 'get', null); }
+    catch (e) { return { ok: false, geral: true, motivo: String(e.message) + ' — confira a internet do servidor e tente de novo.' }; }
+    if (r.http < 200 || r.http >= 300 || !r.j || r.j.error) {
+      return { ok: false, geral: true, motivo: Chaves_erroMeta_(r.http, r.j, r.txt, [cred.token]) };
+    }
+    (r.j.data || []).forEach(function (m) { lista.push(m || {}); });
+    var prox = r.j.paging && r.j.paging.next ? String(r.j.paging.next) : '';
+    url = /^https:\/\/graph\.facebook\.com\//.test(prox) ? prox : '';
+  }
+  return { ok: true, lista: lista };
+}
+
+/** Situação dos 7 modelos do SGO+ a partir da lista da Meta. */
+function Chaves_situacaoModelos_(lista) {
+  var itens = Object.keys(NTF_MODELOS_META).map(function (nome) {
+    var achados = lista.filter(function (m) { return String(m.name || '') === nome; });
+    var pt = achados.filter(function (m) { return String(m.language || '') === NTF_META_IDIOMA; })[0];
+    var it = { nome: nome, uso: NTF_MODELOS_META[nome].uso || '', status: '', situacao: '', motivo: '', categoria: '', falta: !pt };
+    if (!pt) {
+      var outros = achados.map(function (m) { return String(m.language || ''); }).filter(String);
+      it.situacao = 'Não cadastrado';
+      it.motivo = outros.length ? 'existe só em ' + outros.join(', ') + '; o SGO+ envia em ' + NTF_META_IDIOMA + '.' : '';
+      return it;
+    }
+    it.status = String(pt.status || '').toUpperCase();
+    it.situacao = CHV_STATUS_MODELO[it.status] || it.status || 'Sem situação';
+    it.categoria = String(pt.category || '').toUpperCase();
+    var obs = [];
+    if (it.status === 'REJECTED') {
+      var rr = String(pt.rejected_reason || '').toUpperCase();
+      obs.push('motivo: ' + (CHV_RECUSA_MODELO[rr] || (rr && rr !== 'NONE' ? rr : 'não informado pela Meta')) +
+        '. No Gerenciador do WhatsApp (Modelos de mensagem), abra o modelo e peça nova análise; se a Meta mantiver, avise o suporte do SGO+ para revisar o texto');
+    } else if (it.status === 'PAUSED' || it.status === 'DISABLED') {
+      obs.push('a Meta suspendeu o modelo por qualidade; veja o aviso no Gerenciador do WhatsApp');
+    } else if (it.status === 'PENDING' || it.status === 'IN_APPEAL') {
+      obs.push('aguarde a análise da Meta (minutos a 24 h) e clique em Atualizar');
+    }
+    if (it.categoria && it.categoria !== NTF_META_CATEGORIA) obs.push('categoria alterada pela Meta para ' + it.categoria + ' (o SGO+ cadastra como ' + NTF_META_CATEGORIA + ')');
+    it.motivo = obs.join('; ') + (obs.length ? '.' : '');
+    return it;
+  });
+  var faltam = itens.filter(function (x) { return x.falta; }).length;
+  var aprovados = itens.filter(function (x) { return x.status === 'APPROVED'; }).length;
+  return { itens: itens, faltam: faltam, aprovados: aprovados, total: itens.length };
+}
+
+/** Lista "Situação dos modelos". Devolve { funcionou, texto, itens, faltam, aprovados, total }. */
+function Chaves_apiModelosSituacao(sessionId, payload) {
+  return Chaves_resposta_(function () {
+    Chaves_exigirDono_(sessionId);
+    var cred = Chaves_credMetaGestao_();
+    var l = Chaves_metaListarModelos_(cred);
+    if (!l.ok) return { funcionou: false, texto: 'Não foi possível ler os modelos: ' + l.motivo, itens: [] };
+    var s = Chaves_situacaoModelos_(l.lista);
+    // 21/10/2026: guarda a situação para o envio não usar modelo não aprovado (SGO_Notificar.js / SGO_WhatsappPiloto.js)
+    if (typeof SGO_waModelosGuardar_ === 'function') SGO_waModelosGuardar_(s.itens);
+    s.funcionou = true;
+    s.texto = s.aprovados + ' de ' + s.total + ' modelos aprovados' + (s.faltam ? '; ' + s.faltam + ' não cadastrado(s) em ' + NTF_META_IDIOMA + ' — use "Cadastrar modelos na Meta".' : '.');
+    return s;
+  });
+}
+
+/**
+ * Botão "Cadastrar modelos na Meta": para cada modelo de NTF_MODELOS_META que ainda não
+ * existe em pt_BR, POST /<WABA_ID>/message_templates. "Já existe" conta como já cadastrado.
+ * Devolve { funcionou, texto, itens: [{ nome, resultado: 'cadastrado'|'ja_existe'|'erro'|'nao_tentado', texto }] }.
+ */
+function Chaves_apiModelosCadastrar(sessionId, payload) {
+  return Chaves_resposta_(function () { return Chaves_modelosCadastrar_(Chaves_exigirDono_(sessionId)); });
+}
+
+/**
+ * 26/10/2026: o cadastro em si, sem sessão do navegador, para o script do servidor (sgo_servidor
+ * scripts/cadastrar_modelos_meta.ts, pedido do dono) fazer o mesmo que o botão. eu: { usuario } para o registro.
+ */
+function Chaves_modelosCadastrar_(eu) {
+  {
+    var cred = Chaves_credMetaGestao_();
+    var nomes = Object.keys(NTF_MODELOS_META);
+    var existentes = {};
+    var l = Chaves_metaListarModelos_(cred);
+    if (!l.ok) return { funcionou: false, texto: 'Nada foi cadastrado: ' + l.motivo, itens: [] };
+    l.lista.forEach(function (m) { if (String(m.language || '') === NTF_META_IDIOMA) existentes[String(m.name || '')] = String(m.status || '').toUpperCase(); });
+
+    var itens = [], parar = '';
+    nomes.forEach(function (nome) {
+      if (parar) { itens.push({ nome: nome, resultado: 'nao_tentado', texto: 'Não tentado: ' + parar }); return; }
+      if (Object.prototype.hasOwnProperty.call(existentes, nome)) {
+        var st = existentes[nome];
+        itens.push({ nome: nome, resultado: 'ja_existe', texto: 'Já cadastrado (' + (CHV_STATUS_MODELO[st] || st || 'sem situação') + ').' });
+        return;
+      }
+      var corpo, extra = {};
+      // 28/10/2026: modelo com o PDF no cabeçalho (sgo_documento_cliente): a Meta pede um PDF de exemplo, enviado antes
+      if (NTF_MODELOS_META[nome].cabecalho === 'DOCUMENT') {
+        try { extra.handleExemplo = Chaves_metaHandleExemplo_(cred); }
+        catch (e) {
+          itens.push({ nome: nome, resultado: 'erro', texto: 'Não cadastrado: o modelo leva o PDF no cabeçalho e o envio do PDF de exemplo à Meta falhou (' + Notificar_limparSegredos_(e && e.message, [cred.token]) +
+            '). O que fazer: grave META_WA_APP_ID (identificação do aplicativo da Meta) e clique de novo, ou cadastre pelo Gerenciador do WhatsApp com o texto de MODELOS_WHATSAPP_META.md (cabeçalho Documento, categoria Utilidade, pt_BR).' });
+          return;
+        }
+      }
+      try { corpo = Notificar_corpoCadastroMeta_(nome, extra); }
+      catch (e) { itens.push({ nome: nome, resultado: 'erro', texto: String(e.message) + ' Avise o suporte do SGO+.' }); return; }
+      var r;
+      try { r = Chaves_chamarMeta_(cred, Chaves_urlGraph_(encodeURIComponent(cred.wabaId) + '/message_templates'), 'post', corpo); }
+      catch (e) {
+        parar = 'a chamada anterior falhou.';
+        itens.push({ nome: nome, resultado: 'erro', texto: 'Não cadastrado: ' + Notificar_limparSegredos_(e && e.message, [cred.token]) });
+        return;
+      }
+      var er = (r.j && r.j.error) || null;
+      if (r.http >= 200 && r.http < 300 && !er) {
+        var stN = String((r.j && r.j.status) || 'PENDING').toUpperCase();
+        itens.push({ nome: nome, resultado: 'cadastrado', texto: 'Enviado para análise da Meta (' + (CHV_STATUS_MODELO[stN] || stN) + ').' });
+        return;
+      }
+      if (er && Chaves_erroMetaDuplicado_(er)) {
+        itens.push({ nome: nome, resultado: 'ja_existe', texto: 'Já cadastrado na Meta.' });
+        return;
+      }
+      var motivo = Chaves_erroMeta_(r.http, r.j, r.txt, [cred.token]);
+      itens.push({ nome: nome, resultado: 'erro', texto: 'Não cadastrado: ' + motivo });
+      if (Chaves_erroMetaGeral_(r.http, er)) parar = 'o erro acima vale para a conta inteira; corrija e clique de novo.';
+    });
+
+    var conta = { cadastrado: 0, ja_existe: 0, erro: 0, nao_tentado: 0 };
+    itens.forEach(function (x) { conta[x.resultado]++; });
+    try {
+      SGO_DATA.log('MODELOS_META_CADASTRO', eu.usuario, 'Cadastro de modelos na Meta: ' + conta.cadastrado + ' enviados, ' + conta.ja_existe + ' já existiam, ' +
+        (conta.erro + conta.nao_tentado) + ' com erro ou não tentados.', 'CHAVES');
+    } catch (e) {}
+    var falhou = conta.erro + conta.nao_tentado;
+    return {
+      funcionou: falhou === 0, itens: itens,
+      texto: (falhou ? 'Concluído com problemas: ' : 'Concluído: ') + conta.cadastrado + ' enviado(s) para análise, ' + conta.ja_existe + ' já cadastrado(s)' +
+        (falhou ? ', ' + falhou + ' com erro (veja abaixo).' : '. A aprovação sai em minutos ou até 24 h; acompanhe em "Situação dos modelos".')
+    };
+  }
+}
+
+/** PDF de uma página, só texto ASCII (exemplo do cabeçalho DOCUMENT no cadastro do modelo). */
+function Chaves_pdfExemplo_() {
+  var cont = 'BT /F1 16 Tf 72 760 Td (Metrolabs - documento de exemplo) Tj ET';
+  var objs = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    '<< /Length ' + cont.length + ' >>\nstream\n' + cont + '\nendstream', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  var s = '%PDF-1.4\n', pos = [];
+  objs.forEach(function (o, i) { pos.push(s.length); s += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  var xref = s.length;
+  s += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n' + pos.map(function (p) { return ('0000000000' + p).slice(-10) + ' 00000 n \n'; }).join('');
+  s += 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF\n';
+  return s;
+}
+
+/**
+ * 28/10/2026: "handle" de um PDF de exemplo pela Resumable Upload API da Meta (exigido no cadastro de modelo com cabeçalho
+ * DOCUMENT): app id (META_WA_APP_ID ou debug_token do próprio token) -> sessão de upload -> envio do arquivo -> { h }.
+ * Lança erro com o motivo (sem o token).
+ */
+function Chaves_metaHandleExemplo_(cred) {
+  var app = String(PropertiesService.getScriptProperties().getProperty('META_WA_APP_ID') || '').replace(/\D/g, '');
+  if (!app) {
+    var d = Chaves_chamarMeta_(cred, Chaves_urlGraph_('debug_token?input_token=' + encodeURIComponent(cred.token)), 'get', null);
+    app = String((d.j && d.j.data && d.j.data.app_id) || '').replace(/\D/g, '');
+    if (!app) throw new Error('não foi possível descobrir o aplicativo da Meta pelo token (HTTP ' + d.http + ')');
+  }
+  var pdf = Chaves_pdfExemplo_();
+  var s = Chaves_chamarMeta_(cred, Chaves_urlGraph_(app + '/uploads?file_name=exemplo_documento.pdf&file_length=' + pdf.length + '&file_type=application%2Fpdf'), 'post', null);
+  var sessao = String((s.j && s.j.id) || '');
+  if (!/^upload:/.test(sessao)) throw new Error('a Meta não abriu o envio do exemplo (HTTP ' + s.http + (s.j && s.j.error ? ': ' + String(s.j.error.message || '').slice(0, 160) : '') + ')');
+  var r;
+  try {
+    r = UrlFetchApp.fetch('https://graph.facebook.com/' + NTF_META_VERSAO + '/' + sessao, { method: 'post', muteHttpExceptions: true, contentType: 'application/pdf',
+      headers: { Authorization: 'OAuth ' + cred.token, file_offset: '0' }, payload: Utilities.newBlob(pdf, 'application/pdf', 'exemplo_documento.pdf').getBytes() });
+  } catch (e) { throw new Error('sem resposta da Meta no envio do exemplo (' + Chaves_semSegredos_(e && e.message, [cred.token]) + ')'); }
+  var j = null;
+  try { j = JSON.parse(String(r.getContentText() || '')); } catch (e) {}
+  if (!(j && j.h)) throw new Error('a Meta não devolveu o exemplo (HTTP ' + r.getResponseCode() + (j && j.error ? ': ' + String(j.error.message || '').slice(0, 160) : '') + ')');
+  return String(j.h);
+}
+
+/** 26/10/2026: "Situação dos modelos" sem sessão do navegador (script do servidor); guarda a situação como o botão. */
+function Chaves_modelosSituacao_() {
+  var l = Chaves_metaListarModelos_(Chaves_credMetaGestao_());
+  if (!l.ok) return { funcionou: false, texto: 'Não foi possível ler os modelos: ' + l.motivo, itens: [] };
+  var s = Chaves_situacaoModelos_(l.lista);
+  if (typeof SGO_waModelosGuardar_ === 'function') SGO_waModelosGuardar_(s.itens);
+  s.funcionou = true;
+  return s;
+}

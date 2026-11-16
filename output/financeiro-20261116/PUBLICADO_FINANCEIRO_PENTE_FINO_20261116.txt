@@ -1,0 +1,43 @@
+SGO+ — PENTE FINO DO SIGILO + GUIA E EXPLICAÇÃO DE CAMPOS + GRAVAÇÃO NO OMIE LIGADA — 16/11/2026 ~13:30 BRT
+
+Pedido do dono (16/11): "refaça o pente fino... nada e ninguém pode ter acesso ao financeiro, jamais, somente envio de
+informações para o setor... crie um manual em todas as telas e onde tiver lugar para preencher tem que explicar...
+quero que já libere sim para tudo ser feito pelo SGO, pois é a Wanessa que irá fazer".
+
+Imagem: metrolabs/sgo:financeiro-pente-fino-20261116 (sha256:0c97950650f5e1de2daa599f5123decc2b6a2dd0e6c9f300c7bc7f17637a4101)
+Base:   metrolabs/sgo:financeiro-ficha-cliente-20261116 (camada de 12 arquivos; 493 no legado). Fonte: output/financeiro-20261116/cand3.
+Backup: /opt/metrolabs/backup/financeiro-pente-fino-20261116 (compose.antes.yml + banco-antes.dump).
+Reverter: copiar compose.antes.yml para /opt/metrolabs/sgo/docker-compose.yml e "docker compose up -d app".
+Log: publicacao-pente-fino.log (base conferida, imagem conferida, saudável, GET 200, 0 erros).
+
+PENTE FINO (antes de mudar, produção, somente leitura: ensaio/ZZ_Exp.js)
+- Hoje só admin, charles e wanessa chegavam às partes do Financeiro: nenhum vazamento real.
+- Brechas estruturais (dependiam de perfil/área, não da lista de sigilo): Conferência do Financeiro em Compras, faturas de
+  cartão, A pagar, reabrir fatura, cadastro de cartões, relatório da conciliação (eu.financeiro = perfil/área FINANCEIRO,
+  Diretoria ou qualquer ADMIN); Conciliação Caju (CAJU_*); carga e conferência do Depósito de viagem (VIAGEM_DEPOSITAR,
+  VIAGEM_CONFERIR); relatório diário da empresa listava pendências do Financeiro com título; limite dos cartões visível a
+  7 gestores/compradores.
+
+O QUE MUDOU
+1. SGO_Poderes.js: PODERES_SIGILO_FIN (FIN_* exceto FIN_CARTOES_VER, CAJU_*, VIAGEM_DEPOSITAR, VIAGEM_CONFERIR) = restrito à
+   lista de sigilo (Omie_contaNoSigilo_). Fora da lista: origem 'sigilo', NÃO; exceção SIM recusada; cópia/modelo pulam.
+2. SGO_Compras_Config.js: Cmp_sigiloFin_/Cmp_sigiloDe_; eu.financeiro só na lista; Cmp_cx_ FIN_* = NÃO fora da lista;
+   mensagem CMP_SIGILO_MSG. Compras_Financeiro: pendência "compra para conferir" só para a lista. Faturas: limite do cartão
+   some fora da lista. Relatorios: documentos da conciliação só para a lista.
+3. SGO_Gestao_RelatorioDiario.js: itens do Financeiro (CMP:CONFERIR, CJU:, VIA:CARGA/CONF/ACERTO) só na contagem.
+4. JS_Omie_Ajuda.html (novo): "Como fazer nesta aba" nas 15 abas e explicação embaixo de cada campo (47 textos).
+   Manual: docs/MANUAL_PAINEL_FINANCEIRO.md seções 2 (gravação ligada), 8 (sigilo em todo o Financeiro), 10 e 11
+   (gerado por gerar-manual-campos.cjs a partir dos mesmos textos). Ajudas de Compras, Caju e Financeiro ajustadas.
+
+TESTES
+- Novo: tests/financeiro-sigilo-geral-20261116.test.cjs 5/5. financeiro-omie-20261114 25/25 (página: guia e campos 390/320/1366 px).
+- Ajustados ao sigilo (comportamento novo esperado): compras, poderes-lote0/3/5, deposito-viagem, deposito-viagem-prestacao;
+  ambientes carregam SGO_Omie_Sigilo.js (tests/_sigilo_fin.cjs).
+- Suíte completa: pass 2192 / fail 71 (antes 2183 / 71); nenhum arquivo piorou (suite-pente-fino.txt).
+
+VERIFICAÇÃO NA PRODUÇÃO (código publicado)
+- Financeiro em Compras, Caju, carga/conferência de viagem, Painel: só admin, charles, wanessa.
+- Os 7 gestores/compradores continuam vendo os cartões só pelo final e responsável, SEM o limite.
+
+GRAVAÇÃO NO OMIE: LIGADA em 16/11/2026 por ordem do dono (Chaves_apiGravar como admin; registro CHAVE_GRAVADA).
+Desligar: Chaves e senhas > Omie > Gravação no Omie pelo Painel financeiro = Desligada.

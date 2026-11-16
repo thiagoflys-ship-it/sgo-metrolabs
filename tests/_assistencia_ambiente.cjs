@@ -65,8 +65,13 @@ function ambiente(opcoes) {
   // publicação). Padrão do ambiente: 03/11/2026 0h, para os testes de outubro seguirem como antes; o teste escolhe com o.assColabDesde.
   if (o.assColabDesde !== null && !(tabelas.ATEC_CONFIG || []).some((c) => c.CHAVE === 'ASS_COLAB_DESDE'))
     (tabelas.ATEC_CONFIG = tabelas.ATEC_CONFIG || []).push({ ID: 'cfg_ass_colab', CHAVE: 'ASS_COLAB_DESDE', VALOR_JSON: JSON.stringify(o.assColabDesde || '2026-11-03T00:00:00'), VERSAO: 1 });
+  // 13/11/2026: instante em que o resultado obrigatório do atendimento (teste, liberação, mínimos do relato) passou a valer. Padrão do
+  // ambiente: 20/11/2026, para os cenários escritos antes da regra seguirem como antes; o teste escolhe com o.resultadoDesde.
+  if (o.resultadoDesde !== null && !(tabelas.ATEC_CONFIG || []).some((c) => c.CHAVE === 'RESULTADO_FINAL_DESDE'))
+    (tabelas.ATEC_CONFIG = tabelas.ATEC_CONFIG || []).push({ ID: 'cfg_resultado', CHAVE: 'RESULTADO_FINAL_DESDE', VALOR_JSON: JSON.stringify(o.resultadoDesde || '2026-11-20T00:00:00'), VERSAO: 1 });
   let seq = 0;
-  const props = Object.assign({ GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: { TECNICA: ['u_gt'] } }) }, o.props || {});
+  // 16/11/2026 (onda 3, bloco A): regras de antes (NAO) nos testes antigos; SIM em tests/financeiro-onda3-a.test.cjs
+  const props = Object.assign({ GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: { TECNICA: ['u_gt'] } }), APROVACAO_SO_DIRETORIA: 'NAO' }, o.props || {});
   const cache = {}, emails = [], whats = [];
   const sessoes = {};
   tabelas.CAD_USUARIOS.forEach((u) => { sessoes['s_' + u.USUARIO] = { userId: u.ID, usuario: u.USUARIO, nome: u.NOME, perfil: u.PERFIL, clienteId: u.CLIENTE_ID || '' }; });

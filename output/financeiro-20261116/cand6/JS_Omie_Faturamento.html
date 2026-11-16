@@ -1,0 +1,232 @@
+<script>
+  var OMIEFAT = { aba: "produtos", token: "", geracao: 0, documental: false };
+  function OmieFat_esc_(v) {
+    return CadUI_esc_(String(v === undefined ? "" : v));
+  }
+  function OmieFat_chamar_(fn, p, ok) {
+    var geracao = OMIEFAT.geracao;
+    var elemento = document.getElementById("omieFatMensagem");
+    var sessao = SGO_getSessionId();
+    var pedido = typeof OMIE_TELA !== "undefined" ? OMIE_TELA.pedido : null;
+    function atual() {
+      return (
+        geracao === OMIEFAT.geracao &&
+        elemento &&
+        elemento === document.getElementById("omieFatMensagem") &&
+        sessao === SGO_getSessionId() &&
+        (typeof OMIE_TELA === "undefined" || pedido === OMIE_TELA.pedido)
+      );
+    }
+    google.script.run
+      .withSuccessHandler(function (r) {
+        if (!atual()) return;
+        if (!r || !r.ok) {
+          OmieFat_mensagem_(
+            (r && (r.mensagem || r.message)) || "Não foi possível concluir.",
+          );
+          return;
+        }
+        ok(r);
+      })
+      .withFailureHandler(function () {
+        if (atual())
+          OmieFat_mensagem_(
+            "Falha de conexão. Confira a situação no Omie antes de reenviar.",
+          );
+      })
+      [fn](sessao, p);
+  }
+  function OmieFat_mensagem_(m) {
+    var el = document.getElementById("omieFatMensagem");
+    if (el) {
+      el.textContent = m;
+      el.setAttribute("role", "status");
+    }
+  }
+  function OmieFat_render_(aba) {
+    OMIEFAT.aba = aba;
+    OMIEFAT.token = "";
+    OMIEFAT.geracao++;
+    var el = document.getElementById("omieCorpo");
+    if (!el) return;
+    var notas = aba === "notas";
+    el.innerHTML =
+      (notas ? '<div id="omieNotaLanc"></div>' : "") + // 16/11/2026 (design): a tarefa do dia a dia (nota recebida a pagar) vem primeiro
+      '<section class="cadx-card omie-bloco"><h3>' +
+      (notas
+        ? "Importar NF-e de saída ou guardar nota só como documento"
+        : aba === "servicos"
+          ? "Faturamento de serviços"
+          : "Faturamento de produtos") +
+      "</h3>" +
+      "<p>" +
+      (notas
+        ? "NF-e de saída emitida fora do Omie: confira o XML autorizado e importe; a importação não gera título nem movimenta estoque. NF-e de compra e NFS-e podem ficar guardadas aqui só como documento (histórico documental); para pagar, use o quadro \"Lançar nota recebida no Omie\", acima."
+        : "Confira um pedido ou ordem de serviço já cadastrado no Omie antes de faturar. A emissão usa as regras fiscais e integrações configuradas no Omie.") +
+      "</p>" +
+      (notas
+        ? '<div class="omie-grade"><label class="cadx-campo" for="omieFatTipo">Documento<select class="cadx-input" id="omieFatTipo"><option value="saida">NF-e saída: importar no Omie</option><option value="compra">NF-e compra: receber documentos</option><option value="nfse">NFS-e: receber documentos</option></select></label><label class="cadx-campo" for="omieFatArquivo">XML da nota<input class="cadx-input" id="omieFatArquivo" type="file" accept=".xml,text/xml,application/xml"></label></div><div class="omie-acoes"><button class="cadx-btn cadx-btn-primario" type="button" onclick="OmieFat_lerXml_()">Conferir XML</button></div>'
+        : '<div class="omie-barra"><label for="omieFatEtapa">Etapa<select class="cadx-input" id="omieFatEtapa"><option value="50">A faturar</option><option value="10">Pedidos / ordens</option><option value="60">Faturados</option></select></label><button class="cadx-btn" type="button" onclick="OmieFat_listar_()">Atualizar lista</button></div><div id="omieFatLista"></div>') +
+      '<p id="omieFatMensagem" aria-live="polite"></p><div id="omieFatPrevia"></div>' +
+      (notas
+        ? '<button class="cadx-btn" type="button" onclick="OmieFat_historico_()">Histórico documental</button><div id="omieFatHistorico"></div>'
+        : "") +
+      "</section>";
+    if (!notas) OmieFat_listar_();
+    // 16/11/2026 (especificação do Financeiro, seção 3): NF-e de compra e NFS-e viram conta a pagar no Omie (JS_Omie_Notas.html)
+    else if (typeof OmieNota_montar_ === "function") OmieNota_montar_();
+  }
+  function OmieFat_listar_() {
+    OMIEFAT.token = "";
+    document.getElementById("omieFatPrevia").innerHTML = "";
+    OmieFat_mensagem_("Consultando o Omie…");
+    OmieFat_chamar_(
+      "OmieFat_apiListar",
+      {
+        tipo: OMIEFAT.aba,
+        etapa: document.getElementById("omieFatEtapa").value,
+      },
+      function (r) {
+        document.getElementById("omieFatLista").innerHTML = r.itens.length
+          ? '<div style="overflow:auto"><table class="cadx-table"><thead><tr><th>Documento</th><th>Código Omie</th><th>Conferência</th></tr></thead><tbody>' +
+            r.itens
+              .map(function (i) {
+                var id = Number(i.id);
+                return (
+                  '<tr><td data-r="Documento">' +
+                  OmieFat_esc_(i.numero) +
+                  '</td><td data-r="Código Omie">' +
+                  OmieFat_esc_(i.id) +
+                  '</td><td data-r="Conferência">' +
+                  (Number.isSafeInteger(id) && id > 0
+                    ? '<button class="cadx-btn" type="button" onclick="OmieFat_conferir_(' +
+                      id +
+                      ')">Conferir</button>'
+                    : "Código indisponível") +
+                  "</td></tr>"
+                );
+              })
+              .join("") +
+            "</tbody></table></div>"
+          : '<div class="cadx-vazio bc-vazio">Nenhum documento nesta etapa. Troque a etapa acima ou confira no Omie se o pedido ou a O.S. já foi cadastrado.</div>';
+        OmieFat_mensagem_("Lista atualizada.");
+      },
+    );
+  }
+  function OmieFat_conferir_(id) {
+    OMIEFAT.token = "";
+    OmieFat_mensagem_("Conferindo dados e validação fiscal…");
+    OmieFat_chamar_(
+      "OmieFat_apiPrevia",
+      { tipo: OMIEFAT.aba, id: id },
+      OmieFat_previa_,
+    );
+  }
+  function OmieFat_lerXml_() {
+    var file = document.getElementById("omieFatArquivo").files[0];
+    OMIEFAT.token = "";
+    if (!file) {
+      OmieFat_mensagem_("Selecione um arquivo XML.");
+      return;
+    }
+    var tipoArq = document.getElementById("omieFatTipo").value;
+    if (file.size > (tipoArq === "saida" ? 40000 : 1000000)) {
+      OmieFat_mensagem_(tipoArq === "saida" ? "Use um XML de até 40 KB (NF-e de saída)." : "Use um XML de até 1 MB (uma nota por arquivo).");
+      return;
+    }
+    var geracao = OMIEFAT.geracao,
+      arquivoEl = document.getElementById("omieFatArquivo"),
+      reader = new FileReader();
+    reader.onload = function () {
+      if (
+        geracao !== OMIEFAT.geracao ||
+        !arquivoEl ||
+        arquivoEl !== document.getElementById("omieFatArquivo")
+      )
+        return;
+      var tipo = document.getElementById("omieFatTipo").value;
+      OMIEFAT.xml = tipo === "saida" ? "" : String(reader.result); // B7: o XML volta na confirmação e é conferido pelo SHA-256
+      OmieFat_chamar_(
+        tipo === "saida"
+          ? "OmieFat_apiPreviaXml"
+          : "OmieFat_apiPreviaDocumento",
+        { xml: String(reader.result), tipo: tipo },
+        OmieFat_previa_,
+      );
+    };
+    reader.onerror = function () {
+      OmieFat_mensagem_("Não foi possível ler o arquivo.");
+    };
+    reader.readAsText(file);
+  }
+  function OmieFat_previa_(r) {
+    OMIEFAT.token = r.token;
+    var s = r.resumo;
+    OMIEFAT.documental = s.tipo === "compra" || s.tipo === "nfse";
+    var xml = s.tipo === "xml" || OMIEFAT.documental;
+    // 16/11/2026 (design): prévia em caixa com o valor em destaque; aceite com área de toque maior; confirmar é o botão principal
+    var linhas = [["Documento", s.numero], [xml ? "Emitente" : "Código do cliente", s.emitente || s.cliente], ["Valor", Number(s.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })], ["Itens", s.quantidadeItens]];
+    if (xml) linhas.push(["Destinatário", s.destinatario], ["Chave", s.chave]);
+    var titulo = "Conferência antes de " + (xml ? "importar" : "faturar");
+    var dl = typeof OmieUI_previa_ === "function" ? OmieUI_previa_(linhas, titulo)
+      : "<h4>" + titulo + "</h4><dl>" + linhas.map(function (l) { return "<dt>" + OmieFat_esc_(l[0]) + "</dt><dd>" + OmieFat_esc_(l[1]) + "</dd>"; }).join("") + "</dl>";
+    document.getElementById("omieFatPrevia").innerHTML =
+      '<div class="cadx-card omie-previa-caixa">' + dl + "<p>" +
+      (OMIEFAT.documental
+        ? "O documento ficará pendente no histórico local. Não haverá envio, escrituração ou título no Omie."
+        : xml
+          ? "O XML será importado no Omie. Nenhum título ou movimento de estoque será criado por este envio."
+          : "Ao confirmar, o Omie poderá emitir documento fiscal e gerar lançamentos conforme a configuração do pedido/OS.") +
+      '</p><label class="omie-check" for="omieFatAceite"><input type="checkbox" id="omieFatAceite"> Conferi os dados e autorizo esta operação no Omie.</label><div class="omie-previa-acoes"><button type="button" class="cadx-btn cadx-btn-primario" id="omieFatConfirmar" onclick="OmieFat_confirmar_()">' +
+      (OMIEFAT.documental
+        ? "Confirmar recebimento documental"
+        : xml
+          ? "Confirmar importação"
+          : "Confirmar faturamento") +
+      "</button></div></div>";
+    OmieFat_mensagem_("Prévia válida por 10 minutos.");
+  }
+  function OmieFat_confirmar_() {
+    if (!OMIEFAT.token || !document.getElementById("omieFatAceite").checked) {
+      OmieFat_mensagem_("Confira a prévia e marque a autorização.");
+      return;
+    }
+    if (
+      !window.confirm(
+        "Confirmar a operação do documento apresentado acima no Omie?",
+      )
+    )
+      return;
+    document.getElementById("omieFatConfirmar").disabled = true;
+    var token = OMIEFAT.token;
+    OMIEFAT.token = "";
+    OmieFat_mensagem_("Enviando ao Omie. Aguarde a confirmação.");
+    OmieFat_chamar_(
+      OMIEFAT.documental
+        ? "OmieFat_apiGuardarDocumento"
+        : "OmieFat_apiConfirmar",
+      OMIEFAT.documental ? { token: token, confirmacao: "CONFIRMAR", xml: OMIEFAT.xml } : { token: token, confirmacao: "CONFIRMAR" },
+      function (r) {
+        document.getElementById("omieFatPrevia").innerHTML = "";
+        OmieFat_mensagem_(r.mensagem);
+      },
+    );
+  }
+  function OmieFat_historico_() {
+    OmieFat_chamar_("OmieFat_apiHistoricoNotas", {}, function (r) {
+      document.getElementById("omieFatHistorico").innerHTML =
+        "<h4>Documentos recebidos (últimos 100)</h4>" +
+        (r.itens.length
+          ? '<div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Data</th><th>Tipo</th><th>Número</th><th>Situação</th></tr></thead><tbody>' +
+            r.itens
+              .map(function (i) {
+                return (
+                  '<tr><td data-r="Data">' + OmieFat_esc_(i.data) + '</td><td data-r="Tipo">' + OmieFat_esc_(i.tipo) + '</td><td data-r="Número">' + OmieFat_esc_(i.numero) + '</td><td data-r="Situação">' + OmieFat_esc_(i.status) + "</td></tr>"
+                );
+              })
+              .join("") +
+            "</tbody></table></div>"
+          : '<div class="cadx-vazio bc-vazio">Nenhum documento guardado ainda.</div>');
+    });
+  }
+</script>

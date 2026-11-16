@@ -15,6 +15,7 @@
   var CHV_INTEGRACOES = {
     "Inteligência artificial": { icone: "fa-wand-magic-sparkles", teste: "gemini", obrig: [["GEMINI_API_KEY"]], resumo: "Interpretações técnicas, PGT e POP, relatórios com análise e leitura de documentos." },
     "Auvo": { icone: "fa-arrows-rotate", teste: "auvo", obrig: [["AUVO_API_KEY", "AUVO_API_TOKEN"]], resumo: "Sincronização de clientes, equipamentos e ordens de serviço com o Auvo." },
+    "Omie": { icone: "fa-file-invoice-dollar", teste: "omie", obrig: [["OMIE_APP_KEY", "OMIE_APP_SECRET"]], resumo: "Conexão do Omie com o módulo financeiro. Grave a App Key e a App Secret do mesmo aplicativo e teste a conexão." },
     "E-mail": { icone: "fa-envelope", teste: "email", obrig: [["SMTP_SENHA"]], resumo: "Envio dos avisos e documentos por e-mail (sistema@metrolabs.com.br)." },
     "WhatsApp oficial (Meta)": { icone: "fa-comment-dots", teste: "whatsapp", provedor: "meta", obrig: [["META_WA_TOKEN", "META_WA_PHONE_ID"]], resumo: "Avisos por WhatsApp pelo número oficial, com modelos aprovados pela Meta." },
     "Z-API": { icone: "fa-comments", teste: "whatsapp", provedor: "zapi", obrig: [["ZAPI_INSTANCIA", "ZAPI_TOKEN", "ZAPI_CLIENT_TOKEN"]], resumo: "WhatsApp da empresa pela Z-API: avisos do SGO+ e do COMMAND com texto pronto (sem modelo a aprovar) e mensagens recebidas no COMMAND." },
@@ -26,6 +27,7 @@
   var CHV_TESTES = {
     gemini: "Faz uma pergunta mínima à IA com a chave gravada.",
     auvo: "Entra na API do Auvo com a chave e o token gravados.",
+    omie: "Confere a conexão com o Omie usando as chaves gravadas. Consulta somente leitura; não altera dados financeiros.",
     email: "Envia um e-mail de teste para o e-mail do seu usuário.",
     whatsapp: "Envia uma mensagem de teste para o celular digitado, pelo provedor em uso. Pela Meta sai o modelo sgo_aviso_geral (precisa estar aprovado); pela Z-API, um texto pronto (só para celular).",
     rastreador: "Consulta a lista de veículos na iTracker (GET /devices) e mostra quantos encontrou, com número, nome e situação. Não envia comando e não mostra a chave.",

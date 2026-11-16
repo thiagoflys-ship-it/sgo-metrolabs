@@ -175,7 +175,7 @@ test('deslocamento em bloco simples: Brasília, 2 pessoas, 2 dias e 1 noite = cu
   assert.ok(!d.linhas.some((x) => x.codigo === 'TAXA'), 'a linha da taxa não aparece na tela');
   const dj = JSON.parse(reg(amb, a.id).DESLOCAMENTO_JSON);
   assert.equal(dj.viagem.linhas.TAXA.nsa, true); assert.equal(dj.viagem.linhas.TAXA.auto, true); assert.match(dj.viagem.linhas.TAXA.motivo, /Incentivo de Missão/); assert.equal(dj.unidade, 'GO');
-  assert.equal(l.DIARIA.nsa, true); assert.match(l.DIARIA.motivo, /Sem diária em dinheiro: a alimentação e a hospedagem cobrem a estadia/);
+  assert.equal(l.DIARIA.nsa, true); assert.match(l.DIARIA.motivo, /não paga diária a colaboradores \(Diretoria, 13\/11\/2026\): a alimentação e o hotel cobrem a estadia/);
   assert.equal(d.checklist.ok, true, JSON.stringify(d.checklist.faltas));
   // 2 técnicos: km 1.050 + alimentação 400 + hotel 300 + incentivo 600 + estrada 2 x 6 h x 112,50 = 1.350 -> 3.700
   const b = rascunho(amb, [{ descricao: 'Qualificação térmica de autoclave', quantidade: 1, precoUnitario: '3.020,00' }],
@@ -250,6 +250,9 @@ test('margem abaixo da mínima vai para a Caixa de decisões (só a Diretoria ap
   const pend = itens.find((x) => x && /COM:DESC:/.test(x.id));
   assert.ok(pend, 'a proposta aparece na Caixa de decisões');
   assert.match(pend.detalhe, /só a Diretoria aprova/);
+  // 11/11/2026: o item que só a Diretoria aprova vai para a Diretoria na Caixa (não para o gestor comercial)
+  assert.equal(pend.extra.soDiretoria, true);
+  assert.equal(pend.extra.decisor, undefined);
   assert.match(amb.api('s_gaspar', 'decidirDesconto', { id: a.id, aprovar: true, texto: 'Aprovo pelo contrato' }).message, /essa exceção é da Diretoria/);
   ok(amb.api('s_dora', 'decidirDesconto', { id: a.id, aprovar: true, texto: 'Aprovado pela Diretoria pelo contrato anual' }));
   // fora da faixa de mercado (acima do máximo público)

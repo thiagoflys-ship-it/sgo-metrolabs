@@ -1,0 +1,387 @@
+<!--
+  METROLABS — assistente "Tire sua dúvida" (botão, conversa e painel da gestão), 20/10/2026. ARQUIVO IDÊNTICO no SGO+ e no COMMAND.
+  O sistema define ANTES deste include:
+    window.ASSIST_CFG = {
+      sistema: "SGO+" | "COMMAND",
+      ativo: function () -> true quando há alguém logado com perfil interno (o botão só aparece assim),
+      chamar: function (acao, dados, ok, falha)   (servidor: SGO_Assist_api / cmdApiAssist),
+      telaAtual: function () -> chave da tela aberta,
+      abrirTela: function (chave)                 (botão "Abrir esta tela"),
+      falarCom: function (nomes, texto)           (abre o bate-papo com a pergunta já escrita),
+      abrirAjudaTela: function ()                 (opcional: "Como usar esta tela"),
+      rotuloContato: "Falar com o administrador"  (opcional: texto do botão que abre o bate-papo),
+      contatoNome: "o administrador"              (opcional: como a resposta se refere a essa pessoa)
+    };
+  O assistente só orienta: nenhuma ação aqui grava nada no sistema além do registro da pergunta e do "Isso resolveu?".
+  CSS próprio com prefixo .asw- (usa as cores --bc-* do UI_Estilos dos dois sistemas).
+-->
+<style>
+  .asw-raiz { font-family: inherit; font-size: 14px; color: var(--bc-text, #1f2933); }
+  .asw-raiz *, .asw-raiz *::before, .asw-raiz *::after { box-sizing: border-box; }
+  .asw-botao { position: fixed; right: 18px; bottom: 86px; z-index: 2147482990; height: 40px; padding: 0 14px 0 12px; border-radius: 20px;
+    border: 1px solid var(--bc-line, #d9ddd8); background: #fff; color: var(--bc-info, #1f5fa8); font: inherit; font-size: 13.5px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer; box-shadow: 0 4px 14px rgba(15, 23, 42, .16); }
+  .asw-botao:hover { background: var(--bc-surface-2, #f4f6f8); }
+  .asw-botao:focus-visible, .asw-raiz button:focus-visible, .asw-raiz textarea:focus-visible, .asw-raiz select:focus-visible { outline: 3px solid var(--bc-info, #1f5fa8); outline-offset: 2px; }
+  .asw-botao i { font-size: 16px; }
+  .asw-botao[hidden] { display: none; }
+  .asw-painel { position: fixed; right: 18px; bottom: 18px; z-index: 2147483003; width: 430px; max-width: calc(100vw - 24px); height: 640px; max-height: calc(100vh - 36px); max-height: calc(100dvh - 36px);
+    background: var(--bc-bg, #f7f8fa); border: 1px solid var(--bc-line, #d9ddd8); border-radius: 12px; box-shadow: 0 18px 50px rgba(15, 23, 42, .28); display: flex; flex-direction: column; overflow: hidden; }
+  .asw-painel[hidden] { display: none; }
+  .asw-cab { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px 10px; background: #fff; border-bottom: 1px solid var(--bc-line, #d9ddd8); }
+  .asw-cab h3 { margin: 0; font-size: 16px; }
+  .asw-cab .asw-sub { font-size: 12px; color: var(--bc-text-3, #5b6670); margin-top: 3px; line-height: 1.4; }
+  .asw-cresce { flex: 1; min-width: 0; }
+  .asw-x { border: 0; background: transparent; font-size: 24px; line-height: 1; width: 44px; height: 44px; margin: -8px -8px 0 0; cursor: pointer; color: var(--bc-text-3, #5b6670); border-radius: 8px; }
+  .asw-corpo { flex: 1; overflow-y: auto; padding: 12px 14px; -webkit-overflow-scrolling: touch; }
+  .asw-pe { border-top: 1px solid var(--bc-line, #d9ddd8); background: #fff; padding: 10px 12px; }
+  .asw-compor { display: flex; gap: 8px; align-items: flex-end; }
+  .asw-compor textarea { flex: 1; min-width: 0; resize: none; min-height: 44px; max-height: 120px; padding: 10px; border: 1px solid var(--bc-line, #cfd5db); border-radius: 8px; font: inherit; font-size: 14px; line-height: 1.4; }
+  .asw-btn { min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid transparent; background: var(--bc-info, #1f5fa8); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+  .asw-btn[disabled] { opacity: .55; cursor: default; }
+  .asw-btn.sec { background: #fff; color: var(--bc-info, #1f5fa8); border-color: var(--bc-line, #cfd5db); }
+  .asw-btn.peq { min-height: 36px; padding: 0 10px; font-size: 13px; font-weight: 600; }
+  .asw-nota { font-size: 11.5px; color: var(--bc-text-3, #5b6670); margin-top: 6px; line-height: 1.4; }
+  .asw-intro { background: #fff; border: 1px solid var(--bc-line, #d9ddd8); border-radius: 10px; padding: 12px; line-height: 1.5; }
+  .asw-intro p { margin: 0 0 8px; }
+  .asw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .asw-chip { border: 1px solid var(--bc-line, #cfd5db); background: var(--bc-surface-2, #f4f6f8); border-radius: 16px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer; text-align: left; min-height: 36px; color: inherit; }
+  .asw-eu { margin: 12px 0 8px auto; max-width: 85%; width: fit-content; background: var(--bc-info, #1f5fa8); color: #fff; padding: 8px 12px; border-radius: 12px 12px 2px 12px; overflow-wrap: anywhere; line-height: 1.45; }
+  .asw-resp { background: #fff; border: 1px solid var(--bc-line, #d9ddd8); border-radius: 10px; padding: 12px; margin-bottom: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+  .asw-resp p { margin: 0 0 8px; }
+  .asw-resp ol { margin: 4px 0 8px 20px; padding: 0; }
+  .asw-resp ol li { margin-bottom: 4px; }
+  .asw-resp.recusa { border-left: 4px solid var(--bc-warn, #b45309); }
+  .asw-resp.naosei { border-left: 4px solid var(--bc-text-3, #7b8794); }
+  .asw-resp.outro { border-left: 4px solid var(--bc-info, #1f5fa8); }
+  .asw-quem { background: var(--bc-surface-2, #f4f6f8); border-radius: 8px; padding: 8px 10px; margin: 6px 0 8px; }
+  .asw-fonte { font-size: 12px; color: var(--bc-text-3, #5b6670); margin-top: 6px; }
+  .asw-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .asw-trecho { border: 1px solid var(--bc-line, #e2e6ea); border-radius: 8px; padding: 9px 10px; margin: 8px 0; }
+  .asw-trecho b { display: block; margin-bottom: 2px; }
+  .asw-cam { font-size: 12.5px; color: var(--bc-text-3, #5b6670); margin-bottom: 4px; }
+  .asw-aval { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--bc-line, #d9ddd8); font-size: 13px; }
+  .asw-aviso { background: var(--bc-warn-bg, #fff7e6); border: 1px solid var(--bc-warn-line, #f3d39a); color: var(--bc-warn, #8a4b08); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 13px; }
+  .asw-carregando { color: var(--bc-text-3, #5b6670); font-style: italic; margin: 8px 0; }
+  .asw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* painel da gestão (tela inteira dentro do sistema) */
+  .asw-pg { max-width: 1180px; }
+  .asw-pg-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .asw-pg-topo select { width: auto; max-width: 100%; min-height: 40px; font-size: 14px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--bc-line, #cfd5db); }
+  .asw-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .asw-kpis > div { background: #fff; border: 1px solid var(--bc-line, #d9ddd8); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--bc-text-3, #5b6670); }
+  .asw-kpis b { display: block; font-size: 22px; color: var(--bc-text, #1f2933); }
+  .asw-abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .asw-aba { min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--bc-line, #cfd5db); background: #fff; font: inherit; cursor: pointer; color: inherit; }
+  .asw-aba.on { background: var(--bc-info, #1f5fa8); color: #fff; border-color: transparent; }
+  .asw-card { background: #fff; border: 1px solid var(--bc-line, #d9ddd8); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+  .asw-card .asw-l1 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+  .asw-selo { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 10px; padding: 1px 8px; background: var(--bc-surface-2, #eef1f4); color: var(--bc-text-3, #5b6670); margin-right: 4px; }
+  .asw-selo.verm { background: #fdecec; color: #a61b1b; } .asw-selo.verde { background: #e8f5ee; color: #1d6b3f; } .asw-selo.ambar { background: #fff4de; color: #8a4b08; }
+  .asw-rasc { background: var(--bc-surface-2, #f4f6f8); border-radius: 8px; padding: 10px; margin-top: 8px; white-space: pre-wrap; font-size: 13px; }
+  .asw-muted { color: var(--bc-text-3, #5b6670); font-size: 12.5px; }
+  @media (max-width: 900px) { .asw-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 700px), (pointer: coarse) and (max-height: 500px) {
+    /* celular: aba colada na borda direita, logo acima da aba do bate-papo (que fica a 42% do rodapé), sem cobrir os botões do rodapé */
+    .asw-botao { right: env(safe-area-inset-right, 0px); bottom: calc(42% + 56px); height: 52px; width: 46px; padding: 4px 2px; border-radius: 23px 0 0 23px; flex-direction: column; gap: 1px; font-size: 9.5px; line-height: 1.05; justify-content: center; }
+    .asw-botao i { font-size: 18px; }
+    .asw-botao .asw-rot-pc { display: none; }
+    .asw-painel { inset: 0; right: 0; bottom: 0; width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; border: 0;
+      padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+    .asw-compor textarea { font-size: 16px; }
+    .asw-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (min-width: 701px) { .asw-botao .asw-rot-cel { display: none; } }
+</style>
+
+<script>
+(function () {
+  if (window.AssistenteWidget) return;
+  var CFG = window.ASSIST_CFG || {};
+  var ST = { aberto: false, ini: null, msgs: [], enviando: false, chaveIni: "", ultimoAtivo: false };
+  var raiz, botao, painel, corpo, campo, btEnviar, origemFoco = null;
+
+  function h(s) { return String(s === null || s === undefined ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+  function sis() { return CFG.sistema || "sistema"; }
+  function ativo() { try { return !!(CFG.ativo && CFG.ativo()); } catch (e) { return false; } }
+  function telaAtual() { try { return String((CFG.telaAtual && CFG.telaAtual()) || ""); } catch (e) { return ""; } }
+  function chamar(acao, dados, ok, falha) {
+    if (!CFG.chamar) return falha && falha("O assistente não está ligado nesta página.");
+    try { CFG.chamar(acao, dados || {}, function (r) { if (!r || r.ok === false) return falha && falha((r && (r.message || r.erro)) || "O servidor não respondeu como esperado."); ok && ok(r); }, function (e) { falha && falha((e && e.message) || String(e || "Sem conexão com o servidor.")); }); }
+    catch (e) { falha && falha(e.message || String(e)); }
+  }
+
+  /* ---------------- casca ---------------- */
+  function montar() {
+    raiz = document.createElement("div");
+    raiz.className = "asw-raiz";
+    raiz.innerHTML =
+      "<button type='button' class='asw-botao' id='aswBotao' hidden aria-haspopup='dialog' aria-controls='aswPainel' title='Pergunte como usar o " + h(sis()) + "'>" +
+        "<i class='fas fa-circle-question' aria-hidden='true'></i><span class='asw-rot-pc'>Tire sua dúvida</span><span class='asw-rot-cel'>Dúvida</span><span class='asw-sr'> (assistente do sistema)</span></button>" +
+      "<section class='asw-painel' id='aswPainel' hidden role='dialog' aria-modal='false' aria-labelledby='aswTitulo'>" +
+        "<div class='asw-cab'><div class='asw-cresce'><h3 id='aswTitulo'>Tire sua dúvida</h3><div class='asw-sub' id='aswSub'>Respostas com base na ajuda das telas e nos manuais do " + h(sis()) + ".</div></div>" +
+        "<button type='button' class='asw-x' id='aswFechar' aria-label='Fechar o assistente'>&times;</button></div>" +
+        "<div class='asw-corpo' id='aswCorpo' aria-live='polite'></div>" +
+        "<div class='asw-pe'><div class='asw-compor'><label class='asw-sr' for='aswCampo'>Sua dúvida</label>" +
+          "<textarea id='aswCampo' rows='1' maxlength='600' placeholder='Escreva a sua dúvida'></textarea>" +
+          "<button type='button' class='asw-btn' id='aswEnviar'>Perguntar</button></div>" +
+          "<div class='asw-nota'>O assistente só orienta: ele não faz alterações no sistema. Não escreva senhas nem dados de clientes.</div></div>" +
+      "</section>";
+    document.body.appendChild(raiz);
+    botao = raiz.querySelector("#aswBotao"); painel = raiz.querySelector("#aswPainel"); corpo = raiz.querySelector("#aswCorpo");
+    campo = raiz.querySelector("#aswCampo"); btEnviar = raiz.querySelector("#aswEnviar");
+    botao.onclick = function () { abrir(); };
+    raiz.querySelector("#aswFechar").onclick = function () { fechar(); };
+    btEnviar.onclick = function () { enviar(); };
+    campo.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); enviar(); } });
+    campo.addEventListener("input", function () { campo.style.height = "auto"; campo.style.height = Math.min(120, campo.scrollHeight + 2) + "px"; });
+    painel.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); fechar(); } });
+    corpo.addEventListener("click", clique);
+    vigiar();
+    setInterval(vigiar, 1500);
+  }
+
+  /** Mostra o botão só com alguém logado; some enquanto o bate-papo está aberto (ele ocupa o mesmo canto). */
+  function vigiar() {
+    var a = ativo();
+    if (!a && ST.ultimoAtivo) { ST.msgs = []; ST.ini = null; fechar(true); }
+    ST.ultimoAtivo = a;
+    var chat = document.querySelector(".comw-painel");
+    var chatAberto = !!(chat && !chat.hidden && chat.offsetParent !== null);
+    botao.hidden = !a || ST.aberto || chatAberto;
+  }
+
+  function abrir(texto) {
+    if (!ativo()) return;
+    if (!ST.aberto) origemFoco = document.activeElement;
+    ST.aberto = true; painel.hidden = false; botao.hidden = true;
+    var tela = telaAtual();
+    if (!ST.ini || ST.chaveIni !== tela) carregarInicio(tela); else desenhar();
+    if (texto) campo.value = String(texto);
+    setTimeout(function () { try { campo.focus(); } catch (e) { } }, 30);
+  }
+  function fechar(semFoco) {
+    ST.aberto = false; if (painel) painel.hidden = true;
+    vigiar();
+    if (!semFoco && origemFoco && document.body.contains(origemFoco)) { try { origemFoco.focus(); } catch (e) { } }
+  }
+
+  function carregarInicio(tela) {
+    ST.chaveIni = tela;
+    if (!ST.msgs.length) corpo.innerHTML = "<p class='asw-carregando'>Abrindo o assistente...</p>";
+    chamar("iniciar", { tela: tela }, function (r) { ST.ini = r; desenhar(); }, function (erro) {
+      ST.ini = null;
+      corpo.innerHTML = "<div class='asw-aviso' role='alert'>Não foi possível abrir o assistente: " + h(erro) + " Confira a conexão e toque em \"Tentar de novo\".</div><button type='button' class='asw-btn sec' data-acao='tentarIni'>Tentar de novo</button>";
+    });
+  }
+
+  /* ---------------- conversa ---------------- */
+  function desenhar() {
+    var ini = ST.ini || {};
+    var sub = raiz.querySelector("#aswSub");
+    sub.textContent = "Respostas com base na ajuda das telas e nos manuais do " + sis() + "." + (ini.perfilRotulo ? " Você entrou com o perfil " + ini.perfilRotulo + "." : "");
+    var html = [];
+    html.push("<div class='asw-intro'><p>Pergunte como fazer algo no " + h(sis()) + ", onde fica uma tela ou quem faz uma tarefa. A resposta mostra o passo a passo para o seu perfil, o caminho no menu e de onde veio a informação.</p>" +
+      (ini.ia === false ? "<p class='asw-muted'>Neste momento o assistente responde mostrando os trechos da ajuda mais próximos da pergunta.</p>" : "") +
+      ((ini.sugestoes || []).length ? "<div class='asw-muted'>Exemplos:</div><div class='asw-chips'>" + ini.sugestoes.map(function (s) { return "<button type='button' class='asw-chip' data-sug='" + h(s) + "'>" + h(s) + "</button>"; }).join("") + "</div>" : "") +
+      (CFG.abrirAjudaTela ? "<div class='asw-acoes'><button type='button' class='asw-btn sec peq' data-acao='ajudaTela'>Como usar esta tela</button></div>" : "") + "</div>");
+    ST.msgs.forEach(function (m, i) {
+      if (m.eu) html.push("<div class='asw-eu'>" + h(m.texto) + "</div>");
+      else html.push(resposta(m, i));
+    });
+    if (ST.enviando) html.push("<p class='asw-carregando'>Procurando na ajuda e nos manuais...</p>");
+    corpo.innerHTML = html.join("");
+    corpo.scrollTop = corpo.scrollHeight;
+  }
+
+  function listaPassos(l) { return l && l.length ? "<ol>" + l.map(function (p) { return "<li>" + h(p) + "</li>"; }).join("") + "</ol>" : ""; }
+  function botoesTelas(telas) {
+    return (telas || []).filter(Boolean).map(function (t) { return "<button type='button' class='asw-btn sec peq' data-tela='" + h(t.chave) + "' title='" + h(t.caminho || "") + "'>Abrir esta tela: " + h(t.nome) + "</button>"; }).join("");
+  }
+  function rotuloContato() { return CFG.rotuloContato || "Falar com o administrador"; }
+  function contatoNome() { return CFG.contatoNome || "o administrador"; }
+  function botaoAdmin(i) { return "<button type='button' class='asw-btn sec peq' data-admin='" + i + "'>" + h(rotuloContato()) + "</button>"; }
+
+  function resposta(m, i) {
+    var r = m.r || {}, x = [];
+    var cls = r.tipo === "RECUSA" ? " recusa" : r.tipo === "NAO_SEI" ? " naosei" : r.tipo === "OUTRO_PERFIL" ? " outro" : "";
+    x.push("<div class='asw-resp" + cls + "'>");
+    if (m.erro) {
+      x.push("<p>Não foi possível responder agora: " + h(m.erro) + "</p><div class='asw-acoes'><button type='button' class='asw-btn sec peq' data-refazer='" + i + "'>Tentar de novo</button>" + botaoAdmin(i) + "</div></div>");
+      return x.join("");
+    }
+    if (r.tipo === "NAO_SEI") {
+      x.push("<p><b>Não encontrei essa informação na ajuda e nos manuais do " + h(sis()) + ".</b></p>" +
+        "<p>Para não passar uma orientação errada, prefiro não responder. Tente escrever a dúvida de outro jeito, com o nome da tela ou do botão, ou fale com " + h(contatoNome()) + ": a pergunta vai junto e ajuda a melhorar o manual.</p>" +
+        "<div class='asw-acoes'>" + botaoAdmin(i) + "</div>");
+    } else if (r.tipo === "RECUSA") {
+      x.push("<p>" + h(r.resumo) + "</p>" + listaPassos(r.passos) + "<div class='asw-acoes'>" + botaoAdmin(i) + "</div>");
+    } else if (r.tipo === "LIMITE" || r.tipo === "VAZIA") {
+      x.push("<p>" + h(r.resumo) + "</p>" + (r.tipo === "LIMITE" ? "<div class='asw-acoes'>" + botaoAdmin(i) + "</div>" : ""));
+    } else if (r.tipo === "BUSCA") {
+      x.push("<div class='asw-aviso'>" + h(r.aviso || "Estes são os trechos da ajuda mais próximos da sua pergunta.") + "</div>");
+      (r.trechos || []).forEach(function (t) {
+        x.push("<div class='asw-trecho'><b>" + h(t.titulo) + "</b>" + (t.caminho ? "<div class='asw-cam'>" + h(t.caminho) + "</div>" : "") +
+          (t.restrito ? "<div class='asw-quem'>Esta parte é feita por outro perfil. " + h(t.quemPode || "") + "</div>" : listaPassos(t.itens)) +
+          "<div class='asw-fonte'>Fonte: " + h(t.fonte) + "</div>" + (t.abrir ? "<div class='asw-acoes'>" + botoesTelas([t.abrir]) + "</div>" : "") + "</div>");
+      });
+    } else {
+      if (r.resumo) x.push("<p>" + h(r.resumo) + "</p>");
+      if (r.tipo === "OUTRO_PERFIL" && r.quemFaz) x.push("<div class='asw-quem'><b>Quem faz:</b> " + h(r.quemFaz) + "</div>");
+      x.push(listaPassos(r.passos));
+      var bt = botoesTelas(r.telas);
+      if (bt || r.tipo === "OUTRO_PERFIL") x.push("<div class='asw-acoes'>" + bt + (r.tipo === "OUTRO_PERFIL" ? botaoAdmin(i) : "") + "</div>");
+    }
+    if ((r.fontes || []).length) x.push("<div class='asw-fonte'>Fonte: " + h(r.fontes.join("; ")) + "</div>");
+    if (r.id && ["RESPOSTA", "OUTRO_PERFIL", "BUSCA", "NAO_SEI"].indexOf(r.tipo) >= 0) {
+      if (m.avaliado) x.push("<div class='asw-aval'>" + (m.avaliado === "SIM" ? "Obrigado. Que bom que resolveu." : "Obrigado pela avaliação. A sua pergunta vai ajudar a melhorar o manual. Se precisar, fale com " + h(contatoNome()) + ". " + botaoAdmin(i)) + "</div>");
+      else if (r.tipo !== "NAO_SEI") x.push("<div class='asw-aval'><span>Isso resolveu?</span><button type='button' class='asw-btn sec peq' data-aval='SIM' data-i='" + i + "'>Sim</button><button type='button' class='asw-btn sec peq' data-aval='NAO' data-i='" + i + "'>Não</button></div>");
+    }
+    x.push("</div>");
+    return x.join("");
+  }
+
+  function enviar(texto) {
+    if (ST.enviando) return;
+    var q = String(texto !== undefined ? texto : campo.value || "").trim();
+    if (!q) { campo.focus(); return; }
+    var tela = telaAtual();
+    ST.msgs.push({ eu: true, texto: q, tela: tela });
+    if (texto === undefined) { campo.value = ""; campo.style.height = ""; }
+    ST.enviando = true; btEnviar.disabled = true; desenhar();
+    chamar("perguntar", { pergunta: q, tela: tela }, function (r) {
+      ST.enviando = false; btEnviar.disabled = false;
+      ST.msgs.push({ r: r, pergunta: q, tela: tela });
+      if (ST.ini && typeof r.contato !== "undefined") ST.ini.contato = r.contato;
+      desenhar();
+    }, function (erro) {
+      ST.enviando = false; btEnviar.disabled = false;
+      ST.msgs.push({ erro: erro, pergunta: q, tela: tela });
+      desenhar();
+    });
+  }
+
+  function falarComAdmin(i) {
+    var m = ST.msgs[i] || {};
+    var nomeTela = (ST.ini && ST.ini.nomeTela) || "";
+    var texto = "Olá. Tenho uma dúvida sobre o " + sis() + (nomeTela ? " (tela " + nomeTela + ")" : "") + ": " + (m.pergunta || "");
+    var nomes = (m.r && m.r.contato) || (ST.ini && ST.ini.contato) || [];
+    if (CFG.falarCom) { fechar(true); try { CFG.falarCom(nomes, texto); } catch (e) { } }
+  }
+
+  function clique(e) {
+    var t = e.target.closest ? e.target.closest("[data-sug],[data-tela],[data-admin],[data-aval],[data-acao],[data-refazer]") : null;
+    if (!t) return;
+    if (t.getAttribute("data-sug")) return enviar(t.getAttribute("data-sug"));
+    if (t.getAttribute("data-tela")) {
+      var k = t.getAttribute("data-tela");
+      if (window.matchMedia && window.matchMedia("(max-width: 700px)").matches) fechar(true);
+      try { CFG.abrirTela && CFG.abrirTela(k); } catch (e2) { }
+      return;
+    }
+    if (t.getAttribute("data-admin") !== null && t.hasAttribute("data-admin")) return falarComAdmin(Number(t.getAttribute("data-admin")));
+    if (t.getAttribute("data-refazer") !== null && t.hasAttribute("data-refazer")) { var mm = ST.msgs[Number(t.getAttribute("data-refazer"))]; if (mm) { ST.msgs.splice(Number(t.getAttribute("data-refazer")), 1); enviar(mm.pergunta); } return; }
+    if (t.getAttribute("data-aval")) {
+      var i = Number(t.getAttribute("data-i")), m = ST.msgs[i], v = t.getAttribute("data-aval");
+      if (!m || !m.r || !m.r.id) return;
+      t.disabled = true;
+      chamar("avaliar", { id: m.r.id, resolveu: v === "SIM" }, function (r) { m.avaliado = v; if (r.contato && r.contato.length) m.r.contato = r.contato; desenhar(); }, function (erro) { t.disabled = false; alert("Não foi possível registrar a avaliação: " + erro); });
+      return;
+    }
+    var a = t.getAttribute("data-acao");
+    if (a === "tentarIni") return carregarInicio(telaAtual());
+    if (a === "ajudaTela") { fechar(true); try { CFG.abrirAjudaTela(); } catch (e3) { } }
+  }
+
+  /* ---------------- painel da gestão ---------------- */
+  var PG = { el: null, dias: 30, aba: "grupos", d: null, rasc: {} };
+  function montarPainel(el) {
+    PG.el = el; PG.rasc = {};
+    el.innerHTML = "<div class='asw-raiz asw-pg'><p class='asw-carregando'>Carregando as perguntas...</p></div>";
+    carregarPainel();
+  }
+  function carregarPainel() {
+    chamar("painel", { dias: PG.dias }, function (r) { PG.d = r; desenharPainel(); }, function (erro) {
+      PG.el.innerHTML = "<div class='asw-raiz asw-pg'><div class='asw-aviso' role='alert'>Não foi possível abrir o painel: " + h(erro) + "</div><button type='button' class='asw-btn sec' id='aswPgTentar'>Tentar de novo</button></div>";
+      var b = PG.el.querySelector("#aswPgTentar"); if (b) b.onclick = carregarPainel;
+    });
+  }
+  function pct(a, b) { return b ? Math.round(a * 100 / b) + "%" : "-"; }
+  function dataBr(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); }
+  function desenharPainel() {
+    var d = PG.d || {}, t = d.totais || {}, b = d.base || {};
+    var avaliadas = (t.resolveu || 0) + (t.naoResolveu || 0);
+    var x = [];
+    x.push("<div class='asw-raiz asw-pg'>");
+    x.push("<p class='asw-muted'>Perguntas feitas ao assistente \"Tire sua dúvida\". O texto aparece sem e-mail, telefone, documento e placa; quem perguntou não é mostrado. Use os assuntos mais frequentes e os sem resposta para melhorar a ajuda das telas e os manuais.</p>");
+    x.push("<div class='asw-pg-topo'><label for='aswPgDias'>Período</label><select id='aswPgDias'>" + [7, 30, 90, 365].map(function (n) { return "<option value='" + n + "'" + (PG.dias === n ? " selected" : "") + ">Últimos " + n + " dias</option>"; }).join("") + "</select>" +
+      "<button type='button' class='asw-btn sec peq' id='aswPgAtualizar'>Atualizar</button>" +
+      "<span class='asw-muted'>" + (d.ia ? "IA ligada" : "IA desligada: o assistente mostra os trechos mais próximos") + " · limite de " + h(d.limite || "") + " perguntas por pessoa por hora</span></div>");
+    x.push("<div class='asw-kpis'><div><b>" + (t.perguntas || 0) + "</b>perguntas</div><div><b>" + pct(t.resolveu || 0, avaliadas) + "</b>resolveram (das avaliadas)</div>" +
+      "<div><b>" + (t.naoResolveu || 0) + "</b>não resolveram</div><div><b>" + (t.semResposta || 0) + "</b>sem resposta na base</div><div><b>" + (t.recusas || 0) + "</b>pedidos recusados</div><div><b>" + (t.limite || 0) + "</b>no limite por hora</div></div>");
+    var abas = [["grupos", "Assuntos mais frequentes"], ["sem", "Sem resposta ou não resolveu"], ["telas", "Por tela"], ["base", "Base do assistente"]];
+    x.push("<div class='asw-abas' role='tablist'>" + abas.map(function (a) { return "<button type='button' role='tab' class='asw-aba" + (PG.aba === a[0] ? " on" : "") + "' aria-selected='" + (PG.aba === a[0]) + "' data-pgaba='" + a[0] + "'>" + h(a[1]) + "</button>"; }).join("") + "</div>");
+    if (PG.aba === "grupos") {
+      var gs = d.grupos || [];
+      if (!gs.length) x.push("<div class='asw-card'>Nenhuma pergunta no período.</div>");
+      gs.forEach(function (g, i) {
+        var r = PG.rasc[g.grupo];
+        x.push("<div class='asw-card'><div class='asw-l1'><div><b>" + h(g.exemplos[0] || g.grupo) + "</b></div><div>" +
+          "<span class='asw-selo'>" + g.qtd + " pergunta" + (g.qtd === 1 ? "" : "s") + "</span>" +
+          (g.semResposta ? "<span class='asw-selo verm'>" + g.semResposta + " sem resposta</span>" : "") + (g.naoResolveu ? "<span class='asw-selo ambar'>" + g.naoResolveu + " não resolveu</span>" : "") +
+          (g.resolveu ? "<span class='asw-selo verde'>" + g.resolveu + " resolveu</span>" : "") + (g.recusas ? "<span class='asw-selo'>" + g.recusas + " recusada" + (g.recusas === 1 ? "" : "s") + "</span>" : "") + "</div></div>" +
+          (g.exemplos.length > 1 ? "<div class='asw-muted'>Também: " + h(g.exemplos.slice(1).join(" | ")) + "</div>" : "") +
+          "<div class='asw-muted'>Telas: " + h((g.telasNomes || []).join(", ") || "-") + " · Perfis: " + h((g.perfisNomes || []).join(", ") || "-") + "</div>" +
+          (g.recusas >= g.qtd ? "<div class='asw-muted'>Pedidos recusados: não pedem texto novo de ajuda.</div>" : "<div class='asw-acoes'><button type='button' class='asw-btn sec peq' data-sugerir='" + i + "'>" + (r ? "Gerar o rascunho de novo" : "Sugerir texto de ajuda") + "</button></div>") +
+          (r ? rascunhoHtml(r, i) : "") + "</div>");
+      });
+    } else if (PG.aba === "sem") {
+      var ss = d.semResposta || [];
+      if (!ss.length) x.push("<div class='asw-card'>Nenhuma pergunta sem resposta no período.</div>");
+      ss.forEach(function (s) {
+        x.push("<div class='asw-card'><div class='asw-l1'><b>" + h(s.pergunta) + "</b><span>" + (s.tipo === "NAO_SEI" ? "<span class='asw-selo verm'>sem resposta na base</span>" : "<span class='asw-selo ambar'>não resolveu</span>") + "</span></div>" +
+          "<div class='asw-muted'>" + h(dataBr(s.em)) + " · Tela: " + h(s.telaNome || "-") + " · Perfil: " + h(s.perfilNome || "-") + "</div></div>");
+      });
+    } else if (PG.aba === "telas") {
+      var pt = d.porTela || [];
+      x.push("<div class='asw-card'>" + (pt.length ? pt.map(function (p) { return "<div class='asw-l1'><span>" + h(p.nome || "Sem tela") + "</span><b>" + p.qtd + "</b></div>"; }).join("") : "Nenhuma pergunta no período.") + "</div>");
+    } else {
+      x.push("<div class='asw-card'><p>A base do assistente é montada a partir da ajuda \"Como usar esta tela\", dos manuais dos módulos e do menu do sistema. Ela acompanha cada atualização do sistema: quando a ajuda ou um manual muda, o assistente passa a responder pelo texto novo.</p>" +
+        "<div class='asw-muted'>Trechos: " + h(b.trechos) + " · Telas com ajuda: " + h(b.telasComAjuda) + " · Telas no menu: " + h(b.telasNoMenu) + (b.manuais !== undefined ? " · Manuais: " + h(b.manuais) : "") +
+        (b.versaoManuais ? " · Versão dos manuais: " + h(b.versaoManuais) : "") + (b.montadaEm ? " · Montada em " + h(dataBr(b.montadaEm)) : "") + "</div></div>");
+    }
+    x.push("</div>");
+    PG.el.innerHTML = x.join("");
+    var sel = PG.el.querySelector("#aswPgDias"); if (sel) sel.onchange = function () { PG.dias = Number(sel.value) || 30; carregarPainel(); };
+    var at = PG.el.querySelector("#aswPgAtualizar"); if (at) at.onclick = carregarPainel;
+    PG.el.querySelectorAll("[data-pgaba]").forEach(function (b2) { b2.onclick = function () { PG.aba = b2.getAttribute("data-pgaba"); desenharPainel(); }; });
+    PG.el.querySelectorAll("[data-sugerir]").forEach(function (b3) { b3.onclick = function () { sugerir((d.grupos || [])[Number(b3.getAttribute("data-sugerir"))], b3); }; });
+    PG.el.querySelectorAll("[data-copiar]").forEach(function (b4) { b4.onclick = function () { copiar(b4); }; });
+  }
+  function rascunhoTexto(r) {
+    var z = r.rascunho || {};
+    return [z.titulo || "", "", "Para que serve: " + (z.paraQueServe || ""), "", "Passo a passo:"].concat((z.passos || []).map(function (p, i) { return (i + 1) + ". " + p; }),
+      (z.faltaConfirmar || []).length ? ["", "Conferir antes de publicar:"].concat(z.faltaConfirmar.map(function (p) { return "- " + p; })) : []).join("\n");
+  }
+  function rascunhoHtml(r, i) {
+    return "<div class='asw-aviso'>" + h(r.aviso || "Rascunho para revisar. Nada foi publicado.") + (r.origem === "IA" ? "" : " A IA não está ligada: o rascunho traz só a moldura e as perguntas.") + "</div>" +
+      "<div class='asw-rasc' id='aswRasc" + i + "'>" + h(rascunhoTexto(r)) + "</div>" +
+      ((r.trechos || []).length ? "<div class='asw-muted'>Trechos atuais consultados: " + h(r.trechos.map(function (t) { return t.fonte + " (" + t.titulo + ")"; }).join("; ")) + "</div>" : "") +
+      "<div class='asw-acoes'><button type='button' class='asw-btn sec peq' data-copiar='" + i + "'>Copiar o rascunho</button></div>";
+  }
+  function sugerir(g, bt) {
+    if (!g) return;
+    bt.disabled = true; bt.textContent = "Escrevendo o rascunho...";
+    chamar("sugerir", { grupo: g.grupo }, function (r) { PG.rasc[g.grupo] = r; desenharPainel(); }, function (erro) { bt.disabled = false; bt.textContent = "Sugerir texto de ajuda"; alert("Não foi possível escrever o rascunho: " + erro); });
+  }
+  function copiar(b) {
+    var el = PG.el.querySelector("#aswRasc" + b.getAttribute("data-copiar"));
+    var txt = el ? el.textContent : "";
+    var ok = function () { b.textContent = "Copiado"; setTimeout(function () { b.textContent = "Copiar o rascunho"; }, 2000); };
+    try { navigator.clipboard.writeText(txt).then(ok, function () { prompt("Copie o texto:", txt); }); } catch (e) { prompt("Copie o texto:", txt); }
+  }
+
+  if (document.body) montar(); else document.addEventListener("DOMContentLoaded", montar);
+  window.AssistenteWidget = { abrir: function (texto) { abrir(texto); }, fechar: function () { fechar(); }, montarPainel: montarPainel };
+})();
+</script>

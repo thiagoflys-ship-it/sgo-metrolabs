@@ -1,0 +1,14 @@
+Painel financeiro — fila das consultas de movimentos — publicado em 15/11/2026 00:31 BRT
+
+Imagem: metrolabs/sgo:financeiro-fila-20261115
+        sha256:a63fc9fae2df6d95d3202d8dafdff5658de62ed8cb1ccd0f50edd78fa8033985
+Base:   metrolabs/sgo:financeiro-revisao-20261115 (sha256:e1fd4afa…), 1 arquivo conferido; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-fila-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Item 6 da revisão (lado da tela): resumo do período, agenda e vencidos por cliente (todos ListarMovimentos no Omie) entram numa
+fila na tela, um de cada vez; tocar em "Ver vencidos" durante o carregamento espera ("Aguardando a consulta anterior ao Omie
+terminar…"). Segurança de 90 s para resposta perdida. Duas pessoas ao mesmo tempo ainda podem receber "ocupado" (raro).
+Arquivo: JS_Omie_Gestao.html. Patch: patch-fila-movimentos.cjs. Teste: financeiro-omie-20261114 15/15; a verificação "nunca
+duas consultas de movimentos ao mesmo tempo" FALHA na versão anterior (resumo > vencidos > resumo-fim) e passa na nova.
+Ensaio real: ObterResumoFinancas detalhado não traz saldo por conta (só listas de atrasados): saldo por conta descartado.
+No ar: saudável, GET 200, 0 erros, fila no HTML.

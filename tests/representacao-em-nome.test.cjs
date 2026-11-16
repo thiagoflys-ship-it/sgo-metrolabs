@@ -10,7 +10,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { ambiente, ok, FOTO } = require('./_assistencia_ambiente.cjs');
 
-const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js', 'SGO_Representacao_Documentos.js'];
+// 11/11/2026: o servidor carrega todos os arquivos do legado; a régua de prazos da representada (SGO_Representacao_Regua.js) entra como em produção
+const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js', 'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js', 'SGO_Representacao_Documentos.js', 'SGO_Representacao_Regua.js'];
 const BASE = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
 const ler = (f) => fs.readFileSync(path.join(BASE, f), 'utf8').replace(/\r\n/g, '\n');
 const NOVAS = ['emNomeBuscarCliente', 'emNomeBuscarEquipamento', 'abrirEmNome', 'ligarChamado', 'emNomeConfig', 'emNomeSalvar'];

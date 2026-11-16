@@ -1,0 +1,25 @@
+SGO+ — FINANCEIRO COMPLETO (especialistas de finanças, desenvolvimento e design + configurações) — 16/11/2026 noite
+
+Imagem: metrolabs/sgo:financeiro-completo-20261116 (sha256:ff95c3bc84ce00b81bc20ef8bb542c75ea943a1297902e06d3f08d178779efee)
+Base:   metrolabs/sgo:conduta-relato-20261116 (30 arquivos na camada; 501 no legado). Fonte: output/financeiro-20261116/cand4.
+Backup: /opt/metrolabs/backup/financeiro-completo-20261116. Reverter: compose.antes.yml + docker compose up -d app.
+Log: publicacao-completo.log (base e imagem conferidas, saudável, GET 200, 0 erros).
+Documentos: especialistas/ESPEC_FINANCEIRO.md, RELATORIO_DESENVOLVIMENTO.md, RELATORIO_DESIGN.md, RELATORIO_CONFIG.md.
+
+O QUE ENTROU
+- B1–B9 (riscos de lançamento): juros/multa/desconto travados em zero até a 1ª baixa acompanhada; baixa confere saldo e situação;
+  editar recusa título pago/rateado e envia só o que mudou; categoria de despesa/receita conforme o tipo; recusa do Omie libera
+  reenvio, envio incerto vai para "Envios a conferir"; XML até 1 MB; NFS-e confere tomador e usa líquido; busca por CNPJ/nome.
+- Cadastro de cliente/fornecedor no Omie (SGO_Omie_Cadastro.js, SGO-<CNPJ>, sem Upsert).
+- NF-e de compra e NFS-e viram conta(s) a pagar (SGO_Omie_Notas.js, uma por parcela, idempotente pela chave).
+- Explicação de cada campo também em Compras-Financeiro e Caju; marca d'água com nome/hora na tela e impressão; planilha registrada com código.
+- Design: abas viram lista no celular, prévia com valores/datas destacados, campos na ordem do trabalho, baixa mais curta.
+- Configurável (Chaves e senhas, grupos "Regras do Financeiro" e "Conduta"; vazio = padrão seguro): OMIE_NFE_COMPRA_DESTINO,
+  OMIE_NFSE_RETENCOES, OMIE_ALCADA_SEGUNDA_CONFIRMACAO, OMIE_ALCADA_APROVACAO (outra pessoa da lista aprova), CONDUTA_ENVOLVIDO_VE_QUEM_REGISTROU;
+  aba "Regras do Financeiro" com de-para de categorias (motivo + histórico).
+
+TESTES: suíte 2233/71 (referência 2192/71 antes desta rodada; nenhum arquivo piorou). financeiro-config 8/8, financeiro-completo 23/23,
+financeiro-sigilo-geral 5/5, omie-operacoes 20/20, conduta-relato 10/10.
+
+PRODUÇÃO DEPOIS: OMIE_EMPRESA_CNPJ = 32487278000121 gravado por ordem do dono (Chaves_apiGravar como admin). Gravação no Omie continua ligada.
+Sigilo conferido: só admin, charles, wanessa chegam a qualquer parte do Financeiro.

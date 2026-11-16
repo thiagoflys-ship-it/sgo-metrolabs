@@ -24,16 +24,18 @@ test('escalonamento: prazos por prioridade, cada nível uma vez por previsão, o
   assert.deepEqual(Object.keys(por).sort(), ['alta', 'met', 'norm', 'urg']);
   assert.match(por.urg.REFERENCIA, /\|1$/); assert.equal(por.urg.ITENS, 'TIAGO TECNICO TESTE');
   assert.match(por.alta.REFERENCIA, /\|2$/); assert.equal(por.alta.ITENS, 'GIL GESTOR TESTE');
-  assert.match(por.norm.REFERENCIA, /\|3$/); assert.equal(por.norm.ITENS, 'DORA DIRETORA TESTE');
-  assert.match(por.met.REFERENCIA, /\|2$/); assert.equal(por.met.ITENS, 'DORA DIRETORA TESTE', 'área sem gestor: Diretoria');
+  // 11/11/2026 (decisão do dono: a Diretoria é informada, não cobrada): o nível 3 e o nível 2 que cairia na Diretoria continuam
+  // registrados, mas sem destinatário de cobrança (SITUACAO DIRETORIA_RESUMO); a Diretoria vê no resumo diário (SGO_Gestao_RelatorioDiario.js)
+  assert.match(por.norm.REFERENCIA, /\|3$/); assert.equal(por.norm.ITENS, ''); assert.equal(por.norm.SITUACAO, 'DIRETORIA_RESUMO');
+  assert.match(por.met.REFERENCIA, /\|2$/); assert.equal(por.met.ITENS, '', 'área sem gestor: a Diretoria fica sabendo pelo resumo diário'); assert.equal(por.met.SITUACAO, 'DIRETORIA_RESUMO');
   assert.equal(histEsc(amb).length, 4);
   assert.match(histEsc(amb).find((h) => h.ATIVIDADE_ID === 'alta').TEXTO, /Atrasada há 5 horas \(prioridade Alta\): escalada ao gestor da área \(GIL GESTOR TESTE\)/);
-  // uma mensagem por pessoa: Tiago (nível 1), Gil (nível 2), Dora (nível 2 da Metrologia e nível 3 da normal = duas)
+  // uma mensagem por pessoa: Tiago (nível 1), Gil (nível 2); a Dora (Diretoria) não recebe cobrança desde 11/11/2026 (antes: duas)
   const tiago = emailsPara(amb, 'tiago@');
   assert.equal(tiago.length, 1);
   assert.match(tiago[0].body || tiago[0].htmlBody || '', /vai ao gestor da área em 30 min/);
   assert.equal(emailsPara(amb, 'gil@').length, 1);
-  assert.equal(emailsPara(amb, 'dora@').length, 2);
+  assert.equal(emailsPara(amb, 'dora@').length, 0);
   assert.equal(amb.whats.length, 0, 'padrão aprovado: sem WhatsApp até a gestão marcar "na hora"');
   // segunda rodada: nada de novo
   assert.equal(c.Sedna_escalonar_().atividades, 0);
@@ -61,7 +63,8 @@ test('escalonamento: quem lançou (da gestão) também recebe o nível 2; ningu�
   c.Sedna_escalonar_();
   const por = Object.fromEntries(escalas(amb).map((e) => [e.REFERENCIA.split('|')[0], e.ITENS]));
   assert.equal(por.a1, 'GIL GESTOR TESTE, ANA GESTORA TESTE');
-  assert.equal(por.a2, 'DORA DIRETORA TESTE', 'a do próprio gestor vai à Diretoria');
+  // 11/11/2026 (decisão do dono): a do próprio gestor continua indo à Diretoria, mas só no resumo diário (sem cobrança item a item)
+  assert.equal(por.a2, '', 'a do próprio gestor vai à Diretoria pelo resumo diário');
   const amb2 = ambiente({ props: { SEDNA_CFG: JSON.stringify({ escalonamento: { ligado: false } }) } });
   atividade(amb2, 'a1', 'u_tec', 'TIAGO TECNICO TESTE', '2026-10-19T05:00', { PRIORIDADE: 'Alta' });
   assert.match(amb2.ctx.Sedna_escalonar_().fora, /desligado/);

@@ -1,0 +1,26 @@
+Ganhos dos vendedores — recebimentos do Omie como sugestões — publicado em 14/11/2026 23:36 BRT
+
+Imagem: metrolabs/sgo:ganhos-omie-20261115
+        sha256:fa003bf6e1cf65cadd75a0d4ab8d1349d48189b8b5748e7703506b57cc936b96
+Base:   metrolabs/sgo:financeiro-agenda-20261115 (sha256:945c2b26…), 3 arquivos conferidos; imagem pwuser, 487 arquivos, 4 hashes.
+Backup: /opt/metrolabs/backup/ganhos-omie-20261115 (compose.antes.yml + banco-antes.dump).
+Reversão: cp /opt/metrolabs/backup/ganhos-omie-20261115/compose.antes.yml /opt/metrolabs/sgo/docker-compose.yml && docker compose up -d app
+
+Etapa combinada em 12/11 ("Omie automático = próxima etapa"). SOMENTE LEITURA do Omie; nada é lançado sozinho.
+- Aba Recebimentos, bloco "Recebimentos do Omie" (só quem tem a caixa GANHOS_RECEBIMENTOS e com a conexão do Omie): o que entrou
+  no mês pelo dia do pagamento (ListarMovimentos CR + dDtPagtoDe/Ate), com cliente, nota/boleto/parcela, valor recebido e
+  retenções de impostos; cancelados e de outro mês fora; já lançados no fim, marcados.
+- Ligação: CNPJ do título -> cliente do SGO+ (CAD_CLIENTES.CNPJ) -> propostas APROVADAS desse cliente, com saldo e vendedor.
+  "Usar esta proposta" preenche o formulário de sempre (data, valor, documento, proposta); o Financeiro confere e lança, com
+  todas as travas existentes. Sem proposta: "Preencher o formulário sem proposta" (fica a classificar).
+- Lançamento com REF_EXTERNA OMIE:<título> grava ORIGEM 'OMIE' e recusa o mesmo título de novo (anulado libera).
+- "Pagamento parcial" só quando recebido + retenções + desconto < valor do título.
+Arquivos: SGO_Omie_Ganhos.js (novo), SGO_Ganhos_Vendedores.js, JS_GanhosVendedores.html, SGO_Ajuda_GanhosVendedores.js.
+Patch: patch-ganhos-omie.cjs (+ retenções e ajuda, descritos acima).
+
+Testes (DEST=cand): ganhos-omie-20261115 4/4 (novo; página completa 1366/390: Ver -> Usar esta proposta -> Lançar),
+ganhos-vendedores 12/12, financeiro-omie-20261114 8/8, omie-* 13/20/9/12, ajuda 1/1, poderes-lote0 13/13, conciliacao-caju 14/14.
+Medição com os dados REAIS, somente leitura (ensaio/ganhos-omie.json): novembro 49 recebimentos (45 com cliente no SGO+, 5 com
+proposta aprovada); outubro 87 (70 com cliente, 15 com proposta). A maioria dos recebimentos não tem proposta no SGO+.
+No ar: saudável, GET 200, 0 erros, HTML com o bloco, funções publicadas.
+Não verificado: a Wanessa usando; nenhum recebimento real foi lançado (GAN_RECEBIMENTOS segue com 0 linhas).

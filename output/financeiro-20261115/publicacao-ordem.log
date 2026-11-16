@@ -1,0 +1,20 @@
+== 1. base
+base conferida
+== 2. backup
+total 156656
+-rw-r--r-- 1 root root 160408667 Nov 14 23:56 banco-antes.dump
+-rw-r--r-- 1 root root      1671 Nov 14 23:56 compose.antes.yml
+== 3. imagem
+sha256:015919f985ed490084a4f02c403daf82ad47d31f1670f89bbf18eafdc701fa7e
+pwuser
+489
+3ca91845e6e035a46e1add543b2c60025c80a83e861be50adbd21a5a6247f1b4  JS_Omie_Gestao.html
+imagem conferida
+== 4. troca
+saudável
+== 5. no ar
+GET / 200
+metrolabs/sgo:financeiro-ordem-20261115 sha256:015919f985ed490084a4f02c403daf82ad47d31f1670f89bbf18eafdc701fa7e
+erros no log desde a troca: 0
+encadeado: true
+14/11 23:56

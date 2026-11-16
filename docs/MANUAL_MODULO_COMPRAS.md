@@ -74,6 +74,8 @@ Um orçamento por fornecedor em cada pedido: para mudar, "Corrigir"; para tirar 
 
 ## Escolha e aprovação por valor
 
+**Decisão do dono (16/11/2026): no começo, só o dono e a Diretoria aprovam.** Com a configuração "Aprovação só do dono e da Diretoria" em Administração > Chaves e senhas > Regras do Financeiro (padrão: Sim), toda compra, em qualquer faixa, é aprovada só pelo dono do sistema ou pela Diretoria. O comprador, os gestores das áreas e as caixas "Aprovar compra até o limite do comprador", "da própria área" e "acima de todas as faixas" deixam de aprovar; a aprovação do comprador na escolha do orçamento também não acontece, e a compra fica "Aguardando aprovação". As compras que já esperavam um gestor passaram para a Caixa de decisões do dono e da Diretoria. Quem pediu nunca aprova a própria compra (se o pedido for do dono, aprova a Diretoria, e vice-versa). Quem tenta aprovar sem poder recebe: "Você não aprova esta compra: por decisão do dono, no começo só o dono do sistema e a Diretoria aprovam [...]. Quem aprova: [nomes]". As faixas em R$ abaixo continuam guardadas e voltam a valer quando a configuração mudar para "Não".
+
 O comprador toca em "Escolher este orçamento". Só pode ser escolhido o orçamento com arquivo, dentro da validade e com a compatibilidade confirmada. Se não é o mais barato, o comprador escreve o motivo. Se há menos cotações de fornecedores diferentes que o mínimo da faixa, escreve a justificativa (fornecedor único, urgência) e a compra aparece marcada para o Financeiro.
 
 O valor total do orçamento escolhido define quem aprova (Regras de compras):

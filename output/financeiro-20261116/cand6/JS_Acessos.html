@@ -1,0 +1,375 @@
+<style>
+  /* ACESSOS POR CAIXAS (10/11/2026, lote 0): Administração > Acessos. Servidor: SGO_Poderes.js (Poderes_api). */
+  .acs-bloco { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  .acs-bloco h3 { margin: 0 0 10px; font-size: 15px; }
+  .acs-q { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .acs-linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .acs-faixa { padding: 10px 12px; border-radius: 6px; border: 1px solid var(--bc-info-line, #b8cbe6); background: var(--bc-info-bg, #eef4fb); color: var(--bc-text, #1c1f1d); font-size: 13px; line-height: 1.55; margin-bottom: 12px; }
+  .acs-faixa.is-alerta { border-color: var(--bc-warning-line, #e7c58a); background: var(--warning-bg, #fff7e8); }
+  .acs-busca { width: 100%; max-width: 420px; min-height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+  .acs-pessoas { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 10px; max-height: 340px; overflow-y: auto; }
+  .acs-pessoa { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 9px 11px; min-height: 48px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); cursor: pointer; font: inherit; color: inherit; }
+  .acs-pessoa:hover, .acs-pessoa:focus-visible { border-color: var(--bc-action, #1f6b2a); outline: none; }
+  .acs-pessoa.is-atual { border-color: var(--bc-action, #1f6b2a); box-shadow: 0 0 0 2px rgba(31,107,42,.15); }
+  .acs-pessoa b { font-size: 13.5px; }
+  .acs-pessoa span { font-size: 12px; color: var(--muted); }
+  .acs-cab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .acs-cab h3 { margin: 0; font-size: 17px; }
+  .acs-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .acs-grupo { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; background: var(--card); }
+  .acs-grupo > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 11px 14px; font-weight: 600; min-height: 44px; box-sizing: border-box; }
+  .acs-grupo > summary::-webkit-details-marker { display: none; }
+  .acs-grupo > summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .15s ease; margin-right: 2px; }
+  .acs-grupo[open] > summary::before { transform: rotate(45deg); }
+  .acs-grupo-conta { font-weight: 500; font-size: 12.5px; color: var(--muted); }
+  .acs-itens { border-top: 1px solid var(--border); }
+  .acs-item { display: grid; grid-template-columns: 28px 1fr; gap: 4px 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  .acs-item:last-child { border-bottom: 0; }
+  .acs-item.is-pendente { background: var(--warning-bg, #fff7e8); }
+  /* A trava global (UI_Estilos.html) fixa toda caixinha em 16 px; aqui a caixa é a ação principal da tela e precisa de
+     alvo de toque maior no celular (mesmo recurso do .sgo-doc-movel: tamanho próprio com max-width liberado). */
+  #acsTela .acs-item input[type="checkbox"] { width: 22px !important; height: 22px !important; min-width: 22px !important; min-height: 22px !important; max-width: none !important; max-height: none !important; margin: 1px 0 0; cursor: pointer; }
+  .acs-item input[type="checkbox"]:disabled { cursor: not-allowed; }
+  .acs-nome { font-weight: 600; font-size: 14px; cursor: pointer; }
+  .acs-corpo { min-width: 0; }
+  .acs-desc { margin: 3px 0 6px; font-size: 13px; line-height: 1.5; color: var(--bc-text-2, #3b423e); text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
+  .acs-selos { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .acs-selo { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; }
+  .acs-selo.padrao { color: var(--muted); }
+  .acs-selo.excecao { color: var(--warning); background: var(--warning-bg); }
+  .acs-selo.dono { color: var(--success); background: var(--success-bg); }
+  .acs-selo.pendente { color: var(--bc-info, #1d4ed8); background: var(--bc-info-bg, #eef4fb); }
+  .acs-cat { font-size: 11.5px; color: var(--muted); }
+  .acs-quem { font-size: 12px; color: var(--muted); margin-top: 4px; text-align: justify; }
+  .acs-lote { font-size: 12px; color: var(--muted); margin-top: 4px; font-style: italic; }
+  .acs-voltar { background: none; border: 0; padding: 4px 0; min-height: 32px; color: var(--bc-info, #1d4ed8); font-size: 12.5px; font-weight: 600; cursor: pointer; text-decoration: underline; }
+  .acs-rodape { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); margin-top: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 -4px 14px rgba(0,0,0,.06); }
+  .acs-rodape b { font-size: 14px; }
+  .acs-painel { margin-top: 12px; }
+  .acs-painel table td, .acs-painel table th { vertical-align: top; font-size: 13px; }
+  .acs-vercomo ul { margin: 4px 0 10px 18px; padding: 0; }
+  .acs-vercomo li { margin: 2px 0; font-size: 13px; }
+  .acs-modelos { display: grid; gap: 8px; margin: 8px 0; }
+  .acs-modelos label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+  .acs-modelos input { width: 18px; height: 18px; margin-top: 2px; flex: 0 0 auto; }
+  .acs-campo { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 13px; }
+  .acs-campo select { min-height: 40px; }
+  @media (max-width: 760px) {
+    .acs-pessoas { grid-template-columns: 1fr; max-height: 280px; }
+    .acs-acoes .cadx-btn, .acs-rodape .cadx-btn { min-height: 44px; flex: 1 1 auto; }
+    .acs-painel table thead { display: none; }
+    .acs-painel table tr { display: block; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; padding: 8px 10px; }
+    .acs-painel table td { display: block; border: 0 !important; padding: 3px 0 !important; }
+    .acs-painel table td[data-r]::before { content: attr(data-r) ": "; font-weight: 600; color: var(--muted); }
+  }
+</style>
+<script>
+  // ==========================================================
+  // ACESSOS POR CAIXAS (10/11/2026, lote 0). Tela da gestão dos acessos: quem pode o quê, pessoa a pessoa.
+  // Servidor: SGO_Poderes.js (Poderes_api). Ganchos na casca (JS_Core.html): AcessosTela_iniciar_ no login mostra
+  // o item do menu só para quem pode gerir (o servidor confere de novo em toda chamada); abrir('acessos') -> AcessosTela_render_.
+  // No lote 0 nenhuma trava do sistema lê as caixas ainda: gravar é permitido, e a tela avisa que não tem efeito.
+  // ==========================================================
+  var ACS = { pode: false, pessoas: null, eu: "", busca: "", atual: null, tela: null, pendentes: {}, painel: "" };
+  var ACS_ROT_PERFIL = { ADMIN: "Administrador", DIRETORIA: "Diretoria", GESTOR: "Gestor", TECNICO: "Técnico", METROLOGIA: "Metrologia", COMERCIAL: "Comercial", FINANCEIRO: "Financeiro", RH: "RH" };
+  var ACS_ROT_VINCULO = { CLT: "CLT", PJ: "PJ", DIRETORIA: "Diretoria" };
+
+  function Acessos_esc_(v) { return String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+  function AcessosTela_pode_() { return !!ACS.pode; }
+  // 11/11/2026 (Acessos por caixas, lote 1): as caixas já ligadas da própria pessoa chegam junto com o "pode" do login
+  // (Poderes_api -> meus). As telas usam SGO_temPoder_ para mostrar ou esconder botões e itens do menu; antes da
+  // resposta (ou sem ela), vale a regra de perfil de sempre (fallback). A trava de verdade continua no servidor.
+  var SGO_MEUS_PODERES = null;
+  function SGO_temPoder_(codigo, fallback) {
+    if (SGO_MEUS_PODERES && Object.prototype.hasOwnProperty.call(SGO_MEUS_PODERES, codigo)) return !!SGO_MEUS_PODERES[codigo];
+    try { return typeof fallback === "function" ? !!fallback() : false; } catch (e) { return false; }
+  }
+  function SGO_poderesAplicarMenu_() {
+    var rep = typeof SGO_ehRepresentada_ === "function" && SGO_ehRepresentada_();
+    var cli = typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE";
+    var u = document.getElementById("menu-btn-usuarios");
+    if (u && !rep && !cli) u.style.display = SGO_temPoder_("CONTAS_VER", typeof SGO_ehRotina_ === "function" ? SGO_ehRotina_ : null) ? "" : "none";
+    if (typeof SegAcessoTela_iniciar_ === "function") SegAcessoTela_iniciar_();
+  }
+  function AcessosTela_mostrarMenu_() { var b = document.getElementById("menu-btn-acessos"); if (b) b.style.display = ACS.pode ? "" : "none"; }
+  /** No login: pergunta ao servidor se a pessoa gere os acessos (padrão: só o responsável pelo sistema). */
+  function AcessosTela_iniciar_() {
+    ACS.pode = false; ACS.pessoas = null; ACS.atual = null; ACS.tela = null; ACS.pendentes = {};
+    SGO_MEUS_PODERES = null;
+    AcessosTela_mostrarMenu_();
+    if (typeof SGO_getSessionId !== "function" || !SGO_getSessionId()) return;
+    google.script.run
+      .withSuccessHandler(function (r) { ACS.pode = !!(r && r.ok && r.pode); SGO_MEUS_PODERES = (r && r.ok && r.meus) || null; AcessosTela_mostrarMenu_(); SGO_poderesAplicarMenu_(); })
+      .withFailureHandler(function () { ACS.pode = false; AcessosTela_mostrarMenu_(); })
+      .Poderes_api(SGO_getSessionId(), "pode", {});
+  }
+  function AcessosTela_chamar_(acao, dados, ok, erro) {
+    google.script.run
+      .withSuccessHandler(function (r) { if (!r || !r.ok) { erro((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e tente de novo; nada foi alterado."); return; } try { ok(r); } catch (e) { console.error("Acessos:", e); erro("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5)."); } })
+      .withFailureHandler(function (e) { erro(String((e && e.message) || "Não foi possível falar com o servidor. Verifique a conexão; nada foi alterado.")); })
+      .Poderes_api(SGO_getSessionId(), acao, dados || {});
+  }
+  function AcessosTela_avisar_(texto, tipo) { if (typeof CadUI_aviso_ === "function") CadUI_aviso_(texto, tipo); else alert(texto); }
+  function AcessosTela_pendentesQtd_() { return Object.keys(ACS.pendentes).length; }
+  /** Antes de trocar de pessoa ou sair: alterações não salvas pedem confirmação. */
+  function AcessosTela_podeDescartar_() {
+    var n = AcessosTela_pendentesQtd_();
+    return !n || confirm("Há " + n + (n === 1 ? " alteração não salva" : " alterações não salvas") + " para " + ((ACS.tela && ACS.tela.pessoa.nome) || "esta pessoa") + ". Descartar?");
+  }
+
+  /** Casca (abrir): sair da tela com caixas não salvas pergunta antes; desistir de sair mantém tudo como estava. */
+  function AcessosTela_antesDeSair_() {
+    if (!document.getElementById("acsTela") || !AcessosTela_pendentesQtd_()) return true;
+    if (!AcessosTela_podeDescartar_()) return false;
+    ACS.pendentes = {};
+    return true;
+  }
+
+  function AcessosTela_render_() {
+    var div = document.getElementById("conteudo");
+    if (!div) return;
+    if (typeof CadUI_movel_ === "function" && CadUI_movel_()) { try { MOBILE_NAV = { modulo: "mobile_home", tela: "lista" }; atualizarTituloMobile_("Acessos"); } catch (e) {} }
+    ACS.pendentes = {}; ACS.painel = "";
+    div.innerHTML =
+      '<div class="module-shell cadx" id="acsTela">' +
+        '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Acessos</h2>' +
+          '<p class="content-subtitle">O que cada pessoa pode ver e fazer no SGO+, em caixas com nome. Escolha a pessoa, marque ou desmarque as caixas e salve com o motivo.</p></div><div class="module-header-right"></div></div>' +
+        (typeof CadUI_ajuda_ === "function" ? CadUI_ajuda_(
+          "<ul><li><b>Padrão do perfil</b>: sem nenhuma alteração, cada pessoa tem exatamente o que o perfil, a área e as listas de configuração dão hoje.</li>" +
+          "<li><b>Alterado para esta pessoa</b>: a caixa foi marcada ou desmarcada só para ela. Vale no lugar do padrão até alguém tocar em \"voltar ao padrão\".</li>" +
+          "<li><b>Responsável pelo sistema</b>: tem sempre todas as caixas. Ninguém tira poderes dele.</li>" +
+          "<li>Ninguém altera as próprias caixas. Toda mudança pede o motivo e fica no histórico com quem fez, quando, o antes e o depois.</li>" +
+          "<li><b>Implantação por etapas</b>: cada módulo passa a obedecer às caixas quando for ligado. Até lá a caixa grava, mas o sistema continua seguindo o perfil (a caixa mostra o aviso).</li></ul>") : "") +
+        '<div id="acsCorpo">' + (typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(6) : "Carregando...") + '</div>' +
+      '</div>';
+    AcessosTela_chamar_("pessoas", {}, function (r) {
+      ACS.pode = true; AcessosTela_mostrarMenu_();
+      ACS.pessoas = r.pessoas || []; ACS.eu = r.eu || ""; ACS.ligados = r.ligados || []; ACS.totalPoderes = r.totalPoderes || 0;
+      AcessosTela_desenhar_();
+      if (ACS.atual) AcessosTela_abrirPessoa_(ACS.atual, true);
+    }, function (m) {
+      var c = document.getElementById("acsCorpo");
+      if (c) c.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>A tela não abriu.</strong> ' + Acessos_esc_(m) +
+        '<div style="margin-top:10px"><button type="button" class="cadx-btn cadx-btn-grande" onclick="irTelaInicial_()">Voltar ao Início</button></div></div>';
+    });
+  }
+
+  function AcessosTela_desenhar_() {
+    var c = document.getElementById("acsCorpo");
+    if (!c) return;
+    var faixa = !ACS.ligados || !ACS.ligados.length
+      ? '<div class="acs-faixa is-alerta" role="note"><b>Nenhum módulo obedece às caixas ainda.</b> Esta é a primeira etapa: as caixas mostram o que cada pessoa pode hoje e já gravam alterações, mas o sistema continua decidindo pelo perfil até cada módulo ser ligado. Quando um módulo for ligado, as alterações gravadas aqui passam a valer.</div>'
+      : '<div class="acs-faixa" role="note">' + ACS.ligados.length + ' de ' + ACS.totalPoderes + ' caixas já valem no sistema. As outras passam a valer quando o módulo delas for ligado.</div>';
+    c.innerHTML = faixa +
+      '<div class="acs-bloco"><h3>Pessoa</h3><input type="search" id="acsBusca" class="acs-busca" placeholder="Buscar pelo nome, e-mail, perfil ou área" aria-label="Buscar pessoa" oninput="AcessosTela_filtrar_(this.value)" value="' + Acessos_esc_(ACS.busca) + '">' +
+        '<div class="acs-pessoas" id="acsPessoas" role="list"></div></div>' +
+      '<div id="acsPessoa"></div>';
+    AcessosTela_pintarPessoas_();
+  }
+  function AcessosTela_filtrar_(q) { ACS.busca = String(q || ""); AcessosTela_pintarPessoas_(); }
+  function AcessosTela_pintarPessoas_() {
+    var alvo = document.getElementById("acsPessoas");
+    if (!alvo) return;
+    var q = ACS.busca.trim().toLowerCase();
+    var lista = (ACS.pessoas || []).filter(function (p) {
+      return !q || (p.nome + " " + p.email + " " + (ACS_ROT_PERFIL[p.perfil] || p.perfil) + " " + p.areaNome).toLowerCase().indexOf(q) >= 0;
+    });
+    if (!lista.length) { alvo.innerHTML = '<p class="acs-q">Ninguém encontrado. Apague a busca ou procure por outra parte do nome. Clientes e representadas não aparecem: elas usam só o próprio portal.</p>'; return; }
+    alvo.innerHTML = lista.map(function (p) {
+      return '<button type="button" role="listitem" class="acs-pessoa' + (p.id === ACS.atual ? " is-atual" : "") + '" onclick="AcessosTela_abrirPessoa_(\'' + Acessos_esc_(p.id) + '\')">' +
+        '<b>' + Acessos_esc_(p.nome) + (p.id === ACS.eu ? " (você)" : "") + '</b>' +
+        '<span>' + Acessos_esc_(ACS_ROT_PERFIL[p.perfil] || p.perfil) + (p.areaNome ? " · " + Acessos_esc_(p.areaNome) : "") + (p.ativo ? "" : " · inativa") + '</span>' +
+        '<span>' + (p.dono ? "Responsável pelo sistema" : p.excecoes ? p.excecoes + (p.excecoes === 1 ? " caixa alterada" : " caixas alteradas") : "Padrão do perfil") + '</span></button>';
+    }).join("");
+  }
+
+  function AcessosTela_abrirPessoa_(id, recarregar) {
+    if (!recarregar && id !== ACS.atual && !AcessosTela_podeDescartar_()) return;
+    ACS.atual = id; ACS.pendentes = {}; ACS.painel = "";
+    AcessosTela_pintarPessoas_();
+    var alvo = document.getElementById("acsPessoa");
+    if (alvo) alvo.innerHTML = typeof CadUI_esqueleto_ === "function" ? CadUI_esqueleto_(8) : "Carregando...";
+    AcessosTela_chamar_("pessoa", { usuarioId: id }, function (r) {
+      if (ACS.atual !== id) return;            // a pessoa mudou enquanto carregava: a resposta antiga não pinta por cima
+      ACS.tela = r; AcessosTela_pintarPessoa_();
+      try { alvo.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {}
+    }, function (m) { if (alvo && ACS.atual === id) alvo.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>As caixas desta pessoa não abriram.</strong> ' + Acessos_esc_(m) + '</div>'; });
+  }
+
+  function AcessosTela_item_(i, podeAlterar) {
+    var pend = Object.prototype.hasOwnProperty.call(ACS.pendentes, i.codigo), marcado = pend ? ACS.pendentes[i.codigo] : i.valor;
+    var id = "acsCx_" + i.codigo;
+    if (i.origem === "sigilo") podeAlterar = false; // 16/11/2026: caixa sigilosa fora da lista: não se libera por aqui
+    var selo = i.origem === "sigilo" ? '<span class="acs-selo excecao">Sigiloso: fora da lista do módulo</span>' : i.origem === "dono" ? '<span class="acs-selo dono">Responsável pelo sistema</span>' :
+      i.origem === "excecao" ? '<span class="acs-selo excecao">Alterado para esta pessoa</span>' : '<span class="acs-selo padrao">Padrão do perfil</span>';
+    var quem = i.origem === "excecao" && i.excecao ? '<div class="acs-quem">' + (i.excecao.valor === "SIM" ? "Liberada" : "Retirada") + " por " + Acessos_esc_(i.excecao.por || "—") + " em " + Acessos_esc_(i.excecao.em || "—") +
+      (i.excecao.motivo ? ". Motivo: " + Acessos_esc_(i.excecao.motivo) : "") + ". O padrão do perfil seria: " + (i.padrao ? "marcada" : "desmarcada") + ".</div>" : "";
+    return '<div class="acs-item' + (pend ? " is-pendente" : "") + '" data-codigo="' + Acessos_esc_(i.codigo) + '">' +
+      '<input type="checkbox" id="' + id + '"' + (marcado ? " checked" : "") + (podeAlterar ? "" : " disabled") + ' onchange="AcessosTela_marcar_(\'' + Acessos_esc_(i.codigo) + '\', this.checked)" aria-describedby="' + id + '_d">' +
+      '<div class="acs-corpo"><label class="acs-nome" for="' + id + '">' + Acessos_esc_(i.nome) + '</label> <span class="acs-cat">· ' + Acessos_esc_(i.categoriaNome) + '</span>' +
+        '<p class="acs-desc" id="' + id + '_d">' + Acessos_esc_(i.descricao) + '</p>' +
+        '<div class="acs-selos">' + selo + (pend ? '<span class="acs-selo pendente">Não salvo: ' + (marcado ? "marcar" : "desmarcar") + '</span>' : "") +
+          (podeAlterar && i.origem === "excecao" && !pend ? '<button type="button" class="acs-voltar" onclick="AcessosTela_voltarPadrao_(\'' + Acessos_esc_(i.codigo) + '\')">voltar ao padrão</button>' : "") + '</div>' +
+        quem +
+        (i.erro ? '<div class="acs-quem" role="alert">A regra padrão desta caixa não pôde ser conferida agora (' + Acessos_esc_(i.erro) + '). Ela vale como desmarcada até a correção; avise o responsável pelo sistema.</div>' : "") +
+        (i.ligado ? "" : '<div class="acs-lote">Esta caixa passa a valer quando o módulo for ligado (lote ' + Acessos_esc_(i.lote) + ').</div>') +
+      '</div></div>';
+  }
+
+  function AcessosTela_pintarPessoa_() {
+    var alvo = document.getElementById("acsPessoa"), t = ACS.tela;
+    if (!alvo || !t) return;
+    var p = t.pessoa, pode = !!t.podeAlterar;
+    var cab = '<div class="acs-bloco"><div class="acs-cab"><div><h3>' + Acessos_esc_(p.nome) + '</h3>' +
+      '<div class="acs-q">' + Acessos_esc_(ACS_ROT_PERFIL[p.perfil] || p.perfil) + ' · área ' + Acessos_esc_(p.areaNome || "não definida") + (p.vinculo ? " · " + Acessos_esc_(ACS_ROT_VINCULO[p.vinculo] || p.vinculo) : "") + (p.ativo ? "" : " · conta inativa") +
+      ' · ' + (p.dono ? "responsável pelo sistema" : p.excecoes ? p.excecoes + (p.excecoes === 1 ? " caixa alterada para esta pessoa" : " caixas alteradas para esta pessoa") : "tudo no padrão do perfil") + '</div></div></div>' +
+      (pode ? "" : '<div class="acs-faixa" role="note" style="margin-top:10px">' + Acessos_esc_(t.porQueNaoAltera || "Esta pessoa não pode ser alterada aqui.") + '</div>') +
+      '<div class="acs-acoes">' +
+        (pode ? '<button type="button" class="cadx-btn" onclick="AcessosTela_copiar_()">Copiar de…</button><button type="button" class="cadx-btn" onclick="AcessosTela_modelo_()">Aplicar modelo</button>' : "") +
+        '<button type="button" class="cadx-btn" onclick="AcessosTela_historico_()">Histórico</button>' +
+        '<button type="button" class="cadx-btn" onclick="AcessosTela_verComo_()">Ver como esta pessoa vê</button>' +
+        '<button type="button" class="cadx-btn" onclick="AcessosTela_abrirTodos_(true)">Abrir todos</button><button type="button" class="cadx-btn" onclick="AcessosTela_abrirTodos_(false)">Fechar todos</button>' +
+      '</div><div id="acsPainel" class="acs-painel"></div></div>';
+    var grupos = t.grupos.map(function (g) {
+      return '<details class="acs-grupo" data-modulo="' + Acessos_esc_(g.modulo) + '"' + (g.alteradas ? " open" : "") + '><summary>' + Acessos_esc_(g.modulo) +
+        ' <span class="acs-grupo-conta">' + g.comPoder + ' de ' + g.total + ' marcadas' + (g.alteradas ? ' · ' + g.alteradas + (g.alteradas === 1 ? " alterada" : " alteradas") : "") + '</span></summary>' +
+        '<div class="acs-itens">' + g.itens.map(function (i) { return AcessosTela_item_(i, pode); }).join("") + '</div></details>';
+    }).join("");
+    alvo.innerHTML = cab + grupos + (pode ? '<div class="acs-rodape" id="acsRodape"></div>' : "");
+    AcessosTela_pintarRodape_();
+  }
+
+  function AcessosTela_abrirTodos_(abrir) { document.querySelectorAll("#acsPessoa .acs-grupo").forEach(function (d) { d.open = !!abrir; }); }
+
+  function AcessosTela_item_dados_(codigo) {
+    var achado = null;
+    ((ACS.tela && ACS.tela.grupos) || []).forEach(function (g) { g.itens.forEach(function (i) { if (i.codigo === codigo) achado = i; }); });
+    return achado;
+  }
+  function AcessosTela_marcar_(codigo, marcado) {
+    var i = AcessosTela_item_dados_(codigo);
+    if (!i) return;
+    if (!!marcado === !!i.valor) delete ACS.pendentes[codigo]; else ACS.pendentes[codigo] = !!marcado;
+    var el = document.querySelector('#acsPessoa .acs-item[data-codigo="' + codigo + '"]');
+    if (el) {
+      var tmp = document.createElement("div"); tmp.innerHTML = AcessosTela_item_(i, true);
+      el.replaceWith(tmp.firstChild);
+      var cx = document.getElementById("acsCx_" + codigo); if (cx) cx.focus();
+    }
+    AcessosTela_pintarRodape_();
+  }
+  function AcessosTela_pintarRodape_() {
+    var r = document.getElementById("acsRodape");
+    if (!r) return;
+    var n = AcessosTela_pendentesQtd_();
+    r.innerHTML = '<b role="status">' + (n ? n + (n === 1 ? " alteração pendente" : " alterações pendentes") : "Nenhuma alteração pendente") + '</b>' +
+      '<div class="acs-linha"><button type="button" class="cadx-btn"' + (n ? "" : " disabled") + ' onclick="AcessosTela_desfazer_()">Desfazer</button>' +
+      '<button type="button" class="cadx-btn cadx-btn-grande cadx-btn-primario"' + (n ? "" : " disabled") + ' onclick="AcessosTela_salvar_()">Salvar</button></div>';
+  }
+  function AcessosTela_desfazer_() { ACS.pendentes = {}; AcessosTela_pintarPessoa_(); }
+
+  /** Depois de gravar: a tela devolvida pelo servidor substitui a atual e a lista de pessoas atualiza a contagem. */
+  function AcessosTela_aposGravar_(r) {
+    ACS.pendentes = {};
+    if (r.tela) { ACS.tela.grupos = r.tela.grupos; ACS.tela.pessoa = r.tela.pessoa; }
+    (ACS.pessoas || []).forEach(function (p) { if (r.tela && p.id === r.tela.pessoa.id) p.excecoes = r.tela.pessoa.excecoes; });
+    AcessosTela_pintarPessoas_(); AcessosTela_pintarPessoa_();
+    AcessosTela_avisar_(r.message || "Gravado.", "ok");
+  }
+  function AcessosTela_confirmar_(o) {
+    if (typeof CadUI_confirmar_ !== "function") { var m = prompt(o.titulo + " — motivo (pelo menos 5 letras):"); if (m) o.executar({ motivo: m }, function () {}, function (e) { alert(e); }); return; }
+    CadUI_confirmar_({ titulo: o.titulo, texto: o.texto, botao: o.botao, risco: !!o.risco, extraHtml: o.extraHtml || "", validar: o.validar,
+      motivo: { rotulo: "Motivo", min: 5, dica: "Ex.: assumiu a conferência de compras; saiu da gestão da área. Fica no histórico com o seu nome, a data e a hora." },
+      aoConfirmar: function (v, fechar, reabilitar) { o.executar(v, fechar, reabilitar); } });
+  }
+
+  function AcessosTela_salvar_() {
+    var t = ACS.tela, codigos = Object.keys(ACS.pendentes);
+    if (!t || !codigos.length) return;
+    var mudancas = codigos.map(function (c) { var i = AcessosTela_item_dados_(c), quer = ACS.pendentes[c]; return { codigo: c, valor: quer === !!i.padrao ? "PADRAO" : (quer ? "SIM" : "NAO"), nome: i.nome, quer: quer, ligado: i.ligado }; });
+    var semEfeito = mudancas.filter(function (m) { return !m.ligado; }).length;
+    var texto = '<p>' + codigos.length + (codigos.length === 1 ? " caixa muda" : " caixas mudam") + ' para <b>' + Acessos_esc_(t.pessoa.nome) + '</b>:</p><ul>' +
+      mudancas.map(function (m) { return "<li>" + (m.quer ? "Liberar" : "Retirar") + ": " + Acessos_esc_(m.nome) + (m.valor === "PADRAO" ? " (volta ao padrão do perfil)" : "") + "</li>"; }).join("") + '</ul>' +
+      (semEfeito ? '<p>' + (semEfeito === mudancas.length ? "Nenhuma destas caixas" : semEfeito + " destas caixas não") + ' tem efeito ainda: passam a valer quando o módulo for ligado.</p>' : "");
+    AcessosTela_confirmar_({ titulo: "Salvar acessos de " + t.pessoa.nome, texto: texto, botao: "Salvar", executar: function (v, fechar, reabilitar) {
+      AcessosTela_chamar_("salvar", { usuarioId: t.pessoa.id, motivo: v.motivo, mudancas: mudancas.map(function (m) { return { codigo: m.codigo, valor: m.valor }; }) },
+        function (r) { fechar(); AcessosTela_aposGravar_(r); }, function (e) { reabilitar(e); });
+    } });
+  }
+  function AcessosTela_voltarPadrao_(codigo) {
+    var t = ACS.tela, i = AcessosTela_item_dados_(codigo);
+    if (!t || !i) return;
+    AcessosTela_confirmar_({ titulo: "Voltar ao padrão do perfil", botao: "Voltar ao padrão",
+      texto: '<p>A caixa <b>' + Acessos_esc_(i.nome) + '</b> de ' + Acessos_esc_(t.pessoa.nome) + ' volta a seguir o perfil: fica <b>' + (i.padrao ? "marcada" : "desmarcada") + '</b>.</p>',
+      executar: function (v, fechar, reabilitar) {
+        AcessosTela_chamar_("voltarPadrao", { usuarioId: t.pessoa.id, codigo: codigo, motivo: v.motivo }, function (r) { fechar(); AcessosTela_aposGravar_(r); }, function (e) { reabilitar(e); });
+      } });
+  }
+  function AcessosTela_copiar_() {
+    var t = ACS.tela;
+    if (!t) return;
+    if (AcessosTela_pendentesQtd_() && !confirm("As alterações não salvas desta pessoa serão descartadas. Continuar?")) return;
+    var outras = (ACS.pessoas || []).filter(function (p) { return p.id !== t.pessoa.id && p.ativo; });
+    var extra = '<div class="acs-campo"><label for="acsCopiarDe">Copiar as caixas de</label><select id="acsCopiarDe"><option value="">Escolha a pessoa</option>' +
+      outras.map(function (p) { return '<option value="' + Acessos_esc_(p.id) + '">' + Acessos_esc_(p.nome) + ' · ' + Acessos_esc_(ACS_ROT_PERFIL[p.perfil] || p.perfil) + '</option>'; }).join("") + '</select></div>';
+    AcessosTela_confirmar_({ titulo: "Copiar acessos para " + t.pessoa.nome, botao: "Copiar",
+      texto: '<p>' + Acessos_esc_(t.pessoa.nome) + ' fica com as mesmas caixas marcadas da pessoa escolhida. Só onde o resultado difere do padrão do perfil vira alteração; o resto fica no padrão. A caixa «Gerir os acessos» nunca é copiada.</p>',
+      extraHtml: extra,
+      validar: function (fundo, valores) { var s = fundo.querySelector("#acsCopiarDe"); if (!s || !s.value) return "Escolha de quem copiar."; valores.de = s.value; return ""; },
+      executar: function (v, fechar, reabilitar) {
+        AcessosTela_chamar_("copiar", { usuarioId: t.pessoa.id, deUsuarioId: v.de, motivo: v.motivo }, function (r) { fechar(); AcessosTela_aposGravar_(r); }, function (e) { reabilitar(e); });
+      } });
+  }
+  function AcessosTela_modelo_() {
+    var t = ACS.tela;
+    if (!t) return;
+    if (AcessosTela_pendentesQtd_() && !confirm("As alterações não salvas desta pessoa serão descartadas. Continuar?")) return;
+    AcessosTela_chamar_("modelos", { usuarioId: t.pessoa.id }, function (r) {
+      var extra = '<div class="acs-modelos" role="radiogroup" aria-label="Modelo">' + (r.modelos || []).map(function (m, k) {
+        return '<label><input type="radio" name="acsModelo" value="' + Acessos_esc_(m.chave) + '"' + (m.erro ? " disabled" : "") + (k === 0 && !m.erro ? " checked" : "") + '><span><b>' + Acessos_esc_(m.nome) + '</b> · ' + m.poderes.length + ' caixas<br><span class="acs-q">' +
+          Acessos_esc_(m.erro || m.descricao) + '</span></span></label>';
+      }).join("") + '</div>' +
+        '<div class="acs-campo"><label for="acsModeloModo">Como aplicar</label><select id="acsModeloModo"><option value="SUBSTITUIR">Substituir: a pessoa fica exatamente com as caixas do modelo</option><option value="SOMAR">Somar: só liberar as caixas do modelo, sem retirar nenhuma</option></select></div>';
+      AcessosTela_confirmar_({ titulo: "Aplicar modelo em " + t.pessoa.nome, botao: "Aplicar modelo",
+        texto: '<p>O modelo é um conjunto pronto de caixas. Só onde o resultado difere do padrão do perfil vira alteração. A caixa «Gerir os acessos» não é mexida.</p>', extraHtml: extra,
+        validar: function (fundo, valores) { var s = fundo.querySelector('input[name="acsModelo"]:checked'); if (!s) return "Escolha o modelo."; valores.modelo = s.value; valores.modo = fundo.querySelector("#acsModeloModo").value; return ""; },
+        executar: function (v, fechar, reabilitar) {
+          AcessosTela_chamar_("aplicarModelo", { usuarioId: t.pessoa.id, modelo: v.modelo, modo: v.modo, motivo: v.motivo }, function (r2) { fechar(); AcessosTela_aposGravar_(r2); }, function (e) { reabilitar(e); });
+        } });
+    }, function (e) { AcessosTela_avisar_(e, "erro"); });
+  }
+  function AcessosTela_historico_() {
+    var t = ACS.tela, alvo = document.getElementById("acsPainel");
+    if (!t || !alvo) return;
+    if (ACS.painel === "historico") { ACS.painel = ""; alvo.innerHTML = ""; return; }
+    ACS.painel = "historico"; alvo.innerHTML = '<p class="acs-q">Carregando o histórico…</p>';
+    AcessosTela_chamar_("historico", { usuarioId: t.pessoa.id }, function (r) {
+      if (ACS.painel !== "historico") return;
+      var h = r.historico || [];
+      var rot = function (v) { return v === "SIM" ? "liberada" : v === "NAO" ? "retirada" : "padrão do perfil"; };
+      alvo.innerHTML = '<h4 style="margin:6px 0">Histórico de ' + Acessos_esc_(t.pessoa.nome) + '</h4>' + (!h.length ? '<p class="acs-q">Nenhuma alteração gravada para esta pessoa. Tudo segue o padrão do perfil.</p>' :
+        '<div class="table-responsive"><table class="table"><thead><tr><th>Quando</th><th>Caixa</th><th>Antes</th><th>Depois</th><th>Motivo</th><th>Quem</th></tr></thead><tbody>' +
+        h.map(function (l) {
+          return '<tr><td data-r="Quando">' + Acessos_esc_(l.quando) + '</td><td data-r="Caixa">' + Acessos_esc_(l.poderNome || l.poder) + '</td>' +
+            '<td data-r="Antes">' + rot(l.antes) + ' (' + (l.antesEfetivo === "SIM" ? "marcada" : "desmarcada") + ')</td><td data-r="Depois">' + rot(l.depois) + ' (' + (l.depoisEfetivo === "SIM" ? "marcada" : "desmarcada") + ')</td>' +
+            '<td data-r="Motivo">' + Acessos_esc_(l.motivo) + '</td><td data-r="Quem">' + Acessos_esc_(l.por) + '</td></tr>';
+        }).join("") + '</tbody></table></div>');
+    }, function (e) { if (ACS.painel === "historico") alvo.innerHTML = '<p class="acs-q" role="alert">' + Acessos_esc_(e) + '</p>'; });
+  }
+  function AcessosTela_verComo_() {
+    var t = ACS.tela, alvo = document.getElementById("acsPainel");
+    if (!t || !alvo) return;
+    if (ACS.painel === "verComo") { ACS.painel = ""; alvo.innerHTML = ""; return; }
+    ACS.painel = "verComo"; alvo.innerHTML = '<p class="acs-q">Montando o resumo…</p>';
+    AcessosTela_chamar_("verComo", { usuarioId: t.pessoa.id }, function (r) {
+      if (ACS.painel !== "verComo") return;
+      var res = r.resumo || [];
+      alvo.innerHTML = '<div class="acs-vercomo"><h4 style="margin:6px 0">O que ' + Acessos_esc_(t.pessoa.nome) + ' pode no SGO+ (caixas salvas)</h4>' +
+        '<p class="acs-q">Resumo pelas caixas gravadas. Enquanto um módulo não for ligado, o sistema segue o perfil (a lista marca essas caixas com *).</p>' +
+        (!res.length ? '<p class="acs-q">Nenhuma caixa marcada.</p>' : res.map(function (g) {
+          return '<b>' + Acessos_esc_(g.modulo) + '</b><ul>' + g.pode.map(function (i) { return '<li>' + Acessos_esc_(i.nome) + (i.ligado ? "" : " *") + (i.origem === "excecao" ? " (alterada para esta pessoa)" : "") + '</li>'; }).join("") + '</ul>';
+        }).join("")) + '</div>';
+    }, function (e) { if (ACS.painel === "verComo") alvo.innerHTML = '<p class="acs-q" role="alert">' + Acessos_esc_(e) + '</p>'; });
+  }
+</script>

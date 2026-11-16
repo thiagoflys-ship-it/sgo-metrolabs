@@ -1,0 +1,21 @@
+== 1. base
+base conferida
+== 2. backup
+total 156668
+-rw-r--r-- 1 root root 160421702 Nov 15 00:13 banco-antes.dump
+-rw-r--r-- 1 root root      1668 Nov 15 00:13 compose.antes.yml
+== 3. imagem
+sha256:1b61228fa400023df48f70efcc80ddef3da99b090aa481783428cabc614cc140
+pwuser
+489
+cf4a287625a751c2275b2b0832c5a0c100133990be76af15c6c3c056a22a2044  SGO_Ajuda_Administracao.js
+imagem conferida
+== 4. troca
+saudável
+== 5. no ar
+GET / 200
+metrolabs/sgo:poderes-lote3-20261115 sha256:1b61228fa400023df48f70efcc80ddef3da99b090aa481783428cabc614cc140
+erros no log desde a troca: 0
+1
+0
+15/11 00:14

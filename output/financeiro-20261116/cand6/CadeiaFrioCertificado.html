@@ -1,0 +1,10 @@
+<?
+  // Relatório de qualificação térmica (certificado) — padrão comum SGO_DocA4:
+  // cabeçalho/rodapé em todas as páginas, A4, gráficos em SVG, sem JavaScript no PDF.
+  // O conteúdo é montado por SGO_DocA4_documentoQualificacaoTermica_ (SGO_DocA4.js),
+  // o mesmo para Cadeia de Frio e Estufa/Banho-maria/Secadora.
+  var documentoFinal = SGO_DocA4_documentoQualificacaoTermica_({
+    ctx: ctx, textos: textos, fotos: fotos, geradoEm: geradoEm, graficos: graficos,
+    assinaturas: assinaturas, intervaloLeiturasSegundos: intervaloLeiturasSegundos
+  });
+?><?!= documentoFinal ?>

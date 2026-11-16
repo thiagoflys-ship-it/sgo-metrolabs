@@ -36,7 +36,7 @@ var CHV_PREFIXO_ALTERADO = 'CHV_ALTERADO_';
 var CHV_MSG_EXCLUSIVO = 'Não foi possível abrir: este módulo é exclusivo do responsável pelo sistema.';
 
 // 17/10/2026: um grupo por integração (a tela mostra a situação e o teste de cada grupo).
-var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'E-mail', 'WhatsApp oficial (Meta)', 'Z-API', 'Rastreador da frota', 'Automação predial (Tuya)', 'Relatórios técnicos', 'COMMAND'];
+var CHV_GRUPOS = ['Inteligência artificial', 'Auvo', 'Omie', 'E-mail', 'WhatsApp oficial (Meta)', 'Z-API', 'Rastreador da frota', 'Automação predial (Tuya)', 'Relatórios técnicos', 'COMMAND'];
 var CHV_PREFIXO_TESTE = 'CHV_TESTE_';
 var CHV_LIGA_DESLIGA = [['1', 'Ligado'], ['0', 'Desligado']];
 
@@ -46,6 +46,7 @@ var CHV_LIGA_DESLIGA = [['1', 'Ligado'], ['0', 'Desligado']];
  * teste: qual botão "Testar" aparece no item.
  */
 var CHV_ITENS = [
+  { chave: 'OMIE_EMPRESA_CNPJ', grupo: 'Omie', tipo: 'aberto', nome: 'CNPJ da empresa no Omie', ajuda: 'CNPJ da empresa titular do aplicativo. Usado para conferir a origem e o destinatário das notas importadas.' },
   { chave: 'FROTA_KM_NOTURNO_LIGADO', grupo: 'Rastreador da frota', tipo: 'aberto', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Conferência automática do KM às 22h',
     ajuda: 'Horário de Brasília. Um veículo por rodada do rastreador após 22h. Só ajusta o acumulador GPS dos veículos em modo Ativo, devolvidos, parados, desligados e com sinal, sem uso posterior à foto. Duas leituras da foto precisam confirmar o KM digitado; os demais casos ficam pendentes no painel da frota. Não altera o KM digitado pelo colaborador.' },
   { chave: 'FROTA_KM_NOTURNO_IA_AUTORIZADA', grupo: 'Rastreador da frota', tipo: 'aberto', opcoes: [['1', 'Autorizado'], ['0', 'Não autorizado']], vazio: 'Não autorizado', nome: 'Autorizar leitura das fotos dos painéis pela IA',
@@ -61,6 +62,10 @@ var CHV_ITENS = [
     ajuda: 'No Auvo: Menu → Integrações → API, campo da chave de acesso (API Key).' },
   { chave: 'AUVO_API_TOKEN', grupo: 'Auvo', tipo: 'chave', teste: 'auvo', nome: 'Auvo: token de acesso',
     ajuda: 'No Auvo, na mesma tela da chave de acesso, campo do token (API Token).' },
+  { chave: 'OMIE_APP_KEY', grupo: 'Omie', tipo: 'chave', teste: 'omie', nome: 'Omie: App Key',
+    ajuda: 'Cole a App Key do aplicativo Omie autorizado para a empresa que será consultada. Use a App Secret do mesmo aplicativo no campo abaixo.' },
+  { chave: 'OMIE_APP_SECRET', grupo: 'Omie', tipo: 'senha', teste: 'omie', nome: 'Omie: App Secret',
+    ajuda: 'Cole a App Secret do mesmo aplicativo Omie. O segredo fica somente no servidor e nunca é mostrado novamente. Após gravar os dois campos, clique em Testar conexão.' },
   { chave: 'AUVO_AVISOS_WHATSAPP', grupo: 'Auvo', tipo: 'aberto', exemplo: '1', opcoes: CHV_LIGA_DESLIGA, vazio: 'Desligado', nome: 'Avisos de O.S. do Auvo por WhatsApp e e-mail',
     ajuda: 'Ligado, a sincronização do Auvo avisa o técnico, a gestão e o contato do cliente quando um chamado é aberto e quando é concluído (modelos sgo_chamado_aberto e sgo_chamado_concluido; ligue depois que a Meta aprovar os dois). Cada evento avisa uma vez. Na primeira sincronização com os avisos ligados, o SGO+ grava a data de corte AUVO_AVISOS_DESDE; O.S. abertas ou concluídas antes dela não geram aviso.' },
   { chave: 'AUVO_AVISAR_GESTAO', grupo: 'Auvo', tipo: 'aberto', exemplo: 'joao, maria', nome: 'Avisos de O.S.: quem da gestão recebe (logins)',
@@ -217,6 +222,12 @@ function Chaves_validarValor_(item, valor) {
   if (!v) throw new Error('Não foi possível gravar: o campo está vazio. Cole o valor e clique em Gravar; para remover a chave, use Apagar.');
   if (/[\r\n\t]/.test(v)) throw new Error('Não foi possível gravar: o valor tem quebra de linha. Copie de novo só o valor, numa linha, e cole.');
   if (v.length > 4000) throw new Error('Não foi possível gravar: o valor tem mais de 4.000 caracteres. Confira se copiou só a chave.');
+  if (item.chave === 'OMIE_EMPRESA_CNPJ') {
+    v = v.replace(/[^0-9]/g, '');
+    if (!/^\d{14}$/.test(v) || /^(\d)\1{13}$/.test(v)) throw new Error('Informe o CNPJ da empresa com 14 dígitos.');
+    var calc = function (base) { var soma = 0, peso = base.length - 7; for (var n = 0; n < base.length; n++) { soma += Number(base[n]) * peso--; if (peso < 2) peso = 9; } var resto = soma % 11; return resto < 2 ? 0 : 11 - resto; };
+    if (calc(v.slice(0, 12)) !== Number(v[12]) || calc(v.slice(0, 13)) !== Number(v[13])) throw new Error('O CNPJ informado é inválido.');
+  }
   if (item.chave === 'WHATSAPP_PROVEDOR') {
     v = v.toLowerCase();
     if (v !== 'meta' && v !== 'zapi') throw new Error('Não foi possível gravar: o provedor do WhatsApp aceita só meta ou zapi.');
@@ -302,7 +313,7 @@ function Chaves_aposAlterar_(chave) {
 function Chaves_lista_() {
   var props = Chaves_lerTodas_();
   var p = PropertiesService.getScriptProperties(), testes = {};
-  ['gemini', 'auvo', 'email', 'whatsapp', 'rastreador', 'tuya'].forEach(function (t) {
+  ['gemini', 'auvo', 'omie', 'email', 'whatsapp', 'rastreador', 'tuya'].forEach(function (t) {
     try { var j = p.getProperty(CHV_PREFIXO_TESTE + t); if (j) testes[t] = JSON.parse(j); } catch (e) {}
   });
   return { grupos: CHV_GRUPOS, itens: CHV_ITENS.map(function (it) { return Chaves_situacao_(it, props); }), testes: testes };
@@ -375,7 +386,7 @@ function Chaves_apiApagar(sessionId, payload) {
 }
 
 /**
- * Testes: payload.tipo = 'gemini' | 'auvo' | 'email' | 'whatsapp' (whatsapp pede payload.telefone).
+ * Testes: payload.tipo = 'gemini' | 'auvo' | 'omie' | 'email' | 'whatsapp' (whatsapp pede payload.telefone).
  * Devolve { ok:true, funcionou:bool, texto } — o texto já diz o que fazer quando falha.
  */
 function Chaves_apiTestar(sessionId, payload) {
@@ -386,6 +397,7 @@ function Chaves_apiTestar(sessionId, payload) {
     var r;
     if (tipo === 'gemini') r = Chaves_testarGemini_();
     else if (tipo === 'auvo') r = Chaves_testarAuvo_();
+    else if (tipo === 'omie') r = typeof Omie_testarConexao_ === 'function' ? Omie_testarConexao_() : Chaves_falhou_('o módulo do Omie não está carregado neste sistema', 'avise o suporte do SGO+.');
     else if (tipo === 'email') r = Chaves_testarEmail_(eu);
     else if (tipo === 'whatsapp') r = Chaves_testarWhatsapp_(p.telefone);
     else if (tipo === 'rastreador') r = typeof Rastreador_testarConexao_ === 'function' ? Rastreador_testarConexao_() : Chaves_falhou_('o módulo do rastreador não está carregado neste sistema', 'avise o suporte do SGO+.');

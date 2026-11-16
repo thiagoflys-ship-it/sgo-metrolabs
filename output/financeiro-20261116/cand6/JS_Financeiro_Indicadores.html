@@ -1,0 +1,134 @@
+<script>
+/*
+ * Painel financeiro > Indicadores (Onda 2 do Financeiro, E4 e E5, 16/11/2026).
+ * Servidor: SGO_Financeiro_Indicadores.js (Fin_apiIndicadores), SGO_Financeiro_Foto.js (Fin_apiFotoPedir) e
+ * SGO_Financeiro_Saude.js (nota de saúde). A aba lê só a FOTOGRAFIA diária gravada pela rotina: não chama o Omie a cada clique.
+ * "Atualizar agora" só pede uma nova fotografia; a próxima rodada automática a faz. Números já vêm formatados em pt-BR do
+ * servidor; os gráficos vêm em SVG (mesmo desenho do relatório A4). Guia e explicação dos campos: JS_Omie_Ajuda.html.
+ */
+var FIN_IND_TELA = { geracao: 0, ultimo: null };
+function FinIndTela_esc_(v) { return typeof CadUI_esc_ === 'function' ? CadUI_esc_(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function FinIndTela_rpc_(nome, dados, ok, erro) {
+  var g = FIN_IND_TELA.geracao, sessao = SGO_getSessionId(), pedido = typeof OMIE_TELA !== 'undefined' ? OMIE_TELA.pedido : null;
+  function atual() { return g === FIN_IND_TELA.geracao && sessao === SGO_getSessionId() && (typeof OMIE_TELA === 'undefined' || pedido === OMIE_TELA.pedido); }
+  google.script.run.withSuccessHandler(function (r) { if (!atual()) return; if (!r || !r.ok) { (erro || FinIndTela_aviso_)(r && r.mensagem || 'Não foi possível concluir. Tente de novo.', r); return; } ok(r); })
+    .withFailureHandler(function () { if (atual()) (erro || FinIndTela_aviso_)('A comunicação com o servidor foi interrompida. Nada foi alterado; toque em Atualizar a aba ou abra a aba de novo.'); })[nome](sessao, dados || {});
+}
+function FinIndTela_aviso_(m) { var e = document.getElementById('finIndAviso'); if (e) e.textContent = m || ''; }
+
+function FinIndTela_render_() {
+  var c = document.getElementById('omieCorpo'); if (!c) return;
+  FIN_IND_TELA.geracao++;
+  c.innerHTML = '<section class="fin-ind"><h3>Indicadores</h3>' +
+    '<p class="fin-ind-intro">Os números do Financeiro calculados pelo sistema a partir da fotografia diária do Omie (feita pela rotina a partir das 06:00, só leitura). Cada cartão mostra o valor de hoje, o da fotografia anterior, a seta e como o número é calculado. A nota de saúde resume seis critérios com a explicação de cada um.</p>' +
+    '<form class="omie-barra" onsubmit="event.preventDefault();FinIndTela_carregar_()"><label for="finIndComparar">Comparar com<select class="cadx-input" id="finIndComparar" name="finIndComparar" onchange="FinIndTela_carregar_()"><option value="7">Fotografia de 7 dias atrás</option><option value="30">Fotografia de 30 dias atrás</option></select></label>' +
+    '<button type="button" class="cadx-btn" id="finIndAtualizar" onclick="FinIndTela_pedir_()">Atualizar agora</button></form>' +
+    '<p id="finIndAviso" class="fin-ind-aviso" role="status" aria-live="polite"></p><div id="finIndEstado"></div><div id="finIndCorpo">' + (typeof CadUI_esqueleto_ === 'function' ? CadUI_esqueleto_(4) : '<p>Carregando…</p>') + '</div></section>';
+  FinIndTela_carregar_();
+}
+function FinIndTela_carregar_() {
+  var sel = document.getElementById('finIndComparar'), corpo = document.getElementById('finIndCorpo'); if (!corpo) return;
+  FinIndTela_aviso_('Lendo a fotografia do Financeiro…');
+  FinIndTela_rpc_('Fin_apiIndicadores', { dias: sel ? Number(sel.value) : 7 }, function (r) { FinIndTela_aviso_(''); FIN_IND_TELA.ultimo = r; FinIndTela_desenhar_(r); },
+    function (m) { FinIndTela_aviso_(''); corpo.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>Os indicadores não abriram.</strong><p>' + FinIndTela_esc_(m) + '</p></div>'; });
+}
+function FinIndTela_estado_(r) {
+  var e = r.estado || {}, esc = FinIndTela_esc_, b = document.getElementById('finIndAtualizar');
+  if (b) { b.disabled = !e.podePedir; b.setAttribute('aria-describedby', 'finIndEstadoTxt'); }
+  var f = r.foto, linhas = [];
+  if (f) linhas.push('<b>Fotografia de ' + esc(f.concluidaEm) + '</b>' + (f.situacao === 'INCOMPLETA' ? ' (incompleta: alguns números ficaram "não calculado"; veja o motivo em cada cartão)' : '') + '.');
+  if (e.emAndamento) linhas.push('Uma nova fotografia está em andamento (' + esc(e.passo) + ').');
+  linhas.push(e.podePedir ? '"Atualizar agora" pede uma nova fotografia, feita na próxima rodada automática (até 15 minutos).' : esc(e.motivo || ''));
+  var falhas = f && f.falhas && f.falhas.length ? '<ul class="fin-ind-falhas">' + f.falhas.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '';
+  return '<div class="vg-faixa ' + (f && f.situacao === 'COMPLETA' ? 'is-neutra' : 'is-alerta') + ' fin-ind-estado" role="status" id="finIndEstadoTxt">' + linhas.join(' ') + falhas + '</div>';
+}
+function FinIndTela_seta_(t) { return t === 'sobe' ? '▲' : t === 'desce' ? '▼' : t === 'igual' ? '=' : ''; }
+function FinIndTela_desenhar_(r) {
+  var esc = FinIndTela_esc_, est = document.getElementById('finIndEstado'), corpo = document.getElementById('finIndCorpo'); if (!corpo) return;
+  if (est) est.innerHTML = FinIndTela_estado_(r);
+  if (!r.foto) { corpo.innerHTML = '<div class="cadx-vazio bc-vazio" role="status"><strong>Ainda não há fotografia do Financeiro.</strong><p>' + esc(r.mensagem || '') + '</p></div>'; return; }
+  var comp = r.comparadoCom ? 'Fotografia de ' + r.comparadoCom.diaBr : '', h = '';
+  // nota de saúde (E5)
+  var s = r.saude || {};
+  var seta = s.anterior !== null && s.anterior !== undefined && s.nota !== null ? (s.nota > s.anterior ? '▲' : s.nota < s.anterior ? '▼' : '=') + ' era ' + s.anterior + ' (' + esc(s.anteriorFaixa) + ') na ' + esc(comp.toLowerCase()) : 'Sem fotografia anterior para comparar.';
+  h += '<section class="fin-ind-saude is-' + esc(s.classe || 'sem') + '" aria-labelledby="finIndSaudeTit"><h4 id="finIndSaudeTit">Saúde financeira</h4>' +
+    '<div class="fin-ind-nota"><span class="fin-ind-nota-num">' + (s.nota === null || s.nota === undefined ? '—' : esc(s.nota)) + '</span><span class="fin-ind-nota-de">de 100</span><span class="fin-ind-nota-faixa">' + esc(s.faixa || '') + '</span></div>' +
+    '<p class="fin-ind-nota-seta">' + seta + '</p><p class="fin-ind-texto">' + esc(s.texto || '') + '</p>' +
+    '<p class="fin-ind-faixas">Faixas: 80 a 100 Saudável · 60 a 79 Atenção · 40 a 59 Alerta · abaixo de 40 Crítica.</p>' +
+    '<ol class="fin-ind-crit">' + (s.criterios || []).map(function (c) {
+      return '<li class="' + (c.calculado ? '' : 'is-fora') + '"><div class="fin-ind-crit-cab"><strong>' + esc(c.codigo + ' · ' + c.nome) + '</strong><span>' + (c.calculado ? esc(String(c.pontos).replace('.', ',')) + ' de ' + esc(c.peso) + ' pontos' : 'fora da nota') + '</span></div><p>' + esc(c.explicacao) + '</p></li>';
+    }).join('') + '</ol>' +
+    '<p class="cadx-sub">Pesos: ' + esc(s.config && s.config.pesos) + '; limites: ' + esc(s.config && s.config.limites) + '. Os pesos e os limites são propostas iniciais e mudam em Administração > Chaves e senhas > Regras do Financeiro.</p></section>';
+  // cartões dos indicadores (E4)
+  h += '<h4 class="fin-ind-sub">Indicadores de ' + esc(r.foto.diaBr) + (comp ? ', comparados com a ' + esc(comp.toLowerCase()) : '') + '</h4><div class="fin-ind-cartoes">' + (r.indicadores || []).map(function (c) {
+    var antes = c.anteriorTexto ? '<p class="fin-ind-antes">' + esc(comp || 'Antes') + ': ' + esc(c.anteriorTexto) + (c.tendencia ? ' <span class="fin-ind-seta is-' + esc(c.leitura || 'neutro') + '" title="' + esc(c.tendencia === 'sobe' ? 'subiu' : c.tendencia === 'desce' ? 'desceu' : 'igual') + (c.leitura === 'melhor' ? ', melhorou' : c.leitura === 'pior' ? ', piorou' : '') + '">' + FinIndTela_seta_(c.tendencia) + '</span>' : '') + '</p>' : '';
+    var det = c.motivo ? '<p class="fin-ind-motivo">' + esc((c.aDefinir ? 'A definir: ' : 'Não calculado: ') + c.motivo) + '.</p>' : (c.detalhe ? '<p class="fin-ind-det">' + esc(c.detalhe) + '</p>' : '');
+    return '<article class="fin-ind-card' + (c.valor === null && !c.aDefinir ? ' is-nao' : '') + (c.aDefinir ? ' is-definir' : '') + '" data-ind="' + esc(c.codigo) + '"><header><span class="fin-ind-cod">' + esc(c.codigo) + '</span><h5>' + esc(c.nome) + '</h5></header>' +
+      '<p class="fin-ind-valor">' + esc(c.texto) + '</p>' + antes + det +
+      '<p class="fin-ind-ler"><strong>O que é e como ler:</strong> ' + esc(c.comoLer) + '</p><p class="fin-ind-calc"><strong>Como é calculado:</strong> ' + esc(c.comoCalculado) + '</p></article>';
+  }).join('') + '</div>';
+  // gráficos (SVG do servidor, já escapado lá)
+  h += '<h4 class="fin-ind-sub">Gráficos</h4><div class="fin-ind-graficos">' + (r.graficos || []).map(function (g) {
+    return '<div class="fin-ind-graf" data-graf="' + esc(g.id) + '"><h5>' + esc(g.id + ' · ' + g.titulo) + '</h5>' + g.svg + '<p class="fin-ind-frase">' + esc(g.frase) + '</p></div>';
+  }).join('') + '</div>';
+  corpo.innerHTML = h;
+}
+function FinIndTela_pedir_() {
+  var b = document.getElementById('finIndAtualizar'); if (b) b.disabled = true;
+  FinIndTela_aviso_('Registrando o pedido…');
+  FinIndTela_rpc_('Fin_apiFotoPedir', {}, function (r) {
+    FinIndTela_aviso_(r.mensagem);
+    if (FIN_IND_TELA.ultimo) { FIN_IND_TELA.ultimo.estado = r.estado; var est = document.getElementById('finIndEstado'); if (est) est.innerHTML = FinIndTela_estado_(FIN_IND_TELA.ultimo); }
+  }, function (m, r) {
+    FinIndTela_aviso_(m);
+    if (r && r.estado && FIN_IND_TELA.ultimo) { FIN_IND_TELA.ultimo.estado = r.estado; var est = document.getElementById('finIndEstado'); if (est) est.innerHTML = FinIndTela_estado_(FIN_IND_TELA.ultimo); }
+    else if (b) b.disabled = false;
+  });
+}
+</script>
+<style>
+  #omieTela .fin-ind-intro, #omieTela .fin-ind p { text-align:justify; line-height:1.5; }
+  #omieTela .fin-ind-aviso:empty { display:none; }
+  #omieTela .fin-ind-estado { margin:0 0 16px; }
+  #omieTela .fin-ind-falhas { margin:6px 0 0 18px; padding:0; }
+  #omieTela .fin-ind-sub { margin:24px 0 12px; }
+  #omieTela .fin-ind-saude { border:1px solid var(--bc-line, #cbd5e1); border-left:6px solid var(--bc-muted, #64748b); border-radius:10px; padding:14px 16px; background:var(--bc-surface, transparent); }
+  #omieTela .fin-ind-saude.is-ok { border-left-color:#1d6b3f; }
+  #omieTela .fin-ind-saude.is-atencao { border-left-color:#c98a12; }
+  #omieTela .fin-ind-saude.is-alerta { border-left-color:#b45309; }
+  #omieTela .fin-ind-saude.is-critica { border-left-color:#a61b1b; }
+  #omieTela .fin-ind-saude h4 { margin:0 0 6px; }
+  #omieTela .fin-ind-nota { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; }
+  #omieTela .fin-ind-nota-num { font-size:40px; font-weight:700; line-height:1; }
+  #omieTela .fin-ind-nota-faixa { font-weight:700; font-size:18px; }
+  #omieTela .fin-ind-nota-seta, #omieTela .fin-ind-faixas { margin:6px 0; color:var(--bc-muted, #475569); font-size:13.5px; }
+  #omieTela .fin-ind-crit { margin:10px 0 8px; padding:0; list-style:none; display:grid; gap:10px; }
+  #omieTela .fin-ind-crit li { border-top:1px solid var(--bc-line, #e2e8f0); padding-top:8px; }
+  #omieTela .fin-ind-crit li.is-fora { opacity:.8; }
+  #omieTela .fin-ind-crit-cab { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; }
+  #omieTela .fin-ind-crit p { margin:4px 0 0; font-size:13.5px; }
+  #omieTela .fin-ind-cartoes { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap:12px; }
+  #omieTela .fin-ind-card { border:1px solid var(--bc-line, #cbd5e1); border-radius:10px; padding:12px 14px; min-width:0; overflow-wrap:anywhere; background:var(--bc-surface, transparent); }
+  #omieTela .fin-ind-card header { display:flex; gap:8px; align-items:baseline; }
+  #omieTela .fin-ind-card h5 { margin:0; font-size:14.5px; }
+  #omieTela .fin-ind-cod { font-size:11.5px; font-weight:700; color:var(--bc-muted, #64748b); }
+  #omieTela .fin-ind-valor { font-size:22px; font-weight:700; margin:6px 0 2px; text-align:left !important; }
+  #omieTela .fin-ind-card.is-nao .fin-ind-valor, #omieTela .fin-ind-card.is-definir .fin-ind-valor { font-size:16px; color:var(--bc-muted, #475569); }
+  #omieTela .fin-ind-antes, #omieTela .fin-ind-det, #omieTela .fin-ind-motivo { margin:2px 0; font-size:13px; }
+  #omieTela .fin-ind-motivo { color:#8a4b08; }
+  #omieTela .fin-ind-ler, #omieTela .fin-ind-calc { margin:6px 0 0; font-size:12.5px; color:var(--bc-muted, #475569); }
+  #omieTela .fin-ind-seta { font-weight:700; }
+  #omieTela .fin-ind-seta.is-melhor { color:#1d6b3f; }
+  #omieTela .fin-ind-seta.is-pior { color:#a61b1b; }
+  #omieTela .fin-ind-graficos { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap:16px; }
+  #omieTela .fin-ind-graf { border:1px solid var(--bc-line, #cbd5e1); border-radius:10px; padding:12px; min-width:0; }
+  #omieTela .fin-ind-graf h5 { margin:0 0 6px; font-size:14px; }
+  #omieTela .fin-ind-graf figure { margin:0; }
+  #omieTela .fin-ind-graf svg { display:block; max-width:100%; height:auto; }
+  #omieTela .fin-ind-graf figcaption { font-size:12px; color:var(--bc-muted, #475569); margin-top:4px; }
+  #omieTela .fin-ind-graf .leg-grafico { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; margin-top:4px; }
+  #omieTela .fin-ind-graf .leg-grafico i { display:inline-block; width:10px; height:10px; margin-right:4px; vertical-align:middle; border-radius:2px; }
+  #omieTela .fin-ind-graf .leg-grafico i.tracejado { height:0; border-top:2px dashed currentColor; }
+  #omieTela .fin-ind-graf .nota { font-size:13px; color:var(--bc-muted, #475569); }
+  #omieTela .fin-ind-frase { font-size:12.5px; margin:6px 0 0; }
+</style>

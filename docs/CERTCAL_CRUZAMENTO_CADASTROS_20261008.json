@@ -1,0 +1,159 @@
+{
+  "data": "2026-10-08",
+  "spreadsheetId": "1Ny2wiUrzqa8i3IirgEaW11ZZe_IFH9cs1kpXkxu3VzM",
+  "ranges": {
+    "equipamentos": "A2:D1298,H2:H1298,K2:K1298",
+    "clientes": "A2:A1916,I2:I1916",
+    "unidades": "A2:B2201,J2:J2201"
+  },
+  "counts": {
+    "equipamentos": 400,
+    "ativos": 400,
+    "clientes": 45,
+    "unidades": 51,
+    "inconsistenciasAtivos": 9
+  },
+  "tipos": {
+    "AUTOCLAVE": 16,
+    "AUTOCLAVE-2": 1,
+    "AUTOCLAVE-1": 1,
+    "TERMODESINFECTORA-1": 1,
+    "TERMODESINFECTORA-2": 1,
+    "CARDIOVERSOR": 1,
+    "MONITOR MULTIPARÂMETRO": 3,
+    "APARELHO DE ANESTESIA": 1,
+    "VAPORIZADOR CALIBRADO": 2,
+    "BISTURI ELÉTRICO": 2,
+    "DESFIBRILADOR": 1,
+    "BALANÇA DIGITAL": 1,
+    "AUTOCLAVE 1": 1,
+    "AUTOCLAVE 2": 5,
+    "TERMODESINFECTORA": 3,
+    "FREEZER": 18,
+    "TERMODESINFECTORA 1": 1,
+    "LAVADORA ULTRASSONICA": 1,
+    "LAVADORA ULTRASSONICA 2": 2,
+    "TERMO HIGROMETRO": 122,
+    "AUTOCLAVE FORMALDEIDO": 1,
+    "SENSOR DE TEMPERATURA": 5,
+    "AUTOCLAVE VAPOR - 01": 1,
+    "AUTOCLAVE PERÓXIDO": 1,
+    "AUTOCLAVE VAPOR - 02": 1,
+    "AUTOCLAVE VAPOR - 03": 1,
+    "TERMODESINFECTORA 02": 1,
+    "TERMODESINFECTORA 01": 1,
+    "SECADORA DE TRAQUEIA": 1,
+    "LAVADORA ULTRASSÔNICA 01": 1,
+    "LAVADORA ULTRASSÔNICA - 02": 1,
+    "TERMODESINFECTORA - 03": 1,
+    "MANOMETRO 0 A 6 BAR ABS": 8,
+    "VALVULA DE SEGURANÇA": 4,
+    "MANÔMETRO -750 MMHG ATÉ 5 KG/CM2": 2,
+    "MANÔMETRO 0 ATÉ 5 KG/CM2": 1,
+    "VÁLVULA DE SEGURANÇA": 3,
+    "MANÔMETRO 0 A 6 BAR": 8,
+    "VÁLVULA DE SEGURNÇA": 3,
+    "Autoclave 1": 1,
+    "Autoclave 2": 1,
+    "AUTOCLAVE VAPOR": 1,
+    "AUTOCLAVE  VAPOR": 1,
+    "STATIM 02": 1,
+    "STATIM 01": 1,
+    "SECADORA": 1,
+    "TRANSMISSOR DE PRESSÃO": 5,
+    "PRESSOSTATO": 1,
+    "SENSOR DE TEMPERATURA / -50 °C A 250°C": 4,
+    "VALVULA DE ALIVIO E SEGURANCA": 1,
+    "TERMOHIGRÔMETRO": 68,
+    "SELADORA": 2,
+    "CÂMARA DE CONSERVAÇÃO DE HEMÁCIAS": 1,
+    "CÂMARA DE CONSERVAÇÃO PARA REAGENTES": 1,
+    "FREEZER PARA PLASMA FRESCO, CONGELADO E CRIOPRECIPTADO": 1,
+    "TERMÔMETRO": 4,
+    "Endojet": 1,
+    "TERMÔMETRO INFRAVERMELHO": 10,
+    "TERMOMETRO": 6,
+    "TERMO HIGRÔMETRO": 22,
+    "VÁLVULA DE SEGURANÇA - 2,5 BAR": 1,
+    "INCUBADORA": 2,
+    "TERMO-HIGRÔMETRO": 3,
+    "TERMO-HIGROMETRO": 4,
+    "AUTOCLAVE DE BANCADA": 1,
+    "AUTOCLAVE HOSPITALAR": 1,
+    "BALANÇA": 1,
+    "AUTOCLAVE ORTOSINTESE": 1,
+    "AUTOCLAVE SERCON": 1,
+    "Osmose da Ortosintese": 1,
+    "seladora": 3,
+    "TERMÔMETRO PALITO": 8,
+    "BALANÇA ANTROPOMÉTRICA": 1,
+    "CENTRIFUGA": 1,
+    "TERMÔMETRO CULINÁRIO ESPETO": 6,
+    "CENTRÍFUGA": 2
+  },
+  "anomalies": [
+    {
+      "row": 25,
+      "tipo": "AUTOCLAVE 1",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 26,
+      "tipo": "AUTOCLAVE 2",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 27,
+      "tipo": "AUTOCLAVE 2",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 28,
+      "tipo": "TERMODESINFECTORA",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 29,
+      "tipo": "FREEZER",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 30,
+      "tipo": "FREEZER",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 31,
+      "tipo": "FREEZER",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 32,
+      "tipo": "FREEZER",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    },
+    {
+      "row": 33,
+      "tipo": "FREEZER",
+      "codes": [
+        "CLIENTE_UNIDADE_DIVERGENTE"
+      ]
+    }
+  ]
+}

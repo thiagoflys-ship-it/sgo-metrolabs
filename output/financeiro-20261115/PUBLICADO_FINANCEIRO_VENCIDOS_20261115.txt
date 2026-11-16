@@ -1,0 +1,15 @@
+Painel financeiro — Vencidos a receber por cliente — publicado em 14/11/2026 23:48 BRT
+
+Imagem: metrolabs/sgo:financeiro-vencidos-20261115
+        sha256:29fc3df1fdcd025a9c1ec497b28f75b15b98486725f1194a202d0e4339632c05
+Base:   metrolabs/sgo:financeiro-pedidos-20261115 (sha256:c4470129…), 5 arquivos conferidos pelo hash do contêiner; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-vencidos-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+- Visão geral: "Ver vencidos por cliente" (sob pedido): títulos a receber com situação ATRASADO agrupados por cliente, com
+  quantidade, valor dos documentos, vencido desde, dias de atraso, pagamentos parciais e documentos; maior valor primeiro.
+- Omie_nomesClientes_ (nomes em lote) passou de SGO_Omie_Ganhos.js para SGO_Omie.js (uso geral).
+Arquivos: SGO_Omie.js, SGO_Omie_Gestao.js, JS_Omie_Gestao.html, SGO_Ajuda_Financeiro.js, SGO_Omie_Ganhos.js. Patch: patch-vencidos.cjs.
+Testes: financeiro-omie-20261114 10/10 (novo: vencidos), ganhos-omie-20261115 4/4.
+Ensaio REAL somente leitura (ensaio/vencidos.json): 80 títulos vencidos de 37 clientes em 6 s, todos com nome;
+20 clientes com título vencido há mais de 90 dias; 2 com pagamento parcial.
+No ar: saudável, GET 200, 0 erros, HTML com vencidos, pedidos e ganhos.

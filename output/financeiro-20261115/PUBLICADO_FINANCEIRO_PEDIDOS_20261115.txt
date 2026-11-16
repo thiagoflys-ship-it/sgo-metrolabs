@@ -1,0 +1,29 @@
+Painel financeiro — Pedidos aprovados -> conta a receber no Omie — publicado em 14/11/2026 23:45 BRT
+
+Imagem: metrolabs/sgo:financeiro-pedidos-20261115
+        sha256:c4470129ef533e3b2b0bb2f82eb990df2778704659ee4c49d6a775c3f4cbdafa
+Base:   metrolabs/sgo:financeiro-pagina-antiga-20261115 (sha256:65b6e961…), 4 arquivos conferidos pelo hash lido no contêiner;
+        imagem pwuser, 489 arquivos, 6 hashes.
+Backup: /opt/metrolabs/backup/financeiro-pedidos-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Achado da Missão 01: o pedido aprovado ia ao Financeiro como atividade com checklist e era redigitado no Omie.
+- Aba "Pedidos aprovados" no Painel financeiro: propostas APROVADAS (mais recentes primeiro, busca por número, cliente, título,
+  OC), com cliente e CNPJ de faturamento (ComP_dadosFaturamento_), total, OC, vendedor e condição de pagamento. Sem chamar o Omie.
+- "Preparar conta a receber" (caixa FIN_OMIE_LANCAR): acha o cliente no Omie pelo CNPJ (ListarClientes clientesFiltro.cnpj_cpf),
+  lista os últimos títulos do cliente no Omie (ListarContasReceber filtrar_por_cpf_cnpj) e abre o "Novo lançamento" preenchido:
+  cliente (com nome), documento (número da proposta), valor, referência única SGO-<proposta> (o Omie recusa referência
+  repetida) e observação com OC e condição de pagamento. Categoria, conta e vencimento a escolher. Envio = prévia + confirmação
+  de sempre; com a GRAVAÇÃO DESLIGADA nada é enviado.
+- Sem CNPJ no SGO+, sem cadastro no Omie ou com cadastro duplicado: a tela diz o que corrigir.
+- CSS: formulários de lançamento/baixa com o rótulo em cima do campo (no celular os rótulos quebravam letra a letra).
+Arquivos: SGO_Omie_Pedidos.js e JS_Omie_Pedidos.html (novos), Index.html, JS_Omie_Operacoes.html (valores iniciais no
+formulário), JS_Omie_Gestao.html (aba e CSS), SGO_Ajuda_Financeiro.js. Patch: patch-pedidos.cjs (+ CSS e fallback do cadastro).
+
+Testes (DEST=cand): financeiro-omie-20261114 9/9 (novo: pedidos; página completa 1366/390/320 com Pedidos -> Preparar ->
+formulário preenchido), ganhos-omie 4/4, omie-* 13/20/9/12, ajuda 1/1, ganhos-vendedores 12/12, conciliacao-caju 14/14,
+poderes-lote0 13/13.
+Ensaio REAL somente leitura (ensaio/pedidos.json): 34 propostas aprovadas (1 sem CNPJ, 34 com condição de pagamento);
+5 preparadas: 5 clientes achados no Omie, valor igual ao da proposta, títulos existentes listados (2 a 36), nenhuma referência
+repetida; 1 a 5 s cada. Nada gravado.
+No ar: saudável, GET 200, 0 erros, HTML com a aba, a agenda e o bloco de Ganhos; /financeiro com o aviso.
+Não verificado: a Wanessa usando; nenhuma conta a receber criada no Omie (gravação desligada).

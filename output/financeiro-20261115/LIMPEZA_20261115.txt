@@ -1,0 +1,4 @@
+C:/Users/venda/projetos/google-script-dev/output/financeiro-20261115/revisao-antes arquivos=489 bytes=27981703 removido
+C:/Users/venda/projetos/google-script-dev/output/financeiro-20261115/base arquivos=486 bytes=27921129 removido
+C:/Users/venda/projetos/google-script-dev/output/financeiro-20261114/base arquivos=475 bytes=27776920 removido
+temporarios locais de teste removidos

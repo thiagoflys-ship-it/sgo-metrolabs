@@ -103,6 +103,24 @@ Ocorrência registrada pela Diretoria ou pelo responsável pelo sistema já nasc
 3. Para confirmar, toque em "Aprovar".
 4. Para rejeitar, escreva a fundamentação no campo "Fundamentação" e toque em "Rejeitar" (sem ela, a rejeição não é aceita). Se a ocorrência é sua e você é da Diretoria, a fundamentação é obrigatória também para aprovar.
 
+### Reler o relato de uma ocorrência (16/11/2026)
+
+O texto "O que aconteceu" antes só aparecia dentro das janelas "Homologar" e "Julgar". Depois de homologada (e toda ocorrência registrada pela Diretoria ou pelo responsável pelo sistema já nasce homologada), não havia como relê-lo. Agora:
+
+1. Na lista de ocorrências, toque em "Ver relato" na linha da ocorrência, em qualquer situação.
+2. A janela mostra, só para leitura: o código, a regra e o grupo; o nível e o peso aplicados (e a reincidência, se houver); o envolvido e a área; a data do fato e a competência; quem registrou e quando; o relato "O que aconteceu"; a evidência ("Ver a foto", a legenda e a origem, quando veio de sugestão); o prazo em curso; a contestação, o recurso e a fundamentação da decisão; e o histórico passo a passo (registro, homologação, contestação, julgamento, recurso e os passos automáticos de prazo).
+3. Toque em "Fechar" (ou fora da janela) para voltar. As janelas "Homologar" e "Julgar" também têm o botão "Ver o relato completo e o histórico".
+
+| Quem abre o relato | Observação |
+|---|---|
+| Diretoria e responsável pelo sistema | Todas as ocorrências |
+| Gestor de Qualidade (Gestor ou Administrador com área Qualidade) | Todas as ocorrências |
+| Quem registrou | As que registrou |
+| O envolvido | As em seu nome; o nome de quem registrou aparece como "nome preservado" |
+| Demais gestores e RH | Só as que registraram ou em que são o envolvido; nas demais, o sistema recusa e explica o sigilo |
+
+Ocorrência antiga, gravada antes de 19/10/2026 (quando o campo "O que aconteceu" não existia), mostra o aviso "Relato não registrado" no lugar do texto, com a orientação de usar a legenda da foto, a origem e o histórico, ou perguntar a quem registrou. No histórico dessas ocorrências, os passos marcados "Reconstruído dos campos da ocorrência" vêm das datas gravadas na própria ocorrência, sem a hora.
+
 ### Julgar uma contestação ou um recurso
 
 1. Na linha com selo "Contestada" ou "Em recurso", toque em "Julgar".
@@ -149,6 +167,36 @@ Missão lançada pelo próprio colaborador nasce "Aguardando aprovação da gest
 4. Toque em "Salvar destino".
 
 "Remover" tira a missão da lista e do cálculo. O registro fica guardado no histórico.
+
+Com o CNPJ, a distância do destino vale também para a conferência por O.S. e para a proposta do Comercial, mesmo quando a unidade do cliente não tem cidade no cadastro.
+
+### Conferir o incentivo por O.S. (desde 13/11/2026)
+
+O dono decidiu em 13/11/2026: o incentivo conta por O.S., não por deslocamento. O quadro "Incentivo por O.S. (conferência)", no fim da aba "Missões", confere cada O.S. de campo da Assistência técnica pelos requisitos do Manual do Incentivo de Missão (MAN-VIA-001) e diz, por executante, "devido", "não devido" ou "pendente", com o motivo.
+
+1. Escolha o mês e toque em "Conferir". Use "Situação" e "Executante" para filtrar.
+2. O resumo por executante mostra as missões devidas pelas O.S. e o valor, as pendentes, as não devidas, as missões lançadas que o fechamento vai somar, o valor do fechamento e a diferença.
+3. "Missão lançada x O.S. elegível" lista o que não bate: O.S. que cumpre os requisitos sem missão lançada (o fechamento não paga), missão lançada sem O.S., lançada em dobro na mesma saída, lançada para O.S. que não é devida ou lançada antes da Assistência técnica do SGO+.
+4. Em cada O.S., "Requisitos conferidos" mostra a distância cadastral, a execução, o relatório no prazo, as fotos, o retorno, a mesma saída, a ocorrência do executante e a gravíssima do mês.
+5. Toque em "Classificar" para o que os dados não dizem. A classificação fica gravada com quem e quando, e o resultado é refeito na hora.
+
+| Requisito | Como o sistema confere |
+|---|---|
+| Distância | Tabela de distâncias da Conduta, pelo CNPJ da unidade ou do cliente, pela cidade da unidade ou pelo cliente. A maior distância da saída vale. 200 km qualifica, 199 km não. Sem cadastro: pendente, com o que fazer. Na cidade da sede: 0 km |
+| Execução | O.S. encerrada (ou com documentação pendente). O.S. em aberto: pendente. Cancelada antes da saída: não é missão. Cancelada depois da saída: a gestão diz se foi por causa do cliente (devido) ou do executante (não devido) |
+| Relatório | Emitido em até 3 dias úteis da conclusão. Dentro do prazo e sem relatório: pendente; depois do prazo: não devido |
+| Fotos | Pelo menos 2 (ou o mínimo do tipo de serviço, se maior). Mesma regra de prazo do relatório |
+| Retorno | Segunda O.S. do mesmo chamado, ou chamado marcado como reincidente: pendente até a gestão dizer Tipo A (não devido), falha do equipamento ou escopo novo (devido) ou não é retorno |
+| Mesma saída | O.S. do mesmo executante no mesmo dia = uma missão, contada na O.S. que cumpre os requisitos. O.S. no dia seguinte a outra O.S. elegível: pendente até a gestão dizer "mesma saída" ou "nova saída". Dois dias ou mais de intervalo = nova saída |
+| Ocorrência | Ocorrência do executante com data dentro da missão (ou ligada à missão lançada): firme = não devido; em andamento = pendente. A Diretoria e o Gestor de Qualidade marcam a que não é da missão |
+| Gravíssima | Gravíssima firme do executante no mês zera todos os incentivos dele no mês; em andamento = pendente |
+| 2º executante | A O.S. guarda um técnico só. O 2º executante entra pela missão lançada (mesmo cliente ou destino, até 1 dia de diferença) |
+
+> A conferência não paga, não lança missão, não registra ocorrência (nem a CAM-03 do retorno Tipo A) e não manda aviso. O fechamento do mês continua somando as missões lançadas e aprovadas. Acerte o lançamento pela lista de divergências antes de fechar.
+
+Quem vê: a gestão e o RH veem todos; cada colaborador vê só as próprias O.S. Quem classifica: Gestor, Administrador e Diretoria, nunca na própria O.S. (a Diretoria classifica a própria com fundamentação). Pelo sigilo do colaborador, só a Diretoria e o Gestor de Qualidade veem o código da ocorrência; os demais leem "detalhe sob sigilo".
+
+O relatório A4 "Missões" (Relatórios e extratos) traz a seção "Conferência pelas O.S. de campo", com o resumo por executante e as divergências, para a Diretoria e o Financeiro conferirem antes do pagamento.
 
 ## 6. Ausências
 

@@ -61,7 +61,9 @@ function ambiente(opcoes) {
     ATV_ATIVIDADES: [], ATV_HISTORICO: [], ATV_AVISOS: [], ATV_RESUMOS: [], NTF_ENVIOS: [], DOC_ENVIOS: []
   }, o.tabelas || {});
   let seq = 0;
-  const props = Object.assign({ GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: {} }) }, o.props || {});
+  // 16/11/2026 (onda 3, bloco A): os testes antigos rodam com as regras de antes (APROVACAO_SO_DIRETORIA = NAO); a decisão do dono
+  // (SIM, padrão em produção: só o dono e a Diretoria aprovam) é testada em tests/financeiro-onda3-a.test.cjs.
+  const props = Object.assign({ GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: {} }), APROVACAO_SO_DIRETORIA: 'NAO' }, o.props || {});
   const cache = {}, emails = [], whats = [];
   const sessoes = {};
   tabelas.CAD_USUARIOS.forEach((u) => { sessoes['s_' + u.USUARIO] = { userId: u.ID, usuario: u.USUARIO, nome: u.NOME, perfil: u.PERFIL }; });
@@ -128,6 +130,7 @@ function ambiente(opcoes) {
     SGO_execucaoInterna_: () => true
   });
   for (const f of ARQUIVOS) vm.runInContext(fs.readFileSync(path.join(pastaLegado, f), 'utf8').replace(/\r\n/g, '\n'), ctx, { filename: f });
+  require('./_sigilo_fin.cjs').sigiloFin(ctx, props, () => tabelas.CAD_USUARIOS, pastaLegado); // 16/11/2026: sigilo do Financeiro
   vm.runInContext("var CONDUTA_SHEETS = undefined; var CNDQ_SHEETS = undefined;", ctx);
   const api = (sid, acao, dados) => ctx.Compras_api(sid, acao, dados || {});
   const com = (sid, acao, dados) => ctx.Comercial_api(sid, acao, dados || {});

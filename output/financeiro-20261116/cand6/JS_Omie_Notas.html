@@ -1,0 +1,187 @@
+<script>
+/*
+ * Painel financeiro > Importação de notas: "Lançar nota recebida no Omie" (16/11/2026, especificação do Financeiro, seção 3).
+ * NF-e de compra ou NFS-e (XML) -> leitura -> fornecedor no Omie (cadastrar, se faltar) -> categoria de despesa e conta ->
+ * prévia -> confirmar. Uma conta a pagar por parcela. Servidor: SGO_Omie_Notas.js (OmieNota_apiLer, OmieNota_apiPrevia,
+ * OmieNota_apiConfirmar, OmieNota_apiHistorico). O XML fica só na memória da tela e volta na confirmação (o servidor confere
+ * pelo SHA-256 da prévia). A trava fica no servidor.
+ */
+var OMIE_NOTA = { geracao: 0, xml: '', tipo: 'compra', leitura: null, token: '' };
+function OmieNota_esc_(v) { return typeof CadUI_esc_ === 'function' ? CadUI_esc_(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function OmieNota_moeda_(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+function OmieNota_dica_(k) { var t = typeof OMIE_DICAS !== 'undefined' ? OMIE_DICAS[k] : ''; return t ? '<span class="omie-dica">' + OmieNota_esc_(t) + '</span>' : ''; }
+function OmieNota_rpc_(nome, dados, ok, erro) {
+  var geracao = OMIE_NOTA.geracao, sessao = SGO_getSessionId(), pedido = typeof OMIE_TELA !== 'undefined' ? OMIE_TELA.pedido : null;
+  function atual() { return geracao === OMIE_NOTA.geracao && sessao === SGO_getSessionId() && (typeof OMIE_TELA === 'undefined' || pedido === OMIE_TELA.pedido) && document.getElementById('omieNotaSecao'); }
+  google.script.run.withSuccessHandler(function (r) { if (!atual()) return; if (!r || !r.ok) { (erro || OmieNota_aviso_)(r && r.mensagem || 'Não foi possível concluir.'); return; } ok(r); })
+    .withFailureHandler(function () { if (atual()) (erro || OmieNota_aviso_)('A comunicação foi interrompida. Se confirmou o lançamento, confira as contas a pagar no Omie antes de repetir.'); })[nome](sessao, dados || {});
+}
+function OmieNota_aviso_(m) { var e = document.getElementById('omieNotaAviso'); if (e) e.textContent = m; }
+/** Seção da aba "Importação de notas". */
+function OmieNota_montar_() {
+  var alvo = document.getElementById('omieNotaLanc'); if (!alvo) return;
+  OMIE_NOTA.geracao++; OMIE_NOTA.xml = ''; OMIE_NOTA.token = ''; OMIE_NOTA.leitura = null;
+  alvo.innerHTML = '<section class="cadx-card omie-nota omie-bloco" id="omieNotaSecao"><h3>Lançar nota recebida no Omie (conta a pagar)</h3>' +
+    '<p>Para pagar uma NF-e de compra ou a NFS-e de um serviço contratado pela empresa. O SGO+ lê o XML, confere se a nota é para a empresa e se já não está no Omie e lança uma conta a pagar por parcela, sempre com prévia antes. A nota não entra no módulo fiscal do Omie, só no financeiro.</p>' +
+    '<form id="omieNotaForm" onsubmit="event.preventDefault();OmieNota_ler_()"><div class="omie-nota-grade">' +
+    '<label class="cadx-campo">Tipo da nota<select class="cadx-input" name="tipoNota" id="omieNotaTipo"><option value="compra">NF-e de compra (modelo 55)</option><option value="nfse">NFS-e (serviço contratado)</option></select></label>' +
+    '<label class="cadx-campo">XML da nota<input class="cadx-input" type="file" name="arquivo" id="omieNotaArquivo" accept=".xml,text/xml,application/xml"></label></div>' +
+    '<div class="omie-acoes"><button type="submit" class="cadx-btn cadx-btn-primario">Conferir a nota</button></div></form>' +
+    '<p id="omieNotaAviso" role="status" aria-live="polite"></p><div id="omieNotaLeitura"></div><div id="omieNotaCadArea"></div><div id="omieNotaPrevia"></div>' +
+    '<details class="omie-incertos" ontoggle="if(this.open)OmieNota_historico_()"><summary>Notas lançadas pelo SGO+</summary><div id="omieNotaHistorico"><p class="cadx-sub">Abra para ver.</p></div></details></section>';
+}
+function OmieNota_ler_(manual) {
+  var arq = document.getElementById('omieNotaArquivo'), tipo = document.getElementById('omieNotaTipo').value, f = arq && arq.files && arq.files[0];
+  OMIE_NOTA.token = ''; document.getElementById('omieNotaPrevia').innerHTML = ''; document.getElementById('omieNotaPrevia').className = '';
+  if (!manual) {
+    if (!f) { OmieNota_aviso_('Escolha o arquivo XML da nota (o PDF não serve).'); return; }
+    if (f.size > 1000000) { OmieNota_aviso_('O arquivo passa de 1 MB. Confira se é o XML de uma nota só.'); return; }
+    OMIE_NOTA.geracao++; var g = OMIE_NOTA.geracao, rd = new FileReader();
+    OmieNota_aviso_('Lendo a nota…');
+    rd.onload = function () { if (g !== OMIE_NOTA.geracao) return; OMIE_NOTA.xml = String(rd.result || ''); OMIE_NOTA.tipo = tipo; OMIE_NOTA.manual = {}; OMIE_NOTA.motivoManual = ''; OmieNota_lerServidor_({}); };
+    rd.onerror = function () { OmieNota_aviso_('Não foi possível ler o arquivo. Escolha de novo.'); };
+    rd.readAsText(f); return;
+  }
+  OmieNota_lerServidor_(manual);
+}
+function OmieNota_lerServidor_(manual) {
+  OmieNota_aviso_('Conferindo a nota e o fornecedor no Omie…'); document.getElementById('omieNotaLeitura').innerHTML = '';
+  OmieNota_rpc_('OmieNota_apiLer', { xml: OMIE_NOTA.xml, tipo: OMIE_NOTA.tipo, manual: manual || {} }, function (r) { OmieNota_aviso_(''); OMIE_NOTA.leitura = r; OmieNota_desenhar_(r); }, function (m) { OmieNota_aviso_(m); });
+}
+function OmieNota_desenhar_(r) {
+  var l = r.leitura, f = r.fornecedor || {}, h = '', esc = OmieNota_esc_, alvo = document.getElementById('omieNotaLeitura');
+  h += '<h4>' + (l.tipo === 'compra' ? 'NF-e ' + esc(l.numero) + (l.serie ? ' série ' + esc(l.serie) : '') : 'NFS-e ' + esc(l.numero || '(número não lido)')) + '</h4>' +
+    '<p>Emitida em ' + esc(l.emissao || 'data não lida') + ' por <strong>' + esc(l.emitente.nome || 'prestador não lido') + '</strong>' + (l.emitente.cnpj ? ' · ' + esc(l.emitente.cnpj) : '') + '.' + (l.tipo === 'compra' ? ' ' + esc(l.itens) + ' item(ns): ' + esc((l.descricoes || []).join('; ')) + '.' : '') + '</p>';
+  if (r.bloqueios.length) {
+    alvo.innerHTML = h + '<div class="vg-faixa is-erro" role="alert"><strong>Esta nota não será lançada.</strong><ul>' + r.bloqueios.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></div>';
+    return;
+  }
+  h += '<div class="omie-nota-forn"><strong>Fornecedor no Omie:</strong> ' + (f.situacao === 'ok' ? esc(f.nome) + (f.temTag ? '' : ' <span class="cadx-sub">(cadastrado sem a tag Fornecedor; o lançamento funciona assim mesmo)</span>') : esc(f.texto || 'não conferido')) +
+    (f.situacao === 'nenhum' ? ' <button type="button" class="cadx-btn" onclick="OmieNota_cadastrarFornecedor_()">Cadastrar no Omie</button>' : '') + OmieNota_dica_('nota:fornecedor') + '</div>';
+  var podeSeguir = f.situacao === 'ok';
+  h += '<form id="omieNotaLancForm" onsubmit="event.preventDefault();OmieNota_previa_()">';
+  if (l.tipo === 'compra') {
+    if (l.semPagamento || !(l.total > 0)) h += '<p class="vg-faixa is-alerta">Esta nota não gera conta a pagar (' + (l.semPagamento ? 'sem pagamento: remessa, bonificação ou demonstração' : 'valor total zero') + '). Ao confirmar, ela fica registrada no SGO+ como "Registrada sem título".</p>';
+    else if (l.parcelas.length) {
+      var soma = l.parcelas.reduce(function (s, p) { return s + Number(p.valor || 0); }, 0), alvoTot = l.fatura && l.fatura.liquido != null ? l.fatura.liquido : l.total;
+      h += '<h5>Parcelas da nota</h5><div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th></tr></thead><tbody>' + l.parcelas.map(function (p) { return '<tr><td data-r="Parcela">' + esc(p.numero) + '</td><td data-r="Vencimento">' + esc(p.vencimento) + '</td><td data-r="Valor">' + OmieNota_moeda_(p.valor) + '</td></tr>'; }).join('') + '</tbody></table></div>' + OmieNota_dica_('nota:duplicatas') +
+        '<p>Total da nota: ' + OmieNota_moeda_(l.total) + (l.fatura ? ' · a pagar pela fatura: ' + OmieNota_moeda_(alvoTot) : '') + '</p>';
+      if (Math.abs(soma - alvoTot) > 0.01) h += '<label class="cadx-campo">Motivo da diferença<textarea class="cadx-input" name="motivoDiferenca" maxlength="300" required></textarea></label>';
+    } else h += '<p>A nota não traz parcelas. Total: ' + OmieNota_moeda_(l.total) + '.</p><label class="cadx-campo">Vencimento<input class="cadx-input" type="date" name="vencimento"' + (l.aVista ? '' : ' required') + '></label>';
+  } else {
+    var c = l.campos || {};
+    h += '<h5>O que foi lido da NFS-e' + (l.layout === 'DESCONHECIDO' ? ' (formato não reconhecido)' : ' (' + esc(l.layout === 'NACIONAL' ? 'padrão Nacional' : 'padrão ABRASF') + ')') + '</h5><div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Dado</th><th>Valor</th><th>Origem</th></tr></thead><tbody>' +
+      Object.keys(c).map(function (k) {
+        var x = c[k], dinheiro = ['servicos', 'ir', 'pis', 'cofins', 'inss', 'csll', 'iss', 'desconto'].indexOf(k) >= 0;
+        var campo = x.lido ? esc(dinheiro ? OmieNota_moeda_(x.valor) : x.valor) : '<label class="cadx-campo">' + esc(x.rotulo) + '<input class="cadx-input" name="manual_' + k + '"' + (k === 'emissao' ? ' type="date"' : dinheiro ? ' inputmode="decimal"' : '') + '></label>';
+        return '<tr><td data-r="Dado">' + esc(x.rotulo) + '</td><td data-r="Valor">' + campo + '</td><td data-r="Origem">' + (x.manual ? 'digitado na conferência' : x.lido ? 'lido do XML' : '<strong>não encontrado</strong>') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    if (l.retencoes) h += '<p><strong>Retenções:</strong> ' + OmieNota_moeda_(l.totalRetencoes) + ' (IR ' + OmieNota_moeda_(l.retencoes.ir) + ', PIS ' + OmieNota_moeda_(l.retencoes.pis) + ', COFINS ' + OmieNota_moeda_(l.retencoes.cofins) + ', INSS ' + OmieNota_moeda_(l.retencoes.inss) + ', CSLL ' + OmieNota_moeda_(l.retencoes.csll) + ', ISS ' + OmieNota_moeda_(l.retencoes.iss) + ')' +
+      (l.liquidoCalculado != null ? ' · <strong>valor a pagar (líquido calculado): <span class="omie-num">' + OmieNota_moeda_(l.liquidoCalculado) + '</span></strong>' : '') + (l.liquidoXml != null ? ' · líquido informado no XML: ' + OmieNota_moeda_(l.liquidoXml) : '') + '</p>' + OmieNota_dica_('nfse:retencoes');
+    if (l.diferenca) h += '<p class="vg-faixa is-alerta">O líquido calculado é diferente do líquido informado no XML. Confira na nota e digite o valor a pagar.</p><label class="cadx-campo">Valor líquido a pagar (R$)<input class="cadx-input" name="manual_liquido" inputmode="decimal"></label>';
+    var faltam = Object.keys(c).some(function (k) { return !c[k].lido; }) || l.diferenca;
+    if (faltam || (l.manuais && l.manuais.length)) h += '<label class="cadx-campo">Motivo da conferência manual<textarea class="cadx-input" name="motivoManual" maxlength="300"></textarea></label>' + (faltam ? '<button type="button" class="cadx-btn" onclick="OmieNota_aplicarManual_()">Conferir os dados digitados</button>' : '');
+    h += '<label class="cadx-campo">Vencimento<input class="cadx-input" type="date" name="vencimento" required></label>';
+  }
+  if (podeSeguir && !(l.tipo === 'compra' && (l.semPagamento || !(l.total > 0)))) {
+    h += '<div class="omie-nota-grade"><div><label class="cadx-campo">Categoria<select class="cadx-input" name="categoria" id="omieNotaCategoria" required><option value="">Carregando…</option></select></label><button type="button" class="cadx-btn" id="omieNotaMaisCat" onclick="OmieNota_apoio_(\'categorias\')">Carregar mais</button></div>' +
+      '<div><label class="cadx-campo">Conta corrente<select class="cadx-input" name="contaId" id="omieNotaConta" required><option value="">Carregando…</option></select></label></div></div>' +
+      '<label class="omie-check"><input type="checkbox" name="jaPaga"> Nota já paga</label>';
+  }
+  if (r.alertas.length) h += '<ul class="omie-nota-alertas">' + r.alertas.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul>';
+  if (r.parcial) h += '<p class="vg-faixa is-alerta">Esta nota foi lançada em parte (' + r.feitos + ' parcela(s) já no Omie). A prévia mostra o que falta; o que já entrou não é repetido.</p>';
+  h += podeSeguir ? '<button type="submit" class="cadx-btn cadx-btn-primario" id="omieNotaPrever">Conferir prévia</button>' : '<p class="cadx-sub">Resolva o fornecedor no Omie para seguir.</p>';
+  h += '</form>';
+  alvo.innerHTML = h;
+  OMIE_NOTA.apoios = {}; OMIE_NOTA.categoriaSugerida = r.categoriaSugerida || '';
+  if (document.getElementById('omieNotaCategoria')) { OmieNota_apoio_('categorias'); OmieNota_apoio_('contas'); }
+}
+function OmieNota_apoio_(tipo) {
+  var sel = document.getElementById(tipo === 'categorias' ? 'omieNotaCategoria' : 'omieNotaConta'); if (!sel) return;
+  var pagina = ((OMIE_NOTA.apoios || {})[tipo] || 0) + 1, mais = document.getElementById('omieNotaMaisCat');
+  if (tipo === 'categorias' && mais) mais.disabled = true;
+  OmieNota_rpc_('OmieOps_apiApoios', { tipo: tipo, pagina: pagina, natureza: 'pagar' }, function (r) {
+    OMIE_NOTA.apoios[tipo] = pagina;
+    if (pagina === 1) sel.innerHTML = '<option value="">Escolha…</option>';
+    r.itens.forEach(function (i) { sel.add(new Option(i.nome, i.id)); });
+    if (tipo === 'categorias' && OMIE_NOTA.categoriaSugerida && !sel.value) { sel.value = OMIE_NOTA.categoriaSugerida; if (sel.value) OmieNota_aviso_('Categoria sugerida: a mesma da última nota deste fornecedor. Confira.'); }
+    if (tipo === 'categorias' && mais) { mais.disabled = pagina >= r.paginas; mais.textContent = 'Carregar mais'; mais.style.display = mais.disabled ? 'none' : ''; } // 16/11/2026 (design): lista completa não mostra botão
+  }, function (m) { if (mais) mais.disabled = false; OmieNota_aviso_(m); });
+}
+function OmieNota_dadosForm_() {
+  var f = document.getElementById('omieNotaLancForm'), d = { manual: {} }; if (!f) return d;
+  Array.from(f.elements).forEach(function (e) {
+    if (!e.name) return;
+    if (e.name.indexOf('manual_') === 0) { if (String(e.value).trim()) d.manual[e.name.slice(7)] = e.value; }
+    else if (e.type === 'checkbox') d[e.name] = e.checked;
+    else d[e.name] = e.value;
+  });
+  return d;
+}
+function OmieNota_aplicarManual_() { var d = OmieNota_dadosForm_(); OMIE_NOTA.manual = d.manual; OMIE_NOTA.motivoManual = d.motivoManual; OmieNota_lerServidor_(d.manual); }
+function OmieNota_cadastrarFornecedor_() {
+  if (typeof OmieCad_daNota_ !== 'function') return;
+  OmieCad_daNota_(OMIE_NOTA.xml, OMIE_NOTA.tipo, function (r) { OmieNota_aviso_((r && r.mensagem) || 'Fornecedor cadastrado.'); OmieNota_lerServidor_(OMIE_NOTA.manual || {}); }, 'omieNotaCadArea');
+}
+function OmieNota_previa_() {
+  var f = document.getElementById('omieNotaLancForm'); if (!f || !f.reportValidity()) return;
+  var d = OmieNota_dadosForm_(); OMIE_NOTA.jaPaga = !!d.jaPaga; OMIE_NOTA.token = '';
+  var b = document.getElementById('omieNotaPrever'); if (b) b.disabled = true; OmieNota_aviso_('Conferindo a prévia…');
+  OmieNota_rpc_('OmieNota_apiPrevia', { xml: OMIE_NOTA.xml, tipo: OMIE_NOTA.tipo, categoria: d.categoria, contaId: d.contaId, vencimento: d.vencimento, manual: Object.assign({}, OMIE_NOTA.manual || {}, d.manual), motivoManual: d.motivoManual || OMIE_NOTA.motivoManual || '', motivoDiferenca: d.motivoDiferenca }, function (r) {
+    OmieNota_aviso_(''); OMIE_NOTA.token = r.token; Array.from(f.elements).forEach(function (e) { e.disabled = true; });
+    var esc = OmieNota_esc_;
+    // 16/11/2026 (design): prévia em caixa; vencimento e valor de cada parcela em destaque; o total a pagar no fim da tabela
+    var pv = document.getElementById('omieNotaPrevia'); pv.className = 'omie-previa-caixa';
+    var totalTit = r.titulos.reduce(function (a, t) { return a + (t.jaNoOmie ? 0 : Number(t.valor || 0)); }, 0);
+    pv.innerHTML = (typeof OmieUI_previa_ === 'function' ? OmieUI_previa_(r.resumo) : '<h4>Confira antes de confirmar</h4><dl>' + r.resumo.map(function (x) { return '<dt><strong>' + esc(x[0]) + '</strong></dt><dd>' + esc(x[1]) + '</dd>'; }).join('') + '</dl>') +
+      (r.titulos.length ? '<h5 class="omie-nota-sub">Contas a pagar que serão lançadas</h5><div class="omie-lista"><table class="cadx-tabela omie-nota-parcelas"><thead><tr><th>Parcela</th><th>Vencimento</th><th class="omie-n">Valor</th><th>Referência</th></tr></thead><tbody>' + r.titulos.map(function (t) { return '<tr' + (t.jaNoOmie ? ' class="omie-ja"' : '') + '><td data-r="Parcela">' + esc(t.parcela) + (t.jaNoOmie ? ' (já no Omie)' : '') + '</td><td data-r="Vencimento"><strong class="omie-num">' + esc(t.vencimento) + '</strong></td><td data-r="Valor" class="omie-n"><strong class="omie-num">' + OmieNota_moeda_(t.valor) + '</strong></td><td data-r="Referência" class="omie-ref">' + esc(t.referencia) + '</td></tr>'; }).join('') +
+        '</tbody><tfoot><tr><td colspan="4" class="omie-n">Total que será lançado agora: <strong class="omie-num">' + OmieNota_moeda_(totalTit) + '</strong></td></tr></tfoot></table></div>' : '') +
+      (r.alertas.length ? '<ul class="omie-nota-alertas">' + r.alertas.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul>' : '') +
+      (typeof OmieRegras_extrasPrevia_ === 'function' ? OmieRegras_extrasPrevia_(r) : '') +
+      '<p class="omie-previa-validade">Prévia válida por ' + esc(r.expiraEm) + '. Nada foi enviado ainda.</p><div class="omie-previa-acoes"><button type="button" class="cadx-btn cadx-btn-primario" id="omieNotaConfirmar" onclick="OmieNota_confirmar_()">' + (r.semTitulo ? 'Registrar sem título' : 'Confirmar no Omie') + '</button> <button type="button" class="cadx-btn" onclick="OmieNota_revisar_()">Revisar campos</button></div>';
+    try { pv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (_) {}
+  }, function (m) { if (b) b.disabled = false; OmieNota_aviso_(m); });
+}
+function OmieNota_revisar_() { OMIE_NOTA.token = ''; var f = document.getElementById('omieNotaLancForm'); if (f) Array.from(f.elements).forEach(function (e) { e.disabled = false; }); var pv = document.getElementById('omieNotaPrevia'); pv.innerHTML = ''; pv.className = ''; }
+function OmieNota_confirmar_() {
+  var b = document.getElementById('omieNotaConfirmar'), token = OMIE_NOTA.token; if (!b || b.disabled || !token) return; b.disabled = true; OMIE_NOTA.token = '';
+  OmieNota_aviso_('Enviando ao Omie, uma parcela por vez…');
+  OmieNota_rpc_('OmieNota_apiConfirmar', { token: token, xml: OMIE_NOTA.xml, valorConfirmado: typeof OmieRegras_valorDigitado_ === 'function' ? OmieRegras_valorDigitado_() : '' }, function (r) {
+    var esc = OmieNota_esc_;
+    var pvOk = document.getElementById('omieNotaPrevia'); pvOk.className = ''; pvOk.innerHTML = '<div class="vg-faixa is-ok" role="status"><strong>' + esc(r.mensagem) + '</strong></div>' +
+      (r.lancados && r.lancados.length ? '<ul>' + r.lancados.map(function (t) { return '<li>Parcela ' + esc(t.parcela) + ' · vence ' + esc(t.vencimento) + ' · ' + OmieNota_moeda_(t.valor) + (t.codigo && OMIE_NOTA.jaPaga ? ' <button type="button" class="cadx-btn" onclick="OmieNota_irBaixa_(' + Number(t.codigo) + ')">Registrar o pagamento</button>' : '') + '</li>'; }).join('') + '</ul>' : '') +
+      (OMIE_NOTA.jaPaga && r.lancados && r.lancados.length ? '<p class="cadx-sub">Nota já paga: registre o pagamento de cada parcela (abre a baixa em Lançamentos e baixas, com prévia própria).</p>' : '');
+    OmieNota_aviso_('');
+  }, function (m) { b.disabled = false; OMIE_NOTA.token = token; OmieNota_aviso_(m); });
+}
+function OmieNota_irBaixa_(id) {
+  if (typeof OMIE_OPS_UI === 'undefined' || typeof OmieTela_abrir_ !== 'function') return;
+  OMIE_OPS_UI.tipo = 'pagar'; OMIE_OPS_UI.semListaUmaVez = true; OmieTela_abrir_('lancamentos'); OmieOps_form_('baixar', id);
+}
+function OmieNota_historico_() {
+  var alvo = document.getElementById('omieNotaHistorico'); if (!alvo) return; alvo.textContent = 'Carregando…';
+  OmieNota_rpc_('OmieNota_apiHistorico', {}, function (r) {
+    var esc = OmieNota_esc_;
+    alvo.innerHTML = !r.itens.length ? '<p class="cadx-sub">Nenhuma nota lançada pelo SGO+ ainda.</p>' : '<div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Nota</th><th>Fornecedor</th><th>Valor</th><th>Situação</th><th>Lançada</th></tr></thead><tbody>' + r.itens.map(function (i) {
+      return '<tr><td data-r="Nota">' + esc(i.tipo + ' ' + i.numero) + '</td><td data-r="Fornecedor">' + esc(i.emitente) + '</td><td data-r="Valor">' + OmieNota_moeda_(i.valor) + '</td><td data-r="Situação">' + esc(i.situacao) + (i.manuais ? '<br><span class="cadx-sub">digitado: ' + esc(i.manuais) + '</span>' : '') + '</td><td data-r="Lançada">' + esc([i.lancadaEm, i.por].filter(Boolean).join(' · ')) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }, function (m) { alvo.textContent = m; });
+}
+</script>
+<style>
+  #omieTela .omie-nota { margin-top:18px; }
+  #omieTela .omie-nota p, #omieTela .omie-nota li { text-align:justify; }
+  #omieTela .omie-nota-grade { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap:12px; margin:8px 0; }
+  #omieTela .omie-nota-forn { margin:8px 0 12px; overflow-wrap:anywhere; }
+  #omieTela .omie-nota-alertas { margin:10px 0 10px 18px; padding:0; }
+  #omieTela .omie-nota td { overflow-wrap:anywhere; }
+  #omieTela .omie-nota .cadx-campo input[type="file"] { max-width:100%; }
+  /* 16/11/2026 (design) */
+  #omieTela .omie-nota-sub { margin:12px 0 6px; font-size:14px; }
+  #omieTela .omie-nota-parcelas .omie-n { text-align:right; white-space:nowrap; }
+  #omieTela .omie-nota-parcelas .omie-ref { font-size:12px; color:var(--bc-text-3, #5F645F); }
+  #omieTela .omie-nota-parcelas tfoot td { font-weight:600; border-top:2px solid var(--bc-line-2, #C9CDD2); }
+  #omieTela .omie-nota-parcelas tr.omie-ja td { opacity:.7; }
+  #omieTela .omie-nota-forn { padding:10px 12px; border:1px solid var(--bc-line, #E2E0D8); border-radius:6px; background:var(--bc-surface-2, #FAF9F6); }
+  @media(max-width:700px) { #omieTela .omie-nota-parcelas .omie-n { text-align:left; } #omieTela .omie-nota-parcelas tfoot tr { border-width:2px; } }
+</style>

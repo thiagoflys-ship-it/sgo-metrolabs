@@ -1,0 +1,457 @@
+{
+  "cultura": {
+    "arquivo": "guia_cultura.html",
+    "fonte_txt": "Sistema_Cultura_Operacional_Metrolabs_v1 (1).txt",
+    "paginas_fonte_integral": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "topicos": [
+      {
+        "titulo": "1–3. Finalidade, objetivos e princípios",
+        "paginas": [
+          3,
+          4
+        ],
+        "ancora": "assunto-1"
+      },
+      {
+        "titulo": "4. Bonificação coletiva: valor, condição e apuração",
+        "paginas": [
+          4,
+          5
+        ],
+        "ancora": "assunto-2"
+      },
+      {
+        "titulo": "5. Infrações leves, médias e graves",
+        "paginas": [
+          5,
+          6
+        ],
+        "ancora": "assunto-3"
+      },
+      {
+        "titulo": "6. Pontuação individual: cada linha",
+        "paginas": [
+          6,
+          7
+        ],
+        "ancora": "assunto-4"
+      },
+      {
+        "titulo": "7. Ferramentas e instrumentos",
+        "paginas": [
+          7
+        ],
+        "ancora": "assunto-5"
+      },
+      {
+        "titulo": "8. Veículos: uso, multas, danos e checks",
+        "paginas": [
+          7,
+          8
+        ],
+        "ancora": "assunto-6"
+      },
+      {
+        "titulo": "9. Auditoria semanal, abertura e fechamento",
+        "paginas": [
+          8,
+          9
+        ],
+        "ancora": "assunto-7"
+      },
+      {
+        "titulo": "10. Responsáveis por setor e kits",
+        "paginas": [
+          9
+        ],
+        "ancora": "assunto-8"
+      },
+      {
+        "titulo": "11–12. Medidas disciplinares e responsabilidade patrimonial",
+        "paginas": [
+          9,
+          10
+        ],
+        "ancora": "assunto-9"
+      },
+      {
+        "titulo": "13–14. Conduta e ética",
+        "paginas": [
+          10
+        ],
+        "ancora": "assunto-10"
+      },
+      {
+        "titulo": "15–16. Regimento, treinamento e termo de ciência",
+        "paginas": [
+          10,
+          11
+        ],
+        "ancora": "assunto-11"
+      }
+    ],
+    "observacao": "Todas as páginas têm transcrição integral; tópicos didáticos cobrem as seções e linhas de regras, com referências. Capa, identificação e sumário também preservados na transcrição.",
+    "consulta_original": "Aba Manuais e documentos, Pilar original: Sistema de Cultura Operacional, Responsabilidade Patrimonial e Disciplina Interna",
+    "temas_normativos_cobertos": [
+      "1 Apresentação",
+      "2 Objetivos",
+      "3 Princípios",
+      "4 Bonificação",
+      "5 Infrações",
+      "6 Pontuação (todas as linhas)",
+      "7 Ferramentas",
+      "8 Veículos",
+      "9 Auditoria e checklists",
+      "10 Setores",
+      "11 Disciplina e responsabilidade",
+      "12 Termo patrimonial",
+      "13 Conduta",
+      "14 Ética",
+      "15 Regimento",
+      "16 Implementação",
+      "Anexo I Ciência"
+    ]
+  },
+  "campo": {
+    "arquivo": "guia_campo.html",
+    "fonte_txt": "Manual_Operacao_Tecnica_Viagem_Campo_Metrolabs_v2 (1).txt",
+    "paginas_fonte_integral": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "topicos": [
+      {
+        "titulo": "1–3. Finalidade, princípios e definições",
+        "paginas": [
+          1,
+          3,
+          4,
+          5
+        ],
+        "ancora": "assunto-1"
+      },
+      {
+        "titulo": "4. Viagem e incentivo de eficiência de R$ 300",
+        "paginas": [
+          6,
+          7
+        ],
+        "ancora": "assunto-2"
+      },
+      {
+        "titulo": "5.1–5.4. OS, chegada, estado inicial e diagnóstico",
+        "paginas": [
+          8
+        ],
+        "ancora": "assunto-3"
+      },
+      {
+        "titulo": "5.5–5.7. Intervenção, teste e encerramento",
+        "paginas": [
+          8
+        ],
+        "ancora": "assunto-4"
+      },
+      {
+        "titulo": "6. Retornos A, B e C e incidentes",
+        "paginas": [
+          9
+        ],
+        "ancora": "assunto-5"
+      },
+      {
+        "titulo": "7. Checklist: cada grupo e cada item",
+        "paginas": [
+          10,
+          11
+        ],
+        "ancora": "assunto-6"
+      },
+      {
+        "titulo": "8. OS inteligente: preenchimento de cada campo",
+        "paginas": [
+          12
+        ],
+        "ancora": "assunto-7"
+      },
+      {
+        "titulo": "9. Responsabilidades e acionamento da supervisão",
+        "paginas": [
+          13
+        ],
+        "ancora": "assunto-8"
+      },
+      {
+        "titulo": "10.1. Pontuação técnica: cada linha",
+        "paginas": [
+          14
+        ],
+        "ancora": "assunto-9"
+      },
+      {
+        "titulo": "10.2. Quem pode autorizar o quê",
+        "paginas": [
+          14
+        ],
+        "ancora": "assunto-10"
+      },
+      {
+        "titulo": "10.3–11. Treinamento, ciência e disposição final",
+        "paginas": [
+          15
+        ],
+        "ancora": "assunto-11"
+      }
+    ],
+    "observacao": "Todas as páginas têm transcrição integral; tópicos didáticos cobrem as seções e linhas de regras, com referências. Capa, identificação e sumário também preservados na transcrição.",
+    "consulta_original": "Aba Manuais e documentos, Pilar original: Manual de Operação Técnica e Viagem em Campo"
+  },
+  "institucional": {
+    "arquivo": "guia_institucional.html",
+    "fonte_txt": "Livro_Institucional_Metrolabs_SGO_v1 (1).txt",
+    "paginas_fonte_integral": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19
+    ],
+    "topicos": [
+      {
+        "titulo": "Identificação, vigência e controle de versão",
+        "paginas": [
+          1,
+          2,
+          3
+        ],
+        "ancora": "assunto-1"
+      },
+      {
+        "titulo": "1–3. Identidade, missão, visão, valores e escopo",
+        "paginas": [
+          4,
+          5
+        ],
+        "ancora": "assunto-2"
+      },
+      {
+        "titulo": "4–5. Governança e responsabilidades de cada setor",
+        "paginas": [
+          6,
+          7,
+          8
+        ],
+        "ancora": "assunto-3"
+      },
+      {
+        "titulo": "6. RACI: como consultar cada linha",
+        "paginas": [
+          8
+        ],
+        "ancora": "assunto-4"
+      },
+      {
+        "titulo": "7. Regra anti-bagunça",
+        "paginas": [
+          9
+        ],
+        "ancora": "assunto-5"
+      },
+      {
+        "titulo": "5.1 Registro da demanda",
+        "paginas": [
+          10
+        ],
+        "ancora": "assunto-6"
+      },
+      {
+        "titulo": "5.2 Análise preliminar",
+        "paginas": [
+          10
+        ],
+        "ancora": "assunto-7"
+      },
+      {
+        "titulo": "5.3 Proposta",
+        "paginas": [
+          10
+        ],
+        "ancora": "assunto-8"
+      },
+      {
+        "titulo": "5.4 Aceite",
+        "paginas": [
+          10
+        ],
+        "ancora": "assunto-9"
+      },
+      {
+        "titulo": "5.5 Planejamento",
+        "paginas": [
+          10,
+          11
+        ],
+        "ancora": "assunto-10"
+      },
+      {
+        "titulo": "5.6 Execução",
+        "paginas": [
+          11
+        ],
+        "ancora": "assunto-11"
+      },
+      {
+        "titulo": "5.7 Relatório/certificado",
+        "paginas": [
+          11
+        ],
+        "ancora": "assunto-12"
+      },
+      {
+        "titulo": "5.8 Revisão e validação",
+        "paginas": [
+          11
+        ],
+        "ancora": "assunto-13"
+      },
+      {
+        "titulo": "5.9 Entrega formal",
+        "paginas": [
+          11
+        ],
+        "ancora": "assunto-14"
+      },
+      {
+        "titulo": "5.10 Faturamento",
+        "paginas": [
+          11
+        ],
+        "ancora": "assunto-15"
+      },
+      {
+        "titulo": "5.11 Arquivo",
+        "paginas": [
+          11
+        ],
+        "ancora": "assunto-16"
+      },
+      {
+        "titulo": "6.1 POP Engenharia",
+        "paginas": [
+          12
+        ],
+        "ancora": "assunto-17"
+      },
+      {
+        "titulo": "6.2 POP Metrologia",
+        "paginas": [
+          12,
+          13
+        ],
+        "ancora": "assunto-18"
+      },
+      {
+        "titulo": "6.3–6.6 POPs Comercial, Financeiro, Logística e Licitações",
+        "paginas": [
+          13,
+          14
+        ],
+        "ancora": "assunto-19"
+      },
+      {
+        "titulo": "7. Qualidade: documentos, registros, auditoria e melhoria",
+        "paginas": [
+          14,
+          15
+        ],
+        "ancora": "assunto-20"
+      },
+      {
+        "titulo": "8.1–8.7 Políticas: cada assunto",
+        "paginas": [
+          15,
+          16
+        ],
+        "ancora": "assunto-21"
+      },
+      {
+        "titulo": "9. Cargos, níveis e desenvolvimento",
+        "paginas": [
+          16,
+          17
+        ],
+        "ancora": "assunto-22"
+      },
+      {
+        "titulo": "10.1 OS: cada campo do modelo",
+        "paginas": [
+          17
+        ],
+        "ancora": "assunto-23"
+      },
+      {
+        "titulo": "10.2 Checklist técnico: cada item",
+        "paginas": [
+          18
+        ],
+        "ancora": "assunto-24"
+      },
+      {
+        "titulo": "10.3 Não conformidade: cada campo",
+        "paginas": [
+          18
+        ],
+        "ancora": "assunto-25"
+      },
+      {
+        "titulo": "10.4–10.5 Relatório e controle documental; considerações finais",
+        "paginas": [
+          19
+        ],
+        "ancora": "assunto-26"
+      }
+    ],
+    "observacao": "Todas as páginas têm transcrição integral; tópicos didáticos cobrem as seções e linhas de regras, com referências. Capa, identificação e sumário também preservados na transcrição.",
+    "consulta_original": "Aba Manuais e documentos, Pilar original: Livro Institucional e Sistema de Gestão Operacional (SGO)",
+    "matriz_raci_linhas_explicadas": 11
+  }
+}

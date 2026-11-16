@@ -1,0 +1,16 @@
+Painel financeiro — Resultado do mês (regime de caixa) — publicado em 15/11/2026 00:35 BRT
+
+Imagem: metrolabs/sgo:financeiro-resultado-20261115
+        sha256:0b482e9abbf42f68dbe8419107197c37811233900fe0062769b4806bb69b1a54
+Base:   metrolabs/sgo:financeiro-fila-20261115 (sha256:a63fc9fa…), 3 arquivos conferidos; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-resultado-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+Aba nova "Resultado do mês": recebido, pago e resultado pelo dia do pagamento (ListarMovimentos CPCR, dDtPagtoDe/Ate), por
+categoria do plano de contas do Omie com o grupo (ListarCategorias, categoria_superior); transferências entre contas fora do
+resultado, à parte; cancelados e pagamentos de outro mês fora. Na fila das consultas de movimentos. Visão de gestão; o resultado
+contábil continua com o contador. Limite: o Omie dá o pago acumulado do título (pagamento parcial em meses diferentes conta no
+mês do último pagamento).
+Arquivos: SGO_Omie_Gestao.js, JS_Omie_Gestao.html, SGO_Ajuda_Financeiro.js. Patch: patch-resultado.cjs.
+Testes: financeiro-omie-20261114 16/16 (novo: resultado; varredura com 13 abas).
+Ensaio REAL somente leitura (ensaio/resultado.json): outubro 596 títulos em 19 s (7 categorias de receita, 62 de despesa, todas
+com nome e grupo); novembro até hoje 410 títulos em 7 s. No ar: saudável, GET 200, 0 erros.

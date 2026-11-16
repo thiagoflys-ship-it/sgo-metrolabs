@@ -457,3 +457,32 @@ test('ajuda, tela e leitor único: manual atualizado e as telas ligadas às aç�
   for (const t of ['excluirOportunidade', 'salvarMinhaAssinatura', 'removerMinhaAssinatura', 'usarCadastrada: true', 'cancelarLink', 'manterId', 'daFicha: true', '!p.duplicado']) assert(tela.includes(t), t);
   for (const f of ['SGO_Comercial_Painel.js', 'SGO_Comercial_Gestora.js', 'SGO_Comercial_Quadro.js', 'SGO_Comercial_Especialista.js', 'SGO_Comercial_Orcamentista.js']) assert.doesNotMatch(fs.readFileSync(path.join(PASTA, f), 'utf8'), /Com_ler_\(COM_ABAS\.OPORTUNIDADES\)/, f);
 });
+
+// 12/11/2026 (caso Ricardo, PROP-2026-0064): dois QUA-001 para autoclaves diferentes eram recusados como "repetidos, sem equipamento".
+test('a: repetidos consideram os equipamentos identificados no item; a tela nunca apaga o equipamento já escolhido', () => {
+  const a = amb();
+  a.tabelas.CAD_EQUIPAMENTOS.push({ ID: 'eq2', CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', TIPO: 'Autoclave', TAG: 'AC-02', SETOR: 'CME', STATUS: 'ATIVO' });
+  const prod = ok(a.api('s_gaspar', 'salvarProduto', { codigo: 'QT-AC2', tipo: 'SERVICO', nome: 'Qualificação de autoclave teste 2', unidade: 'equip.', preco: '4500', custo: '900' })).produto;
+  const x = rascunho(a);
+  const item = (eqs) => ({ produtoId: prod.id, descricao: 'Qualificação de autoclave teste 2', quantidade: 1, unidade: 'equip.', precoUnitario: '4.500,00', equipamentoId: '', equipamentos: eqs });
+  const salvar = (itens) => a.api('s_vera', 'salvarProposta', { deslocamento: SEM_VIAGEM, id: x.pid, contatoId: x.contato.id, itens, condicoes: { pagamento: 'Boleto' } });
+  ok(salvar([item([{ equipamentoId: 'eq1' }]), item([{ equipamentoId: 'eq2' }])]));
+  const gravados = JSON.parse(a.tabelas.COM_PROPOSTAS.find((p) => p.ID === x.pid).ITENS_JSON);
+  assert.deepEqual(gravados.map((i) => i.equipamentos.map((e) => e.equipamentoId)), [['eq1'], ['eq2']]);
+  nok(salvar([item([{ equipamentoId: 'eq1' }]), item([{ equipamentoId: 'eq1' }])]), /o item 2 repete o item 1 .*para os mesmos equipamentos identificados/);
+  ok(salvar([item([{ tipo: 'Autoclave', serie: 'S-1' }]), item([{ tipo: 'Autoclave', serie: 'S-2' }])]));
+  nok(salvar([item([]), item([])]), /o item 2 repete o item 1 .*sem equipamento/);
+  // tela: com a lista da unidade ainda vazia (ou sem o equipamento), o seletor mantém o escolhido
+  const t = telaComercial(a, 's_vera');
+  t.ctx.CM.equipProp = [];
+  const op = t.ctx.Comercial_opcoesEquip_('eqX', 'AUTOCLAVE 2 · TAG 0079');
+  assert.deepEqual(JSON.parse(JSON.stringify(op)), [{ v: 'eqX', t: 'AUTOCLAVE 2 · TAG 0079' }]);
+  t.ctx.CM.equipProp = [{ id: 'eq1', texto: 'Autoclave · TAG AC-01' }];
+  assert.equal(t.ctx.Comercial_opcoesEquip_('eq1', 'x').length, 1, 'não repete o que já está na lista');
+  assert.equal(t.ctx.Comercial_opcoesEquip_('', '').length, 1);
+  // junção automática ao escolher o produto: equipamentos identificados diferentes não somam
+  vm.runInContext('Comercial_lerItens_ = function () {}; Comercial_desenharItens_ = function () {};', t.ctx);
+  t.ctx.CM.itens = [{ produtoId: 'pX', descricao: 'Serviço X', quantidade: 1, equipamentoId: '', equipamentos: [{ equipamentoId: 'eq1' }], faixa: '' }, { produtoId: '', descricao: 'ser', quantidade: 1, equipamentoId: '', equipamentos: [{ equipamentoId: 'eq2' }], faixa: '' }];
+  t.ctx.Comercial_aplicarProduto_(1, { id: 'pX', nome: 'Serviço X', codigo: 'X', tipo: 'SERVICO', preco: 10, unidade: 'un.' });
+  assert.equal(t.ctx.CM.itens.length, 2, 'outro equipamento: ficam os dois itens');
+});

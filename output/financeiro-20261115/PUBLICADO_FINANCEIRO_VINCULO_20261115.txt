@@ -1,0 +1,18 @@
+Painel financeiro — vínculo pedido aprovado -> conta a receber — publicado em 15/11/2026 00:04 BRT
+
+Imagem: metrolabs/sgo:financeiro-vinculo-20261115
+        sha256:deb3ff21771502012307c129585bdd1f63a32bdd28e678bfda2f58a998b7bea8
+Base:   metrolabs/sgo:financeiro-nomes-20261115 (sha256:1e1a198b…), 4 arquivos conferidos; 489 arquivos.
+Backup: /opt/metrolabs/backup/financeiro-vinculo-20261115. Reversão: compose.antes.yml desse backup + docker compose up -d app.
+
+- Ao confirmar no Omie uma conta a receber com referência SGO-<proposta> (ou SGO-<proposta>-1, -2… para parcelas), o SGO+ grava
+  o vínculo na aba FIN_OMIE_PEDIDOS (proposta, referência, código do título no Omie, documento, valor, vencimento, quem, quando),
+  criada pelo padrão do sistema (CertCal_garantirTabela_). Falha nesse registro não afeta a confirmação.
+- Pedidos aprovados mostra "Lançado no Omie pelo SGO+: N título(s), R$ X, último em … por …" e o filtro "Só os sem conta a
+  receber pelo SGO+". Títulos lançados direto no Omie não aparecem (dito na ajuda).
+- Só entra em uso quando a gravação no Omie for ligada (hoje desligada): nada foi gravado.
+Arquivos: SGO_Omie_Pedidos.js, SGO_Omie_Operacoes.js, JS_Omie_Pedidos.html, SGO_Ajuda_Financeiro.js. Patch: patch-pedidos-vinculo.cjs
+(+ criação da aba pelo padrão do sistema).
+Testes: financeiro-omie-20261114 12/12 (novo: confirmação com referência de pedido registra o vínculo; lançamento avulso não),
+omie-* 13/20/9/12, ganhos-omie 4/4, ajuda 1/1. Produção tem insertSheet na emulação (provisões/conciliação antigas OK).
+No ar: saudável, GET 200, 0 erros, filtro no HTML.

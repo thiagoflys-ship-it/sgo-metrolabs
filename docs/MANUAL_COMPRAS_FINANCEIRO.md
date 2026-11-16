@@ -105,3 +105,55 @@ Em Compras > Regras de compras, quadro "Compra informada depois de feita": limit
 - Assistência técnica: a ficha do chamado mostra "Compras ligadas ao chamado", com o custo para quem vê valor.
 - Comercial: a ficha do pedido aprovado mostra "Compras deste pedido", com o custo para quem vê valor.
 - Minhas atividades: a compra informada que "ainda vai chegar" segue o recebimento normal; a peça disponível avisa quem comprou e vira a atividade de entrega do comprador.
+
+## O que preencher em cada campo (16/11/2026)
+
+Embaixo de cada campo da Conferência do Financeiro, do registro do pagamento, de Cartões da empresa, da Conciliação das faturas e do A pagar aparece a explicação abaixo. Onde o mesmo campo serve a ações diferentes, o texto muda com a janela aberta (entre parênteses).
+
+Ajuste de tela de 16/11/2026: o formulário do cartão (Novo cartão e Editar), que abre na lateral, também mostra a explicação de cada campo; antes ela não aparecia ali. Em todas essas telas, tocar no nome do campo leva ao campo, e o campo de arquivo tem área de toque maior no celular. Na Conciliação das faturas, a lista Cartão já aparece com o cartão da fatura que está na tela.
+
+- **Mês:** o mês das compras a conferir, pela data do pagamento (ou da emissão do pedido, se ainda não foi pago).
+- **Final do cartão:** os 4 últimos números de um cartão da empresa. Use para conferir as compras de uma fatura. Em branco, mostra todas as formas de pagamento.
+- **Situação:** "Aguardando conferência" é o que falta você conferir; "Divergentes" voltaram ao comprador para corrigir; "Sem pagamento registrado" são pedidos ainda não pagos.
+- **Baixar a planilha:** gera um arquivo com a lista filtrada, para uso interno do Financeiro. O arquivo sai com o seu nome, a data e um código, e o download fica registrado.
+- (Conferida) **Observação (opcional):** algo que vale registrar na conferência (ex.: nota fiscal chegou depois, conferida pelo e-mail do fornecedor). Fica no histórico da compra.
+- (Divergente) **O que não bate:** escreva o que está errado e o que o comprador deve fazer (ex.: valor pago R$ 50 maior que o pedido; anexar a nota). O comprador recebe este texto. Mínimo de 10 letras.
+- (Ciente da compra sem pedido) **Observação (opcional):** o que a gestão combinou com quem comprou fora do sistema. A compra sai da Caixa de decisões.
+- (Fechar com ressalva) **Motivo:** o que ficou aberto e por quê (ex.: 2 lançamentos aguardando comprovante do responsável). O que ficou aberto continua na lista. Mínimo de 20 letras.
+- (Reabrir a fatura) **Motivo:** por que a fatura fechada precisa ser reaberta. Só a Diretoria reabre. Mínimo de 15 letras.
+- **Valor pago:** o valor exatamente como está no comprovante, com frete e descontos. Se for diferente do pedido, o Financeiro vê a diferença.
+- **Data do pagamento:** o dia em que o dinheiro saiu (data do comprovante), não o dia de hoje. Boleto a vencer: registre só quando pagar.
+- **Forma de pagamento:** como foi pago. Cartão de crédito gera as parcelas que serão conferidas na fatura; boleto e faturado entram no "A pagar"; reembolso vai para quem pagou do próprio bolso.
+- **4 últimos números do cartão:** só os 4 finais, nunca o número inteiro. É por eles que a compra é encontrada na fatura.
+- **Parcelas:** em quantas vezes a compra foi feita no cartão (1 para à vista). Cada parcela aparece numa fatura.
+- **Vencimento do boleto:** a data impressa no boleto. Entra no "A pagar" do Financeiro nesta data.
+- **Condição do faturamento:** o prazo combinado com o fornecedor (ex.: 28 dias da nota fiscal). O Financeiro usa para saber quando pagar.
+- **Quem pagou:** a pessoa que pagou do próprio bolso e vai receber o reembolso. Ela não pode marcar o próprio reembolso como pago.
+- **Comprovante:** recibo, cupom, extrato ou boleto pago, em PDF ou foto legível. É por ele que o Financeiro confere.
+- **O que foi corrigido:** responda ao que o Financeiro apontou (ex.: anexei a nota; valor corrigido para R$ 320,00). Mínimo de 10 letras.
+- **4 últimos números:** os 4 finais do cartão impresso. Nunca o número inteiro. Não pode repetir o final de outro cartão ativo.
+- **Apelido:** um nome fácil de reconhecer (ex.: Cartão da Logística). Aparece nas listas e nos relatórios.
+- **Tipo:** crédito (gera fatura mensal e parcelas) ou débito (sai da conta na hora, sem fatura).
+- **Responsável:** quem guarda e usa o cartão. Recebe a cobrança quando há lançamento na fatura sem compra informada.
+- **Dia do fechamento:** o dia do mês em que a fatura fecha. Compras depois desse dia vão para a fatura seguinte.
+- **Dia do vencimento:** o dia do mês em que a fatura vence. Define o "mês da fatura".
+- **Limite (opcional):** o limite de crédito do cartão, em reais. Só informativo.
+- **Observações:** o que ajuda a identificar ou usar o cartão (ex.: só para combustível).
+- **Cartão ativo:** desmarque quando o cartão for cancelado ou substituído. O histórico continua guardado.
+- **O que mudou e por quê:** obrigatório ao editar (ex.: troca de responsável, cartão novo com outro final). Fica no histórico do cartão.
+- **Cartão:** o cartão da fatura que você vai conferir.
+- **Mês da fatura (vencimento):** o mês em que a fatura vence, não o mês das compras.
+- **Arquivo:** o extrato da fatura exportado pelo banco (OFX, CSV ou Excel .xlsx), deste cartão e deste mês. Não altere as colunas. Primeiro aparece a prévia; nada é gravado antes de "Importar e conciliar".
+- **Parcela:** a compra informada que corresponde a este lançamento da fatura. Confira valor, data e quem comprou.
+- (Casar o lançamento com uma compra) **Motivo:** por que este lançamento e esta compra são a mesma coisa (ex.: valor com frete; data do lançamento diferente da compra). Mínimo de 15 letras.
+- (Justificar o lançamento) **Motivo:** o que é este lançamento, já que não é uma compra a informar (ex.: anuidade do cartão; tarifa; assinatura do software X). A cobrança ao responsável é encerrada.
+- (Desfazer a conciliação) **Motivo:** por que a ligação estava errada. O lançamento volta a "Não informada" e a compra a "A conciliar".
+- (Reabrir o lançamento) **Motivo:** por que a justificativa não vale mais. O responsável do cartão volta a ser cobrado.
+- (Passar para a próxima fatura) **Motivo:** por que a compra vai aparecer na fatura seguinte (ex.: compra feita depois do fechamento).
+- (Marcar como divergente) **Motivo:** o que está errado com esta compra informada (ex.: não aparece em nenhuma fatura; valor diferente do cobrado).
+- (Voltar a conciliar) **Motivo:** o que foi resolvido e por que a compra volta a ser conferida.
+- **Mostrar:** "A pagar" são os vencimentos de boleto, faturado e reembolso ainda não pagos; "Pagos" mostra os dos últimos 60 dias.
+- **Data do pagamento:** o dia em que o dinheiro saiu da conta (data do comprovante), hoje ou antes.
+- **Comprovante:** o comprovante da transferência, do PIX ou do boleto pago. Fica junto da compra. Quem recebe o reembolso é avisado.
+
+**Sigilo na tela.** Nestas telas aparece uma marca d'água discreta com o nome, o login, a data e a hora de quem está vendo, também na impressão (com o rodapé "Impresso por"). A planilha da Conferência sai com a linha "Gerado por ... · código" no começo e o código repetido no fim, e o download fica no registro de acessos do Financeiro (código, linhas e resumo do conteúdo, nunca os valores).

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "manual_colaborador",
+    "titulo": "Manual do colaborador",
+    "file": "manual_colaborador.html",
+    "descricao": "Aprenda a consultar, registrar e acompanhar sua participação.",
+    "tipo": "GUIA",
+    "mime": "text/html;charset=utf-8"
+  },
+  {
+    "id": "manual_fiscal",
+    "titulo": "Manual do fiscal e da gestão",
+    "file": "manual_fiscal.html",
+    "descricao": "Registro com evidências, decisões, defesa e conferência do fechamento.",
+    "tipo": "GUIA",
+    "mime": "text/html;charset=utf-8"
+  },
+  {
+    "id": "guia_cultura",
+    "titulo": "Cultura operacional: guia explicado",
+    "file": "guia_cultura.html",
+    "descricao": "Explicação por assunto com exemplos, cenários e perguntas.",
+    "tipo": "GUIA",
+    "mime": "text/html;charset=utf-8"
+  },
+  {
+    "id": "guia_institucional",
+    "titulo": "Livro institucional: guia explicado",
+    "file": "guia_institucional.html",
+    "descricao": "Organização, processos e responsabilidades em linguagem simples.",
+    "tipo": "GUIA",
+    "mime": "text/html;charset=utf-8"
+  },
+  {
+    "id": "guia_campo",
+    "titulo": "Viagem e campo: guia explicado",
+    "file": "guia_campo.html",
+    "descricao": "Preparação, execução, registros e retorno das atividades.",
+    "tipo": "GUIA",
+    "mime": "text/html;charset=utf-8"
+  },
+  {
+    "id": "original_cultura",
+    "titulo": "Pilar original: Cultura operacional",
+    "file": "Sistema_Cultura_Operacional_Metrolabs_v1 (1).pdf",
+    "descricao": "PDF original enviado pela gestão. Leia junto ao guia correspondente.",
+    "tipo": "ORIGINAL",
+    "mime": "application/pdf",
+    "sha256": "996cc19db34e819ff7868939593f086b9bdf1c4947093cb2c3835fb1e8e6a829",
+    "bytes": 285533
+  },
+  {
+    "id": "original_institucional",
+    "titulo": "Pilar original: Livro institucional SGO",
+    "file": "Livro_Institucional_Metrolabs_SGO_v1 (1).pdf",
+    "descricao": "PDF original enviado pela gestão. Leia junto ao guia correspondente.",
+    "tipo": "ORIGINAL",
+    "mime": "application/pdf",
+    "sha256": "87cca4a53e7e5fe48cf062b774cff5d230e5f4947042197563f7f7799613211f",
+    "bytes": 358947
+  },
+  {
+    "id": "original_campo",
+    "titulo": "Pilar original: Operação técnica, viagem e campo",
+    "file": "Manual_Operacao_Tecnica_Viagem_Campo_Metrolabs_v2 (1).pdf",
+    "descricao": "PDF original enviado pela gestão. Leia junto ao guia correspondente.",
+    "tipo": "ORIGINAL",
+    "mime": "application/pdf",
+    "sha256": "4ae4f422b8fd3520ab2e0f1952faef7a577091d64ad26e399bb59079cf3a0d98",
+    "bytes": 273288
+  }
+]

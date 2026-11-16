@@ -64,6 +64,10 @@ function acoes() {
   return l;
 }
 
+// 16/11/2026 (sigilo do Financeiro): a única diferença aceita é o texto da recusa do Financeiro, que passou a explicar o sigilo.
+const MSG_FIN_ANTES = 'a conferência das compras é do Financeiro (perfil ou área Financeiro), da Diretoria e do Administrador';
+const MSG_FIN_AGORA = 'esta parte é do Financeiro, que é sigiloso: só a Diretoria e o Financeiro autorizado a acessam. Para enviar uma informação ao Financeiro, registre o pagamento e o comprovante na ficha da compra';
+const normFin = (x) => JSON.stringify(x).split(MSG_FIN_ANTES).join(MSG_FIN_AGORA);
 test('1) equivalência: 23 contas reais × ações do lote 5, sem exceções = legado de antes (resultado e mensagem)', () => {
   assert.ok(fs.existsSync(path.join(pastaAntes, 'SGO_Compras_Config.js')), 'cópia de antes: ' + pastaAntes);
   assert.ok(!/Cmp_aplicarCaixas_/.test(lerAntes('SGO_Compras_Config.js')), 'a cópia de antes precisa ser anterior ao lote 5');
@@ -77,7 +81,7 @@ test('1) equivalência: 23 contas reais × ações do lote 5, sem exceções = l
       const ra = j(fn(antes, u)), rd = j(fn(depois, u));
       comparacoes++;
       if (ra && (ra.lancou || ra.ok === false || ra.pode === false || (ra.m && ra.m.length))) recusadas++;
-      if (JSON.stringify(ra) !== JSON.stringify(rd)) divergencias.push(u + ' · ' + rotulo + '\n   antes:  ' + JSON.stringify(ra).slice(0, 300) + '\n   depois: ' + JSON.stringify(rd).slice(0, 300));
+      if (normFin(ra) !== JSON.stringify(rd)) divergencias.push(u + ' · ' + rotulo + '\n   antes:  ' + JSON.stringify(ra).slice(0, 300) + '\n   depois: ' + JSON.stringify(rd).slice(0, 300));
     }
   }
   fs.writeFileSync(path.join(pastaPoderes, 'lote5-equivalencia.txt'),

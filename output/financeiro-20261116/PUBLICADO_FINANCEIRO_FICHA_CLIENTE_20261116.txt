@@ -1,0 +1,27 @@
+SGO+ — PAINEL FINANCEIRO > FICHA DO CLIENTE — PUBLICADO EM 16/11/2026 ~11:29 BRT
+
+Imagem: metrolabs/sgo:financeiro-ficha-cliente-20261116 (sha256:1d1d2e2ac1a20e93fb95c9032c9ad8b940379077fece262522c11f6420192c4c)
+Base:   metrolabs/sgo:financeiro-sigilo-20261116 (camada de 6 arquivos; 492 no legado)
+Fonte:  output/financeiro-20261116/cand2 (= produção agora). Backup: /opt/metrolabs/backup/financeiro-ficha-cliente-20261116.
+Reverter: compose.antes.yml desse backup -> /opt/metrolabs/sgo/docker-compose.yml e "docker compose up -d app".
+Log: publicacao-ficha.log (base e imagem conferidas, saudável, GET 200, 0 erros).
+
+O QUE FAZ (só leitura no Omie, sob o sigilo)
+- Busca do cliente no cadastro do SGO+ (nome/CNPJ; sem Omie). Ficha pelo CNPJ: vencido (saldo em aberto, desde quando,
+  dias), em aberto total, recebido em 12 meses, atraso médio ao pagar, títulos em aberto e recebimentos, propostas
+  aprovadas no SGO+, planilha CSV (download registrado).
+- Omie: ListarClientes (cnpj_cpf) -> ListarMovimentos (cTpLancamento CR, nCodCliente) por cadastro ATIVO.
+  Cadastro INATIVO: o Omie recusa ListarMovimentos com esse código ("não cadastrado") — achado no ensaio real; a ficha usa
+  ListarContasReceber pelo CNPJ (valor do documento) e avisa na tela.
+- Título devolvido de outro cliente fica fora; se só vierem de outros, recusa (não mistura clientes).
+
+TESTES: financeiro-omie-20261114 24/24 (3 novos da ficha: cálculos, inativo/sem cadastro/sem filtro/sigilo, página 390 px).
+43 testes de página completa (todos que montam o Index.html): nenhum piorou em relação à base (2 falhas antigas iguais:
+assistente-duvidas, comercial-c4-entrada-mercado). Captura: capturas/390-ficha-cliente.png.
+
+ENSAIO REAL (somente leitura, contagens, ensaio/ZZ_Ficha*.js) e VERIFICAÇÃO APÓS PUBLICAR (código publicado):
+- Filtro por cliente no Omie: 0 títulos de outro cliente.
+- 6 clientes com vencidos: quantidade e total da ficha = lista de vencidos por cliente (6/6, inclusive o inativo).
+- Clientes que pagaram em novembro: recebimentos aparecem (35 e 21 em 12 meses).
+- Sigilo após a publicação: só admin, charles e wanessa; 0 exceções FIN_OMIE_*. Página servida contém a ficha e o sigilo.
+- Um ensaio intermediário recebeu "só responde à mesma consulta uma vez por minuto" (regra do Omie); repetido depois de 1 min.

@@ -105,7 +105,9 @@ const LIGADOS_LOTE1 = ['CONTAS_VER', 'CONTAS_CRIAR', 'CONTAS_ALTERAR_OUTROS', 'C
   'COMPRAS_PEDIR', 'COMPRAS_VER_FILA', 'COMPRAS_VER_VALORES', 'COMPRAS_COMPRAR', 'COMPRAS_APROVAR_ATE_LIMITE', 'COMPRAS_APROVAR_DA_AREA',
   'COMPRAS_APROVAR_SEM_LIMITE', 'COMPRAS_GESTAO', 'COMPRAS_REGRAS_EDITAR', 'COMPRAS_CIENCIA_GESTAO',
   // lote 6 (11/11/2026): Frota, localização e bloqueio
-  'FROTA_LOCALIZAR', 'FROTA_RASTREADOR_CONFIGURAR', 'FROTA_BLOQUEAR_PARTIDA', 'FROTA_LIBERAR_PARTIDA', 'FROTA_BLOQUEIO_ROUBO', 'FROTA_ODOMETRO_CORRIGIR'];
+  'FROTA_LOCALIZAR', 'FROTA_RASTREADOR_CONFIGURAR', 'FROTA_BLOQUEAR_PARTIDA', 'FROTA_LIBERAR_PARTIDA', 'FROTA_BLOQUEIO_ROUBO', 'FROTA_ODOMETRO_CORRIGIR',
+  // lote 3 (15/11/2026): Financeiro em Compras
+  'FIN_CONFERIR_COMPRAS', 'FIN_FATURAS_CONCILIAR', 'FIN_A_PAGAR', 'FIN_FATURA_REABRIR', 'FIN_CARTOES_VER', 'FIN_CARTOES_EDITAR'];
 test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os ligados pelo lote 1; nada fora do catalogo.json', () => {
   const a = ambiente();
   const cat = a.ctx.SGO_poderesCatalogo_();
@@ -295,7 +297,8 @@ test('SGO_podeExigir_: recusa com o nome da caixa, o porquê e o que fazer', () 
 test('copiar de outra pessoa: fica igual, com exceção só onde difere do padrão; a caixa de gerir acessos nunca é copiada', () => {
   const a = ambiente(), ricardo = a.idDe('ricardo'), priscilla = a.idDe('priscilla'), charles = a.idDe('charles');
   ok(a.api('admin', 'salvar', { usuarioId: charles, motivo: 'Diretor gere os acessos', mudancas: [{ codigo: 'ACESSOS_GERIR', valor: 'SIM' }] }));
-  ok(a.api('admin', 'salvar', { usuarioId: ricardo, motivo: 'Ricardo confere o banco', mudancas: [{ codigo: 'FIN_CONCILIAR_BANCO', valor: 'SIM' }] }));
+  // 16/11/2026: caixa do Financeiro não serve mais de exemplo (sigilo: fora da lista não recebe); usa a avaliação dos gestores
+  ok(a.api('admin', 'salvar', { usuarioId: ricardo, motivo: 'Ricardo avalia os gestores', mudancas: [{ codigo: 'GESTAO_AVALIACAO_GESTORES', valor: 'SIM' }] }));
   const antes = a.tabelas.SYS_PODERES_LOG.length;
   const r = ok(a.api('admin', 'copiar', { usuarioId: priscilla, deUsuarioId: ricardo, motivo: 'Priscilla cobre as férias do Ricardo' }));
   const efR = a.ctx.SGO_poderesEfetivos_(ricardo), efP = a.ctx.SGO_poderesEfetivos_(priscilla);
@@ -312,6 +315,13 @@ test('copiar de outra pessoa: fica igual, com exceção só onde difere do padr�
   // copiar de novo: nada muda
   assert.equal(ok(a.api('admin', 'copiar', { usuarioId: priscilla, deUsuarioId: ricardo, motivo: 'Conferir de novo' })).alteradas, 0);
   recusa(a.api('admin', 'copiar', { usuarioId: priscilla, deUsuarioId: priscilla, motivo: 'Copiar dela mesma' }), /diferente/);
+  // 16/11/2026 (sigilo do Financeiro): copiar da Wanessa não leva nenhuma caixa do Financeiro para quem está fora da lista
+  ok(a.api('admin', 'copiar', { usuarioId: priscilla, deUsuarioId: a.idDe('wanessa'), motivo: 'Priscilla cobre a Wanessa' }));
+  const mapa = a.ctx.SGO_poderesCatalogo_().mapa;
+  for (const cod of ['FIN_OMIE_CONSULTAR', 'FIN_OMIE_LANCAR', 'FIN_A_PAGAR', 'FIN_CONFERIR_COMPRAS', 'CAJU_VER', 'CAJU_CARGA', 'VIAGEM_DEPOSITAR', 'VIAGEM_CONFERIR'].filter((c) => mapa[c])) {
+    assert.equal(a.ctx.SGO_pode_('s_priscilla', cod), false, cod + ' não pode passar na cópia');
+  }
+  assert.ok(!a.tabelas.SYS_PODERES_EXCECOES.some((l) => l.USUARIO_ID === priscilla && /^(FIN_|CAJU_|VIAGEM_(DEPOSITAR|CONFERIR)$)/.test(l.PODER) && l.VALOR === 'SIM'), 'nenhuma exceção SIM do Financeiro gravada');
 });
 
 test('modelos: substituir deixa exatamente o modelo; somar só libera; Gestor de área usa a área; nenhum modelo mexe em gerir acessos', () => {

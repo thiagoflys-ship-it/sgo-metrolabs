@@ -1,6 +1,6 @@
 # Manual do módulo Representação
 
-Metrolabs · SGO+ · versão de 03/11/2026 (catálogo de modelos pela representada e aviso de pedido novo na tela, em Avisos e no WhatsApp) · equipe da Metrolabs
+Metrolabs · SGO+ · versão de 11/11/2026 (régua de prazos do chamado da representada: estudar e agendar, relatório, peça, avaliação e pedido de mais prazo) · equipe da Metrolabs
 
 ## 1. Para que serve
 
@@ -17,7 +17,7 @@ O módulo Representação é a área do SGO+ em que a empresa representada (Bras
 ## 3. Primeira configuração
 
 1. Representação > Representadas > "Nova representada": nome, CNPJ, contrato, vigência, contato e prazos.
-2. Prazos (padrão do estudo, configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis.
+2. Prazos (padrão do estudo, configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), prazo de atendimento do chamado (estudar o caso e agendar) em 1710 minutos úteis (3 dias úteis), relatório do atendimento em 2 dias úteis, avaliação depois da chegada da peça em 2 dias úteis (régua de prazos, seção 6.3), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis.
 3. Opções: consulta de CNPJ na base pública da Receita ao cadastrar cliente (ligada no padrão) e cancelamento pela representada antes da visita, com motivo (ligado no padrão).
 4. Catálogo de modelos: a própria representada cadastra os modelos dela (seção 10.1). A Metrolabs também pode incluir em Representação > Catálogo de modelos (código, nome, tipo de equipamento, família, garantia em meses e, se houver, o padrão do número de série).
 5. Assistência técnica > Regras da assistência > Representação: marque quem responde pela conta da representada. Sem ninguém marcado, vale quem faz a triagem.
@@ -142,6 +142,39 @@ O tempo com complemento pedido não conta. Os avisos seguem a Matriz de avisos (
 | Teto | No máximo 10 WhatsApp de pedidos por pessoa por dia. Passou disso, o aviso vai por e-mail e fica no sistema; a linha mostra "Teto do dia: só e-mail". |
 | E-mail | Sai junto com o WhatsApp. |
 | Onde conferir | Administração > Matriz de avisos > Avisos da gestão: cada aviso, a pessoa, os canais e o motivo. |
+
+### 6.3 Régua de prazos do chamado da representada (11/11/2026)
+
+Decisão do dono (11/11/2026): o chamado da representada não tem um prazo único. Ele anda por etapas, cada uma com quem responde e até quando. Os prazos ficam na tela da representada (Representação > Representadas) e valem em dias úteis do expediente da Metrolabs. O tempo com o cliente final (aguardando orçamento ou o cliente) não conta nas etapas da Metrolabs.
+
+| Etapa | Quem responde | Começa | Termina (cumprida) | Prazo padrão |
+|---|---|---|---|---|
+| 1. Estudar o caso e agendar o atendimento | Metrolabs | Abertura do chamado (aceite do pedido) | Chamado vai para "Agendado" (ou o estudo conclui que precisa de peça, ou o chamado é resolvido) | 3 dias úteis (prazo de atendimento do chamado) |
+| 2. Relatório do atendimento | Metrolabs | Cada atendimento realizado (o técnico saiu do local: execução concluída, falta de peça, voltar outro dia) | Relatório do atendimento na versão da representada gerado pela Metrolabs | 2 dias úteis |
+| 3. Previsão de chegada da peça | Representada | Chamado vai para "Aguardando peça" | A representada informa a data prevista no portal (ou a Metrolabs registra em nome dela) | Sem prazo da Metrolabs: pendência da representada, prazo da Metrolabs pausado |
+| 3. Chegada da peça | Representada | Previsão informada | Chegada registrada pela Metrolabs (ou conferida pelo Compras, ou "Liberar para agendar") | A data prevista informada pela representada |
+| 4. Avaliação depois da chegada da peça | Metrolabs | Chegada da peça (ou peça dispensada, quando o chamado volta à triagem: "Reavaliação") | Novo atendimento realizado, chamado concluído ou "Registrar a avaliação (próximo passo)" | 2 dias úteis |
+| 5. Pedido de mais prazo | Metrolabs pede, representada responde | Qualquer etapa da Metrolabs em aberto, com motivo e nova data | Aceito: vale a nova data. Recusado (com motivo): segue o prazo vigente | Repetível, um pedido por vez em cada etapa |
+
+**Onde aparece.** Na ficha do chamado (Assistência técnica > chamado > parte "Representação" > "Régua de prazos") e na ficha da representada (Representação > Chamados): a etapa de agora, com quem está, o prazo vigente e o que falta, e a lista das etapas com início, prazo vigente, conclusão e situação, mais os pedidos de mais prazo. Nos cartões do Kanban e no Gantt dos dois lados ("Régua: etapa · até ..."), no relatório A4 do atendimento (seção "Régua de prazos", versões da representada e interna; o cliente final não lê) e na lista de chamados da representada.
+
+**Ações da Metrolabs** (gestão da área Técnica e quem responde pela representação): "Pedir mais prazo" (etapa, nova data, hora opcional, motivo); "Registrar a chegada da peça" (data e hora; o chamado que espera a peça volta para "Planejado"); "Registrar a avaliação (próximo passo)"; "Registrar a previsão informada por outro canal" (quem informou e por onde).
+
+**Ações da representada** (administrador e atendentes): "Informar a previsão" da peça (para mudar a data depois, com o motivo); "Aceitar o novo prazo" ou "Recusar" com o motivo. Leitura e Financeiro de garantia só consultam.
+
+**Prazo do chamado na Assistência.** O selo de prazo, os contadores e a central de pendências da Assistência seguem a etapa da Metrolabs que vale agora; com a pendência na representada, o prazo fica "pausado". No fim, o chamado fica "cumprido" se todas as etapas da Metrolabs fecharam no prazo vigente (com as prorrogações aceitas); senão, "fora do prazo". Os chamados que não são de representada não mudam. Chamado comum ligado depois à representada mantém o prazo com que nasceu.
+
+| Aviso | Quem recebe | Quando |
+|---|---|---|
+| RP09 | Representada (administrador; sem ele, os atendentes) | Chamado entrou em "Aguardando peça": informar a previsão; lembrete depois de 1 dia útil sem previsão |
+| RP10 | Representada | Pedido de mais prazo; lembrete depois de 1 dia útil sem resposta |
+| RP11 | Responsável pela representação, quem pediu o prazo e o técnico do chamado | A representada informou a previsão ou respondeu o pedido de mais prazo |
+| RP12 | Responsável pela representação; vencida, também a gestão da área Técnica | Etapa da Metrolabs a 75% do prazo ou vencida (uma vez por etapa); representada sem previsão da peça há 1 dia útil |
+| RP06 | Representada | Relatório do atendimento enviado, peça recebida, avaliação registrada, previsão registrada em nome dela |
+
+A central de pendências lista também o chamado com a pendência na representada há 1 dia útil ou mais ("Com a representada").
+
+**Chamados que já estavam abertos.** Passam para a régua sem ficar falsamente vencidos: as etapas são lidas do histórico do chamado. A etapa 1 conta até o agendamento registrado no histórico (o chamado já agendado ou em atendimento dentro dos 3 dias úteis aparece como cumprido; o registro antigo sem as mudanças de situação no histórico, já agendado, conta como cumprido sem a hora). As etapas seguintes começam quando o atendimento for realizado ou a peça for pedida.
 
 ## 7. Conversas
 

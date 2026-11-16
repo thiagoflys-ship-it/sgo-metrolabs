@@ -174,9 +174,19 @@ O técnico registra pelo aplicativo do celular (funciona sem internet) ou em Ass
 1. Cheguei: registra a hora e, se o aparelho permitir, a localização. Localização só nos toques Cheguei e Concluí,
    nunca o tempo todo. Chegada longe do endereço da unidade vira observação para a gestão, não bloqueio.
 2. Checklist do tipo de serviço (itens com * são obrigatórios), fotos de cada pergunta de foto e fotos gerais.
-3. Relato: condição encontrada, causa, serviço realizado, teste funcional, recomendações e o número de série
-   conferido (ou leitura do QR). Série diferente do cadastro é aceita, avisada à gestão e vira pendência até alguém
-   conferir; o cadastro não muda sozinho.
+3. Relato: condição encontrada, causa ou diagnóstico, serviço realizado, medições (no SGO+ Campo), teste funcional,
+   situação do equipamento ao final, recomendações e o número de série conferido (ou leitura do QR). Série diferente do
+   cadastro é aceita, avisada à gestão e vira pendência até alguém conferir; o cadastro não muda sozinho.
+3a. Resultado do atendimento (13/11/2026): todo serviço técnico com visita fecha com o **resultado do teste funcional**
+   (aprovado, reprovado ou não realizado) e a **situação do equipamento ao final** (liberado para uso, liberado com
+   restrição ou não liberado). Teste reprovado ou não realizado pede o motivo (pelo menos 5 palavras); não liberado ou
+   com restrição pede o que falta ou a restrição (pelo menos 4 palavras); "liberado para uso" só com o teste aprovado.
+   Os textos têm um mínimo de palavras: condição encontrada 4, causa ou diagnóstico 3 (só na manutenção corretiva),
+   serviço realizado 5. Cada falta diz o quê e como completar. Equipamento não liberado ou com restrição: a gestão da
+   área Técnica recebe o aviso para combinar o próximo passo e o e-mail de atendimento concluído ao cliente diz isso.
+   A regra vale para as O.S. com a chegada a partir do instante da publicação (gravado sozinho na primeira rotina depois
+   dela, chave RESULTADO_FINAL_DESDE); as anteriores fecham como antes. Base: ABNT NBR 15943 (registro do serviço, do teste
+   e da liberação do equipamento para uso) e RDC 509/2021 (rastreabilidade das intervenções).
 4. Peças aplicadas. Peça em falta abre o pedido em Compras e a O.S. fica aguardando peça. Quando Compras recebe e
    confere a peça, o chamado volta sozinho a "Planejado" com "peça disponível em ..." e entra na Caixa de decisões
    como "retorno a agendar"; o técnico e a gestão são avisados e o cliente recebe o e-mail "peça chegou, retorno será
@@ -195,7 +205,7 @@ O técnico registra pelo aplicativo do celular (funciona sem internet) ou em Ass
 6. Concluí: registra a conclusão.
 
 A O.S. só fecha com a documentação completa do tipo de serviço: chegada, relato, condição encontrada, teste
-funcional, conferência do equipamento, checklist obrigatório, fotos mínimas, assinatura do cliente (ou a exceção) e
+funcional (com o resultado), situação do equipamento ao final, conferência do equipamento, checklist obrigatório, fotos mínimas, assinatura do cliente (ou a exceção) e
 assinatura do técnico (ou a justificativa da gestão). Faltando
 algo, fica "Documentação pendente": o técnico vê o que falta e recebe a cobrança; passadas 24 horas, a gestão também.
 Quando o que falta chega, a O.S. fecha sozinha.
@@ -305,10 +315,40 @@ lado do nome do equipamento, e campo de cadastro vazio ou que não informa nada 
 
 Relatório de atendimento técnico em A4: identificação, chamado, atendimento (com a hora do aparelho quando difere da
 hora do servidor), serviço, checklist, peças, fotos, as duas assinaturas (cliente e técnico responsável, com o nome e o
-documento só quando informado; sem a do técnico, "assinatura não registrada") e linha do tempo. Antes do encerramento sai como
+documento só quando informado; sem a do técnico, "assinatura não registrada") e rastreabilidade do atendimento. Antes do encerramento sai como
 rascunho e fica numa pasta privada. Encerrada, a versão é salva na pasta "4. Ordens de Serviço" do equipamento (a
 mesma do QR), registrada no Arquivo de documentos (também quando o encerramento vem pela rotina, sem sessão) e aparece
 na ficha do equipamento e no portal do cliente. Nenhuma versão é sobrescrita.
+
+### O que mudou no relatório em 13/11/2026 (relatório de excelência)
+
+- **Resultado do atendimento no topo**, numa caixa verde (liberado para uso), amarela (liberado com restrição, com a
+  restrição escrita) ou vermelha (não liberado, com o que falta), sempre com o resultado do teste funcional. A ficha do
+  cabeçalho ganha a linha "Equipamento ao final". O.S. antiga sem esse registro mostra só o que o checklist respondeu
+  ("Equipamento liberado para uso?", com a nota "conforme a resposta do checklist") ou nada; a seção Serviço diz "não
+  registrada de forma estruturada nesta O.S.". O relatório nunca afirma o que não foi registrado.
+- **Serviço na ordem do atendimento**: condição encontrada, causa ou diagnóstico, serviço realizado, **medições
+  realizadas** (tabela com grandeza, ponto ou condição da medição, valor e unidade), teste funcional com o resultado,
+  situação do equipamento ao final, recomendações e observações do técnico. Quebra de linha do técnico vira parágrafo.
+- **Checklist limpo**: sem as linhas de assinatura (as assinaturas estão na seção própria), rótulos em caixa normal e
+  sem dois-pontos sobrando, pergunta de foto com a referência às fotos numeradas ("2 fotos (Fotos 14 e 15)") e resposta
+  longa em texto corrido abaixo da tabela, no lugar de uma célula estreita.
+- **Fotos**: numeradas em ordem de quando foram tiradas, até 24 no PDF (antes 12), com a legenda do técnico ou a pergunta
+  do checklist e a hora. Acima de 24, a nota diz quais ficaram arquivadas com a O.S. e que o cliente pode pedir.
+- **Atendimento**: O.S. aberta em campo mostra "Aberta em campo pelo técnico, sem agendamento prévio" no lugar de
+  "Agendado para" (antes a hora da abertura parecia a chegada). "Equipamento conferido por" e "Observação da
+  localização" só aparecem quando preenchidos. A reincidência sai no bloco do chamado.
+- **Rastreabilidade do atendimento** (no lugar da "Linha do tempo"): um marco por fato, em ordem (abertura do chamado,
+  agendamento ou abertura em campo, saída, chegada e início do serviço, fotos agrupadas numa linha, última atualização do
+  checklist e do relato, peças, assinaturas, execução concluída e O.S. encerrada com a situação do equipamento). Sem
+  nome de arquivo, sem código interno, sem linhas repetidas e sem a coluna "Por": o responsável vem uma vez no alto e o
+  nome de outra pessoa só aparece quando foi ela que registrou. Nada é apagado: a trilha completa (cada foto, resposta e
+  alteração, com a hora do aparelho e a do servidor) continua no SGO+, em "Eventos" da O.S., e é apresentada quando
+  solicitada. O termo de entrega, retirada ou envio usa a mesma rastreabilidade.
+- **Peças**: a unidade aparece padronizada no documento ("un.", "UN" e "unid" viram "un"); o que foi gravado não muda.
+- **Marca de conferência**: nas O.S. com o resultado, o resultado, as medições e os textos do serviço entram na conta da
+  marca; nas O.S. antigas a conta é a mesma de antes.
+- **"Abrir para corrigir"** também corrige o resultado do teste, a situação do equipamento ao final e a restrição.
 
 O PDF é gerado **uma vez só**, no encerramento. "Abrir o PDF" numa O.S. encerrada reabre o mesmo documento; nenhuma
 versão nova nasce sem motivo. Correção depois do encerramento é da gestão: na ficha da O.S., bloco "Documento e envio",
@@ -336,6 +376,16 @@ O cliente, em "Meus chamados", vê e baixa o PDF da O.S. encerrada.
 
 1. A triagem escolhe "Precisa de orçamento"; o Comercial recebe a atividade.
 2. Em Chamados > chamado > Orçamento: "Preencher valores" (peças e serviços) e "Emitir o A4".
+   Outro CNPJ paga o serviço (o equipamento é de um cliente e o faturamento é de outro): em "Preencher valores",
+   no campo "Faturar para", busque e escolha o cliente que paga. O A4 mostra "Faturar para" com o CNPJ dele e o
+   "Proprietário do equipamento"; o e-mail, o link de aceite e o comprovante saem no nome de quem paga, e os contatos
+   dele vêm sugeridos no envio. O equipamento, o chamado e o histórico continuam no dono: não é preciso transferir o
+   equipamento em Cadastros > Vínculos. O cliente que paga também vê e responde o orçamento no portal. Sem escolher,
+   quem paga é o próprio cliente do chamado. Depois de emitido, para trocar quem paga use "Nova revisão".
+   Desde 13/11/2026 o A4 do orçamento traz as mesmas condições comerciais, condições gerais, responsabilidades e
+   Termos e condições da contratação da Proposta comercial (Comercial > Metodologia > Modelo da proposta), na versão
+   em vigor na emissão; o texto do campo "Condições" sai como "Observações". Orçamento emitido antes disso fica como
+   estava: para sair com os termos, use "Nova revisão" e emita de novo.
 3. "Enviar com link de aceite": escolha os contatos do cliente (ou digite outro e-mail), confira o texto e toque em
    "Enviar". O e-mail leva o PDF em anexo e o link "Ver e responder o orçamento". O link vale 30 dias (Regras da
    assistência > "Link de aceite do orçamento vale (dias)", de 1 a 90) e é um por envio: enviar de novo cria outro e o
@@ -465,6 +515,23 @@ saiu junto. "Restaurar" pede o motivo e devolve o chamado, a O.S. e o orçamento
 tinham. A atividade cancelada em Minhas atividades não volta sozinha: se o atendimento vale, reagende pela ficha.
 
 ## Problemas comuns
+
+Atualização de 12/11/2026:
+
+- Faixa no rodapé "Há uma versão nova do SGO+. Salve o que está fazendo e toque em Atualizar.": a página foi aberta antes
+  de uma publicação e ainda está com as telas antigas (exemplo real: o campo "Faturar para" não aparecia). Salve e toque
+  em **Atualizar**. O SGO+ nunca recarrega sozinho; **Depois** esconde o aviso por 30 minutos.
+- "O chamado acabou de ser alterado" ou "o orçamento acabou de mudar": outra pessoa, outra aba ou um segundo toque já fez a
+  mesma ação (agendar, concluir a triagem, liberar para agendar, abrir a revisão). A segunda é recusada para não criar O.S.,
+  pedido de compra ou revisão em dobro. Atualize e confira a ficha.
+- "Não foi possível falar com o servidor": a resposta não chegou, mas o pedido pode ter sido registrado. Atualize e confira
+  antes de repetir.
+- Triagem recusada (motivo da prioridade vazio, tipo de serviço que não existe mais) não grava nada: nem o início da
+  triagem nem o histórico.
+- No editor do orçamento, o código da peça e a unidade (que vêm da triagem ou da revisão) são mantidos ao salvar; item de
+  cortesia já salvo aparece com valor 0.
+- Resposta do cliente pelo link que falhou no meio: o link continua ativo e o cliente pode responder de novo; se aparecer
+  "já foi respondido", a resposta ficou registrada.
 
 - "Reservado para a triagem de ... até ...": o chamado ainda está no tempo de quem faz a triagem. Depois do horário,
   se ninguém assumir, ele vai para a fila livre. Se é urgente, fale com quem faz a triagem ou com a gestão.

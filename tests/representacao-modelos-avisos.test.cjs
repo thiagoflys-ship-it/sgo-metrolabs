@@ -14,8 +14,9 @@ const path = require('node:path');
 const { ambiente, ok, FOTO } = require('./_assistencia_ambiente.cjs');
 
 const LEGADO = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
+// 11/11/2026: o servidor carrega todos os arquivos do legado; a régua de prazos da representada (SGO_Representacao_Regua.js) entra como em produção
 const EXTRAS = ['SGO_CadastroQualidade.js', 'SGO_Clientes.js', 'SGO_Avisos.js', 'SGO_Avisos_Gestao.js', 'SGO_Representacao_Config.js', 'SGO_Representacao.js', 'SGO_Representacao_Avisos.js',
-  'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js'];
+  'SGO_Representacao_Alertas.js', 'SGO_Representacao_Modelos.js', 'SGO_Representacao_Painel.js', 'SGO_Gantt_Layout.js', 'SGO_Representacao_Regua.js'];
 const CNPJ_B = '04.252.011/0001-10';
 const foto = (nome) => ({ nome: nome || 'foto.jpg', tipo: 'image/jpeg', base64: FOTO });
 const SEG = (hhmm) => '2026-10-19T' + hhmm + ':00-03:00'; // segunda-feira, dia útil

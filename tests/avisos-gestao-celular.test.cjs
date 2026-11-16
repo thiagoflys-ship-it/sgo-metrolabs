@@ -308,9 +308,10 @@ test('Caixa de decisões: decisão nova (GS01), prazo vencido (GS02, na hora), e
   amb.tabelas.GES_DECISOES[0].ESCALADO_EM = '2026-10-21T10:05'; amb.tabelas.GES_DECISOES[0].ESCALADO_PARA = 'u_dir';
   amb.mudar('2026-10-21T10:15:00-03:00'); aprovado(amb);
   c.SGO_avisosGestaoRodada_(new c.Date());
+  // 11/11/2026 (decisão do dono: a Diretoria é informada, não cobrada): com o resumo diário da Diretoria ligado (padrão), a
+  // escalada não vira GS03 item a item; vai no resumo diário (GS07, tests/diretoria-informada.test.cjs). Antes: GS03 à Dora.
   const gs3 = filaG(amb, { EVENTO: 'GS03' });
-  assert.deepEqual(gs3.map((l) => l.USUARIO_ID), ['u_dir']);
-  assert.match(gs3[0].TEXTO, /com GIL GESTOR TESTE/);
+  assert.deepEqual(gs3.map((l) => l.USUARIO_ID), []);
   // decidido: sai da Caixa e o aviso fica resolvido
   amb.tabelas.GES_DECISOES[0].SITUACAO = 'RESOLVIDA';
   amb.mudar('2026-10-21T10:30:00-03:00');

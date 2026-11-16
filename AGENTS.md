@@ -1,5 +1,54 @@
 # Regras persistentes de trabalho
 
+## Localizar a base RH vigente
+
+- As entradas RH antigas abaixo são um histórico cronológico. Expressões como
+  “base atual” nessas entradas valem para a data da própria publicação, não
+  substituem uma publicação posterior. Não republicar versões antigas.
+- Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
+  Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
+- Última publicação RH registrada nesta revisão: R46, imagem
+  `sha256:309f9ae8325ead944685ed5d8296355b69c0c65f0de170d8bea56597180a6fb8`,
+  tag `metrolabs/rh:identificacao-arquivos-equipe-20261112-r46`.
+  Evidência: `output/rh360-20261112-r46/PUBLICADO_RH360_R46_20261112.txt`.
+  Preserva todas as entregas anteriores; 734 pins de fontes/metadados.
+- A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
+  O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
+  diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
+- Preenchimento real agregado, sem exportar valores: 18 ativos, 18 setores e
+  2 datas de admissão vazios em 12/11/2026, 01:09 BRT. Referência e roteiro:
+  `output/rh360-jornada-20261111/PREENCHIMENTO_REAL_AGREGADO_20261112.json` e
+  `output/rh360-jornada-20261111/PENDENCIAS_PREENCHIMENTO_EQUIPE_20261112.txt`.
+  Não preencher lacunas com dados inventados. Aceite operacional real adiado.
+- Este resumo é do RH. As instruções e registros do SGO/Comercial abaixo
+  pertencem a outra frente e não autorizam alterá-la durante a jornada RH.
+
+## Retenção de cópias locais de versões encerradas — 12/11/2026
+
+Compactação R13–R41 concluída: 29 cópias, 49.873 arquivos, cerca de 1,19 GB
+liberados descontando ZIPs. Recibo: `output/rh360-jornada-20261111/COMPACTACAO_CANDIDATOS_20261112.json`.
+R42/R43/R44 permanecem expandidas. O preparador agora trabalha em
+`candidato-em-preparacao` e só expõe `candidato` no fim; aguardar PREPARED
+terminal e `preparacao-concluida.json` antes de alterar uma candidata nova.
+
+- Para reduzir espaço, cópias expandidas antigas em `output/rh360-*/candidato`
+  podem ser compactadas somente após publicação/verificação, inventário de
+  todos os arquivos, conferência dos pins e leitura integral do ZIP com hashes.
+  Preservar ZIP, inventário e recibo `candidato-compactado.json` junto da versão.
+- Não compactar a versão atual ou sua base imediata durante implementação.
+  Não remover evidências, pacotes de entrega, imagens de reversão ou backups.
+  Remover somente a junction local `node_modules`, nunca seu destino compartilhado.
+- Utilitário: `output/rh360-jornada-20261111/compactar-candidatos.py`.
+  O limite atual é R13–R41, com R42/R43 preservadas expandidas. Reavaliar limites
+  conforme a base vigente; não usar o utilitário antigo como autorização genérica.
+- Para consultar fontes históricas compactadas, restaurar primeiro:
+  `python output/rh360-jornada-20261111/restaurar-candidato-compactado.py NOME_DA_PASTA`.
+  O utilitário recusa sobrescrever um candidato existente. `--verify-only`
+  restaura em pasta temporária, verifica todos os hashes e remove o temporário.
+- A restauração integral da R13 foi comprovada; os fontes permanecem recuperáveis.
+  Datas anteriores a 1980 são ajustadas ao limite do ZIP; a prova é dos conteúdos,
+  não de identidade de todos os metadados do sistema de arquivos.
+
 ## Concluir as solicitações sem exigir insistência
 
 Preferência explícita do usuário, registrada em 06/11/2026:
@@ -13,6 +62,43 @@ Preferência explícita do usuário, registrada em 06/11/2026:
 - Durante trabalhos longos, manter atualizações curtas em português, sem usá-las como substituto da execução.
 
 ## Continuidade atual
+
+### Limpeza segura após testes — 11/11/2026
+
+- Após encerrar os processos de cada teste, remover os temporários próprios
+  descartáveis: bancos sintéticos, arquivos intermediários e caches gerados
+  exclusivamente pelo ensaio. Não acumular cópias sem finalidade de entrega.
+- Antes de excluir, conferir o caminho absoluto, a origem e o uso atual.
+  Não atravessar junctions, links ou pontos de nova análise; não apagar
+  dependências compartilhadas, dados reais, fontes, evidências úteis,
+  backups ou arquivos necessários à reversão.
+- Guardar relatório compacto do teste e recibo da limpeza, com caminhos e
+  bytes removidos. Não é necessário guardar o banco sintético inteiro.
+- Arquivos próprios de transporte/conversão de imagens podem ser descartados
+  depois da importação e verificação, comprovando que as imagens imutáveis e
+  os inventários continuam disponíveis. Preservar as imagens de reversão;
+  esta regra não autoriza apagar backups de dados ou fontes únicas.
+- Para bancos RH `qa-native-*` encerrados, usar
+  `python output/rh360-jornada-20261111/limpar-temporarios.py --apply`.
+  O utilitário recusa testes potencialmente ativos e árvores com links.
+- Esta limpeza faz parte da conclusão da tarefa; não exige nova confirmação
+  para os descartáveis identificados e autorizados pelo usuário.
+
+### Prioridade de entrega e verificações proporcionais — 11/11/2026
+
+- O usuário corrigiu expressamente a condução: ciclos repetitivos estavam
+  atrasando a conclusão. Priorizar implementação e entrega, sem preencher
+  o prazo de trabalho com repetição de testes ou monitoramento sem necessidade.
+- Executar uma rodada de verificações adequada à mudança. Repetir apenas
+  por alteração posterior, falha ou preocupação concreta ainda não resolvida.
+- Ensaios prolongados não são requisito padrão nem motivo para adiar novas
+  entregas. Exigem justificativa concreta e duração limitada ao necessário.
+- Manter backup, reversão, verificação da publicação e preservação da base
+  atual. Esta preferência reduz repetição; não permite inventar sucesso ou
+  omitir falhas. Testes operacionais reais continuam adiados pelo usuário.
+- Informar progresso por entregas e impedimentos relevantes, evitando relatos
+  repetidos de contagem de ciclos. O horário até03:00 é janela de execução,
+  não obrigação de manter ensaio rodando até esse horário.
 
 As melhorias do Comercial e a recuperação do botão de investimento foram
 publicadas em 06/11/2026. Evidências e limites da verificação estão em
@@ -226,3 +312,496 @@ SGO+ — 11/11/2026 ~02:52: base atual metrolabs/sgo:poderes-lote5-20261111 (sha
 Pendências: Lote 2 Conduta (adiado pelo dono), 3 Financeiro (trava no Node), 6–11; teste compras-acesso-financeiro-
 delegado falhava já antes desta noite (investigar). Evidência: PUBLICADO_LOTE5_20261111.txt.
 SGO+ — 11/11/2026 ~03:07: base atual metrolabs/sgo:poderes-lote6-20261111 (sha256:fd7fe182…). Lotes 0,1,4,5,6 ligados (34 caixas).
+SGO+ — 11/11/2026 ~10:50: base atual metrolabs/sgo:frota-sessao-20261111 (sha256:f58a719e…), sobre poderes-lote6.
+"Não abasteci" com campo na tela (sem window.prompt) e aviso de sessão que não fica preso após novo login.
+Fonte de trabalho: output/frota-sessao-20261111/cand (= produção). Evidência: PUBLICADO_FROTA_SESSAO_20261111.txt.
+SGO+ — 11/11/2026 ~13:00: base atual metrolabs/sgo:aprovacao-chat-20261111 (sha256:704f2d9d…), sobre frota-sessao.
+Pedido de aprovação do Comercial avisa na hora (GS04, e-mail+WhatsApp, dono incluído) + Voltar fixo no chat.
+Fonte: output/frota-sessao-20261111/cand (= produção). Em andamento em cópias próprias: gestora-auto-20261111,
+padroes-20261111, secadora-20261111 (especialistas) — ao publicar, mesclar sobre esta base, nunca sobre cópia antiga.
+SGO+ — 11/11/2026 tarde: base atual metrolabs/sgo:frota-gestora-20261111 (sha256:c1d2b35a…), sobre aprovacao-chat.
+Confirmação contra toque acidental na Frota + gestora automática do Comercial (seletor ligado). Fonte: output/lote-20261111c/cand (= produção).
+SGO+ — 11/11/2026 fim da tarde: base atual metrolabs/sgo:padroes-secadora-20261111 (sha256:c5db52c7…), sobre frota-gestora.
+Padrões: novo certificado + leitura IA + filtros; secadora: próximo passo claro. Fonte: output/lote-20261111d/cand (= produção).
+Proposta do módulo depósito de viagem (só desenho, aguarda decisões do dono): output/deposito-viagem-20261111/PROPOSTA_DEPOSITO_VIAGEM.md
+
+
+RH360 R13 publicada/verificada em 11/11/2026 14:02 BRT: base atual
+sha256:bba83f4483865a0f90917744935e0ba544d9ece26596d2e9ffcff981568afc40, tag metrolabs/rh:cadastro-pendencias-20261111-r13.
+Consulta de pendências dos campos básicos do colaborador. Delta incremental sobre a base real anterior.
+71 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r13/PUBLICADO_RH360_R13_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+SGO+ — 11/11/2026 ~14:30: base atual metrolabs/sgo:decisao-aviso-20261111 (sha256:a08d73d3…), sobre padroes-secadora.
+Vendedor recebe na hora alerta + e-mail (S80) da decisão da aprovação. Fonte: output/lote-20261111d/cand (= produção).
+Depósito de viagem E1 em construção por especialista em output/deposito-viagem-20261111/cand (copiado ANTES desta publicação: mesclar só o diff dele).
+Config 11/11 ~14:45 (pedido do dono "Matheus é o gerente, tudo aparece pra ele"): matheusgodoi responsável em todas as áreas da
+Caixa de decisões menos DIRETORIA (gestoresPorArea; registro GESTAO_REGRAS). Mantidos os demais (charles, wanessa, bruna, elisa, admin).
+
+
+RH360 R14 publicada/verificada em 11/11/2026 14:12 BRT: base atual
+sha256:c47336e14852a5ba38a4ea478745508a64001a866cda0846b2a4a6f9a0fd1b10, tag metrolabs/rh:cadastro-retorno-20261111-r14.
+Retorno da consulta e atalhos do resumo do dossiê. Delta incremental sobre a base real anterior.
+76 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r14/PUBLICADO_RH360_R14_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+
+
+RH360 R15 publicada/verificada em 11/11/2026 14:21 BRT: base atual
+sha256:267e0e82ec86c29d6335af5ae4d4d8558bc87a4a8dd0153728140daab7b09989, tag metrolabs/rh:arquivo-organizacao-20261111-r15.
+Organização e consulta das séries documentais autorizadas. Delta incremental sobre a base real anterior.
+80 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r15/PUBLICADO_RH360_R15_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+Config 11/11 ~15:00: prazo de aceite da Representação (estudar o caso e agendar) = 3 dias úteis (aceiteMin 1710 min úteis,
+expediente 08:00-17:30) nas representadas Brasmedical e Energiza (antes 240 = 4 h). Registro REPRESENTACAO_PRAZOS. Tela mostra "28 h 30 min úteis".
+Dado 11/11 ~15:20: CH-2026-0030 (Brasmedical, P1) prazo 240 -> 1710 min úteis (3 dias úteis; SLA_FONTE REPRESENTACAO), registro ASSISTENCIA_PRAZO.
+Especialista em andamento: output/representacao-20261111/cand (chamado de representada = 3 dias úteis; imagens/vídeos; Kanban/Gantt e A4 para os dois lados).
+SGO+ — 11/11/2026 ~16:00: base atual metrolabs/sgo:deposito-viagem-e1-20261111 (sha256:63a284ea…), sobre decisao-aviso.
+Depósito de viagem E1 publicado. Fonte: output/lote-20261111f/cand (= produção). Representação (especialista) copiou de lote d: mesclar só o diff dele.
+
+
+RH360 R16 publicada/verificada em 11/11/2026 14:44 BRT: base atual
+sha256:1eda7bac150d9e0376073610cff7dc88ad05ad8a45b9f5db53ed8bd05dc4d2b5, tag metrolabs/rh:arquivo-conferencia-20261111-r16.
+Conferência da seleção e integridade do arquivo privado. Delta incremental sobre a base real anterior.
+86 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r16/PUBLICADO_RH360_R16_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+
+
+RH360 R17 publicada/verificada em 11/11/2026 15:02 BRT: base atual
+sha256:1234e06f6c57076a20a510b8b5131813afae764623722d15b571ca521658f70b, tag metrolabs/rh:arquivo-acessos-20261111-r17.
+Revisão das permissões registradas e revogação por conta. Delta incremental sobre a base real anterior.
+90 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r17/PUBLICADO_RH360_R17_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+SGO+ — 11/11/2026 ~17:00: base atual metrolabs/sgo:representacao-midia-20261111 (sha256:f6f9dcb9…), sobre deposito-viagem-e1.
+Representação: prazo da representada, imagens/vídeos (rota Node própria), A4. Fonte: output/lote-20261111g/cand (= produção).
+Em andamento: depósito de viagem organização/design em output/deposito-viagem-org (copiado de lote f: mesclar só o diff).
+
+
+RH360 R18 publicada/verificada em 11/11/2026 15:23 BRT: base atual
+sha256:72cd3d811c77c3c8118ab5946b0f7425fba27af2873c5288d5c97513f1338aac, tag metrolabs/rh:arquivo-historico-20261111-r18.
+Histórico autorizado por tipo e retorno ao dossiê. Delta incremental sobre a base real anterior.
+99 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r18/PUBLICADO_RH360_R18_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+
+
+RH360 R19 publicada/verificada em 11/11/2026 15:39 BRT: base atual
+sha256:7698624b2e1a2b4a4566bdf3edba1b1754d14f73b20a09fb029f69fed8c976c2, tag metrolabs/rh:consulta-mobile-20261111-r19.
+Consulta móvel legível e controles documentais compactos. Delta incremental sobre a base real anterior.
+99 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r19/PUBLICADO_RH360_R19_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+
+
+RH360 R20 publicada/verificada em 11/11/2026 15:48 BRT: base atual
+sha256:d4fcc9b51d5f7d4c6910e1e64ef529db5b75e9df52ba10e6f631daabcfadffd4, tag metrolabs/rh:arquivo-fila-assistida-20261111-r20.
+Seleção local assistida de documentos com confirmação por arquivo. Delta incremental sobre a base real anterior.
+102 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r20/PUBLICADO_RH360_R20_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+SGO+ — 11/11/2026 ~18:00: base atual metrolabs/sgo:deposito-viagem-org-20261111 (sha256:437b6345…), sobre representacao-midia.
+Depósito de viagem organizado (Kanban/Gantt/A4/guia). Fonte: output/lote-20261111h/cand (= produção). Régua da Representação em andamento (output/representacao-prazos, copiada de lote g: mesclar só o diff).
+
+
+RH360 R21 publicada/verificada em 11/11/2026 16:11 BRT: base atual
+sha256:5cbd627e4b1628f1189b6bdb71ca9e05069a93cdd903909ce8c638312e115466, tag metrolabs/rh:arquivo-consulta-paginada-20261111-r21.
+Consulta paginada de arquivos extensos preservando filtros e posição. Delta incremental sobre a base real anterior.
+105 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r21/PUBLICADO_RH360_R21_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+SGO+ — 11/11/2026 ~19:00: base atual metrolabs/sgo:representacao-regua-20261111 (sha256:6963a7dd…), sobre deposito-viagem-org.
+Régua de prazos da Representação publicada. Fonte: output/lote-20261111i/cand (= produção). Nenhum especialista em andamento.
+
+
+RH360 R22 publicada/verificada em 11/11/2026 16:26 BRT: base atual
+sha256:9bb74a72399169695c30befbea4b6aa1f6f595f9d5c28b83ed54db56769e32c8, tag metrolabs/rh:arquivos-visao-autorizada-20261111-r22.
+Visão autorizada dos arquivos por colaborador, com consulta explícita e pausa. Delta incremental sobre a base real anterior.
+109 testes na imagem, página completa/backup restaurado/693 hashes/saúde
+conferidos. Evidências e limites: output/rh360-20261111-r22/PUBLICADO_RH360_R22_20261111.txt.
+Teste operacional real adiado por pedido do usuário; sem dados inventados,
+sem efeitos financeiros/disciplinários/ponto nem aprovação ou vínculo CCT.
+Preservar módulos anteriores e alterações posteriores; não republicar releases
+históricas como atualização. Missão CCT integral/Financeiro permanecem abertos.
+Achado 11/11 ~17:20: modelo Meta sgo_gestao_acao (avisos da gestão) e sgo_aviso_geral estão na categoria MARKETING -> Meta aceita
+e pode não entregar (limite de marketing). Sem webhook de status (META_WA_VERIFY_TOKEN vazio). Correção em curso: modelo UTILITY novo (especialista diretoria-avisos).
+Enviados 11/11 17:13 por script: GS04 dos 5 preços pendentes da Mônica a admin+charles (e-mail OK; WhatsApp aceito, entrega não confirmada).
+SGO+ — 11/11/2026 ~18:30: base atual metrolabs/sgo:diretoria-avisos-20261111 (sha256:f9062889…), sobre deposito-viagem-e2.
+Depósito E2 publicado; avisos na hora para a Diretoria (GS06) + janela do preço + modelo sgo_gestao_item (Meta PENDING/UTILITY).
+Fonte: output/lote-20261111k/cand (= produção). Nenhum especialista em andamento. Conciliação Caju aguarda acesso a docs.caju.com.br.
+Config 11/11 ~19:00 (dono: "dono é informado, não cobrado"): admin e charles fora das áreas operacionais da Caixa; só DIRETORIA.
+Responsáveis: RH elisa+matheus; TECNICA bruna+matheus; METROLOGIA bruna+matheus; FINANCEIRO e ADMINISTRATIVO wanessa+matheus; COMERCIAL, QUALIDADE, LOGISTICA matheus.
+SGO+ — 11/11/2026 ~19:15: base atual metrolabs/sgo:topo-regras-20261111 (sha256:3de6f3f8…). Fonte: output/lote-20261111k/cand (= produção).
+Em andamento: diretoria-resumo (resumo diário GS03 + Diretoria sem trava em atividades), copiado de lote k já com este pacote.
+Caju 11/11: API estudada (output/deposito-viagem-20261111/ESTUDO_API_CAJU.md). Dono: pagamento pelo saldo da conta Caju; categoria a definir com a Wanessa.
+Em andamento: output/conciliacao-caju (módulo Conciliação + cliente API Caju simulado; credenciais de homologação a pedir pelo formulário do Caju).
+Caju 11/11 ~20h: pedido de homologação enviado pelo formulário (Thiago, CNPJ 32.487.278/0001-21, engenharia@metrolabs.com.br),
+com as perguntas: tipo TRIP na criação, categoria (FLEXIBLE/CASHEW), extrato CSV/OFX e layout, webhook. Aguardar retorno.
+SGO+ — 11/11/2026 ~20:30: base atual metrolabs/sgo:diretoria-resumo-20261111 (sha256:871fa7c2…). Fonte: output/diretoria-resumo/cand (= produção).
+Em andamento: conciliacao-caju (copiado de lote k ANTES deste pacote: mesclar só o diff dele; conflitos prováveis em JS_Core, Index, Poderes, AssistenteManuais).
+
+
+RH360 R23 publicada/verificada em 11/11/2026 19:40 BRT: base atual
+sha256:fb4c633243c75f6c9f55bc735b58bdf8dc95dd73510ab663502d7882642de0d3, tag metrolabs/rh:pendencias-cadastrais-20261111-r23.
+Central de pendências cadastrais, estrutura e contrato declarado. Duas interfaces alteradas sobreR22,backendinalterado.
+Verificacao proporcional:5testes direcionados e pagina completa nativa,
+320/390/1440px,backup restaurado,693hashes/health/GET e readonlyPASS.
+Sem ensaio prolongado ou repeticao de suites backend ja aprovadas.
+Evidencias/limites: output/rh360-20261111-r23/PUBLICADO_RH360_R23_20261111.txt.
+PreservarR22/R21 e modulosanteriores; nao republicarreleaseshistoricas.
+Aceiteoperacional real adiado,sem dados/aprovacoes/vinculosinventados ou
+efeitos financeiros/disciplinarios/ponto. CCTintegral/Financeiropendentes.
+Caju 11/11 resposta (protocolo 02527150, Lucas A.): API = colaboradores + pedidos de benefícios; NÃO cobre Despesas;
+TRIP/categorias/extrato/webhooks a responder; credenciais encaminhadas. Pergunta à Wanessa: carga hoje por Despesas ou benefício?
+
+
+RH360 R24 publicada/verificada em 11/11/2026 19:58 BRT: base atual
+sha256:313ec033c87eb65adc9e39d0aa59d491276ed78e895c9692a2ed1bdd29a339ee, tag metrolabs/rh:cadastro-csv-assistido-20261111-r24.
+Preenchimento assistido por CSV com revisão e salvamento no editor existente. Duas interfaces alteradas sobreR23,backendinalterado.
+Verificacao proporcional:11testes direcionados e pagina completa nativa,
+320/390/1440px,backup restaurado,693hashes/health/GET e readonlyPASS.
+Sem ensaio prolongado ou repeticao de suites backend ja aprovadas.
+Evidencias/limites: output/rh360-20261111-r24/PUBLICADO_RH360_R24_20261111.txt.
+PreservarR22/R21 e modulosanteriores; nao republicarreleaseshistoricas.
+Aceiteoperacional real adiado,sem dados/aprovacoes/vinculosinventados ou
+efeitos financeiros/disciplinarios/ponto. CCTintegral/Financeiropendentes.
+SGO+ — 11/11/2026 noite: base atual metrolabs/sgo:conciliacao-caju-20261111 (sha256:243767b8…), sobre diretoria-resumo.
+Conciliação Caju (API simulada até credenciais de homologação). Fonte: output/lote-20261111n/cand (= produção).
+Em andamento: desempenho-gestao (copiado de diretoria-resumo ANTES deste pacote: mesclar só o diff dele) e Missão 01 (auditoria só leitura, output/missao01-auditoria).
+
+
+RH360 R25 publicada/verificada em 11/11/2026 20:21 BRT: base atual
+sha256:341395040d2069e46d7d9b4aeb3c0b6813d1555fa612bb79c3f502dfd8a9f37c, tag metrolabs/rh:documentos-prioridades-datas-20261111-r25.
+Prioridades de datas nos documentos autorizados e atalhos para a consulta atual. Uma interface alterada sobreR24,backendinalterado.
+Verificacao proporcional:6testes direcionados e pagina completa nativa,
+320/390/1440px,backup restaurado,693hashes/health/GET e readonlyPASS.
+Sem ensaio prolongado ou repeticao de suites backend ja aprovadas.
+Evidencias/limites: output/rh360-20261111-r25/PUBLICADO_RH360_R25_20261111.txt.
+PreservarR22/R21 e modulosanteriores; nao republicarreleaseshistoricas.
+Aceiteoperacional real adiado,sem dados/aprovacoes/vinculosinventados ou
+efeitos financeiros/disciplinarios/ponto. CCTintegral/Financeiropendentes.
+SGO+ — 11/11/2026 ~20:20: metrolabs/sgo:desempenho-gestao-20261111 (sha256:03da8f0b…): Desempenho da gestão e Caixa refeitos (saneamento fora da nota).
+SGO+ — 11/11/2026 20:25: base atual metrolabs/sgo:trava-despacho-20261111 (sha256:98801bfe…): /api/run recusa destinos de despacho
+sem chamada pelas telas (achado D-01 da Missão 01, confirmado e corrigido). Fonte: output/lote-20261111p/cand (= produção).
+Missão 01 (auditoria): output/missao01-auditoria (partes A, B, C + relatório consolidado). Nenhum especialista em andamento.
+Caju 11/11 20:29 (Wanessa): a viagem é carregada no Caju como ADIANTAMENTO DE DESPESAS (Caju Despesas), classificado por plano de contas
+e combustível. A API do Caju não cobre Despesas: modo de carga MANUAL (padrão do módulo) é o correto; credenciais de API deixam de ser
+necessárias para a carga. Pedido à Wanessa: lista do plano de contas do Caju Despesas, um extrato exportado de um mês e se o combustível
+da viagem vai no Caju ou no cartão da Frota — para mapear categorias e ajustar a importação.
+DECISÃO DO DONO 11/11 ~20:45 (Missão 01): o Omie deixa de ser usado pelas pessoas; TUDO o que hoje é feito no Omie passa a ser
+feito no SGO+, que grava/lê no Omie pela API (Omie = motor de fundo: nota fiscal e contabilidade). Módulo Financeiro do SGO+ =
+interface única (receber, pagar, cobrança, conciliação, emissão de nota pela API do Omie). Antes de construir: reconciliar as duas
+implementações Omie (rota /financeiro publicada x módulo local output/omie-financeiro não publicado) e fazer a segurança (sim do dono).
+Segurança 11/11 ~20:40 (sim do dono): backups protegidos (D-03): 10.233 arquivos de /opt/metrolabs/backup fechados (o-rwx), pasta 711,
+vigia.sh reaplica a cada 5 min (cópia vigia.sh.antes-protecao-20261111); SGO+ lê só status/vigia/restauro. Disco 85%->77%
+(docker builder prune, sem apagar imagens/dados). Próximos: chaves cifradas (D-04), senhas antigas (D-05).
+
+
+RH360 R26 publicada/verificada em 11/11/2026 20:52 BRT: base atual
+sha256:9f7b136eb00e42bfea72604f8d6bfdd508c44b852e47704c3f37bfa93f49bc92, tag metrolabs/rh:historico-profissional-paginado-20261111-r26.
+Hist?ricos profissionais paginados, com busca, per?odo e consulta consistente. Quatro arquivos sobreR25, dois servi?os e duas interfaces.
+9testes na imagem e p?gina completa nativa com ambas consultas:PASS.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evid?ncias/limites: output/rh360-20261111-r26/PUBLICADO_RH360_R26_20261111.txt.
+Preservar m?dulos anteriores. Aceite operacional real adiado.
+Sem efeitos financeiros/disciplin?rios/ponto ou aprova??o/v?nculo inventado.
+
+
+RH360 R27 publicada/verificada em 11/11/2026 20:59 BRT: base atual
+sha256:f1f49e0b99f682d9af09625bbf648a768ba0d4846194ad10ae380a80eae641af, tag metrolabs/rh:tipos-documentais-assistidos-20261111-r27.
+Sugestões opcionais de tipos documentais no envio individual e em fila. Uma interface alterada sobreR26; backend intacto.
+6testes na imagem + página nativa completa/envio individual/fila:PASS.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidências/limites: output/rh360-20261111-r27/PUBLICADO_RH360_R27_20261111.txt.
+Preservar módulos anteriores. Aceite operacional real adiado.
+Sem efeitos financeiros/disciplinários/ponto ou aprovação/vínculo inventado.
+
+
+RH360 R28 publicada/verificada em 11/11/2026 21:07 BRT: base atual
+sha256:2eae083fc52b1c968395642e79f1db7d10ef6ef891766f5a2b6b6f99ed84208d, tag metrolabs/rh:csv-novos-colaboradores-20261111-r28.
+Cadastro assistido de novos colaboradores pelo CSV existente. Uma interface CSV alterada sobreR27; editor e backend intactos.
+18testes na imagem + pagina nativa/criacao/conflito/reconciliacao:PASS.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidências/limites: output/rh360-20261111-r28/PUBLICADO_RH360_R28_20261111.txt.
+Preservar módulos anteriores. Aceite operacional real adiado.
+Sem efeitos financeiros/disciplinários/ponto ou aprovação/vínculo inventado.
+
+
+RH360 R29 publicada/verificada em 11/11/2026 21:14 BRT: base atual
+sha256:3e9e7ba3048048d60a15e1427e9aa17375e3f675b625e20b78521ceb4028aca9, tag metrolabs/rh:historicos-sob-consulta-20261111-r29.
+Historicos profissionais recolhiveis e consultados somente ao abrir. Uma interface sobreR28; backend/consulta original intactos.
+Pagina nativa completa,11verificacoes focadas:PASS. Sem suites repetidas.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r29/PUBLICADO_RH360_R29_20261111.txt.
+Preservar modulos anteriores. Aceite operacional real adiado.
+Sem efeitos financeiros/disciplinarios/ponto ou aprovacao/vinculo inventado.
+SGO+ — 11/11/2026 ~21:00: base atual metrolabs/sgo:segredos-cofre-20261111 (sha256:41744f00…): chaves e sessões cifradas (D-04),
+146 itens, 0 em claro. Fonte: output/lote-20261111q/cand (= produção). Chave do cofre: cópia no PC do dono (%USERPROFILE%\.metrolabs_cofre).
+SEM a chave do cofre as integrações não abrem: nunca recriar /opt/metrolabs/sgo/cofre/chave. Ver PUBLICADO_SEGREDOS_COFRE_20261111.txt.
+
+
+RH360 R30 publicada/verificada em 11/11/2026 21:23 BRT: base atual
+sha256:1da447f3e9e2b5f78cabd5533e6d9d24a92f83946dd44d050be44e384ebc9d7a, tag metrolabs/rh:recuperacao-local-dossie-20261111-r30.
+Recuperacao local do resumo, estrutura e documentos privados. Quatro interfaces sobreR29; backend e gravacoes intactos.
+Pagina nativa completa,10cenarios focados e botoes44px:PASS. Backend nao repetido.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r30/PUBLICADO_RH360_R30_20261111.txt.
+Preservar modulos anteriores. Aceite operacional real adiado.
+Sem efeitos financeiros/disciplinarios/ponto ou aprovacao/vinculo inventado.
+Catálogo 11/11 ~21:30 (dono): QUA-001 autoclave R$ 4.500; QUA-002 termo R$ 4.800; 33 itens antigos do CRM de qualificação arquivados
+(output/catalogo-20261111). Custos de viagem por estado (GO 2,50/150/100; RJ 3,00/200/100; km pela origem, hotel/alimentação pelo destino),
+banco de rotas com km+pedágio automático, trava de dados completos e escopo por IA validado pelo vendedor: especialista em
+output/comercial-dados-completos/cand (copiado de lote-20261111q = produção). Não publicado ainda.
+
+
+RH360 R31 publicada/verificada em 11/11/2026 21:42 BRT: base atual
+sha256:842daf1a3d198532e186c206c30199d886e0cf11de4479e90130fc8b1c4b9fcf, tag metrolabs/rh:fluxo-preparacao-equipe-20261111-r31.
+Roteiro integrado de preparacao da equipe e atalhos documentais. Uma interface da central sobreR30; backend e modulos existentes intactos.
+Pagina nativa completa,9verificacoes focadas:PASS. Sem suites repetidas.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r31/PUBLICADO_RH360_R31_20261111.txt.
+Preservar modulos anteriores. Aceite operacional real adiado.
+Sem efeitos financeiros/disciplinarios/ponto ou aprovacao/vinculo inventado.
+SGO+ — 11/11/2026 ~22:15: base atual metrolabs/sgo:caixa-diretoria-20261111 (sha256:7ea7a01b…): pedido de aprovação que só a Diretoria
+aprova vai para a Diretoria na Caixa. Fonte: output/lote-20261111r/cand (= produção). O especialista do Comercial (output/comercial-dados-completos)
+copiou de lote q: ao publicar, mesclar só o diff dele sobre lote r (atenção SGO_Comercial_Painel.js).
+
+
+RH360 R32 publicada/verificada em 11/11/2026 22:08 BRT: base atual
+sha256:abc000dbeb78d751e55877847eaab60a4897a34f971e1991803b4f1e2e08e504, tag metrolabs/rh:estrutura-csv-assistida-20261111-r32.
+Preenchimento assistido dos catalogos da estrutura por CSV. Tres interfaces sobreR31; backend e gravacao existentes intactos.
+14testes na imagem +12verificacoes de pagina nativa:PASS.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r32/PUBLICADO_RH360_R32_20261111.txt.
+Preservar modulos anteriores.18pessoas e0catalogos reais preservados.
+Aceite real adiado. Sem efeitos financeiros/disciplinarios/ponto/CCT.
+SGO+ — 11/11/2026 ~23:00: base atual metrolabs/sgo:comercial-dados-completos-20261111 (sha256:84c5c993…): trava de dados completos,
+pedido ao cliente (/dados-cliente/), escopo por IA validado, viagem por UF + banco de rotas, intermediário. Fonte: output/lote-20261111s/cand
+(= produção). Etapa 2 (assistente em etapas e IA de plaqueta/insumos) em output/comercial-etapa2 (copiado de lote s).
+
+
+RH360 R33 publicada/verificada em 11/11/2026 22:42 BRT: base atual
+sha256:531979e7cbdb0f79a2d293247ec9870352dfeffed3dd9562845ce880ba54dc53, tag metrolabs/rh:vinculos-csv-assistidos-20261111-r33.
+Vinculos organizacionais assistidos por CSV para colaboradores existentes. Quatro interfaces sobreR32; backend intacto.
+33testes na imagem +16cenarios nativos:PASS; temporarios removidos.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r33/PUBLICADO_RH360_R33_20261111.txt.
+18pessoas e0catalogos/vinculos reais preservados. Aceite real adiado.
+Preservar modulos anteriores; sem efeitos financeiros/disciplinares/ponto/CCT.
+
+
+RH360 R34 publicada/verificada em 11/11/2026 22:52 BRT: base atual
+sha256:ca301845e4e02f56c93be423550bfd81fa4b02391c49642fdc4dac4bd4fd3acb, tag metrolabs/rh:modelos-identificados-equipe-20261111-r34.
+Modelos CSV identificados dos colaboradores autorizados. Duas interfaces sobreR33; backend intacto.
+12testes na imagem +14cenarios nativos:PASS; temporarios/downloads removidos.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r34/PUBLICADO_RH360_R34_20261111.txt.
+18pessoas e0catalogos/vinculos reais preservados. Aceite real adiado.
+Preservar modulos anteriores; sem efeitos financeiros/disciplinares/ponto/CCT.
+
+
+RH360 R35 publicada/verificada em 11/11/2026 23:04 BRT: base atual
+sha256:5290481859681adf0fb98ab1b84dd8a75a70b1e788624aafac2a61d35e81a72d, tag metrolabs/rh:conferencia-conteudo-documental-20261111-r35.
+Conferencia local de conteudo documental repetido. UmHTML sobreR34; submit/backend intactos.
+11testes na imagem +15cenarios nativos:PASS; temporarios removidos.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r35/PUBLICADO_RH360_R35_20261111.txt.
+18pessoas e0documentos reais preservados. Aceite real adiado.
+Preservar modulos anteriores; sem efeitos financeiros/disciplinares/ponto/CCT.
+
+
+RH360 R36 publicada/verificada em 11/11/2026 23:18 BRT: base atual
+sha256:b24eeae8e640921b9ea5100a719c8964b49441aec194f8209ac45f5491f19e88, tag metrolabs/rh:contexto-colaborador-documentos-20261111-r36.
+Contexto do colaborador nas telas documentais. UmHTML sobreR35; payload/backend intactos.
+8testes na imagem +15cenarios nativos:PASS; temporarios removidos.
+Backup restaurado,693hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r36/PUBLICADO_RH360_R36_20261111.txt.
+18pessoas e0documentos reais preservados. Aceite real adiado.
+Preservar modulos anteriores; sem efeitos financeiros/disciplinares/ponto/CCT.
+SGO+ — 11/11/2026 ~23:22: base atual metrolabs/sgo:comercial-proposta-guiada-20261112 (sha256:cc6877c4…): proposta guiada (etapa 2).
+Fonte: output/lote-20261111t/cand (= produção). Pente fino em produção 46/47 OK. Relatório da noite: output/RELATORIO_NOITE_20261111.md.
+Nenhum especialista em andamento.
+
+
+RH360 R37 publicada/verificada em 12/11/2026 00:05 BRT: base atual
+sha256:0872439516c6ac4aee69f2013089578a9fbcedbf2c68f39b75f62fed1b842fa1, tag metrolabs/rh:cadastro-pessoal-privado-20261111-r37.
+Cadastro pessoal privado estruturado com concessoes nominais independentes.7fontes sobreR36:4alteradas+3novas.
+20testes na imagem +21cenarios nativos:PASS; temporarios removidos.
+Backup restaurado,696hashes/health/GET/readonly:PASS. Sem ensaio prolongado.
+Evidencias/limites: output/rh360-20261111-r37/PUBLICADO_RH360_R37_20261112.txt.
+18pessoas preservadas;0registros/grants pessoais reais. Aceite real adiado.
+Typecheck global nao limpo:18declaracoesMJS ja ausentes na baseR36;
+servidorTS/JS/map inalterados. Ver typescript-baseline.json.
+Preservar modulos anteriores; sem efeitos financeiros/disciplinares/ponto/CCT.
+
+
+RH360 R38 publicada/verificada: sha256:d6f96cf1146e7599e0b9b0e721d28e576fc403fe19243ead6026e64f9d521215
+Tag metrolabs/rh:contratos-tipos-nativos-20261112-r38
+38declaracoes de tipos novas;696pins anteriores inalterados;734pins atuais.
+Typecheck sem erros,53JS compilados em temporario removido,18exports conferidos.
+Sem mudanca funcional nem dados/grants reais. Base atual preservaR37 e anteriores.
+Evidencias:output/rh360-20261112-r38/PUBLICADO_RH360_R38_20261112.txt
+Aceite real adiado;CCT/Financeiro/projeto integral abertos.
+
+
+RH360 R39 publicada/verificada: sha256:1566d6c14148c51c9c92c19a23ec5e7f226283195f840c7be90ce2a0924b3b7e
+Tag metrolabs/rh:preenchimento-pessoal-assistido-20261112-r39
+Resumo opcional de identificacao/emergencia somente apos consulta autorizada.
+AtalhosWRITE abrem editor/focam primeiro vazio; nenhuma consulta adicional.
+UmaHTML,6modelos+8checks nativos;734pins/backup/readonly verificados.
+Temporarios removidos. Evidencias:output/rh360-20261112-r39/PUBLICADO_RH360_R39_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+
+
+RH360 R40 publicada/verificada: sha256:0c5582c889119781b3ad4ae2d27e618977c57cb5a3581fe3e705b5832fdc0f44
+Tag metrolabs/rh:comparacao-revisoes-pessoais-20261112-r40
+Comparacao de campos historicos com referencia nominal ja consultada.
+Revisao/identidade divergente exige atualizar;semRPCextra ou restauracao.
+UmaHTML,7modelos+8checks nativos;734pins/backup/readonly conferidos.
+Temporarios removidos. Evidencias:output/rh360-20261112-r40/PUBLICADO_RH360_R40_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+
+
+RH360 R41 publicada/verificada: sha256:cf64cebe2561cb53fb42d7bddac84e99d1d3083a383959620c89a70204c570d3
+Tag metrolabs/rh:previa-local-imagem-documental-20261112-r41
+PreviaPNG/JPEGlocal opcional no editor documental,semRPCou upload.
+Troca/ocultar/fechar revogamBlobURL;individual/versao/fila preservados.
+UmaHTML,3modelos+9checks nativos;734pins/backup/readonly conferidos.
+Temporarios removidos. Evidencias:output/rh360-20261112-r41/PUBLICADO_RH360_R41_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+
+
+RH360 R42 publicada/verificada: sha256:5c37f76cd0667be320aaf80625e83990079efa3c3dc7e79d6871cb7fcbf5f74d
+Tag metrolabs/rh:atualizacao-lista-pendencias-20261112-r42
+Atualizacao explicita da lista de pendencias preserva filtros e limpa
+conferencias anteriores somente no sucesso.Falha preserva snapshot comaviso.
+UmaHTML,3modelos+9checks nativos;734pins/backup/readonly conferidos.
+Temporarios removidos. Evidencias:output/rh360-20261112-r42/PUBLICADO_RH360_R42_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+
+
+RH360 R43 publicada/verificada: sha256:8f63b69d6d5077cecebfed1562a0e4c241a18aa3cc0961106b5a001fd84da69d
+Tag metrolabs/rh:roteiro-cadastro-pessoal-20261112-r43
+Cadastro pessoal integrado a navegacao,atalhos e roteiro da equipe.
+Atalhos apenas focamsecao,semconsulta pessoal ou concessao.
+UmaHTML,7checks nativos;734pins/backup/readonly conferidos.
+Temporarios removidos. Evidencias:output/rh360-20261112-r43/PUBLICADO_RH360_R43_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+
+
+RH360 R44 publicada/verificada: sha256:8ef56368818464e9e3f4129a3e2ba6de4f305c530de3f724eb157f39a94c48c2
+Tag metrolabs/rh:identificacao-pendencias-cadastro-20261112-r44
+Cards e busca da central de pendencias incluemID/email ja autorizados.
+Homonimos abrem dossie peloIDestavel;nenhumRPCextra por busca.
+UmaHTML,3modelos+8checks nativos;734pins/backup/readonly conferidos.
+Temporarios removidos. Evidencias:output/rh360-20261112-r44/PUBLICADO_RH360_R44_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+
+
+RH360 R45 publicada/verificada: sha256:ff3a5795652f397f42a93d012b6a4b07dd670d56fe85e04a6d294883581afba3
+Tag metrolabs/rh:carregamento-isolado-sessao-20261112-r45
+Contador de loadingporgeracao de sessao;clear/troca nao aguardapedidoantigo,
+respostaantiga naodesconta operacaoatual.Escritasatuais/guardas preservadas.
+2HTML,7modelos+8checks nativos;734pins/backup/readonly conferidos.
+Preparacaoatomicaexercitada.Temporarios removidos.Evidencias:output/rh360-20261112-r45/PUBLICADO_RH360_R45_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+
+
+RH360 R46 publicada/verificada: sha256:309f9ae8325ead944685ed5d8296355b69c0c65f0de170d8bea56597180a6fb8
+Tag metrolabs/rh:identificacao-arquivos-equipe-20261112-r46
+Arquivos dos colaboradores mostra/buscaID/email ja autorizados.
+Homonimos distinguiveis;semconsultaprivadaautomatica ougrant.
+UmaHTML,8checks nativos;734pins/backup/readonly conferidos.
+Temporarios removidos. Evidencias:output/rh360-20261112-r46/PUBLICADO_RH360_R46_20261112.txt
+18pessoas preservadas;nenhum dado/grant real. Aceite real adiado.
+SGO+ — 12/11/2026 ~15:20: base atual metrolabs/sgo:vinculos-chamados-20261112 (sha256:186b3410…), sobre comercial-proposta-guiada.
+Vínculos: chamado/O.S. cancelado, encerrado ou excluído não trava mais a transferência de equipamento (caso Matheus, IMED -> Guima).
+Fonte: lote-20261111t/cand + 2 arquivos de output/vinculos-chamados-20261112/cand. Evidência: PUBLICADO_VINCULOS_CHAMADOS_20261112.txt.
+SGO+ — 12/11/2026 ~15:50: base atual metrolabs/sgo:orcamento-pagador-20261112 (sha256:60f5f627…), sobre vinculos-chamados.
+Assistência: "Faturar para" no orçamento (outro CNPJ paga; equipamento fica no dono). Evidência: output/orcamento-pagador-20261112/PUBLICADO_ORCAMENTO_PAGADOR_20261112.txt.
+Publicação em camada: conferir permissão de /app/legado na imagem (app roda como pwuser) antes do up; usar build --no-cache se mudar permissão.
+SGO+ — 12/11/2026 ~16:30: base atual metrolabs/sgo:comercial-equip-item-20261112 (sha256:34f6decb…), sobre orcamento-pagador.
+Comercial: equipamento do item não some mais e itens com equipamentos identificados diferentes não são "repetidos" (caso Ricardo).
+SGO+ — 12/11/2026 ~17:35: base atual metrolabs/sgo:campo-os-20261112 (sha256:6a82126d…), sobre comercial-equip-item.
+Campo: abrir O.S. em campo voltou a funcionar (hora is not defined) e fica com quem abriu; Meu dia com abas Em aberto/Agenda/Kanban/Concluídas.
+SGO+ — 12/11/2026 ~17:48: base atual metrolabs/sgo:campo-excluir-20261112 (sha256:8da3b617…), sobre campo-os. Técnico exclui O.S. que abriu (antes de começar); aviso de O.S. em dobro na mesma unidade.
+SGO+ — 12/11/2026 ~18:05: base atual metrolabs/sgo:campo-fotos-20261112 (sha256:86c32d30…), sobre campo-excluir. Campo: fotos do celular (várias de uma vez) também nas perguntas do checklist.
+SGO+ — 12/11/2026 ~19:08: base atual metrolabs/sgo:pente-assistencia-20261112 (sha256:f0000e6e…), sobre campo-fotos. Pente fino Assistência/Campo (18 correções) + aviso de versão nova (SGO_VersaoTelas.js).
+Em seguida: especialista do painel de ganhos dos vendedores (comissão: valor recebido, faixa cheia, mensal, vendedor/Financeiro/Diretoria).
+SGO+ — 12/11/2026 ~19:42: base atual metrolabs/sgo:ganhos-vendedores-20261112 (sha256:1ab843bd…), sobre pente-assistencia. Ganhos dos vendedores etapa 1 (Financeiro lança recebimento; Omie automático = próxima etapa).
+SGO+ — 13/11/2026 ~00:15: base atual metrolabs/sgo:orcamento-termos-20261113 (sha256:41c2cca8…), sobre ganhos-vendedores. Orçamento da Assistência (OA) com as condições, responsabilidades e Termos e condições da Proposta comercial, congelados na emissão. Fonte: output/orcamento-termos-20261113/cand (= produção).
+SGO+ — 13/11/2026 ~00:18: base atual metrolabs/sgo:orcamento-termos2-20261113 (sha256:9a8ba7a6…), sobre orcamento-termos. OA: "proposta"->"orçamento" fora das cláusulas (termos intactos). Fonte: output/orcamento-termos2-20261113/cand (= produção).
+SGO+ — 13/11/2026 ~01:21: base atual metrolabs/sgo:relatorio-campo-20261113 (sha256:a0927812…), sobre orcamento-termos2. Relatório da O.S. e app de campo: resultado/liberação obrigatórios, medições, rastreabilidade enxuta, revisar português com IA. Fonte: output/relatorio-campo-20261113/cand (= produção). Em andamento: output/comercial-viagem-20261113 (copiado de orcamento-termos2 ANTES deste pacote: arquivos Comercial, sem sobreposição).
+SGO+ — 13/11/2026 ~01:35: base atual metrolabs/sgo:comercial-viagem-20261113 (sha256:f6b20318…), sobre relatorio-campo. Comercial: dicas da viagem pela regra do estado, motivo para valor abaixo da regra, conferência do km, "Aguardando aprovação: motivo". Fonte: relatorio-campo cand + 9 arquivos de output/comercial-viagem-20261113/cand.
+SGO+ — 13/11/2026 ~14:20: base atual metrolabs/sgo:padroes-filtros-20261113 (sha256:30aa2819…), sobre comercial-viagem. Padrões: filtros travavam com TAG numérica (2 padrões); revisão do módulo inteiro. Fonte: comercial-viagem cand + 6 arquivos de output/padroes-filtro-20261113/cand. Evidência: PUBLICADO_PADROES_FILTROS_20261113.txt.
+Frota 13/11 ~13:00 (dono): bloqueio da partida e integração iTracker DESLIGADOS (RASTREADOR_BLOQUEIO_LIGADO=0, RASTREADOR_LIGADO=0, 4 veículos em DESLIGADO). Não religar sem pedido. output/frota-bloqueio-20261113/.
+SGO+ — 13/11/2026 ~15:25: base atual metrolabs/sgo:comercial-deslocamento-20261113 (sha256:b2e48d26…), sobre padroes-filtros. Comercial: diluído não some mais com o deslocamento (PROP-0071). Fonte: output/comercial-deslocamento-20261113/cand (= produção). Etapas 2 (incentivo por O.S.) e 3 (legendas) em seguida, na mesma linha.
+SGO+ — 13/11/2026 ~15:58: base atual metrolabs/sgo:comercial-incentivo-20261113 (sha256:96a1e194…), sobre comercial-deslocamento. Incentivo por O.S. na proposta + conferência na Conduta. Fonte: output/comercial-incentivo-20261113/cand (= produção). Em andamento: padrões com várias faixas (output/padroes-faixas-20261113, copiado de comercial-deslocamento: mesclar só o diff dele). Etapa 3 do Comercial (legendas) depois.
+SGO+ — 13/11/2026 ~16:47: base atual metrolabs/sgo:padroes-faixas-20261113 (sha256:7f7f7c36…), sobre comercial-incentivo. Padrões com tabela de pontos (PONTOS_JSON) usada no certificado. Fonte: comercial-incentivo cand + 13 arquivos de output/padroes-faixas-20261113/cand.
+SGO+ — 13/11/2026 ~17:20: base atual metrolabs/sgo:comercial-legendas-20261113 (sha256:b91108a6…), sobre padroes-faixas. Legendas, cenários e guia da viagem na proposta. Fonte: output/comercial-legendas-20261113/cand (= produção). Nenhum especialista em andamento.
+SGO+ — 13/11/2026 ~18:33: base atual metrolabs/sgo:comercial-diaria-20261113 (sha256:5677582c…), sobre comercial-legendas. Sem diária a colaboradores (linha sempre "não se aplica"; PROP-0071 perde os R$ 1.760 ao recalcular) e veículo locado como "hoje não usado". Fonte: output/comercial-diaria-20261113/cand (= produção). Nenhum especialista em andamento.
+SGO+ — 13/11/2026 ~21:45: base atual metrolabs/sgo:comercial-guia-tela-20261113 (sha256:9c97e155…), sobre comercial-diaria. Aba "Guia da viagem: o que significa cada linha e o que fazer" no fim do bloco da viagem da proposta. Fonte: output/comercial-guia-tela-20261113/cand (= produção).
+SGO+ — 13/11/2026 ~22:50: base atual metrolabs/sgo:pgtpop-redesenho-20261113 (sha256:b99497f6…), sobre comercial-guia-tela. PGT e POP redesenhado (5 etapas, guia na tela). Fonte: output/pgtpop-redesenho-20261113/cand (= produção).
+SGO+ — 14/11/2026 madrugada: base atual metrolabs/sgo:conduta-foto-20261114 (sha256:45e8eb0a…), sobre pgtpop-redesenho. Ocorrência da Conduta no celular: câmera ou galeria. Em andamento: output/pgtpop-correcoes-20261114 (copiado de pgtpop-redesenho ANTES: levar JS_Core.html e SGO_Ajuda_Conduta.js desta publicação).
+SGO+ — 14/11/2026 ~00:35: base atual metrolabs/sgo:pgtpop-correcoes-20261114 (sha256:3c979043…), sobre conduta-foto. PGT/POP: busca de documentos, motivo de revisão, trava, limpeza do texto da IA, título do catálogo. Fonte: output/pgtpop-correcoes-20261114/cand (= produção). Auditoria: output/pgtpop-auditoria-20261113.
+SGO+ — 14/11/2026 ~09:21: base atual metrolabs/sgo:pgtpop-suspensos-20261114 (sha256:91285ae2…), sobre pgtpop-correcoes. Dono: todos os PGT/POP existentes serão refeitos; suspensos (selo, sem envio, fora do PGT novo) até PGTPOP_GERACAO_NOVA_DESDE (vazio = tudo). Ao publicar a geração revisada, gravar o instante nessa variável. Fonte: output/pgtpop-refacao-20261114/cand (= produção). Em andamento: especialista técnico (output/pgtpop-refacao-20261114/especialista, só leitura); depois desenvolvedor na mesma cand.
+SGO+ — 14/11/2026 ~10:38: base atual metrolabs/sgo:pgtpop-fichas-20261114 (sha256:c2993c3d…), sobre pgtpop-suspensos. Geração do PGT/POP refeita pelas fichas do especialista (SGO_PgtPop_Fichas.js novo; perguntas do estabelecimento; normas por documento). Corte PGTPOP_GERACAO_NOVA_DESDE='2026-11-14T10:48:00': antes = suspenso. Ensaio com IA real sem gravar: POP018, POP022, PGTS ok. Fonte: output/pgtpop-refacao-20261114/cand (= produção). Evidência: PUBLICADO_PGTPOP_FICHAS_20261114.txt.
+SGO+ — 14/11/2026 ~10:58: base atual metrolabs/sgo:conduta-motivo-20261114 (sha256:81e112c1…), sobre pgtpop-fichas. Conduta no celular mostra o motivo da recusa do servidor (prazo vencido) em vez de 'Verifique a conexão'. Fonte: output/conduta-motivo-20261114/cand (= produção; inclui o PGT/POP de pgtpop-refacao).
+SGO+ — 14/11/2026 ~23:21: base atual metrolabs/sgo:financeiro-omie-20261114 (sha256:3330c214…), sobre conduta-motivo. Painel financeiro (Omie pela API): consultas reais OK; caixas FIN_OMIE_* (lote 3); GRAVAÇÃO NO OMIE DESLIGADA (OMIE_GRAVACAO_LIGADA, Chaves e senhas > Omie, só o dono) até a 1ª operação acompanhada. Limites do Omie tratados (memória 60 s, 5 s entre chamadas do mesmo método, sem repetição automática). Fonte: output/financeiro-20261114/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_OMIE_20261114.txt.
+SGO+ — 14/11/2026 ~23:30: base atual metrolabs/sgo:financeiro-agenda-20261115 (sha256:945c2b26…), sobre financeiro-omie. Agenda de vencimentos (7/15/30 dias, nomes do Omie) na Visão geral do Painel financeiro; gravação no Omie segue desligada. Fonte: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_AGENDA_20261115.txt.
+SGO+ — 14/11/2026 23:36: base atual metrolabs/sgo:ganhos-omie-20261115 (sha256:fa003bf6…), sobre financeiro-agenda. Ganhos dos vendedores: recebimentos do Omie como sugestões (CNPJ -> cliente -> proposta aprovada), lançamento pelo formulário com origem OMIE e sem duplicar. Fonte: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_GANHOS_OMIE_20261115.txt.
+SGO+ — 14/11/2026 23:39: base atual metrolabs/sgo:financeiro-pagina-antiga-20261115 (sha256:65b6e961…), sobre ganhos-omie. /financeiro antigo virou aviso (410 na consulta). Legado igual a ganhos-omie (output/financeiro-20261115/cand); servidor: node/dist e node/src. Evidência: PUBLICADO_PAGINA_ANTIGA_20261115.txt.
+SGO+ — 14/11/2026 23:45: base atual metrolabs/sgo:financeiro-pedidos-20261115 (sha256:c4470129…), sobre financeiro-pagina-antiga. Painel financeiro > Pedidos aprovados: prepara a conta a receber no Omie a partir da proposta (cliente pelo CNPJ, referência SGO-<proposta>); gravação segue desligada. Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_PEDIDOS_20261115.txt.
+SGO+ — 14/11/2026 23:48: base atual metrolabs/sgo:financeiro-vencidos-20261115 (sha256:29fc3df1…), sobre financeiro-pedidos. Vencidos a receber por cliente na Visão geral. Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_VENCIDOS_20261115.txt.
+SGO+ — 14/11/2026 23:53: base atual metrolabs/sgo:financeiro-posicao-20261115 (sha256:52e704ff…), sobre financeiro-vencidos. Posição de hoje (saldo das contas + fluxo 10 dias do Omie) e vencidos por cliente pelo SALDO EM ABERTO. Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_POSICAO_20261115.txt.
+SGO+ — 14/11/2026 23:56: base atual metrolabs/sgo:financeiro-ordem-20261115 (sha256:015919f9…), sobre financeiro-posicao. Visão geral: agenda depois do resumo (o Omie recusa ListarMovimentos simultâneo). Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_ORDEM_20261115.txt.
+SGO+ — 15/11/2026 00:00: base atual metrolabs/sgo:financeiro-nomes-20261115 (sha256:1e1a198b…), sobre financeiro-ordem. Nomes de cliente/fornecedor nas listas do Painel financeiro. Manual: docs/MANUAL_PAINEL_FINANCEIRO.md; roteiro da 1ª gravação: output/financeiro-20261115/ROTEIRO_PRIMEIRA_GRAVACAO_OMIE.md. Fonte legado: output/financeiro-20261115/cand (= produção).
+SGO+ — 15/11/2026 00:04: base atual metrolabs/sgo:financeiro-vinculo-20261115 (sha256:deb3ff21…), sobre financeiro-nomes. Pedidos aprovados registra/mostra a conta a receber criada pelo SGO+ (aba FIN_OMIE_PEDIDOS; só com a gravação ligada). Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_VINCULO_20261115.txt.
+SGO+ — 15/11/2026 00:07: base atual metrolabs/sgo:financeiro-abas-20261115 (sha256:ac60b5cb…), sobre financeiro-vinculo. Varredura das 12 abas: Provisões sem randomUUID em http; aba aberta destacada. Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_ABAS_20261115.txt.
+SGO+ — 15/11/2026 00:14: base atual metrolabs/sgo:poderes-lote3-20261115 (sha256:1b61228f…), sobre financeiro-abas. Acessos por caixas LOTE 3 (Financeiro em Compras) ligado, espelho, 0 divergências em 23 contas; FIN_VER_CONTAS/FIN_CONCILIAR_BANCO desligadas. Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_LOTE3_20261115.txt e LOTE3_IMPLEMENTACAO.md.
+SGO+ — 15/11/2026 00:26: base atual metrolabs/sgo:financeiro-revisao-20261115 (sha256:e1fd4afa…), sobre poderes-lote3. Correções da revisão (Ganhos ref por pagamento, espera de 1 min na confirmação, vínculo exato). Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_REVISAO_20261115.txt.
+SGO+ — 15/11/2026 00:31: base atual metrolabs/sgo:financeiro-fila-20261115 (sha256:a63fc9fa…), sobre financeiro-revisao. Fila na tela para consultas de movimentos do Omie. Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_FILA_20261115.txt.
+SGO+ — 15/11/2026 00:35: base atual metrolabs/sgo:financeiro-resultado-20261115 (sha256:0b482e9a…), sobre financeiro-fila. Aba Resultado do mês (regime de caixa por categoria do Omie). Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_RESULTADO_20261115.txt.
+SGO+ — 15/11/2026 00:38: base atual metrolabs/sgo:financeiro-faixas-20261115 (sha256:f810538b…), sobre financeiro-resultado. Faixas de atraso e CSV no Painel financeiro. Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_FAIXAS_20261115.txt.
+SGO+ — 15/11/2026 00:54: base atual metrolabs/sgo:financeiro-revisao2-20261115 (sha256:3ed18d84…), sobre financeiro-faixas. Correções da 2ª revisão (fila, CSV, Ganhos ref antiga, 1 min após ocupado). Fonte legado: output/financeiro-20261115/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_REVISAO2_20261115.txt.
+SGO+ — 16/11/2026 ~11:13: base atual metrolabs/sgo:financeiro-sigilo-20261116 (sha256:4b9604c6…), sobre financeiro-revisao2. SIGILO do Financeiro (dono): só admin, charles e wanessa (lista OMIE_SIGILO_CONTAS; só o dono altera, na aba Sigilo e acessos); trava acima das caixas (exceção em Acessos não abre); registro FIN_OMIE_ACESSOS sem valores; tela some ao sair/10 min. Fonte legado: output/financeiro-20261116/cand (= produção). Evidência: PUBLICADO_FINANCEIRO_SIGILO_20261116.txt.
+SGO+ — 16/11/2026 ~11:29: base atual metrolabs/sgo:financeiro-ficha-cliente-20261116 (sha256:1d1d2e2a…), sobre financeiro-sigilo. Painel financeiro > Ficha do cliente (cobrança, só leitura; cliente inativo no Omie pelo valor do documento). Fonte legado: output/financeiro-20261116/cand2 (= produção). Evidência: PUBLICADO_FINANCEIRO_FICHA_CLIENTE_20261116.txt.
+
+- 16/11/2026 ~13:30: PENTE FINO do sigilo do Financeiro publicado (metrolabs/sgo:financeiro-pente-fino-20261116, fonte output/financeiro-20261116/cand3): lista de sigilo vale também para Conferência do Financeiro em Compras, faturas, A pagar, cartões (limite), Caju, carga/conferência de viagem e relatório diário (só contagem); guia por aba e explicação de cada campo no Painel (JS_Omie_Ajuda.html); GRAVAÇÃO NO OMIE LIGADA por ordem do dono. Ver output/financeiro-20261116/PUBLICADO_FINANCEIRO_PENTE_FINO_20261116.txt.
+
+- 16/11/2026 ~19h: CONDUTA "Ver relato" publicado (metrolabs/sgo:conduta-relato-20261116, base financeiro-pente-fino-20261116, fonte output/conduta-20261116/cand): botão em toda linha, ficha com relato/quem registrou/foto/histórico; envolvido não recebe quem registrou nem o histórico na lista (CONDUTA_ENVOLVIDO_VE_QUEM_REGISTROU=SIM muda; entra em Chaves com a publicação do Financeiro). Verificado: admin, charles, matheusgodoi abrem 15/15 relatos. Relatório: output/conduta-20261116/RELATORIO_CONDUTA_RELATO.md.
+
+- 16/11/2026 noite: FINANCEIRO COMPLETO publicado (metrolabs/sgo:financeiro-completo-20261116, fonte output/financeiro-20261116/cand4): B1-B9, cadastro cliente/fornecedor no Omie, NF-e compra/NFS-e -> contas a pagar, explicações em Compras/Caju, marca d agua, design, configurações (Regras do Financeiro, alçadas, retenções, destino NF-e, Conduta). CNPJ da empresa gravado. Ver PUBLICADO_FINANCEIRO_COMPLETO_20261116.txt. Próximo: onda 2 (ESPEC_ONDA2_FINANCEIRO.md).
+
+- 16/11/2026 ~21h: ONDA 2 E1-E5 publicada (metrolabs/sgo:financeiro-onda2-indicadores-20261116, fonte output/financeiro-20261116/cand5): atividades do Financeiro só para a lista de sigilo; assistente geral sem manuais do Financeiro; foto diária 06:00 (FIN_FOTO_*); aba Indicadores (20 cartões, 8 gráficos); nota de saúde 0-100 (FIN_SAUDE_*); aprovação do Painel só dono+Diretoria. Suíte 2245/71. Verificado: wanessa abre (sem foto até a 1a rotina), bruna recusada. Relatório: especialistas/RELATORIO_ONDA2_E1E5.md.
+
+- 16/11/2026 ~22h: APROVAÇÃO SÓ DIRETORIA publicada (metrolabs/sgo:financeiro-aprovacao-diretoria-20261116, fonte cand6): APROVACAO_SO_DIRETORIA padrão SIM em Compras, Depósito de viagem e Painel. Suíte 2252/71. ONDE PARAMOS: output/financeiro-20261116/ONDE_PARAMOS_20261116_NOITE.md.

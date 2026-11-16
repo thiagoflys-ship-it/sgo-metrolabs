@@ -1,0 +1,4 @@
+ALTERADO JS_Core.html
+ALTERADO SGO_Ajuda_Conduta.js
+ALTERADO SGO_Conduta_ConteudoModulo.js
+ALTERADO SGO_Conduta_Ocorrencias.js

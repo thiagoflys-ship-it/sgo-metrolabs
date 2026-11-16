@@ -1,6 +1,6 @@
 # Manual do módulo Comercial do SGO+
 
-Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços e com a entrada "O que você quer fazer agora?", os modos de ver das Oportunidades (Lista, Quadro (Kanban) e Gantt), "Completar quem ganhou" e o relatório "Preço proposto × ganho ou perdido, por serviço" (Comercial C4). A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades (com os modos Quadro (Kanban) e Gantt), Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial. Atualizado em 01/11/2026 com a decisão do dono: sobra mínima de 35%, valores maiores, Incentivo de Missão no lugar da taxa por viagem, Bônus Coletivo diluído e impostos por unidade (Lucro Real).
+Versão de 21/10/2026, atualizada em 29/10/2026 (precificação: custos da viagem, checklist, margem e reajuste) em 01/11/2026 (proposta em quatro passos, faixas de prazo, deslocamento em bloco simples e Metodologia em quatro páginas) e, no mesmo dia, com o Orçamentista e o Banco de preços e com a entrada "O que você quer fazer agora?", os modos de ver das Oportunidades (Lista, Quadro (Kanban) e Gantt), "Completar quem ganhou" e o relatório "Preço proposto × ganho ou perdido, por serviço" (Comercial C4). A gestão tem também o manual "Preços, ficha de custo e parâmetros" (docs/MANUAL_COMERCIAL_PRECOS_GESTAO.md). Telas: Comercial > Hoje no Comercial, Oportunidades (com os modos Quadro (Kanban) e Gantt), Propostas, Orçamentista, Pedidos aprovados, Produtos e serviços, Banco de preços, Painel comercial e Metodologia comercial. Atualizado em 01/11/2026 com a decisão do dono: sobra mínima de 35%, valores maiores, Incentivo de Missão no lugar da taxa por viagem, Bônus Coletivo diluído e impostos por unidade (Lucro Real). Atualizado em 13/11/2026: o deslocamento separado ou diluído cobra o mesmo valor e dá o mesmo total (caso PROP-2026-0071); e o Incentivo de Missão passou a contar por O.S. prevista, com a distância cadastral do cliente e sem "não se aplica" nem desconto a 200 km ou mais (MAN-VIA-001). No mesmo dia, o bloco da viagem ganhou legenda em cada linha, o exemplo dos dois modos de repasse e os cenários prontos ("Aplicar um cenário pronto"), sem mudar regra de conta.
 
 ## Para que serve
 
@@ -197,7 +197,67 @@ Unidade que emite a nota: Goiânia (padrão) ou Rio de Janeiro. Ela muda os impo
 
 Exemplo: Brasília (210 km), 2 técnicos, 2 dias e 1 noite. Km R$ 1.050,00 + Incentivo de Missão R$ 600,00 + alimentação R$ 400,00 + hotel R$ 300,00 + estrada R$ 1.350,00 (2 x 6 h x R$ 112,50) = custo de R$ 3.700,00; o item sai por R$ 4.320,00.
 
+### Incentivo de Missão: uma vez por O.S. (desde 13/11/2026)
+
+O dono decidiu em 13/11/2026: "A regra do incentivo é por O.S. e não por deslocamento, quantas vezes ele for lá." A regra oficial é o Manual do Incentivo de Missão (MAN-VIA-001, Rev. 03): R$ 300 por executante, por missão, quando o cliente fica a 200 km ou mais da sede, pela distância cadastral.
+
+- Quantidade: executantes x missões. Uma missão por O.S. prevista; duas O.S. na mesma viagem contam uma vez; uma O.S. com duas idas conta uma vez. Por isso, missões = o menor número entre "O.S. previstas" e "Viagens". Dias e pernoites nunca multiplicam o incentivo: eles são diárias, hotel e alimentação, outras linhas.
+- Campo "O.S. previstas" (em "Ver a conta linha por linha e ajustar", ao lado de "Viagens"): as visitas que o contrato prevê. Com uma viagem, vem 1. Com mais de uma viagem, é obrigatório: sem ele a conta usa uma missão por viagem e o checklist não deixa concluir.
+- Exemplos com 2 técnicos: contrato com 3 visitas (3 viagens, 3 O.S.) = 2 x 3 = R$ 1.800,00; uma O.S. com duas idas (2 viagens, 1 O.S.) = 2 x 1 = R$ 600,00; duas O.S. na mesma viagem (1 viagem, 2 O.S.) = R$ 600,00; uma missão de 5 dias = R$ 600,00.
+- Distância: vale a distância cadastral do cliente (tabela do Programa de conduta, medida da sede, achada pelo CNPJ ou pela cidade da unidade) quando a viagem vai à cidade cadastrada. O km digitado da viagem continua servindo para o km rodado. Viagem lançada para outro destino (por exemplo, atendimento na sede) usa o km do trecho, e a revisão da gestora avisa: "a unidade do cliente fica a X km da sede (distância cadastral), mas a viagem foi lançada para ...".
+- Linha obrigatória: a 200 km ou mais, a linha do incentivo não aceita "não se aplica" e não aceita valor abaixo do programa, nem com motivo. O rascunho não conclui e o documento não sai (MAN-VIA-001 §6; proposta sem a linha é a ocorrência COM-02).
+- O incentivo é custo da viagem: fica fora da margem e da sobra e entra igual no item separado e no diluído (etapa de 13/11/2026 do deslocamento).
+- A frase abaixo do campo do preço do deslocamento mostra a conta: valor x executantes x missões, de onde vem cada número e a distância usada.
+- Propostas gravadas antes de 13/11/2026 sem "O.S. previstas" continuam com a conta antiga (uma missão por viagem) até alguém salvar com o número. Propostas enviadas ou aprovadas não mudam.
+
+A fiscalização do incentivo na execução (O.S. de campo devida, não devida ou pendente, por executante) fica em Programa de conduta > Missões > "Incentivo por O.S. (conferência)".
+
 Para digitar outro preço, use "Preço do deslocamento na proposta". Abaixo do custo da viagem, a tela avisa em vermelho (a empresa estaria pagando para ir), a gestora aponta e o valor conta como desconto. Em branco, vale o calculado. Transporte diferente do veículo da empresa, várias viagens ou um valor diferente ficam em "Ver a conta linha por linha e ajustar".
+
+### Conferências da viagem (13/11/2026)
+
+O diagnóstico da PROP-2026-0064 (filial Rio de Janeiro, viagem para Angra dos Reis) mostrou três erros induzidos pela tela: a dica dos campos mostrava os valores de Goiânia numa viagem do Rio, o valor digitado abaixo da regra passava sem motivo e o km digitado "só a ida" virava 1.120 km rodados sem nenhuma conferência. Desde 13/11/2026 a tela confere e avisa; nenhum valor de preço, regra da política ou proposta gravada mudou.
+
+- Regra do estado certo: a dica cinza de cada campo da conta da viagem mostra a regra do estado (km pela cidade de origem; hotel e alimentação pelo destino), por exemplo "regra RJ: 3,00" no km rodado de uma viagem que sai do Rio. Ao mudar a origem ou o destino, as dicas e o quadro "Regras desta viagem" mudam na hora. O botão "Voltar aos valores da regra" apaga os valores digitados (km, alimentação, hotel, incentivo, diárias e horas de estrada, com os motivos) e salva o rascunho com a regra.
+- Valor abaixo da regra: a linha abre o campo "Motivo do valor abaixo da regra". Sem o motivo (pelo menos 10 letras) a proposta não conclui, e a mensagem diz o valor, a regra, o porquê e o que fazer. Com o motivo, o valor é respeitado e vira alerta na revisão da gestora, na Caixa de decisões e no aviso de quem aprova, no formato "Alimentação R$ 50,00 abaixo da regra RJ (R$ 100,00): motivo do vendedor: ...". Valor acima da regra é só alerta.
+- Km digitado à mão: ao calcular e ao concluir, a tela pede a conferência do resumo, por exemplo "Você informou 280 km só a ida: a equipe vai rodar 1.120 km (ida e volta × 2 viagens). Confere?". O km de "Calcular km e pedágio", do banco de rotas ou da tabela da Conduta não pergunta. Quem conferiu e quando fica gravado na proposta; mudar o km ou o número de viagens pede a conferência de novo. Km não conferido aparece como alerta na revisão da gestora.
+- Trecho de 200 km ou mais: a tela mostra quanto o Incentivo de Missão e as horas de estrada acrescentam ao custo (na PROP-2026-0064, R$ 1.200,00 mais R$ 3.600,00, R$ 4.800,00 a mais).
+- Horas que não cabem: a tela avisa quando a estrada passa de 6 h por dia de viagem ou quando estrada e trabalho previsto pela ficha dos itens (horas do técnico e do engenheiro) passam de 10 h por dia (8 h mais 2 h extras).
+- Proposta concluída antes de 13/11/2026 continua abrindo e calculando igual. Os avisos aparecem ao reabrir, sem bloquear o documento nem o envio; o motivo só é exigido quando o rascunho é concluído de novo.
+
+### Diária e veículo locado (13/11/2026, noite)
+
+Decisão do dono: "não pagamos diárias a colaboradores, e veículo locado não usamos mais; um dia pode ser usado".
+
+- Diárias: a linha fica sempre "não se aplica", sem campo de valor, com o motivo "A Metrolabs não paga diária a colaboradores (Diretoria, 13/11/2026): a alimentação e o hotel cobrem a estadia." Diária digitada antes num rascunho ou gravada na política sai da conta ao calcular. Na PROP-2026-0071 (Rio Med) os R$ 220,00 × 8 dias = R$ 1.760,00 saem: o custo gravado passa de R$ 6.194,00 para R$ 4.434,00 (item de R$ 5.180,00; total de R$ 26.580,00) quando o rascunho for salvo ou calculado de novo.
+- A Metodologia (Preço e desconto) não tem mais os campos de diária em dinheiro; mostra a regra.
+- Veículo locado: continua no campo Transporte. As legendas e o guia dizem que hoje a empresa não usa; se um dia usar, o km rodado fica "não se aplica", a locação vai em "Outros custos" e o combustível na linha "Combustível adicional ou passagem".
+- O exemplo da PROP-2026-0071 em "Como o custo entra no preço" usa a conta sem diária: R$ 4.434,00 ÷ (1 − 14,25%) = R$ 5.170,85, arredondado a R$ 5.180,00; total de R$ 26.580,00 nos dois modos.
+
+### Legendas, exemplos e cenários prontos da viagem (13/11/2026)
+
+Pedido do dono: a equipe não sabia o que preencher no bloco da viagem ("não tem legenda; se tem que preencher algo, como calcular, que valor informar?"). Desde 13/11/2026 a tela ensina junto ao campo. Nenhuma regra de conta mudou: as legendas leem a política em vigor e os cenários só preenchem a tela e usam o mesmo "Calcular".
+
+- Legenda de cada linha: em "Ver a conta linha por linha e ajustar", cada linha (km rodado, pedágios, alimentação, diárias (sempre "não se aplica"), hospedagem, Incentivo de Missão, combustível adicional ou passagem, horas de estrada e outros custos) tem a legenda com o "i". A primeira frase, sempre à vista, diz a conta da linha. O toque em "Como preencher" abre o que é, de onde vem o valor (com os valores da política: km padrão R$ 2,50 e RJ R$ 3,00; hotel padrão R$ 150 e RJ R$ 200; alimentação R$ 100; hora de estrada do técnico R$ 112,50 e do engenheiro R$ 165,00; incentivo R$ 300), quando mudar, quando marcar "Não se aplica" com o motivo e um exemplo. Os números vêm da política: se a Diretoria mudar a Metodologia, a legenda muda junto.
+- Transporte e "Viagens × O.S. previstas": legendas próprias. Veículo da empresa: o km cobre o combustível (a linha de combustível fica "não se aplica" sozinha, e digitar combustível é cobrar duas vezes). Veículo locado (hoje a empresa não usa; se um dia usar): km "não se aplica", locação em "Outros custos" e combustível na linha própria. Avião ou ônibus: km e pedágio "não se aplica", passagens somadas na linha "Combustível adicional ou passagem" e as horas reais em "Horas por viagem". Viagens são as idas e voltas da sede; O.S. previstas são as visitas, e só o incentivo usa esse número.
+- "Como o custo entra no preço": "Ver o exemplo e quando usar cada um" mostra a conta com a PROP-2026-0071 sem diária (custo R$ 4.434,00, R$ 5.180,00 com impostos, total de R$ 26.580,00 nos dois modos). Item separado quando o cliente aceita ver a viagem; diluído quando a licitação ou o cliente exige preço fechado por serviço.
+- "Aplicar um cenário pronto": com o destino e o km na tela, escolha a) cidade próxima, sem pernoite; b) viagem com pernoite, 1 técnico; c) 2 técnicos, vários dias, acima de 200 km; d) contrato com várias visitas; e) Rio de Janeiro; f) transporte aéreo. As quantidades aparecem para ajustar; "Aplicar e calcular" preenche quem vai, dias, noites, viagens, O.S. previstas e transporte, devolve as linhas à regra (apaga os valores digitados nas linhas e os "não se aplica" marcados à mão) e salva o rascunho. O destino, o km e o pedágio continuam os da tela. Sem km, a janela diz o que falta e o que fazer. O cenário do Rio troca a unidade e a origem para a filial e espera o km novo antes de calcular. O do avião pede a soma das passagens e as horas de viagem.
+- Contas completas dos seis cenários: ajuda da tela (manual A4, "Cenários da viagem com a conta completa") e o guia da equipe output/comercial-diaria-20261113/GUIA_EQUIPE_VIAGEM_NA_PROPOSTA.md, com a versão A4 para PDF.
+
+| Cenário | Viagem | Custo | Item na proposta |
+|---|---|---:|---:|
+| a) Cidade próxima | Goiânia → Anápolis/GO, 57 km, 1 técnico, 1 dia | R$ 285,00 | R$ 340,00 |
+| b) Pernoite, 1 técnico | Goiânia → Luziânia/GO, 175 km, 2 dias e 1 noite | R$ 1.225,00 | R$ 1.430,00 |
+| c) 2 técnicos, acima de 200 km | Goiânia → Rio Verde/GO, 228 km, 3 dias e 2 noites | R$ 4.402,50 | R$ 5.140,00 |
+| d) Contrato com 4 visitas | Goiânia → Brasília/DF, 209 km, 4 viagens de 1 dia | R$ 8.480,00 | R$ 9.890,00 |
+| e) Rio de Janeiro | Rio → Angra dos Reis/RJ, 139 km, 2 dias e 1 noite, pedágio R$ 50 | R$ 1.284,00 | R$ 1.500,00 |
+| f) Avião | Goiânia → São Paulo/SP, 926 km, 3 dias e 2 noites, passagem ilustrativa R$ 1.500 e 6 h | R$ 3.075,00 | R$ 3.590,00 |
+
+Sem pedágio nas contas a, b, c, d e f (o banco de rotas ainda não tem as praças dessas rotas): some o valor real da rota.
+
+### Aguardando aprovação: o motivo real
+
+A situação aparece como "Aguardando aprovação", seguida do motivo real: desconto acima do limite, sobra abaixo da mínima, item sem custo, custo sem cotação válida, preço do catálogo não aprovado, preço abaixo ou acima da tabela e valores da viagem abaixo da regra. Até 12/11/2026 a tela dizia "Aguardando aprovação do desconto" mesmo com desconto zero. Os motivos ficam gravados no pedido e aparecem na lista de propostas, na proposta, na Caixa de decisões (título e detalhe) e na mensagem de quem tenta gerar o documento antes da decisão. Para pedidos anteriores, o motivo é calculado de novo ao abrir.
 
 ### Proposta errada: editar, excluir ou cancelar
 
@@ -215,7 +275,7 @@ Pedido do dono (29/10/2026): todo custo de campo entra no preço e nunca passa e
 Checklist obrigatório (caixa "Custos da viagem e do frete" do rascunho). Proposta com serviço (tipo Serviço ou Misto) só conclui depois de dizer se há viagem:
 
 - Não há viagem: escreva o motivo (por exemplo "serviço no laboratório da Metrolabs; o cliente envia o equipamento").
-- Há viagem: técnicos e engenheiros (1, 2 ou mais, cada um com a sua diária), transporte, origem (Goiânia/GO, editável na política), destino (vem a cidade da unidade) e o km do trecho, só a ida (vem da tabela de distâncias do Programa de conduta quando o destino está lá; senão, digite; 0 = mesma cidade), viagens (mais de uma para contrato com visitas), dias e noites por viagem.
+- Há viagem: técnicos e engenheiros (1, 2 ou mais), transporte, origem (Goiânia/GO, editável na política), destino (vem a cidade da unidade) e o km do trecho, só a ida (vem da tabela de distâncias do Programa de conduta quando o destino está lá; senão, digite; 0 = mesma cidade), viagens (mais de uma para contrato com visitas), dias e noites por viagem.
 - Cada linha tem valor ou "não se aplica" com o motivo:
 
 | Linha | Conta | Padrão da política |
@@ -223,10 +283,10 @@ Checklist obrigatório (caixa "Custos da viagem e do frete" do rascunho). Propos
 | Km rodado | km do trecho x 2 (ida e volta) x viagens x valor por km | R$ 2,50 por km; cobre o veículo da empresa (combustível, desgaste, manutenção) |
 | Pedágios | valor por viagem (ida e volta) x viagens | sem padrão (depende da rota) |
 | Alimentação | pessoas x dias x viagens x valor | R$ 100 por pessoa por dia, só fora da região da sede (trecho acima de 60 km) |
-| Diárias | (técnicos x diária do técnico + engenheiros x diária do engenheiro) x dias x viagens | sem diária em dinheiro: a linha fica "não se aplica" sozinha (a alimentação e o hotel cobrem a estadia) |
+| Diárias | não entra (desde 13/11/2026 a Metrolabs não paga diária a colaboradores) | sempre "não se aplica" sozinha, sem campo de valor (a alimentação e o hotel cobrem a estadia) |
 | Hospedagem | pessoas x noites x viagens x valor | R$ 150 por pessoa por noite |
-| Incentivo de Missão (Programa de conduta) | executantes x viagens x valor | R$ 300 por executante por missão, dos parâmetros do Programa de conduta; só em trecho de 200 km ou mais a partir da sede da unidade (regra da Conduta) |
-| Combustível adicional ou passagem | valor por viagem x viagens | só quando não é veículo da empresa (avião, ônibus, veículo locado) |
+| Incentivo de Missão (Programa de conduta) | executantes x missões x valor; missões = menor entre O.S. previstas e viagens (desde 13/11/2026) | R$ 300 por executante por missão, dos parâmetros do Programa de conduta; só a 200 km ou mais da sede pela distância cadastral do cliente (sem cadastro, pelo trecho); obrigatória e sem desconto a partir daí |
+| Combustível adicional ou passagem | valor por viagem x viagens | só quando não é veículo da empresa (avião, ônibus; veículo locado, se um dia for usado) |
 | Horas de estrada | horas por viagem x (valor da hora por função) x viagens | custo da hora com o custo fixo (técnico R$ 112,50, engenheiro R$ 165,00), só em trecho acima de 200 km; horas pela velocidade média (70 km/h) |
 
 | Outros (opcional) | valor total com a descrição | — |
@@ -240,18 +300,20 @@ A linha "Taxa por viagem" das propostas gravadas antes de 01/11/2026 continua ap
 Como o custo entra no preço (escolha da proposta; padrão na política = item separado):
 
 - Item separado: o sistema põe na proposta o item "Despesas de deslocamento e estadia" (tipo Serviço, 1 vb) com preço = custo da viagem x (1 + margem sobre o deslocamento) / (1 - impostos), arredondado para cima a R$ 10 (configurável). O frete vira o item "Frete e entrega". Esses itens são refeitos a cada gravação do rascunho e não mudam o tipo de orçamento nem os setores do pedido.
-- Diluído no preço dos serviços: nenhum item a mais; o custo da viagem entra no custo dos serviços e a sobra mínima de 35% tem que cobrir. A tela mostra quanto aumentar os serviços: custo ÷ (1 − impostos − comissão − 35%).
-- Nos dois casos o custo interno, linha por linha, fica gravado na proposta.
+- Diluído no preço dos serviços (13/11/2026, caso PROP-2026-0071): os dois modos cobram o mesmo valor (custo da viagem mais impostos, sem margem, sem comissão e sem desconto, fora da conta da sobra) e dão o mesmo total. Diluído, o sistema guarda o mesmo item por dentro, mas o cliente não vê a linha: o valor é distribuído no preço dos serviços, proporcional ao valor de cada linha (o frete, no preço dos produtos). A parte de cada serviço é arredondada para cima ao centavo por unidade, para quantidade x preço unitário fechar no documento; o que passar do valor sai de um item com quantidade 1 (sem item com quantidade 1, sobram no máximo alguns centavos a mais, nunca a menos). O preço digitado de cada serviço não muda: ele continua sendo a base da sobra, do preço mínimo e do desconto. Sem serviço com preço para receber o valor, a linha volta a aparecer ao cliente, com aviso.
+- Antes de 13/11/2026 o diluído não criava item nenhum: o total caía pelo valor da viagem (o cliente via um "desconto"), o custo da viagem entrava na sobra e a tela pedia para subir os serviços à mão em custo ÷ (1 − impostos − comissão − 35%). Proposta diluída gravada antes dessa data continua lendo como gravou até o rascunho ser salvo de novo; a tela avisa e mostra o valor que será distribuído.
+- Nos dois casos o custo interno, linha por linha, fica gravado na proposta. Trocar o modo nunca baixa o total nem cria desconto.
+- Resumo junto ao campo "Como o custo entra no preço", nos dois modos: custo da viagem, impostos, arredondamento, quanto foi para o preço e o total ao cliente. No diluído, também a tabela de cada serviço: preço digitado, parte da viagem por unidade e preço que o cliente vê. Exemplo da PROP-2026-0071: custo R$ 6.194,00 + impostos R$ 1.030,28 (14,25%) + arredondamento R$ 5,72 = R$ 7.230,00; total ao cliente R$ 28.630,00 nos dois modos.
 
-O que o cliente vê: só o item "Despesas de deslocamento e estadia" (ou nada, se diluído), com a equipe, a viagem e o que está incluído (deslocamento, pedágios, alimentação, hospedagem, diárias). O Incentivo de Missão nunca aparece com esse nome nem o custo interno: ele está dentro do valor do item.
+O que o cliente vê: só o item "Despesas de deslocamento e estadia" (ou, se diluído, os serviços já com a parte da viagem no preço, no documento A4 e no link de assinatura), com a equipe, a viagem e o que está incluído (deslocamento, pedágios, alimentação, hospedagem, diárias). O Incentivo de Missão nunca aparece com esse nome nem o custo interno: ele está dentro do valor do item.
 
-O que o vendedor vê: os custos da viagem (ele preenche), o item calculado, quanto diluir, o que falta no checklist, a situação da sobra (dentro da alvo, abaixo da alvo, abaixo da mínima) e o aviso nos itens abaixo do preço que garante a sobra mínima (sem o valor). O que a gestão vê: também o custo dos itens do catálogo, os impostos da unidade, a sobra em número, o total mínimo e o total alvo da proposta, o piso de cada item e o custo de viagem não repassado.
+O que o vendedor vê: os custos da viagem (ele preenche), o valor calculado e como ele entra no preço (separado ou distribuído nos serviços), o que falta no checklist, a situação da sobra (dentro da alvo, abaixo da alvo, abaixo da mínima) e o aviso nos itens abaixo do preço que garante a sobra mínima (sem o valor). O que a gestão vê: também o custo dos itens do catálogo, os impostos da unidade, a sobra em número, o total mínimo e o total alvo da proposta, o piso de cada item e o custo de viagem não repassado.
 
-Sobra e alçada (decisão do dono, 01/11/2026: "pra empresa tem que sobrar no mínimo 35%"): sobra = preço dos serviços e produtos (já com o desconto geral) − impostos da unidade (serviço sobre o preço; produto sobre o preço menos os créditos sobre o custo) − comissão − custos diretos (itens com custo e, quando a viagem é diluída, o custo da viagem e do frete). O item de deslocamento e o frete em item próprio ficam fora da conta: são repasse, nem ajudam nem atrapalham. A sobra é antes de IR e CSLL: no Lucro Real eles incidem sobre o lucro do período, fora desta conta. Abaixo de 35%, a proposta vai para a mesma aprovação da política de desconto, mas só a Diretoria (ou o Administrador) aprova, qualquer que seja a alçada de desconto do vendedor; o gestor comercial pode negar. A Diretoria é avisada no sistema e por e-mail no expediente. Item sem custo no catálogo deixa a sobra parcial (otimista): ela só trava quando nem a conta parcial alcança a mínima. A margem alvo é 40% (proposta nossa, provisória; o Planejamento traz margem de contribuição de 39,5%).
+Sobra e alçada (decisão do dono, 01/11/2026: "pra empresa tem que sobrar no mínimo 35%"): sobra = preço dos serviços e produtos (já com o desconto geral) − impostos da unidade (serviço sobre o preço; produto sobre o preço menos os créditos sobre o custo) − comissão − custos diretos (itens com custo). O deslocamento e o frete, em item próprio ou diluídos, ficam fora da conta: são repasse, nem ajudam nem atrapalham. A sobra é antes de IR e CSLL: no Lucro Real eles incidem sobre o lucro do período, fora desta conta. Abaixo de 35%, a proposta vai para a mesma aprovação da política de desconto, mas só a Diretoria (ou o Administrador) aprova, qualquer que seja a alçada de desconto do vendedor; o gestor comercial pode negar. A Diretoria é avisada no sistema e por e-mail no expediente. Item sem custo no catálogo deixa a sobra parcial (otimista): ela só trava quando nem a conta parcial alcança a mínima. A margem alvo é 40% (proposta nossa, provisória; o Planejamento traz margem de contribuição de 39,5%).
 
 Casos: proposta antiga (concluída antes de 29/10/2026) não é travada; a revisão da gestora e o documento mostram o alerta, e a nova revisão cobra o checklist. Nova revisão copia os custos da viagem. O desconto geral sai só dos serviços e produtos e não pode passar da soma deles: o deslocamento e o frete ficam com o preço inteiro (MAN-VIA-001: "desconto comercial incide sobre a margem, nunca sobre a linha de incentivo"). Se o vendedor digitar o deslocamento abaixo de custo mais impostos, a diferença conta como desconto e a gestora avisa. Item de deslocamento digitado (por exemplo os itens do CRM antigo "DESLOCAMENTO GO/DF" ou "DESPESAS DESLOCAMENTO") junto com o cálculo da viagem: a revisão avisa para não cobrar duas vezes; use o cálculo. Ao concluir, a proposta guarda a fotografia da precificação (custo, impostos, margem, repasse, benefício e a versão da política) para o painel.
 
-Política de precificação (Metodologia comercial, só Diretoria e Administrador): origem padrão, valor por km, velocidade média, alimentação, diárias do técnico e do engenheiro, hospedagem, hora de deslocamento por função, reserva do Incentivo de Missão, impostos por unidade que emite a nota, sobra mínima, margem alvo, Bônus Coletivo, margem sobre o deslocamento, arredondamento do item, repasse padrão, alerta de item sem reajuste (12 meses) e o texto da política. Cada gravação é uma versão com o motivo. Campo em branco vale o padrão do sistema; campo gravado vence o padrão.
+Política de precificação (Metodologia comercial, só Diretoria e Administrador): origem padrão, valor por km, velocidade média, alimentação, hospedagem (sem diária: a empresa não paga), hora de deslocamento por função, reserva do Incentivo de Missão, impostos por unidade que emite a nota, sobra mínima, margem alvo, Bônus Coletivo, margem sobre o deslocamento, arredondamento do item, repasse padrão, alerta de item sem reajuste (12 meses) e o texto da política. Cada gravação é uma versão com o motivo. Campo em branco vale o padrão do sistema; campo gravado vence o padrão.
 
 ### Decisão do dono de 01/11/2026: sobra mínima, valores maiores, incentivos e impostos
 
@@ -314,7 +376,7 @@ O Financeiro vê o valor, a condição de pagamento e os dados de faturamento em
 
 Itens da tabela oficial da Diretoria levam o escopo técnico para a execução, sem valores: na atividade da Área técnica e no chamado da Assistência aparecem, item a item, a versão da tabela, os pontos, as receitas ou processos (com temperatura, tempo, pressão, carga, sensores, ciclos e ensaios), os parâmetros (por exemplo PMTA e pressão de ajuste da NR-13), o escopo adicional (o que passou do pacote-base; o motivo comercial do ajuste fica só na proposta) e o que está pendente de aprovação técnica. A atividade guarda até 4.000 letras; se o escopo passar disso, o final aponta para a proposta, onde está completo.
 
-Quando a proposta tem viagem, as atividades da Área técnica e do Financeiro trazem, sem valores, a viagem prevista (equipe, destino, km do trecho, dias e noites, transporte) e, quando a viagem dá direito, o lembrete do incentivo de missão do Programa de conduta de cada colaborador (lançar a missão na Conduta depois da viagem).
+Quando a proposta tem viagem, as atividades da Área técnica e do Financeiro trazem, sem valores, a viagem prevista (equipe, destino, km do trecho, dias e noites, transporte) e, quando a viagem dá direito, o lembrete do incentivo de missão do Programa de conduta: um por O.S. de campo e por executante, com a conferência em Programa de conduta > Missões > Incentivo por O.S.
 
 ## Produtos e serviços
 
@@ -442,6 +504,10 @@ No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial
 
 A versão antiga da metodologia (listas escritas com barras "|") é lida e aparece nas tabelas, linha por linha. Nada se perdeu.
 
+## Gestora automática (atividades dos orçamentos)
+
+Com o seletor "Gestora automática" ligado (Comercial > Hoje > Panorama da gestão), a gestora cria em Minhas atividades do vendedor uma atividade para cada orçamento que pede ação: proposta pronta e não enviada, enviada sem resposta, vencendo, vencida, desconto não aprovado, recusa sem decisão e pedido aprovado sem passagem aos setores (e as oportunidades urgentes que já têm orçamento). Cada atividade traz o porquê, o que fazer, a estratégia e a mensagem sugerida; o vendedor revisa e faz. Ela é concluída sozinha quando o item se resolve. No máximo 5 novas por vendedor por dia, só em dia útil e no expediente. A gestora nunca envia nada ao cliente, não muda preço nem etapa e não aprova desconto. Desligar (gestão comercial, com o motivo): nenhuma atividade nova; as abertas continuam. Serve para quando houver um gestor comercial acompanhando.
+
 ## Dados trazidos do CRM antigo
 
 Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do SGO+:
@@ -473,7 +539,7 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - "Os termos e condições da contratação só são alterados pela Diretoria ou pelo Administrador": desfaça a mudança nas cláusulas (ou atualize a tela) e salve de novo; para mudar as cláusulas, peça à Diretoria.
 - "Quem pediu não aprova o próprio desconto": a decisão é de outro gestor comercial ou da Diretoria.
 - "O checklist de custos está incompleto": em "Custos da viagem e do frete", dê valor ou "não se aplica" com o motivo a cada linha da lista; se a política ainda não tem o valor padrão, digite o desta viagem e peça à Diretoria para preencher a política.
-- "Sobra ... abaixo da mínima de 35% ... só a Diretoria aprova": suba o preço dos itens marcados em vermelho, reduza o desconto ou ajuste o escopo, ou peça a aprovação da Diretoria com o motivo. O gestor comercial pode negar, não aprovar. O deslocamento em item próprio não muda a sobra; a viagem diluída entra nela.
+- "Sobra ... abaixo da mínima de 35% ... só a Diretoria aprova": suba o preço dos itens marcados em vermelho, reduza o desconto ou ajuste o escopo, ou peça a aprovação da Diretoria com o motivo. O gestor comercial pode negar, não aprovar. O deslocamento, em item próprio ou diluído, não muda a sobra.
 - "O desconto geral é maior que a soma dos serviços e produtos": o deslocamento e o frete não recebem desconto. Diminua o desconto.
 - "A unidade emissora ... não existe": escolha Goiânia ou Rio de Janeiro no passo 2.
 - "A política de precificação só é alterada pela Diretoria ou pelo Administrador": desfaça a mudança nesses campos (ou atualize a tela) e salve de novo.

@@ -1,0 +1,668 @@
+/****************************************************
+ * COMERCIAL — PAINEL, PENDÊNCIAS, ROTINA E A CHAMADA ÚNICA DA TELA (21/10/2026)
+ *
+ * Comercial_api(sessionId, acao, dados) — google.script.run, uma porta só para todas as telas do Comercial.
+ *   Toda ação confere a sessão e o nível (Com_eu_ / Com_exigir_). Nunca lança: erro vem em { ok:false, message }.
+ *
+ * Pendências (fonte da central SGO_Alertas_Central.js › PEND_FONTES; as de gestão entram na Caixa de decisões
+ * pelos tipos de GES_TIPOS, com a área COMERCIAL):
+ *   comercial_sem_proxima    oportunidade aberta sem próxima ação — vendedor e gestão (Caixa, prazo 1 dia útil)
+ *   comercial_parada         sem contato há N dias — só o vendedor (Início)
+ *   comercial_desconto       proposta aguardando aprovação (desconto, sobra, custo; 13/11/2026: com o motivo real) — gestão comercial (Caixa)
+ *   comercial_reabertura     pedido de reabertura de oportunidade encerrada — gestão comercial (Caixa)
+ *   comercial_pedido_parado  pedido aprovado sem passagem aos setores há 1 dia útil — gestão (Caixa) e vendedor
+ *   comercial_pedido_passar  pedido aprovado ainda sem passagem (antes do prazo) — só o vendedor
+ *   comercial_aviso          avisos do Comercial não lidos (desconto decidido, setor concluiu...) — só a pessoa
+ * Os retornos atrasados já são atividades: a central e a Caixa cobram pela regra das atividades (escada da gestão).
+ * Nenhuma pendência leva valor.
+ *
+ * Rotina: Comercial_rotina_ é chamada pela rotina da gestão (SGO_Gestao_Escada.js › Ges_rodada_, a cada 15 min)
+ * e roda no máximo uma vez por hora: envios registrados, validade das propostas, passagem aos setores, e-mails
+ * guardados (só no expediente) e, uma vez por dia útil no início do expediente, a lista do dia de cada vendedor e
+ * o panorama da gestão pela gestora comercial. O relatório mensal sai pela rotina de relatórios da gestão.
+ ****************************************************/
+
+var COM_ROTINA_PROP = 'COM_ROTINA_ULTIMA';
+
+// ------------------------------------------------------------
+// INDICADORES
+// ------------------------------------------------------------
+/** Indicadores de uma competência 'aaaa-mm' (gestão: equipe toda; vendedorId: só ele). Sem Date cru. */
+function Com_indicadores_(comp, vendedorId) {
+  var met = Com_metodologia_(), agora = Com_agora_(), atvs = ComOpo_mapaAtividades_();
+  var ops = ComOpo_lerOportunidades_(), props = ComP_lerPropostas_();
+  if (vendedorId) { ops = ops.filter(function (o) { return Com_s_(o.RESPONSAVEL_ID) === vendedorId; }); props = props.filter(function (p) { return Com_s_(p.RESPONSAVEL_ID) === vendedorId; }); }
+  var noMes = function (v) { return Com_dia_(v).slice(0, 7) === comp; };
+  var r = { competencia: comp, ganho: { qtd: 0, valor: 0 }, perdido: { qtd: 0, valor: 0 }, aberto: { qtd: 0, valor: 0, ponderado: 0 }, novas: 0, emDia: 0,
+    perdasPorMotivo: met.motivosPerda.map(function (m) { return { motivo: m, qtd: 0, valor: 0 }; }), funil: [], porVendedor: [], origens: [],
+    propostas: { enviadas: 0, aprovadas: 0, recusadas: 0, vencidas: 0, descontoMedio: 0 }, pedidosSemPassagem: 0 };
+  var funilMapa = {}, vend = {}, orig = {};
+  met.funis.forEach(function (f) { f.etapas.forEach(function (e) { funilMapa[f.codigo + '|' + e.codigo] = { funil: f.nome, etapa: e.nome, probabilidade: e.probabilidade, qtd: 0, valor: 0, ponderado: 0 }; }); });
+  ops.forEach(function (o) {
+    var v = Number(o.VALOR_ESTIMADO) || 0, s = Com_up_(o.SITUACAO || 'ABERTA'), uid = Com_s_(o.RESPONSAVEL_ID);
+    var pv = vend[uid] = vend[uid] || { id: uid, nome: Com_s_(o.RESPONSAVEL_NOME), abertas: 0, semProxima: 0, paradas: 0, ganhas: 0, valorGanho: 0, perdidas: 0 };
+    if (noMes(o.CRIADO_EM)) { r.novas++; var og = orig[Com_s_(o.ORIGEM) || 'Outro'] = orig[Com_s_(o.ORIGEM) || 'Outro'] || { origem: Com_s_(o.ORIGEM) || 'Outro', novas: 0, ganhas: 0 }; og.novas++; }
+    if (s === 'GANHA' && noMes(o.GANHA_EM)) { r.ganho.qtd++; r.ganho.valor += v; pv.ganhas++; pv.valorGanho += v; var og2 = orig[Com_s_(o.ORIGEM) || 'Outro'] = orig[Com_s_(o.ORIGEM) || 'Outro'] || { origem: Com_s_(o.ORIGEM) || 'Outro', novas: 0, ganhas: 0 }; og2.ganhas++; }
+    if (s === 'PERDIDA' && noMes(o.PERDIDA_EM)) {
+      r.perdido.qtd++; r.perdido.valor += v; pv.perdidas++;
+      var m = r.perdasPorMotivo.filter(function (x) { return x.motivo === Com_s_(o.MOTIVO_PERDA); })[0];
+      if (!m) { m = { motivo: Com_s_(o.MOTIVO_PERDA) || 'Sem motivo', qtd: 0, valor: 0 }; r.perdasPorMotivo.push(m); }
+      m.qtd++; m.valor += v;
+    }
+    if (s === 'ABERTA') {
+      var d = ComOpo_derivados_(o, { met: met, agora: agora, atividades: atvs });
+      r.aberto.qtd++; r.aberto.valor += v; r.aberto.ponderado += d.ponderado; pv.abertas++;
+      if (d.semProxima) pv.semProxima++; if (d.parada) pv.paradas++;
+      if (!d.semProxima && !d.atrasada) r.emDia++;
+      var fe = funilMapa[Com_s_(o.FUNIL) + '|' + Com_s_(o.ETAPA)];
+      if (fe) { fe.qtd++; fe.valor += v; fe.ponderado += d.ponderado; }
+    }
+  });
+  var descontos = [], primeira = [];
+  props.forEach(function (p) {
+    var s = Com_up_(p.SITUACAO);
+    if (noMes(p.ENVIADA_EM)) { r.propostas.enviadas++; descontos.push(Number(p.DESCONTO_PCT) || 0); }
+    if (s === 'APROVADA' && noMes(p.RESPOSTA_EM)) r.propostas.aprovadas++;
+    if (s === 'RECUSADA' && noMes(p.RESPOSTA_EM)) r.propostas.recusadas++;
+    if (s === 'VENCIDA' && noMes(p.VALIDA_ATE)) r.propostas.vencidas++;
+    if (s === 'APROVADA' && (!Com_s_(p.PEDIDO_SITUACAO) || Com_up_(p.PEDIDO_SITUACAO) === 'SEM_PASSAGEM')) r.pedidosSemPassagem++;
+  });
+  ops.forEach(function (o) {
+    if (!noMes(o.CRIADO_EM)) return;
+    var env = props.filter(function (p) { return Com_s_(p.OPORTUNIDADE_ID) === Com_s_(o.ID) && Com_s_(p.ENVIADA_EM); }).map(function (p) { return Com_dia_(p.ENVIADA_EM); }).sort()[0];
+    if (env) primeira.push(Math.max(0, Com_diasEntre_(Com_dia_(o.CRIADO_EM), env) || 0));
+  });
+  var dec = r.ganho.qtd + r.perdido.qtd, resp = r.propostas.aprovadas + r.propostas.recusadas;
+  r.ganho.valor = Com_r2_(r.ganho.valor); r.perdido.valor = Com_r2_(r.perdido.valor); r.aberto.valor = Com_r2_(r.aberto.valor); r.aberto.ponderado = Com_r2_(r.aberto.ponderado);
+  r.conversao = dec ? Math.round(r.ganho.qtd / dec * 1000) / 10 : 0; r.conversaoTxt = dec ? Com_pct_(r.conversao) : 'sem decisões';
+  r.aprovacao = resp ? Math.round(r.propostas.aprovadas / resp * 1000) / 10 : 0; r.aprovacaoTxt = resp ? Com_pct_(r.aprovacao) : 'sem respostas';
+  r.higienePct = r.aberto.qtd ? Math.round(r.emDia / r.aberto.qtd * 1000) / 10 : 100; r.higieneTxt = r.aberto.qtd ? Com_pct_(r.higienePct) : 'sem abertas';
+  r.propostas.descontoMedio = descontos.length ? Math.round(descontos.reduce(function (a, b) { return a + b; }, 0) / descontos.length * 100) / 100 : 0;
+  r.propostas.descontoMedioTxt = descontos.length ? Com_pct_(r.propostas.descontoMedio) : '—';
+  r.tempoPrimeiraProposta = primeira.length ? Math.round(primeira.reduce(function (a, b) { return a + b; }, 0) / primeira.length * 10) / 10 : null;
+  r.tempoPrimeiraPropostaTxt = primeira.length ? SGO_DocA4_num_(r.tempoPrimeiraProposta, 1) + ' dias' : '—';
+  r.funil = Object.keys(funilMapa).map(function (k) { var e = funilMapa[k]; e.valor = Com_r2_(e.valor); e.ponderado = Com_r2_(e.ponderado); return e; });
+  r.porVendedor = Object.keys(vend).map(function (k) { var v = vend[k]; v.valorGanho = Com_r2_(v.valorGanho); return v; }).filter(function (v) { return v.abertas || v.ganhas || v.perdidas; }).sort(function (a, b) { return b.valorGanho - a.valorGanho || b.abertas - a.abertas; });
+  r.origens = Object.keys(orig).map(function (k) { return orig[k]; }).sort(function (a, b) { return b.novas - a.novas; });
+  r.meta = Number(met.referencias.metaMensal) || 0;
+  return r;
+}
+
+function Com_painel_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'abrir o painel comercial');
+  d = d || {};
+  var comp = /^\d{4}-\d{2}$/.test(Com_s_(d.competencia)) ? Com_s_(d.competencia) : Com_hoje_().slice(0, 7);
+  var vid = eu.gestao ? Com_s_(d.vendedorId) : eu.id;
+  var ind = Com_indicadores_(comp, vid);
+  if (!eu.gestao) delete ind.porVendedor;
+  // 29/10/2026: quadro "Precificação e estratégia" (gestão): margem, propostas abaixo da mínima, viagem repassada x não repassada, reajustes
+  var prec = null;
+  if (eu.gestao && typeof ComPr_quadroPainel_ === 'function') { try { prec = ComPr_quadroPainel_(comp, vid); } catch (e) { prec = { erro: String((e && e.message) || e) }; } }
+  return { indicadores: ind, competencia: comp, vendedorId: vid, equipe: eu.gestao ? Com_equipeComercial_() : [], precificacao: prec };
+}
+
+// ------------------------------------------------------------
+// RELATÓRIO MENSAL
+// ------------------------------------------------------------
+/** O Comercial está em uso? (há pelo menos uma oportunidade registrada) */
+function Comercial_emUso_() {
+  try { return ComOpo_lerOportunidades_().length > 0; } catch (e) { return false; }
+}
+
+// ------------------------------------------------------------
+/** Gera e salva o relatório da competência. Chamado pela rotina dos relatórios mensais (1º dia útil) e pela gestão. */
+function Comercial_relatorioMes_(comp, quem) {
+  try { Com_garantirAbas_(); } catch (e) {}
+  var ind = Com_indicadores_(comp, '');
+  var analise = ComG_analiseMes_(ind, true);
+  var html = ComDoc_relatorioMesHtml_(comp, ind, analise, quem || 'Rotina automática');
+  var g = RelA4_salvar_(ComDoc_pastaRelatorios_, comp, html, { compartilhar: false });
+  try { ComG_registrar_('ANALISE_MES', analise.origem, '', null, analise.origem, comp, { texto: analise.texto, sugestoes: analise.sugestoes }, analise.aviso); } catch (e) {}
+  return { salvo: g.salvo, link: g.pdfUrl, aviso: [g.aviso, analise.aviso].filter(Boolean).join(' '), html: g.html, pdfUrl: g.pdfUrl, pastaUrl: g.pastaUrl };
+}
+
+// ------------------------------------------------------------
+// PENDÊNCIAS (central e Caixa de decisões)
+// ------------------------------------------------------------
+/**
+ * Quem decide na Caixa quando a área Comercial ainda não tem gestor em "Regras e responsáveis": o gestor comercial do
+ * cadastro (Gestor com área Comercial ou listado na metodologia). Com a área configurada, a Caixa roteia sozinha ('').
+ */
+function Com_decisorCaixa_(envolvidoId) {
+  try {
+    var g = typeof Ges_cfg_ === 'function' ? ((Ges_cfg_().gestoresPorArea || {}).COMERCIAL || []) : [];
+    if (g.length) return '';
+    var us = Com_usuarios_();
+    var ids = Com_idsGestaoComercial_([Com_s_(envolvidoId)]).filter(function (id) { return us[id] && ['ADMIN', 'GESTOR', 'DIRETORIA'].indexOf(us[id].perfil) >= 0; });
+    return ids[0] || '';
+  } catch (e) { return ''; }
+}
+
+function Comercial_fontePendencias_(add, ctx) {
+  if (!ctx || ctx.cliente || typeof Pend_item_ !== 'function' || typeof PEND_TIPOS === 'undefined' || !PEND_TIPOS.comercial_sem_proxima) return;
+  if (!Pend_abaExiste_(COM_ABAS.OPORTUNIDADES)) return;
+  var met = Com_metodologia_(), agora = Com_agora_(), hoje = agora.slice(0, 10), atvs = ComOpo_mapaAtividades_();
+  var tela = function (aba, id) { return { tipo: 'comercial', aba: aba, id: id }; };
+  ComOpo_lerOportunidades_().forEach(function (o) {
+    var s = Com_up_(o.SITUACAO || 'ABERTA'), resp = Com_s_(o.RESPONSAVEL_ID), nome = Com_s_(o.RESPONSAVEL_NOME);
+    if (s === 'ABERTA') {
+      var d = ComOpo_derivados_(o, { met: met, agora: agora, atividades: atvs });
+      if (d.semProxima) add(Pend_item_('comercial_sem_proxima', {
+        id: 'COM:SEMPROX:' + o.ID, nome: Com_s_(o.CODIGO) + ' · ' + Com_s_(o.CLIENTE_NOME), publico: 'GESTAO', paraUsuarios: [resp], responsavel: nome, responsavelId: resp,
+        gravidade: 'CRITICO', dias: 0, titulo: 'Oportunidade ' + Com_s_(o.CODIGO) + ' (' + Com_s_(o.CLIENTE_NOME) + ') sem próxima ação',
+        detalhe: 'Responsável: ' + nome + '. A atividade de retorno foi concluída ou cancelada sem marcar o próximo passo.',
+        oQueFazer: 'Abra Comercial > Oportunidades, registre o contato feito e marque a próxima ação com data.',
+        oQueFazerOutro: 'Peça a ' + nome + ' para marcar a próxima ação hoje (Comercial > Oportunidades).',
+        tela: tela('oportunidades', Com_s_(o.ID)), extra: { area: 'COMERCIAL', motivoDecisor: 'Gestor comercial do cadastro (a área Comercial ainda não tem responsável em Regras e responsáveis).', decisor: Com_decisorCaixa_(resp), prazo: Com_somarDiasUteis_(hoje, 1), desde: Com_dia_(o.ATUALIZADO_EM) || hoje }
+      }));
+      else if (d.parada) add(Pend_item_('comercial_parada', {
+        id: 'COM:PARADA:' + o.ID, nome: Com_s_(o.CODIGO), publico: 'PESSOA', paraUsuarios: [resp], responsavel: nome, responsavelId: resp, gravidade: 'ATENCAO', dias: null,
+        titulo: 'Oportunidade ' + Com_s_(o.CODIGO) + ' (' + Com_s_(o.CLIENTE_NOME) + ') parada há ' + d.diasSemContato + ' dias', detalhe: 'Sem contato registrado há ' + d.diasSemContato + ' dias.',
+        oQueFazer: 'Registre um contato real com o cliente e a próxima ação, ou registre a perda com o motivo real.', tela: tela('oportunidades', Com_s_(o.ID))
+      }));
+    } else if (Com_s_(o.REABERTURA_PEDIDA_EM)) {
+      var pedinte = Com_s_(o.REABERTURA_PEDIDA_POR_ID);
+      add(Pend_item_('comercial_reabertura', {
+        id: 'COM:REABRIR:' + o.ID, nome: Com_s_(o.CODIGO), publico: 'GESTAO', responsavel: nome, responsavelId: pedinte,
+        gravidade: 'ATENCAO', dias: null, titulo: 'Pedido de reabertura da oportunidade ' + Com_s_(o.CODIGO) + ' (' + Com_s_(o.CLIENTE_NOME) + ')',
+        detalhe: 'Pedido de ' + nome + ' em ' + Com_br_(o.REABERTURA_PEDIDA_EM) + ': ' + Com_s_(o.REABERTURA_MOTIVO).slice(0, 220),
+        oQueFazer: 'Abra a oportunidade em Comercial > Oportunidades e reabra (com a próxima ação) ou recuse com o motivo. Quem pediu não decide.',
+        tela: tela('oportunidades', Com_s_(o.ID)), extra: { area: 'COMERCIAL', motivoDecisor: 'Gestor comercial do cadastro (a área Comercial ainda não tem responsável em Regras e responsáveis).', decisor: Com_decisorCaixa_(pedinte), naoPode: [pedinte], desde: Com_dia_(o.REABERTURA_PEDIDA_EM) }
+      }));
+    }
+  });
+  // 29/10/2026: redução de preço do catálogo pedida pelo vendedor acima da alçada (sem R$: pendência não leva valor)
+  if (PEND_TIPOS.comercial_preco) Com_ler_(COM_ABAS.PRODUTOS).forEach(function (p) {
+    if (Com_up_(p.PRECO_PEDIDO_SITUACAO) !== 'PENDENTE') return;
+    var quem = Com_s_(p.PRECO_PEDIDO_POR_ID), nomeQ = Com_s_(p.PRECO_PEDIDO_POR_NOME), base = ComP_basePreco_(p), novo = Number(p.PRECO_PEDIDO) || 0;
+    var red = base > 0 ? Math.round((base - novo) / base * 1000) / 10 : 0;
+    add(Pend_item_('comercial_preco', {
+      id: 'COM:PRECO:' + p.ID, nome: Com_s_(p.CODIGO), publico: 'GESTAO', responsavel: nomeQ, responsavelId: quem, gravidade: 'ATENCAO', dias: null,
+      titulo: 'Preço do item ' + Com_s_(p.CODIGO) + ' (' + Com_s_(p.NOME).slice(0, 60) + ') aguardando aprovação',
+      detalhe: 'Pedido de ' + nomeQ + ' em ' + Com_br_(p.PRECO_PEDIDO_EM) + ': reduzir o preço de venda em ' + Com_pct_(red) + ' sobre o preço de referência do item (acima da alçada do vendedor). Motivo: ' + Com_s_(p.PRECO_PEDIDO_MOTIVO).slice(0, 200) + ' Até a decisão, as propostas usam o preço atual.',
+      oQueFazer: 'Abra Comercial > Produtos e serviços (Situação "Preço aguardando aprovação"), confira o item e aprove ou negue com a fundamentação. Quem pediu não decide.',
+      tela: tela('catalogo', Com_s_(p.ID)), extra: { area: 'COMERCIAL', motivoDecisor: 'Gestor comercial do cadastro (a área Comercial ainda não tem responsável em Regras e responsáveis).', decisor: Com_decisorCaixa_(quem), naoPode: [quem], desde: Com_dia_(p.PRECO_PEDIDO_EM) }
+    }));
+  });
+  ComP_lerPropostas_().forEach(function (p) {
+    var s = Com_up_(p.SITUACAO), resp = Com_s_(p.RESPONSAVEL_ID), nome = Com_s_(p.RESPONSAVEL_NOME), rot = ComP_rotulo_(p);
+    // 29/10/2026: margem abaixo da mínima da política de precificação: a decisão é da Diretoria
+    // 11/11/2026 (dono: "tudo quanto fala Diretoria tem que chegar para nós dois"): a mesma regra da proposta (ComP_avaliarPolitica_:
+    // sobra abaixo da mínima, item sem custo ou preço não aprovado = só a Diretoria aprova) leva o item à Diretoria na Caixa
+    // 13/11/2026 (caso PROP-2026-0064): o item diz o motivo real (antes: "Desconto da proposta ... aguardando aprovação" com desconto zero)
+    // e traz os valores da viagem fora da regra, com o motivo do vendedor
+    var avCx = null;
+    if (s === 'AGUARDANDO_APROVACAO') { try { if (typeof ComP_avaliarProposta_ === 'function') avCx = ComP_avaliarProposta_(p, null, met, typeof ComP_opcoesReconferencia_ === 'function' ? ComP_opcoesReconferencia_(p) : null); } catch (eAv) { avCx = null; } }
+    var soDir = s === 'AGUARDANDO_APROVACAO' && (function () {
+      if (avCx) return !!avCx.pol.exigeDiretoria;
+      try { return typeof ComPr_daProposta_ === 'function' && !!ComPr_daProposta_(p, null).analise.abaixoMin; } catch (e2) { return false; }
+    })();
+    var motCx = s === 'AGUARDANDO_APROVACAO' && typeof ComP_motivosAguardando_ === 'function' ? ComP_motivosAguardando_(p) : { rotulos: [], texto: '' };
+    var regraCx = [];
+    try { if (avCx && avCx.x && avCx.x.desl && typeof ComPr_foraDaRegra_ === 'function') { var frCx = ComPr_foraDaRegra_(avCx.x.desl, avCx.x.pol); regraCx = frCx.abaixo.concat(frCx.acima).map(ComPr_textoForaDaRegra_); } } catch (eR) { regraCx = []; }
+    if (s === 'AGUARDANDO_APROVACAO') add(Pend_item_('comercial_desconto', {
+      id: 'COM:DESC:' + p.ID, nome: rot, publico: 'GESTAO', responsavel: nome, responsavelId: resp, gravidade: 'ATENCAO', dias: null,
+      titulo: 'Proposta ' + rot + ' (' + Com_s_(p.CLIENTE_NOME) + ') aguardando aprovação' + (motCx.texto ? ': ' + motCx.texto : ''),
+      detalhe: 'Pedido de ' + nome + ' em ' + Com_br_(p.DESCONTO_PEDIDO_EM) + '.' + (avCx && avCx.pol.motivos.length ? ' Por que precisa de aprovação: ' + avCx.pol.motivos.join('; ').slice(0, 600) + '.' : '') +
+        (regraCx.length ? ' Valores da viagem fora da regra: ' + regraCx.join('; ').slice(0, 600) + '.' : '') + ' Motivo do vendedor: ' + Com_s_(p.DESCONTO_MOTIVO).slice(0, 200) + ' A proposta não pode ser enviada até a decisão.' + (soDir ? ' Pela política de precificação (sobra abaixo da mínima, item sem custo ou preço não aprovado), só a Diretoria aprova.' : ''),
+      oQueFazer: 'Abra a proposta em Comercial > Propostas, confira a política e aprove ou negue com a fundamentação. Quem pediu não aprova o próprio desconto.' + (soDir ? ' A aprovação é da Diretoria (o gestor comercial acompanha e pode negar).' : ''),
+      tela: tela('propostas', Com_s_(p.ID)), extra: soDir
+        ? { area: 'COMERCIAL', soDiretoria: true, naoPode: [resp], desde: Com_dia_(p.DESCONTO_PEDIDO_EM) }
+        : { area: 'COMERCIAL', motivoDecisor: 'Gestor comercial do cadastro (a área Comercial ainda não tem responsável em Regras e responsáveis).', decisor: Com_decisorCaixa_(resp), naoPode: [resp], desde: Com_dia_(p.DESCONTO_PEDIDO_EM) }
+    }));
+    if (s === 'APROVADA' && (!Com_s_(p.PEDIDO_SITUACAO) || Com_up_(p.PEDIDO_SITUACAO) === 'SEM_PASSAGEM')) {
+      var du = Com_diasUteisEntre_(Com_dia_(p.RESPOSTA_EM), hoje), lim = Number(met.posVenda.pedidoParadoDiasUteis) || 1;
+      if (du >= lim) add(Pend_item_('comercial_pedido_parado', {
+        id: 'COM:PEDIDO:' + p.ID, nome: rot, publico: 'GESTAO', paraUsuarios: [resp], responsavel: nome, responsavelId: resp, gravidade: 'CRITICO', dias: null,
+        titulo: 'Pedido aprovado ' + rot + ' (' + Com_s_(p.CLIENTE_NOME) + ') sem passagem aos setores há ' + Com_plural_(du, 'dia útil', 'dias úteis'),
+        detalhe: 'Aprovado pelo cliente em ' + Com_brDia_(p.RESPOSTA_EM) + '. A técnica, compras e o financeiro ainda não receberam o pedido.',
+        oQueFazer: 'Abra a proposta em Comercial > Propostas e toque em "Passar aos setores".', oQueFazerOutro: 'Cobre de ' + nome + ' a passagem aos setores hoje.',
+        tela: tela('propostas', Com_s_(p.ID)), extra: { area: 'COMERCIAL', motivoDecisor: 'Gestor comercial do cadastro (a área Comercial ainda não tem responsável em Regras e responsáveis).', decisor: Com_decisorCaixa_(resp), desde: Com_dia_(p.RESPOSTA_EM) }
+      }));
+      else add(Pend_item_('comercial_pedido_passar', {
+        id: 'COM:PASSAR:' + p.ID, nome: rot, publico: 'PESSOA', paraUsuarios: [resp], responsavel: nome, responsavelId: resp, gravidade: 'ATENCAO', dias: 0,
+        titulo: 'Passe o pedido aprovado ' + rot + ' (' + Com_s_(p.CLIENTE_NOME) + ') aos setores', detalhe: 'O cliente aprovou em ' + Com_brDia_(p.RESPOSTA_EM) + '.',
+        oQueFazer: 'Abra a proposta e toque em "Passar aos setores".', tela: tela('propostas', Com_s_(p.ID))
+      }));
+    }
+  });
+  if (ctx.userId && !ctx.interno) {
+    Com_ler_(COM_ABAS.AVISOS).forEach(function (v) {
+      if (Com_s_(v.DESTINATARIO_ID) !== ctx.userId || Com_s_(v.LIDO_EM)) return;
+      add(Pend_item_('comercial_aviso', {
+        id: 'COM:AVISO:' + v.ID, nome: Com_s_(v.TITULO).slice(0, 40), publico: 'PESSOA', paraUsuarios: [ctx.userId], responsavel: ctx.nome, responsavelId: ctx.userId, gravidade: 'INFO', dias: null,
+        titulo: Com_s_(v.TITULO), detalhe: Com_s_(v.TEXTO).slice(0, 220), oQueFazer: 'Abra o Comercial: o aviso fica marcado como lido ao aparecer na tela.',
+        tela: Com_s_(v.REF_ID) ? tela(Com_s_(v.REF_TIPO) === 'proposta' ? 'propostas' : Com_s_(v.REF_TIPO) === 'catalogo' ? 'catalogo' : 'oportunidades', Com_s_(v.REF_ID)) : tela('hoje', '')
+      }));
+    });
+  }
+}
+
+// ------------------------------------------------------------
+// ROTINA
+// ------------------------------------------------------------
+/** Chamado pela rotina da gestão (a cada 15 min). Roda no máximo uma vez por hora; a lista do dia, uma vez por dia útil. */
+function Comercial_rotina_(quando, forcar) {
+  var r = {};
+  try {
+    if (!Pend_abaExiste_ || !Pend_abaExiste_(COM_ABAS.OPORTUNIDADES)) return { fora: 'Comercial ainda sem uso' };
+  } catch (e) { return { fora: 'Comercial ainda sem uso' }; }
+  var props = PropertiesService.getScriptProperties(), ultima = Number(props.getProperty(COM_ROTINA_PROP)) || 0, agoraMs = (quando || new Date()).getTime();
+  if (!forcar && agoraMs - ultima < 55 * 60 * 1000) return { fora: 'rodou há menos de 1 hora' };
+  props.setProperty(COM_ROTINA_PROP, String(agoraMs));
+  var passo = function (nome, fn) { try { r[nome] = fn(); } catch (e) { r[nome] = { erro: String((e && e.message) || e).slice(0, 300) }; console.error('Comercial (' + nome + '): ' + r[nome].erro); } };
+  passo('envios', ComP_sincronizarEnvios_);
+  passo('validade', ComP_rotinaValidade_);
+  passo('passagens', ComP_acompanharPassagens_);
+  passo('emails', Com_enviarEmailsPendentes_);
+  passo('contatos', ComCt_migrarUmaVez_);
+  // 29/10/2026: reajustes de preço agendados que chegaram à vigência
+  if (typeof ComPr_rotinaReajustes_ === 'function') passo('reajustes', ComPr_rotinaReajustes_);
+  // 11/11/2026: custos vencendo e vencidos (uma vez por dia útil, no expediente; avisos sem valores)
+  if (typeof ComCu_rotinaAvisos_ === 'function') passo('custos', function () { return ComCu_rotinaAvisos_(quando); });
+  var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(quando || new Date()) : { dentro: true };
+  if (ex.dentro) passo('listaDoDia', function () { return Com_listasDoDia_(); });
+  // 11/11/2026 (pedido do dono): gestora automática cria as atividades dos orçamentos que pedem ação (seletor ligada/desligada; SGO_Comercial_GestoraAuto.js)
+  if (ex.dentro && typeof ComGA_rodada_ === 'function') passo('gestoraAutomatica', function () { return ComGA_rodada_(quando); });
+  return r;
+}
+
+/** Lista do dia de cada vendedor e panorama de cada gestor comercial (uma vez por dia útil; com IA quando houver chave). */
+function Com_listasDoDia_() {
+  var hoje = Com_hoje_();
+  var feitos = {};
+  Com_ler_(COM_ABAS.DIA).forEach(function (d) { if (Com_dia_(d.DIA) === hoje) feitos[Com_s_(d.USUARIO_ID) + '|' + Com_s_(d.PAPEL)] = true; });
+  var ctx = ComG_ctx_(), n = 0;
+  Com_equipeComercial_().forEach(function (p) {
+    var papel = p.gestao ? 'GESTAO' : 'VENDEDOR';
+    if (feitos[p.id + '|' + papel]) return;
+    if (papel === 'VENDEDOR' && !ctx.oportunidades.some(function (o) { return Com_s_(o.RESPONSAVEL_ID) === p.id; })) return;
+    ComG_gerarDia_(p.id, p.nome, papel, true, ctx);
+    n++;
+  });
+  return { geradas: n };
+}
+
+// ------------------------------------------------------------
+// CHAMADA ÚNICA DA TELA
+// ------------------------------------------------------------
+function Com_inicio_(eu) {
+  var met = Com_metodologia_();
+  var base = { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, veCusto: eu.veCusto, catalogo: !!eu.catalogo, catalogoVenda: !!eu.catalogoVenda, diretoria: eu.diretoria, eu: { id: eu.id, nome: eu.nome } };
+  if (eu.nivel === 'NENHUM') return base;
+  base.funis = met.funis.map(function (f) { return { codigo: f.codigo, nome: f.nome, descricao: f.descricao, etapas: f.etapas.map(function (e) { return { codigo: e.codigo, nome: e.nome, probabilidade: e.probabilidade, maxDias: e.maxDias, criterio: e.criterio }; }) }; });
+  base.origens = met.origens; base.motivosPerda = met.motivosPerda; base.regraPerda = met.regraPerda; base.tiposContato = COM_TIPOS_CONTATO; base.papeisContato = COM_PAPEIS_CONTATO;
+  base.estrategias = met.estrategias; base.qualificacao = met.qualificacao.itens; base.situacoesProposta = COM_SITUACOES_PROP; base.tiposItem = COM_TIPOS_ITEM; base.setores = COM_SETORES;
+  base.politica = { descontoMaxPct: ComP_limiteDe_(eu.id, met), margemMinPct: met.precificacao.margemMinPct };
+  // 01/11/2026 (Comercial C2): faixas de prazo para a proposta (a tela recalcula o preço do item ao trocar a faixa) e, para quem vê
+  // custo, os percentuais do quadro "Preço, custo, impostos e margem"
+  if (typeof ComPr_politica_ === 'function') {
+    var polI = ComPr_politica_(met);
+    base.prazo = { faixas: polI.prazo.faixas, contaAte: polI.prazo.contaAte, relatorioDiasUteis: polI.prazo.relatorioDiasUteis, licitacaoSemAcrescimo: polI.prazo.licitacaoSemAcrescimo, licitacaoRotulo: polI.prazo.licitacaoRotulo };
+    // 01/11/2026: impostos por unidade emissora (alíquotas para todos; os créditos sobre o custo só para quem vê custo)
+    var unQ = {};
+    Object.keys(polI.unidades).forEach(function (k) { var pu = ComPr_polUnidade_(polI, k); unQ[k] = { nome: polI.unidades[k].nome, impostosPct: pu.impostosServicoPct, impostosProdutoPct: pu.impostosProdutoPct, creditoProdutoPct: eu.veCusto ? pu.creditoProdutoPct : null }; });
+    base.precoQuadro = { impostosPct: polI.impostosPct, comissaoPct: polI.comissaoPct, margemMinPct: eu.veCusto ? polI.margemMinPct : null, margemAlvoPct: eu.veCusto ? polI.margemAlvoPct : null, unidades: unQ, unidadePadrao: polI.unidadePadrao };
+  }
+  // 29/10/2026: alçada do vendedor para reduzir preço do catálogo sem aprovação
+  if (eu.catalogoVenda) base.alcadaPreco = ComP_alcadaPreco_(eu, met);
+  // 29/10/2026: política de precificação (só Diretoria e Administrador mudam) e reajuste do catálogo
+  base.podePrecificacao = !!(eu.diretoria || eu.perfil === 'ADMIN');
+  base.validadePadrao = met.proposta.validadeDias;
+  base.equipe = eu.gestao ? Com_equipeComercial_() : [];
+  base.iaDisponivel = ComG_iaDisponivel_();
+  return base;
+}
+
+// ------------------------------------------------------------
+// ENTRADA "O QUE VOCÊ QUER FAZER AGORA?" (Comercial C4, 01/11/2026)
+// ------------------------------------------------------------
+var COM_ENTRADA_ORDEM = { ATRASADO: 0, VENCEU: 1, HOJE: 2, SEMANA: 3 };
+/**
+ * Números dos quatro caminhos da entrada (tela Hoje) e a lista do que vence: retornos de hoje ou atrasados, propostas que vencem
+ * nos próximos 7 dias e as que venceram sem resposta nos últimos 30 dias. Vendedor: só o que é dele (ComOpo_podeVer_ e
+ * ComP_podeVer_); gestão: a equipe toda. Não devolve valor nenhum (a entrada não mostra dinheiro).
+ */
+function Com_entrada_(eu) {
+  Com_exigir_(eu, 'VENDEDOR', 'abrir o Comercial');
+  var met = Com_metodologia_(), agora = Com_agora_(), hoje = agora.slice(0, 10), em7 = Com_somarDias_(hoje, 7), ha30 = Com_somarDias_(hoje, -30);
+  var ctx = { met: met, agora: agora, atividades: ComOpo_mapaAtividades_() };
+  var r = { abertas: 0, minhas: 0, semProxima: 0, atrasados: 0, retornosHoje: 0, aguardando: 0, vencidas: 0, vencemSemana: 0, rascunhos: 0, vence: [] };
+  ComOpo_lerOportunidades_().forEach(function (o) {
+    if (Com_up_(o.SITUACAO || 'ABERTA') !== 'ABERTA' || !ComOpo_podeVer_(eu, o)) return;
+    r.abertas++;
+    if (Com_s_(o.RESPONSAVEL_ID) === eu.id) r.minhas++;
+    var dv = ComOpo_derivados_(o, ctx);
+    if (dv.semProxima) r.semProxima++;
+    if (!dv.atrasada && !dv.hoje) return;
+    if (dv.atrasada) r.atrasados++; else r.retornosHoje++;
+    r.vence.push({ tipo: 'oportunidade', id: Com_s_(o.ID), quando: dv.atrasada ? 'ATRASADO' : 'HOJE', ord: Com_iso_(dv.proximaEm) || hoje,
+      titulo: (dv.atrasada ? 'Retorno atrasado' : 'Retorno de hoje') + ': ' + (Com_s_(o.PROXIMA_ACAO) || 'próxima ação'),
+      sub: [Com_s_(o.CODIGO) + ' · ' + Com_s_(o.CLIENTE_NOME), dv.proximaEm ? 'combinado para ' + Com_br_(dv.proximaEm) : '', eu.gestao ? Com_s_(o.RESPONSAVEL_NOME) : ''].filter(Boolean).join(' · ') });
+  });
+  ComP_lerPropostas_().forEach(function (p) {
+    if (!ComP_podeVer_(eu, p)) return;
+    var s = Com_up_(p.SITUACAO), va = Com_dia_(p.VALIDA_ATE);
+    if (s === 'RASCUNHO' || s === 'PRONTA' || s === 'AGUARDANDO_APROVACAO') r.rascunhos++;
+    if (s !== 'ENVIADA' && s !== 'VENCIDA') return;
+    r.aguardando++;
+    var base = { tipo: 'proposta', id: Com_s_(p.ID), ord: va || hoje };
+    var sub = [Com_s_(p.CLIENTE_NOME), eu.gestao ? Com_s_(p.RESPONSAVEL_NOME) : ''].filter(Boolean).join(' · ');
+    if (s === 'VENCIDA' || (va && va < hoje)) {
+      r.vencidas++;
+      if (!va || va >= ha30) r.vence.push(Object.assign(base, { quando: 'VENCEU', titulo: 'Proposta vencida sem resposta: ' + ComP_rotulo_(p), sub: sub + (va ? ' · venceu em ' + Com_brDia_(va) : '') }));
+    } else if (va && va <= em7) {
+      r.vencemSemana++;
+      r.vence.push(Object.assign(base, { quando: va === hoje ? 'HOJE' : 'SEMANA', titulo: 'Proposta vence ' + (va === hoje ? 'hoje' : 'em ' + Com_brDia_(va)) + ': ' + ComP_rotulo_(p), sub: sub }));
+    }
+  });
+  r.vence.sort(function (a, b) { return (COM_ENTRADA_ORDEM[a.quando] - COM_ENTRADA_ORDEM[b.quando]) || String(a.ord).localeCompare(String(b.ord)); });
+  r.venceTotal = r.vence.length;
+  r.vence = r.vence.slice(0, 40).map(function (x) { delete x.ord; return x; });
+  r.gestao = !!eu.gestao;
+  return r;
+}
+
+function Com_marcarAvisosLidos_(eu) {
+  var agora = Com_agora_(), n = 0;
+  Com_ler_(COM_ABAS.AVISOS).forEach(function (v) { if (Com_s_(v.DESTINATARIO_ID) === eu.id && !Com_s_(v.LIDO_EM)) { SGO_DATA.update(COM_ABAS.AVISOS, v.ID, { LIDO_EM: agora }); n++; } });
+  if (n && typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
+  return n;
+}
+
+function Com_avisosDe_(eu) {
+  return Com_ler_(COM_ABAS.AVISOS).filter(function (v) { return Com_s_(v.DESTINATARIO_ID) === eu.id; })
+    .sort(function (a, b) { return String(b.DATA).localeCompare(String(a.DATA)); }).slice(0, 20)
+    .map(function (v) { return { titulo: Com_s_(v.TITULO), texto: Com_s_(v.TEXTO), em: Com_br_(v.DATA), novo: !Com_s_(v.LIDO_EM), ref: { tipo: Com_s_(v.REF_TIPO), id: Com_s_(v.REF_ID) } }; });
+}
+
+/** Clientes para a escolha (busca no cadastro único). */
+function Com_buscarClientes_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'buscar clientes');
+  // 27/10/2026: sem acento e por partes (Com_casaBusca_); o nome da unidade também acha o cliente ("Uruaçu" acha o IMED da unidade).
+  var termos = Com_termosBusca_(d && d.busca);
+  if (termos.join('').length < 2) return [];
+  var unidadesPorCliente = {};
+  try {
+    Com_ler_(SGO_CFG.SHEETS.CAD_UNIDADES).forEach(function (u) {
+      if (Com_up_(u.STATUS || 'ATIVO') !== 'ATIVO') return;
+      var cid = Com_s_(u.CLIENTE_ID);
+      (unidadesPorCliente[cid] = unidadesPorCliente[cid] || []).push(Com_s_(u.NOME_UNIDADE) + ' ' + Com_s_(u.CIDADE));
+    });
+  } catch (e) {}
+  var achados = [];
+  Com_ler_(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) {
+    if (Com_up_(c.STATUS || 'ATIVO') === 'INATIVO') return;
+    var proprio = [Com_s_(c.NOME_FANTASIA), Com_s_(c.RAZAO_SOCIAL), Com_s_(c.CNPJ)];
+    if (Com_casaBusca_(termos, proprio)) { achados.push({ c: c, peso: Com_normBusca_(c.NOME_FANTASIA || c.RAZAO_SOCIAL).indexOf(termos[0]) === 0 ? 0 : 1 }); return; }
+    var un = (unidadesPorCliente[Com_s_(c.ID)] || []).filter(function (t) { return Com_casaBusca_(termos, proprio.concat([t])); })[0];
+    if (un) achados.push({ c: c, peso: 2, unidade: un });
+  });
+  achados.sort(function (a, b) { return (a.peso - b.peso) || String(a.c.NOME_FANTASIA || a.c.RAZAO_SOCIAL).localeCompare(String(b.c.NOME_FANTASIA || b.c.RAZAO_SOCIAL), 'pt-BR'); });
+  return achados.slice(0, 30).map(function (x) { var c = x.c; return { id: Com_s_(c.ID), nome: Com_s_(c.NOME_FANTASIA) || Com_s_(c.RAZAO_SOCIAL), razao: Com_s_(c.RAZAO_SOCIAL), cnpj: Com_s_(c.CNPJ), unidade: x.unidade ? Com_s_(x.unidade) : '' }; });
+}
+
+function Com_unidadesEquip_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'ver as unidades do cliente');
+  var cid = Com_s_(d && d.clienteId);
+  var unidades = Com_ler_(SGO_CFG.SHEETS.CAD_UNIDADES).filter(function (u) { return Com_s_(u.CLIENTE_ID) === cid && Com_up_(u.STATUS || 'ATIVO') === 'ATIVO'; })
+    .map(function (u) { return { id: Com_s_(u.ID), nome: Com_s_(u.NOME_UNIDADE), cidade: [Com_s_(u.CIDADE), Com_s_(u.UF)].filter(Boolean).join('/') }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+  var equipamentos = Com_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) { return Com_s_(e.CLIENTE_ID) === cid && Com_up_(e.STATUS || 'ATIVO') === 'ATIVO'; })
+    .map(function (e) { return { id: Com_s_(e.ID), unidadeId: Com_s_(e.UNIDADE_ID), texto: [Com_s_(e.TIPO), Com_s_(e.TAG) ? 'TAG ' + Com_s_(e.TAG) : '', Com_s_(e.SETOR)].filter(Boolean).join(' · ') }; });
+  try { Com_comTrava_(function () { ComCt_migrar_(cid); }); } catch (e) {}
+  return { unidades: unidades, equipamentos: equipamentos, contatos: ComCt_listar_(cid, '', true) };
+}
+
+/** Quadro "Comercial" da ficha do cliente (Cadastros): só para quem vê o Comercial. */
+function Com_doCliente_(eu, d) {
+  if (eu.nivel === 'NENHUM') return { semAcesso: true };
+  var cid = Com_s_(d && d.clienteId);
+  var ops = ComOpo_lerOportunidades_().filter(function (o) { return Com_s_(o.CLIENTE_ID) === cid && ComOpo_podeVer_(eu, o); }).map(function (o) { return ComOpo_paraTela_(eu, o); });
+  var props = ComP_lerPropostas_().filter(function (p) { return Com_s_(p.CLIENTE_ID) === cid && ComP_podeVer_(eu, p); }).map(function (p) { return ComP_paraTela_(eu, p, false); });
+  // 11/11/2026 (proposta guiada): propostas e serviços ligados ao cliente e à unidade (interligação dos cadastros)
+  var lig = typeof ComAs_ligacoes_ === 'function' && (eu.gestao || eu.vendedor) ? ComAs_ligacoes_(eu, cid, Com_s_(d && d.unidadeId)) : [];
+  return { oportunidades: ops, propostas: props, contatos: ComCt_podeVer_(eu) ? ComCt_listar_(cid, '', false) : [], ligacoes: lig };
+}
+
+function Com_metodologiaTela_(eu, d) {
+  Com_exigir_(eu, 'VENDEDOR', 'ver a metodologia');
+  d = d || {};
+  if (d.salvar) {
+    Com_exigir_(eu, 'GESTAO', 'salvar a metodologia');
+    var motivo = Com_texto_(d.motivo, 500);
+    if (motivo.length < 10) throw new Error('Não foi possível salvar: escreva o que mudou e por quê (pelo menos 10 letras). Cada versão fica no histórico');
+    // 01/11/2026 (Comercial C2): cada página da Metodologia salva só as chaves dela, por cima da versão em vigor (merge)
+    if (d.pagina) d.salvar = Com_mesclarPagina_(d.pagina, d.salvar);
+    // 28/10/2026: termos e condições da contratação são cláusulas de contrato: só a Diretoria e o Administrador mudam
+    var atualP = Com_metodologia_().proposta, novoP = (d.salvar && d.salvar.proposta) || {};
+    var normT = function (s) { return Com_texto_(s).replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim(); };
+    var mexeu = ['termos', 'termosConcordancia'].some(function (k) { return novoP[k] !== undefined && normT(novoP[k]) !== normT(atualP[k]); });
+    if (mexeu && !(eu.diretoria || eu.perfil === 'ADMIN')) throw new Error('Não foi possível salvar: os termos e condições da contratação (cláusulas do contrato) só são alterados pela Diretoria ou pelo Administrador. Desfaça a mudança nesses textos (ou atualize a tela) e salve de novo; para mudar as cláusulas, peça à Diretoria');
+    // 29/10/2026: política de precificação (valores da viagem, impostos, margens, reajuste): só a Diretoria e o Administrador
+    if (d.salvar.precificacao !== undefined && typeof ComPr_politicaCanonica_ === 'function' && ComPr_politicaCanonica_(d.salvar.precificacao) !== ComPr_politicaCanonica_(Com_metodologia_().precificacao) && !(eu.diretoria || eu.perfil === 'ADMIN'))
+      throw new Error('Não foi possível salvar: a política de precificação (km, diárias, alimentação, hospedagem, impostos, margens e reajuste) só é alterada pela Diretoria ou pelo Administrador. Desfaça a mudança nesses campos (ou atualize a tela) e salve de novo; para mudar a política, peça à Diretoria');
+    var v = Com_comTrava_(function () { Com_garantirAbas_(); return Com_gravarMetodologia_(d.salvar, eu, Com_s_(d.pagina) && COM_MET_PAGINAS[Com_up_(d.pagina)] ? COM_MET_PAGINAS[Com_up_(d.pagina)].nome + ': ' + motivo : motivo); });
+    var depois = Com_metodologiaTela_(eu, {});
+    depois.message = (Com_s_(d.pagina) && COM_MET_PAGINAS[Com_up_(d.pagina)] ? 'Página "' + COM_MET_PAGINAS[Com_up_(d.pagina)].nome + '" salva' : 'Metodologia salva') + ' (versão ' + v + '). A gestora comercial passa a usar a versão nova nas próximas sugestões.';
+    return depois;
+  }
+  var r = { metodologia: Com_metodologia_(), podeEditar: eu.gestao, padrao: eu.gestao ? COM_METODOLOGIA_PADRAO : null,
+    podeEditarTermos: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')), termos: Com_termosVigentes_(),
+    podeEditarPrecificacao: !!(eu.gestao && (eu.diretoria || eu.perfil === 'ADMIN')) };
+  if (typeof ComPr_politica_ === 'function') {
+    var polT = ComPr_politica_();
+    r.precificacao = { beneficio: ComPr_beneficio_(polT), incompleta: ComPr_politicaIncompleta_(polT).map(function (f) { return f.nome; }), repasses: COM_PR_REPASSES,
+      // 01/11/2026 (Comercial C2): o que ainda é provisório, a lista para "confirmado pelo dono" e a política normalizada (faixas)
+      provisorios: COM_PR_PROVISORIOS, pendentes: ComPr_provisorios_(polT).map(function (x) { return x.campo; }), prazo: polT.prazo,
+      // 11/11/2026: custos da viagem por estado em vigor (o que a tabela gravada ou o padrão aprovado pelo dono diz)
+      custosUF: polT.custosUF || {}, padraoViagem: { valorKm: polT.valorKm, hospedagemPessoaNoite: polT.hospedagemPessoaNoite, alimentacaoPessoaDia: polT.alimentacaoPessoaDia } };
+    // 01/11/2026 (decisão do dono): impostos por unidade e a conta do Bônus Coletivo por hora (só quem vê custo)
+    if (eu.veCusto) {
+      r.precificacao.unidades = ComPr_unidadesTela_(polT); r.precificacao.unidadePadrao = polT.unidadePadrao; r.precificacao.bonus = ComPr_bonusHora_(polT);
+      r.precificacao.custoHoraComBonus = { TECNICO: Com_r2_((Number(polT.custoHora.TECNICO) || 0) + r.precificacao.bonus.porHora), ENGENHEIRO: Com_r2_((Number(polT.custoHora.ENGENHEIRO) || 0) + r.precificacao.bonus.porHora) };
+      if (typeof ComDec_podeAplicar_ === 'function') r.precificacao.decisaoDono = { pode: ComDec_podeAplicar_(eu) };
+    }
+  }
+  r.paginas = Object.keys(COM_MET_PAGINAS).map(function (k) { return { codigo: k, nome: COM_MET_PAGINAS[k].nome }; });
+  // quem não vê custo (vendedor) vê os valores da viagem, mas não impostos nem margens da política
+  if (!eu.veCusto && r.metodologia && r.metodologia.precificacao) {
+    r.metodologia = Com_copia_(r.metodologia);
+    ['impostosPct', 'comissaoPct', 'margemMinPct', 'margemAlvoPct', 'margemDeslocamentoPct', 'custoHora', 'custoFixoPct', 'margemPecasPct', 'unidades', 'bonusConduta'].forEach(function (k) { r.metodologia.precificacao[k] = null; });
+    r.metodologia.politica = Com_copia_(r.metodologia.politica); r.metodologia.politica.margemMinPct = null;
+    delete r.metodologia.margemUnificada;
+    r.precificacaoReservada = true;
+  }
+  if (eu.gestao) {
+    r.aprendizado = ComG_aprendizado_();
+    r.versoes = Com_ler_(COM_ABAS.CONFIG).filter(function (c) { return Com_s_(c.CHAVE) === 'METODOLOGIA'; }).map(function (c) { return { versao: Number(c.VERSAO), em: Com_br_(c.ATUALIZADO_EM), por: Com_s_(c.ATUALIZADO_POR_NOME), motivo: Com_s_(c.MOTIVO) }; })
+      .sort(function (a, b) { return b.versao - a.versao; });
+    r.equipeSgo = Object.keys(Com_usuarios_()).map(function (id) { var u = Com_usuarios_()[id]; return u.ativo ? { id: id, nome: u.nome, perfil: u.perfil } : null; }).filter(Boolean)
+      .sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+  }
+  return r;
+}
+
+var COM_ACOES = {
+  iniciar: function (eu) { var b = Com_inicio_(eu); if (eu.nivel !== 'NENHUM') { try { Com_garantirAbas_(); ComCt_migrarUmaVez_(); } catch (e) {} b.avisos = Com_avisosDe_(eu); } return b; },
+  acesso: function (eu) { return { nivel: eu.nivel, gestao: eu.gestao, vendedor: eu.vendedor, financeiro: eu.financeiro, catalogo: !!eu.catalogo, catalogoVenda: !!eu.catalogoVenda }; },
+  avisosLidos: function (eu) { return { marcados: Com_marcarAvisosLidos_(eu) }; },
+  // 11/11/2026: o panorama da gestão leva o quadro da gestora automática (seletor ligada/desligada)
+  hoje: function (eu, sid, d) { var r = ComG_hoje_(eu, d); if (r.papel === 'GESTAO' && typeof ComGA_painel_ === 'function') { try { r.automatica = ComGA_painel_(eu); } catch (e) { r.automatica = null; } } return r; },
+  gestoraAutomatica: function (eu) { return { automatica: ComGA_painel_(eu) }; },
+  gestoraAutomaticaSalvar: function (eu, sid, d) { return ComGA_salvarSeletor_(eu, d); },
+  decidirSugestao: function (eu, sid, d) { return ComG_decidirSugestao_(eu, d); },
+  proximoPasso: function (eu, sid, d) { return ComG_proximoPasso_(eu, d); },
+  revisarProposta: function (eu, sid, d) { return ComG_revisarProposta_(eu, d); },
+  perguntar: function (eu, sid, d) { return ComG_perguntar_(eu, d); },
+  clientes: function (eu, sid, d) { return { clientes: Com_buscarClientes_(eu, d) }; },
+  cliente: function (eu, sid, d) { return Com_unidadesEquip_(eu, d); },
+  doCliente: function (eu, sid, d) { return Com_doCliente_(eu, d); },
+  salvarContato: function (eu, sid, d) { return { contato: ComCt_salvar_(eu, d), message: 'Contato salvo.' }; },
+  inativarContato: function (eu, sid, d) { return ComCt_inativar_(eu, d && d.id, d && d.motivo); },
+  oportunidades: function (eu, sid, d) { var info = {}; var l = ComOpo_listar_(eu, d, info); return { oportunidades: l, foraDoFiltro: info.foraDoFiltro || 0 }; },
+  oportunidade: function (eu, sid, d) { return ComOpo_detalhe_(eu, d && d.id); },
+  salvarOportunidade: function (eu, sid, d) { return ComOpo_salvar_(eu, sid, d); },
+  moverEtapa: function (eu, sid, d) { return ComOpo_moverEtapa_(eu, sid, d); },
+  // 21/10/2026: quadro do funil (Kanban), Gantt comercial e a especialista (SGO_Comercial_Quadro.js e SGO_Comercial_Gestora.js)
+  criteriosEtapa: function (eu, sid, d) { return ComOpo_criteriosTela_(eu, d); },
+  quadro: function (eu, sid, d) { return ComQ_quadro_(eu, d); },
+  gantt: function (eu, sid, d) { return ComQ_gantt_(eu, d); },
+  especialista: function (eu, sid, d) { return ComG_especialista_(eu, d); },
+  // 01/11/2026: memória dos planos da especialista (usar, trocar, deu certo, não deu certo) e a próxima ação com um toque
+  especialistaUsarPlano: function (eu, sid, d) { return ComEsp_usarPlano_(eu, d); },
+  especialistaDecidirPlano: function (eu, sid, d) { return ComEsp_decidirPlano_(eu, d); },
+  especialistaCriarAcao: function (eu, sid, d) { return ComEsp_criarAcao_(eu, sid, d); },
+  especialistaPlanos: function (eu, sid, d) { return ComEsp_planosTela_(eu, d); },
+  leituraFunil: function (eu, sid, d) { return ComG_leituraFunil_(eu, d); },
+  criarAtividadeOportunidade: function (eu, sid, d) { return ComOpo_criarAtividadeGestao_(eu, sid, d); },
+  registrarContato: function (eu, sid, d) { return ComOpo_registrarContato_(eu, sid, d); },
+  ganhar: function (eu, sid, d) { return ComOpo_ganhar_(eu, d); },
+  // 10/11/2026 (etapa 2): excluir oportunidade criada por teste ou engano (exclusão lógica) e "Minha assinatura" (imagem cadastrada)
+  excluirOportunidade: function (eu, sid, d) { return ComOpo_excluir_(eu, d); },
+  minhaAssinatura: function (eu) { return ComAss_minha_(eu); },
+  salvarMinhaAssinatura: function (eu, sid, d) { return ComAss_salvar_(eu, d); },
+  removerMinhaAssinatura: function (eu) { return ComAss_remover_(eu); },
+  perder: function (eu, sid, d) { return ComOpo_perder_(eu, d); },
+  pedirReabertura: function (eu, sid, d) { return ComOpo_pedirReabertura_(eu, d); },
+  reabrir: function (eu, sid, d) { return ComOpo_reabrir_(eu, sid, d); },
+  catalogo: function (eu, sid, d) { return ComP_catalogo_(eu, d); },
+  excluirProdutoDuplicado: function (eu, sid, d) { return ComP_excluirDuplicado_(eu, d); },
+  salvarProduto: function (eu, sid, d) { return ComP_salvarProduto_(eu, d); },
+  arquivarProduto: function (eu, sid, d) { return ComP_arquivarProduto_(eu, d); },
+  // 29/10/2026: redução de preço acima da alçada do vendedor (aprovar ou negar) e o histórico de preço do item
+  decidirPreco: function (eu, sid, d) { return ComP_decidirPreco_(eu, d); },
+  // 11/11/2026: conta completa do preço pedido para decidir (janela de decisão)
+  analisePreco: function (eu, sid, d) { return ComP_analisePreco_(eu, d); },
+  historicoProduto: function (eu, sid, d) { return ComP_historicoProduto_(eu, d); },
+  // 11/11/2026 (custo com cotação e preço sugerido, SGO_Comercial_Custos.js)
+  custosPainel: function (eu, sid, d) { return ComCu_painel_(eu, d); },
+  custoItem: function (eu, sid, d) { return ComCu_item_(eu, d); },
+  custoSalvar: function (eu, sid, d) { return ComCu_salvarCusto_(eu, d); },
+  custoArquivo: function (eu, sid, d) { return ComCu_arquivo_(eu, d); },
+  custosConfigSalvar: function (eu, sid, d) { return ComCu_salvarConfig_(eu, d); },
+  custoPedirAtualizacao: function (eu, sid, d) { return ComCu_pedirAtualizacao_(eu, d); },
+  guiaPrecos: function (eu, sid, d) { Com_exigir_(eu, 'VENDEDOR', 'ver o preço sugerido'); return { guia: ComCu_guiaPrecos_(eu, ComP_obter_(eu, d && d.id, 'ver o preço sugerido')) }; },
+  aplicarPrecos: function (eu, sid, d) { return ComCu_aplicarPrecos_(eu, d); },
+  propostas: function (eu, sid, d) { var info = {}; var l = ComP_listar_(eu, d, info); return { propostas: l, foraDoFiltro: info.foraDoFiltro || 0 }; },
+  proposta: function (eu, sid, d) { return { proposta: ComP_detalhe_(eu, d && d.id) }; },
+  novaProposta: function (eu, sid, d) { return ComP_nova_(eu, d); },
+  salvarProposta: function (eu, sid, d) { return ComP_salvar_(eu, d); },
+  concluirProposta: function (eu, sid, d) { return ComP_concluir_(eu, d); },
+  decidirDesconto: function (eu, sid, d) { return ComP_decidirDesconto_(eu, d); },
+  voltarRascunho: function (eu, sid, d) { return ComP_voltarRascunho_(eu, d); },
+  linkAssinatura: function (eu, sid, d) { return ComP_linkAssinatura_(eu, d); },
+  // 10/11/2026 (etapa 1): assinatura do cliente feita antes desta versão (aplica a aprovação; confirmação só ao vendedor)
+  registrarAssinaturaCliente: function (eu, sid, d) { return ComP_registrarAssinaturaCliente_(eu, d); },
+  assinarResponsavel: function (eu, sid, d) { return ComP_assinarResponsavel_(eu, d); },
+  gerarDocumento: function (eu, sid, d) { return ComP_gerarDocumento_(eu, d); },
+  marcarInvestimento: function (eu, sid, d) { return ComP_marcarInvestimento_(eu, d); },
+  marcarEnviada: function (eu, sid, d) { return ComP_marcarEnviada_(eu, d); },
+  // 10/11/2026 (brechas de preço): conferência do preço da proposta pronta antes de abrir a janela "Enviar documento"
+  conferirEnvio: function (eu, sid, d) { return ComP_conferirEnvio_(eu, d); },
+  sincronizarEnvios: function (eu) { Com_exigir_(eu, 'VENDEDOR', 'conferir os envios'); return { atualizadas: ComP_sincronizarEnvios_() }; },
+  novaRevisao: function (eu, sid, d) { return ComP_novaRevisao_(eu, d); },
+  cancelarProposta: function (eu, sid, d) { return ComP_cancelar_(eu, d); },
+  // 29/10/2026: proposta que nunca foi ao cliente pode ser excluída (responsável ou gestão, com motivo)
+  excluirProposta: function (eu, sid, d) { return ComP_excluir_(eu, d); },
+  respostaCliente: function (eu, sid, d) { return ComP_registrarResposta_(eu, sid, d); },
+  opcoesPassagem: function (eu, sid, d) { return ComP_opcoesPassagem_(eu, d); },
+  passarSetores: function (eu, sid, d) { return ComP_passarSetores_(eu, d); },
+  pedidos: function (eu, sid, d) { return { pedidos: ComP_pedidos_(eu, d) }; },
+  painel: function (eu, sid, d) { return Com_painel_(eu, d); },
+  relatorioMes: function (eu, sid, d) {
+    Com_exigir_(eu, 'GESTAO', 'gerar o relatório mensal');
+    var comp = /^\d{4}-\d{2}$/.test(Com_s_(d && d.competencia)) ? Com_s_(d.competencia) : Com_hoje_().slice(0, 7);
+    var g = Comercial_relatorioMes_(comp, eu.nome);
+    return { html: typeof RelA4_injetarAvisos_ === 'function' ? RelA4_injetarAvisos_(g.html, RelA4_avisosPadrao_({ salvo: g.salvo, pdfUrl: g.pdfUrl, pastaUrl: g.pastaUrl, aviso: g.salvo ? '' : g.aviso }, [{ aviso: g.salvo ? g.aviso : '' }])) : g.html, salvo: g.salvo, pdfUrl: g.pdfUrl };
+  },
+  metodologia: function (eu, sid, d) { return Com_metodologiaTela_(eu, d); },
+  // 29/10/2026: reajuste do catálogo (SGO_Comercial_Precificacao.js): prévia, aplicar (ou agendar), histórico e desfazer o último
+  reajustePrevia: function (eu, sid, d) { var r = ComPr_previaReajuste_(eu, d); delete r._todas; return r; },
+  reajusteAplicar: function (eu, sid, d) { return ComPr_aplicarReajuste_(eu, d); },
+  reajustes: function (eu, sid, d) { return ComPr_historicoReajustes_(eu); },
+  reajusteDesfazer: function (eu, sid, d) { return ComPr_desfazerReajuste_(eu, d); },
+  // 01/11/2026: aplicar a decisão do dono na política (versão nova) e nos preços (lote de reajuste), com prévia (SGO_Comercial_Decisao20261101.js)
+  decisaoDonoPolitica: function (eu, sid, d) { return d && d.aplicar === true ? ComDec_aplicarPolitica_(eu, d) : ComDec_previaPolitica_(eu, d); },
+  decisaoDonoPrecos: function (eu, sid, d) { return d && d.aplicar === true ? ComDec_aplicarPrecos_(eu, d) : ComDec_previaPrecos_(eu, d); },
+  // 01/11/2026: catálogo oficial da Diretoria (26 serviços): tela da gestão (com a sobra), alteração e implantação (SGO_Comercial_CatalogoOficial.js)
+  catalogoOficial: function (eu) { return ComCat_tela_(eu); },
+  catalogoOficialSalvar: function (eu, sid, d) { return ComCat_salvar_(eu, d); },
+  catalogoOficialImplantar: function (eu, sid, d) {
+    var etapa = Com_up_(d && d.etapa) || 'CATALOGO';
+    if (etapa === 'DESCRICOES') return d.aplicar === true ? ComCat_aplicarDescricoes_(eu, d) : ComCat_previaDescricoes_(eu);
+    return d && d.aplicar === true ? ComCat_aplicarCatalogo_(eu, d) : ComCat_previaCatalogo_(eu);
+  },
+  // 01/11/2026 (Comercial C2): tabela de preços C1 (prévia e importação), ficha de custo e "usar o preço sugerido" (SGO_Comercial_Ficha.js)
+  importarC1Previa: function (eu, sid, d) { return ComF_previaImportacao_(eu); },
+  importarC1: function (eu, sid, d) { return ComF_importar_(eu, d); },
+  salvarFicha: function (eu, sid, d) { return ComF_salvarFicha_(eu, d); },
+  aplicarSugerido: function (eu, sid, d) { return ComF_aplicarSugerido_(eu, d); },
+  // 01/11/2026 (Comercial C3): banco de preços (SGO_Comercial_BancoPrecos.js) e o Orçamentista (SGO_Comercial_Orcamentista.js)
+  bancoPrecos: function (eu, sid, d) { return ComBP_consultar_(eu, d); },
+  bancoItem: function (eu, sid, d) { return ComBP_item_(eu, d); },
+  bancoCargaPrevia: function (eu) { return ComBP_previaCarga_(eu); },
+  bancoCarregar: function (eu, sid, d) { return ComBP_carregar_(eu, d); },
+  bancoRegistrar: function (eu, sid, d) { return ComBP_registrar_(eu, d); },
+  bancoDesconsiderar: function (eu, sid, d) { return ComBP_desconsiderar_(eu, d); },
+  // revisão 01/11/2026: preços fora da curva (prévia e lote, gestão)
+  bancoForaDaCurva: function (eu) { return ComBP_foraDaCurva_(eu); },
+  bancoDesconsiderarLote: function (eu, sid, d) { return ComBP_desconsiderarLote_(eu, d); },
+  bancoIndicadores: function (eu, sid, d) { return ComBP_indicadores_(eu, d); },
+  bancoBuscarInternet: function (eu, sid, d) { return ComBP_buscarInternet_(eu, d); },
+  bancoConfirmarInternet: function (eu, sid, d) { return ComBP_confirmarInternet_(eu, d); },
+  orcamentista: function (eu, sid, d) { return ComO_analisar_(eu, d); },
+  orcamentistaMontar: function (eu, sid, d) { return ComO_montar_(eu, d); },
+  // 01/11/2026 (Comercial C4): entrada "O que você quer fazer agora?", quem ganhou informado depois e o relatório preço × resultado
+  entrada: function (eu) { return Com_entrada_(eu); },
+  completarPerda: function (eu, sid, d) { return ComOpo_completarPerda_(eu, d); },
+  relatorioPrecoResultado: function (eu, sid, d) { return ComBP_relatorioResultado_(eu, d); },
+  // 11/11/2026 (dados completos para emitir, SGO_Comercial_DadosEmissao.js): preencher, pedir ao cliente, conferir, liberar; escopo da especialista
+  dadosPreencher: function (eu, sid, d) { return ComDE_preencher_(eu, sid, d); },
+  dadosPedir: function (eu, sid, d) { return ComDE_pedir_(eu, d); },
+  dadosCancelarPedido: function (eu, sid, d) { return ComDE_cancelarPedido_(eu, d); },
+  dadosConferir: function (eu, sid, d) { return ComDE_conferir_(eu, sid, d); },
+  dadosLiberar: function (eu, sid, d) { return ComDE_liberar_(eu, d); },
+  dadosPedirLiberacao: function (eu, sid, d) { return ComDE_pedirLiberacao_(eu, d); },
+  escopoGerar: function (eu, sid, d) { return ComDE_gerarEscopo_(eu, d); },
+  escopoValidar: function (eu, sid, d) { return ComDE_validarEscopo_(eu, d); },
+  // 11/11/2026: viagem com origem e destino, km e pedágio calculados e o banco de rotas (SGO_Comercial_Rotas.js)
+  // 11/11/2026 (caso RIO MED): intermediário e comissão (Diretoria decide) e a unidade de execução da proposta
+  intermediarioSalvar: function (eu, sid, d) { return ComDE_salvarIntermediario_(eu, d); },
+  // 11/11/2026 (proposta guiada, SGO_Comercial_Assistente.js): cliente -> unidade -> responsáveis -> equipamentos -> serviços -> proposta
+  guiaCliente: function (eu, sid, d) { return ComAs_cliente_(eu, d); },
+  guiaAbrirCliente: function (eu, sid, d) { return ComAs_abrirCliente_(eu, d); },
+  guiaSalvarCliente: function (eu, sid, d) { return ComAs_salvarCliente_(eu, sid, d); },
+  guiaSalvarUnidade: function (eu, sid, d) { return ComAs_salvarUnidade_(eu, sid, d); },
+  guiaUnidade: function (eu, sid, d) { return ComAs_unidade_(eu, d); },
+  guiaSalvarContato: function (eu, sid, d) { return ComAs_salvarContato_(eu, d); },
+  guiaJuntarContatos: function (eu, sid, d) { return ComAs_juntar_(eu, d); },
+  guiaPedirJuncao: function (eu, sid, d) { return ComAs_pedirJuncao_(eu, d); },
+  guiaSalvarEquipamento: function (eu, sid, d) { return ComAs_salvarEquipamento_(eu, sid, d); },
+  guiaLerPlaqueta: function (eu, sid, d) { return ComAs_lerPlaqueta_(eu, d); },
+  guiaLerTexto: function (eu, sid, d) { return ComAs_lerTexto_(eu, d); },
+  guiaSugerir: function (eu, sid, d) { return ComAs_sugerir_(eu, d); },
+  guiaPedirServico: function (eu, sid, d) { return ComAs_pedirServico_(eu, d); },
+  guiaMontar: function (eu, sid, d) { return ComAs_montar_(eu, sid, d); },
+  intermediarioDecidir: function (eu, sid, d) { return ComDE_decidirIntermediario_(eu, d); },
+  dadosUnidade: function (eu, sid, d) { return ComDE_definirUnidade_(eu, d); },
+  rotaCalcular: function (eu, sid, d) { return ComRo_calcular_(eu, d); },
+  rotaConferir: function (eu, sid, d) { return ComRo_conferir_(eu, d); },
+  rotas: function (eu, sid, d) { return ComRo_listar_(eu, d); }
+};
+
+/** google.script.run: Comercial_api(sessionId, acao, dados). Nunca lança. */
+function Comercial_api(sessionId, acao, dados) {
+  try {
+    var fn = COM_ACOES[Com_s_(acao)];
+    if (!fn) return { ok: false, message: 'Ação do Comercial desconhecida (' + Com_s_(acao) + '). Atualize a página (F5) e tente de novo.' };
+    var eu = Com_eu_(sessionId);
+    if (eu.perfil === 'CLIENTE') return { ok: false, message: 'O Comercial é da equipe interna da Metrolabs.' };
+    if (acao !== 'iniciar' && acao !== 'acesso' && acao !== 'doCliente' && eu.nivel === 'NENHUM') return { ok: false, semAcesso: true, message: 'Não foi possível abrir: ' + COM_MSG_SEM_ACESSO + '.' };
+    if (eu.nivel !== 'NENHUM' && acao !== 'acesso') { try { Com_garantirAbas_(); } catch (e) {} }
+    var r = fn(eu, sessionId, dados || {});
+    return JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
+  } catch (e) {
+    var m = String((e && e.message) || e).replace(/[.\s]+$/, '');
+    return { ok: false, message: (/^Não foi possível|^A proposta|^Escreva/.test(m) ? m : 'Não foi possível concluir: ' + m) + '.' };
+  }
+}

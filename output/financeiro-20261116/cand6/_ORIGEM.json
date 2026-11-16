@@ -1,0 +1,9 @@
+{
+  "sistema": "sgo",
+  "origem": "C:\\Users\\venda\\projetos\\wt_sgo_retomada_20261104\\apps-script-imports\\portal_sgo_versao_cnpj_db",
+  "commit": "26914c81a0ab3eab7022999d8ad5972f4ed61cdf",
+  "importado_em": "2026-11-04T03:21:57.358235+00:00",
+  "arquivos": 439,
+  "candidato": true,
+  "observacao": "Arquivos funcionais do candidato de origem; arquivos sem mudança semântica preservam bytes do servidor master. Evidências em docs/RETOMADA_SGO_20261104.md."
+}

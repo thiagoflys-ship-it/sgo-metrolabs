@@ -1,0 +1,1676 @@
+/****************************************************
+ * MINHAS ATIVIDADES / ATIVIDADES DA EQUIPE — servidor (2026-10-16)
+ *
+ * Atividades de trabalho com responsável, prazo, situação e histórico.
+ * Tela em JS_Atividades.html (incluída direto no Index, porque a janela
+ * de justificativa de atraso e o Kanban de cada módulo precisam existir
+ * desde o login, fora de qualquer módulo).
+ *
+ * Abas próprias no banco principal (criadas sob demanda, idempotente,
+ * mesmo padrão de CertCal_garantirTabela_ usado por Conduta/Auvo/CertCal —
+ * NUNCA usar setupSGO() aqui):
+ *  ATV_ATIVIDADES — uma linha por atividade.
+ *  ATV_HISTORICO  — criação, mudanças de situação, comentários,
+ *                   justificativas de atraso, "fazendo agora", edições
+ *                   (EDICAO), replanejamento da gestão (REPLANEJAMENTO)
+ *                   e troca de responsável (RESPONSAVEL).
+ *  ATV_AVISOS     — avisos para uma pessoa (ex.: gestor avisado da
+ *                   justificativa), lidos no painel/toast.
+ *
+ * Datas gravadas como texto no horário de Brasília, "aaaa-mm-ddThh:mm"
+ * (comparáveis como texto). Nada de Date cru volta ao navegador.
+ *
+ * Perfis: lançar atividade para OUTRA pessoa = Gestor, Admin, Diretoria e,
+ * desde 21/10/2026, RH e Financeiro (rotina da empresa: Atividades_ehGestorPerfil_).
+ * Atividade restrita (conduta) de outra pessoa: só a gestão de decisões
+ * (isAdminPerfilAuth_) e o RH (veRestritas). Demais perfis só criam para si.
+ * Perfil CLIENTE não usa o módulo.
+ *
+ * 19/10/2026 — equipe inteira e COMMAND:
+ *  - VER: todo perfil interno vê a equipe (Gantt, Kanban, lista). Fica fora
+ *    só a atividade restrita (RESTRITA = SIM, ou do Programa de conduta),
+ *    que só o responsável, quem lançou e a gestão veem.
+ *  - ALTERAR (situação, comentário, andamento): só o responsável, quem
+ *    lançou e a gestão. Os demais só veem. Editar os campos continua com
+ *    a gestão e com quem lançou para si (Atividades_podeEditar_).
+ *  - A justificativa de atraso (texto) só aparece para os envolvidos e a
+ *    gestão; os demais veem que houve justificativa e a nova previsão.
+ *  - COMMAND: uma fonte só. O COMMAND lê e grava pela ponte assinada
+ *    (SGO_PonteCommand.js, ações "atividades.*" -> Atividades_ponte_), em
+ *    nome do usuário do SGO+ ligado à conta (sgo_id). As MESMAS funções e
+ *    regras daqui atendem as duas telas. SISTEMA_ORIGEM diz onde foi lançada.
+ *  - 5W2H opcional na atividade: o quê (título), por quê, onde, quando
+ *    (prazo), quem (responsável), como, quanto. O PDCA fica no plano de
+ *    ação do Programa de conduta (SGO_Conduta_Qualidade.js), cujas ações
+ *    são atividades daqui.
+ *  - Avisos (SGO_Atividades_Avisos.js): no sistema na hora (ATV_AVISOS e a
+ *    central de pendências, que cobra até concluir ou justificar); e-mail
+ *    só no expediente (fora dele fica guardado e sai na abertura do próximo
+ *    expediente); WhatsApp só no resumo diário, no máximo um por pessoa por
+ *    dia, em dia útil e no horário de trabalho, sem repetir cobrança.
+ ****************************************************/
+
+var ATV_SITUACOES = ['A fazer', 'Em andamento', 'Aguardando', 'Concluída', 'Cancelada'];
+var ATV_PRIORIDADES = ['Baixa', 'Normal', 'Alta', 'Urgente'];
+var ATV_FUSO = 'America/Sao_Paulo';
+
+var ATV_COLUNAS = [
+  'ID', 'TITULO', 'DESCRICAO', 'MODULO', 'MODULO_NOME', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'UNIDADE_NOME',
+  'RESPONSAVEL_ID', 'RESPONSAVEL_NOME', 'CRIADO_POR_ID', 'CRIADO_POR_NOME', 'PRIORIDADE',
+  'INICIO_PREVISTO', 'PRAZO', 'PREVISAO_ATUAL', 'SITUACAO', 'PERCENTUAL', 'INICIADA_EM', 'CONCLUIDA_EM',
+  'AGORA_DESDE', 'MOTIVO_AGUARDANDO', 'OBS_CONCLUSAO', 'QTD_JUSTIFICATIVAS', 'ATUALIZADO_EM', 'CRIADO_EM',
+  // 2026-10-16: previsão cujo atraso já foi avisado por e-mail/WhatsApp (um aviso por atraso;
+  // nova previsão vencida = novo atraso = novo aviso). Ver Atividades_notificarAtrasos_.
+  'ATRASO_AVISADO_PREV',
+  // 19/10/2026: sistema onde foi lançada (SGO+ ou COMMAND), 5W2H opcional e atividade restrita.
+  'SISTEMA_ORIGEM', 'POR_QUE', 'ONDE', 'COMO', 'QUANTO', 'RESTRITA',
+  // 26/10/2026 (agenda única aprovada pelo dono): O.S. da Assistência técnica que criou esta atividade (atendimento do técnico).
+  // Quem manda é a O.S.: a atividade não conta atraso aqui (o prazo do cliente é acompanhado na Assistência) e só muda pela O.S.
+  'OS_ID',
+  // 31/10/2026 (pedido do dono, caso da lavadora): a justificativa de atraso vira PEDIDO DE NOVA DATA. O responsável propõe a
+  // data; quem lançou (ou a gestão) aceita ou recusa. Enquanto o pedido está PENDENTE, o atraso não é cobrado do responsável.
+  // PEDIDO_SITUACAO: '' (sem pedido) | PENDENTE | ACEITO | RECUSADO | ENCERRADO (concluída, cancelada ou replanejada antes da decisão).
+  'PEDIDO_SITUACAO', 'PEDIDO_DATA', 'PEDIDO_MOTIVO', 'PEDIDO_TEXTO', 'PEDIDO_PRIORIZOU', 'PEDIDO_A_PEDIDO_DE_ID', 'PEDIDO_A_PEDIDO_DE_NOME',
+  'PEDIDO_EM', 'PEDIDO_PREVISAO_ANTERIOR', 'PEDIDO_DECISOR_ID', 'PEDIDO_DECISOR_NOME', 'PEDIDO_DECIDIDO_POR_ID', 'PEDIDO_DECIDIDO_POR_NOME',
+  'PEDIDO_DECIDIDO_EM', 'PEDIDO_RESPOSTA'
+];
+/** Colunas de data (texto "aaaa-mm-ddThh:mm") da aba ATV_ATIVIDADES. */
+var ATV_COLUNAS_DATA = ['INICIO_PREVISTO', 'PRAZO', 'PREVISAO_ATUAL', 'INICIADA_EM', 'CONCLUIDA_EM', 'AGORA_DESDE', 'ATUALIZADO_EM', 'ATRASO_AVISADO_PREV',
+  'PEDIDO_DATA', 'PEDIDO_EM', 'PEDIDO_PREVISAO_ANTERIOR', 'PEDIDO_DECIDIDO_EM'];
+var ATV_COLUNAS_HIST = [
+  'ID', 'ATIVIDADE_ID', 'TIPO', 'USUARIO_ID', 'USUARIO_NOME', 'DATA', 'DE', 'PARA', 'TEXTO',
+  'PREVISAO_ANTERIOR', 'PREVISAO_NOVA', 'CRIADO_EM',
+  'CATEGORIA' // 19/10/2026: motivo da justificativa de atraso (ATV_MOTIVOS_ATRASO), para os indicadores
+];
+// EMAIL_*: fila do e-mail do aviso (PENDENTE até sair no expediente; ENVIADO; PULADO). Ver SGO_Atividades_Avisos.js.
+var ATV_COLUNAS_AVISOS = ['ID', 'DESTINATARIO_ID', 'ATIVIDADE_ID', 'TIPO', 'TITULO', 'TEXTO', 'DATA', 'LIDO_EM', 'CRIADO_EM', 'EMAIL_SITUACAO', 'EMAIL_EM', 'EMAIL_MOTIVO'];
+/**
+ * Motivo do atraso, escolhido no pedido de nova data (o texto continua obrigatório).
+ * 31/10/2026: "Outra prioridade definida pela gestão" soava como culpa da gestão. Virou "Outra prioridade, a pedido de alguém",
+ * que exige qual prioridade e quem pediu; a gestão lê "Priorizou: X, a pedido de Y". O nome antigo continua aceito (COMMAND,
+ * registros antigos) e conta junto nos indicadores.
+ */
+var ATV_MOTIVO_PRIORIDADE = 'Outra prioridade, a pedido de alguém';
+var ATV_MOTIVOS_ATRASO = [
+  'Aguardando cliente', 'Aguardando peça ou material', 'Aguardando outra área ou pessoa', ATV_MOTIVO_PRIORIDADE,
+  'Volume de trabalho acima do previsto', 'Problema técnico ou de equipamento', 'Prazo estimado curto demais', 'Ausência (férias, folga ou afastamento)', 'Outro motivo'
+];
+var ATV_MOTIVOS_LEGADO = { 'Outra prioridade definida pela gestão': ATV_MOTIVO_PRIORIDADE };
+/** Explicação do pedido de nova data: curta e objetiva (o relatório do dia vai em "Registrar andamento do dia"). */
+var ATV_PEDIDO_TEXTO_MIN = 15, ATV_PEDIDO_TEXTO_MAX = 600;
+var ATV_SISTEMAS = ['SGO+', 'COMMAND'];
+
+// ------------------------------------------------------------
+// INFRA
+// ------------------------------------------------------------
+function Atividades_abas_() {
+  return {
+    ATIVIDADES: SGO_CFG.SHEETS.ATV_ATIVIDADES || 'ATV_ATIVIDADES',
+    HISTORICO: SGO_CFG.SHEETS.ATV_HISTORICO || 'ATV_HISTORICO',
+    AVISOS: SGO_CFG.SHEETS.ATV_AVISOS || 'ATV_AVISOS'
+  };
+}
+
+/** Cria/completa as abas sob demanda. Guardado em cache para não conferir a planilha a cada chamada. */
+function Atividades_garantirAbas_() {
+  var cache = CacheService.getScriptCache();
+  if (cache.get('ATV_ABAS_OK_V5')) return;
+  var abas = Atividades_abas_();
+  CertCal_garantirTabela_(abas.ATIVIDADES, ATV_COLUNAS);
+  CertCal_garantirTabela_(abas.HISTORICO, ATV_COLUNAS_HIST);
+  CertCal_garantirTabela_(abas.AVISOS, ATV_COLUNAS_AVISOS);
+  ATV_COLUNAS.forEach(function (c) { CertCal_garantirColuna_(abas.ATIVIDADES, c); });
+  ATV_COLUNAS_HIST.forEach(function (c) { CertCal_garantirColuna_(abas.HISTORICO, c); });
+  ATV_COLUNAS_AVISOS.forEach(function (c) { CertCal_garantirColuna_(abas.AVISOS, c); });
+  // Datas são texto "aaaa-mm-ddThh:mm": trava o formato para a planilha não converter sozinha.
+  ATV_COLUNAS_DATA.forEach(function (c) { CertCal_forcarColunaTexto_(abas.ATIVIDADES, c); });
+  ['DATA', 'PREVISAO_ANTERIOR', 'PREVISAO_NOVA'].forEach(function (c) { CertCal_forcarColunaTexto_(abas.HISTORICO, c); });
+  CertCal_forcarColunaTexto_(abas.AVISOS, 'DATA');
+  CertCal_forcarColunaTexto_(abas.AVISOS, 'LIDO_EM');
+  CertCal_forcarColunaTexto_(abas.AVISOS, 'EMAIL_EM');
+  try { Atividades_vincularOS_(); } catch (eV) { console.error('Atividades, vínculo com as O.S.: ' + ((eV && eV.message) || eV)); }
+  cache.put('ATV_ABAS_OK_V5', '1', 21600);
+}
+
+// Chamada vinda do COMMAND pela ponte (Atividades_ponte_): enquanto a ação roda, as APIs abaixo
+// aceitam este identificador de uso único no lugar da sessão. Ele é sorteado no servidor e
+// descartado no fim da mesma execução; o navegador nunca o conhece.
+var ATV_PONTE_CTX = null;
+
+/** Sessão válida e perfil que pode usar o módulo. Lança erro com mensagem para a tela. */
+function Atividades_sessao_(sessionId) {
+  if (ATV_PONTE_CTX && ATV_PONTE_CTX.token && sessionId === ATV_PONTE_CTX.token) return ATV_PONTE_CTX.eu;
+  var s = exigirSessao(sessionId);
+  var perfil = SGO_UTILS.safeUpper(s.perfil);
+  if (perfil === 'CLIENTE') {
+    throw new Error('Não foi possível abrir as atividades: o perfil Cliente não usa este módulo. Se precisar, peça acesso de colaborador ao administrador.');
+  }
+  Atividades_garantirAbas_();
+  return {
+    id: SGO_UTILS.safe(s.userId),
+    usuario: SGO_UTILS.safe(s.usuario),
+    nome: SGO_UTILS.safe(s.nome) || SGO_UTILS.safe(s.usuario),
+    perfil: perfil,
+    gestor: Atividades_ehGestorPerfil_(perfil),
+    veRestritas: Atividades_veRestritasPerfil_(perfil)
+  };
+}
+
+/** 21/10/2026 (pedido do dono): atividades da equipe são rotina da empresa (gestão, RH e Financeiro). */
+function Atividades_ehGestorPerfil_(perfil) {
+  return isAdminPerfilAuth_(perfil) || (typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil));
+}
+
+/** Atividade restrita (Programa de conduta) de outra pessoa: a gestão de decisões e o RH; o Financeiro não. */
+function Atividades_veRestritasPerfil_(perfil) {
+  return isAdminPerfilAuth_(perfil) || (typeof SGO_ehPerfilRH_ === 'function' && SGO_ehPerfilRH_(perfil));
+}
+
+/** A gestão sobre esta atividade: gestor, e, se for restrita, quem vê as restritas. */
+function Atividades_gestaoSobre_(eu, a) {
+  if (!eu || !eu.gestor) return false;
+  if (Atividades_doFinanceiro_(a)) return Atividades_noSigiloFin_(eu.id); // 16/11/2026: Financeiro só com a lista de sigilo
+  return !Atividades_restrita_(a) || eu.veRestritas !== false;
+}
+
+/**
+ * 11/11/2026 (decisão do dono: a Diretoria é informada, não cobrada). Quem é da Diretoria (perfil Diretoria ou o dono, mesmas
+ * funções de diretoria e dono do restante do SGO+) não é travado pela atividade vencida: sem janela obrigatória de pedido de
+ * nova data, sem e-mail de atraso e sem cobrança da SEDNA; a atividade vira lembrete (aviso discreto na tela e no resumo diário)
+ * e a pessoa remarca a data, se quiser, sem justificativa (Atividades_apiRemarcar). Os demais perfis continuam como antes.
+ * Segue a chave "Resumo diário da Diretoria" da Caixa de decisões (padrão ligado).
+ */
+function Atividades_diretoriaInformada_() {
+  return typeof Ges_diretoriaInformada_ !== 'function' || Ges_diretoriaInformada_();
+}
+function Atividades_ehDiretoria_(eu) {
+  if (!eu || !Atividades_diretoriaInformada_()) return false;
+  if (SGO_UTILS.safeUpper(eu.perfil) === 'DIRETORIA') return true;
+  try { return typeof Chaves_ehDonoUsuario_ === 'function' && !!eu.usuario && !!Chaves_ehDonoUsuario_(eu.usuario); } catch (e) { return false; }
+}
+/** Ids ativos da Diretoria (perfil Diretoria e o dono), lidos uma vez por chamada. {} quando a regra está desligada. */
+function Atividades_idsDiretoria_() {
+  var m = {};
+  if (!Atividades_diretoriaInformada_()) return m;
+  SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) {
+    if (SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO') return;
+    if (Atividades_ehDiretoria_({ perfil: u.PERFIL, usuario: u.USUARIO })) m[String(u.ID)] = true;
+  });
+  return m;
+}
+
+function Atividades_exigirGestor_(eu, acao) {
+  if (!eu.gestor) {
+    throw new Error('Não foi possível ' + acao + ': esta ação é só para a gestão (Administrador, Diretoria, Gestor, RH e Financeiro). Peça a um gestor para fazer, ou lance a atividade para você mesmo.');
+  }
+}
+
+function Atividades_agora_() {
+  return Utilities.formatDate(new Date(), ATV_FUSO, "yyyy-MM-dd'T'HH:mm");
+}
+
+function Atividades_menosDias_(dias) {
+  return Utilities.formatDate(new Date(Date.now() - dias * 86400000), ATV_FUSO, "yyyy-MM-dd'T'HH:mm");
+}
+
+/** Normaliza "aaaa-mm-dd", "aaaa-mm-ddThh:mm(:ss)" ou Date para "aaaa-mm-ddThh:mm". Vazio se inválido. */
+function Atividades_normData_(v, horaPadrao) {
+  if (v === null || v === undefined || v === '') return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') {
+    if (isNaN(v.getTime())) return '';
+    return Utilities.formatDate(v, ATV_FUSO, "yyyy-MM-dd'T'HH:mm");
+  }
+  var s = String(v).trim();
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if (!m) return '';
+  var mes = Number(m[2]), dia = Number(m[3]);
+  if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return '';
+  return m[1] + '-' + m[2] + '-' + m[3] + 'T' + (m[4] ? m[4] + ':' + m[5] : (horaPadrao || '23:59'));
+}
+
+function Atividades_dataBr_(s) {
+  var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] + ' ' + m[4] + ':' + m[5] : '';
+}
+
+function Atividades_texto_(v, max) {
+  var s = SGO_UTILS.safe(v);
+  return max && s.length > max ? s.slice(0, max) : s;
+}
+
+/** 5W2H opcional (o quê = título, quando = prazo, quem = responsável já são campos próprios). */
+function Atividades_campos5w2h_(p) {
+  return {
+    POR_QUE: Atividades_texto_(p.porQue, 1000), ONDE: Atividades_texto_(p.onde, 300),
+    COMO: Atividades_texto_(p.como, 2000), QUANTO: Atividades_texto_(p.quanto, 300)
+  };
+}
+
+function Atividades_comTrava_(fn) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try { return fn(); } finally {
+    try { SpreadsheetApp.flush(); } catch (e) {}
+    lock.releaseLock();
+    // toda gravação das atividades passa por aqui: o Início e o painel recalculam as pendências
+    if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_();
+  }
+}
+
+// E-mails pedidos durante a chamada (avisos com EMAIL_SITUACAO = PENDENTE): só saem depois que
+// a gravação deu certo e a trava foi solta, e só no expediente (SGO_Atividades_Avisos.js).
+// Aqui ficam só os destinatários a conferir; se a chamada falhar, nada é enviado agora
+// (o aviso já gravado sai na rotina de hora em hora, no expediente).
+var ATV_FILA_NTF = [];
+// 26/10/2026 (plano de avisos aprovado pelo dono): WhatsApp "na hora" dos eventos das atividades marcados na matriz de
+// avisos. Guardado durante a trava e enviado depois, como o e-mail; o notificador confere expediente, vínculo, piloto e teto.
+var ATV_FILA_WA = [];
+
+function Atividades_enviarFila_() {
+  var fila = ATV_FILA_NTF;
+  ATV_FILA_NTF = [];
+  Atividades_enviarWhatsFila_();
+  if (!fila.length) return;
+  try { if (typeof Atividades_enviarEmailsPendentes_ === 'function') Atividades_enviarEmailsPendentes_(fila); }
+  catch (e) { console.error('Atividades e-mails: ' + ((e && e.message) || e)); }
+}
+
+function Atividades_enviarWhatsFila_() {
+  var fila = ATV_FILA_WA;
+  ATV_FILA_WA = [];
+  fila.forEach(function (w) {
+    try {
+      SGO_notificar_({ usuarios: [w.dest], canais: ['whatsapp'], evento: w.evento, origem: 'ATIVIDADES', refId: w.atividadeId + ':' + w.tipo + ':' + w.dia,
+        titulo: w.titulo, texto: w.texto });
+    } catch (e) { console.error('Atividades WhatsApp: ' + ((e && e.message) || e)); }
+  });
+}
+
+/** Evento da matriz de avisos de um aviso das atividades (pelo tipo e, no tipo NOVA, pelo título). */
+function Atividades_eventoMatriz_(tipo, titulo) {
+  var t = String(tipo || '').toUpperCase();
+  if (t === 'NOVA') return /devolvida/i.test(titulo) ? 'S09' : /passada para você/i.test(titulo) ? 'S02' : 'S01';
+  return { RESPONSAVEL: 'S03', REPLANEJAMENTO: 'S04', CONCLUIDA: 'S05', AGUARDANDO: 'S05', COMENTARIO: 'S06', JUSTIFICATIVA: 'S07', ATRASO: 'S08', VENCE_HOJE: 'S69' }[t] || '';
+}
+
+function Atividades_resposta_(fn) {
+  ATV_FILA_NTF = [];
+  ATV_FILA_WA = [];
+  try {
+    var r = fn();
+    var saida = JSON.parse(JSON.stringify(Object.assign({ ok: true }, r || {})));
+    Atividades_enviarFila_();
+    return saida;
+  } catch (e) {
+    ATV_FILA_NTF = [];
+    ATV_FILA_WA = [];
+    return { ok: false, message: String((e && e.message) || e) };
+  }
+}
+
+function Atividades_textoNtf_(a, extra) {
+  var linhas = [extra];
+  linhas.push('Atividade: ' + a.TITULO);
+  if (a.DESCRICAO) linhas.push('Descrição: ' + a.DESCRICAO);
+  if (a.MODULO_NOME) linhas.push('Módulo: ' + a.MODULO_NOME);
+  if (a.CLIENTE_NOME) linhas.push('Cliente: ' + a.CLIENTE_NOME + (a.UNIDADE_NOME ? ' - ' + a.UNIDADE_NOME : ''));
+  if (a.PRIORIDADE) linhas.push('Prioridade: ' + a.PRIORIDADE);
+  linhas.push('Prazo: ' + Atividades_dataBr_(a.PREVISAO_ATUAL || a.PRAZO) + '.');
+  linhas.push('Veja em Minhas atividades, no SGO+ ou no COMMAND.');
+  return linhas.join('\n');
+}
+
+/**
+ * Atraso: grava UM aviso por atraso para o responsável (marca a previsão avisada em
+ * ATRASO_AVISADO_PREV; nova previsão que vencer = novo aviso). O aviso nasce lido (a cobrança
+ * na tela é a janela de justificativa e a central de pendências) e leva o e-mail, que sai no
+ * expediente. Chamado pela verificação periódica das telas (no máximo a cada 10 min) e pela
+ * rotina de hora em hora (Atividades_rotinaAtrasos).
+ */
+function Atividades_notificarAtrasos_() {
+  var agora = Atividades_agora_();
+  var avisar = [], dir = Atividades_idsDiretoria_();
+  Atividades_comTrava_(function () {
+    Atividades_todas_().forEach(function (a) {
+      if (!Atividades_vencida_(a, agora) || !a.RESPONSAVEL_ID) return;
+      if (a.ATRASO_AVISADO_PREV && a.ATRASO_AVISADO_PREV === a.PREVISAO_ATUAL) return;
+      SGO_DATA.update(Atividades_abas_().ATIVIDADES, a.ID, { ATRASO_AVISADO_PREV: a.PREVISAO_ATUAL });
+      // 11/11/2026: da Diretoria, sem e-mail de cobrança: lembrete na tela e no resumo diário
+      if (dir[String(a.RESPONSAVEL_ID)]) return;
+      Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'ATRASO', 'Atividade atrasada: ' + a.TITULO,
+        'A atividade passou da previsão de entrega (' + Atividades_dataBr_(a.PREVISAO_ATUAL) + ') e ainda está aberta. Peça nova data (motivo e data proposta) em Minhas atividades ou, se já terminou, conclua a atividade.',
+        { email: true, lido: true });
+      avisar.push(a);
+    });
+  });
+  return avisar.length;
+}
+
+/**
+ * 26/10/2026: "Atividade vence hoje" (matriz S69). Só quando a gestão liga o evento (e-mail ou WhatsApp) e só no
+ * expediente: um aviso por atividade no dia do prazo (previsão atual), para o responsável.
+ */
+function Atividades_notificarVenceHoje_() {
+  var regra = typeof SGO_avisoRegra_ === 'function' ? SGO_avisoRegra_('S69') : null;
+  if (!regra || (regra.email === 'NAO' && regra.whatsapp === 'NAO') || regra.decisao === 'HISTORICO') return 0;
+  var ex = typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(new Date()) : { dentro: true };
+  if (!ex.dentro) return 0;
+  var agora = Atividades_agora_(), hoje = agora.slice(0, 10), n = 0;
+  var ja = {};
+  SGO_DATA.getAll(Atividades_abas_().AVISOS).forEach(function (v) { if (String(v.TIPO) === 'VENCE_HOJE' && String(v.DATA || '').slice(0, 10) === hoje) ja[String(v.ATIVIDADE_ID)] = true; });
+  Atividades_comTrava_(function () {
+    Atividades_todas_().forEach(function (a) {
+      if (!Atividades_aberta_(a) || !a.RESPONSAVEL_ID || ja[a.ID] || Atividades_daOS_(a)) return;
+      var prev = String(a.PREVISAO_ATUAL || a.PRAZO || '');
+      if (prev.slice(0, 10) !== hoje || prev <= agora) return;
+      Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'VENCE_HOJE', 'Atividade vence hoje: ' + a.TITULO,
+        'A atividade "' + a.TITULO + '" vence hoje às ' + prev.slice(11, 16) + '. Conclua, ou registre o andamento do dia; se não der para entregar, peça nova data depois que a previsão passar.',
+        { email: regra.email !== 'NAO', lido: true });
+      n++;
+    });
+  });
+  return n;
+}
+
+function Atividades_verificarAtrasosTalvez_() {
+  try {
+    var cache = CacheService.getScriptCache();
+    if (cache.get('ATV_ATRASOS_CHECADO')) return;
+    cache.put('ATV_ATRASOS_CHECADO', '1', 600);
+    Atividades_garantirRotina_();
+    Atividades_notificarAtrasos_();
+  } catch (e) { console.error('Atividades atrasos: ' + ((e && e.message) || e)); }
+}
+
+/** Gatilho de hora em hora: avisa atrasos mesmo sem ninguém com o SGO+ aberto. */
+function Atividades_garantirRotina_() {
+  var props = PropertiesService.getScriptProperties();
+  var hoje = Atividades_agora_().slice(0, 10);
+  if (props.getProperty('ATV_ROTINA_CHECADA_EM') === hoje) return;
+  var tem = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'Atividades_rotinaAtrasos'; });
+  if (!tem) ScriptApp.newTrigger('Atividades_rotinaAtrasos').timeBased().everyHours(1).create();
+  props.setProperty('ATV_ROTINA_CHECADA_EM', hoje);
+}
+
+/**
+ * Gatilho de hora em hora (nome sem "_" no fim para o gatilho de tempo do Google achar a função).
+ * Não recebe nem devolve dado de ninguém: só dispara os avisos de atraso ainda não enviados
+ * (cada atraso uma vez), então é inofensiva se chamada de outro lugar.
+ */
+function Atividades_rotinaAtrasos() {
+  // Rotina do gatilho: recusada quando chamada pelo navegador (SGO_Main.js SGO_execucaoInterna_).
+  if (!SGO_execucaoInterna_()) return 0;
+  Atividades_garantirAbas_();
+  ATV_FILA_NTF = [];
+  ATV_FILA_WA = [];
+  var n = Atividades_notificarAtrasos_();
+  try { Atividades_notificarVenceHoje_(); } catch (e) { console.error('Atividades vence hoje: ' + ((e && e.message) || e)); }
+  ATV_FILA_NTF = [];
+  Atividades_enviarWhatsFila_();
+  // e-mails guardados (inclusive os que chegaram fora do expediente) e o resumo diário do WhatsApp
+  try { if (typeof Atividades_enviarEmailsPendentes_ === 'function') Atividades_enviarEmailsPendentes_(null); } catch (e) { console.error('Atividades e-mails: ' + ((e && e.message) || e)); }
+  // 21/10/2026: resumo do dia ÚNICO (matriz de avisos, SGO_Avisos_Matriz.js) no lugar do resumo de atividades; a rotina da
+  // gestão também chama (a cada 15 min); cada pessoa recebe no máximo um e-mail e um WhatsApp de resumo por dia.
+  try {
+    if (typeof SGO_resumoDiaRodada_ === 'function') SGO_resumoDiaRodada_(new Date());
+    else if (typeof Atividades_resumoDiario_ === 'function') Atividades_resumoDiario_();
+  } catch (e) { console.error('Atividades resumo: ' + ((e && e.message) || e)); }
+  return n;
+}
+
+// ------------------------------------------------------------
+// LEITURA
+// ------------------------------------------------------------
+function Atividades_todas_() {
+  return SGO_DATA.getAll(Atividades_abas_().ATIVIDADES).map(Atividades_limpar_);
+}
+
+/** Linha da planilha -> objeto para o navegador (só strings/números). */
+function Atividades_limpar_(r) {
+  var o = {};
+  ATV_COLUNAS.forEach(function (c) { o[c] = r[c] === undefined || r[c] === null ? '' : r[c]; });
+  ATV_COLUNAS_DATA.forEach(function (c) { o[c] = Atividades_normData_(o[c], '00:00'); });
+  o.CRIADO_EM = String(o.CRIADO_EM || '');
+  if (!o.PREVISAO_ATUAL) o.PREVISAO_ATUAL = o.PRAZO;
+  var p = Number(String(o.PERCENTUAL).replace(',', '.'));
+  o.PERCENTUAL = isFinite(p) && String(o.PERCENTUAL) !== '' ? Math.max(0, Math.min(100, Math.round(p))) : '';
+  o.QTD_JUSTIFICATIVAS = Number(o.QTD_JUSTIFICATIVAS) || 0;
+  o.SITUACAO = ATV_SITUACOES.indexOf(o.SITUACAO) >= 0 ? o.SITUACAO : 'A fazer';
+  o.SISTEMA_ORIGEM = ATV_SISTEMAS.indexOf(String(o.SISTEMA_ORIGEM)) >= 0 ? String(o.SISTEMA_ORIGEM) : 'SGO+';
+  ['POR_QUE', 'ONDE', 'COMO', 'QUANTO', 'RESTRITA'].forEach(function (c) { o[c] = String(o[c] === undefined || o[c] === null ? '' : o[c]); });
+  ['PEDIDO_SITUACAO', 'PEDIDO_MOTIVO', 'PEDIDO_TEXTO', 'PEDIDO_PRIORIZOU', 'PEDIDO_A_PEDIDO_DE_ID', 'PEDIDO_A_PEDIDO_DE_NOME', 'PEDIDO_DECISOR_ID', 'PEDIDO_DECISOR_NOME',
+    'PEDIDO_DECIDIDO_POR_ID', 'PEDIDO_DECIDIDO_POR_NOME', 'PEDIDO_RESPOSTA'].forEach(function (c) { o[c] = String(o[c] === undefined || o[c] === null ? '' : o[c]); });
+  o.PEDIDO_SITUACAO = o.PEDIDO_SITUACAO.toUpperCase();
+  return o;
+}
+
+function Atividades_aberta_(a) {
+  return a.SITUACAO !== 'Concluída' && a.SITUACAO !== 'Cancelada';
+}
+
+/** Previsão de entrega já passou (atraso de fato, para os indicadores e o Gantt). */
+function Atividades_atrasada_(a, agora) {
+  return Atividades_aberta_(a) && !Atividades_daOS_(a) && !!a.PREVISAO_ATUAL && a.PREVISAO_ATUAL < agora;
+}
+
+/**
+ * Atrasada E cobrável do responsável (janela de justificativa, aviso de atraso, central, resumo, Sedna).
+ * 31/10/2026: com pedido de nova data PENDENTE a bola está com a gestão: o responsável não é cobrado enquanto isso.
+ */
+function Atividades_vencida_(a, agora) {
+  return Atividades_atrasada_(a, agora) && !Atividades_pedidoPendente_(a);
+}
+
+/** 31/10/2026: pedido de nova data aguardando a decisão de quem lançou (ou da gestão). */
+function Atividades_pedidoPendente_(a) {
+  return String((a && a.PEDIDO_SITUACAO) || '').toUpperCase() === 'PENDENTE';
+}
+
+/** 26/10/2026: atividade criada por uma O.S. da Assistência técnica (atendimento do técnico). */
+function Atividades_daOS_(a) { return !!String((a && a.OS_ID) || '').trim(); }
+
+/** Mudança manual em atividade de O.S.: só a rotina da Assistência (reagendar, encerrar, cancelar a O.S.). */
+function Atividades_exigirForaDaOS_(eu, a, acao) {
+  if (!Atividades_daOS_(a) || String((eu && eu.perfil) || '').toUpperCase() === 'SISTEMA') return;
+  throw new Error('Não foi possível ' + acao + ': esta atividade é o atendimento de uma O.S. da Assistência técnica e muda sozinha pela O.S. (agendar, reagendar, encerrar ou cancelar). Abra a O.S. em Assistência técnica > Minhas O.S. ou no aplicativo do técnico.');
+}
+
+/**
+ * Liga cada atividade criada pela Assistência à O.S. dela (OS_ID), pelas O.S. que guardam ATIVIDADE_ID. Só preenche o
+ * que está vazio. Roda junto com a conferência das abas (no máximo a cada 6 horas); as novas já nascem ligadas.
+ */
+function Atividades_vincularOS_() {
+  if (typeof AST_ABAS === 'undefined' || !SGO_DATA.getDB().getSheetByName(AST_ABAS.OS)) return 0;
+  var porAtv = {}, n = 0;
+  SGO_DATA.getAll(AST_ABAS.OS).forEach(function (o) { var id = String(o.ATIVIDADE_ID || '').trim(); if (id) porAtv[id] = String(o.ID); });
+  if (!Object.keys(porAtv).length) return 0;
+  SGO_DATA.getAll(Atividades_abas_().ATIVIDADES).forEach(function (a) {
+    var os = porAtv[String(a.ID)];
+    if (os && !String(a.OS_ID || '').trim()) { SGO_DATA.update(Atividades_abas_().ATIVIDADES, a.ID, { OS_ID: os }); n++; }
+  });
+  return n;
+}
+
+function Atividades_obter_(id) {
+  var alvo = SGO_UTILS.safe(id);
+  if (!alvo) throw new Error('Não foi possível localizar a atividade: identificação não informada. Feche a janela e abra a atividade de novo.');
+  var r = SGO_DATA.getById(Atividades_abas_().ATIVIDADES, alvo);
+  if (!r) throw new Error('Não foi possível localizar a atividade: ela não existe mais no banco. Atualize a tela para ver a lista atual.');
+  return Atividades_limpar_(r);
+}
+
+/** Responsável ou quem lançou. */
+function Atividades_envolvido_(eu, a) {
+  return !!eu.id && (a.RESPONSAVEL_ID === eu.id || a.CRIADO_POR_ID === eu.id);
+}
+
+/** Restrita: marcada ao lançar, ligada ao Programa de conduta (ação de plano disciplinar não é da equipe toda) ou do Financeiro. */
+function Atividades_restrita_(a) {
+  return SGO_UTILS.safeUpper(a.RESTRITA) === 'SIM' || a.MODULO === 'conduta' || Atividades_doFinanceiro_(a);
+}
+
+/**
+ * 16/11/2026 (Onda 2 do Financeiro, E1): atividade do Financeiro fala de valores e clientes. Ela é sempre restrita e só é vista
+ * pelo responsável, por quem lançou e por quem está na LISTA DE SIGILO do Financeiro (Omie_contaNoSigilo_, SGO_Omie_Sigilo.js).
+ * O RH e a gestão fora da lista não a veem (as restritas do Programa de conduta continuam como antes). Mesmos módulos que o
+ * relatório diário da empresa trata como sigilosos (RELDIA_FIN_MODULOS).
+ */
+var ATV_MODULOS_FINANCEIRO = ['financeiro', 'omie', 'caju', 'conciliacao_caju', 'compras_financeiro'];
+function Atividades_doFinanceiro_(a) {
+  return ATV_MODULOS_FINANCEIRO.indexOf(String((a && a.MODULO) || '').toLowerCase()) >= 0;
+}
+/** A conta está na lista de sigilo do Financeiro? Sem a trava carregada, ninguém está (nunca abre para todos). */
+function Atividades_noSigiloFin_(id) {
+  return !!id && typeof Omie_contaNoSigilo_ === 'function' && !!Omie_contaNoSigilo_(id);
+}
+var ATV_MSG_FIN_RESPONSAVEL = 'A atividade do Financeiro só pode ser de alguém da lista de sigilo. Para pedir algo a outra pessoa, crie a atividade sem valores e sem nome de cliente, fora do Financeiro.';
+
+/** Ver: toda a equipe interna, menos atividade restrita de outra pessoa. */
+function Atividades_podeVer_(eu, a) {
+  if (Atividades_gestaoSobre_(eu, a) || Atividades_envolvido_(eu, a)) return true;
+  if (Atividades_doFinanceiro_(a)) return Atividades_noSigiloFin_(eu && eu.id);
+  return !Atividades_restrita_(a);
+}
+
+/** Alterar situação, comentar: só o responsável, quem lançou e a gestão. */
+function Atividades_podeAlterar_(eu, a) {
+  return Atividades_gestaoSobre_(eu, a) || Atividades_envolvido_(eu, a);
+}
+
+/**
+ * Atividade para a tela, com o que esta pessoa pode fazer nela (a tela só mostra; o servidor confere de novo).
+ * 31/10/2026: AGIR diz, numa frase, quem age agora e o que precisa fazer (topo do detalhe, cartões e lista).
+ */
+function Atividades_paraTela_(eu, a, agora) {
+  var o = Object.assign({}, a);
+  o.PODE_ALTERAR = Atividades_podeAlterar_(eu, a);
+  o.PODE_EDITAR = Atividades_podeEditar_(eu, a);
+  o.ENVOLVIDO = Atividades_envolvido_(eu, a);
+  o.RESTRITA = Atividades_restrita_(a) ? 'SIM' : '';
+  o.SISTEMA_ORIGEM = o.SISTEMA_ORIGEM || 'SGO+';
+  o.PODE_DECIDIR = Atividades_pedidoPendente_(a) && Atividades_podeDecidirPedido_(eu, a);
+  o.PEDIDO_MOTIVO_TEXTO = a.PEDIDO_MOTIVO ? Atividades_motivoNeutro_(a.PEDIDO_MOTIVO, a.PEDIDO_PRIORIZOU, a.PEDIDO_A_PEDIDO_DE_NOME) : '';
+  if (!Atividades_veJustificativa_(eu, a)) {
+    // texto do pedido e da recusa: só envolvidos e gestão (como a justificativa); os demais veem que há pedido e a data
+    o.PEDIDO_TEXTO = ''; o.PEDIDO_PRIORIZOU = ''; o.PEDIDO_A_PEDIDO_DE_NOME = ''; o.PEDIDO_RESPOSTA = ''; o.PEDIDO_MOTIVO_TEXTO = '';
+  }
+  o.AGIR = Atividades_quemAge_(eu, o, agora || Atividades_agora_());
+  return o;
+}
+
+/** Quem vê o texto da justificativa de atraso: envolvidos e gestão. */
+function Atividades_veJustificativa_(eu, a) {
+  return Atividades_gestaoSobre_(eu, a) || Atividades_envolvido_(eu, a);
+}
+
+/** Motivo do pedido no texto que a gestão lê: neutro, sem apontar culpa ("Priorizou: X, a pedido de Y"). */
+function Atividades_motivoNeutro_(motivo, priorizou, aPedidoDe) {
+  var m = ATV_MOTIVOS_LEGADO[motivo] || motivo || '';
+  if (m !== ATV_MOTIVO_PRIORIDADE) return m;
+  if (!priorizou) return 'Outra prioridade';
+  return 'Priorizou: ' + priorizou + (aPedidoDe ? ', a pedido de ' + aPedidoDe : '');
+}
+
+/** Decide o pedido de nova data: quem lançou ou a gestão; nunca o próprio responsável. */
+function Atividades_podeDecidirPedido_(eu, a) {
+  if (!eu || !eu.id || eu.id === a.RESPONSAVEL_ID) return false;
+  // Revisão 01/11/2026: quem lançou só decide se for o decisor gravado no pedido (da gestão, Atividades_infoDecisor_). Antes
+  // qualquer "quem lançou" decidia: atividade lançada por um técnico para si e depois passada a um colega pela gestão
+  // deixava o colega aprovar o pedido do outro, contra o manual ("quem lançou, se for da gestão").
+  return Atividades_gestaoSobre_(eu, a) || (!!a.PEDIDO_DECISOR_ID && a.PEDIDO_DECISOR_ID === eu.id);
+}
+
+/**
+ * Quem decide o pedido de nova data desta atividade.
+ *  direto = true: a atividade foi lançada pela própria pessoa ou por uma rotina do sistema (Comercial, Assistência...): a nova
+ *  data vale na hora, como antes, sem ninguém para aprovar. Senão, quem lançou decide (com o nome dele na tela); se quem
+ *  lançou não está mais ativo, "a gestão" (qualquer gestor decide; a Caixa de decisões leva ao gestor da área).
+ */
+function Atividades_infoDecisor_(a) {
+  var lancou = String(a.CRIADO_POR_ID || '');
+  if (!lancou || lancou === String(a.RESPONSAVEL_ID)) return { direto: true, id: '', nome: '' };
+  var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, lancou);
+  if (!u) return { direto: true, id: '', nome: '' }; // rotina do sistema (ASSISTENCIA, COMERCIAL, COMPRAS...)
+  if (SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO') return { direto: false, id: '', nome: 'a gestão' };
+  // revisão 01/11/2026: quem lançou e não é da gestão (lançou para si e a gestão passou a outra pessoa) não decide
+  if (!Atividades_ehGestorPerfil_(SGO_UTILS.safeUpper(u.PERFIL))) return { direto: false, id: '', nome: 'a gestão' };
+  return { direto: false, id: String(u.ID), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO) || a.CRIADO_POR_NOME || 'a gestão' };
+}
+
+/**
+ * "Quem age agora" (31/10/2026, aprovado pelo dono): uma frase e a ação principal, conforme quem está vendo e o estado.
+ * codigo: JUSTIFICAR (responsável com a atividade vencida), DECIDIR (gestão com pedido pendente), AGUARDANDO (responsável
+ * esperando a gestão) ou NADA. acao: o botão principal da tela (pedir, decidir, mudarPedido) ou vazio.
+ */
+function Atividades_quemAge_(eu, a, agora) {
+  var souResp = !!eu && a.RESPONSAVEL_ID === eu.id;
+  var resp = a.RESPONSAVEL_NOME || 'o responsável';
+  var prev = Atividades_dataBr_(a.PREVISAO_ATUAL);
+  var nada = function (detalhe) { return { codigo: 'NADA', frase: 'Nada a fazer agora', detalhe: detalhe || '', acao: '' }; };
+  if (!Atividades_aberta_(a)) return nada('Atividade ' + String(a.SITUACAO || '').toLowerCase() + '.');
+  if (Atividades_daOS_(a)) return nada('Esta atividade muda pela O.S. da Assistência técnica.');
+  var pedida = Atividades_dataBr_(a.PEDIDO_DATA);
+  if (Atividades_pedidoPendente_(a)) {
+    var decisor = a.PEDIDO_DECISOR_NOME || 'a gestão';
+    // Revisão 01/11/2026: a data proposta pode passar enquanto o pedido espera. Aceitar fica impossível (o servidor barra);
+    // a tela não oferece "Aceitar" e diz o que fazer, dos dois lados.
+    var passou = !!a.PEDIDO_DATA && a.PEDIDO_DATA <= agora;
+    if (Atividades_podeDecidirPedido_(eu, a)) {
+      if (passou) {
+        return { codigo: 'DECIDIR', frase: 'Você precisa: recusar ou replanejar a nova data proposta por ' + resp, dataPassou: true,
+          detalhe: 'A data proposta (' + pedida + ') já passou sem decisão e não pode mais ser aceita. Recuse com o motivo (' + resp + ' propõe outra data ou conclui) ou, se já sabe a data certa, mude o prazo em Editar.', acao: 'decidir' };
+      }
+      return { codigo: 'DECIDIR', frase: 'Você precisa: aceitar ou recusar a nova data proposta por ' + resp,
+        detalhe: 'Enquanto você não decide, ' + resp + ' não é cobrado pelo atraso.', acao: 'decidir' };
+    }
+    if (souResp) {
+      return { codigo: 'AGUARDANDO', frase: 'Aguardando ' + decisor + ' decidir sua nova data; você não será cobrado enquanto isso',
+        detalhe: passou ? 'A data que você propôs (' + pedida + ') já passou e ainda não houve decisão. Se precisar de mais tempo, toque em "Mudar o pedido" e proponha outra data; se já terminou, conclua.'
+          : 'Se precisar mudar a data ou o motivo, toque em "Mudar o pedido".', acao: 'mudarPedido' };
+    }
+    return nada('Aguardando ' + decisor + ' decidir a nova data (' + pedida + ') pedida por ' + resp + '.');
+  }
+  if (Atividades_vencida_(a, agora)) {
+    var recusa = a.PEDIDO_SITUACAO === 'RECUSADO' && a.PEDIDO_DECIDIDO_POR_NOME
+      ? a.PEDIDO_DECIDIDO_POR_NOME + ' recusou a nova data pedida (' + pedida + ')' + (a.PEDIDO_RESPOSTA ? ': ' + a.PEDIDO_RESPOSTA : '') + '. ' : '';
+    if (souResp && Atividades_ehDiretoria_(eu)) return { codigo: 'LEMBRETE', frase: 'Lembrete: a previsão desta atividade passou', detalhe: 'A previsão de entrega venceu em ' + prev + '. Para a Diretoria é só um lembrete, sem justificativa: conclua ou, se quiser, remarque a data.', acao: 'remarcar' };
+    if (souResp) return { codigo: 'JUSTIFICAR', frase: 'Você precisa: pedir nova data (justificar) ou concluir', detalhe: recusa + 'A previsão de entrega venceu em ' + prev + '.', acao: 'pedir' };
+    return nada(recusa + resp + ' precisa pedir nova data ou concluir (a previsão venceu em ' + prev + ').');
+  }
+  return nada((souResp ? 'Sua entrega está prevista para ' : 'Entrega prevista para ') + prev + '.');
+}
+
+/**
+ * Datas absurdas (31/10/2026: uma atividade foi gravada com início em 2023 e nada barrou). Ano fora de [ano atual - 1,
+ * ano atual + 2] não entra. Lança erro dizendo o quê, por quê e o que fazer.
+ */
+function Atividades_exigirAnoValido_(iso, rotulo, acao) {
+  if (!iso) return;
+  var ano = Number(String(iso).slice(0, 4)), atual = Number(Atividades_agora_().slice(0, 4));
+  if (ano >= atual - 1 && ano <= atual + 2) return;
+  throw new Error('Não foi possível ' + acao + ': o campo ' + rotulo + ' (' + Atividades_dataBr_(iso) + ') está com o ano ' + ano + ', fora do período aceito (' + (atual - 1) + ' a ' + (atual + 2) +
+    '). Provavelmente o ano foi digitado errado. Corrija o ano no campo ' + rotulo + ' e tente de novo.');
+}
+
+/** Pessoa do SGO+ pelo ID (chamadas da ponte do COMMAND). Lança erro com mensagem para a tela. */
+function Atividades_euDoUsuario_(userId, sistema) {
+  var id = SGO_UTILS.safe(userId);
+  if (!id) throw new Error('Não foi possível abrir as atividades: a sua conta do COMMAND não está ligada a um usuário do SGO+. Peça ao administrador para ligar a conta em Usuários e papéis (Migrar do SGO+).');
+  var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_USUARIOS, id);
+  if (!u) throw new Error('Não foi possível abrir as atividades: o usuário do SGO+ ligado à sua conta não existe mais. Peça ao administrador para ligar a conta de novo em Usuários e papéis.');
+  if (SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO') throw new Error('Não foi possível abrir as atividades: o seu usuário está inativo no SGO+. Peça ao administrador para reativar em Administração > Usuários.');
+  var perfil = SGO_UTILS.safeUpper(u.PERFIL);
+  if (perfil === 'CLIENTE') throw new Error('Não foi possível abrir as atividades: o perfil Cliente não usa este módulo.');
+  Atividades_garantirAbas_();
+  return { id: String(u.ID), usuario: SGO_UTILS.safe(u.USUARIO), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: perfil, gestor: Atividades_ehGestorPerfil_(perfil), veRestritas: Atividades_veRestritasPerfil_(perfil), sistema: sistema || 'COMMAND' };
+}
+
+function Atividades_usuariosAtivos_() {
+  return SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS)
+    .filter(function (u) {
+      return SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO' && SGO_UTILS.safeUpper(u.PERFIL) !== 'CLIENTE';
+    })
+    .map(function (u) {
+      return { id: String(u.ID), nome: SGO_UTILS.safe(u.NOME) || SGO_UTILS.safe(u.USUARIO), perfil: SGO_UTILS.safeUpper(u.PERFIL),
+        dono: typeof Chaves_ehDonoUsuario_ === 'function' && Chaves_ehDonoUsuario_(u.USUARIO) };
+    })
+    .sort(function (a, b) { return a.nome.localeCompare(b.nome); });
+}
+
+function Atividades_historico_(atividadeId) {
+  return SGO_DATA.getAll(Atividades_abas_().HISTORICO)
+    .filter(function (h) { return String(h.ATIVIDADE_ID) === String(atividadeId); })
+    .map(Atividades_limparHist_)
+    .sort(Atividades_ordemHistDesc_);
+}
+
+/** Mais recente primeiro; no mesmo minuto, desempata pelo carimbo CRIADO_EM (com segundos). */
+function Atividades_ordemHistDesc_(a, b) {
+  var ka = a.DATA + "|" + a.CRIADO_EM, kb = b.DATA + "|" + b.CRIADO_EM;
+  return ka < kb ? 1 : ka > kb ? -1 : 0;
+}
+
+function Atividades_limparHist_(h) {
+  var o = {};
+  ATV_COLUNAS_HIST.forEach(function (c) { o[c] = h[c] === undefined || h[c] === null ? '' : String(h[c]); });
+  o.DATA = Atividades_normData_(o.DATA, '00:00');
+  o.PREVISAO_ANTERIOR = Atividades_normData_(o.PREVISAO_ANTERIOR, '00:00');
+  o.PREVISAO_NOVA = Atividades_normData_(o.PREVISAO_NOVA, '00:00');
+  return o;
+}
+
+// ------------------------------------------------------------
+// ESCRITA
+// ------------------------------------------------------------
+function Atividades_registrarHist_(eu, atividadeId, tipo, extra) {
+  var e = extra || {};
+  SGO_DATA.insert(Atividades_abas_().HISTORICO, {
+    ATIVIDADE_ID: atividadeId, TIPO: tipo, USUARIO_ID: eu.id, USUARIO_NOME: eu.nome, DATA: Atividades_agora_(),
+    DE: e.de || '', PARA: e.para || '', TEXTO: Atividades_texto_(e.texto, 4000),
+    PREVISAO_ANTERIOR: e.previsaoAnterior || '', PREVISAO_NOVA: e.previsaoNova || '', CATEGORIA: e.categoria || ''
+  });
+}
+
+/**
+ * Aviso no sistema (toast no SGO+ e no COMMAND, central de pendências).
+ * opcoes.email: o aviso também vai por e-mail (fila: sai depois da gravação, só no expediente).
+ * opcoes.lido: já nasce lido (aviso que só carrega o e-mail; a cobrança na tela é outra).
+ */
+function Atividades_avisar_(destinatarioId, atividadeId, tipo, titulo, texto, opcoes) {
+  if (!destinatarioId) return;
+  var o = opcoes || {};
+  var agora = Atividades_agora_();
+  SGO_DATA.insert(Atividades_abas_().AVISOS, {
+    DESTINATARIO_ID: destinatarioId, ATIVIDADE_ID: atividadeId, TIPO: tipo,
+    TITULO: Atividades_texto_(titulo, 200), TEXTO: Atividades_texto_(texto, 2000), DATA: agora, LIDO_EM: o.lido ? agora : '',
+    EMAIL_SITUACAO: o.email ? 'PENDENTE' : '', EMAIL_EM: '', EMAIL_MOTIVO: ''
+  });
+  if (o.email && ATV_FILA_NTF.indexOf(String(destinatarioId)) < 0) ATV_FILA_NTF.push(String(destinatarioId));
+  // 26/10/2026: evento marcado "WhatsApp na hora" na matriz de avisos -> fila do WhatsApp (sai depois da trava)
+  var evento = o.evento || Atividades_eventoMatriz_(tipo, titulo);
+  var regra = evento && typeof SGO_avisoRegra_ === 'function' ? SGO_avisoRegra_(evento) : null;
+  if (regra && regra.whatsapp === 'HORA' && regra.decisao !== 'HISTORICO') {
+    ATV_FILA_WA.push({ dest: String(destinatarioId), atividadeId: atividadeId, tipo: tipo, evento: evento, dia: agora.slice(0, 10), titulo: Atividades_texto_(titulo, 180), texto: Atividades_texto_(texto, 1500) });
+  }
+}
+
+function Atividades_gravar_(id, dados) {
+  dados.ATUALIZADO_EM = Atividades_agora_();
+  var ok = SGO_DATA.update(Atividades_abas_().ATIVIDADES, id, dados);
+  if (!ok) throw new Error('Não foi possível gravar a atividade: ela não foi encontrada no banco. Atualize a tela e tente de novo.');
+}
+
+// ------------------------------------------------------------
+// API — todas validam sessão e perfil em toda chamada
+// ------------------------------------------------------------
+
+/** Opções dos formulários: pessoas, clientes e quem sou eu. */
+function Atividades_apiOpcoes(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var usuarios = Atividades_usuariosAtivos_();
+    if (!eu.gestor) usuarios = usuarios.filter(function (u) { return u.id === eu.id; });
+    usuarios = usuarios
+      .map(function (u) { return { id: u.id, nome: u.nome, perfil: u.perfil }; });
+    if (!usuarios.some(function (u) { return u.id === eu.id; })) usuarios.unshift({ id: eu.id, nome: eu.nome, perfil: eu.perfil });
+    var clientes = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES)
+      .filter(function (c) { return SGO_UTILS.safeUpper(c.STATUS || 'ATIVO') === 'ATIVO'; })
+      .map(function (c) { return { ID: String(c.ID), NOME: SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL), CNPJ: SGO_UTILS.safe(c.CNPJ) }; })
+      .sort(function (a, b) { return a.NOME.localeCompare(b.NOME); });
+    // 31/10/2026: "a pedido de quem" no pedido de nova data (motivo "Outra prioridade, a pedido de alguém"): toda a equipe interna ativa
+    var pessoas = Atividades_usuariosAtivos_().filter(function (u) { return u.id !== eu.id; }).map(function (u) { return { id: u.id, nome: u.nome }; });
+    return {
+      eu: { id: eu.id, nome: eu.nome, perfil: eu.perfil, gestor: eu.gestor, configuraAvisos: eu.perfil === 'ADMIN' || eu.perfil === 'DIRETORIA' },
+      usuarios: usuarios, pessoas: pessoas, clientes: clientes, situacoes: ATV_SITUACOES, prioridades: ATV_PRIORIDADES, motivosAtraso: ATV_MOTIVOS_ATRASO,
+      motivoPrioridade: ATV_MOTIVO_PRIORIDADE, pedidoTextoMin: ATV_PEDIDO_TEXTO_MIN, pedidoTextoMax: ATV_PEDIDO_TEXTO_MAX, agora: Atividades_agora_()
+    };
+  });
+}
+
+function Atividades_apiUnidades(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    Atividades_sessao_(sessionId);
+    var clienteId = SGO_UTILS.safe(payload && payload.clienteId);
+    if (!clienteId) return { unidades: [] };
+    var unidades = SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_UNIDADES)
+      .filter(function (u) { return String(u.CLIENTE_ID) === clienteId && SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') === 'ATIVO'; })
+      .map(function (u) { return { ID: String(u.ID), NOME: SGO_UTILS.safe(u.NOME_UNIDADE) }; })
+      .sort(function (a, b) { return a.NOME.localeCompare(b.NOME); });
+    return { unidades: unidades };
+  });
+}
+
+/** Atividades em que sou o responsável. */
+function Atividades_apiListarMinhas(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var agora = Atividades_agora_();
+    var itens = Atividades_todas_().filter(function (a) { return a.RESPONSAVEL_ID === eu.id; }).map(function (a) { return Atividades_paraTela_(eu, a, agora); });
+    return { itens: itens, agora: agora };
+  });
+}
+
+/**
+ * Kanban de um módulo: todas as atividades daquele módulo que a pessoa pode ver (a equipe inteira,
+ * menos as restritas de outras pessoas). Cada item diz se a pessoa pode alterar.
+ */
+function Atividades_apiListarModulo(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var modulo = SGO_UTILS.safe(payload && payload.modulo);
+    if (!/^[a-z0-9_]{1,60}$/.test(modulo)) throw new Error('Não foi possível abrir as atividades do módulo: módulo não identificado. Abra o módulo pelo menu e tente de novo.');
+    var agora = Atividades_agora_();
+    var itens = Atividades_todas_().filter(function (a) { return a.MODULO === modulo && a.SITUACAO !== 'Cancelada' && Atividades_podeVer_(eu, a); })
+      .map(function (a) { return Atividades_paraTela_(eu, a, agora); });
+    return { itens: itens, agora: agora, gestor: eu.gestor };
+  });
+}
+
+function Atividades_apiDetalhe(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var a = Atividades_obter_(payload && payload.id);
+    if (!Atividades_podeVer_(eu, a)) throw new Error('Não foi possível abrir a atividade: ela é restrita. Só o responsável, quem lançou e a gestão veem atividades restritas e as do Programa de conduta.');
+    var veJust = Atividades_veJustificativa_(eu, a);
+    var hist = Atividades_historico_(a.ID).map(function (h) {
+      if (ATV_HIST_RESERVADOS.indexOf(h.TIPO) >= 0 && !veJust) { h.TEXTO = ''; h.CATEGORIA = ''; h.OCULTO = true; }
+      return h;
+    });
+    var plano = typeof Atividades_planoDaAtividade_ === 'function' ? Atividades_planoDaAtividade_(a) : null;
+    // 31/10/2026: para o formulário do pedido de nova data, quem decide (ou se a nova data vale na hora)
+    var dec = a.RESPONSAVEL_ID === eu.id && Atividades_aberta_(a) ? Atividades_infoDecisor_(a) : null;
+    return { item: Atividades_paraTela_(eu, a), historico: hist, plano: plano, agora: Atividades_agora_(), eu: { id: eu.id, gestor: eu.gestor },
+      decisor: dec ? { direto: dec.direto, nome: dec.nome } : null };
+  });
+}
+
+function Atividades_apiCriar(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var titulo = Atividades_texto_(p.titulo, 200);
+    if (titulo.length < 3) throw new Error('Não foi possível salvar a atividade: o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito (mínimo 3 letras) e clique em Salvar atividade de novo.');
+    var prazo = Atividades_normData_(p.prazo, '18:00');
+    if (!prazo) throw new Error('Não foi possível salvar a atividade: o prazo não foi informado. Preencha o campo Prazo com data e hora e clique em Salvar atividade de novo.');
+    var inicio = Atividades_normData_(p.inicioPrevisto, '08:00');
+    if (p.inicioPrevisto && !inicio) throw new Error('Não foi possível salvar a atividade: o início previsto é inválido. Corrija a data ou deixe o campo vazio.');
+    if (eu.perfil !== 'SISTEMA') {
+      // 31/10/2026: ano digitado errado (ex.: 2023) não entra; as rotinas do sistema (Assistência, Comercial) calculam a data sozinhas
+      Atividades_exigirAnoValido_(prazo, 'Prazo', 'salvar a atividade');
+      Atividades_exigirAnoValido_(inicio, 'Início previsto', 'salvar a atividade');
+    }
+    if (inicio && inicio > prazo) throw new Error('Não foi possível salvar a atividade: o início previsto (' + Atividades_dataBr_(inicio) + ') está depois do prazo (' + Atividades_dataBr_(prazo) + '). A atividade não pode começar depois de terminar. Ajuste uma das duas datas e clique em Salvar atividade de novo.');
+    var prioridade = ATV_PRIORIDADES.indexOf(p.prioridade) >= 0 ? p.prioridade : 'Normal';
+
+    var respId = SGO_UTILS.safe(p.responsavelId) || eu.id;
+    var respNome = eu.nome;
+    if (respId !== eu.id) {
+      Atividades_exigirGestor_(eu, 'lançar atividade para outra pessoa');
+      var resp = Atividades_usuariosAtivos_().filter(function (u) { return u.id === respId; })[0];
+      if (!resp) throw new Error('Não foi possível lançar a atividade: o responsável escolhido não está ativo no SGO+. Escolha outra pessoa na lista ou reative o usuário em Administração.');
+      respNome = resp.nome;
+    }
+
+    var modulo = SGO_UTILS.safe(p.modulo);
+    if (modulo && !/^[a-z0-9_]{1,60}$/.test(modulo)) modulo = '';
+    // 16/11/2026 (E1): atividade do Financeiro só para alguém da lista de sigilo, e sempre restrita
+    var doFin = Atividades_doFinanceiro_({ MODULO: modulo });
+    if (doFin && !Atividades_noSigiloFin_(respId)) throw new Error('Não foi possível lançar a atividade: ' + ATV_MSG_FIN_RESPONSAVEL);
+    var clienteId = SGO_UTILS.safe(p.clienteId), clienteNome = '', unidadeId = SGO_UTILS.safe(p.unidadeId), unidadeNome = '';
+    if (clienteId) {
+      var c = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, clienteId);
+      if (!c) throw new Error('Não foi possível lançar a atividade: o cliente escolhido não existe mais. Escolha o cliente de novo na lista.');
+      clienteNome = SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL);
+      if (unidadeId) {
+        var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, unidadeId);
+        if (!u || String(u.CLIENTE_ID) !== clienteId) throw new Error('Não foi possível lançar a atividade: a unidade não pertence ao cliente escolhido. Escolha a unidade de novo.');
+        unidadeNome = SGO_UTILS.safe(u.NOME_UNIDADE);
+      }
+    } else unidadeId = '';
+    var w = Atividades_campos5w2h_(p);
+
+    return Atividades_comTrava_(function () {
+      var agora = Atividades_agora_();
+      var reg = SGO_DATA.insert(Atividades_abas_().ATIVIDADES, {
+        TITULO: titulo, DESCRICAO: Atividades_texto_(p.descricao, 4000), MODULO: modulo, MODULO_NOME: Atividades_texto_(p.moduloNome, 120),
+        CLIENTE_ID: clienteId, CLIENTE_NOME: clienteNome, UNIDADE_ID: unidadeId, UNIDADE_NOME: unidadeNome,
+        RESPONSAVEL_ID: respId, RESPONSAVEL_NOME: respNome, CRIADO_POR_ID: eu.id, CRIADO_POR_NOME: eu.nome,
+        PRIORIDADE: prioridade, INICIO_PREVISTO: inicio, PRAZO: prazo, PREVISAO_ATUAL: prazo, SITUACAO: 'A fazer', OS_ID: String(eu.perfil || '').toUpperCase() === 'SISTEMA' ? SGO_UTILS.safe(p.osId) : '',
+        PERCENTUAL: '', INICIADA_EM: '', CONCLUIDA_EM: '', AGORA_DESDE: '', MOTIVO_AGUARDANDO: '', OBS_CONCLUSAO: '',
+        QTD_JUSTIFICATIVAS: 0, ATUALIZADO_EM: agora,
+        SISTEMA_ORIGEM: eu.sistema === 'COMMAND' ? 'COMMAND' : 'SGO+', POR_QUE: w.POR_QUE, ONDE: w.ONDE, COMO: w.COMO, QUANTO: w.QUANTO,
+        RESTRITA: doFin || p.restrita === true || SGO_UTILS.safeUpper(p.restrita) === 'SIM' ? 'SIM' : ''
+      });
+      Atividades_registrarHist_(eu, reg.ID, 'CRIACAO', { para: 'A fazer', texto: 'Atividade lançada para ' + respNome + (eu.sistema === 'COMMAND' ? ' pelo COMMAND' : '') + '. Prazo: ' + Atividades_dataBr_(prazo) + '.' });
+      if (respId !== eu.id) {
+        Atividades_avisar_(respId, reg.ID, 'NOVA', 'Nova atividade para você', eu.nome + ' lançou "' + titulo + '" com prazo ' + Atividades_dataBr_(prazo) + '.', { email: true });
+      }
+      return { item: Atividades_paraTela_(eu, Atividades_limpar_(reg)), message: 'Atividade lançada para ' + respNome + '.' + Atividades_avisoConflitoOS_(respId, inicio, prazo, respNome) };
+    });
+  });
+}
+
+/** Quem pode editar: gestão qualquer uma; demais perfis só a que lançaram para si mesmos. */
+function Atividades_podeEditar_(eu, a) {
+  return Atividades_gestaoSobre_(eu, a) || (a.CRIADO_POR_ID === eu.id && a.RESPONSAVEL_ID === eu.id);
+}
+
+function Atividades_resumoHist_(v) {
+  var s = SGO_UTILS.safe(v).replace(/\s+/g, ' ');
+  if (!s) return '(vazio)';
+  return s.length > 160 ? s.slice(0, 157) + '...' : s;
+}
+
+/**
+ * Edição de atividade já lançada (título, descrição, módulo, cliente/unidade,
+ * responsável, prioridade, início previsto, prazo). Situação continua pelos botões/Kanban.
+ * Prazo mudado pela gestão = replanejamento: a previsão volta a ser o novo prazo e,
+ * se ficar no futuro, a atividade deixa de exigir justificativa de atraso.
+ * Campo ausente no payload = mantém o valor atual.
+ */
+function Atividades_apiEditar(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var tem = function (k) { return Object.prototype.hasOwnProperty.call(p, k) && p[k] !== undefined && p[k] !== null; };
+    return Atividades_comTrava_(function () {
+      var a = Atividades_obter_(p.id);
+      Atividades_exigirForaDaOS_(eu, a, 'editar a atividade');
+      if (!Atividades_podeEditar_(eu, a)) {
+        throw new Error('Não foi possível editar a atividade: ela foi lançada por ' + (a.CRIADO_POR_NOME || 'outra pessoa') +
+          (a.RESPONSAVEL_ID !== eu.id ? ' para ' + (a.RESPONSAVEL_NOME || 'outra pessoa') : ' para você') +
+          '. Só um gestor (Gestor, Admin ou Diretoria) ou quem lançou a atividade para si mesmo pode editar. Para mudar algo, comente na atividade ou peça a um gestor.');
+      }
+      var agora = Atividades_agora_();
+      var dados = {}, mudancas = [];
+      var mudou = function (campo, rotulo, antes, depois, antesTxt, depoisTxt) {
+        if (String(antes) === String(depois)) return;
+        dados[campo] = depois;
+        if (rotulo) mudancas.push(rotulo + ': ' + Atividades_resumoHist_(antesTxt !== undefined ? antesTxt : antes) + ' → ' + Atividades_resumoHist_(depoisTxt !== undefined ? depoisTxt : depois));
+      };
+
+      if (tem('titulo')) {
+        var titulo = Atividades_texto_(p.titulo, 200);
+        if (titulo.length < 3) throw new Error('Não foi possível salvar a atividade: o título está vazio ou curto demais. Escreva no campo Título o que precisa ser feito (mínimo 3 letras) e clique em Salvar de novo.');
+        mudou('TITULO', 'Título', a.TITULO, titulo);
+      }
+      if (tem('descricao')) mudou('DESCRICAO', 'Descrição', a.DESCRICAO, Atividades_texto_(p.descricao, 4000));
+      var w = Atividades_campos5w2h_(p);
+      if (tem('porQue')) mudou('POR_QUE', 'Por quê', a.POR_QUE, w.POR_QUE);
+      if (tem('onde')) mudou('ONDE', 'Onde', a.ONDE, w.ONDE);
+      if (tem('como')) mudou('COMO', 'Como', a.COMO, w.COMO);
+      if (tem('quanto')) mudou('QUANTO', 'Quanto', a.QUANTO, w.QUANTO);
+      if (tem('restrita')) {
+        var restr = p.restrita === true || SGO_UTILS.safeUpper(p.restrita) === 'SIM' ? 'SIM' : '';
+        if (restr !== (SGO_UTILS.safeUpper(a.RESTRITA) === 'SIM' ? 'SIM' : '')) {
+          if (!eu.gestor && a.CRIADO_POR_ID !== eu.id) throw new Error('Não foi possível mudar a visibilidade: só quem lançou a atividade ou a gestão decide se ela é restrita.');
+          mudou('RESTRITA', 'Visibilidade', SGO_UTILS.safeUpper(a.RESTRITA) === 'SIM' ? 'restrita' : 'equipe', restr ? 'restrita' : 'equipe');
+          dados.RESTRITA = restr;
+        }
+      }
+      if (tem('prioridade')) {
+        if (ATV_PRIORIDADES.indexOf(p.prioridade) < 0) throw new Error('Não foi possível salvar a atividade: prioridade desconhecida. Escolha Baixa, Normal, Alta ou Urgente.');
+        mudou('PRIORIDADE', 'Prioridade', a.PRIORIDADE, p.prioridade);
+      }
+      if (tem('modulo')) {
+        var modulo = SGO_UTILS.safe(p.modulo);
+        if (modulo && !/^[a-z0-9_]{1,60}$/.test(modulo)) throw new Error('Não foi possível salvar a atividade: módulo não reconhecido. Escolha o módulo de novo na lista.');
+        if (modulo !== a.MODULO) {
+          var moduloNome = modulo ? Atividades_texto_(p.moduloNome, 120) || modulo : '';
+          dados.MODULO = modulo;
+          mudou('MODULO_NOME', 'Módulo', a.MODULO_NOME || a.MODULO, moduloNome);
+          dados.MODULO_NOME = moduloNome;
+        }
+      }
+      if (tem('clienteId') || tem('unidadeId')) {
+        var clienteId = tem('clienteId') ? SGO_UTILS.safe(p.clienteId) : a.CLIENTE_ID;
+        var unidadeId = clienteId ? (tem('unidadeId') ? SGO_UTILS.safe(p.unidadeId) : a.UNIDADE_ID) : '';
+        if (clienteId !== a.CLIENTE_ID || unidadeId !== a.UNIDADE_ID) {
+          var clienteNome = '', unidadeNome = '';
+          if (clienteId) {
+            var c = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES, clienteId);
+            if (!c) throw new Error('Não foi possível salvar a atividade: o cliente escolhido não existe mais. Escolha o cliente de novo na lista.');
+            clienteNome = SGO_UTILS.safe(c.NOME_FANTASIA) || SGO_UTILS.safe(c.RAZAO_SOCIAL);
+            if (unidadeId) {
+              var u = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_UNIDADES, unidadeId);
+              if (!u || String(u.CLIENTE_ID) !== clienteId) throw new Error('Não foi possível salvar a atividade: a unidade não pertence ao cliente escolhido. Escolha a unidade de novo.');
+              unidadeNome = SGO_UTILS.safe(u.NOME_UNIDADE);
+            }
+          }
+          var cliTxt = function (cn, un) { return cn ? cn + (un ? ' · ' + un : '') : ''; };
+          mudancas.push('Cliente: ' + Atividades_resumoHist_(cliTxt(a.CLIENTE_NOME, a.UNIDADE_NOME)) + ' → ' + Atividades_resumoHist_(cliTxt(clienteNome, unidadeNome)));
+          dados.CLIENTE_ID = clienteId; dados.CLIENTE_NOME = clienteNome; dados.UNIDADE_ID = unidadeId; dados.UNIDADE_NOME = unidadeNome;
+        }
+      }
+
+      // Responsável: só gestão troca.
+      var novoResp = null;
+      if (tem('responsavelId')) {
+        var respId = SGO_UTILS.safe(p.responsavelId);
+        if (!respId) throw new Error('Não foi possível salvar a atividade: o responsável não foi escolhido. Escolha uma pessoa no campo Responsável.');
+        if (respId !== a.RESPONSAVEL_ID) {
+          Atividades_exigirGestor_(eu, 'trocar o responsável da atividade');
+          novoResp = Atividades_usuariosAtivos_().filter(function (x) { return x.id === respId; })[0];
+          if (!novoResp) throw new Error('Não foi possível salvar a atividade: o responsável escolhido não está ativo no SGO+. Escolha outra pessoa na lista ou reative o usuário em Administração.');
+          if (Atividades_doFinanceiro_(a) && !Atividades_noSigiloFin_(novoResp.id)) throw new Error('Não foi possível trocar o responsável: ' + ATV_MSG_FIN_RESPONSAVEL);
+          dados.RESPONSAVEL_ID = novoResp.id; dados.RESPONSAVEL_NOME = novoResp.nome;
+          dados.AGORA_DESDE = ''; // quem estava executando deixa de ser o responsável
+        }
+      }
+
+      // Datas.
+      var prazo = a.PRAZO, inicio = a.INICIO_PREVISTO;
+      if (tem('prazo')) {
+        prazo = Atividades_normData_(p.prazo, '18:00');
+        if (!prazo) throw new Error('Não foi possível salvar a atividade: o prazo não foi informado ou é inválido. Preencha o campo Prazo com data e hora e clique em Salvar de novo.');
+      }
+      if (tem('inicioPrevisto')) {
+        inicio = Atividades_normData_(p.inicioPrevisto, '08:00');
+        if (p.inicioPrevisto && !inicio) throw new Error('Não foi possível salvar a atividade: o início previsto é inválido. Corrija a data ou deixe o campo vazio.');
+      }
+      // 31/10/2026: ano fora de [ano atual - 1, ano atual + 2] só é barrado no valor que mudou (registro antigo com data errada
+      // não impede editar outro campo; quem abrir a edição vê o aviso na tela para corrigir)
+      if (eu.perfil !== 'SISTEMA') {
+        if (prazo !== a.PRAZO) Atividades_exigirAnoValido_(prazo, 'Prazo', 'salvar a atividade');
+        if (inicio !== a.INICIO_PREVISTO) Atividades_exigirAnoValido_(inicio, 'Início previsto', 'salvar a atividade');
+      }
+      if (inicio && prazo && inicio > prazo) throw new Error('Não foi possível salvar a atividade: o início previsto (' + Atividades_dataBr_(inicio) + ') está depois do prazo (' + Atividades_dataBr_(prazo) + '). A atividade não pode começar depois de terminar. Ajuste uma das duas datas e clique em Salvar de novo.');
+      mudou('INICIO_PREVISTO', 'Início previsto', a.INICIO_PREVISTO, inicio, Atividades_dataBr_(a.INICIO_PREVISTO), Atividades_dataBr_(inicio));
+      var replanejada = prazo !== a.PRAZO, estavaVencida = Atividades_vencida_(a, agora);
+      if (replanejada) {
+        if (!eu.gestor && estavaVencida) {
+          throw new Error('Não foi possível mudar o prazo: a atividade está com prazo vencido. Peça nova data (motivo e data proposta) na janela "Atividade com prazo vencido" ou no detalhe da atividade; mudar o prazo vencido sem pedir nova data só é permitido à gestão.');
+        }
+        dados.PRAZO = prazo;
+        dados.PREVISAO_ATUAL = prazo; // replanejamento: a previsão passa a ser o novo prazo
+        // 31/10/2026: o replanejamento da gestão responde ao pedido de nova data que estava aberto (encerra o pedido)
+        if (Atividades_pedidoPendente_(a)) dados.PEDIDO_SITUACAO = 'ENCERRADO';
+      }
+      // Revisão 01/11/2026: trocar o responsável com pedido aberto também encerra o pedido. Antes ele seguia PENDENTE: o novo
+      // responsável ficava sem cobrança por um pedido que não fez e, se a atividade passasse para quem lançou, ninguém além da
+      // gestão podia decidir (quem decide nunca é o responsável).
+      var encerraPorResp = !!novoResp && Atividades_pedidoPendente_(a);
+      if (encerraPorResp) dados.PEDIDO_SITUACAO = 'ENCERRADO';
+
+      if (!Object.keys(dados).length) return { item: a, message: 'Nada foi alterado: os campos estão iguais aos já gravados.' };
+      Atividades_gravar_(a.ID, dados);
+
+      if (mudancas.length) Atividades_registrarHist_(eu, a.ID, 'EDICAO', { texto: mudancas.join('\n') });
+      if (dados.PEDIDO_SITUACAO === 'ENCERRADO') {
+        Atividades_registrarHist_(eu, a.ID, 'PEDIDO_ENCERRADO', { texto: 'O pedido de nova data (' + Atividades_dataBr_(a.PEDIDO_DATA) + ') foi encerrado: ' + eu.nome +
+          (replanejada ? ' replanejou o prazo para ' + Atividades_dataBr_(prazo) : '') + (replanejada && encerraPorResp ? ' e' : '') +
+          (encerraPorResp ? ' passou a atividade para ' + novoResp.nome : '') + '.' });
+      }
+      if (replanejada) {
+        var deixou = estavaVencida && prazo > agora;
+        Atividades_registrarHist_(eu, a.ID, eu.gestor ? 'REPLANEJAMENTO' : 'EDICAO', {
+          texto: (eu.gestor ? 'Replanejada: prazo ' : 'Prazo: ') + Atividades_dataBr_(a.PRAZO) + ' → ' + Atividades_dataBr_(prazo) + ' por ' + eu.nome + '.' +
+            (deixou ? ' A atividade deixou de estar atrasada e não exige mais justificativa.' : '') +
+            (eu.gestor ? ' Replanejamento da gestão; não conta como justificativa de atraso.' : ''),
+          previsaoAnterior: a.PREVISAO_ATUAL, previsaoNova: prazo
+        });
+      }
+      if (novoResp) {
+        Atividades_registrarHist_(eu, a.ID, 'RESPONSAVEL', {
+          de: a.RESPONSAVEL_NOME, para: novoResp.nome,
+          texto: 'Responsável: ' + (a.RESPONSAVEL_NOME || '(vazio)') + ' → ' + novoResp.nome + ' por ' + eu.nome + '.'
+        });
+      }
+
+      var titAtual = dados.TITULO || a.TITULO, prazoTxt = Atividades_dataBr_(prazo);
+      if (novoResp && novoResp.id !== eu.id) {
+        Atividades_avisar_(novoResp.id, a.ID, 'NOVA', 'Atividade passada para você',
+          eu.nome + ' passou para você "' + titAtual + '" (antes com ' + (a.RESPONSAVEL_NOME || 'ninguém') + '). Prazo: ' + prazoTxt + '.', { email: true });
+      }
+      if (novoResp && a.RESPONSAVEL_ID && a.RESPONSAVEL_ID !== eu.id) {
+        Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'RESPONSAVEL', 'Atividade passada para outra pessoa',
+          eu.nome + ' passou "' + titAtual + '" para ' + novoResp.nome + '. Ela saiu das suas atividades.');
+      }
+      var respFinal = novoResp ? novoResp.id : a.RESPONSAVEL_ID;
+      // 21/10/2026 (matriz de avisos, S04): só a mudança de prazo avisa o responsável; as outras alterações (texto,
+      // cliente, prioridade) ficam só no histórico da atividade.
+      if (!novoResp && respFinal && respFinal !== eu.id && replanejada) {
+        Atividades_avisar_(respFinal, a.ID, 'REPLANEJAMENTO', 'Atividade replanejada',
+          eu.nome + ' mudou o prazo de "' + titAtual + '" de ' + Atividades_dataBr_(a.PRAZO) + ' para ' + prazoTxt + '.');
+      }
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID)), message: 'Atividade alterada.' + (replanejada ? ' Novo prazo: ' + prazoTxt + '.' : '') + (novoResp ? ' Responsável agora: ' + novoResp.nome + '.' : '') };
+    });
+  });
+}
+
+/** Muda a situação (lista, detalhe e arrastar no Kanban). */
+function Atividades_apiMudarSituacao(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var nova = String(p.situacao || '');
+    if (ATV_SITUACOES.indexOf(nova) < 0) throw new Error('Não foi possível mudar a situação: situação desconhecida. Escolha A fazer, Em andamento, Aguardando, Concluída ou Cancelada.');
+    return Atividades_comTrava_(function () {
+      var a = Atividades_obter_(p.id);
+      Atividades_exigirForaDaOS_(eu, a, 'mudar a situação');
+      if (!Atividades_podeAlterar_(eu, a)) throw new Error('Não foi possível mudar a situação: a atividade é de ' + (a.RESPONSAVEL_NOME || 'outra pessoa') + '. Só o responsável, quem lançou e a gestão mudam a situação; os demais só acompanham. Se precisar de algo, fale com ' + (a.RESPONSAVEL_NOME || 'o responsável') + '.');
+      var dono = eu.gestor || a.CRIADO_POR_ID === eu.id;
+      if (a.SITUACAO === nova) return { item: a, message: 'A atividade já estava em ' + nova + '.' };
+      if (!Atividades_aberta_(a) && !dono) throw new Error('Não foi possível reabrir a atividade: ela já está ' + a.SITUACAO.toLowerCase() + '. Só quem lançou ou um gestor pode reabrir; peça a essa pessoa.');
+      if (nova === 'Cancelada' && !dono) throw new Error('Não foi possível cancelar: só quem lançou a atividade ou um gestor pode cancelar. Se ela não faz mais sentido, comente o motivo e avise quem lançou.');
+      var motivo = Atividades_texto_(p.motivo, 2000);
+      if ((nova === 'Aguardando' || nova === 'Cancelada') && motivo.length < 5) {
+        throw new Error('Não foi possível mudar para ' + nova + ': informe o motivo (mínimo 5 letras), por exemplo o que você está aguardando. Escreva o motivo e confirme de novo.');
+      }
+      var agora = Atividades_agora_();
+      var dados = { SITUACAO: nova };
+      if (nova === 'Em andamento' && !a.INICIADA_EM) dados.INICIADA_EM = agora;
+      if (nova === 'Aguardando') { dados.MOTIVO_AGUARDANDO = motivo; dados.AGORA_DESDE = ''; }
+      if (nova === 'Concluída') {
+        dados.CONCLUIDA_EM = agora; dados.PERCENTUAL = 100; dados.AGORA_DESDE = '';
+        dados.OBS_CONCLUSAO = Atividades_texto_(p.observacao, 2000);
+        if (!a.INICIADA_EM) dados.INICIADA_EM = agora;
+      }
+      if (nova === 'Cancelada') dados.AGORA_DESDE = '';
+      if (Atividades_aberta_({ SITUACAO: nova }) && !Atividades_aberta_(a)) dados.CONCLUIDA_EM = '';
+      // 31/10/2026: concluída ou cancelada com pedido de nova data aberto: o pedido deixa de existir (sai da Caixa de decisões)
+      var encerraPedido = !Atividades_aberta_({ SITUACAO: nova }) && Atividades_pedidoPendente_(a);
+      if (encerraPedido) dados.PEDIDO_SITUACAO = 'ENCERRADO';
+      Atividades_gravar_(a.ID, dados);
+      var texto = nova === 'Aguardando' || nova === 'Cancelada' ? 'Motivo: ' + motivo : (nova === 'Concluída' && dados.OBS_CONCLUSAO ? 'Observação: ' + dados.OBS_CONCLUSAO : '');
+      Atividades_registrarHist_(eu, a.ID, 'SITUACAO', { de: a.SITUACAO, para: nova, texto: texto });
+      if (encerraPedido) Atividades_registrarHist_(eu, a.ID, 'PEDIDO_ENCERRADO', { texto: 'O pedido de nova data (' + Atividades_dataBr_(a.PEDIDO_DATA) + ') foi encerrado porque a atividade foi ' + (nova === 'Concluída' ? 'concluída' : 'cancelada') + '.' });
+      if (a.CRIADO_POR_ID && a.CRIADO_POR_ID !== eu.id && (nova === 'Concluída' || nova === 'Aguardando')) {
+        Atividades_avisar_(a.CRIADO_POR_ID, a.ID, nova === 'Concluída' ? 'CONCLUIDA' : 'AGUARDANDO',
+          nova === 'Concluída' ? 'Atividade concluída' : 'Atividade aguardando',
+          eu.nome + ' mudou "' + a.TITULO + '" para ' + nova + (texto ? '. ' + texto : '.'));
+      }
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID)), message: 'Situação alterada para ' + nova + '.' };
+    });
+  });
+}
+
+function Atividades_apiComentar(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var texto = Atividades_texto_(p.texto, 4000);
+    if (texto.length < 2) throw new Error('Não foi possível registrar o comentário: o texto está vazio. Escreva o comentário e clique em Comentar de novo.');
+    return Atividades_comTrava_(function () {
+      var a = Atividades_obter_(p.id);
+      if (!Atividades_podeAlterar_(eu, a)) throw new Error('Não foi possível comentar: só o responsável (' + (a.RESPONSAVEL_NOME || 'outra pessoa') + '), quem lançou e a gestão comentam nesta atividade. Para combinar algo, fale com o responsável.');
+      Atividades_registrarHist_(eu, a.ID, 'COMENTARIO', { texto: texto });
+      var destino = eu.id === a.RESPONSAVEL_ID ? a.CRIADO_POR_ID : a.RESPONSAVEL_ID;
+      if (destino && destino !== eu.id) Atividades_avisar_(destino, a.ID, 'COMENTARIO', 'Comentário em atividade', eu.nome + ' comentou em "' + a.TITULO + '": ' + texto);
+      Atividades_gravar_(a.ID, {});
+      return { message: 'Comentário registrado.' };
+    });
+  });
+}
+
+function Atividades_apiPercentual(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var n = Number(String(p.percentual).replace(',', '.'));
+    if (!isFinite(n) || n < 0 || n > 100) throw new Error('Não foi possível gravar o andamento: informe um percentual entre 0 e 100.');
+    n = Math.round(n);
+    return Atividades_comTrava_(function () {
+      var a = Atividades_obter_(p.id);
+      if (a.RESPONSAVEL_ID !== eu.id && !eu.gestor) throw new Error('Não foi possível gravar o andamento: só o responsável ou um gestor pode alterar o percentual.');
+      if (!Atividades_aberta_(a)) throw new Error('Não foi possível gravar o andamento: a atividade já está ' + a.SITUACAO.toLowerCase() + '.');
+      Atividades_gravar_(a.ID, { PERCENTUAL: n });
+      Atividades_registrarHist_(eu, a.ID, 'PERCENTUAL', { de: String(a.PERCENTUAL === '' ? '' : a.PERCENTUAL + '%'), para: n + '%' });
+      return { item: Atividades_obter_(a.ID), message: 'Andamento gravado: ' + n + '%.' };
+    });
+  });
+}
+
+/** "Estou fazendo agora": só uma por pessoa. ligar=false desmarca. */
+function Atividades_apiFazendoAgora(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var ligar = p.ligar !== false;
+    return Atividades_comTrava_(function () {
+      var a = Atividades_obter_(p.id);
+      if (a.RESPONSAVEL_ID !== eu.id) throw new Error('Não foi possível marcar "fazendo agora": só o responsável pela atividade pode marcar o que está executando.');
+      if (ligar && !Atividades_aberta_(a)) throw new Error('Não foi possível marcar "fazendo agora": a atividade já está ' + a.SITUACAO.toLowerCase() + '. Escolha uma atividade aberta.');
+      var agora = Atividades_agora_();
+      if (!ligar) {
+        if (a.AGORA_DESDE) { Atividades_gravar_(a.ID, { AGORA_DESDE: '' }); Atividades_registrarHist_(eu, a.ID, 'AGORA', { texto: 'Deixou de executar agora.' }); }
+        return { message: 'Atividade desmarcada como "fazendo agora".' };
+      }
+      Atividades_todas_().forEach(function (o) {
+        if (o.RESPONSAVEL_ID === eu.id && o.AGORA_DESDE && o.ID !== a.ID) {
+          Atividades_gravar_(o.ID, { AGORA_DESDE: '' });
+          Atividades_registrarHist_(eu, o.ID, 'AGORA', { texto: 'Deixou de executar agora (passou para "' + a.TITULO + '").' });
+        }
+      });
+      var dados = { AGORA_DESDE: agora };
+      if (a.SITUACAO !== 'Em andamento') { dados.SITUACAO = 'Em andamento'; if (!a.INICIADA_EM) dados.INICIADA_EM = agora; }
+      Atividades_gravar_(a.ID, dados);
+      if (dados.SITUACAO) Atividades_registrarHist_(eu, a.ID, 'SITUACAO', { de: a.SITUACAO, para: 'Em andamento', texto: 'Marcada como "fazendo agora".' });
+      else Atividades_registrarHist_(eu, a.ID, 'AGORA', { texto: 'Marcada como "fazendo agora".' });
+      return { item: Atividades_obter_(a.ID), message: 'Marcada como a atividade que você está fazendo agora.' };
+    });
+  });
+}
+
+/** Verificação periódica do navegador: minhas atividades vencidas sem justificativa + avisos não lidos. */
+function Atividades_apiVerificar(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    Atividades_verificarAtrasosTalvez_();
+    var agora = Atividades_agora_();
+    var minhas = Atividades_todas_().filter(function (a) { return a.RESPONSAVEL_ID === eu.id && Atividades_aberta_(a); });
+    // 31/10/2026: atividade com pedido de nova data aguardando a gestão não entra (Atividades_vencida_); a recusada volta, com o motivo
+    var vencidas = minhas.filter(function (a) { return Atividades_vencida_(a, agora); });
+    // 11/11/2026: Diretoria: a atividade vencida não abre a janela obrigatória; vira lembrete (aviso discreto na tela)
+    var diretoria = Atividades_ehDiretoria_(eu);
+    var lembretes = diretoria ? vencidas.map(function (a) { return { ID: a.ID, TITULO: a.TITULO, PREVISAO_ATUAL: a.PREVISAO_ATUAL }; }) : [];
+    var pendentes = (diretoria ? [] : vencidas)
+      .map(function (a) {
+        var dec = Atividades_infoDecisor_(a);
+        return { ID: a.ID, TITULO: a.TITULO, PRAZO: a.PRAZO, PREVISAO_ATUAL: a.PREVISAO_ATUAL, CRIADO_POR_NOME: a.CRIADO_POR_NOME, MODULO_NOME: a.MODULO_NOME, QTD_JUSTIFICATIVAS: a.QTD_JUSTIFICATIVAS, PRIORIDADE: a.PRIORIDADE,
+          RESPONSAVEL_ID: a.RESPONSAVEL_ID, RESPONSAVEL_NOME: a.RESPONSAVEL_NOME, PEDIDO_SITUACAO: a.PEDIDO_SITUACAO, PEDIDO_DATA: a.PEDIDO_DATA, PEDIDO_RESPOSTA: a.PEDIDO_SITUACAO === 'RECUSADO' ? a.PEDIDO_RESPOSTA : '',
+          PEDIDO_DECIDIDO_POR_NOME: a.PEDIDO_SITUACAO === 'RECUSADO' ? a.PEDIDO_DECIDIDO_POR_NOME : '', DECISOR_DIRETO: dec.direto, DECISOR_NOME: dec.nome };
+      });
+    var avisos = SGO_DATA.getAll(Atividades_abas_().AVISOS)
+      .filter(function (v) { return String(v.DESTINATARIO_ID) === eu.id && !SGO_UTILS.safe(v.LIDO_EM); })
+      .map(function (v) { return { ID: String(v.ID), ATIVIDADE_ID: String(v.ATIVIDADE_ID), TIPO: String(v.TIPO), TITULO: String(v.TITULO), TEXTO: String(v.TEXTO), DATA: Atividades_normData_(v.DATA, '00:00') }; })
+      .slice(-20);
+    // Revisão 01/11/2026: com !Atividades_vencida_ a atividade já atrasada com pedido pendente entrava em "vence hoje"
+    var venceHoje = minhas.filter(function (a) { return !Atividades_atrasada_(a, agora) && String(a.PREVISAO_ATUAL).slice(0, 10) === agora.slice(0, 10); })
+      .map(function (a) { return { ID: a.ID, TITULO: a.TITULO, PREVISAO_ATUAL: a.PREVISAO_ATUAL }; });
+    return { pendentes: pendentes, lembretes: lembretes, diretoria: diretoria, avisos: avisos, abertas: minhas.length, venceHoje: venceHoje, agora: agora, gestor: eu.gestor, motivosAtraso: ATV_MOTIVOS_ATRASO,
+      motivoPrioridade: ATV_MOTIVO_PRIORIDADE };
+  });
+}
+
+/**
+ * 11/11/2026 (decisão do dono): a Diretoria remarca a data da PRÓPRIA atividade sem justificativa obrigatória (vencida ou não).
+ * payload: { id, novaPrevisao, observacao (opcional, até 300 letras) }. Fica no histórico como replanejamento; não conta como
+ * justificativa de atraso. Os demais perfis continuam com o pedido de nova data (Atividades_apiJustificar).
+ */
+function Atividades_apiRemarcar(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {}, acao = 'remarcar a data';
+    if (!Atividades_ehDiretoria_(eu)) throw new Error('Não foi possível ' + acao + ': remarcar sem justificativa é só para a Diretoria. Se a sua atividade atrasou, use "Pedir nova data" (motivo e data proposta) em Minhas atividades.');
+    var nova = Atividades_normData_(p.novaPrevisao, '18:00');
+    if (!nova) throw new Error('Não foi possível ' + acao + ': a nova data não foi informada. Preencha data e hora e confirme de novo.');
+    Atividades_exigirAnoValido_(nova, 'Nova data', acao);
+    var obs = Atividades_texto_(p.observacao, 1000).replace(/\s+/g, ' ').trim();
+    if (obs.length > 300) throw new Error('Não foi possível ' + acao + ': a observação passou de 300 letras. Resuma e confirme de novo.');
+    return Atividades_comTrava_(function () {
+      var agora = Atividades_agora_();
+      if (nova <= agora) throw new Error('Não foi possível ' + acao + ': a nova data (' + Atividades_dataBr_(nova) + ') já passou. Escolha uma data e hora futuras e confirme de novo.');
+      var a = Atividades_obter_(p.id);
+      Atividades_exigirForaDaOS_(eu, a, acao);
+      if (a.RESPONSAVEL_ID !== eu.id) throw new Error('Não foi possível ' + acao + ': a atividade é de ' + (a.RESPONSAVEL_NOME || 'outra pessoa') + '. Para mudar o prazo de outra pessoa, use Editar.');
+      if (!Atividades_aberta_(a)) throw new Error('Não foi possível ' + acao + ': a atividade já está ' + String(a.SITUACAO || '').toLowerCase() + '. Atualize a tela.');
+      var dados = { PREVISAO_ATUAL: nova };
+      if (Atividades_pedidoPendente_(a)) dados.PEDIDO_SITUACAO = 'ENCERRADO';
+      Atividades_gravar_(a.ID, dados);
+      Atividades_registrarHist_(eu, a.ID, 'REPLANEJAMENTO', { de: a.PREVISAO_ATUAL, para: nova, previsaoAnterior: a.PREVISAO_ATUAL, previsaoNova: nova,
+        texto: 'Data remarcada pela Diretoria (lembrete, sem justificativa obrigatória)' + (obs ? ': ' + obs : '.') });
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID), agora), message: 'Data remarcada para ' + Atividades_dataBr_(nova) + '.' };
+    });
+  });
+}
+
+function Atividades_apiMarcarAvisosLidos(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var ids = (payload && payload.ids) || [];
+    if (!ids.length) return { marcados: 0 };
+    return Atividades_comTrava_(function () {
+      var aba = Atividades_abas_().AVISOS, agora = Atividades_agora_(), n = 0;
+      SGO_DATA.getAll(aba).forEach(function (v) {
+        if (ids.indexOf(String(v.ID)) >= 0 && String(v.DESTINATARIO_ID) === eu.id && !SGO_UTILS.safe(v.LIDO_EM)) { SGO_DATA.update(aba, v.ID, { LIDO_EM: agora }); n++; }
+      });
+      return { marcados: n };
+    });
+  });
+}
+
+/** Tipos do histórico cujo texto só os envolvidos e a gestão leem (justificativa, pedido alterado e a recusa). */
+var ATV_HIST_RESERVADOS = ['JUSTIFICATIVA', 'PEDIDO_ALTERADO', 'PEDIDO_RECUSADO'];
+
+/**
+ * PEDIDO DE NOVA DATA (31/10/2026; antes "justificativa de atraso", mesmo nome de função para o COMMAND e as telas antigas).
+ * payload: { id, categoria (ATV_MOTIVOS_ATRASO), motivo (explicação curta, 15 a 600 letras), novaPrevisao,
+ *            prioridade + pedidoPorId (obrigatórios no motivo "Outra prioridade, a pedido de alguém") }
+ * Regras:
+ *  - só o responsável pede, e só com a atividade atrasada (ou para mudar o pedido que ainda espera decisão);
+ *  - a data proposta tem de ser futura e com o ano dentro de [ano atual - 1, ano atual + 2];
+ *  - lançada pela própria pessoa ou por rotina do sistema: a nova data vale na hora (como antes);
+ *  - lançada por outra pessoa: fica PENDENTE para quem lançou (ou a gestão) aceitar ou recusar. A previsão NÃO muda até a
+ *    decisão, mas o atraso deixa de ser cobrado do responsável (Atividades_vencida_). Mudar o pedido pendente atualiza o
+ *    mesmo pedido (uma decisão por atividade na Caixa de decisões), sem contar outra justificativa.
+ * Tudo fica no histórico (JUSTIFICATIVA com PARA = PENDENTE/APLICADA, PEDIDO_ALTERADO).
+ */
+function Atividades_apiJustificar(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var acao = 'enviar o pedido de nova data';
+    var categoria = String(p.categoria || '').trim();
+    categoria = ATV_MOTIVOS_LEGADO[categoria] || categoria;
+    if (ATV_MOTIVOS_ATRASO.indexOf(categoria) < 0) throw new Error('Não foi possível ' + acao + ': o motivo não foi escolhido; escolha o motivo do atraso na lista "Motivo" (se nenhum servir, escolha "Outro motivo") e envie de novo.');
+    var motivo = Atividades_texto_(p.motivo, 4000).replace(/\s+/g, ' ').trim();
+    if (motivo.length < ATV_PEDIDO_TEXTO_MIN) throw new Error('Não foi possível ' + acao + ': a explicação está curta demais (mínimo ' + ATV_PEDIDO_TEXTO_MIN + ' letras). Diga em poucas palavras o que atrasou e envie de novo.');
+    if (motivo.length > ATV_PEDIDO_TEXTO_MAX) throw new Error('Não foi possível ' + acao + ': a explicação passou de ' + ATV_PEDIDO_TEXTO_MAX + ' letras. O pedido é só o motivo do atraso, curto; o relatório do que foi feito vai em "Registrar andamento do dia". Resuma e envie de novo.');
+    var priorizou = '', porQuem = null;
+    if (categoria === ATV_MOTIVO_PRIORIDADE) {
+      priorizou = Atividades_texto_(p.prioridade, 200).replace(/\s+/g, ' ').trim();
+      if (priorizou.length < 5) throw new Error('Não foi possível ' + acao + ': no motivo "Outra prioridade, a pedido de alguém", diga qual prioridade você atendeu (mínimo 5 letras), por exemplo "atendimento de urgência no Hospital X", e envie de novo.');
+      var pid = SGO_UTILS.safe(p.pedidoPorId);
+      if (!pid) throw new Error('Não foi possível ' + acao + ': no motivo "Outra prioridade, a pedido de alguém", escolha na lista "Quem pediu" a pessoa que pediu a outra prioridade e envie de novo.');
+      if (pid === eu.id) throw new Error('Não foi possível ' + acao + ': em "Quem pediu", escolha a pessoa que pediu a outra prioridade, não você. Se a prioridade foi decisão sua, escolha outro motivo.');
+      porQuem = Atividades_usuariosAtivos_().filter(function (u) { return u.id === pid; })[0];
+      if (!porQuem) throw new Error('Não foi possível ' + acao + ': a pessoa escolhida em "Quem pediu" não está ativa no SGO+. Escolha outra pessoa da lista e envie de novo.');
+    }
+    var nova = Atividades_normData_(p.novaPrevisao, '18:00');
+    if (!nova) throw new Error('Não foi possível ' + acao + ': a nova data não foi informada. Preencha data e hora da entrega que você propõe e envie de novo.');
+    Atividades_exigirAnoValido_(nova, 'Nova data', acao);
+    return Atividades_comTrava_(function () {
+      var agora = Atividades_agora_();
+      if (nova <= agora) throw new Error('Não foi possível ' + acao + ': a nova data (' + Atividades_dataBr_(nova) + ') já passou. A data proposta precisa ser depois de agora. Escolha uma data e hora futuras e envie de novo.');
+      var a = Atividades_obter_(p.id);
+      Atividades_exigirForaDaOS_(eu, a, acao);
+      if (a.RESPONSAVEL_ID !== eu.id) throw new Error('Não foi possível ' + acao + ': só o responsável pela atividade (' + (a.RESPONSAVEL_NOME || 'outra pessoa') + ') pede nova data. Se você é da gestão e quer mudar o prazo, use Editar.');
+      if (!Atividades_aberta_(a)) throw new Error('Não foi possível ' + acao + ': a atividade já está ' + a.SITUACAO.toLowerCase() + '. Atualize a tela.');
+      var pendente = Atividades_pedidoPendente_(a);
+      if (!pendente && !Atividades_atrasada_(a, agora)) return { item: Atividades_paraTela_(eu, a, agora), message: 'Esta atividade não está atrasada; não há nova data a pedir. Se precisar de mais tempo antes do prazo, comente na atividade para quem lançou.' };
+      var textoGestao = (categoria === ATV_MOTIVO_PRIORIDADE ? Atividades_motivoNeutro_(categoria, priorizou, porQuem.nome) + '. ' : '') + motivo;
+      var campos = { PEDIDO_DATA: nova, PEDIDO_MOTIVO: categoria, PEDIDO_TEXTO: motivo, PEDIDO_PRIORIZOU: priorizou,
+        PEDIDO_A_PEDIDO_DE_ID: porQuem ? porQuem.id : '', PEDIDO_A_PEDIDO_DE_NOME: porQuem ? porQuem.nome : '' };
+      // grava só o que mudou (nunca sobrescreve campo igual)
+      var mudou = function (dados) { var d = {}; Object.keys(dados).forEach(function (k) { if (String(a[k] === undefined ? '' : a[k]) !== String(dados[k])) d[k] = dados[k]; }); return d; };
+
+      if (pendente) {
+        var dif = mudou(campos);
+        if (!Object.keys(dif).length) return { item: Atividades_paraTela_(eu, a, agora), message: 'Nada mudou no pedido. Continua aguardando ' + (a.PEDIDO_DECISOR_NOME || 'a gestão') + ' decidir; você não será cobrado enquanto isso.' };
+        Atividades_gravar_(a.ID, dif);
+        Atividades_registrarHist_(eu, a.ID, 'PEDIDO_ALTERADO', { texto: textoGestao, previsaoAnterior: a.PEDIDO_DATA, previsaoNova: nova, categoria: categoria, para: 'PENDENTE' });
+        if (a.PEDIDO_DECISOR_ID) {
+          Atividades_avisar_(a.PEDIDO_DECISOR_ID, a.ID, 'PEDIDO_ALTERADO', 'Pedido de nova data alterado: ' + a.TITULO,
+            eu.nome + ' mudou o pedido de nova data de "' + a.TITULO + '" para ' + Atividades_dataBr_(nova) + ' (' + textoGestao + '). Aceite ou recuse na Caixa de decisões ou no detalhe da atividade.');
+        }
+        return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID), agora), message: 'Pedido alterado: nova data proposta ' + Atividades_dataBr_(nova) + '. Continua aguardando ' + (a.PEDIDO_DECISOR_NOME || 'a gestão') + ' decidir; você não será cobrado enquanto isso.' };
+      }
+
+      var dec = Atividades_infoDecisor_(a);
+      var anterior = a.PREVISAO_ATUAL;
+      var base = Object.assign({}, campos, { PEDIDO_EM: agora, PEDIDO_PREVISAO_ANTERIOR: anterior, PEDIDO_DECISOR_ID: dec.id, PEDIDO_DECISOR_NOME: dec.nome,
+        PEDIDO_RESPOSTA: '', QTD_JUSTIFICATIVAS: (a.QTD_JUSTIFICATIVAS || 0) + 1 });
+      if (dec.direto) {
+        Atividades_gravar_(a.ID, mudou(Object.assign(base, { PREVISAO_ATUAL: nova, PEDIDO_SITUACAO: 'ACEITO', PEDIDO_DECIDIDO_POR_ID: eu.id, PEDIDO_DECIDIDO_POR_NOME: eu.nome, PEDIDO_DECIDIDO_EM: agora })));
+        Atividades_registrarHist_(eu, a.ID, 'JUSTIFICATIVA', { texto: textoGestao, previsaoAnterior: anterior, previsaoNova: nova, categoria: categoria, para: 'APLICADA' });
+        return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID), agora), message: 'Nova data gravada: ' + Atividades_dataBr_(nova) + '. A atividade foi lançada por você (ou por uma rotina do sistema), então a nova data vale na hora.' };
+      }
+      Atividades_gravar_(a.ID, mudou(Object.assign(base, { PEDIDO_SITUACAO: 'PENDENTE', PEDIDO_DECIDIDO_POR_ID: '', PEDIDO_DECIDIDO_POR_NOME: '', PEDIDO_DECIDIDO_EM: '' })));
+      Atividades_registrarHist_(eu, a.ID, 'JUSTIFICATIVA', { texto: textoGestao, previsaoAnterior: anterior, previsaoNova: nova, categoria: categoria, para: 'PENDENTE' });
+      if (dec.id) {
+        Atividades_avisar_(dec.id, a.ID, 'JUSTIFICATIVA', 'Nova data pedida: ' + a.TITULO,
+          eu.nome + ' pediu nova data para "' + a.TITULO + '": ' + Atividades_dataBr_(nova) + ' (a previsão era ' + Atividades_dataBr_(anterior) + '). Motivo: ' + textoGestao +
+          ' Aceite ou recuse na Caixa de decisões ou no detalhe da atividade. Enquanto não houver decisão, o atraso não é cobrado de ' + eu.nome + '.', { email: true });
+      }
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID), agora), message: 'Pedido enviado: nova data ' + Atividades_dataBr_(nova) + '. Agora ' + dec.nome + ' aceita ou recusa; você não será cobrado por este atraso enquanto isso.' };
+    });
+  });
+}
+
+/**
+ * Decisão do pedido de nova data (31/10/2026), pelo detalhe da atividade ou pela Caixa de decisões, com um toque.
+ * payload: { id, decisao: 'ACEITAR' | 'RECUSAR', motivo (recusa: 5 a 300 letras) }
+ *  ACEITAR: a data proposta vira a previsão de entrega (o prazo original continua para o indicador "no prazo").
+ *  RECUSAR: a previsão continua a vencida; o responsável vê o motivo e volta a ser cobrado (pedir outra data ou concluir).
+ * O item da Caixa de decisões sai na hora, registrado como decisão de quem decidiu.
+ */
+function Atividades_apiDecidirPedido(sessionId, payload) {
+  var resolver = null, irrevG = null;
+  var r = Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var decisao = SGO_UTILS.safeUpper(p.decisao);
+    if (decisao !== 'ACEITAR' && decisao !== 'RECUSAR') throw new Error('Não foi possível decidir o pedido de nova data: a decisão não veio. Toque em "Aceitar nova data" ou em "Recusar".');
+    var motivo = Atividades_texto_(p.motivo, 1000).replace(/\s+/g, ' ').trim();
+    if (decisao === 'RECUSAR' && motivo.length < 5) throw new Error('Não foi possível recusar: escreva em poucas palavras por que a data não serve (mínimo 5 letras), por exemplo "o cliente precisa até sexta". A pessoa vai ler e propor outra data.');
+    if (motivo.length > 300) throw new Error('Não foi possível recusar: o motivo passou de 300 letras. Resuma em uma frase e confirme de novo.');
+    return Atividades_comTrava_(function () {
+      var agora = Atividades_agora_();
+      var a = Atividades_obter_(p.id);
+      Atividades_exigirForaDaOS_(eu, a, 'decidir o pedido de nova data');
+      if (!Atividades_pedidoPendente_(a)) {
+        var sit = a.PEDIDO_SITUACAO === 'ACEITO' ? 'já foi aceito' + (a.PEDIDO_DECIDIDO_POR_NOME ? ' por ' + a.PEDIDO_DECIDIDO_POR_NOME : '')
+          : a.PEDIDO_SITUACAO === 'RECUSADO' ? 'já foi recusado' + (a.PEDIDO_DECIDIDO_POR_NOME ? ' por ' + a.PEDIDO_DECIDIDO_POR_NOME : '')
+          : a.PEDIDO_SITUACAO === 'ENCERRADO' ? 'foi encerrado (a atividade foi concluída, cancelada ou replanejada)' : 'não existe';
+        throw new Error('Não foi possível decidir: o pedido de nova data desta atividade ' + sit + '. Nada a fazer; atualize a tela para ver a situação atual.');
+      }
+      if (a.RESPONSAVEL_ID === eu.id) throw new Error('Não foi possível decidir: o pedido é seu. Quem decide é ' + (a.PEDIDO_DECISOR_NOME || 'a gestão') + '.');
+      if (!Atividades_podeDecidirPedido_(eu, a)) throw new Error('Não foi possível decidir: o pedido de nova data é decidido por quem lançou a atividade (' + (a.CRIADO_POR_NOME || 'outra pessoa') + ') ou pela gestão. Você acompanha.');
+      var dados = { PEDIDO_DECIDIDO_POR_ID: eu.id, PEDIDO_DECIDIDO_POR_NOME: eu.nome, PEDIDO_DECIDIDO_EM: agora };
+      if (decisao === 'ACEITAR') {
+        if (a.PEDIDO_DATA <= agora) throw new Error('Não foi possível aceitar: a data proposta (' + Atividades_dataBr_(a.PEDIDO_DATA) + ') já passou enquanto o pedido esperava. Recuse com o motivo "proponha outra data" ou, se já sabe a data certa, mude o prazo em Editar.');
+        dados.PEDIDO_SITUACAO = 'ACEITO';
+        dados.PREVISAO_ATUAL = a.PEDIDO_DATA;
+        Atividades_gravar_(a.ID, dados);
+        Atividades_registrarHist_(eu, a.ID, 'PEDIDO_ACEITO', { texto: 'Nova data aceita por ' + eu.nome + (motivo ? ': ' + motivo : '.'), previsaoAnterior: a.PREVISAO_ATUAL, previsaoNova: a.PEDIDO_DATA, para: 'ACEITO' });
+        Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'PEDIDO_ACEITO', 'Nova data aceita: ' + a.TITULO,
+          eu.nome + ' aceitou a nova data de "' + a.TITULO + '": ' + Atividades_dataBr_(a.PEDIDO_DATA) + '.');
+      } else {
+        dados.PEDIDO_SITUACAO = 'RECUSADO';
+        dados.PEDIDO_RESPOSTA = motivo;
+        Atividades_gravar_(a.ID, dados);
+        Atividades_registrarHist_(eu, a.ID, 'PEDIDO_RECUSADO', { texto: motivo, previsaoAnterior: a.PREVISAO_ATUAL, previsaoNova: a.PEDIDO_DATA, para: 'RECUSADO' });
+        Atividades_avisar_(a.RESPONSAVEL_ID, a.ID, 'PEDIDO_RECUSADO', 'Nova data recusada: ' + a.TITULO,
+          eu.nome + ' recusou a nova data (' + Atividades_dataBr_(a.PEDIDO_DATA) + ') de "' + a.TITULO + '". Motivo: ' + motivo + ' Peça outra data ou conclua a atividade em Minhas atividades.', { email: true });
+        // 01/11/2026: ato irreversível (GI02): avisado depois de soltar a trava das atividades (SGO_Avisos_Gestao.js)
+        irrevG = { evento: 'GI02', modulo: 'atividades', quem: eu, responsavelId: a.RESPONSAVEL_ID, oque: 'Pedido de nova data recusado',
+          item: '"' + String(a.TITULO || '').slice(0, 120) + '", com ' + (a.RESPONSAVEL_NOME || 'o responsável') + ' (data pedida: ' + Atividades_dataBr_(a.PEDIDO_DATA) + ')', motivo: motivo,
+          tela: { tipo: 'modulo', mod: 'atividades_equipe' }, refId: 'ATV-PEDIDO-REC-' + a.ID + '-' + a.PEDIDO_DATA };
+      }
+      resolver = { itemId: 'ATV:PEDIDO:' + a.ID, eu: eu, texto: (decisao === 'ACEITAR' ? 'Nova data aceita (' + Atividades_dataBr_(a.PEDIDO_DATA) + ').' : 'Nova data recusada: ' + motivo) };
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID), agora),
+        message: decisao === 'ACEITAR' ? 'Nova data aceita: ' + Atividades_dataBr_(a.PEDIDO_DATA) + '. ' + (a.RESPONSAVEL_NOME || 'O responsável') + ' foi avisado.'
+          : 'Pedido recusado. ' + (a.RESPONSAVEL_NOME || 'O responsável') + ' foi avisado com o motivo e precisa pedir outra data ou concluir.' };
+    });
+  });
+  // fora da trava das atividades: o item da Caixa de decisões sai como decisão tomada por esta pessoa
+  if (r.ok && resolver && typeof Gestao_resolverItemDecidido_ === 'function') {
+    try { Gestao_resolverItemDecidido_(resolver.itemId, resolver.eu, resolver.texto); } catch (e) { console.error('Atividades, Caixa de decisões: ' + ((e && e.message) || e)); }
+  }
+  if (r.ok && irrevG && typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_(irrevG);
+  return r;
+}
+
+/**
+ * "Registrar andamento do dia" (31/10/2026): o relatório técnico do dia (o que foi feito, o que falta) e o percentual.
+ * Fica no histórico (ANDAMENTO). Não pede nova data, não tira a cobrança do atraso e não vai para a gestão decidir.
+ * payload: { id, texto (10 a 4000 letras; opcional se vier só o percentual), percentual (0 a 100, opcional) }
+ */
+function Atividades_apiAndamento(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var p = payload || {};
+    var texto = Atividades_texto_(p.texto, 4000).trim();
+    var temPerc = p.percentual !== undefined && p.percentual !== null && String(p.percentual).trim() !== '';
+    var n = temPerc ? Number(String(p.percentual).replace(',', '.')) : null;
+    if (temPerc && (!isFinite(n) || n < 0 || n > 100)) throw new Error('Não foi possível registrar o andamento: o percentual precisa ficar entre 0 e 100. Corrija o número (ou deixe vazio) e registre de novo.');
+    if (temPerc) n = Math.round(n);
+    if (!texto && !temPerc) throw new Error('Não foi possível registrar o andamento: escreva o que foi feito hoje (mínimo 10 letras) ou informe o percentual, e toque em Registrar andamento de novo.');
+    if (texto && texto.replace(/\s+/g, ' ').length < 10) throw new Error('Não foi possível registrar o andamento: o texto está curto demais (mínimo 10 letras). Diga o que foi feito e o que falta, e registre de novo.');
+    return Atividades_comTrava_(function () {
+      var a = Atividades_obter_(p.id);
+      Atividades_exigirForaDaOS_(eu, a, 'registrar o andamento');
+      if (a.RESPONSAVEL_ID !== eu.id && !Atividades_gestaoSobre_(eu, a)) throw new Error('Não foi possível registrar o andamento: só o responsável (' + (a.RESPONSAVEL_NOME || 'outra pessoa') + ') ou a gestão registram o andamento. Para combinar algo, use Comentar.');
+      if (!Atividades_aberta_(a)) throw new Error('Não foi possível registrar o andamento: a atividade já está ' + a.SITUACAO.toLowerCase() + '.');
+      var dados = {};
+      if (temPerc && String(a.PERCENTUAL) !== String(n)) dados.PERCENTUAL = n;
+      Atividades_gravar_(a.ID, dados);
+      Atividades_registrarHist_(eu, a.ID, 'ANDAMENTO', { texto: texto, de: temPerc && a.PERCENTUAL !== '' ? a.PERCENTUAL + '%' : '', para: temPerc ? n + '%' : '' });
+      return { item: Atividades_paraTela_(eu, Atividades_obter_(a.ID)), message: 'Andamento registrado' + (temPerc ? ' (' + n + '%)' : '') + '. Fica no histórico da atividade.' };
+    });
+  });
+}
+
+/**
+ * Atividades da equipe (19/10/2026: aberta a todo perfil interno, não só à gestão).
+ * Cada pessoa recebe as atividades que pode ver (Atividades_podeVer_), cada uma dizendo se ela pode
+ * alterar; o painel Agora, os indicadores e a carga por pessoa saem dessas mesmas atividades.
+ * Texto das justificativas: só das atividades em que a pessoa é envolvida (ou todas, para a gestão);
+ * os números por motivo valem para todos.
+ */
+function Atividades_apiPainelEquipe(sessionId, payload) {
+  return Atividades_resposta_(function () {
+    var eu = Atividades_sessao_(sessionId);
+    var agora = Atividades_agora_(), hoje = agora.slice(0, 10);
+    var limite30 = Atividades_menosDias_(30);
+    var em7 = Utilities.formatDate(new Date(Date.now() + 7 * 86400000), ATV_FUSO, "yyyy-MM-dd'T'HH:mm");
+    var todas = Atividades_todas_().filter(function (a) { return Atividades_podeVer_(eu, a); });
+    var usuarios = Atividades_usuariosAtivos_();
+
+    var abertas = todas.filter(Atividades_aberta_);
+    // 31/10/2026: os números mostram o atraso de fato (com ou sem pedido de nova data); a cobrança do responsável é outra régua
+    var vencidas = abertas.filter(function (a) { return Atividades_atrasada_(a, agora); });
+    var concl30 = todas.filter(function (a) { return a.SITUACAO === 'Concluída' && a.CONCLUIDA_EM && a.CONCLUIDA_EM >= limite30 && !Atividades_daOS_(a); });
+    var noPrazo = concl30.filter(function (a) { return a.PRAZO && a.CONCLUIDA_EM <= a.PRAZO; });
+
+    var pesoPri = { Urgente: 3, Alta: 2, Normal: 1, Baixa: 1 };
+    var agoraPainel = usuarios.map(function (u) {
+      var minhas = abertas.filter(function (a) { return a.RESPONSAVEL_ID === u.id; });
+      var atual = minhas.filter(function (a) { return a.AGORA_DESDE; })[0] || null;
+      return {
+        id: u.id, nome: u.nome, perfil: u.perfil, abertas: minhas.length,
+        vencidas: minhas.filter(function (a) { return Atividades_atrasada_(a, agora); }).length,
+        venceHoje: minhas.filter(function (a) { return !Atividades_atrasada_(a, agora) && String(a.PREVISAO_ATUAL).slice(0, 10) === hoje; }).length,
+        prox7: minhas.filter(function (a) { return a.PREVISAO_ATUAL >= agora && a.PREVISAO_ATUAL <= em7; }).length,
+        aguardando: minhas.filter(function (a) { return a.SITUACAO === 'Aguardando'; }).length,
+        carga: minhas.reduce(function (s, a) { return s + (pesoPri[a.PRIORIDADE] || 1); }, 0),
+        atual: atual ? { ID: atual.ID, TITULO: atual.TITULO, AGORA_DESDE: atual.AGORA_DESDE, MODULO_NOME: atual.MODULO_NOME, CLIENTE_NOME: atual.CLIENTE_NOME } : null
+      };
+    }).filter(function (p) { return p.abertas > 0 || p.atual; });
+
+    var porId = {};
+    todas.forEach(function (a) { porId[a.ID] = a; });
+    var justTodas = SGO_DATA.getAll(Atividades_abas_().HISTORICO)
+      .filter(function (h) { return String(h.TIPO) === 'JUSTIFICATIVA' && porId[String(h.ATIVIDADE_ID)]; })
+      .map(Atividades_limparHist_)
+      .sort(Atividades_ordemHistDesc_);
+    var porMotivo = {};
+    justTodas.forEach(function (h) {
+      if (h.DATA < limite30) return;
+      var k = ATV_MOTIVOS_LEGADO[h.CATEGORIA] || h.CATEGORIA || 'Sem motivo escolhido (anterior a 19/10/2026)';
+      porMotivo[k] = (porMotivo[k] || 0) + 1;
+    });
+    var justificativas = justTodas
+      .filter(function (h) { return Atividades_veJustificativa_(eu, porId[h.ATIVIDADE_ID]); })
+      .slice(0, 30)
+      .map(function (h) { var a = porId[h.ATIVIDADE_ID] || {}; h.TITULO = a.TITULO || ''; h.RESPONSAVEL_NOME = a.RESPONSAVEL_NOME || h.USUARIO_NOME; h.SITUACAO = a.SITUACAO || ''; return h; });
+
+    var porModulo = {};
+    abertas.forEach(function (a) {
+      var k = a.MODULO || '-';
+      var m = porModulo[k] = porModulo[k] || { modulo: k, nome: a.MODULO_NOME || (a.MODULO ? a.MODULO : 'Sem módulo'), abertas: 0, vencidas: 0 };
+      m.abertas++; if (Atividades_atrasada_(a, agora)) m.vencidas++;
+    });
+    var porSistema = { 'SGO+': 0, COMMAND: 0 };
+    abertas.forEach(function (a) { porSistema[a.SISTEMA_ORIGEM === 'COMMAND' ? 'COMMAND' : 'SGO+']++; });
+
+    return {
+      agora: agora, eu: { id: eu.id, gestor: eu.gestor, configuraAvisos: eu.perfil === 'ADMIN' || eu.perfil === 'DIRETORIA' },
+      // 26/10/2026 (agenda única): atendimento de O.S. vem com os dados vivos da O.S. (quem manda é a O.S.); O.S. cancelada sai da agenda
+      itens: Atividades_comDadosDaOS_(todas.filter(function (a) { return a.SITUACAO !== 'Cancelada'; }).map(function (a) { return Atividades_paraTela_(eu, a, agora); })),
+      auvo: Atividades_agendaAuvo_(eu, usuarios),
+      usuarios: usuarios.map(function (u) { return { id: u.id, nome: u.nome }; }), painelAgora: agoraPainel,
+      indicadores: {
+        abertas: abertas.length, vencidas: vencidas.length, concluidas30: concl30.length, noPrazo30: noPrazo.length,
+        percNoPrazo30: concl30.length ? Math.round(noPrazo.length * 1000 / concl30.length) / 10 : null,
+        aguardando: abertas.filter(function (a) { return a.SITUACAO === 'Aguardando'; }).length,
+        pedidosPendentes: abertas.filter(Atividades_pedidoPendente_).length,
+        justificativas30: Object.keys(porMotivo).reduce(function (s, k) { return s + porMotivo[k]; }, 0),
+        porMotivo: Object.keys(porMotivo).map(function (k) { return { motivo: k, qtd: porMotivo[k] }; }).sort(function (a, b) { return b.qtd - a.qtd; }),
+        porModulo: Object.keys(porModulo).map(function (k) { return porModulo[k]; }).sort(function (a, b) { return b.abertas - a.abertas; }),
+        porSistema: porSistema
+      },
+      justificativas: justificativas,
+      // 26/10/2026: o Gantt da equipe usa o empilhamento comum (SGO_Gantt_Layout.js), o mesmo da Frota: texto só
+      // quando cabe inteiro, nunca cortado nem por cima de outra barra ou da faixa de atraso.
+      ganttJs: typeof SGOGantt_codigoNavegador_ === 'function' ? SGOGantt_codigoNavegador_() : ''
+    };
+  });
+}
+
+/**
+ * 26/10/2026 (agenda única aprovada pelo dono): acrescenta às atividades de O.S. o número, a situação e o horário da O.S.
+ * (OS_NUMERO, OS_SITUACAO, OS_SITUACAO_NOME, OS_INICIO, OS_FIM). A O.S. cancelada tira a atividade da lista. Nunca lança.
+ */
+function Atividades_comDadosDaOS_(itens) {
+  var comOS = itens.filter(Atividades_daOS_);
+  if (!comOS.length || typeof AST_ABAS === 'undefined') return itens;
+  var porId = {};
+  try { if (SGO_DATA.getDB().getSheetByName(AST_ABAS.OS)) SGO_DATA.getAll(AST_ABAS.OS).forEach(function (o) { porId[String(o.ID)] = o; }); } catch (e) { return itens; }
+  var nomes = typeof AST_OS_SITUACOES !== 'undefined' ? AST_OS_SITUACOES : {};
+  return itens.filter(function (a) {
+    if (!Atividades_daOS_(a)) return true;
+    var o = porId[String(a.OS_ID)];
+    if (!o) return true;
+    var sit = String(o.SITUACAO || '').toUpperCase();
+    if (sit === 'CANCELADA') return false;
+    if (String(o.EXCLUIDO_EM || '').trim()) return false; // 27/10/2026: O.S. de chamado excluído (teste ou simulação) sai da agenda
+    var ini = Atividades_normData_(o.AGENDADO_PARA, '08:00');
+    var dur = Number(o.DURACAO_MIN) || 90;
+    a.OS_NUMERO = String(o.NUMERO || ''); a.OS_SITUACAO = sit; a.OS_SITUACAO_NOME = nomes[sit] || sit;
+    a.OS_INICIO = ini; a.OS_FIM = ini ? Utilities.formatDate(new Date(Atividades_msLocal_(ini) + dur * 60000), ATV_FUSO, "yyyy-MM-dd'T'HH:mm") : '';
+    return true;
+  });
+}
+
+/** 'aaaa-mm-ddThh:mm' (hora de Brasília) em milissegundos. */
+function Atividades_msLocal_(s) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(s || ''));
+  return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] + 3, +m[5]) : NaN;
+}
+
+/**
+ * 26/10/2026: atendimentos do Auvo dos técnicos (AUVO_TAREFAS com técnico ligado ao SGO+), de 60 dias atrás a 120 dias à frente,
+ * só para leitura na agenda da equipe, com a etiqueta Auvo. A gestão vê todos; os demais só os próprios. Nunca lança.
+ */
+function Atividades_agendaAuvo_(eu, usuarios) {
+  try {
+    var aba = SGO_CFG.SHEETS.AUVO_TAREFAS;
+    if (!aba || !SGO_DATA.getDB().getSheetByName(aba)) return [];
+    var nomes = {}; (usuarios || []).forEach(function (u) { nomes[u.id] = u.nome; });
+    var de = Atividades_menosDias_(60).slice(0, 10), ate = Utilities.formatDate(new Date(Date.now() + 120 * 86400000), ATV_FUSO, 'yyyy-MM-dd');
+    return SGO_DATA.getAll(aba).map(function (t) {
+      var tec = String(t.TECNICO_ID_SGO || '').trim();
+      var ini = Atividades_normData_(t.CHECKIN_EM || t.DATA_TAREFA, '08:00');
+      if (!tec || !nomes[tec] || !ini || ini.slice(0, 10) < de || ini.slice(0, 10) > ate) return null;
+      if (!eu.gestor && tec !== eu.id) return null;
+      var fim = Atividades_normData_(t.CHECKOUT_EM, '') || Utilities.formatDate(new Date(Atividades_msLocal_(ini) + 90 * 60000), ATV_FUSO, "yyyy-MM-dd'T'HH:mm");
+      if (fim < ini) fim = ini;
+      return { ID: 'AUVO:' + String(t.AUVO_TASK_ID || t.ID), TAREFA: String(t.AUVO_TASK_ID || ''), RESPONSAVEL_ID: tec, RESPONSAVEL_NOME: nomes[tec],
+        TITULO: (String(t.TIPO_TAREFA || 'Atendimento') + ' · ' + String(t.CLIENTE_NOME_AUVO || 'cliente do Auvo')).slice(0, 160), INICIO: ini, FIM: fim,
+        FINALIZADA: String(t.FINALIZADA || '').toUpperCase() === 'SIM' };
+    }).filter(Boolean).slice(0, 1500);
+  } catch (e) { console.error('Agenda, atendimentos do Auvo: ' + ((e && e.message) || e)); return []; }
+}
+
+/**
+ * 26/10/2026 (agenda única, etapa 5): atividade com horário (início e prazo no mesmo período, até 12 horas) que cai em cima de
+ * O.S. ou tarefa do Auvo da pessoa: avisa na mensagem e não bloqueia (a gestão decide). Atividade só com prazo não conta.
+ * Devolve o texto do aviso (com espaço na frente) ou vazio. Nunca lança.
+ */
+function Atividades_avisoConflitoOS_(respId, inicio, prazo, respNome) {
+  try {
+    if (!inicio || !prazo || typeof AstA_conflitos_ !== 'function') return '';
+    var ini = Atividades_msLocal_(inicio), fim = Atividades_msLocal_(prazo);
+    if (!(fim > ini) || fim - ini > 12 * 3600000) return '';
+    var conf = AstA_conflitos_(respId, ini, fim, '');
+    if (!conf.length) return '';
+    return ' Atenção: ' + respNome + ' tem compromisso nesse horário (' + conf.map(function (x) { return x.texto; }).join('; ') + '). A atividade foi lançada; se precisar, ajuste o horário.';
+  } catch (e) { return ''; }
+}
+
+/** Plano de ação do Programa de conduta (5W2H + PDCA) de que a atividade faz parte, para o detalhe. Só leitura. */
+function Atividades_planoDaAtividade_(a) {
+  if (!a || a.MODULO !== 'conduta') return null;
+  try {
+    var aba = (typeof CNDQ_SHEETS !== 'undefined' && CNDQ_SHEETS.PLANO) || 'qual_plano_acao';
+    var achado = null;
+    SGO_DATA.getAll(aba).forEach(function (p) {
+      if (achado) return;
+      var ids = [];
+      try { ids = JSON.parse(String(p.ATIVIDADES_JSON || '[]')); } catch (e) { ids = []; }
+      if (Array.isArray(ids) && ids.map(String).indexOf(String(a.ID)) >= 0) achado = p;
+    });
+    if (!achado) return null;
+    var fases = typeof CNDQ_FASES !== 'undefined' ? CNDQ_FASES : {};
+    var fase = SGO_UTILS.safeUpper(achado.FASE);
+    return { CODIGO: SGO_UTILS.safe(achado.CODIGO), TITULO: SGO_UTILS.safe(achado.TITULO), FASE: fase, FASE_NOME: fases[fase] || fase, CICLO: Number(achado.CICLO) || 1 };
+  } catch (e) { return null; }
+}
+
+// ------------------------------------------------------------
+// PONTE COMMAND -> SGO+ (SGO_PonteCommand.js, ações "atividades.*")
+// ------------------------------------------------------------
+/**
+ * O COMMAND chama em nome do usuário do SGO+ ligado à conta (dados.sgoUsuarioId) e as MESMAS funções
+ * das telas do SGO+ respondem, com as mesmas regras de quem vê e quem altera (o perfil vale o do SGO+).
+ * A assinatura (HMAC) já foi conferida por PonteCmd_tratar_. dados = { sgoUsuarioId, payload }.
+ * Resposta: a mesma da tela; erro vem com ok:false, message e erro (texto para o operador).
+ */
+var ATV_PONTE_ACOES = {
+  'atividades.opcoes': function (t, p) { return Atividades_apiOpcoes(t, p); },
+  'atividades.unidades': function (t, p) { return Atividades_apiUnidades(t, p); },
+  'atividades.minhas': function (t, p) { return Atividades_apiListarMinhas(t, p); },
+  'atividades.modulo': function (t, p) { return Atividades_apiListarModulo(t, p); },
+  'atividades.detalhe': function (t, p) { return Atividades_apiDetalhe(t, p); },
+  'atividades.criar': function (t, p) { return Atividades_apiCriar(t, p); },
+  'atividades.editar': function (t, p) { return Atividades_apiEditar(t, p); },
+  'atividades.situacao': function (t, p) { return Atividades_apiMudarSituacao(t, p); },
+  'atividades.comentar': function (t, p) { return Atividades_apiComentar(t, p); },
+  'atividades.percentual': function (t, p) { return Atividades_apiPercentual(t, p); },
+  'atividades.agora': function (t, p) { return Atividades_apiFazendoAgora(t, p); },
+  'atividades.verificar': function (t, p) { return Atividades_apiVerificar(t, p); },
+  'atividades.lidos': function (t, p) { return Atividades_apiMarcarAvisosLidos(t, p); },
+  'atividades.justificar': function (t, p) { return Atividades_apiJustificar(t, p); },
+  'atividades.decidir': function (t, p) { return Atividades_apiDecidirPedido(t, p); },
+  'atividades.remarcar': function (t, p) { return Atividades_apiRemarcar(t, p); },
+  'atividades.andamento': function (t, p) { return Atividades_apiAndamento(t, p); },
+  'atividades.equipe': function (t, p) { return Atividades_apiPainelEquipe(t, p); }
+};
+
+function Atividades_ponte_(acao, dados) {
+  var fn = Object.prototype.hasOwnProperty.call(ATV_PONTE_ACOES, acao) ? ATV_PONTE_ACOES[acao] : null;
+  if (!fn) return { ok: false, erro: 'Ação de atividades desconhecida.', message: 'Ação de atividades desconhecida.' };
+  var d = dados || {};
+  var eu;
+  try { eu = Atividades_euDoUsuario_(d.sgoUsuarioId, 'COMMAND'); }
+  catch (e) { var m = String((e && e.message) || e); return { ok: false, erro: m, message: m }; }
+  var anterior = ATV_PONTE_CTX;
+  ATV_PONTE_CTX = { token: 'PONTE-' + Utilities.getUuid(), eu: eu };
+  var r;
+  try { r = fn(ATV_PONTE_CTX.token, d.payload || {}); }
+  finally { ATV_PONTE_CTX = anterior; }
+  if (r && r.ok === false && !r.erro) r.erro = r.message;
+  return r;
+}

@@ -1,0 +1,127 @@
+<script>
+/*
+ * Painel financeiro > Regras do Financeiro (16/11/2026, pedido do dono: "deixa tudo organizado de forma que possa ser configurado").
+ * Mostra as configurações em vigor (alteradas pelo responsável pelo sistema em Chaves e senhas > Regras do Financeiro), as
+ * operações aguardando aprovação (alçada) e o de-para de categorias (sugestão da categoria do Omie por tipo de lançamento e,
+ * se quiser, por CNPJ). Servidor: SGO_Omie_Regras.js. A trava fica no servidor; quem preparou não aprova a própria operação.
+ * Também traz os pedaços usados nas prévias (segunda confirmação e espera da aprovação) por JS_Omie_Operacoes e JS_Omie_Notas.
+ */
+var OMIE_REGRAS = { geracao: 0, tela: null, lista: [] };
+function OmieRegras_esc_(v) { return typeof CadUI_esc_ === 'function' ? CadUI_esc_(v) : String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function OmieRegras_rpc_(nome, dados, ok, erro) {
+  var g = OMIE_REGRAS.geracao, sessao = SGO_getSessionId(), pedido = typeof OMIE_TELA !== 'undefined' ? OMIE_TELA.pedido : null;
+  function atual() { return g === OMIE_REGRAS.geracao && sessao === SGO_getSessionId() && (typeof OMIE_TELA === 'undefined' || pedido === OMIE_TELA.pedido); }
+  google.script.run.withSuccessHandler(function (r) { if (!atual()) return; if (!r || !r.ok) { (erro || OmieRegras_aviso_)(r && r.mensagem || 'Não foi possível concluir.'); return; } ok(r); })
+    .withFailureHandler(function () { if (atual()) (erro || OmieRegras_aviso_)('A comunicação foi interrompida. Atualize a aba e tente de novo.'); })[nome](sessao, dados || {});
+}
+function OmieRegras_aviso_(m) { var e = document.getElementById('omieRegrasAviso'); if (e) e.textContent = m; }
+
+// ---------------------------------------------------------------- pedaços das prévias (alçadas)
+/** HTML a pôr na prévia quando a operação passa de uma alçada. */
+function OmieRegras_extrasPrevia_(r) {
+  var a = r && r.alcada; if (!a) return '';
+  return (a.aprovacao ? '<div class="vg-faixa is-alerta omie-alcada" role="status"><strong>Aguardando aprovação.</strong> O valor passa da alçada de aprovação: o dono do sistema ou a Diretoria precisa aprovar em "Regras do Financeiro" antes de você confirmar. Quando aprovarem, toque em "Confirmar no Omie".</div>' : '') +
+    (a.segunda ? '<label class="cadx-campo omie-alcada">Digite o valor de novo (R$)<input class="cadx-input" id="omieValorConfirmado" name="valorConfirmado" inputmode="decimal" autocomplete="off"></label>' : '');
+}
+function OmieRegras_valorDigitado_() { var e = document.getElementById('omieValorConfirmado'); return e ? String(e.value || '') : ''; }
+/** A confirmação recusada por alçada não apaga a prévia: a pessoa digita o valor ou espera a aprovação e tenta de novo. */
+function OmieRegras_ehEsperaAlcada_(m) { return /aguardando a aprovação|digite de novo o valor exato/i.test(String(m || '')); }
+
+// ---------------------------------------------------------------- aba
+function OmieRegras_render_() {
+  var c = document.getElementById('omieCorpo'); if (!c) return;
+  OMIE_REGRAS.geracao++;
+  c.innerHTML = '<section class="omie-regras"><h3>Regras do Financeiro</h3><p id="omieRegrasAviso" role="status" aria-live="polite"></p><div id="omieRegrasCorpo"><p class="cadx-sub">Carregando…</p></div></section>';
+  OmieRegras_rpc_('OmieRegras_apiTela', {}, OmieRegras_desenhar_, function (m) { document.getElementById('omieRegrasCorpo').textContent = m; });
+}
+var OMIE_REGRAS_TEXTOS = {
+  destinoNfe: { FINANCEIRO: 'Só financeiro: cada parcela vira conta a pagar no Omie.', FINANCEIRO_FISCAL: 'Financeiro e fiscal (combinar com o contador). O caminho fiscal ainda não existe no SGO+: a nota continua sendo lançada só no financeiro, com aviso na tela.' },
+  retencoes: { OBSERVACAO: 'Título pelo valor líquido; retenções escritas na observação do título.', CAMPOS_OMIE: 'Título pelo valor do serviço; retenções nos campos de impostos retidos do Omie (a confirmar na primeira operação acompanhada).' }
+};
+function OmieRegras_desenhar_(r) {
+  var esc = OmieRegras_esc_, cfg = r.config, alvo = document.getElementById('omieRegrasCorpo'); if (!alvo) return;
+  OMIE_REGRAS.tela = r; OMIE_REGRAS.lista = r.depara.map(function (x) { return Object.assign({}, x); });
+  var h = '<div class="omie-bloco"><h4>Configurações em vigor</h4><dl class="omie-regras-cfg">' +
+    '<dt>NF-e de compra</dt><dd>' + esc(OMIE_REGRAS_TEXTOS.destinoNfe[cfg.destinoNfe]) + '</dd>' +
+    '<dt>Retenções da NFS-e</dt><dd>' + esc(OMIE_REGRAS_TEXTOS.retencoes[cfg.retencoes]) + '</dd>' +
+    '<dt>Digitar o valor de novo</dt><dd>' + esc(cfg.alcadaSegunda ? 'Acima de ' + cfg.alcadaSegunda + ' (baixa, conta a pagar e nota recebida).' : 'Desligada.') + '</dd>' +
+    '<dt>Aprovação de outra pessoa</dt><dd>' + esc(cfg.alcadaAprovacao ? 'Acima de ' + cfg.alcadaAprovacao + ': o dono do sistema ou a Diretoria aprova antes de confirmar (nunca quem preparou; o Financeiro prepara e não aprova).' : 'Desligada.') + '</dd>' +
+    // 16/11/2026 (Onda 2): saldo mínimo, nota de saúde e fotografia diária
+    '<dt>Quem aprova</dt><dd>' + esc(cfg.soDiretoria === false ? 'Regras de cada módulo (configuração "Não").' : 'Só o dono do sistema e a Diretoria, em todo o Financeiro, Compras, Depósito de viagem e Recarga Caju (decisão do dono).') + '</dd>' +
+    '<dt>Saldo mínimo de segurança</dt><dd>' + esc(cfg.saldoMinimo ? cfg.saldoMinimo + ' (usado em Indicadores > Folga sobre o saldo mínimo).' : 'A definir: o indicador mostra "a definir" até a Diretoria decidir.') + '</dd>' +
+    '<dt>Nota de saúde</dt><dd>' + esc('Pesos: ' + (cfg.saudePesos || 'padrão 25;20;20;20;5;10') + '. Limites: ' + (cfg.saudeLimites || 'padrão da especificação') + '.') + '</dd>' +
+    '<dt>Fotografia diária</dt><dd>' + esc(cfg.fotoLigada === false ? 'Desligada: a aba Indicadores mostra a última fotografia que existir.' : 'Ligada, a partir das ' + (cfg.fotoHora || '06:00') + ' (só leitura do Omie).') + '</dd></dl>' +
+    '<p class="cadx-sub">Estas configurações são alteradas pelo responsável pelo sistema em Administração > Chaves e senhas > Regras do Financeiro.</p></div>';
+  h += '<div class="omie-bloco"><h4>Aprovações pendentes</h4><div id="omieRegrasAprov"></div></div>';
+  h += '<div class="omie-bloco"><h4>De-para de categorias</h4><p>Sugere a categoria do Omie em cada tipo de lançamento (e, se quiser, para um fornecedor ou cliente pelo CNPJ). A categoria sugerida já aparece escolhida; a pessoa sempre confere e pode trocar antes da prévia. Lista vazia: a categoria é escolhida em cada lançamento.</p><div id="omieRegrasLista"></div>' +
+    (r.podeEditar ? '<form id="omieRegrasForm" onsubmit="event.preventDefault();OmieRegras_acrescentar_()"><div class="omie-grade">' +
+      '<label class="cadx-campo">Tipo de lançamento<select class="cadx-input" name="regraTipo" id="omieRegraTipo" onchange="OmieRegras_carregarCategorias_()">' + r.tipos.map(function (t) { return '<option value="' + esc(t.codigo) + '">' + esc(t.nome) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="cadx-campo">CNPJ ou CPF (opcional)<input class="cadx-input" name="regraCnpj" id="omieRegraCnpj" inputmode="numeric" autocomplete="off"></label>' +
+      '<label class="cadx-campo">Categoria do Omie<select class="cadx-input" name="regraCategoria" id="omieRegraCategoria" required><option value="">Carregando…</option></select></label></div>' +
+      '<div class="omie-acoes"><button type="submit" class="cadx-btn">Acrescentar à lista</button></div>' +
+      '<label class="cadx-campo">Motivo da mudança<textarea class="cadx-input" name="regraMotivo" id="omieRegraMotivo" maxlength="300"></textarea></label>' +
+      '<div class="omie-acoes"><button type="button" class="cadx-btn cadx-btn-primario" id="omieRegrasGravar" onclick="OmieRegras_gravar_()">Gravar o de-para</button></div></form>'
+      : '<p class="cadx-sub">Só quem lança no Omie (caixa "Lançar, alterar e baixar títulos no Omie") altera o de-para.</p>') + '</div>';
+  h += '<details class="omie-incertos"><summary>Histórico das mudanças</summary>' + (r.historico.length ? '<ul class="omie-regras-hist">' + r.historico.map(function (x) { return '<li><strong>' + esc(x.em + ' · ' + x.nome) + '</strong>: ' + esc(x.depois) + '<br><span class="cadx-sub">Motivo: ' + esc(x.motivo) + '</span></li>'; }).join('') + '</ul>' : '<p class="cadx-sub">Nenhuma mudança registrada ainda.</p>') + '</details>';
+  alvo.innerHTML = h;
+  OmieRegras_desenharAprovacoes_(r.aprovacoes); OmieRegras_desenharLista_();
+  if (r.podeEditar) OmieRegras_carregarCategorias_();
+}
+function OmieRegras_nomeTipo_(c) { var t = (OMIE_REGRAS.tela && OMIE_REGRAS.tela.tipos || []).filter(function (x) { return x.codigo === c; })[0]; return t ? t.nome : c; }
+function OmieRegras_desenharLista_() {
+  var esc = OmieRegras_esc_, alvo = document.getElementById('omieRegrasLista'); if (!alvo) return;
+  var pode = OMIE_REGRAS.tela && OMIE_REGRAS.tela.podeEditar;
+  alvo.innerHTML = !OMIE_REGRAS.lista.length ? '<div class="cadx-vazio bc-vazio">Nenhuma regra: a categoria é escolhida em cada lançamento.</div>' :
+    '<div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Tipo de lançamento</th><th>CNPJ ou CPF</th><th>Categoria sugerida</th>' + (pode ? '<th></th>' : '') + '</tr></thead><tbody>' + OMIE_REGRAS.lista.map(function (x, i) {
+      return '<tr><td data-r="Tipo">' + esc(OmieRegras_nomeTipo_(x.tipo)) + '</td><td data-r="CNPJ ou CPF">' + esc(x.cnpj || 'todos') + '</td><td data-r="Categoria">' + esc(x.categoria + (x.descricao ? ' · ' + x.descricao : '')) + '</td>' + (pode ? '<td data-r=""><button type="button" class="cadx-btn" onclick="OmieRegras_tirar_(' + i + ')">Tirar</button></td>' : '') + '</tr>';
+    }).join('') + '</tbody></table></div>' + (pode ? '<p class="cadx-sub">Mudanças na lista só valem depois de "Gravar o de-para".</p>' : '');
+}
+function OmieRegras_carregarCategorias_() {
+  var t = document.getElementById('omieRegraTipo'), sel = document.getElementById('omieRegraCategoria'); if (!t || !sel) return;
+  var tipo = (OMIE_REGRAS.tela.tipos.filter(function (x) { return x.codigo === t.value; })[0] || {}).natureza || 'pagar';
+  sel.innerHTML = '<option value="">Carregando…</option>';
+  OmieRegras_rpc_('OmieOps_apiApoios', { tipo: 'categorias', pagina: 1, natureza: tipo }, function (r) {
+    sel.innerHTML = '<option value="">Escolha…</option>' + r.itens.map(function (i) { return '<option value="' + OmieRegras_esc_(i.id) + '">' + OmieRegras_esc_(i.id + ' · ' + i.nome) + '</option>'; }).join('');
+  }, function (m) { sel.innerHTML = '<option value="">Não carregou</option>'; OmieRegras_aviso_(m); });
+}
+function OmieRegras_acrescentar_() {
+  var f = document.getElementById('omieRegrasForm'); if (!f) return;
+  var tipo = document.getElementById('omieRegraTipo').value, cnpj = String(document.getElementById('omieRegraCnpj').value || '').replace(/\D/g, ''), sel = document.getElementById('omieRegraCategoria');
+  if (!sel.value) { OmieRegras_aviso_('Escolha a categoria do Omie.'); sel.focus(); return; }
+  if (cnpj && cnpj.length !== 11 && cnpj.length !== 14) { OmieRegras_aviso_('O CNPJ tem 14 números e o CPF tem 11. Deixe em branco para valer para todos.'); return; }
+  OMIE_REGRAS.lista = OMIE_REGRAS.lista.filter(function (x) { return !(x.tipo === tipo && x.cnpj === cnpj); });
+  OMIE_REGRAS.lista.push({ tipo: tipo, cnpj: cnpj, categoria: sel.value, descricao: String(sel.options[sel.selectedIndex].text || '').replace(/^[^·]*·\s*/, '') });
+  document.getElementById('omieRegraCnpj').value = ''; OmieRegras_desenharLista_(); OmieRegras_aviso_('Regra acrescentada à lista. Escreva o motivo e toque em "Gravar o de-para".');
+}
+function OmieRegras_tirar_(i) { OMIE_REGRAS.lista.splice(i, 1); OmieRegras_desenharLista_(); OmieRegras_aviso_('Regra tirada da lista. Escreva o motivo e toque em "Gravar o de-para".'); }
+function OmieRegras_gravar_() {
+  var b = document.getElementById('omieRegrasGravar'), m = document.getElementById('omieRegraMotivo'); if (!b) return; b.disabled = true; OmieRegras_aviso_('Conferindo as categorias no Omie e gravando…');
+  OmieRegras_rpc_('OmieRegras_apiSalvarDepara', { regras: OMIE_REGRAS.lista, motivo: m ? m.value : '' }, function (r) { OmieRegras_desenhar_(r.tela); OmieRegras_aviso_(r.mensagem); }, function (msg) { b.disabled = false; OmieRegras_aviso_(msg); });
+}
+function OmieRegras_desenharAprovacoes_(itens) {
+  var esc = OmieRegras_esc_, alvo = document.getElementById('omieRegrasAprov'); if (!alvo) return;
+  if (!itens.length) { alvo.innerHTML = '<p class="cadx-sub">Nenhuma operação aguardando aprovação.</p>'; return; }
+  alvo.innerHTML = itens.map(function (x, k) {
+    var corpo = typeof OmieUI_previa_ === 'function' ? OmieUI_previa_(x.resumo) : '<dl>' + x.resumo.map(function (l) { return '<dt>' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd>'; }).join('') + '</dl>';
+    return '<div class="omie-aprov omie-previa-caixa"><p><strong>' + esc(x.origem + ' · ' + x.valor) + '</strong><br><span class="cadx-sub">Preparada por ' + esc(x.preparadoPor) + '</span></p>' + corpo +
+      (x.minha ? '<p class="vg-faixa is-alerta">Você preparou esta operação: o dono do sistema ou a Diretoria (outra pessoa, não você) precisa aprovar.</p>' :
+        !x.podeDecidir ? '<p class="vg-faixa is-neutra">Aguardando a decisão do dono do sistema ou da Diretoria. Por decisão do dono, o Financeiro e os demais colaboradores não aprovam nem recusam operações do Financeiro; acompanhe por aqui.</p>' :
+        '<label class="cadx-campo">Motivo (obrigatório para recusar)<textarea class="cadx-input" name="aprovMotivo" id="omieAprovMot' + k + '" maxlength="300"></textarea></label>' +
+        '<div class="omie-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-chave="' + esc(x.chave) + '" data-decisao="aprovar" data-k="' + k + '" onclick="OmieRegras_decidir_(this)">Aprovar</button> <button type="button" class="cadx-btn" data-chave="' + esc(x.chave) + '" data-decisao="recusar" data-k="' + k + '" onclick="OmieRegras_decidir_(this)">Recusar</button></div>') + '</div>';
+  }).join('');
+}
+function OmieRegras_decidir_(b) {
+  var m = document.getElementById('omieAprovMot' + b.getAttribute('data-k')); b.disabled = true;
+  OmieRegras_rpc_('OmieRegras_apiDecidir', { chave: b.getAttribute('data-chave'), decisao: b.getAttribute('data-decisao'), motivo: m ? m.value : '' }, function (r) { OmieRegras_aviso_(r.mensagem); OmieRegras_desenharAprovacoes_(r.itens); }, function (msg) { b.disabled = false; OmieRegras_aviso_(msg); });
+}
+</script>
+<style>
+  #omieTela .omie-regras p, #omieTela .omie-regras li, #omieTela .omie-regras dd { text-align: justify; }
+  #omieTela .omie-regras-cfg { display: grid; grid-template-columns: minmax(0, 14em) minmax(0, 1fr); gap: 6px 14px; margin: 8px 0; }
+  #omieTela .omie-regras-cfg dt { font-weight: 600; }
+  #omieTela .omie-regras-cfg dd { margin: 0; overflow-wrap: anywhere; }
+  #omieTela .omie-regras-hist { margin: 8px 0 0 18px; padding: 0; }
+  #omieTela .omie-aprov { margin: 10px 0; }
+  #omieTela .omie-alcada { margin-top: 10px; }
+  @media (max-width: 700px) { #omieTela .omie-regras-cfg { grid-template-columns: 1fr; } #omieTela .omie-regras-cfg dd { margin-bottom: 8px; } }
+</style>

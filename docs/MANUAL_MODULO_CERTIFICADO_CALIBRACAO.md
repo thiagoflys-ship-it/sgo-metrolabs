@@ -8,6 +8,25 @@
 - Padrão vencido na data da calibração bloqueia a emissão. O cadastro e a validade dos padrões ficam na página "Padrões de referência" (botões "Editar" e "⋯" Mais ações: Substituir PDF, Dados, localização e foto, Inativar, Reativar).
 - Os perfis Comercial e Financeiro só consultam certificados.
 
+## O que mudou em 13/11/2026 (Padrões de referência)
+
+- Os números do resumo (Ativos, Vencidos, Vencem em 30 dias, Vigentes, Sem validade, Sem PDF, Inativos) e a faixa vermelha seguem o local, a grandeza e a busca em uso. Tocar num número mostra exatamente aquela quantidade na lista. Com algum desses filtros em uso, a faixa diz "neste filtro" e informa também o total geral.
+- A lista não fica mais presa no filtro anterior quando um padrão tem a TAG, a descrição ou o número do certificado gravados como número na planilha (ex.: TAG 260101580).
+- Se a lista não puder ser montada, aparece o aviso "Não foi possível montar a lista de padrões", com o motivo; nenhum dado é alterado. Toque em "Atualizar lista"; se continuar, em "Limpar filtros", e envie a mensagem ao suporte.
+- A busca ignora acentos (termometro acha Termômetro) e acha séries e números de certificado numéricos.
+- Ordenar por "Local" deixa os padrões sem localização no fim da lista.
+- "Conferido pela equipe" passa a valer também para certificados com número só de dígitos.
+- Reativar um padrão ou anexar PDF a um padrão com data de validade inválida diz onde corrigir ("Cadastro e validade").
+
+## O que mudou em 13/11/2026 (pontos calibrados dos padrões)
+
+- Cada padrão de referência tem a tabela **"Pontos calibrados do certificado"**: uma linha por ponto (ou por faixa De/Até) do certificado do padrão, com grandeza, unidade, ponto, indicação, valor de referência, erro, U95, k, νeff e, se quiser, resolução. Um padrão de valor único continua com 1 linha, como antes; nada precisa ser refeito.
+- A tabela fica em **Padrões de referência > (padrão) > Editar (Cadastro e validade)** e também em **Novo certificado**. Dá para adicionar, duplicar e remover linhas; colar a tabela do PDF ou da planilha; trazer a leitura já salva; ou ler os pontos do PDF com IA. A IA e a colagem só propõem: nada é salvo sem conferência e "Salvar".
+- No certificado de calibração, cada ponto medido usa U95, k e νeff do ponto do certificado do padrão que vale para aquele valor: o mesmo ponto; entre dois pontos, o vizinho de **maior incerteza** (conservador); dentro de uma faixa De/Até, os dados da faixa. **Fora da faixa calibrada a emissão é bloqueada**, com o padrão e a faixa na mensagem.
+- Opcional, por bloco: **"Correção do valor de referência"** usa o erro do padrão (interpolado entre dois pontos) para corrigir a leitura do padrão. O padrão é "Não corrigir".
+- O certificado mostra, na seção 3, a tabela "Pontos do certificado dos padrões aplicados", com o ponto do padrão usado em cada medição. Certificados já emitidos não mudam: cada um guarda os números da época.
+- Na renovação ("Novo certificado"), a tabela de pontos anterior vai para "Calibrações anteriores". Se o número do certificado mudar e a tabela não for conferida, o padrão fica bloqueado para certificados até a conferência.
+
 ## O que mudou em 18/10/2026
 
 - Certificado e relatório interpretativo em A4 com seções numeradas ("1. Identificação"…), tabelas numeradas ("Tabela N —") e figuras numeradas ("Figura N —"), identificação numa tabela só e cada informação uma vez (o aviso de que o certificado não contém declaração de conformidade fica só no quadro da abertura).
@@ -72,11 +91,21 @@ Este bloco fica **sempre visível no topo da tela**, independente de você estar
 | **Identificação (TAG)** | Código do padrão (ex.: "THM-002") | Identifica qual padrão foi usado, no certificado | Digite o código físico do instrumento-padrão |
 | **Descrição** | O que é o padrão | Aparece na tabela "Padrões utilizados" do certificado | Ex.: "Registro de temperatura e umidade" |
 | **Nº do certificado do padrão** | Número do certificado de calibração **do próprio padrão** (emitido por outro laboratório) | Rastreabilidade | Copie do certificado do padrão |
-| **Incerteza (U95)** | O valor de incerteza expandida escrito no certificado do padrão | Entra direto na conta de incerteza do certificado que você vai emitir | Copie o número exatamente como está no certificado do padrão |
-| **Fator K (padrão 2)** | O fator de abrangência usado no certificado do padrão | Usado para converter a incerteza do padrão pro cálculo | Deixe 2, a menos que o certificado do padrão diga outro valor explicitamente |
-| **Graus de liberdade (0 = infinito)** | Um número técnico do cálculo de incerteza do próprio padrão | Ajusta a conta com precisão | Deixe 0 (infinito) — é o caso normal. Só mude se souber exatamente o motivo |
+| **Pontos calibrados do certificado** | Tabela com uma linha por ponto (ou faixa De/Até) do certificado do padrão: ponto, indicação, referência, erro, **U95**, **k** e **νeff** | Cada ponto do certificado de calibração usa a incerteza do ponto do padrão que vale para ele | Cole a tabela do PDF ou planilha (com a linha de títulos), traga a leitura já salva ou leia com IA; confira linha por linha com o PDF e salve. Valor único: 1 linha só com U95, k e νeff |
+| **Incerteza (U95), fator k e νeff** | Em cada linha da tabela: incerteza expandida, fator de abrangência e graus de liberdade do certificado do padrão | Entram direto na conta de incerteza | Copie exatamente como está no certificado. νeff vazio ou 0 = infinito |
 | **Validade** | Até quando o padrão pode ser usado | Controla o aviso de vencimento | `dd/mm/aaaa` |
 | **Certificado do padrão (PDF)** | O arquivo do certificado do próprio padrão | Fica salvo pra consulta futura, sem precisar procurar no computador/gaveta | Anexe o PDF (opcional, mas recomendado) |
+
+### Pontos calibrados: passo a passo para a equipe
+
+1. Abra **Padrões de referência**, toque na TAG do padrão e em **Editar** (aba "Cadastro e validade").
+2. Na tabela **"Pontos calibrados do certificado"**, toque em **"Colar tabela do PDF ou planilha"**. Copie do PDF a tabela de resultados **com a linha de títulos** (por exemplo: Ponto, Indicação, Erro, U95, k, νeff) e toque em **"Ler a tabela colada"**. Se o certificado já foi lido antes, **"Trazer da leitura já salva"** faz o mesmo sem copiar nada. Com o PDF anexado, **"Ler os pontos do PDF com IA"** lê todas as páginas.
+3. Se o certificado tiver várias grandezas ou canais, marque só as linhas deste cadastro e toque em **"Trazer as linhas marcadas"**. Cada grandeza ou canal continua com o seu cadastro (mesma TAG com o canal entre parênteses, por exemplo THM-002 (T) e THM-002 (U)).
+4. Confira **cada linha** com o PDF. Erro = indicação − referência; se o certificado der correção, o erro é a correção com o sinal trocado (a colagem já faz isso quando o título da coluna é "Correção").
+5. Leia a conferência abaixo da tabela: ela mostra a faixa calibrada e o ponto de maior incerteza; linhas em vermelho têm problema e não deixam salvar.
+6. Toque em **"Salvar alterações"**.
+
+Na renovação, use **Novo certificado**: anexe o PDF, a IA propõe todos os pontos na tabela, confira, marque a conferência e salve. A tabela anterior fica no histórico.
 
 ### Status de validade (selo colorido)
 
@@ -155,7 +184,8 @@ Dentro de cada bloco, um **ponto** é um valor de referência testado (ex.: 15°
 |---|---|---|
 | **Título (grandeza/canal)** | Nome do bloco | Ex.: "Sensor Interno — Temperatura" |
 | **Unidade** | A unidade de medida do bloco | Ex.: "°C", "% UR" |
-| **Padrões de referência usados neste bloco** | Quais padrões (seção 3) entram na conta de incerteza | Marque um ou mais padrões cadastrados — sem marcar nenhum, a conta de incerteza fica incompleta |
+| **Padrões de referência usados neste bloco** | Quais padrões (seção 3) entram na conta de incerteza | Marque um ou mais padrões cadastrados — sem marcar nenhum, a conta de incerteza fica incompleta. Padrão com vários pontos entra, em cada ponto, com a U95/k/νeff do ponto calibrado aplicável |
+| **Correção do valor de referência** | Opção de corrigir a leitura do padrão pelo erro dele no ponto | "Não corrigir" (padrão) quando o valor digitado já é o de referência; escolha o padrão quando digitar a leitura dele e quiser aplicar o erro do certificado |
 | **Referência (Nominal)** | O valor de referência do ponto | Informe o valor de referência conforme o procedimento; sua origem ainda precisa de definição técnica explícita |
 | **Ensaio 1 / Ensaio 2 / Ensaio 3** | As 3 leituras reais | Digite os 3 valores medidos pelo equipamento |
 
@@ -236,6 +266,9 @@ No topo da tela, digite o CNPJ do cliente e clique em "Buscar" — aparece a lis
 | "Selecione o cliente e o equipamento antes de gerar" | Você pulou a seção 1 ou 2 | Volte e complete cliente + equipamento |
 | "Adicione ao menos 1 bloco de ensaio" | Nenhum bloco foi criado, ou todos foram removidos | Clique em "+ Adicionar bloco de ensaio" |
 | Os números da prévia parecem estranhos | Padrão errado marcado, ou leitura digitada com erro de dedo | Confira os valores digitados e os padrões marcados no bloco |
+| "fora da faixa calibrada do padrão" ao calcular | O valor do ponto está fora dos pontos calibrados do padrão | Confira o valor digitado; use um padrão calibrado nesse valor; ou, se o certificado cobre o valor, inclua o ponto na tabela do padrão |
+| "o bloco está em %UR, mas os pontos do padrão estão em °C" | Padrão (canal) de outra grandeza marcado no bloco | Desmarque e marque o canal certo, ou corrija a unidade do bloco |
+| "a tabela de pontos calibrados é do certificado nº ..." | O certificado do padrão foi trocado e a tabela não foi conferida | Abra o padrão > Cadastro e validade, confira os pontos com o PDF atual e salve |
 | Um padrão que eu preciso usar não aparece na lista de seleção | Ele está **Inativo** | Vá no bloco "Padrões de Referência" no topo e clique em "Reativar" |
 | O balão vermelho no menu não some depois que eu resolvi o padrão vencido | A tela ainda não recarregou a contagem | Saia e entre de novo no Portal, ou aguarde a próxima ação que atualiza o balão |
 

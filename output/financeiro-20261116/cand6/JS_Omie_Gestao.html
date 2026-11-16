@@ -1,0 +1,470 @@
+<script>
+  var OMIE_ABAS = [ ['resumo','Visão geral'], ['contas','Contas a pagar e receber'], ['cliente','Ficha do cliente'], ['pedidos','Pedidos aprovados'], ['lancamentos','Lançamentos e baixas'], ['cobrancas','Cobranças'], ['conciliacao','Conciliação bancária'], ['produtos','Faturamento de produtos'], ['servicos','Faturamento de serviços'], ['notas','Importação de notas'], ['fluxo','Fluxo de caixa'], ['resultado','Resultado do mês'], ['provisoes','Provisões'], ['comissoes','Comissões'], ['regras','Regras do Financeiro'], ['indicadores','Indicadores'], ['sigilo','Sigilo e acessos'] ];
+  // 14/11/2026: faixa fixa enquanto a gravação no Omie estiver desligada (as consultas funcionam; a prévia mostra o que seria enviado).
+  function OmieTela_faixaGravacao_() {
+    if (!OMIE_INI) return '';
+    // 16/11/2026 (Regras do Financeiro): operações acima da alçada esperando a aprovação de quem está vendo
+    var aprov = OMIE_INI.aprovacoesPendentes > 0 ? '<div class="vg-faixa is-alerta" role="status" id="omieFaixaAprovacao"><b>' + OMIE_INI.aprovacoesPendentes + ' operação(ões) aguardando a sua aprovação.</b> <button type="button" class="cadx-btn" onclick="OmieTela_abrir_(\'regras\')">Ver aprovações</button></div>' : '';
+    return aprov + OmieTela_faixaGravacaoBase_();
+  }
+  function OmieTela_faixaGravacaoBase_() {
+    if (OMIE_INI.configurado === false) return '<div class="vg-faixa is-erro" role="alert"><b>Conexão com o Omie não configurada.</b> As consultas e operações dependem das chaves do Omie, gravadas pelo responsável pelo sistema.</div>';
+    if (OMIE_INI.gravacao) return '';
+    return '<div class="vg-faixa is-alerta" role="status" id="omieFaixaGravacao"><b>Consultas ligadas; gravação no Omie desligada.</b> Tudo o que é lido aqui vem do Omie na hora. Lançar, baixar, gerar boleto, faturar e importar nota ainda não enviam nada: a prévia mostra exatamente o que seria enviado, e o envio será ligado depois da primeira operação acompanhada.</div>';
+  }
+  function OmieTela_render_() {
+    var div = document.getElementById('conteudo');
+    if (!div) return;
+    div.innerHTML = '<div class="module-shell cadx" id="omieTela"><div class="module-header"><div class="module-header-left"><h2 class="content-title">Painel financeiro</h2><p class="content-subtitle">Contas, bancos, faturamento e planejamento da empresa, lidos e gravados no Omie pelo SGO+.</p></div></div>' + OmieTela_faixaGravacao_() +
+      '<nav class="omie-abas" aria-label="Rotinas do Financeiro">' + OMIE_ABAS.map(function (a) { return '<button type="button" class="cadx-btn" data-omie-aba="' + a[0] + '" onclick="OmieTela_abrir_(\'' + a[0] + '\')">' + a[1] + '</button>'; }).join('') + '</nav>' +
+      // 16/11/2026 (design): no celular, as 15 rotinas em botões ocupavam a tela inteira; lá elas viram uma lista de escolha
+      '<label class="omie-abas-movel" for="omieAbaMovel"><span>Rotina do Financeiro</span><select class="cadx-input" id="omieAbaMovel" onchange="OmieTela_abrir_(this.value)">' + OMIE_ABAS.map(function (a) { return '<option value="' + a[0] + '">' + a[1] + '</option>'; }).join('') + '</select></label><div id="omieCorpo"></div></div>';
+    // 16/11/2026 (sigilo, seção 5): marca d'água com o nome e o login de quem está vendo (vem do servidor em Omie_apiIniciar)
+    if (typeof FinMarca_aplicar_ === 'function') FinMarca_aplicar_(document.getElementById('omieTela'), OMIE_INI && OMIE_INI.marca);
+    OmieTela_abrir_('resumo');
+    OmieSig_vigiar_();
+  }
+  function OmieTela_abrir_(aba) {
+    OMIE_TELA.pedido++;
+    var alvo = document.getElementById('omieCorpo'); if (!alvo) return;
+    if (!OmieTela_permitido_()) { alvo.innerHTML = '<p role="alert">O Financeiro é sigiloso: só a Diretoria e o Financeiro autorizado o acessam.</p>'; return; }
+    document.querySelectorAll('[data-omie-aba]').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-omie-aba') === aba ? 'true' : 'false'); });
+    var movel = document.getElementById('omieAbaMovel'); if (movel && movel.value !== aba) movel.value = aba;
+    if (aba === 'resumo') { OmieGest_resumo_(); return; }
+    if (aba === 'contas') { OmieTela_contas_(); return; }
+    if (aba === 'cliente' && typeof OmieCli_render_ === 'function') { OmieCli_render_(); return; } // 16/11/2026
+    if (aba === 'pedidos' && typeof OmiePed_render_ === 'function') { OmiePed_render_(); return; } // 15/11/2026
+    if (aba === 'lancamentos' || aba === 'cobrancas') { OmieOps_render_(aba); return; }
+    if (aba === 'conciliacao') { OmieConc_render_(); return; }
+    if (['produtos','servicos','notas'].indexOf(aba) >= 0) { OmieFat_render_(aba); return; }
+    if (aba === 'fluxo') { OmieGest_fluxo_(); return; }
+    if (aba === 'resultado') { OmieGest_resultado_(); return; } // 15/11/2026
+    if (aba === 'provisoes') { OmieGest_provisoes_(); return; }
+    if (aba === 'sigilo' && typeof OmieSig_render_ === 'function') { OmieSig_render_(); return; } // 16/11/2026
+    if (aba === 'regras' && typeof OmieRegras_render_ === 'function') { OmieRegras_render_(); return; } // 16/11/2026: Regras do Financeiro
+    if (aba === 'indicadores' && typeof FinIndTela_render_ === 'function') { FinIndTela_render_(); return; } // 16/11/2026: Onda 2, Indicadores e saúde
+    if (aba === 'comissoes') {
+      alvo.innerHTML = '<section><h3>Comissões de vendas</h3><div class="cadx-vazio bc-vazio"><strong>As comissões ficam em Ganhos dos vendedores</strong><p>A regra decidida pela gestão (comissão sobre o valor recebido, por faixa, com fechamento mensal conferido pelo vendedor, pelo Financeiro e pela Diretoria) está no módulo Ganhos dos vendedores.</p>' + (typeof Ganhos_render_ === 'function' ? '<p><button type="button" class="cadx-btn" onclick="abrir(\'ganhos_vendedores\')">Abrir Ganhos dos vendedores</button></p>' : '') + '</div></section>';
+    }
+  }
+  var OMIE_GEST_PEDIDOS = {};
+  // 16/11/2026: sigilo na tela. Ao sair, trocar de conta ou após 10 minutos sem uso no Painel financeiro, os dados somem da
+  // página (as listas guardadas para a planilha também). Volta com "Mostrar de novo" (nova consulta, registrada).
+  var OMIE_SIG = { ultimo: 0, timer: null, ocioMs: 10 * 60 * 1000 };
+  function OmieSig_limpar_(motivo) {
+    try { OMIE_CSV = {}; } catch (e) {}
+    var t = document.getElementById('omieTela');
+    if (!t) return;
+    OMIE_TELA.pedido++;
+    if (!motivo) { t.parentNode && (t.outerHTML = ''); return; }
+    t.innerHTML = '<div class="module-header"><div class="module-header-left"><h2 class="content-title">Painel financeiro</h2></div></div><div class="cadx-vazio bc-vazio" role="status"><strong>Dados ocultados por sigilo.</strong><p>' + CadUI_esc_(motivo) + '</p><p><button type="button" class="cadx-btn" onclick="OmieTela_render_()">Mostrar de novo</button></p></div>';
+  }
+  function OmieSig_mexeu_() { OMIE_SIG.ultimo = Date.now(); }
+  function OmieSig_vigiar_() {
+    OMIE_SIG.ultimo = Date.now();
+    if (!OMIE_SIG.ligado) {
+      OMIE_SIG.ligado = true;
+      ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(function (ev) { document.addEventListener(ev, OmieSig_mexeu_, { passive: true, capture: true }); });
+    }
+    if (OMIE_SIG.timer) clearInterval(OMIE_SIG.timer);
+    OMIE_SIG.timer = setInterval(OmieSig_conferir_, 30000);
+  }
+  function OmieSig_conferir_() {
+    var t = document.getElementById('omieTela');
+    if (!t) { if (OMIE_SIG.timer) clearInterval(OMIE_SIG.timer); OMIE_SIG.timer = null; return; }
+    if (!document.getElementById('omieCorpo')) return; // já ocultado
+    if (Date.now() - OMIE_SIG.ultimo >= OMIE_SIG.ocioMs) OmieSig_limpar_('O Painel financeiro ficou 10 minutos sem uso e os dados foram retirados da tela.');
+  }
+  function OmieSig_render_() {
+    var alvo = document.getElementById('omieCorpo'); if (!alvo) return;
+    alvo.innerHTML = '<section><h3>Sigilo e acessos</h3><p class="content-subtitle">Quem pode ver o Financeiro e quem consultou.</p><p id="omieGestStatus" aria-live="polite"></p><div id="omieSigCorpo">' + CadUI_esqueleto_(3) + '</div></section>';
+    OmieGest_chamar_('Omie_apiSigilo', null, OmieSig_pintar_);
+  }
+  function OmieSig_pintar_(r) {
+    var c = document.getElementById('omieSigCorpo'); if (!c) return;
+    var esc = CadUI_esc_, h = '<div class="vg-faixa is-alerta" role="note"><b>O Financeiro é sigiloso.</b> Só as contas abaixo o acessam, qualquer que seja o perfil ou as caixas em Administração > Acessos. Toda consulta e toda recusa ficam registradas (sem valores). Na tela, os dados somem ao sair e após 10 minutos sem uso.</div>';
+    h += '<h4>Contas autorizadas' + (r.padrao ? ' (lista padrão)' : '') + '</h4>' + OmieGest_tabela_(['Nome', 'Usuário', 'Perfil', 'Situação'], r.autorizados.map(function (a) { return [a.nome, a.usuario, a.perfil, a.situacao]; }));
+    if (r.dono && r.contas) {
+      h += '<details class="omie-sig-editar"><summary>Alterar a lista (só o responsável pelo sistema)</summary><p>Marque quem pode ver o Financeiro. Você continua na lista. Contas de clientes e de representadas nunca entram.</p><div class="omie-sig-contas">' +
+        r.contas.map(function (u) { var id = 'omieSig_' + esc(u.id); return '<label for="' + id + '"><input type="checkbox" id="' + id + '" data-omie-sig="' + esc(u.id) + '"' + (u.marcado ? ' checked' : '') + '> ' + esc(u.nome) + ' <span class="cadx-sub">(' + esc(u.usuario) + ' · ' + esc(u.perfil) + (u.area ? ' · ' + esc(u.area) : '') + ')</span></label>'; }).join('') +
+        '</div><label for="omieSigMotivo">Motivo<input class="cadx-input" id="omieSigMotivo" maxlength="200" placeholder="Ex.: nova pessoa no Financeiro"></label><p><button type="button" class="cadx-btn" onclick="OmieSig_salvar_()">Gravar a lista</button></p></details>';
+    }
+    if (r.diretoria && r.registro) {
+      h += '<h4>Registro de acessos (últimos 300)</h4><p>' + (r.negados30 ? '<b>' + r.negados30 + ' tentativa(s) recusada(s) nos últimos 30 dias.</b> ' : 'Nenhuma tentativa recusada nos últimos 30 dias. ') + 'A mesma consulta da mesma pessoa aparece uma vez a cada 10 minutos.</p>' +
+        (r.registro.length ? OmieGest_tabela_(['Quando', 'Quem', 'O quê', 'Resultado', 'Detalhe'], r.registro.map(function (x) { return [x.em, x.nome + (x.usuario ? ' (' + x.usuario + ')' : ''), x.consulta, x.resultado === 'NEGADO' ? 'RECUSADO' : x.resultado === 'PERMITIDO' ? 'Consultou' : x.resultado === 'CSV' ? 'Baixou planilha' : x.resultado === 'LISTA_ALTERADA' ? 'Lista alterada' : x.resultado, x.detalhe]; })) : '<div class="cadx-vazio bc-vazio">Nenhum acesso registrado ainda.</div>');
+    }
+    c.innerHTML = h;
+  }
+  function OmieSig_salvar_() {
+    var ids = Array.prototype.map.call(document.querySelectorAll('[data-omie-sig]:checked'), function (x) { return x.getAttribute('data-omie-sig'); });
+    var motivo = (document.getElementById('omieSigMotivo') || {}).value || '';
+    OmieGest_chamar_('Omie_apiSigiloSalvar', { ids: ids, motivo: motivo }, function (r) { if (r.tela && r.tela.ok) OmieSig_pintar_(r.tela); });
+  }
+  // 15/11/2026: fila das consultas que usam ListarMovimentos no Omie (resumo, agenda, vencidos): uma de cada vez.
+  var OMIE_MOV = { ocupado: false, fila: [] };
+  function OmieGest_movFila_(executar) { OMIE_MOV.fila.push(executar); OmieGest_movProximo_(); }
+  function OmieGest_movProximo_() {
+    if (OMIE_MOV.ocupado || !OMIE_MOV.fila.length) return;
+    OMIE_MOV.ocupado = true;
+    var f = OMIE_MOV.fila.shift(), feito = false;
+    var liberar = function () { if (feito) return; feito = true; OMIE_MOV.ocupado = false; OmieGest_movProximo_(); };
+    setTimeout(liberar, 300000); // segurança: resposta perdida não prende a fila (300 s = limite das chamadas do servidor)
+    try { f(liberar); } catch (e) { liberar(); }
+  }
+  // 15/11/2026: fim (opcional) roda sempre ao terminar, com sucesso ou não; recebe true se a tela ainda é a mesma
+  function OmieGest_chamar_(fn, payload, ok, fim) {
+    var corpo = document.getElementById('omieCorpo'), pedido = OMIE_TELA.pedido, sessao = SGO_getSessionId();
+    var serial = (OMIE_GEST_PEDIDOS[fn] || 0) + 1; OMIE_GEST_PEDIDOS[fn] = serial;
+    var status = document.getElementById('omieGestStatus');
+    function atual() { return pedido === OMIE_TELA.pedido && sessao === SGO_getSessionId() && serial === OMIE_GEST_PEDIDOS[fn] && corpo === document.getElementById('omieCorpo'); }
+    if (status) status.textContent = 'Consultando…';
+    var acabou = function () { if (fim) { try { fim(atual()); } catch (e) {} } };
+    var runner = google.script.run.withSuccessHandler(function (r) {
+      if (!atual()) { acabou(); return; }
+      if (!r || !r.ok) { if (status) status.textContent = r && r.mensagem || 'Não foi possível concluir.'; acabou(); return; }
+      if (status) status.textContent = r.mensagem || '';
+      try { ok(r); } finally { acabou(); }
+    }).withFailureHandler(function () { if (atual() && status) status.textContent = 'Não foi possível comunicar com o servidor. Tente novamente.'; acabou(); });
+    runner[fn](SGO_getSessionId(), payload);
+  }
+  /* 16/11/2026 (design): prévia de confirmação com valores e datas em destaque. linhas = [[rótulo, texto], ...] vindas do servidor.
+     Só apresentação: o texto é o mesmo, escapado; valores em R$ e datas ganham negrito, e as linhas de dinheiro e data, fundo. */
+  function OmieUI_destacar_(texto) {
+    return CadUI_esc_(texto == null ? '' : String(texto)).replace(/-?R\$\s?-?[\d.]+,\d{2}|\b\d{2}\/\d{2}\/\d{4}\b/g, function (m) { return '<strong class="omie-num">' + m + '</strong>'; });
+  }
+  function OmieUI_previa_(linhas, titulo) {
+    var chave = /R\$\s?-?[\d.]+,\d{2}|\b\d{2}\/\d{2}\/\d{4}\b/; // linha com valor em reais ou data ganha fundo
+    return '<h4 class="omie-previa-tit">' + CadUI_esc_(titulo || 'Confira antes de confirmar') + '</h4><dl class="omie-previa">' + (linhas || []).map(function (l) {
+      var txt = l[1] == null ? '' : String(l[1]);
+      return '<div class="omie-previa-linha' + (chave.test(txt) ? ' is-chave' : '') + (txt ? '' : ' is-vazia') + '"><dt>' + CadUI_esc_(l[0]) + '</dt><dd>' + (txt ? OmieUI_destacar_(txt) : '—') + '</dd></div>';
+    }).join('') + '</dl>';
+  }
+  function OmieGest_moeda_(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function OmieGest_tabela_(colunas, linhas) {
+    var esc = CadUI_esc_;
+    if (!linhas.length) return '<div class="cadx-vazio bc-vazio">Nenhum registro encontrado para o período.</div>';
+    return '<div class="omie-lista"><table><thead><tr>' + colunas.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' + linhas.map(function (l) {
+      return '<tr>' + l.map(function (v, i) { return '<td data-r="' + esc(colunas[i]) + '">' + esc(v) + '</td>'; }).join('') + '</tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+  function OmieGest_periodoHtml_() {
+    return '<label>De <input class="cadx-input" type="date" id="omieGestInicio" required></label><label>Até <input class="cadx-input" type="date" id="omieGestFim" required></label>';
+  }
+  function OmieGest_datas_() {
+    var hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+    var d = {}; hoje.forEach(function (p) { d[p.type] = p.value; });
+    document.getElementById('omieGestInicio').value = d.year + '-' + d.month + '-01';
+    document.getElementById('omieGestFim').value = d.year + '-' + d.month + '-' + d.day;
+    return d.year + '-' + d.month;
+  }
+  function OmieGest_resumo_() {
+    document.getElementById('omieCorpo').innerHTML = '<section class="omie-posicao"><h3>Posição de hoje</h3><p>Pelo resumo do próprio Omie: o saldo somado das contas e o que entra e sai nos próximos 10 dias, com o saldo previsto ao fim de cada dia.</p><p id="omiePosStatus" role="status" aria-live="polite"></p><div id="omiePosCartoes" class="cadx-resumo bc-resumo"></div><div id="omiePosFluxo"></div></section>' +
+      '<section class="omie-agenda"><h3>Visão geral do Financeiro</h3><p>Saldos em aberto dos títulos com vencimento no período escolhido. O resumo consulta todas as páginas; títulos cancelados ficam fora dos valores.</p><form class="omie-barra" onsubmit="event.preventDefault();OmieGest_atualizarResumo_()">' + OmieGest_periodoHtml_() + '<button class="cadx-btn" type="submit">Atualizar resumo</button></form><p id="omieGestStatus" role="status"></p><div class="cadx-resumo bc-resumo" id="omieGestResumo"></div><p id="omieGestAtualizado"></p><p>Para movimentações e saldos bancários, consulte Fluxo de caixa.</p></section>' +
+      '<section class="omie-agenda"><h3>Agenda de vencimentos</h3><p>O que vence de hoje em diante, em ordem de data, com o valor que ainda está em aberto. Os vencidos ficam em Contas a pagar e receber, situação Vencidos.</p>' +
+      '<form class="omie-barra" onsubmit="event.preventDefault();OmieGest_agenda_()"><label for="omieAgDias">Período<select class="cadx-input" id="omieAgDias"><option value="7">Próximos 7 dias</option><option value="15">Próximos 15 dias</option><option value="30">Próximos 30 dias</option></select></label>' +
+      '<label for="omieAgNat">Mostrar<select class="cadx-input" id="omieAgNat"><option value="todos">A pagar e a receber</option><option value="P">Só a pagar</option><option value="R">Só a receber</option></select></label>' +
+      '<button class="cadx-btn" type="submit">Ver agenda</button></form><p id="omieAgStatus" role="status" aria-live="polite"></p><div id="omieAgTotais" class="cadx-resumo bc-resumo"></div><div id="omieAgLista"></div></section>' +
+      '<section class="omie-agenda"><h3>Vencidos a receber por cliente</h3><p>Quem está devendo, quantos títulos, o total e há quantos dias venceu o mais antigo. Para a cobrança; o detalhe de cada título fica em Contas a pagar e receber, situação Vencidos.</p>' +
+      '<button class="cadx-btn" type="button" onclick="OmieGest_vencidos_()">Ver vencidos por cliente</button><p id="omieVcStatus" role="status" aria-live="polite"></p><div id="omieVcLista"></div></section>';
+    OmieGest_datas_();
+    OmieGest_posicao_();
+    // 15/11/2026: resumo e agenda usam o mesmo método do Omie (ListarMovimentos), que recusa chamadas simultâneas: os dois
+    // entram na fila (OmieGest_movFila_), um depois do outro. A posição usa outro método e vai junto.
+    OmieGest_atualizarResumo_();
+    OmieGest_agenda_();
+  }
+  function OmieGest_atualizarResumo_(depois) {
+    document.getElementById('omieGestResumo').innerHTML = '';
+    document.getElementById('omieGestAtualizado').textContent = '';
+    var stR = document.getElementById('omieGestStatus'); if (stR && OMIE_MOV.ocupado) stR.textContent = 'Aguardando a consulta anterior ao Omie terminar…';
+    OmieGest_movFila_(function (liberar) { if (!document.getElementById('omieGestResumo') || !document.getElementById('omieGestInicio')) { liberar(); return; } OmieGest_chamar_('Omie_apiResumo', { inicio: document.getElementById('omieGestInicio').value, fim: document.getElementById('omieGestFim').value }, function (r) {
+      if (!r.completo || !r.totais) { document.getElementById('omieGestStatus').textContent = 'O resumo não foi concluído. Atualize a consulta.'; return; }
+      var t = r.totais;
+      document.getElementById('omieGestResumo').innerHTML = [['A pagar em aberto',t.pagar],['A receber em aberto',t.receber],['A pagar vencido',t.pagarVencido],['A receber vencido',t.receberVencido]].map(function (c) { return '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + CadUI_esc_(OmieGest_moeda_(c[1])) + '</span><span>' + c[0] + '</span></div>'; }).join('');
+      document.getElementById('omieGestAtualizado').textContent = t.titulos + ' títulos consultados. Atualizado em ' + new Date(r.atualizadoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + '.';
+    }, function (vale) { liberar(); if (vale && depois) depois(); }); });
+  }
+  // 15/11/2026: agenda de vencimentos (Omie_apiAgenda). Chamada própria: não divide o aviso nem a ordem das respostas do resumo.
+  var OMIE_AG_SERIAL = 0;
+  function OmieGest_dataBr_(s) { var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!m) return s; var d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])); return ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][d.getDay()] + ' ' + m[3] + '/' + m[2]; }
+  function OmieGest_agenda_() {
+    var lista = document.getElementById('omieAgLista'), st = document.getElementById('omieAgStatus'), tot = document.getElementById('omieAgTotais');
+    if (!lista) return;
+    var serial = ++OMIE_AG_SERIAL, pedido = OMIE_TELA.pedido, sessao = SGO_getSessionId();
+    function atual() { return serial === OMIE_AG_SERIAL && pedido === OMIE_TELA.pedido && sessao === SGO_getSessionId() && lista === document.getElementById('omieAgLista'); }
+    var dias = document.getElementById('omieAgDias').value, nat = document.getElementById('omieAgNat').value;
+    st.textContent = OMIE_MOV.ocupado ? 'Aguardando a consulta anterior ao Omie terminar…' : 'Consultando a agenda no Omie…'; tot.innerHTML = ''; lista.innerHTML = CadUI_esqueleto_(3);
+    OmieGest_movFila_(function (liberar) {
+    if (!atual()) { liberar(); return; }
+    st.textContent = 'Consultando a agenda no Omie…';
+    google.script.run.withSuccessHandler(function (r) {
+      liberar();
+      if (!atual()) return;
+      if (!r || !r.ok) { st.textContent = (r && r.mensagem) || 'Não foi possível consultar a agenda.'; lista.innerHTML = ''; return; }
+      var esc = CadUI_esc_;
+      tot.innerHTML = (nat !== 'R' ? '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + esc(OmieGest_moeda_(r.totais.pagar)) + '</span><span>A pagar no período</span></div>' : '') +
+        (nat !== 'P' ? '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + esc(OmieGest_moeda_(r.totais.receber)) + '</span><span>A receber no período</span></div>' : '');
+      st.textContent = r.itens.length + ' título(s) de ' + OmieGest_dataBr_(r.de) + ' a ' + OmieGest_dataBr_(r.ate) + '.' + (r.semNome ? ' ' + r.semNome + ' sem nome no cadastro do Omie (aparece o CPF ou CNPJ).' : '') +
+        ' Atualizado em ' + new Date(r.atualizadoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + '.';
+      if (!r.itens.length) { lista.innerHTML = '<div class="cadx-vazio bc-vazio">Nada vence neste período.</div>'; return; }
+      var dia = '', linhas = [];
+      r.itens.forEach(function (i) {
+        if (i.vencimento !== dia) {
+          dia = i.vencimento;
+          var doDia = r.itens.filter(function (x) { return x.vencimento === dia; }), p = 0, rc = 0;
+          doDia.forEach(function (x) { if (x.natureza === 'P') p += x.valor; else rc += x.valor; });
+          linhas.push('<tr class="omie-ag-dia"><td colspan="5"><b>' + esc(OmieGest_dataBr_(dia)) + '</b>' + (p ? ' · a pagar ' + esc(OmieGest_moeda_(p)) : '') + (rc ? ' · a receber ' + esc(OmieGest_moeda_(rc)) : '') + '</td></tr>');
+        }
+        linhas.push('<tr><td data-r="Tipo"><span class="omie-ag-tipo omie-ag-' + (i.natureza === 'P' ? 'pagar' : 'receber') + '">' + (i.natureza === 'P' ? 'A pagar' : 'A receber') + '</span></td>' +
+          '<td data-r="Cliente ou fornecedor">' + esc(i.nome || i.cnpj || 'Sem cadastro') + '</td><td data-r="Documento">' + esc([i.documento, i.parcela ? 'parcela ' + i.parcela : ''].filter(Boolean).join(' · ') || '—') + '</td>' +
+          '<td data-r="Em aberto">' + esc(OmieGest_moeda_(i.valor)) + '</td><td data-r="Situação">' + esc(i.situacao) + '</td></tr>');
+      });
+      OMIE_CSV.agenda = { cab: ['Vencimento', 'Tipo', 'Cliente ou fornecedor', 'CPF/CNPJ', 'Documento', 'Parcela', 'Em aberto', 'Situação'],
+        linhas: r.itens.map(function (i) { return [i.vencimento.split('-').reverse().join('/'), i.natureza === 'P' ? 'A pagar' : 'A receber', i.nome, i.cnpj, i.documento, i.parcela, OmieGest_csvNum_(i.valor), i.situacao]; }) };
+      lista.innerHTML = '<div class="omie-lista"><table><thead><tr><th>Tipo</th><th>Cliente ou fornecedor</th><th>Documento</th><th>Em aberto</th><th>Situação</th></tr></thead><tbody>' + linhas.join('') + '</tbody></table></div>' + OmieGest_botaoCsv_('agenda', 'agenda-de-vencimentos.csv');
+    }).withFailureHandler(function () { liberar(); if (atual()) { st.textContent = 'Não foi possível comunicar com o servidor. Tente novamente.'; lista.innerHTML = ''; } })
+      .Omie_apiAgenda(sessao, { dias: Number(dias), natureza: nat });
+    });
+  }
+  // 15/11/2026: posição de hoje (Omie_apiPosicao)
+  var OMIE_POS_SERIAL = 0;
+  function OmieGest_posicao_() {
+    var cart = document.getElementById('omiePosCartoes'), st = document.getElementById('omiePosStatus'), fl = document.getElementById('omiePosFluxo'); if (!cart) return;
+    var serial = ++OMIE_POS_SERIAL, pedido = OMIE_TELA.pedido, sessao = SGO_getSessionId();
+    function atual() { return serial === OMIE_POS_SERIAL && pedido === OMIE_TELA.pedido && sessao === SGO_getSessionId() && cart === document.getElementById('omiePosCartoes'); }
+    st.textContent = 'Consultando o resumo do Omie…'; cart.innerHTML = ''; fl.innerHTML = '';
+    google.script.run.withSuccessHandler(function (r) {
+      if (!atual()) return;
+      if (!r || !r.ok) { st.textContent = (r && r.mensagem) || 'Não foi possível consultar o resumo.'; return; }
+      var esc = CadUI_esc_, c = function (v, rot, extra) { return '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + esc(OmieGest_moeda_(v)) + '</span><span>' + esc(rot) + '</span>' + (extra ? '<span class="cadx-sub">' + esc(extra) + '</span>' : '') + '</div>'; };
+      // Só o saldo das contas e o fluxo: os totais de aberto e atraso do resumo do Omie usam um recorte próprio (no ensaio real de
+      // 15/11, 87,5% do saldo em aberto dos títulos vencidos); os da tela vêm dos títulos (agenda e vencidos por cliente).
+      cart.innerHTML = c(r.saldoContas, 'Saldo nas contas hoje', r.limite ? 'limite ' + OmieGest_moeda_(r.limite) : 'soma das contas no Omie');
+      st.textContent = 'Atualizado em ' + new Date(r.atualizadoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + '. Os valores seguem os critérios do Omie (o saldo previsto considera o que o Omie tem como previsto em cada dia).';
+      fl.innerHTML = r.fluxo.length ? OmieGest_tabela_(['Dia', 'A receber', 'A pagar', 'Saldo previsto (Omie)'], r.fluxo.map(function (d) { return [OmieGest_dataBr_(d.dia), OmieGest_moeda_(d.receber), OmieGest_moeda_(d.pagar), OmieGest_moeda_(d.saldo)]; })) : '';
+    }).withFailureHandler(function () { if (atual()) st.textContent = 'Não foi possível comunicar com o servidor. Tente novamente.'; })
+      .Omie_apiPosicao(sessao);
+  }
+  // 15/11/2026: planilha CSV do que está na tela (";" e vírgula decimal, para o Excel em português); sem nova consulta
+  var OMIE_CSV = {};
+  function OmieGest_csvNum_(v) { return (Math.round(Number(v || 0) * 100) / 100).toFixed(2).replace('.', ','); }
+  function OmieGest_csv_(chave, nome) {
+    var d = OMIE_CSV[chave]; if (!d) return;
+    var cel = function (v) { var s = String(v == null ? '' : v); if (/^[=+@\-]/.test(s) && !/^-?\d+(,\d+)?$/.test(s)) s = "'" + s; return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    var corpo = [d.cab].concat(d.linhas).map(function (l) { return l.map(cel).join(';'); }).join('\r\n');
+    // 16/11/2026 (sigilo, seção 5): a planilha só baixa depois de registrada no servidor, que devolve a identificação
+    // ("Gerado por ... · código") da primeira linha e a da última. Sem o registro, nada é baixado.
+    var sessao = SGO_getSessionId(), pedido = OMIE_TELA.pedido;
+    var msg = function (t) { var e = document.querySelector('[data-omie-csv-msg="' + chave + '"]'); if (e) e.textContent = t; };
+    msg('Registrando a planilha…');
+    google.script.run.withSuccessHandler(function (r) {
+      if (sessao !== SGO_getSessionId() || pedido !== OMIE_TELA.pedido) return;
+      if (!r || !r.ok || !r.cabecalho) { msg((r && r.mensagem) || 'Não foi possível registrar a planilha. Nada foi baixado; tente de novo.'); return; }
+      var txt = '﻿' + cel(r.cabecalho) + '\r\n' + corpo + '\r\n' + cel(r.rodape);
+      var url = URL.createObjectURL(new Blob([txt], { type: 'text/csv;charset=utf-8' })), a = document.createElement('a');
+      a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      msg('Planilha baixada com a identificação ' + r.codigo + ' (fica no registro de acessos).');
+    }).withFailureHandler(function () { msg('Não foi possível registrar a planilha. Nada foi baixado; tente de novo.'); })
+      .Omie_apiCsv(sessao, { nome: nome, conteudo: corpo, linhas: d.linhas.length });
+  }
+  function OmieGest_botaoCsv_(chave, nome) { return '<p><button type="button" class="cadx-btn" onclick="OmieGest_csv_(\'' + chave + '\', \'' + nome + '\')">Baixar planilha (CSV)</button> <span class="omie-csv-msg" role="status" data-omie-csv-msg="' + chave + '"></span></p>'; }
+  // 15/11/2026: vencidos a receber por cliente (Omie_apiVencidosClientes), sob pedido
+  var OMIE_VC_SERIAL = 0;
+  function OmieGest_vencidos_() {
+    var lista = document.getElementById('omieVcLista'), st = document.getElementById('omieVcStatus'); if (!lista) return;
+    var serial = ++OMIE_VC_SERIAL, pedido = OMIE_TELA.pedido, sessao = SGO_getSessionId();
+    function atual() { return serial === OMIE_VC_SERIAL && pedido === OMIE_TELA.pedido && sessao === SGO_getSessionId() && lista === document.getElementById('omieVcLista'); }
+    st.textContent = OMIE_MOV.ocupado ? 'Aguardando a consulta anterior ao Omie terminar…' : 'Consultando os vencidos no Omie…'; lista.innerHTML = CadUI_esqueleto_(3);
+    OmieGest_movFila_(function (liberar) {
+    if (!atual()) { liberar(); return; }
+    st.textContent = 'Consultando os vencidos no Omie…';
+    google.script.run.withSuccessHandler(function (r) {
+      liberar();
+      if (!atual()) return;
+      if (!r || !r.ok) { st.textContent = (r && r.mensagem) || 'Não foi possível consultar.'; lista.innerHTML = ''; return; }
+      st.textContent = r.titulos + ' título(s) vencido(s) de ' + r.clientes.length + ' cliente(s), ' + OmieGest_moeda_(r.total) + ' em aberto no total. Atualizado em ' + new Date(r.atualizadoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + '.';
+      var fx = r.faixas || {}, cf = function (k, rot) { var x = fx[k] || { titulos: 0, valor: 0 }; return '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + CadUI_esc_(OmieGest_moeda_(x.valor)) + '</span><span>' + rot + '</span><span class="cadx-sub">' + x.titulos + ' título(s)</span></div>'; };
+      OMIE_CSV.vencidos = { cab: ['Cliente', 'Títulos', 'Em aberto', 'Vencido desde', 'Dias de atraso', 'Com pagamento parcial', 'Documentos'],
+        linhas: r.clientes.map(function (c) { return [c.cliente || 'Sem nome no Omie', c.titulos, OmieGest_csvNum_(c.valor), c.maisAntigo.split('-').reverse().join('/'), c.diasAtraso, c.parciais, c.documentos.join(', ')]; }) };
+      lista.innerHTML = '<div class="cadx-resumo bc-resumo">' + cf('ate30', 'Vencido há até 30 dias') + cf('de31a90', 'De 31 a 90 dias') + cf('mais90', 'Há mais de 90 dias') + '</div>' +
+        OmieGest_tabela_(['Cliente', 'Títulos', 'Em aberto', 'Vencido desde', 'Dias', 'Documentos'], r.clientes.map(function (c) {
+        return [c.cliente || 'Sem nome no Omie', c.titulos + (c.parciais ? ' (' + c.parciais + ' com pagamento parcial)' : ''), OmieGest_moeda_(c.valor), OmieGest_dataBr_(c.maisAntigo).replace(/^\S+ /, '') + '/' + c.maisAntigo.slice(0, 4), String(c.diasAtraso), c.documentos.join(', ')];
+      })) + OmieGest_botaoCsv_('vencidos', 'vencidos-por-cliente.csv');
+    }).withFailureHandler(function () { liberar(); if (atual()) { st.textContent = 'Não foi possível comunicar com o servidor. Tente novamente.'; lista.innerHTML = ''; } })
+      .Omie_apiVencidosClientes(sessao);
+    });
+  }
+  // 15/11/2026: resultado do mês (regime de caixa) por categoria do Omie (Omie_apiResultado), na fila dos movimentos
+  var OMIE_RES_SERIAL = 0;
+  function OmieGest_resultado_() {
+    document.getElementById('omieCorpo').innerHTML = '<section><h3>Resultado do mês</h3><p>O que foi recebido e pago no mês (regime de caixa), por categoria do plano de contas do Omie. Transferências entre contas ficam fora do resultado e aparecem à parte. É uma visão de gestão; o resultado contábil continua com o contador.</p>' +
+      '<form class="omie-barra" onsubmit="event.preventDefault();OmieGest_consultarResultado_()"><label for="omieResMes">Mês<input class="cadx-input" type="month" id="omieResMes" required></label><button class="cadx-btn" type="submit">Ver resultado</button></form>' +
+      '<p id="omieResStatus" role="status" aria-live="polite"></p><div id="omieResCartoes" class="cadx-resumo bc-resumo"></div><div id="omieResTabelas"></div></section>';
+    var hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit' }).formatToParts(new Date()), d = {};
+    hoje.forEach(function (p) { d[p.type] = p.value; });
+    document.getElementById('omieResMes').value = d.year + '-' + d.month;
+    OmieGest_consultarResultado_();
+  }
+  function OmieGest_consultarResultado_() {
+    var st = document.getElementById('omieResStatus'), cart = document.getElementById('omieResCartoes'), tab = document.getElementById('omieResTabelas'); if (!st) return;
+    var serial = ++OMIE_RES_SERIAL, pedido = OMIE_TELA.pedido, sessao = SGO_getSessionId(), mes = document.getElementById('omieResMes').value;
+    function atual() { return serial === OMIE_RES_SERIAL && pedido === OMIE_TELA.pedido && sessao === SGO_getSessionId() && st === document.getElementById('omieResStatus'); }
+    st.textContent = OMIE_MOV.ocupado ? 'Aguardando a consulta anterior ao Omie terminar…' : 'Consultando o Omie (pode levar alguns segundos)…'; cart.innerHTML = ''; tab.innerHTML = CadUI_esqueleto_(4);
+    OmieGest_movFila_(function (liberar) {
+      if (!atual()) { liberar(); return; }
+      st.textContent = 'Consultando o Omie (pode levar alguns segundos)…';
+      google.script.run.withSuccessHandler(function (r) {
+        liberar();
+        if (!atual()) return;
+        if (!r || !r.ok) { st.textContent = (r && r.mensagem) || 'Não foi possível consultar.'; tab.innerHTML = ''; return; }
+        var esc = CadUI_esc_, t = r.totais, c = function (v, rot) { return '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + esc(OmieGest_moeda_(v)) + '</span><span>' + esc(rot) + '</span></div>'; };
+        cart.innerHTML = c(t.receitas, 'Recebido') + c(t.despesas, 'Pago') + c(t.resultado, t.resultado < 0 ? 'Resultado (negativo)' : 'Resultado');
+        st.textContent = r.titulos + ' título(s) de ' + OmieGest_dataBr_(r.de).replace(/^\S+ /, '') + ' a ' + OmieGest_dataBr_(r.ate).replace(/^\S+ /, '') + '.' + (r.semCategoria ? ' ' + r.semCategoria + ' sem categoria no Omie.' : '') +
+          ' Atualizado em ' + new Date(r.atualizadoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + '.';
+        var tabela = function (titulo, lista, total) {
+          if (!lista.length) return '<h4>' + esc(titulo) + '</h4><div class="cadx-vazio bc-vazio">Nada neste mês.</div>';
+          return '<h4>' + esc(titulo) + '</h4>' + OmieGest_tabela_(['Categoria', 'Grupo', 'Títulos', 'Valor', '% do total'], lista.map(function (i) {
+            return [i.descricao + (i.codigo && i.codigo !== 'sem categoria' ? ' (' + i.codigo + ')' : ''), i.grupo, String(i.titulos), OmieGest_moeda_(i.valor), total ? (Math.round(i.valor / total * 1000) / 10).toLocaleString('pt-BR') + '%' : ''];
+          }));
+        };
+        var csvL = [];
+        [['Recebido', r.receitas], ['Pago', r.despesas], ['Transferência (fora do resultado)', r.transferencias]].forEach(function (b) { b[1].forEach(function (i) { csvL.push([b[0], i.codigo, i.descricao, i.grupo, i.titulos, OmieGest_csvNum_(i.valor)]); }); });
+        csvL.push(['Resultado', '', '', '', '', OmieGest_csvNum_(t.resultado)]);
+        OMIE_CSV.resultado = { cab: ['Tipo', 'Código', 'Categoria', 'Grupo', 'Títulos', 'Valor'], linhas: csvL };
+        tab.innerHTML = tabela('Recebido por categoria', r.receitas, t.receitas) + tabela('Pago por categoria', r.despesas, t.despesas) +
+          (r.transferencias.length ? tabela('Transferências entre contas (fora do resultado)', r.transferencias, t.transferencias) : '') + OmieGest_botaoCsv_('resultado', 'resultado-' + r.mes + '.csv');
+      }).withFailureHandler(function () { liberar(); if (atual()) { st.textContent = 'Não foi possível comunicar com o servidor. Tente novamente.'; tab.innerHTML = ''; } })
+        .Omie_apiResultado(sessao, { mes: mes });
+    });
+  }
+  function OmieGest_fluxo_() {
+    document.getElementById('omieCorpo').innerHTML = '<section><h3>Fluxo de caixa</h3><p>Saldos realizados e previstos e movimentos da conta, conforme o Omie.</p><form class="omie-barra" onsubmit="event.preventDefault();OmieGest_consultarFluxo_()"><label>Conta <select id="omieGestConta" class="cadx-input" required><option value="">Carregando contas…</option></select></label>' + OmieGest_periodoHtml_() + '<button class="cadx-btn" type="submit">Consultar fluxo</button></form><p id="omieGestStatus" role="status"></p><div id="omieGestSaldos" class="cadx-resumo bc-resumo"></div><div id="omieGestTabela"></div><h3>Orçamento: previsto × realizado</h3><form class="omie-barra" onsubmit="event.preventDefault();OmieGest_orcamento_()"><label>Mês <input type="month" id="omieGestMes" class="cadx-input" required></label><button class="cadx-btn">Consultar orçamento</button></form><div id="omieGestOrcamento"></div></section>';
+    document.getElementById('omieGestMes').value = OmieGest_datas_();
+    OmieGest_chamar_('Omie_apiContasCorrentes', {}, function (r) {
+      document.getElementById('omieGestConta').innerHTML = '<option value="">Selecione a conta</option>' + r.contas.map(function (i) { return '<option value="' + CadUI_esc_(i.id) + '">' + CadUI_esc_(i.nome) + '</option>'; }).join('');
+    });
+  }
+  function OmieGest_consultarFluxo_() {
+    var p = { contaId: document.getElementById('omieGestConta').value, inicio: document.getElementById('omieGestInicio').value, fim: document.getElementById('omieGestFim').value };
+    document.getElementById('omieGestTabela').innerHTML = '';
+    document.getElementById('omieGestSaldos').innerHTML = '';
+    OmieGest_chamar_('Omie_apiFluxo', p, function (r) {
+      document.getElementById('omieGestSaldos').innerHTML = [['Saldo anterior do período',r.saldoAnterior],['Saldo atual (hoje)',r.saldoAtual],['Saldo atual previsto',r.saldoPrevisto],['Saldo conciliado',r.saldoConciliado]].map(function (v) { return '<div class="cadx-num bc-resumo-item"><span class="bc-resumo-num">' + CadUI_esc_(OmieGest_moeda_(v[1])) + '</span><span>' + v[0] + '</span></div>'; }).join('');
+      document.getElementById('omieGestTabela').innerHTML = OmieGest_tabela_(['Data','Pessoa','Documento','Categoria','Natureza','Valor do documento','Saldo realizado','Saldo previsto','Situação'],r.itens.map(function (i) { return [i.data,i.pessoa,i.documento,i.categoria,i.natureza,OmieGest_moeda_(i.valor),OmieGest_moeda_(i.saldo),OmieGest_moeda_(i.saldoPrevisto),i.situacao]; }));
+    });
+  }
+  function OmieGest_orcamento_() {
+    document.getElementById('omieGestOrcamento').innerHTML = '';
+    OmieGest_chamar_('Omie_apiOrcamento', { mes: document.getElementById('omieGestMes').value }, function (r) {
+      document.getElementById('omieGestOrcamento').innerHTML = OmieGest_tabela_(['Categoria','Previsto','Realizado / a realizar','Diferença'],r.itens.map(function (i) { return [i.categoria,OmieGest_moeda_(i.previsto),OmieGest_moeda_(i.realizado),OmieGest_moeda_(i.realizado - i.previsto)]; }));
+    });
+  }
+  // 15/11/2026: crypto.randomUUID só existe em conexão segura (https); por http a aba Provisões quebrava. Mesmo formato (36 caracteres).
+  function OmieGest_uuid_() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    var b = new Uint8Array(16);
+    try { crypto.getRandomValues(b); } catch (e) { for (var i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256); }
+    b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    var h = Array.prototype.map.call(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+  var OMIE_PROV_PAGINA = 1, OMIE_PROV_PAGINAS = 0, OMIE_PROV_ID = '';
+  function OmieGest_provisoes_() {
+    OMIE_PROV_PAGINA = 1; OMIE_PROV_ID = OmieGest_uuid_();
+    document.getElementById('omieCorpo').innerHTML = '<section><h3>Provisões e previsões</h3><p>As previsões do Omie e as provisões internas são consultadas separadamente para evitar somar a mesma receita ou despesa duas vezes.</p><form class="omie-barra" onsubmit="event.preventDefault();OMIE_PROV_PAGINA=1;OmieGest_consultarProvisoes_()"><label>Origem <select id="omieGestOrigem" class="cadx-input"><option value="PV">Contratos de serviços (Omie)</option><option value="POS">Ordens de serviço (Omie)</option><option value="PPV">Pedidos de venda (Omie)</option><option value="LOCAL">Provisões internas (SGO+)</option></select></label>' + OmieGest_periodoHtml_() + '<button class="cadx-btn">Consultar</button></form><p id="omieGestStatus" role="status"></p><div id="omieGestTabela"></div><div class="omie-barra"><button type="button" class="cadx-btn" onclick="OmieGest_provPagina_(-1)">Anterior</button><span id="omieProvPaginas"></span><button type="button" class="cadx-btn" onclick="OmieGest_provPagina_(1)">Próxima</button></div><details><summary>Nova provisão interna</summary><p>Registro de planejamento. Não gera título a pagar ou receber no Omie.</p><form class="omie-form" id="omieProvForm" onsubmit="event.preventDefault();OmieGest_salvarProvisao_()"><label>Tipo<select name="tipo" class="cadx-input"><option value="P">Despesa prevista</option><option value="R">Receita prevista</option></select></label><label>Descrição<input name="descricao" class="cadx-input" maxlength="250" minlength="3" required></label><label>Valor (R$)<input name="valor" class="cadx-input" type="number" min="0.01" step="0.01" required></label><label>Vencimento previsto<input name="vencimento" class="cadx-input" type="date" required></label><button class="cadx-btn" id="omieProvSalvar">Registrar provisão</button></form></details></section>';
+    OmieGest_datas_();
+  }
+  function OmieGest_provPagina_(delta) { var n = OMIE_PROV_PAGINA + delta; if (n < 1 || n > OMIE_PROV_PAGINAS) return; OMIE_PROV_PAGINA = n; OmieGest_consultarProvisoes_(); }
+  function OmieGest_consultarProvisoes_() {
+    document.getElementById('omieGestTabela').innerHTML = '';
+    var local = document.getElementById('omieGestOrigem').value === 'LOCAL';
+    OmieGest_chamar_('Omie_apiProvisoes', { origem: document.getElementById('omieGestOrigem').value, inicio: document.getElementById('omieGestInicio').value, fim: document.getElementById('omieGestFim').value, pagina: OMIE_PROV_PAGINA },function (r) {
+      OMIE_PROV_PAGINAS = r.paginas;
+      document.getElementById('omieProvPaginas').textContent = r.total ? 'Página ' + OMIE_PROV_PAGINA + ' de ' + r.paginas + ' · ' + r.total + ' previsões' : 'Nenhuma previsão';
+      document.getElementById('omieGestTabela').innerHTML = OmieGest_tabela_(['Identificador','Descrição / documento','Data prevista','Natureza','Valor','Situação'],r.itens.map(function (i) { return [i.id,i.documento,i.data,i.natureza,OmieGest_moeda_(i.valor),i.situacao]; }));
+      if (local) r.itens.filter(function (i) { return i.situacao === 'PREVISTA'; }).forEach(function (i) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'cadx-btn'; b.textContent = 'Cancelar provisão: ' + i.documento;
+        b.onclick = function () { if (confirm('Cancelar a provisão “' + i.documento + '”, de ' + OmieGest_moeda_(i.valor) + '? O histórico será preservado.')) OmieGest_chamar_('Omie_apiCancelarProvisao', { id: i.id }, function () { OmieGest_consultarProvisoes_(); }); };
+        document.getElementById('omieGestTabela').appendChild(b);
+      });
+    });
+  }
+  function OmieGest_salvarProvisao_() {
+    var f = document.getElementById('omieProvForm'), p = Object.fromEntries(new FormData(f)); p.id = OMIE_PROV_ID;
+    if (!confirm('Registrar provisão de ' + OmieGest_moeda_(p.valor) + ' para ' + p.vencimento + ': ' + p.descricao + '?')) return;
+    OmieGest_chamar_('Omie_apiSalvarProvisao', p, function () { OMIE_PROV_ID = OmieGest_uuid_(); f.reset(); document.getElementById('omieGestOrigem').value = 'LOCAL'; OMIE_PROV_PAGINA = 1; OmieGest_consultarProvisoes_(); });
+  }
+</script>
+<style>
+  #omieTela .omie-abas { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
+  /* 15/11/2026: aba aberta com o destaque do botão principal do sistema (antes o estilo padrão do botão encobria o destaque) */
+  #omieTela .omie-abas .cadx-btn[aria-pressed="true"] { background:var(--bc-action, #1f6f43) !important; border-color:var(--bc-action, #1f6f43) !important; color:#FFFFFF !important; }
+  #omieTela .omie-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin:16px 0; }
+  #omieTela .omie-form label { display:flex; align-items:stretch; flex-direction:column; gap:6px; }
+  #omieTela input, #omieTela select { max-width:100%; min-height:44px; box-sizing:border-box; }
+  #omieTela .bc-resumo-item { display:flex; flex-direction:column; padding:16px; }
+  @media(max-width:700px) { #omieTela input, #omieTela select { font-size:16px; } #omieTela .omie-abas .cadx-btn { flex:1 1 140px; } }
+  #omieTela .omie-sig-contas { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:8px; margin:12px 0; }
+  #omieTela .omie-sig-contas label { min-height:44px; }
+  #omieTela .omie-sig-editar { margin:16px 0; }
+  /* 14/11/2026: no celular, "De" e "Até" quebravam letra por letra ao lado da data */
+  #omieTela .omie-barra label { white-space:nowrap; }
+  #omieTela .omie-barra label input, #omieTela .omie-barra label select { min-width:0; }
+  @media(max-width:400px) { #omieTela .bc-resumo-num { font-size:15px; } }
+  /* 15/11/2026: formulários de lançamento e baixa: rótulo em cima do campo (no celular os rótulos quebravam letra a letra) */
+  #omieTela label.cadx-campo { flex-direction:column; align-items:stretch; gap:6px; }
+  #omieTela .cadx-faixa label { white-space:nowrap; }
+  #omieTela textarea { font:inherit; font-weight:normal; min-height:88px; width:100%; box-sizing:border-box; }
+  @media(max-width:700px) { #omieTela textarea { font-size:16px; } }
+  /* 15/11/2026: agenda de vencimentos */
+  #omieTela .omie-agenda { margin-top:28px; }
+  #omieTela .omie-ag-dia td { background:var(--bc-soft, #f1f5f9); padding-top:10px; }
+  #omieTela .omie-ag-tipo { display:inline-block; padding:2px 8px; border-radius:10px; font-size:13px; font-weight:600; white-space:nowrap; }
+  #omieTela .omie-ag-pagar { background:#fdecec; color:#9b1c1c; }
+  #omieTela .omie-ag-receber { background:#e7f6ec; color:#1e6b3a; }
+  @media(max-width:700px) { #omieTela .omie-ag-dia td { display:block; } #omieTela .omie-ag-dia td:before { content:none; } }
+  /* 16/11/2026 (design): rotinas em lista no celular; foco visível; mensagens em caixa; prévia de confirmação legível */
+  #omieTela .omie-abas-movel { display:none; }
+  @media(max-width:700px) {
+    #omieTela .omie-abas { display:none; }
+    #omieTela .omie-abas-movel { display:flex; flex-direction:column; align-items:stretch; gap:6px; margin:0 0 18px; font-weight:600; white-space:normal; }
+    #omieTela .omie-abas-movel select { width:100%; font-weight:600; border:2px solid var(--bc-action, #1F6B2A); }
+  }
+  #omieTela :is(button, a, input, select, textarea, summary):focus-visible { outline:3px solid var(--bc-action, #1F6B2A); outline-offset:2px; }
+  #omieTela details > summary { min-height:40px; padding:9px 0; box-sizing:border-box; cursor:pointer; }
+  #omieTela :is(#omieOpsAviso, #omieCadAviso, #omieNotaAviso, #omieFatMensagem):not(:empty) { padding:10px 14px; border-radius:6px; border:1px solid var(--bc-info-line, #BFD2E4); border-left:4px solid var(--bc-info, #1E4F7A); background:var(--bc-info-bg, #E7EFF6); text-align:justify; overflow-wrap:anywhere; }
+  #omieTela .omie-previa-caixa { border:1px solid var(--bc-line, #E2E0D8); border-left:4px solid var(--bc-action, #1F6B2A); border-radius:8px; background:#FFFFFF; padding:12px 16px; margin:16px 0; }
+  #omieTela .omie-previa-tit { margin:0 0 10px; font-size:16px; }
+  #omieTela .omie-previa { display:grid; grid-template-columns:minmax(150px, 220px) minmax(0, 1fr); margin:0 0 10px; border-top:1px solid var(--bc-line, #E2E0D8); }
+  #omieTela .omie-previa-linha { display:contents; }
+  #omieTela .omie-previa dt, #omieTela .omie-previa dd { margin:0; padding:7px 8px; border-bottom:1px solid var(--bc-line, #E2E0D8); overflow-wrap:anywhere; text-align:left; }
+  #omieTela .omie-previa dt { font-weight:600; color:var(--bc-text-3, #5F645F); font-size:13px; }
+  #omieTela .omie-previa .is-chave dt, #omieTela .omie-previa .is-chave dd { background:var(--bc-action-bg, #E8F2E5); }
+  #omieTela .omie-previa .is-vazia dd { color:var(--bc-text-3, #5F645F); }
+  #omieTela .omie-num { font-size:1.08em; font-variant-numeric:tabular-nums; white-space:nowrap; color:var(--bc-text, #1C1F1D); }
+  #omieTela .omie-previa-acoes { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:10px; }
+  #omieTela .omie-previa-validade { color:var(--bc-text-3, #5F645F); font-size:13px; margin:6px 0 0; }
+  @media(max-width:700px) {
+    #omieTela .omie-previa { grid-template-columns:1fr; }
+    #omieTela .omie-previa dt { border-bottom:0; padding-bottom:0; }
+    #omieTela .omie-previa-acoes .cadx-btn { flex:1 1 140px; }
+  }
+  /* caixas de marcar com área de toque de 44 px (conciliação, aceite do faturamento, nota já paga) */
+  #omieTela label.omie-check { display:flex; flex-direction:row; align-items:center; gap:10px; min-height:44px; cursor:pointer; white-space:normal; }
+  #omieTela .omie-check input[type="checkbox"], #omieTela .omie-conc-check { width:22px; height:22px; min-height:0; flex:0 0 auto; }
+  #omieTela label.omie-conc-alvo { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; cursor:pointer; }
+  /* formulários de faturamento, notas e conciliação: rótulo em cima, campos em grade */
+  #omieTela .omie-grade { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap:12px 16px; margin:12px 0; align-items:start; }
+  #omieTela input[type="file"] { max-width:100%; min-height:44px; height:auto !important; padding:2px 0; }
+  #omieTela input[type="file"]::file-selector-button { min-height:40px; padding:0 14px; margin-right:10px; cursor:pointer; }
+  #omieTela .omie-acoes { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px; }
+  @media(max-width:700px) { #omieTela .omie-acoes .cadx-btn { flex:1 1 160px; } }
+  #omieTela .omie-bloco { border:1px solid var(--bc-line, #E2E0D8); border-radius:8px; background:#FFFFFF; padding:14px 16px; margin:0 0 18px; }
+  #omieTela .omie-bloco > h3 { margin-top:0; }
+  #omieTela .omie-bloco > p, #omieTela .omie-bloco .cadx-sub { text-align:justify; }
+  /* baixa: juros, multa e desconto travados juntos, com um aviso só */
+  #omieTela .omie-travados { grid-column:1 / -1; border:1px dashed var(--bc-line-2, #C9CDD2); border-radius:8px; padding:10px 12px; margin:0; min-width:0; }
+  #omieTela .omie-travados legend { font-weight:600; padding:0 4px; }
+  #omieTela .omie-travados-campos { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+  #omieTela .omie-travados .omie-aviso-baixa { margin-top:8px; }
+</style>

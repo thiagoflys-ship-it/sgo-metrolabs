@@ -262,6 +262,7 @@
           if (typeof AvisosTela_iniciar_ === "function") AvisosTela_iniciar_();
           if (typeof RepAlertas_iniciar_ === "function") RepAlertas_iniciar_(); // 03/11/2026: aviso na tela dos pedidos da representada (JS_Representacao.html)
           if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
+        if (typeof OmieTela_menu_ === "function") OmieTela_menu_();
           if (typeof AutPred_iniciar_ === "function") AutPred_iniciar_();
           if (typeof ModoPers_iniciar_ === "function") ModoPers_iniciar_();
           if (typeof WaPiloto_iniciar_ === "function") WaPiloto_iniciar_();
@@ -368,6 +369,7 @@
         if (typeof AvisosTela_iniciar_ === "function") AvisosTela_iniciar_();
         if (typeof RepAlertas_iniciar_ === "function") RepAlertas_iniciar_(); // 03/11/2026: aviso na tela dos pedidos da representada (JS_Representacao.html)
         if (typeof ChavesTela_iniciar_ === "function") ChavesTela_iniciar_();
+        if (typeof OmieTela_menu_ === "function") OmieTela_menu_();
         if (typeof AutPred_iniciar_ === "function") AutPred_iniciar_();
         if (typeof ModoPers_iniciar_ === "function") ModoPers_iniciar_();
         if (typeof WaPiloto_iniciar_ === "function") WaPiloto_iniciar_();
@@ -751,6 +753,7 @@
     if (typeof Atividades_parar_ === "function") Atividades_parar_();
     if (typeof AvisosTela_parar_ === "function") AvisosTela_parar_();
     if (typeof ChavesTela_parar_ === "function") ChavesTela_parar_();
+    if (typeof OmieTela_menu_ === "function") OmieTela_menu_();
     if (typeof AutPred_parar_ === "function") AutPred_parar_();
     if (typeof ModoPers_parar_ === "function") ModoPers_parar_();
     if (typeof Gestao_parar_ === "function") Gestao_parar_();
@@ -1078,6 +1081,12 @@
     // MODO PERSONALIZADO (21/10/2026) — responsáveis técnicos designados e Administrador; ver JS_ModoPersonalizado.html / SGO_ModoPersonalizado.js.
     if (mod === "modo_personalizado" && typeof ModoPers_render_ === "function") {
       ModoPers_render_();
+      return;
+    }
+
+    if (mod === "omie") {
+      OmieTela_render_();
+      atualizarBadgeModulo_("omie");
       return;
     }
 
@@ -5006,6 +5015,7 @@
     // 31/10/2026: relatório do ciclo da lavadora (equipe e cliente; o servidor mostra só os equipamentos do cliente)
     itens.push({ icone: '<i class="fas fa-receipt" aria-hidden="true"></i>', legenda: "Relatórios de ciclo", mod: "lavadora_ciclos" });
     itens.push({ icone: '<i class="fas fa-folder-open" aria-hidden="true"></i>', legenda: "Documentos", mod: "documentos" });
+    if (typeof OmieTela_permitido_ === "function" && OmieTela_permitido_()) itens.push({ icone: '<i class="fas fa-wallet" aria-hidden="true"></i>', legenda: "Financeiro", mod: "omie" });
     if (typeof ChavesTela_ehDono_ === "function" && ChavesTela_ehDono_()) itens.push({ icone: '<i class="fas fa-key" aria-hidden="true"></i>', legenda: "Chaves e senhas", mod: "chaves" });
     if (typeof SegAcessoTela_pode_ === "function" && SegAcessoTela_pode_()) itens.push({ icone: '<i class="fas fa-shield-halved" aria-hidden="true"></i>', legenda: "Segurança do acesso", mod: "seguranca_acesso" });
     // Perfil RH: só as telas do perfil. Usuários: a rotina da empresa (gestão, RH e Financeiro) tem o atalho no celular.
@@ -6752,6 +6762,7 @@
       avisos: "Avisos",
       email: "E-mail",
       chaves: "Chaves e senhas",
+      omie: "Financeiro",
       seguranca_acesso: "Segurança do acesso",
       modo_personalizado: "Modo personalizado"
     };

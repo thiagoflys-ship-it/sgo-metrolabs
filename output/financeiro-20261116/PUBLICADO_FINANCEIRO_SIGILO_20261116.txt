@@ -1,0 +1,44 @@
+SGO+ — SIGILO DO FINANCEIRO — PUBLICADO EM 16/11/2026 ~11:13 BRT
+
+Pedido do dono (16/11): "ninguém pode ter acesso a esse módulo a não ser os diretores e a Wanessa; informações sigilosas;
+pensar muito bem em vazamento de informação".
+
+Imagem: metrolabs/sgo:financeiro-sigilo-20261116 (sha256:4b9604c66d93ae2b6e52184661bb67e9da3e96325ff85a5091c4948c34e7638a)
+Base:   metrolabs/sgo:financeiro-revisao2-20261115 (camada de 9 arquivos; 490 no legado)
+Fonte:  output/financeiro-20261116/cand (= produção). Patch: patch-sigilo.cjs (+ OmieSig_conferir_ aplicado à mão).
+Backup: /opt/metrolabs/backup/financeiro-sigilo-20261116 (compose.antes.yml + banco-antes.dump 162 MB).
+Reverter: copiar compose.antes.yml para /opt/metrolabs/sgo/docker-compose.yml e "docker compose up -d app".
+Log: publicacao-sigilo.log (base conferida, imagem conferida, saudável, GET 200, 0 erros).
+
+O QUE MUDOU
+1. Trava fixa acima das caixas (SGO_Omie_Sigilo.js): lista de sigilo por ID de conta. Padrão no código = admin (Thiago),
+   charles, wanessa. Propriedade OMIE_SIGILO_CONTAS vazia/ilegível = padrão (nunca abre para todos).
+2. Acessos: caixa "restrita" (FIN_OMIE_*) vale NÃO para quem está fora da lista (origem 'sigilo'). Exceção gravada em
+   Acessos, modelo e cópia não liberam; a tela mostra "Sigiloso: fora da lista do módulo" e não deixa marcar.
+3. Omie_exigirAcesso_: confere o sigilo antes de tudo; Omie_apiIniciar devolve ver=false (nem diz se o Omie está configurado).
+   Ganhos dos vendedores: recebimentos do Omie também sob o sigilo.
+4. Registro FIN_OMIE_ACESSOS (sem valores): consultas (1 por pessoa/rotina a cada 10 min), planilhas baixadas, recusas,
+   mudanças da lista. Diretoria vê na aba "Sigilo e acessos".
+5. Só o responsável pelo sistema (SGO_DONOS) altera a lista, com motivo; não se retira; cliente/representada nunca entram.
+6. Tela: dados apagados da página ao sair/trocar de conta e após 10 min sem uso ("Mostrar de novo" consulta de novo).
+
+DIAGNÓSTICO DE VAZAMENTO (antes de mudar)
+- /api/run já recusa funções terminadas em "_" (internas) e as de exportação (MIGRACAO_, setup, diag…).
+- Leitores genéricos de abas (Vínculos, exclusão de conta) leem só colunas de cadastro (ID, CLIENTE_ID, STATUS…), não valores.
+- Registros SGO_DATA.log do Omie não guardam valores.
+- Ponto aberto ANTES: uma exceção em Administração > Acessos abriria o Financeiro a qualquer pessoa. Fechado.
+- Fora do alcance do sistema: foto da tela, impressão, repasse de planilha (por isso o download é registrado).
+
+TESTES
+- tests/financeiro-omie-20261114.test.cjs 21/21 (4 novos do sigilo: fora da lista, exceção forçada, registro, lista,
+  tela 390 px com 10 min sem uso e saída). ganhos-omie 6/6, omie-financeiro 13/13, omie-operacoes 20/20,
+  omie-faturamento 12/12, poderes-lote0 13/13, poderes-lote3 4/4.
+- Suíte completa (238 arquivos): pass 2183 / fail 71 contra 2177 / 71 no fim da noite de 15/11: nenhum teste piorou
+  (os 71 já falhavam antes; suite-sigilo.txt). Capturas: capturas/390-aba-sigilo.png, 390-sigilo-ocultado.png.
+
+VERIFICAÇÃO NA PRODUÇÃO (código publicado, registro de acessos desligado na verificação; ensaio/ZZ_Verif.js)
+- Lista vigente: 3 contas (propriedade vazia = padrão).
+- Passam (caixa, menu e aba Sigilo): admin (Diretoria, dono), charles (Diretoria), wanessa (Financeiro). Mais ninguém.
+- As outras 20 contas ativas: nenhuma passa; 18 recebem a mensagem de sigilo. Exceções FIN_OMIE_* gravadas: 0.
+
+GRAVAÇÃO NO OMIE: continua DESLIGADA (OMIE_GRAVACAO_LIGADA). As consultas ao Omie já funcionam com a chave cadastrada.

@@ -1,0 +1,110 @@
+<script>
+  var OMIE_TELA = { tipo: 'receber', situacao: 'ATRASADO', pagina: 1, paginas: 0, pedido: 0 };
+  // 14/11/2026: situação dos títulos (o Omie lista em ordem de cadastro; sem filtro, a 1ª página traz títulos antigos já pagos).
+  function OmieTela_situacoesHtml_(id, atual, onchange) {
+    return '<label for="' + id + '">Situação<select class="cadx-input" id="' + id + '" onchange="' + onchange + '">' +
+      [['ATRASADO', 'Vencidos'], ['VENCEHOJE', 'Vencem hoje'], ['AVENCER', 'A vencer'], ['', 'Todos (mais recentes primeiro)']].map(function (o) {
+        return '<option value="' + o[0] + '"' + (o[0] === atual ? ' selected' : '') + '>' + o[1] + '</option>';
+      }).join('') + '</select></label>';
+  }
+  // 14/11/2026: o acesso vem das caixas (Omie_apiIniciar); a trava continua no servidor em toda chamada.
+  var OMIE_INI = null;
+  function OmieTela_permitido_() { return !!(OMIE_INI && OMIE_INI.ver); }
+  function OmieTela_pode_(c) { return !!(OMIE_INI && OMIE_INI.poderes && OMIE_INI.poderes[c]); }
+  /** O grupo Financeiro do menu aparece quando qualquer item dele aparece (Conciliação Caju, Painel financeiro...). */
+  function Financeiro_grupoMenu_() {
+    var g = document.getElementById('menu-secao-financeiro'); if (!g) return;
+    var algum = Array.prototype.some.call(g.querySelectorAll('.menu-btn'), function (b) { return b.style.display !== 'none'; });
+    g.style.display = algum ? '' : 'none';
+  }
+  function OmieTela_mostrarMenu_() {
+    var b = document.getElementById('menu-btn-omie');
+    if (b) b.style.display = OmieTela_permitido_() ? '' : 'none';
+    Financeiro_grupoMenu_();
+  }
+  function OmieTela_menu_() {
+    // Invalida callbacks do usuário anterior no login/logout.
+    OMIE_TELA.pedido++;
+    if (typeof OmieSig_limpar_ === 'function') OmieSig_limpar_(); // 16/11/2026: nenhum dado financeiro fica na página ao sair ou trocar de conta
+    OMIE_INI = null; OmieTela_mostrarMenu_();
+    if (typeof SGO_getSessionId !== 'function' || !SGO_getSessionId()) return;
+    var sessao = SGO_getSessionId();
+    google.script.run.withSuccessHandler(function (r) {
+      if (sessao !== SGO_getSessionId()) return;
+      OMIE_INI = r && r.ok ? r : null; OmieTela_mostrarMenu_();
+    }).withFailureHandler(function () { OMIE_INI = null; OmieTela_mostrarMenu_(); }).Omie_apiIniciar(sessao);
+  }
+  function OmieTela_contas_() {
+    var div = document.getElementById('omieCorpo');
+    if (!div) return;
+    if (!OmieTela_permitido_()) {
+      div.innerHTML = '<div class="module-shell"><h2 class="content-title">Financeiro · Omie</h2><p>O Financeiro é sigiloso: só a Diretoria e o Financeiro autorizado o acessam.</p></div>';
+      return;
+    }
+    OMIE_TELA.tipo = 'receber'; OMIE_TELA.pagina = 1;
+    if (CadUI_movel_()) { try { MOBILE_NAV = { modulo: 'mobile_home', tela: 'lista' }; atualizarTituloMobile_('Financeiro · Omie'); } catch (e) {} }
+    div.innerHTML = '<section>' +
+      '<div><h3>Contas a pagar e receber</h3>' +
+      '<p class="content-subtitle">Consulte as contas a pagar e a receber da empresa.</p></div>' +
+      CadUI_ajuda_('<p>Os dados são consultados no Omie. Esta tela permite consultar os títulos; o valor apresentado é o valor original do documento. A situação vem do Omie. A conexão com o Omie é configurada pelo responsável pelo sistema.</p>') +
+      '<div class="omie-barra"><label for="omieTipo">Contas<select class="cadx-input" id="omieTipo" onchange="OmieTela_trocar_()"><option value="receber">A receber</option><option value="pagar">A pagar</option></select></label>' + OmieTela_situacoesHtml_('omieSituacao', OMIE_TELA.situacao, 'OmieTela_trocar_()') +
+      '<button type="button" class="cadx-btn" id="omieAtualizar" onclick="OmieTela_carregar_()">Atualizar</button></div>' +
+      '<div id="omieResultado" aria-live="polite"></div>' +
+      '<div class="omie-barra"><button type="button" class="cadx-btn" id="omieAnterior" onclick="OmieTela_pagina_(-1)">Anterior</button><span id="omiePaginacao"></span>' +
+      '<button type="button" class="cadx-btn" id="omieProxima" onclick="OmieTela_pagina_(1)">Próxima</button></div></section>';
+    OmieTela_carregar_();
+  }
+  function OmieTela_trocar_() {
+    OMIE_TELA.tipo = document.getElementById('omieTipo').value; OMIE_TELA.situacao = document.getElementById('omieSituacao').value; OMIE_TELA.pagina = 1; OmieTela_carregar_();
+  }
+  function OmieTela_pagina_(delta) {
+    var n = OMIE_TELA.pagina + delta;
+    if (n < 1 || n > OMIE_TELA.paginas) return;
+    OMIE_TELA.pagina = n; OmieTela_carregar_();
+  }
+  function OmieTela_carregar_() {
+    var alvo = document.getElementById('omieResultado');
+    if (!alvo) return;
+    var pedido = ++OMIE_TELA.pedido;
+    ['omieAnterior', 'omieProxima', 'omieAtualizar'].forEach(function (id) { document.getElementById(id).disabled = true; });
+    document.getElementById('omiePaginacao').textContent = '';
+    alvo.innerHTML = CadUI_esqueleto_(4);
+    function atual() { return pedido === OMIE_TELA.pedido && document.getElementById('omieResultado') === alvo; }
+    function erro(msg) {
+      if (!atual()) return;
+      alvo.innerHTML = '<div class="cadx-vazio bc-vazio" role="alert"><strong>Não foi possível carregar as contas.</strong><p>' + CadUI_esc_(msg) + '</p></div>';
+      document.getElementById('omieAtualizar').disabled = false;
+    }
+    google.script.run.withSuccessHandler(function (r) {
+      if (!atual()) return;
+      if (!r || !r.ok) { erro(r && r.mensagem || 'Tente novamente.'); return; }
+      OMIE_TELA.paginas = r.paginas;
+      document.getElementById('omieAtualizar').disabled = false;
+      document.getElementById('omieAnterior').disabled = OMIE_TELA.pagina <= 1;
+      document.getElementById('omieProxima').disabled = OMIE_TELA.pagina >= r.paginas;
+      document.getElementById('omiePaginacao').textContent = r.total ? 'Página ' + r.pagina + ' de ' + r.paginas + ' · ' + r.total + ' títulos' : 'Nenhum título';
+      if (!r.itens.length) { alvo.innerHTML = '<div class="cadx-vazio bc-vazio">Nenhum título nesta situação.</div>'; return; }
+      var esc = CadUI_esc_;
+      alvo.innerHTML = '<div class="omie-lista"><table class="cadx-tabela"><thead><tr><th>Documento</th><th>Cliente ou fornecedor</th><th>Vencimento</th><th>Valor do documento</th><th>Situação</th></tr></thead><tbody>' + r.itens.map(function (i) {
+        return '<tr><td data-r="Documento">' + esc(i.documento || i.id) + '</td><td data-r="Cliente ou fornecedor">' + esc(i.pessoa || ('código Omie ' + i.pessoaId)) + '</td><td data-r="Vencimento">' + esc(i.vencimento) + '</td><td data-r="Valor">' + esc(Number(i.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })) + '</td><td data-r="Situação">' + esc(typeof OmieOps_situacao_ === 'function' ? OmieOps_situacao_(i.situacao) : i.situacao) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    }).withFailureHandler(function () { erro('Não foi possível comunicar com o servidor. Tente novamente.'); })
+      .Omie_apiListar(SGO_getSessionId(), { tipo: OMIE_TELA.tipo, situacao: OMIE_TELA.situacao, pagina: OMIE_TELA.pagina });
+  }
+</script>
+<style>
+  #omieTela .omie-barra { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:16px 0; }
+  #omieTela label { display:flex; gap:8px; align-items:center; }
+  #omieTela select, #omieTela button { min-height:44px; }
+  #omieTela .omie-lista { max-width:100%; overflow-x:auto; }
+  #omieTela table { width:100%; border-collapse:collapse; }
+  #omieTela th, #omieTela td { padding:12px; text-align:left; border-bottom:1px solid var(--bc-line, #e2e8f0); }
+  @media(max-width:700px) {
+    #omieTela select { font-size:16px; }
+    #omieTela thead { display:none; }
+    #omieTela tbody, #omieTela tr, #omieTela td { display:block; }
+    #omieTela tr { border:1px solid var(--bc-line, #e2e8f0); border-radius:8px; margin-bottom:12px; }
+    #omieTela td { overflow-wrap:anywhere; }
+    #omieTela td[data-r]:before { content:attr(data-r) ': '; font-weight:600; }
+  }
+</style>

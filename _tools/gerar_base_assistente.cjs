@@ -20,6 +20,10 @@ const PADRAO_SAIDA = path.join(RAIZ, "apps-script-imports", "portal_sgo_versao_c
 const MAPA = {
   "MANUAL_ASSISTENTE_DUVIDAS.md": { tela: "assistente_duvidas" },
   "MANUAL_BATE_PAPO.md": { tela: "bate_papo" },
+  // 11/11/2026: módulo Depósito de viagem (E1)
+  "MANUAL_DEPOSITO_VIAGEM.md": { tela: "deposito_viagem" },
+  // 11/11/2026: Conciliação Caju (Financeiro; a Diretoria acompanha)
+  "MANUAL_CONCILIACAO_CAJU.md": { tela: "conciliacao_caju", perfis: ["ADMIN", "DIRETORIA", "FINANCEIRO"] },
   "MANUAL_CLIENTES_UNIDADES_VINCULOS.md": { tela: "vinculos" },
   "MANUAL_CONDUTA_COLABORADOR.md": { tela: "conduta" },
   "MANUAL_CONDUTA_FISCAL.md": { tela: "conduta", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "RH"] },

@@ -75,6 +75,7 @@ test('todo documento vai à IA com o especialista do assunto: o POP pelo tema de
   prompts.length = 0;
   ctx.PgtPop_gerarTextoPGT_(hospital, '', [], [], null);
   assert.equal(prompts.length, 6);
-  assert.match(prompts[2], /especialista sênior no assunto "Requisitos Específicos I — Planejamento até Instalação \(Requisitos Específicos: Planejamento e Seleção; Requisitos Específicos: Aquisição;/);
+  // 14/11/2026 (fichas técnicas): os blocos seguem as seções da ficha do PGTS (antes: "Requisitos Específicos I — ...").
+  assert.match(prompts[2], /especialista sênior no assunto "Etapas do gerenciamento I — do planejamento ao registro histórico \(Etapas do gerenciamento: Planejamento e seleção; Etapas do gerenciamento: Aquisição;/);
   assert.ok(prompts.every((p) => /ESPECIALISTA RESPONSÁVEL PELA REDAÇÃO/.test(p)));
 });
