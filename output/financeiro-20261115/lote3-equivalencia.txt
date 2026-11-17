@@ -1,3 +1,3 @@
-Lote 3 — equivalência (sem exceções) em 2026-11-16T20:54:42.134Z
+Lote 3 — equivalência (sem exceções) em 2026-11-17T19:27:43.608Z
 contas=23 ações=14 comparações=322 recusadas(antes)=257 divergências=0
 

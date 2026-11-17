@@ -15,14 +15,23 @@
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
-- Preenchimento real agregado, sem exportar valores: 18 ativos, 18 setores e
-  2 datas de admissão vazios em 17/11/2026, 02:54 BRT. Referência e roteiro:
-  `output/rh360-jornada-20261111/PREENCHIMENTO_REAL_AGREGADO_20261117.json` e
+- Preenchimento real agregado, sem exportar valores: 18 ativos, 18 cadastros sem setor e
+  2 datas de admissão vazias, reconferidos em 17/11/2026, 16:36 BRT. Referência e roteiro:
+  `output/rh360-jornada-20261111/CONSULTA_AGREGADA_ATUAL_20261117.json` e
   `output/rh360-jornada-20261111/PENDENCIAS_PREENCHIMENTO_EQUIPE_20261117.txt`.
   Não preencher lacunas com dados inventados. Aceite operacional real adiado.
 - Critérios CCT e lacunas de software: `output/rh360-jornada-20261111/MATRIZ_ACEITE_CCT_20261117.txt`.
-  Próximo desenho: `output/rh360-jornada-20261111/PLANO_VINCULO_JURIDICO_20261117.txt`.
-  Referências administrativas não validam enquadramento; condições textuais não são motor executável.
+  Conferência de origens R69, decisão individual canônica R70 e portal R71 já publicados;
+  critérios estruturados/manuais R73/R74 disponíveis. Não reimplementar como se faltassem.
+  O `PLANO_VINCULO_JURIDICO_20261117.txt` é histórico R68, identificado como tal.
+  Próximo roteiro: `output/rh360-jornada-20261111/ROTEIRO_EXECUCAO_FECHAMENTO_RH360_20261117.txt`.
+  Decisões reais, cobertura jurídica, fatos reconciliados, motor/apuração, integrações e aceite continuam abertos.
+  Referência administrativa ou confronto manual não equivale a decisão jurídica/fato verificado.
+- Relatório total R81, 26 áreas e cadeia das 13 entregas R69–R81 desta janela:
+  `output/rh360-jornada-20261111/RELATORIO_TOTAL_RH360_20261117.html` (também `.txt`).
+  Imagem, 792 pins, saúde e GET públicos reconferidos em 17/11/2026, 16:50 BRT:
+  `output/rh360-jornada-20261111/VERIFICACAO_ENCERRAMENTO_1700_20261117.json`.
+  Quatro ativações Secullum permanecem desligadas; configuração salva rev.2, sem chamada real nesta jornada.
 - Este resumo é do RH. As instruções e registros do SGO/Comercial abaixo
   pertencem a outra frente e não autorizam alterá-la durante a jornada RH.
 

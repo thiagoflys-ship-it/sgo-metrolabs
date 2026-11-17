@@ -1,4 +1,4 @@
-Lote 1 — equivalência (sem exceções) em 2026-11-16T20:54:34.388Z
+Lote 1 — equivalência (sem exceções) em 2026-11-17T19:27:37.781Z
 contas=23 ações=40 comparações=920 recusadas(antes)=718 divergências=0
 ações: usuariosListar | usuariosObter | usuariosPesquisar | usuariosPainel | criar técnico | criar Diretoria | criar Administrador | alterar nome de outro | mudar perfil de outro | promover a Diretoria | promover a Administrador | alterar conta da Diretoria | alterar conta do Administrador | mudar o próprio perfil | área pela edição | senha provisória (tem e-mail) | link de nova senha | link para o Administrador | inativar | reativar | inativar Diretoria | inativar Administrador | inativar a si mesmo | vínculos antes de excluir | excluir Administrador | excluir | áreas: painel | áreas: salvar | áreas: área da pessoa | áreas: preencher pelo perfil | segurança: painel | segurança: registro | segurança: gravar config | segurança: exigir troca (técnico) | segurança: zerar segundo fator | modo personalizado: situação | modo personalizado: responsáveis | modo personalizado: desbloquear | acessos: pode | segurança: exigir troca de todos
 
