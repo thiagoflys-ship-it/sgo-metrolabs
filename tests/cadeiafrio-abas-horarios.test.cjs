@@ -130,7 +130,9 @@ test('registrador: vale o certificado válido na data do ensaio; vencido diz o c
   assert.equal(trava.codigo, 'REGISTRADOR_VENCIDO');
   assert.equal(trava.campo, 'certDataLogger');
   assert.match(trava.oQue, /ensaio em 17\/09\/2026, validade 01\/01\/2025/);
-  assert.match(trava.comoCorrigir, /Calibração › Padrões de referência, procure DTL-VENC, clique em Editar/);
+  // 17/11/2026: a tela de Padrões não deixa mudar número/validade pelo cadastro; o caminho certo é "Novo certificado" (JS_Padroes_Documentos.html).
+  assert.match(trava.comoCorrigir, /Calibração › Padrões de referência, procure DTL-VENC, abra o padrão e use Novo certificado/);
+  assert.doesNotMatch(trava.comoCorrigir, /clique em Editar/);
 });
 
 test('conferência antecipada: travas com o campo da tela, sem gerar documento e sem lançar', () => {
