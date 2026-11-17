@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R76, imagem
-  `sha256:8e754d563a661ee064430b1b5b6bc6df8fbdf538018c2486fe996df70050a228`,
-  tag `metrolabs/rh:secullum-conferencia-originais-20261117-r76`.
-  Evidência: `output/rh360-20261117-r76/PUBLICADO_RH360_R76_20261117.txt`.
-  Preserva as entregas anteriores; 777 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R79, imagem
+  `sha256:4519b227afa33aba80234a2b13f7a9b2abd80f7e2b895cf626cb1beaa7960439`,
+  tag `metrolabs/rh:secullum-confronto-declaracoes-20261117-r79`.
+  Evidência: `output/rh360-20261117-r79/PUBLICADO_RH360_R79_20261117.txt`.
+  Preserva as entregas anteriores; 788 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -906,3 +906,11 @@ RH360 R75 publicada/verificada em 17/11/2026 14:17 BRT: sha256:019f6ecb412915337
 
 RH360 R76 publicada/verificada em 17/11/2026 14:29 BRT: sha256:8e754d563a661ee064430b1b5b6bc6df8fbdf538018c2486fe996df70050a228; metrolabs/rh:secullum-conferencia-originais-20261117-r76. Conferencia privada entre duas paginas originais do mesmo banco com repeticoes, mutacoes e IDs ambiguos, sem importacao, exclusao ou cobertura presumida. Evidência: output/rh360-20261117-r76/PUBLICADO_RH360_R76_20261117.txt. 777 pins; backup restaurado, verificações proporcionais e pós-publicação PASS. Testes sintéticos; aceite operacional real adiado e CCT integral aberta.
 - 17/11/2026 — PUBLICADO assistente-ia-20261117 (sha 0e9d992d…; base estufa-simulador-20261117; candH). "Tire sua dúvida": base = docs/ + 88 parágrafos que só existiam na produção (devolvidos a docs/ com origem); índice de 3.676 mensagens de erro lidas do código (SGO_AssistenteErros.js), botão "Perguntar ao assistente sobre este erro", busca tolerante e por sinônimos, sigilo do Financeiro. Regra antiga das atividades retirada da ajuda; CAL-011 reposicionada no catálogo. Suíte 2417/0. ATENÇÃO: base dos manuais precisa do docs/ deste trabalho e do gerador novo (output/assistente-20261117). Decisões pendentes: quem lê manuais Painel financeiro/Ganhos dos vendedores/Portal interno; parágrafos em duas versões a conferir.
+- 17/11/2026 — Decisão do dono sobre o assistente: (1) os 3 manuais fora da base (Painel financeiro, Ganhos dos vendedores, Portal do cliente interno) entram, cada um só para quem tem acesso à tela correspondente (Painel financeiro = lista de sigilo; Ganhos = quem vê Ganhos, sem o contrato individual de vendedor para os demais; Portal = caixa PORTAL_CLIENTE_CONTRATOS_VER, parte do reajuste só na lista de sigilo); (2) parágrafos em duas versões (output/assistente-20261117/RELATORIO.md, decisão 2): conferir no CÓDIGO qual descreve a tela atual e apagar a outra — quem decide somos nós. FILA: depois do especialista dos documentos em pastas (candI), porque mexe nos mesmos manuais de docs/.
+
+RH360 R77 publicada/verificada em 17/11/2026 14:46 BRT: sha256:13808ceed9af3ea91acdda97e4309de5ea8f44f11d5e0f034f256b7be53e3b0d; metrolabs/rh:secullum-associacao-revisada-20261117-r77. Registro privado revisado de associacao declarada entre identidade externa observada e colaborador/estrutura oficial, com periodo, origem, revogacao e sem liberar importacao de ponto. Evidência: output/rh360-20261117-r77/PUBLICADO_RH360_R77_20261117.txt. 782 pins; backup restaurado, verificações proporcionais e pós-publicação PASS. Testes sintéticos; aceite operacional real adiado e CCT integral aberta.
+
+RH360 R78 publicada/verificada em 17/11/2026 15:00 BRT: sha256:2ef61e9afc1e228f1cb1429a54d05c0bf63b2ed6476c49e45c244936093691ae; metrolabs/rh:secullum-cadastro-original-20261117-r78. Captura privada manual do cadastro original de funcionarios Secullum, em namespace separado da fonte de ponto, com campos documentados e sem associacao automatica. Evidência: output/rh360-20261117-r78/PUBLICADO_RH360_R78_20261117.txt. 785 pins; backup restaurado, verificações proporcionais e pós-publicação PASS. Testes sintéticos; aceite operacional real adiado e CCT integral aberta.
+
+RH360 R79 publicada/verificada em 17/11/2026 15:20 BRT: sha256:4519b227afa33aba80234a2b13f7a9b2abd80f7e2b895cf626cb1beaa7960439; metrolabs/rh:secullum-confronto-declaracoes-20261117-r79. Confronto somente leitura entre associacao declarada e linha explicitamente escolhida do cadastro original, com divergencias mascaradas e sem autenticar pessoa ou liberar importacao. Evidência: output/rh360-20261117-r79/PUBLICADO_RH360_R79_20261117.txt. 788 pins; backup restaurado, verificações proporcionais e pós-publicação PASS. Testes sintéticos; aceite operacional real adiado e CCT integral aberta.
+- 17/11/2026 — PUBLICADO documentos-pastas-20261117 (sha 215a897f…; base assistente-ia-20261117; candI). Documentos em 11 pastas (SGO_DocumentosPastas.js + JS_DocumentosPastas.html) no QR/prontuário, ficha de cliente/unidade/equipamento e conta de cliente. Dono aprovou: conta de cliente abre documentos emitidos do próprio prontuário (DOCP_CFG.clienteAbreProntuario). Conferido em produção: Hospital Santa Lúcia 57 docs (25 certificados, 29 PGT/POP, 3 registros), 0,4 s; 21 equipamentos com documentos. Suíte 2426/0.

@@ -156,7 +156,7 @@ Mostra a situação (qualificado até a data, requalificação vencendo, qualifi
 
 ### QR Code — seção Qualificação
 
-Quem lê a etiqueta do equipamento e entra no SGO+ vê, abaixo da identificação, a seção **Qualificação**: situação, relatório vigente com a validade e revisões anteriores. Só aparecem documentos **emitidos e aprovados**; o cliente vê apenas os equipamentos da própria empresa. Cada consulta, cada documento aberto e cada tentativa negada ficam registrados (trilha de acesso).
+Quem lê a etiqueta do equipamento e entra no SGO+ vê, abaixo da identificação, o **Prontuário do equipamento** organizado por pasta (desde 17/11/2026; detalhes em "Documentos organizados por pasta", no fim deste manual). A pasta **Qualificações (QI, QO, QD e térmica)** traz o relatório vigente com a validade e as revisões anteriores, e a situação da qualificação aparece no alto. Só aparecem documentos **emitidos e aprovados**; o cliente vê apenas os equipamentos da própria empresa. Cada consulta, cada documento aberto e cada tentativa negada ficam registrados (trilha de acesso).
 
 ### Vencimento da requalificação
 
@@ -202,5 +202,51 @@ em [Manual da gestão: segurança do acesso](MANUAL_SEGURANCA_ACESSO_GESTAO.md),
 ## Contrato do cliente na ficha (17/11/2026)
 
 Na ficha do cliente (Cadastros > Clientes > aba Dados), a parte **"Contrato e Portal do cliente"** mostra a situação do cliente no Portal, o contrato vigente com a vigência, o objeto, os serviços e a renovação. Cliente com conta de cliente (ou com pista de contrato) e sem nenhum contrato cadastrado aparece com o selo **"contrato a cadastrar"**: ele tem acesso completo até 31/12/2026 (decisão do dono), e o Comercial cadastra o contrato real antes dessa data. Valores não aparecem aqui. Quem tem a caixa «Ver contratos de clientes» abre os contratos pelo botão da própria parte.
+
+## Documentos organizados por pasta (17/11/2026)
+
+Pedido da equipe técnica: pelo QR Code o prontuário não mostrava a pasta de PGT e POP, nem as pastas de ordem de serviço e de qualificação; na ficha do cliente os documentos apareciam em lista solta, com repetições, e a árvore cliente → unidade → equipamento mostrava "0 documento(s)" em quase todos os equipamentos. Agora o SGO+ tem uma organização única dos documentos, usada em todas as telas.
+
+### As pastas
+
+Todo documento de qualquer módulo cai numa destas pastas, sempre na mesma ordem:
+
+1. **Certificados de calibração** — certificados do módulo de calibração e relatórios de calibração.
+2. **Qualificações (QI, QO, QD e térmica)** — relatórios de qualificação de autoclave, lavadora, estufa, banho-maria, cadeia de frio, baixa temperatura e QI/QO/QD.
+3. **Relatórios técnicos e de ciclos** — relatórios de ensaio de ciclo, planilhas de dados, relatórios de ciclo da lavadora e inventário.
+4. **Ordens de serviço e relatórios de atendimento** — relatório da O.S. encerrada, relatórios de atendimento e de ronda.
+5. **Manutenção preventiva e corretiva** — relatórios de manutenção e cronograma de execução.
+6. **PGT e POP** — PGT, POP e planejamento técnico do CME. São documentos da unidade e valem para todos os equipamentos dela.
+7. **Registros operacionais** — formulários de rotina da unidade.
+8. **NR-13 (vasos de pressão)** — laudos de inspeção, com a data da próxima inspeção.
+9. **Laudos e declarações** — declarações de execução de serviço, laudos técnicos e pareceres.
+10. **Contratos e propostas** — uso interno: nunca aparece para o cliente nem no QR Code.
+11. **Outros documentos** — o que não se encaixa nas pastas acima.
+
+A pasta vem do módulo que gerou o documento. Para o que foi enviado à mão no Arquivo de documentos vale a categoria escolhida; documento antigo sem categoria útil é classificado pelo nome do arquivo (por exemplo, "POP008..." vai para PGT e POP). Nada é alterado nos registros: a organização é calculada na hora da consulta, e documento novo de qualquer módulo aparece sozinho.
+
+### Onde aparece
+
+- **QR Code (prontuário do equipamento no celular):** os documentos do equipamento, por pasta, mais o PGT, os POP e os registros operacionais da unidade dele (o POP do tipo do equipamento vem primeiro).
+- **Cadastros > Clientes > aba "Documentos por pasta":** todos os documentos do cliente, com busca e filtro por unidade e equipamento, e os botões Abrir e Enviar.
+- **Cadastros > Unidades e Equipamentos > aba "Documentos por pasta":** o mesmo recorte para a unidade e para o equipamento (no equipamento é o mesmo prontuário do QR Code, mais o que só a equipe vê).
+- **Arquivo de documentos, na conta de cliente:** "Documentos da sua empresa por pasta", no alto da tela.
+- **Cadastros > Clientes > aba "Documentos gerados e envios":** os documentos salvos nas pastas do cliente, separados nas mesmas pastas, com o último envio.
+
+### Como ler cada documento
+
+O documento mais novo vem primeiro, com a data de emissão e a validade: **Válido até**, **Vence em X dias** (amarelo, até 30 dias) ou **Vencido há X dias** (vermelho). Revisões anteriores e versões do mesmo documento (por exemplo, POP028 v1 e v2) ficam dentro dele, em **Versões anteriores**: nada é apagado. O mesmo arquivo registrado em dois lugares (o certificado que o módulo grava e o registro no Arquivo de documentos, por exemplo) aparece uma vez só; a equipe vê o aviso de quantos registros ele tem.
+
+### O que o cliente vê
+
+A conta de cliente e o QR Code mostram só documentos **emitidos**, da própria empresa, sem a pasta Contratos e propostas, sem minuta aguardando aprovação, sem a versão interna dos relatórios de atendimento, sem documento inativo e sem PGT/POP suspenso. O link de cada documento passa pela trava de arquivo do Portal do cliente (rota /arquivos do SGO+, com login): o cliente abre o documento emitido do prontuário da própria empresa e nenhum outro. Se aparecer "Peça a cópia à Metrolabs", o arquivo ainda não foi liberado para abrir pelo portal.
+
+### Por que a árvore mostrava "0 documento(s)"
+
+A contagem por equipamento olhava só o **Arquivo de documentos**. Certificados, relatórios de qualificação, O.S., laudos NR-13, PGT e POP ficam na tabela de cada módulo e só uma parte deles é registrada no Arquivo; o PGT e os POP são da unidade e não têm equipamento. Por isso a maior parte dos equipamentos aparecia sem documento. Agora a árvore conta os documentos de todos os módulos ligados a cada equipamento (o mesmo arquivo conta uma vez).
+
+### Configuração (Administrador)
+
+A organização vem pronta. Quando preciso, o responsável pelo sistema ajusta a configuração **DOCP_CFG** (propriedade do servidor), que permite: trocar o nome de uma pasta, esconder uma pasta do cliente, acrescentar uma regra pelo nome ou pelo tipo (por exemplo, "LAUDO TECNICO" para Relatórios técnicos), escolher quais documentos da unidade entram no prontuário do equipamento (padrão: PGT e POP e Registros operacionais), o prazo de "vencendo" (padrão 30 dias) e se a conta de cliente abre os documentos emitidos do prontuário pela trava de arquivo (padrão: sim).
 
 </div>
