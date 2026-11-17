@@ -321,36 +321,45 @@ test('equipe: todos veem (menos restritas e do Conduta); só responsável, quem 
   assert.equal(amb.ctx.Atividades_apiPainelEquipe('s_tec', {}).itens.some((i) => i.ID === propria.ID), false);
 });
 
-// ------------------------------------------------------------------ responsável pelo sistema (26/10/2026)
-test('responsável pelo sistema: só ele lança ou passa atividade para si; some da lista dos outros; rotina automática continua', () => {
+// ------------------------------------------------------------------ responsável pelo sistema (26/10/2026 -> 17/11/2026)
+// 17/11/2026 (decisão do dono): a regra de 26/10/2026 "o responsável pelo sistema só recebe atividade lançada por ele mesmo" NÃO
+// vale mais. Ela já tinha saído do código em produção antes de 06/11 (relatório output/falhas-20261117/RELATORIO.md, pergunta 1);
+// o dono confirmou em 17/11 que ela fica fora e mandou tirar da ajuda e do teste. Este teste confere a regra atual: a gestão lança
+// e passa atividade para o responsável pelo sistema como para qualquer pessoa, ele aparece na lista de responsáveis, a ponte do
+// COMMAND segue a mesma regra, a rotina automática continua, e a ajuda da tela não ensina mais a regra antiga.
+test('responsável pelo sistema recebe atividade da gestão como qualquer pessoa (regra de 26/10 retirada pelo dono em 17/11/2026)', () => {
   const amb = ambiente();
   amb.ctx.Chaves_ehDonoUsuario_ = (u) => String(u || '').toLowerCase() === 'ana'; // no teste, a dona é a Ana (SGO_DONOS)
-  // gestão não lança para a dona
-  let r = amb.ctx.Atividades_apiCriar('s_ges', { titulo: 'Tarefa para a dona', prazo: amb.amanha18, responsavelId: 'u_adm' });
-  assert.equal(r.ok, false);
-  assert.match(r.message, /ANA ADMIN é o responsável pelo sistema e só ele lança atividades para si/);
-  assert.equal(amb.tabelas.ATV_ATIVIDADES.length, 0);
-  // a dona não aparece na lista de responsáveis dos outros; para ela mesma aparece
+  // gestão lança para a dona
+  const r = amb.ctx.Atividades_apiCriar('s_ges', { titulo: 'Tarefa para a dona', prazo: amb.amanha18, responsavelId: 'u_adm' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(amb.tabelas.ATV_ATIVIDADES.length, 1);
+  // a dona aparece na lista de responsáveis da gestão e na dela; a lista não marca ninguém como dono
   const nomes = (sid) => amb.ctx.Atividades_apiOpcoes(sid, {}).usuarios.map((u) => u.id);
-  assert.ok(!nomes('s_ges').includes('u_adm'));
+  assert.ok(nomes('s_ges').includes('u_adm'));
   assert.ok(nomes('s_adm').includes('u_adm'));
   assert.ok(!amb.ctx.Atividades_apiOpcoes('s_adm', {}).usuarios.some((u) => 'dono' in u));
   // a dona lança para si e para os outros normalmente
   criar(amb, 's_adm', { titulo: 'Minha tarefa', responsavelId: 'u_adm' });
   criar(amb, 's_adm', { titulo: 'Tarefa do Gil', responsavelId: 'u_ges' });
-  // gestão não passa uma atividade para a dona
+  // gestão passa uma atividade para a dona
   const doTec = criar(amb, 's_ges', { titulo: 'Tarefa do Tiago', responsavelId: 'u_tec' });
-  r = amb.ctx.Atividades_apiEditar('s_ges', { id: doTec.ID, responsavelId: 'u_adm' });
-  assert.equal(r.ok, false);
-  assert.match(r.message, /responsável pelo sistema/);
-  // pela ponte do COMMAND também não
+  const ed = amb.ctx.Atividades_apiEditar('s_ges', { id: doTec.ID, responsavelId: 'u_adm' });
+  assert.equal(ed.ok, true, JSON.stringify(ed));
+  // pela ponte do COMMAND também
   const ponteEu = amb.ctx.Atividades_euDoUsuario_('u_ges', 'COMMAND');
   amb.ctx.ATV_PONTE_CTX = { token: 'tk-teste', eu: ponteEu };
-  assert.equal(amb.ctx.Atividades_apiCriar('tk-teste', { titulo: 'Pelo COMMAND', prazo: amb.amanha18, responsavelId: 'u_adm' }).ok, false);
+  assert.equal(amb.ctx.Atividades_apiCriar('tk-teste', { titulo: 'Pelo COMMAND', prazo: amb.amanha18, responsavelId: 'u_adm' }).ok, true);
   // rotina automática (perfil SISTEMA) continua podendo
   amb.ctx.ATV_PONTE_CTX = { token: 'tk-sis', eu: { id: 'COMERCIAL', usuario: 'sistema', nome: 'Comercial (rotina)', perfil: 'SISTEMA', gestor: true, sistema: 'SGO+' } };
   assert.equal(amb.ctx.Atividades_apiCriar('tk-sis', { titulo: 'Retorno da proposta', prazo: amb.amanha18, responsavelId: 'u_adm' }).ok, true);
   amb.ctx.ATV_PONTE_CTX = null;
+  // técnico continua lançando só para si (regra que segue valendo)
+  const rt = amb.ctx.Atividades_apiCriar('s_tec', { titulo: 'Para a dona pelo técnico', prazo: amb.amanha18, responsavelId: 'u_adm' });
+  assert.equal(rt.ok, false);
+  // a ajuda da tela não descreve mais a regra antiga
+  const ajuda = fs.readFileSync(path.join(pastaLegado, 'SGO_Ajuda_Principal.js'), 'utf8');
+  assert.ok(!/só ele lança atividades para si|que só recebe as que ele mesmo lança/.test(ajuda), 'ajuda da tela ainda ensina a regra retirada');
 });
 
 // ------------------------------------------------------------------ ponte do COMMAND

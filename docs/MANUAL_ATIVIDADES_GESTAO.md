@@ -25,6 +25,8 @@ Logo abaixo: a data proposta, quando a previsão venceu, o motivo, a explicaçã
 
 Para quem só acompanha (sem poder decidir), a faixa mostra "Nada a fazer agora" e quem está decidindo.
 
+Quem lança: a gestão (Administrador, Diretoria, Gestor, RH e Financeiro) lança atividade para qualquer pessoa da equipe e passa uma atividade de uma pessoa para outra, inclusive para o responsável pelo sistema. A regra antiga de 26/10/2026, em que só o responsável pelo sistema lançava atividade para si, não vale mais (decisão do dono de 17/11/2026).
+
 ## 3. Decidir
 
 Pelo detalhe da atividade ou pela Caixa de decisões (item "Decidir a nova data (data) pedida por ..."):

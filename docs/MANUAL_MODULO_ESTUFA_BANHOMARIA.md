@@ -1,5 +1,14 @@
 # Manual do Operador — Módulo Estufa + Banho-maria
 
+## O que mudou em 11/11/2026 — do relatório de ensaio ao relatório de qualificação
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+O relatório de ensaio só passa a existir no sistema depois de "Enviar para aprovação" (técnico) ou de "Emitir o relatório" (responsável técnico). "Gerar rascunho" e "Ver a prévia" não gravam nada: depois do rascunho, o quadro azul "Próximo passo" diz o que falta, e a seção 8 lembra quando o rascunho ainda não foi enviado.
+
+Ao enviar, a mensagem verde mostra o número (REE-…) e o nome de quem aprova. Quem aprova recebe o aviso "relatório técnico aguardando sua aprovação" no Início, no painel de alertas e na janela ao entrar, com o número, o cliente, a TAG e quem enviou; confere a prévia na seção 7 e toca em "Aprovar e emitir" ou em "Devolver" com o motivo.
+
+Na seção 8 (Relatório de qualificação do equipamento), só aparecem relatórios de ensaio aprovados e emitidos. Enquanto o seu aguarda aprovação, o quadro amarelo e a trava do rascunho mostram o número, quem enviou e quem aprova. Relatório gerado no relatório interno (simulação didática, número SIM-…) não conta para a qualificação, e o quadro amarelo avisa. A planilha de dados não substitui o relatório de ensaio. Vale para a secadora, a estufa e o banho-maria.
+
 ## O que mudou em 22/10/2026
 
 - **Horário do evento fora das leituras (abertura de porta, queda de energia):** a mensagem passou a mostrar o período importado para o estudo e a leitura mais próxima do horário digitado. Horário até um intervalo de leitura depois da última leitura usa a última leitura.

@@ -59,6 +59,23 @@ Regras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-ma
 
 Tudo configurável em Regras e responsáveis (horas, dias úteis do WhatsApp e da Diretoria, liga e desliga de cada etapa e de cada automação). O horário de trabalho e os feriados continuam em Atividades da equipe > Avisos e horários.
 
+## Diretoria informada, não cobrada (11/11/2026)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Decisão do dono de 11/11/2026: os donos (o dono, no login admin, e quem tem o perfil Diretoria) não são cobrados como funcionários; são informados e decidem só o que é da Diretoria.
+
+- Com o "Resumo diário da Diretoria" ligado (padrão; Regras e responsáveis, caixa "Diretoria informada"), a Diretoria deixa de receber aviso item a item de decisão nova (GS01), prazo vencido (GS02), escalada (GS03) e das escaladas de atividade da SEDNA (S71 a S73). A escada continua marcando o item como escalado e ele continua na aba "Com a Diretoria".
+
+- No lugar, um resumo por dia útil, à hora das regras (padrão 08:30): e-mail com os números do dia, o que está parado em cada setor (item, com quem está, há quantos dias, prazo e link), as atividades da equipe atrasadas, o que está com a Diretoria e as atividades da própria pessoa (lembrete); WhatsApp curto (quantidade por setor e o link) pelo modelo de utilidade da gestão (sgo_gestao_item quando aprovado e na categoria Utilidade, senão o sgo_gestao_acao); alerta na tela. Evento GS07 da matriz de avisos. Texto informativo, sem pedir ação nem justificativa.
+
+- Continuam na hora: o que só a Diretoria decide (GS04 proposta, GS05 depósito de viagem, GS06 preço, compra e demais pedidos por regra) e os atos irreversíveis (GI01 a GI07).
+
+- O resumo do dia das 08:00 da Diretoria fica com os relatórios do dia e diz que o resto vai no resumo da Diretoria. Para os gestores nada mudou.
+
+- Relatório diário da empresa (Gestão > Relatório diário da empresa, ou o link do resumo): documento A4 com índice clicável, visão geral com gráficos, Kanban da empresa, uma seção por setor, ranking de atrasos por pessoa e por setor, o que está com a Diretoria, atos irreversíveis do dia e o Programa de conduta só em números. Abre para a Diretoria e o dono; outra pessoa, só com a caixa "Ver o relatório diário da empresa" (Administração > Acessos). Baixar em HTML ou imprimir em PDF.
+
+- Desligado o resumo, volta tudo como antes (avisos item a item à Diretoria e janela obrigatória de nova data também para ela).
+
 ## 6. Avaliação do gestor
 
 Por gestor e por mês. É avaliado quem tem o perfil Gestor e quem responde por uma área (a Diretoria avalia, não é avaliada).
@@ -81,6 +98,33 @@ Quem vê: o próprio gestor (só a dele) e a Diretoria (todas). Ninguém mais, n
 Falha grave recorrente (farol vermelho dois meses seguidos, ou 3 escalonamentos ou mais no mês) vira SUGESTÃO no Programa de conduta, visível e decidida só pela Diretoria. Nunca vira ocorrência sozinha.
 
 Relatório A4 "Desempenho da gestão" (todos, para a Diretoria; ou só o do gestor, para ele): resumo, nota e farol por gestor, gráfico de notas só quando há dois ou mais gestores, itens que chegaram à Diretoria, prazos vencidos, dias sem acesso e a regra da nota. Texto montado dos números, sem IA (a avaliação de pessoas não sai do sistema). Guardado em "Gestão - Relatórios" (HTML e PDF, sem compartilhamento público).
+
+## Painel do Desempenho, Caixa agrupada e saneamento (11/11/2026)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Pedido do dono (11/11/2026): "desempenho da gestão, isso está horrível" e "Caixa de decisões, fazer o mesmo". A tela mostrava, por gestor, um parágrafo corrido com centenas de títulos (O.S. do Auvo abertas há meses, O.S. sem vínculo de técnico, sugestões e avarias repetidas) e a Caixa era uma lista única de até 400 cartões. Código novo: SGO_Gestao_Painel.js (painel, classificação e saneamento); telas em JS_Gestao.html.
+
+Regras (publicadas em Desempenho da gestão > Regra da nota):
+
+1. Saneamento: O.S. do Auvo que chegou à Caixa com mais de 30 dias em aberto no Auvo (a Diretoria ajusta de 7 a 365 dias em Regra da nota) é acúmulo antigo. Fica num bloco próprio e não pesa na nota. A O.S. que entrou nova e envelheceu na Caixa continua contando: aí o atraso é da gestão.
+
+2. Cadastro: O.S. do Auvo sem técnico ou cliente vinculado ao SGO+. A causa é uma por técnico do Auvo sem cadastro: aparece agrupada por técnico e não pesa na nota.
+
+3. Mesmo fato: itens com o mesmo assunto (por exemplo a avaria do veículo e a sugestão de ocorrência da mesma avaria) aparecem com o selo "Mesmo fato".
+
+4. O painel mede tempo de resposta e taxa de resolução: recebidos, resolvidos, taxa de resolução (resolvidos no mês sobre a carteira do mês: o que estava aberto no começo do mês mais o que entrou), decididos no prazo, prazos vencidos, tempo médio e escalados (também em percentual dos recebidos). A nota oficial continua a da regra da Diretoria, já sem os itens das regras 1 e 2.
+
+5. Programa de conduta e Qualidade: só contagem, sem títulos nem nomes.
+
+Quem decide cada item e a escada de cobrança não mudaram.
+
+Desempenho da gestão: filtros de mês, área, gestor (Diretoria) e tipo. Abas: Visão geral (resumo em texto, oito números, gráfico de recebidos e resolvidos por gestor, gráfico de abertos por área, tabela de gestores e tabela de áreas), Gestores (a nota oficial, os itens da nota e o que chegou à Diretoria e os prazos vencidos agrupados por tipo, com expandir), Abertos agora (decisões, saneamento e cadastro agrupados por tipo e área, com o botão de resolver), Regra da nota e Relatórios. No celular as tabelas viram cartões.
+
+Caixa de decisões: números do topo só das decisões (aguardando, no prazo, prazo vencido, escalados, decisão da Diretoria; tocar no número filtra). Filtros de área, responsável, tipo, prazo e busca. Ver como: Grupos (padrão, por tipo, área ou responsável, com a contagem, vencidos, escalados, mesmo fato e desde quando; tocar abre os cartões, 10 por vez), Lista ou Kanban (pela etapa da escada). Com uma providência sendo escrita, trocar o filtro é recusado com aviso e o texto fica.
+
+Saneamento (botão "Saneamento" na Caixa e no Desempenho): números (quantas O.S. antigas, de quando a quando, quantas sem vínculo, quantos técnicos do Auvo sem cadastro, quantas já saneadas), gráfico por mês de abertura e por técnico, lista com "Conferir no Auvo" em cada O.S., filtros por técnico e mês, "Marcar as O.S. deste filtro", motivo (15 letras ou mais) e confirmação na própria tela. Marcar como "encerrada fora do SGO+" grava uma linha por O.S. em GES_SANEAMENTO (quem, quando, motivo, de quando era a O.S.) e deixa a linha da Caixa como SANEADA: sai da Caixa, da escada, do relatório diário e da avaliação. Nada é apagado e nada muda no Auvo. O.S. sem vínculo: vincular o técnico em Integração Auvo (o certo) ou "Dispensar o vínculo" com motivo. "Desfazer" (com motivo; quem marcou, a Diretoria ou o Administrador) devolve a O.S. à Caixa na mesma linha. Quem pode marcar: o responsável pelo item, a Diretoria e o Administrador; no máximo 500 por vez.
+
+Correção junto: o mês fechado guardava todos os escalados no registro congelado e cortava o texto em 45 mil letras, o que deixava o registro ilegível com centenas de itens. Agora o detalhe guarda até 60 escalados e o registro é sempre válido.
 
 ## 6A. Relatórios da empresa (29/10/2026)
 

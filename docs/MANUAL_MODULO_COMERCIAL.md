@@ -315,6 +315,9 @@ Casos: proposta antiga (concluída antes de 29/10/2026) não é travada; a revis
 
 Política de precificação (Metodologia comercial, só Diretoria e Administrador): origem padrão, valor por km, velocidade média, alimentação, hospedagem (sem diária: a empresa não paga), hora de deslocamento por função, reserva do Incentivo de Missão, impostos por unidade que emite a nota, sobra mínima, margem alvo, Bônus Coletivo, margem sobre o deslocamento, arredondamento do item, repasse padrão, alerta de item sem reajuste (12 meses) e o texto da política. Cada gravação é uma versão com o motivo. Campo em branco vale o padrão do sistema; campo gravado vence o padrão.
 
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Incentivo de Missão (Programa de conduta) | executantes x viagens x valor | R$ 300 por executante por missão, dos parâmetros do Programa de conduta; só em trecho de 200 km ou mais a partir da sede da unidade (regra da Conduta)
+
 ### Decisão do dono de 01/11/2026: sobra mínima, valores maiores, incentivos e impostos
 
 O que o dono decidiu, nas palavras dele: "Pra empresa tem que sobrar no mínimo 35%". "Os valores têm que ser os valores maiores, esses serviços estão muito baratos". "Os 300 é missão acima de 200 km, porém temos mais 300 por colaborador de incentivo de conduta, tem que incluir e diluir, a empresa precisa pagar esses custos". "2,50 km rodado; imposto: você tem que ver como é Goiás e como é Rio; aqui é lucro real."
@@ -368,6 +371,67 @@ As cláusulas do contrato (1. Do objeto, 2. Do prazo de entrega, 3. Da forma de 
 - Aprovação: o Comercial não tem aprovação do cliente por link nem pelo portal; a aprovação é registrada pelo vendedor com o aceite anexado, e o histórico diz a versão dos termos enviada no documento.
 - Propostas trazidas do CRM: as cláusulas estavam coladas na descrição. Ao abrir ou gerar, o bloco das cláusulas sai da descrição (a tela avisa) e fica só o restante ("Condições", "Frete", "Entrega"). O banco não é alterado só por abrir; ao salvar o rascunho, a descrição fica como aparece na tela.
 
+### Nova proposta guiada (cliente, unidade, responsáveis, equipamentos e serviços)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+"Nova proposta guiada" (em Propostas ou em Hoje > Novo orçamento) monta a proposta em seis passos, pelos cadastros únicos do SGO+ (nada fica num cadastro paralelo).
+
+1. Cliente: cole o e-mail do cliente e toque em "Ler o texto" (CNPJ, contatos e equipamentos escritos no texto; o que não estava escrito é descartado). Procure pelo CNPJ: cliente existente mostra o que falta, as propostas e serviços dele e os possíveis repetidos; cliente novo vem da consulta às bases públicas para conferir, completar e cadastrar com "Ciente".
+
+2. Unidade de execução: onde ficam os equipamentos (pode ser outro hospital atendido pela contratante); mostra as propostas e serviços da unidade.
+
+3. Responsáveis: técnico (recebe o orçamento: nome completo, cargo, e-mail e telefone), financeiro (e-mail para nota) e intermediário opcional (só interno; comissão decidida pela Diretoria). Contatos repetidos: a gestão comercial junta (o que sai fica inativo e as propostas passam para o que fica); o vendedor pede a junção.
+
+4. Equipamentos: escolha ou cadastre (o mesmo cadastro da Assistência, da qualificação e dos certificados); a foto da plaqueta preenche os campos para conferir; sem série, o equipamento entra como "série a confirmar".
+
+5. Serviços: serviço (qualificação completa, só QI, QO ou QD, NR-13, calibração), ciclos ou programas e carga; "Sugerir serviços e insumos" aponta o serviço oficial e os insumos do catálogo; serviço fora do catálogo vira pedido de cadastro à gestão e a proposta espera a aprovação para emitir.
+
+6. Montar: a proposta abre em rascunho, ligada a tudo; depois vêm o deslocamento, o escopo da especialista e o quadro "Faltam dados para emitir". Sem a chave da IA, tudo funciona à mão e pelas regras.
+
+### Dados completos para emitir (11/11/2026)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Pedido do dono: não deixar a proposta sair com cadastro ou dado faltando; faltando, o vendedor pede ao cliente e só emite com os dados completos. O rascunho continua livre para salvar e concluir. Emitir é gerar o documento A4; o envio, o link de assinatura e o "Entregue por outro meio" dependem dele.
+
+Obrigatórios para emitir: cadastro do cliente completo (CNPJ ou CPF válido, razão social, endereço de faturamento com CEP, logradouro, número, bairro, cidade e UF, e-mail para nota fiscal e cobrança, responsável e telefone); unidade com cidade e UF (local de execução) e CNPJ válido quando informado; contato da proposta com e-mail e telefone; o equipamento de cada serviço técnico identificado, um por unidade do item (do cadastro do cliente ou com tipo, marca, modelo, número de série, setor e, para autoclave, lavadora, termodesinfectora, secadora, estufa e câmaras, a capacidade); e o escopo escrito e validado pelo vendedor. Produto, peça e serviço sem equipamento (treinamento, consultoria, documentos, taxa) não pedem equipamento.
+
+Na proposta, o quadro "Faltam N dados para emitir" diz, para cada falta, o quê, por quê e o que fazer, com os botões "Preencher agora" (dado que o cliente já informou, com a marca "Ciente"), "Identificar equipamentos" (no item do rascunho) e "Pedir ao cliente".
+
+### Pedir os dados ao cliente e conferir a resposta
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+"Pedir ao cliente" gera a lista exata do que falta, o texto pronto para e-mail e WhatsApp e um link seguro (/dados-cliente/), válido por 30 dias e com uma resposta. O cliente vê só os campos que faltam, sem valores e sem os dados já cadastrados. Pode também enviar o e-mail na hora, com o nome do vendedor e a resposta para ele. A proposta fica "Aguardando dados do cliente" e a cobrança entra em Minhas atividades (2 dias úteis); a gestora lembra na lista do dia.
+
+Quando o cliente responde, o vendedor recebe o aviso e a atividade "Conferir os dados"; a proposta fica "Dados do cliente a conferir". Em "Conferir os dados do cliente", cada dado aparece com o que está no cadastro hoje: aceitar ou recusar com o motivo. Só o aceito entra no cadastro do cliente (com o histórico do Cadastro), no contato e nos equipamentos dos itens. O que ficou em branco ou foi recusado continua faltando.
+
+### Escopo escrito pela especialista e validado pelo vendedor
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Com os equipamentos e o local completos, "Gerar o escopo com a especialista" escreve o escopo a partir da descrição do catálogo, dos parâmetros técnicos, dos equipamentos e das condições: o que é feito em cada equipamento, as normas que o catálogo já cita, a entrega dos relatórios e certificados e o que não está incluso. O texto da IA só vale se passar na conferência (norma só as do catálogo, número só os dos dados, sem preço, sem citar IA); senão, ou sem a chave da IA, vem o modelo a partir do catálogo.
+
+O vendedor lê, ajusta se precisar e toca em "Li e valido o escopo" (quem e quando ficam registrados). Mudou o texto, item, quantidade, equipamento ou local, a validação cai e é preciso gerar de novo e validar.
+
+### Liberação excepcional da emissão
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Casos excepcionais (licitação por lote, equipamento parado, orçamento para investimento): o vendedor pede a liberação à Diretoria com o motivo. A Diretoria, o Administrador ou o dono liberam na proposta, com o motivo de pelo menos 20 letras. Vale só para as faltas daquele momento, naquela revisão. Documento gerado antes de 11/11/2026 segue valendo; gerar de novo ou nova revisão passa pela conferência.
+
+### Responsável técnico, intermediário e unidade de execução
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+O A/C da proposta é o responsável técnico do cliente (engenharia clínica), com nome completo, cargo, e-mail e telefone; o quadro aponta o contato sem sobrenome ou cargo e o contato repetido no cliente. Intermediário ou indicador nunca recebe o orçamento: no A/C, o quadro pede o responsável técnico, e os dados informados criam o contato novo, deixando o intermediário registrado.
+
+"Registrar intermediário" (quadro "Intermediário e comissão", só interno): nome, pessoa ou empresa, contato, comissão pedida (percentual ou valor; em branco a Diretoria define) e o motivo. A Diretoria decide em "Decidir a comissão"; a aprovada entra na sobra, como a comissão do vendedor, e nunca aparece no documento do cliente. A emissão espera a decisão; mudar o intermediário ou a comissão derruba a aprovação.
+
+Unidade de execução é onde ficam os equipamentos (pode ser outro hospital). Sem ela, escolha no quadro ("Usar esta unidade") ou cadastre em Cadastros > Unidades. Equipamento conferido com número de série entra no cadastro de equipamentos da unidade (o mesmo da Assistência, da qualificação e dos certificados); série já cadastrada liga ao existente.
+
+### Viagem: origem, destino, km, pedágio e valores por estado
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+No passo 2, informe a cidade de origem (de onde sai o veículo, preenchida pela unidade) e a de destino como "Cidade/UF" e toque em "Calcular km e pedágio": primeiro o banco de rotas (rotas conferidas pela equipe), depois o cálculo automático da rota (com a chave do serviço de rotas cadastrada pelo dono) e a tabela de distâncias do Programa de conduta. A tela mostra de onde veio cada número; os números continuam editáveis. "Conferir e guardar no banco de rotas" grava a rota para as próximas propostas.
+
+Valores por estado aprovados pelo dono: km rodado pelo estado da origem (Rio de Janeiro R$ 3,00; Goiânia R$ 2,50); hotel e alimentação pelo estado do destino (RJ: hotel R$ 200, alimentação R$ 100; GO: hotel R$ 150, alimentação R$ 100). Outros estados: a Diretoria acrescenta em Metodologia; vazio usa o padrão. Propostas gravadas mantêm o que gravaram.
+
 ## Pedido aprovado e setores
 
 No pedido aprovado, toque em "Passar aos setores". A Área técnica (serviço ou contrato), Compras (produto) e o Financeiro (sempre) recebem uma atividade com prazo (2, 1 e 2 dias úteis, configuráveis) e a lista de conferência, sem valores. A atividade da Área técnica aparece também no Kanban do Cronograma de execução. Quem recebe: o escolhido na janela, o responsável configurado na Metodologia ou, em Compras, o comprador das Regras de compras (que também recebe a requisição de compra com os produtos); nos demais setores, e em Compras sem comprador na lista, o gestor da área na Caixa de decisões. O vendedor é avisado quando cada setor conclui. Pedido aprovado sem passagem há 1 dia útil entra na Caixa de decisões.
@@ -410,6 +474,9 @@ Como a equipe é pequena e nem sempre há gestor comercial, a equipe comercial m
 - Toda mudança de preço fica no "Histórico do preço" do item (no Editar): quem, quando, de quanto para quanto, inclusive pedido, aprovação, negativa e reajuste em lote.
 
 A gestão comercial e o Financeiro continuam sem esses limites.
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Como a equipe é pequena e nem sempre há gestor comercial, a equipe comercial mantém o catálogo, com estes limites (o servidor confere em toda gravação): Cadastra item novo (código, tipo, nome, descrição, unidade, categoria e preço de venda). O custo não aparece para a equipe comercial; quem cadastra o custo é a gestão comercial ou o Financeiro. No item já cadastrado, altera descrição, unidade, categoria e preço de venda. Código, nome e tipo ficam com a gestão e o Financeiro (identificam o item nas propostas); item errado: arquive e cadastre o certo. Preço nunca abaixo do custo cadastrado (a mensagem não mostra o custo). Aumento de preço grava na hora. Redução dentro da alçada grava; a alçada é a mesma do desconto nas propostas (Metodologia > Política de desconto, por vendedor ou a geral, padrão 15%; sem número configurado, 10%) e soma as reduções desde o último preço definido pela gestão, pelo Financeiro ou por reajuste. Redução acima da alçada não grava o preço: com o motivo escrito em "Motivo da mudança de preço", vira pedido "aguardando aprovação da Diretoria". O pedido entra na Caixa de decisões da gestão comercial ("Preço do item ... aguardando aprovação", sem valores), e a gestão recebe o aviso. Desde 11/11/2026 o pedido (cadastro novo ou redução) chega também na hora aos dois da Diretoria por e-mail, WhatsApp e alerta na tela, com o item, o preço, o custo, o mínimo e o motivo (evento GS06); a gestão comercial recebe pela mesma fila, no expediente. Até a decisão, as propostas usam o preço atual. Um item tem um pedido por vez. A gestão decide em Produtos e serviços > Situação "Preço aguardando aprovação" > "Decidir o preço" (o link do aviso abre a mesma janela). Desde 11/11/2026 a janela mostra a conta completa, calculada pelo servidor com a política de precificação: preço pedido, impostos (com a alíquota), comissão, custo e de onde vem (cotação do fornecedor, validade e o arquivo), sobra em R$ e %, preço mínimo (sobra mínima) e preço sugerido (margem alvo) com a diferença para o pedido, o selo (verde, laranja ou vermelho, como no quadro da proposta), os preços do banco de preços e o histórico do item. Opções, todas com a fundamentação: aprovar o preço pedido, aprovar com o sugerido, com o mínimo ou com outro preço ("Ver a conta deste preço" antes de aprovar), ou negar. Aprovar abaixo do mínimo fica marcado no histórico e as propostas com esse preço vão para a aprovação da Diretoria. Quem pediu não decide e recebe o aviso da decisão na hora (alerta na tela e e-mail). A equipe comercial não exclui item: arquiva (sai da escolha das propostas novas; as antigas ficam como estão). Reativar é da gestão comercial ou do Financeiro. Toda mudança de preço fica no "Histórico do preço" do item (no Editar): quem, quando, de quanto para quanto, inclusive pedido, aprovação, negativa e reajuste em lote.
 
 ### Reajuste de preços (Diretoria e Administrador)
 
@@ -550,6 +617,9 @@ Em 26/10/2026 o histórico do CRM usado até 22/10/2026 entrou no Comercial do S
 - "Reativar um item arquivado é da gestão": peça à gestão comercial ou ao Financeiro.
 - "Não foi possível excluir ... já foi ao cliente": use "Cancelar proposta" com o motivo; ela sai do funil e fica no histórico.
 - "A proposta ... foi excluída em ...": alguém excluiu (a mensagem diz quem, quando e o motivo); atualize a lista e, se a oportunidade continua, faça "Nova proposta".
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Onde ficam o Kanban e o Gantt? No menu do computador continuam os atalhos "Kanban do funil" e "Gantt comercial", que abrem Oportunidades já no modo certo. Dentro de Oportunidades, use os botões "Quadro (Kanban)" e "Gantt" do topo. No celular, entre em Oportunidades e toque no modo. "Completar quem ganhou" diz que já está registrado e não é trocado. É a regra: o que foi informado não se sobrescreve. Peça à gestão comercial para desconsiderar o preço no Banco de preços e registrar o certo. O quadro "Preço proposto × ganho ou perdido" está vazio. Ele só conta propostas decididas. Escolha "Todo o histórico" ou inclua o CRM antigo (que entra depois da carga do Banco de preços). "Ainda não dá para mover" (quadro ou ficha): falta algo exigido pela metodologia para sair da etapa. A janela diz o quê e onde resolver; resolva e mova de novo. No celular o cartão não arrasta: use "Mover para". "Escolha em qual unidade é a oportunidade": o cliente tem unidades; documentos, equipamentos e pastas do SGO+ são por unidade. "A próxima ação não pode ficar no passado": o que já foi feito se registra em "Registrar contato". A busca não acha a proposta ou a oportunidade: confira o filtro "Situação" (o padrão mostra só as em andamento ou abertas); quando a busca acha itens em outras situações, a tela avisa e oferece "Ver em todas as situações". O vendedor vê só as próprias; a gestão comercial vê todas. O produto não aparece no catálogo: busque por outra palavra do nome ou pelo código; confira o tipo, a categoria e, para a gestão, a situação (o item pode estar arquivado). Toque em "Limpar" para voltar à lista completa. A proposta não ficou "Enviada": toque em "Já enviei: atualizar"; se enviou por outro meio, use "Entregue por outro meio". WhatsApp desligado na janela "Enviar documento": a janela diz o porquê (WhatsApp oficial não configurado ou modelo do documento ainda não aprovado pela Meta). Envie por e-mail enquanto isso. "Já existe o item ativo..." ao salvar um produto: outro item ativo tem o mesmo nome; edite aquele ou diferencie o nome. "Os termos e condições da contratação só são alterados pela Diretoria ou pelo Administrador": desfaça a mudança nas cláusulas (ou atualize a tela) e salve de novo; para mudar as cláusulas, peça à Diretoria. "Quem pediu não aprova o próprio desconto": a decisão é de outro gestor comercial ou da Diretoria. "O checklist de custos está incompleto": em "Custos da viagem e do frete", dê valor ou "não se aplica" com o motivo a cada linha da lista; se a política ainda não tem o valor padrão, digite o desta viagem e peça à Diretoria para preencher a política. "Sobra ... abaixo da mínima de 35% ... só a Diretoria aprova": suba o preço dos itens marcados em vermelho, reduza o desconto ou ajuste o escopo, ou peça a aprovação da Diretoria com o motivo. O gestor comercial pode negar, não aprovar. O deslocamento em item próprio não muda a sobra; a viagem diluída entra nela. "O desconto geral é maior que a soma dos serviços e produtos": o deslocamento e o frete não recebem desconto. Diminua o desconto. "A unidade emissora ... não existe": escolha Goiânia ou Rio de Janeiro no passo 2. "A política de precificação só é alterada pela Diretoria ou pelo Administrador": desfaça a mudança nesses campos (ou atualize a tela) e salve de novo. "O reajuste de preços do catálogo é da Diretoria": a gestão e o Financeiro continuam editando item por item; o lote é da Diretoria. "O catálogo ou a seleção mudou desde a prévia": toque em "Ver a prévia" de novo e aplique. "A redução ... passa da sua alçada" (catálogo): escreva o motivo em "Motivo da mudança de preço" e salve; o preço vai para a aprovação da Diretoria ou da gestão comercial. Ou reduza menos. "Ficou abaixo do custo cadastrado deste item": mantenha um preço maior; preço abaixo do custo é decisão da gestão comercial ou da Diretoria. "Reativar um item arquivado é da gestão": peça à gestão comercial ou ao Financeiro. "Não foi possível excluir ... já foi ao cliente": use "Cancelar proposta" com o motivo; ela sai do funil e fica no histórico. "A proposta ... foi excluída em ...": alguém excluiu (a mensagem diz quem, quando e o motivo); atualize a lista e, se a oportunidade continua, faça "Nova proposta".
 
 
 ## Orçamento para investimento

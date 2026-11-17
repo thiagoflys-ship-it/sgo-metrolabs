@@ -2,6 +2,11 @@
 
 Metrolabs · SGO+ · versão de 11/11/2026 (régua de prazos do chamado da representada: estudar e agendar, relatório, peça, avaliação e pedido de mais prazo) · equipe da Metrolabs
 
+## Introdução
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Metrolabs · SGO+ · versão de 11/11/2026 (régua de prazos do chamado: estudar e agendar, relatório, peça, avaliação e pedido de mais prazo; imagens e vídeos do pedido e do chamado) · equipe da Metrolabs
+
 ## 1. Para que serve
 
 O módulo Representação é a área do SGO+ em que a empresa representada (Brasmedical) aciona a Metrolabs para atendimento técnico aos clientes finais dos equipamentos dela e acompanha cada pedido até o encerramento. Do lado da Metrolabs, o mesmo módulo reúne a fila de pedidos, as conversas com a representada, o cadastro da representada e o catálogo de modelos. O pedido aceito vira chamado da Assistência técnica, com a marca da representada, e segue a triagem, a agenda, a O.S., o aplicativo do técnico e o relatório de sempre.
@@ -23,6 +28,32 @@ O módulo Representação é a área do SGO+ em que a empresa representada (Bras
 4. Catálogo de modelos: a própria representada cadastra os modelos dela (seção 10.1). A Metrolabs também pode incluir em Representação > Catálogo de modelos (código, nome, tipo de equipamento, família, garantia em meses e, se houver, o padrão do número de série).
 5. Assistência técnica > Regras da assistência > Representação: marque quem responde pela conta da representada. Sem ninguém marcado, vale quem faz a triagem.
 6. Administração > Usuários: crie as contas da representada.
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+2. Prazos (configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), prazo de atendimento do chamado em 1710 minutos úteis (3 dias úteis, decisão de 11/11/2026), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis. A tela mostra o que o número quer dizer ("= 3 dias úteis"); um dia de expediente tem 570 minutos.
+
+## Régua de prazos do chamado da representada (11/11/2026)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Decisão do dono (11/11/2026): o chamado da representada não tem um prazo único; anda por etapas, cada uma com quem responde e até quando (dias úteis do expediente da Metrolabs; o tempo com o cliente final não conta).
+
+1. Estudar o caso e agendar (Metrolabs): da abertura do chamado até o atendimento agendado; padrão 3 dias úteis. Cumprida ao ir para "Agendado" (ou quando o estudo conclui que precisa de peça).
+
+2. Relatório do atendimento (Metrolabs): depois de cada atendimento realizado, 2 dias úteis para gerar o relatório do atendimento na versão da representada (ficha do chamado > Relatórios do atendimento > "Gerar a versão da representada").
+
+3. Peça (representada): no "Aguardando peça", a representada informa a data prevista de chegada; enquanto não informa, a pendência é dela e o prazo da Metrolabs fica pausado (aviso RP09 e lembrete). Se ela informar por outro canal, a Metrolabs registra em nome dela. A Metrolabs registra a chegada da peça; o chamado volta para "Planejado".
+
+4. Avaliação depois da peça (Metrolabs): 2 dias úteis da chegada até novo atendimento, conclusão ou "Registrar a avaliação (próximo passo)".
+
+5. Pedir mais prazo: em qualquer etapa da Metrolabs, com motivo e nova data; a representada aceita (vale a nova data) ou recusa com motivo (segue o prazo vigente). Repetível; tudo no histórico e no A4.
+
+Onde: caixa "Régua de prazos" na ficha do chamado (Assistência técnica > chamado > Representação) e na ficha da representada; cartões do Kanban e Gantt ("Régua: etapa · até ..."); relatório A4 do atendimento (versões da representada e interna). Prazos configuráveis em Representação > Representadas.
+
+Quem age: na Metrolabs, a gestão da área Técnica e quem responde pela representação; na representada, o administrador e os atendentes.
+
+Avisos: RP09 (previsão da peça, à representada), RP10 (pedido de mais prazo, à representada), RP11 (resposta da representada, à Metrolabs), RP12 (etapa a 75% ou vencida; representada sem previsão há 1 dia útil).
+
+Na Assistência, o selo de prazo e a central seguem a etapa da Metrolabs que vale agora; com a pendência na representada, "pausado". Chamados abertos antes da régua não ficam falsamente vencidos: a etapa 1 conta até o agendamento registrado no histórico.
 
 ## 4. Painel: o que cada perfil vê e como cada número é contado
 
@@ -190,6 +221,40 @@ A central de pendências lista também o chamado com a pendência na representad
 - Parte "Representação" na ficha do chamado: protocolo, enquadramento pretendido, relato completo (código de erro, risco, o que já foi tentado), contato no local, arquivos e número de mensagens.
 - Linha do tempo com três públicos: interno (sem marca), representada e cliente final. O que é registrado para o cliente final aparece também para a representada.
 - **Ligar à representada (03/11/2026):** chamado comum que a representada pediu (por exemplo, urgência atendida antes) é ligado a ela na ficha do chamado, botão "Ligar à representada" (mesma lista restrita do item 5.1). Pede a representada, o protocolo dela (se houver) e o motivo (pelo menos 10 letras). Depois de ligado, a representada vê e acompanha o chamado, com quem ligou, quando e o motivo, e recebe e-mail. Chamado que já é de uma representada não muda de representada. Se a escolha ficou errada, só o **Administrador desliga** (botão "Desligar da representada" na parte Representação da ficha, com motivo): a representada deixa de ver o chamado e tudo dele (documentos da versão dela, arquivos, mensagens, fotos liberadas só para ela e os registros da linha do tempo feitos para ela, que voltam a ser internos) e recebe o aviso; a próxima representada ligada não herda nada disso; depois, quem está na lista liga à representada certa. Chamado que nasceu de pedido da representada não é desligado (cancele com o motivo, se for o caso).
+
+## Prazo de atendimento do chamado da representada (11/11/2026)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Decisão do dono: depois do aceite, a Metrolabs tem 3 dias úteis para estudar o caso e agendar o atendimento.
+
+O chamado que nasce do pedido da representada grava como prazo de atendimento o prazo da representada (Representação > Representadas > "Prazo de atendimento do chamado", padrão 1710 minutos úteis = 3 dias úteis), com a fonte "Prazo da representada". O prazo da Assistência pela prioridade (P1 = 4 h úteis etc.) não vale para ele; a prioridade continua decidindo o prazo da triagem, que nunca passa do prazo de atendimento.
+
+Trocar a prioridade na triagem mantém o prazo da representada. Chamado comum ligado depois à representada (urgência atendida antes) mantém o prazo com que nasceu.
+
+Mudar o prazo na representada vale para os chamados aceitos dali em diante (e na troca de prioridade); os já abertos ficam com o prazo gravado.
+
+Telas e documentos da Representação mostram o prazo em dias úteis quando ele é um número inteiro de dias de expediente ("3 dias úteis" em vez de "28 h 30 min úteis").
+
+Atenção: o SGO+ conta esse prazo até a conclusão do atendimento (como todo prazo de atendimento da Assistência), não até o agendamento.
+
+## Imagens e vídeos do pedido e do chamado (11/11/2026)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+A galeria "Imagens e vídeos" fica no pedido (Representação > Pedidos), na ficha do chamado da Assistência técnica (parte "Representação") e, para a representada, na ficha do pedido ou do chamado. No chamado, junta o que foi anexado no chamado e no pedido que o originou.
+
+Miniatura da imagem e player do vídeo; toque para ver grande ou assistir, passar para a anterior ou a próxima e baixar. Vídeo MOV de iPhone pode não tocar no Windows: use Baixar.
+
+Limites: imagens JPG, PNG ou WEBP, até 10 por envio, reduzidas no aparelho para até 2 MB (mais uma cópia reduzida para miniatura e relatório A4); vídeo MP4, MOV, WEBM ou 3GP, um por envio, até 100 MB; até 60 imagens e vídeos por pedido ou chamado.
+
+Por que o vídeo tem rota própria: pelo canal comum das telas ele ia em texto (base64) e, no servidor, virava uma lista de números de cerca de 40 vezes o tamanho do arquivo; 25 MB já chegavam ao limite de memória e o vídeo de 50 MB derrubava o processo. Agora o vídeo sobe direto para o disco (com barra de progresso) e o sistema só confere e registra. No Novo pedido, o vídeo sobe logo depois do pedido.
+
+Quem anexa: a representada (administrador, atendente e financeiro de garantia; Leitura só consulta) nos pedidos e chamados dela, e a equipe da Metrolabs que vê o chamado. A Metrolabs pode marcar "Só para a Metrolabs" (a representada não vê). Pedido recusado ou cancelado e chamado encerrado ou cancelado não recebem anexo da representada; num pedido aceito, o envio vai para o chamado.
+
+Avisos: a representada anexou, o responsável pela representação e o técnico do chamado recebem (RP05); a Metrolabs anexou sem a marca, a representada recebe por e-mail (RP06). A linha do tempo registra cada envio.
+
+Retirar: quem enviou (ou o administrador da representada, nas da empresa dele; na Metrolabs, quem administra a representação) retira com motivo. O registro e o arquivo ficam guardados; a representada deixa de abrir o arquivo.
+
+Relatórios A4: as imagens da galeria entram nas fotos do relatório do atendimento (versão interna: todas; versão da representada: só as que ela vê; versão do cliente: nenhuma). Os vídeos aparecem na lista de documentos do atendimento.
 
 ## 9. O que a representada vê e o que nunca vê
 

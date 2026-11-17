@@ -86,7 +86,8 @@ O valor total do orçamento escolhido define quem aprova (Regras de compras):
 
 Quem pediu nunca aprova a própria compra. Acima da faixa do comprador, quem lançou ou escolheu orçamento também não aprova. A Diretoria pode aprovar qualquer faixa.
 
-A compra fica "Aguardando aprovação" e entra na Caixa de decisões do aprovador, com prazo de 1 dia útil (urgência crítica: no mesmo dia). A decisão é tomada na ficha da compra: a Caixa mostra, cobra pela escada (e-mail da manhã, depois o resumo do WhatsApp da gestão e, parada, a Diretoria) e leva até a ficha. Na faixa do comprador, o item aparece no Início dos compradores.
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+A compra fica "Aguardando aprovação" e entra na Caixa de decisões do aprovador, com prazo de 1 dia útil (urgência crítica: no mesmo dia). Desde 11/11/2026 o pedido de aprovação chega na hora aos dois da Diretoria (e ao gestor ou comprador que aprova, no expediente) por e-mail, WhatsApp e alerta na tela, com o fornecedor, o total, a faixa e as justificativas (evento GS06). A decisão é tomada na ficha da compra: a Caixa mostra, cobra pela escada (e-mail da manhã, depois o resumo do WhatsApp da gestão e, parada, a Diretoria) e leva até a ficha. Na faixa do comprador, o item aparece no Início dos compradores.
 
 "Aprovar" (observação opcional): o comprador recebe a atividade "Fazer o pedido de compra" (crítica: no mesmo dia; demais: 1 dia útil) e o aviso no sistema e no resumo de e-mail. "Reprovar" exige o motivo: a compra volta para cotação, o comprador recebe o motivo no sistema e a atividade "Rever a cotação". Orçamento vencido não é aprovado: reprove com o motivo para o comprador pedir a revalidação.
 

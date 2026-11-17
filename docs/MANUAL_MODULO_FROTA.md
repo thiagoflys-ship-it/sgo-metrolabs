@@ -244,7 +244,8 @@ Lançamento "a conferir" ou "divergente" fica fora da média de consumo. Interva
 ### Responder um abastecimento pendente (condutor)
 
 1. Abra a aba "Abastecimentos e despesas" (no celular, "Resolver agora" no aviso da tela inicial da Frota).
-2. Em "Comprovantes pedidos a você": se abasteceu, preencha e anexe a nota em "Enviar comprovante"; se não abasteceu, toque em "Não abasteci" e escreva o motivo.
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+2. Em "Comprovantes pedidos a você": se abasteceu, preencha e anexe a nota em "Enviar comprovante"; se não abasteceu, toque em "Não abasteci", escreva o motivo no campo que aparece logo abaixo (mínimo de 15 caracteres) e toque em "Confirmar Não abasteci". Se quem abasteceu foi outra pessoa, escreva quem foi e o dia.
 3. A próxima retirada fica livre na hora.
 
 ### Obrigatoriedade do abastecimento (gestão, no topo da aba)

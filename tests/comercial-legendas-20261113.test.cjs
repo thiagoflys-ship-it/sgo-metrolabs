@@ -65,7 +65,16 @@ test('2. nenhuma regra de conta mudou: os arquivos do servidor do Comercial são
   const arquivos = fs.readdirSync(BASE).filter((f) => /^SGO_Comercial_.*\.js$/.test(f));
   assert.ok(arquivos.length > 10);
   // 13/11/2026 (noite): SGO_Comercial_Precificacao.js mudou só na diária (a empresa não paga): coberto por comercial-diaria-20261113
-  for (const f of arquivos.filter((x) => x !== 'SGO_Comercial_Precificacao.js')) assert.equal(ler(f), fs.readFileSync(path.join(BASE, f), 'utf8'), f + ' mudou');
+  // 17/11/2026 (decisão do dono: corrigir a ordem do catálogo oficial): em SGO_Comercial_CatalogoOficial.js só a posição da calibração de
+  // centrífuga (CAL-011) mudou: o número fixo 13 caía entre as etapas QUA-001-QO e QUA-001-QD; agora a posição vem do código (logo
+  // depois de QUA-003). A igualdade continua para todo o resto do arquivo: desfeito esse trecho, o arquivo tem de ser o da base.
+  // Preços, códigos e a ordem nova são conferidos em comercial-catalogo-oficial.test.cjs.
+  const CAT = 'SGO_Comercial_CatalogoOficial.js';
+  const trechoOrdem = new RegExp(String.raw`  // 17/11/2026 \(decisão do dono\): a posição vem do código[^\n]*\n[^\n]*\n` +
+    String.raw`  var posCal011 = L\.length;\n  for \(var iCal = 0;[^\n]*\n  L\.splice\(posCal011, 0, `);
+  assert.match(ler(CAT), trechoOrdem, 'trecho da ordem do CAL-011');
+  assert.equal(ler(CAT).replace(trechoOrdem, '  L.splice(13, 0, '), fs.readFileSync(path.join(BASE, CAT), 'utf8'), CAT + ' mudou além da ordem do CAL-011');
+  for (const f of arquivos.filter((x) => x !== 'SGO_Comercial_Precificacao.js' && x !== CAT)) assert.equal(ler(f), fs.readFileSync(path.join(BASE, f), 'utf8'), f + ' mudou');
 });
 
 // ---------------------------------------------------------------- navegador (página completa)

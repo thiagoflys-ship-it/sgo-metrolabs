@@ -90,3 +90,12 @@ A cobrança do atraso é feita no sistema (janela, faixa do topo e lista de pend
 - Kanban é um quadro com uma coluna por situação; Gantt mostra cada atividade como uma barra do início à previsão de entrega. Agenda sem atividade no período diz isso e sugere as setas para ver outros períodos.
 - No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
 - A janela "Atividade com prazo vencido" continua sem fechar pelo voltar: peça nova data ou conclua.
+
+## Diretoria: lembrete, sem justificativa (11/11/2026)
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Para a Diretoria (perfil Diretoria e o dono), por decisão do dono de 11/11/2026, a atividade com a previsão vencida não abre a janela obrigatória de pedir nova data e não pede justificativa. Ela vira lembrete: um aviso discreto na tela (que não bloqueia), o selo de lembrete no menu e a linha no resumo diário da Diretoria. Não há e-mail de atraso nem cobrança da SEDNA para a Diretoria.
+
+No detalhe da atividade aparece "Lembrete: a previsão desta atividade passou", com dois botões: "Remarcar a data" (escolhe a nova data; a observação é opcional; fica no histórico como replanejamento e não conta como justificativa) e "Já terminei: concluir".
+
+Para os demais perfis nada mudou: a janela de pedir nova data ou concluir continua igual. A regra segue a chave "Resumo diário da Diretoria" em Caixa de decisões > Regras e responsáveis (padrão ligada).

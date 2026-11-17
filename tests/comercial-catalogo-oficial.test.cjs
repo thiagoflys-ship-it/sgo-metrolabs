@@ -473,3 +473,20 @@ test('revisão: escopo para a execução sem o motivo comercial do ajuste; conco
   assert.match(amb.api('s_dora', 'salvarProduto', { id: p.ID, codigo: 'CAL-001', nome: p.NOME, tipo: 'SERVICO', preco: '80,00' }).message, /Catálogo oficial > Editar/);
   assert.equal(prodCod(amb, 'CAL-001').PRECO, 75.5);
 });
+
+// ---------------------------------------------------------------- ordem (17/11/2026)
+// Decisão do dono (17/11/2026): corrigir a ordem do catálogo oficial. A calibração de centrífuga (CAL-011) era inserida na posição
+// fixa 13, escrita antes das 9 etapas QI/QO/QD avulsas; com elas, caía entre QUA-001-QO e QUA-001-QD. Agora vem logo depois de
+// QUA-003 (a ordem de antes das etapas). Só a ordem mudou: os mesmos 35 itens, e os preços seguem conferidos na implantação acima.
+test('ordem do catálogo oficial: calibração de centrífuga logo depois de QUA-003, nunca no meio das etapas da autoclave', () => {
+  const amb = amb0();
+  const cods = amb.ctx.ComCat_definicoes_().map((d) => d.codigo);
+  assert.equal(cods.length, 35);
+  assert.equal(new Set(cods).size, 35, 'sem código repetido');
+  assert.equal(cods.indexOf('CAL-011'), cods.indexOf('QUA-003') + 1);
+  ['QUA-001', 'QUA-002', 'QUA-005'].forEach((q) => {
+    const i = cods.indexOf(q);
+    assert.deepEqual(Array.from(cods.slice(i, i + 4)), [q, q + '-QI', q + '-QO', q + '-QD'], 'etapas de ' + q + ' juntas e em ordem');
+  });
+  assert.equal(amb.ctx.ComCat_defCodigo_('CAL-011').preco, 194.23);
+});

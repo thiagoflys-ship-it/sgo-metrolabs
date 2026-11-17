@@ -330,7 +330,12 @@ test('casca: núcleo e componentes idênticos ao COMMAND, menu, includes na orde
   if (fs.existsSync(path.join(cmd, 'AssistenteNucleo.js'))) {
     const igual = (x, y) => fs.readFileSync(x, 'utf8').replace(/\r\n/g, '\n') === fs.readFileSync(y, 'utf8').replace(/\r\n/g, '\n');
     assert.ok(igual(path.join(pastaLegado, 'SGO_AssistenteNucleo.js'), path.join(cmd, 'AssistenteNucleo.js')), 'núcleo diferente do COMMAND');
-    assert.ok(igual(path.join(pastaLegado, 'AssistenteWidget.html'), path.join(cmd, 'AssistenteWidget.html')), 'componente diferente do COMMAND');
+    // 17/11/2026 (pedido do dono: "a I.A para o manual mais eficaz ajudando a buscar e entender o erro"): o componente do SGO+ ganhou
+    // a explicação de mensagem de erro (tipo ERRO), o último erro da tela ("Entender esta mensagem"), "a quem perguntar" no "não sei"
+    // e o aviso das correções de digitação. Com o COMMAND descontinuado (27/10/2026), a cópia dele não é mais a referência do
+    // componente: o que o componente tem de manter está aqui e em tests/assistente-ia-eficaz-20261117.test.cjs. O núcleo segue igual.
+    const comp = fs.readFileSync(path.join(pastaLegado, 'AssistenteWidget.html'), 'utf8');
+    for (const t of ['Tire sua dúvida', 'Isso resolveu?', 'Abrir esta tela', 'Falar com o administrador', 'r.tipo === "ERRO"', 'Entender esta mensagem', 'quemPerguntar', 'montarPainel: montarPainel']) assert.ok(comp.includes(t), 'componente: ' + t);
     // 17/11/2026 (falhas antigas): o COMMAND foi descontinuado pelo dono em 27/10/2026 ("esquece o command, não vamos dar seguimento";
     // memória project_command_descontinuado_20261027). O balão do SGO+ seguiu sozinho: ordem cronológica (09/11), Voltar fixo (11/11) e
     // documentos no bate-papo (16/11), publicados só no SGO+ (e RH360). A cópia local do COMMAND parou em 6b41926 e não é mais a referência;

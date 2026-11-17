@@ -1,5 +1,35 @@
 # Manual do Operador — Módulo Cadeia de Frio
 
+## Onde começar
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Abra Biblioteca de POPs, escolha o equipamento e consulte o procedimento. Em Novo ensaio, selecione cliente, unidade e equipamento e confirme o perfil.
+
+## Como registrar e conferir
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Importe o arquivo do registrador, confira sensores e período na prévia e informe os horários reais. Confira separadamente distribuição, abertura de porta, queda de energia e autonomia, conforme os estudos executados.
+
+## Quando aparece Inconclusivo
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Se um evento começar com sensor fora da faixa, conserve as leituras e os horários. A retenção térmica pode ficar inconclusiva. Corrija um horário apenas se houver evidência de erro de registro. Confira a conferência dos dados para distinguir um estudo inconclusivo de um erro que impede a emissão.
+
+## Emitir e localizar
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Use as seções 5 e 6 do formulário para gerar a planilha e o relatório. Envie para aprovação ou emita conforme sua permissão. Na entrada, Quadro de relatórios mostra os últimos relatórios em Kanban. Use Lista para incluir planilhas e busque por número, cliente ou TAG.
+
+## Atividades do módulo
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Abra Atividades do módulo para acompanhar o Kanban de tarefas da Cadeia Fria. Use Nova atividade neste módulo para registrar a tarefa e definir responsável e prazo. Para ver os documentos emitidos, abra Quadro de relatórios.
+
+## Tire sua dúvida
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Abra Tire sua dúvida com Cadeia Fria na tela. Pergunte, por exemplo, “Onde baixo o POP de ultrafreezer?”, “Por que a queda de energia ficou inconclusiva?” ou “Como encontro um relatório pelo TAG?”.
+
 ## O que mudou em 22/10/2026 (arquivo com várias abas e conferência na tela)
 
 - **Arquivo com uma aba por estudo.** O arquivo do registrador pode ter uma aba para cada estudo (por exemplo, "Ensaio 24h", "Porta Aberta" e "Queda de Energia"). Antes só a primeira aba era lida, e o estudo de porta ou de energia acusava "O início do evento informado não está dentro das leituras do arquivo". Agora todas as abas com leituras entram: a prévia mostra o período de cada aba e cada estudo usa a aba que contém o seu horário. Abas com o mesmo horário são recusadas, com o período de cada uma. A aba que é cópia exata de um trecho de outra (mesmos horários e mesmas leituras, como "Porta Aberta" copiada da aba de 24 h) é aceita, e o estudo usa a aba maior; basta uma leitura diferente para a recusa continuar.
@@ -8,6 +38,9 @@
 - **Horário fora das leituras:** a mensagem mostra o período importado (de cada aba) e a leitura mais próxima do horário digitado, com a distância (por exemplo, "10 min antes").
 - **Conferência enquanto preenche.** A tela confere os dados sem gerar nada: justificativa em branco aparece na hora, ao lado do campo; horários, sensores e registrador são conferidos pelo servidor logo depois de cada alteração e depois da prévia. Cada problema aparece em vermelho ao lado do campo e no quadro **Conferência dos dados**, acima do resultado, com o que fazer.
 - **Registrador vencido:** a mensagem diz a data do ensaio, a validade e o caminho: menu **Calibração › Padrões de referência**, procure o registrador, toque em **Editar** e atualize o número do certificado, a validade e o PDF do certificado novo. Se o certificado não foi renovado antes do ensaio, o ensaio precisa ser repetido com registrador calibrado. Havendo mais de um cadastro da mesma identificação, vale o válido na data do ensaio.
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Cada problema aparece em vermelho ao lado do campo e no quadro Conferência dos dados, acima do resultado, com o que fazer. Registrador vencido: a mensagem diz a data do ensaio, a validade e o caminho: menu Calibração › Padrões de referência, procure o registrador, toque em "Novo certificado", anexe o PDF do certificado novo e leia com IA; confira número, data da calibração e validade e salve. Se o certificado não foi renovado antes do ensaio, o ensaio precisa ser repetido com registrador calibrado. Havendo mais de um cadastro da mesma identificação, vale o válido na data do ensaio.
 
 ## O que mudou em 21/10/2026 (revisão completa no molde da autoclave)
 
@@ -23,6 +56,9 @@
 - **Não existe mais "aprovado com observação" na tela.** Saída da faixa dentro da tolerância continua aprovada e aparece em Observações. Estudo sem critério (porta ou energia sem tempo-alvo, autonomia sem mínimo) é informativo e não aprova nem reprova os outros.
 - **Norma na edição certa:** ABNT NBR 16328:2024 (3ª edição), Anexo G. A temperatura cinética média (MKT) aparece como informação, sem critério.
 - **Novos campos:** "Autonomia mínima exigida" (caixa térmica), "Grandezas e estudos não realizados" (umidade, abertura de porta e queda de energia, com o motivo), "Justificativa dos sensores desconsiderados" e a "Identificação do registrador" agora fica na seção 4.
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Documentos novos, todos em A4, salvos na pasta do equipamento (Cadeia de Frio - Laudos / CNPJ do cliente / TAG - tipo / Qualificação): Relatório de ensaio (seção 6, retrato): resultado de cada estudo, critérios com a fonte, gráficos, análise e conclusões. Planilha de dados (seção 5, A4 deitado): quadro-resumo dos critérios, estatísticas, gráficos, memória de cálculo e as leituras do registrador folha a folha. Relatório de qualificação do equipamento (seção 8): consolida os relatórios de ensaio emitidos e a lista de verificação da instalação; a validade aparece na ficha do equipamento, no QR code e nas pendências de requalificação. Aprovação do responsável técnico. Quem não é responsável técnico envia para aprovação (seção 7). O responsável técnico confere a prévia e emite, ou devolve com o motivo. Emitir de novo o mesmo número gera a revisão seguinte; a anterior fica guardada. A conferência distingue erros de dados que impedem a emissão de estudos inconclusivos. O rascunho mostra a lista do que corrigir: leitura impossível, sensor parado, pico isolado, leitura faltando, lacuna, registrador sem cadastro ou vencido, horário do evento ou do fim da rampa fora dos dados, sensor desmarcado sem justificativa, umidade ou estudo não feito sem justificativa. Desvio do método. Duração menor que 24 h, intervalo de leitura maior que 60 s (distribuição) ou 10 s (porta e energia), menos de 5 min de monitoramento depois do evento e menos sensores que o mínimo aparecem como "Desvio do método" no documento. Não mudam o resultado. Não existe mais "aprovado com observação" na tela. Saída da faixa dentro da tolerância continua aprovada e aparece em Observações.
 
 ## O que mudou em 18/10/2026
 
@@ -369,6 +405,9 @@ O sistema sugere 12 sensores (3 em equipamento com menos de 60 L, 12 no equipame
 | "Os dados mudaram desde o rascunho" | Algo mudou na tela ou no cadastro depois do rascunho | Toque em "Gerar rascunho" de novo |
 
 ---
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+"O registrador ... não está no cadastro de padrões" ou "estava vencido" | Identificação digitada diferente do cadastro, ou certificado vencido na data do ensaio | Corrija a identificação na seção 4. Se o certificado foi renovado antes do ensaio: menu Calibração › Padrões de referência, procure o registrador, toque em "Novo certificado", anexe o PDF, leia com IA, confira número e validade e salve. Sem renovação, o ensaio precisa ser repetido
 
 ## 15. Glossário
 
