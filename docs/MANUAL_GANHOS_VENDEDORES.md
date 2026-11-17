@@ -11,17 +11,25 @@ Menu: **Ganhos dos vendedores**. O botão aparece para o vendedor com contrato o
 ## 2. Regras do cálculo (decisões do dono, 12/11/2026)
 
 - **Base de cálculo: o valor recebido.** Só conta quando o cliente paga, pelo mês da data em que o dinheiro entrou na conta.
-- **Faixa cheia.** A faixa atingida no mês vale sobre todo o recebido no mês. Exemplo com o contrato da Mônica: até R$ 30.000,00 = 2%; acima de R$ 30.000,00 até R$ 60.000,00 = 3%; acima de R$ 60.000,00 até R$ 80.000,00 = 4%; acima de R$ 80.000,00 = 5%. Quem recebe R$ 50.000,00 no mês ganha 3% sobre os R$ 50.000,00, ou seja, R$ 1.500,00.
-- **"Até" inclui o próprio valor.** R$ 30.000,00 ainda é 2%; R$ 30.000,01 já é 3%.
+- **Faixa cheia.** A faixa atingida no mês vale sobre todo o recebido no mês, e não só sobre a parte que passou do limite da faixa anterior.
+- **"Até" inclui o próprio valor.** O recebido igual ao limite da faixa fica nela; um centavo acima já vai para a faixa seguinte.
 - **Período mensal.** O mês em andamento aparece como parcial; a conferência abre no dia 1º do mês seguinte.
 - **Arredondamento em centavos**, valores em formato brasileiro (R$ 1.234,56).
 - **Contrato por vendedor**, com faixas e mês de início. Contrato novo vale do mês de início em diante e não altera mês já fechado.
+
+### Exemplo com o contrato da Mônica (Financeiro e Diretoria)
+
+<!-- assistente: acesso=sigilo_diretoria -->
+O contrato de cada vendedor é sigiloso: este exemplo fica só com a lista de sigilo do Financeiro e a Diretoria. Contrato da Mônica: até R$ 30.000,00 = 2%; acima de R$ 30.000,00 até R$ 60.000,00 = 3%; acima de R$ 60.000,00 até R$ 80.000,00 = 4%; acima de R$ 80.000,00 = 5%. Quem recebe R$ 50.000,00 no mês ganha 3% sobre os R$ 50.000,00, ou seja, R$ 1.500,00. R$ 30.000,00 ainda é 2%; R$ 30.000,01 já é 3%. No cadastro do contrato, o botão **"Usar o modelo da negociação da Mônica"** preenche essas faixas.
 
 ## 3. De onde vem o recebido
 
 O recebimento é lançado pelo Financeiro, ligado a uma proposta aprovada pelo cliente. O vendedor é o responsável pela proposta no Comercial (sem ele, o responsável pela oportunidade). Recebimento sem proposta, ou de proposta sem responsável, fica **"a classificar"** e não entra em comissão de ninguém até ser ligado à proposta certa. O sistema nunca atribui recebimento a um vendedor por suposição.
 
-**Recebimentos do Omie (15/11/2026).** Na aba Recebimentos, o bloco "Recebimentos do Omie" mostra o que entrou na conta no mês, pela data do pagamento no Omie: cliente, nota ou boleto, valor recebido e retenções de impostos. Para cada recebimento aparecem as propostas aprovadas do mesmo cliente (ligadas pelo CNPJ do cadastro de clientes do SGO+), com saldo e vendedor. "Usar esta proposta" preenche o formulário de lançamento; o Financeiro confere e lança, com todas as regras acima. Sem proposta encontrada, "Preencher o formulário sem proposta" deixa o recebimento a classificar. Nada é lançado sozinho, e o mesmo recebimento do Omie não entra duas vezes (o lançamento guarda a referência do título do Omie; anulado, libera de novo). Pagamento parcial só aparece quando o recebido mais as retenções e o desconto ficam abaixo do valor do título.
+### Recebimentos do Omie (15/11/2026)
+
+<!-- assistente: acesso=sigilo -->
+Na aba Recebimentos, o bloco "Recebimentos do Omie" mostra o que entrou na conta no mês, pela data do pagamento no Omie: cliente, nota ou boleto, valor recebido e retenções de impostos. Para cada recebimento aparecem as propostas aprovadas do mesmo cliente (ligadas pelo CNPJ do cadastro de clientes do SGO+), com saldo e vendedor. "Usar esta proposta" preenche o formulário de lançamento; o Financeiro confere e lança, com todas as regras acima. Sem proposta encontrada, "Preencher o formulário sem proposta" deixa o recebimento a classificar. Nada é lançado sozinho, e o mesmo recebimento do Omie não entra duas vezes (o lançamento guarda a referência do título do Omie; anulado, libera de novo). Pagamento parcial só aparece quando o recebido mais as retenções e o desconto ficam abaixo do valor do título.
 
 ## 4. Fluxo do fechamento
 
@@ -62,7 +70,7 @@ O responsável pelo sistema pode dar ou tirar cada caixa de uma pessoa, com moti
 1. Abra **Contratos** e use o quadro "Novo contrato de ganhos".
 2. Escolha o vendedor e o mês em que o contrato começa a valer.
 3. Preencha as faixas (até que valor e percentual). A última fica sem valor final.
-4. Para a Mônica, toque em **"Usar o modelo da negociação da Mônica"**. Confira; nada é gravado antes de "Gravar o contrato".
+4. No quadro "Modelo disponível", o botão do modelo preenche as faixas da negociação mostrada no quadro. Confira; nada é gravado antes de "Gravar o contrato".
 5. Use o simulador para ver a faixa e a comissão de um valor.
 6. Se o vendedor já tem contrato, escreva o motivo da mudança e toque em **"Gravar o contrato"**.
 

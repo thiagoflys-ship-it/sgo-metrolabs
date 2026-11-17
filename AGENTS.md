@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R79, imagem
-  `sha256:4519b227afa33aba80234a2b13f7a9b2abd80f7e2b895cf626cb1beaa7960439`,
-  tag `metrolabs/rh:secullum-confronto-declaracoes-20261117-r79`.
-  Evidência: `output/rh360-20261117-r79/PUBLICADO_RH360_R79_20261117.txt`.
-  Preserva as entregas anteriores; 788 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R81, imagem
+  `sha256:6f5698b73f31b941cb2c7b2c015fdaaa44d0678b707ca4df6004244be4a19a1c`,
+  tag `metrolabs/rh:secullum-previa-data-fuso-20261117-r81`.
+  Evidência: `output/rh360-20261117-r81/PUBLICADO_RH360_R81_20261117.txt`.
+  Preserva as entregas anteriores; 792 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -914,3 +914,8 @@ RH360 R78 publicada/verificada em 17/11/2026 15:00 BRT: sha256:2ef61e9afc1e228f1
 
 RH360 R79 publicada/verificada em 17/11/2026 15:20 BRT: sha256:4519b227afa33aba80234a2b13f7a9b2abd80f7e2b895cf626cb1beaa7960439; metrolabs/rh:secullum-confronto-declaracoes-20261117-r79. Confronto somente leitura entre associacao declarada e linha explicitamente escolhida do cadastro original, com divergencias mascaradas e sem autenticar pessoa ou liberar importacao. Evidência: output/rh360-20261117-r79/PUBLICADO_RH360_R79_20261117.txt. 788 pins; backup restaurado, verificações proporcionais e pós-publicação PASS. Testes sintéticos; aceite operacional real adiado e CCT integral aberta.
 - 17/11/2026 — PUBLICADO documentos-pastas-20261117 (sha 215a897f…; base assistente-ia-20261117; candI). Documentos em 11 pastas (SGO_DocumentosPastas.js + JS_DocumentosPastas.html) no QR/prontuário, ficha de cliente/unidade/equipamento e conta de cliente. Dono aprovou: conta de cliente abre documentos emitidos do próprio prontuário (DOCP_CFG.clienteAbreProntuario). Conferido em produção: Hospital Santa Lúcia 57 docs (25 certificados, 29 PGT/POP, 3 registros), 0,4 s; 21 equipamentos com documentos. Suíte 2426/0.
+
+RH360 R80 publicada/verificada em 17/11/2026 15:59 BRT: sha256:1de44fe1cecf5e8cbf043de43db525fda294d903f0d91ef12a37fa7f8b1010e5; metrolabs/rh:secullum-confronto-pessoal-autorizado-20261117-r80. Confronto opcional e auditado de declaracoes CPF/PIS do RH com originais Secullum, somente com concessao pessoal nominal atual e sem autenticar identidade ou liberar importacao. Evidência: output/rh360-20261117-r80/PUBLICADO_RH360_R80_20261117.txt. 790 pins; backup restaurado, verificações proporcionais e pós-publicação PASS. Testes sintéticos; aceite operacional real adiado e CCT integral aberta.
+
+RH360 R81 publicada/verificada em 17/11/2026 16:13 BRT: sha256:6f5698b73f31b941cb2c7b2c015fdaaa44d0678b707ca4df6004244be4a19a1c; metrolabs/rh:secullum-previa-data-fuso-20261117-r81. Previa privada de data e hora da fonte com formato e fuso declarados, detectando ambiguidade e horarios inexistentes sem importar ou apurar ponto. Evidência: output/rh360-20261117-r81/PUBLICADO_RH360_R81_20261117.txt. 792 pins; backup restaurado, verificações proporcionais e pós-publicação PASS. Testes sintéticos; aceite operacional real adiado e CCT integral aberta.
+- 17/11/2026 — PUBLICADO assistente-manuais-20261117 (sha a01e5841…; base documentos-pastas-20261117; candJ). Manuais Painel financeiro (só lista de sigilo), Ganhos dos vendedores (quem vê a tela, GV_veTela_; contrato da Mônica e Omie só sigilo/Diretoria/dono) e Portal do cliente interno (caixa PORTAL_CLIENTE_CONTRATOS_VER; reajuste só sigilo) no assistente. 11 pares de parágrafos resolvidos pelo código. Ajuda da tela de Ganhos sem as faixas da Mônica. Suíte 2432/0. PENDENTE: mensagens de registrador vencido ainda dizem "clique em Editar" (Cadeia de Frio, Autoclave, Estufa, Lavadora + 1 ajuda) — o certo é "Novo certificado"; ver output/assistente-manuais-20261117/RELATORIO.md.

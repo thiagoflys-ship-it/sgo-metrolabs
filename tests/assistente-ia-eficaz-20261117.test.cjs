@@ -268,10 +268,15 @@ test('6. Financeiro não vaza: mensagens e manuais do Financeiro só para a list
     const r = a.P('s_tec', q);
     assert.ok(!/omie|conciliacao_caju|compras_financeiro|MANUAL_PAINEL_FINANCEIRO|MANUAL_CONCILIACAO_CAJU/i.test(tudo(r.trechos || []) + (r.fontes || []).join(' ')), q + ' ' + tudo(r));
   }
-  // os manuais do Painel financeiro e dos ganhos dos vendedores ficam fora da base geral
+  // 17/11/2026 (decisão do dono, depois deste teste): os manuais do Painel financeiro e dos ganhos dos vendedores entram na base,
+  // cada um com a regra de acesso da tela. Antes este teste exigia que ficassem fora (IGNORAR). Continua valendo, mais forte: o
+  // Painel financeiro nem entra na base geral (só na da lista de sigilo) e quem está fora da lista não recebe nada dele.
   const arqs = a.ctx.SGO_ASSIST_MANUAIS.manuais.map((m) => m.arquivo);
-  assert.ok(!arqs.includes('MANUAL_PAINEL_FINANCEIRO.md') && !arqs.includes('MANUAL_GANHOS_VENDEDORES.md'));
-  assert.ok(gerador.IGNORAR.includes('MANUAL_PAINEL_FINANCEIRO.md'));
+  assert.ok(arqs.includes('MANUAL_PAINEL_FINANCEIRO.md') && arqs.includes('MANUAL_GANHOS_VENDEDORES.md'));
+  assert.ok(!gerador.IGNORAR.includes('MANUAL_PAINEL_FINANCEIRO.md'));
+  assert.deepEqual(gerador.MAPA['MANUAL_PAINEL_FINANCEIRO.md'].acesso, ['sigilo']);
+  assert.ok(!a.ctx.SGO_Assist_base_('').trechos.some((t) => /MANUAL_PAINEL_FINANCEIRO/.test(t.id)), 'Painel financeiro fora da base geral');
+  assert.ok(a.ctx.SGO_Assist_base_('S').trechos.some((t) => /MANUAL_PAINEL_FINANCEIRO/.test(t.id)), 'Painel financeiro na base da lista de sigilo');
 });
 
 // ------------------------------------------------------------------ 7. fonte com a seção

@@ -2,7 +2,7 @@
 // Código REAL do SGO+ com o OMIE SIMULADO (tests/_financeiro_simulado.cjs, ampliado aqui com títulos, pagamentos, resumo e
 // orçamento de números conhecidos). Nada sai para a rede. Confere:
 //  E1  atividade do Financeiro invisível ao RH e à gestão fora da lista de sigilo; Conduta como antes; responsável fora da lista
-//      recusado; assistente geral sem a ajuda nem os manuais do Financeiro.
+//      recusado; assistente geral sem a ajuda nem os manuais do Financeiro (17/11/2026: o do Painel só na base da lista de sigilo).
 //  E2  as api antigas devolvem o mesmo de antes (equivalência com a cópia anterior, cand4) e a rotina usa os mesmos miolos.
 //  E3  a rotina grava a fotografia, não repete no mesmo dia, respeita o limite de páginas por rodada, não repete a mesma consulta,
 //      não disputa o Omie com a tela no expediente e o pedido "Atualizar agora".
@@ -162,12 +162,25 @@ test('E1: o assistente geral "Tire sua dúvida" não tem a ajuda nem os manuais 
     SGO_DATA: { getAll: () => [], getById: () => null, insert: (t, d) => d, update: () => true }, SGO_CFG: { SHEETS: { CAD_USUARIOS: 'CAD_USUARIOS' } } });
   const arquivos = ['SGO_Utilis.js', 'SGO_Ajuda.js'].concat(fs.readdirSync(PASTA).filter((f) => /^SGO_Ajuda_.*\.js$/.test(f)).sort(), ['SGO_EnviarDoc_Ajuda.js', 'SGO_AssistenteNucleo.js', 'SGO_AssistenteManuais.js', 'SGO_Assistente.js']);
   for (const f of arquivos) if (fs.existsSync(path.join(PASTA, f))) vm.runInContext(ler(f), ctx, { filename: f });
-  const base = ctx.SGO_Assist_base_();
-  assert.ok(base.trechos.length > 200, 'a base continua com o resto do SGO+');
-  const fin = base.trechos.filter((t) => ['omie', 'conciliacao_caju', 'compras_financeiro'].includes(String(t.modulo).split('/')[0]) || /MANUAL_(COMPRAS_FINANCEIRO|CONCILIACAO_CAJU|PAINEL_FINANCEIRO)/.test(t.id));
-  assert.equal(JSON.stringify(fin.map((t) => t.id)), '[]', 'nenhum trecho do Financeiro na base geral');
-  assert.ok(!base.trechos.some((t) => /Painel financeiro/.test(t.titulo + ' ' + t.texto) && /lista de sigilo/.test(t.texto)), 'nem texto da ajuda do Painel');
-  assert.ok(base.trechos.some((t) => t.modulo === 'deposito_viagem'), 'o Depósito de viagem (do colaborador) continua');
+  // 17/11/2026 (decisão do dono): o manual do Painel financeiro entra no assistente, só para a lista de sigilo (OMIE_SIGILO_CONTAS);
+  // Ganhos dos vendedores e Portal do cliente entram para quem abre a tela, com as partes do Financeiro marcadas "sigilo". A base
+  // GERAL (sem nível, e a da Diretoria fora da lista) continua sem nada do Financeiro; só a base da lista de sigilo ('S') tem o Painel.
+  for (const nivel of ['', 'D']) {
+    const base = ctx.SGO_Assist_base_(nivel);
+    assert.ok(base.trechos.length > 200, 'a base continua com o resto do SGO+');
+    const fin = base.trechos.filter((t) => ['omie', 'conciliacao_caju', 'compras_financeiro'].includes(String(t.modulo).split('/')[0]) || /MANUAL_(COMPRAS_FINANCEIRO|CONCILIACAO_CAJU|PAINEL_FINANCEIRO)/.test(t.id));
+    assert.equal(JSON.stringify(fin.map((t) => t.id)), '[]', 'nenhum trecho do Financeiro na base geral (' + (nivel || 'geral') + ')');
+    assert.ok(!base.trechos.some((t) => /Painel financeiro/.test(t.titulo + ' ' + t.texto) && /lista de sigilo/.test(t.texto)), 'nem texto da ajuda do Painel');
+    assert.ok(!base.trechos.some((t) => (t.acesso || []).includes('sigilo')), 'nenhuma seção marcada para a lista de sigilo');
+    assert.ok(!base.trechos.some((t) => /^man:MANUAL_(MODULO_PORTAL_CLIENTE|GANHOS_VENDEDORES)/.test(t.id) && /Painel financeiro|Recebimentos do Omie/.test(t.titulo + ' ' + t.texto)), 'nem o Painel financeiro nem os recebimentos do Omie nos manuais do Portal e dos Ganhos');
+    assert.ok(base.trechos.some((t) => t.modulo === 'deposito_viagem'), 'o Depósito de viagem (do colaborador) continua');
+  }
+  const sig = ctx.SGO_Assist_base_('S');
+  assert.ok(sig.trechos.some((t) => /^man:MANUAL_PAINEL_FINANCEIRO#/.test(t.id)), 'a lista de sigilo tem o manual do Painel financeiro');
+  assert.ok(sig.trechos.filter((t) => /^man:MANUAL_PAINEL_FINANCEIRO#/.test(t.id)).every((t) => (t.acesso || []).includes('sigilo')), 'marcado como sigilo');
+  // a ajuda das telas do Financeiro e os outros manuais do Financeiro continuam fora de todas as bases
+  assert.ok(!sig.trechos.some((t) => t.tipo !== 'manual' && ['omie', 'conciliacao_caju', 'compras_financeiro'].includes(String(t.modulo).split('/')[0])), 'ajuda do Financeiro fora');
+  assert.ok(!sig.trechos.some((t) => /MANUAL_(COMPRAS_FINANCEIRO|CONCILIACAO_CAJU)/.test(t.id)), 'outros manuais do Financeiro fora');
 });
 
 // ================================================================= E2

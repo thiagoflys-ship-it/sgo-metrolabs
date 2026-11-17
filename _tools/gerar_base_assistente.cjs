@@ -73,9 +73,31 @@ const MAPA = {
   "MANUAL_SEGURANCA_ACESSO_GESTAO.md": { tela: "seguranca_acesso", perfis: ["ADMIN", "DIRETORIA", "GESTOR"] },
   // 31/10/2026: atividades — o manual de quem executa (pedido de nova data, andamento do dia, concluir) e o da gestão (decidir o pedido)
   "MANUAL_MINHAS_ATIVIDADES.md": { tela: "minhas_atividades" },
-  "MANUAL_ATIVIDADES_GESTAO.md": { tela: "atividades_equipe", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"] }
+  "MANUAL_ATIVIDADES_GESTAO.md": { tela: "atividades_equipe", perfis: ["ADMIN", "DIRETORIA", "GESTOR", "RH", "FINANCEIRO"] },
+  // 17/11/2026 (decisão do dono): os três manuais que ficavam fora entram, cada um só para quem abre a tela correspondente.
+  // "acesso" é a regra real da tela, conferida pelo assistente na hora para cada pessoa (SGO_Assistente.js › SGO_ASSIST_ACESSO_MANUAL);
+  // quem não tem o acesso não recebe nada do manual, nem o título. Seção marcada no manual com <!-- assistente: acesso=... -->
+  // acrescenta a sua regra (ver ACESSOS). O que é "sigilo" nem entra na base de quem está fora da lista OMIE_SIGILO_CONTAS.
+  //  - Painel financeiro: só a lista de sigilo do Financeiro (o perfil Financeiro sozinho não basta).
+  "MANUAL_PAINEL_FINANCEIRO.md": { tela: "omie", acesso: ["sigilo"] },
+  //  - Ganhos dos vendedores: quem vê a tela (alguma caixa GANHOS_*, contrato de ganhos próprio ou vendedor da equipe comercial);
+  //    o contrato individual de vendedor e os recebimentos do Omie ficam em seções marcadas (sigilo_diretoria / sigilo).
+  "MANUAL_GANHOS_VENDEDORES.md": { tela: "ganhos_vendedores", acesso: ["ganhos"] },
+  //  - Portal do cliente (manual interno): quem tem a caixa PORTAL_CLIENTE_CONTRATOS_VER (conta de cliente e de representada nunca);
+  //    o reajuste dos contratos e o Painel financeiro ficam em seções marcadas "sigilo".
+  "MANUAL_MODULO_PORTAL_CLIENTE.md": { tela: "portal_cliente_contratos", acesso: ["portal_contratos"] }
 };
-/** Manuais que não são deste SGO+ (cartão financeiro do sistema antigo). */
+/** Regras de acesso aceitas no MAPA e nas marcas de seção (o assistente conhece cada uma; outra palavra é recusada aqui). */
+const ACESSOS = {
+  sigilo: "lista de sigilo do Financeiro (OMIE_SIGILO_CONTAS)",
+  sigilo_diretoria: "lista de sigilo do Financeiro ou Diretoria (e o dono do sistema)",
+  ganhos: "quem vê a tela Ganhos dos vendedores",
+  portal_contratos: "caixa PORTAL_CLIENTE_CONTRATOS_VER (Portal do cliente > Contratos de clientes)"
+};
+const MARCA_ACESSO = /<!--\s*assistente:\s*acesso\s*=\s*([a-z_,\s]+?)\s*-->/;
+/** Manuais que não são deste SGO+ (cartão financeiro do sistema antigo).
+ *  17/11/2026 (decisão do dono): Painel financeiro, Ganhos dos vendedores e Portal do cliente saíram desta lista e entraram no MAPA com
+ *  a regra de acesso de cada um (antes ficavam fora do assistente). */
 const IGNORAR = ["MANUAL_FINANCEIRO_FLASH_USO_OPERACIONAL.md", "MANUAL_USO_FIN_FLASH_V2.md"];
 const MAX_SECAO = 1800;
 
@@ -113,24 +135,41 @@ function dividir(texto) {
   return partes;
 }
 
+/** Regras de acesso de uma marca "<!-- assistente: acesso=sigilo -->" (lista separada por vírgula). */
+function acessosDaMarca(linha, arquivo) {
+  const m = MARCA_ACESSO.exec(linha);
+  if (!m) return null;
+  const l = m[1].split(",").map((x) => x.trim()).filter(Boolean);
+  l.forEach((a) => { if (!ACESSOS[a]) throw new Error(arquivo + ": regra de acesso desconhecida na marca do assistente: " + a + " (aceitas: " + Object.keys(ACESSOS).join(", ") + ")"); });
+  return l;
+}
+
 function lerManual(arquivo, conteudo) {
   const linhas = conteudo.replace(/\r\n/g, "\n").split("\n");
   let titulo = arquivo.replace(/\.md$/, "");
   const secoes = [];
-  let h2 = "", h3 = "", buf = [];
+  // 17/11/2026: a marca de acesso abaixo de um título "##" vale para a seção e as subseções dela; abaixo de "###", só para ela
+  let h2 = "", h3 = "", buf = [], acH2 = [], acH3 = [];
   const fechar = () => {
     const texto = limparMd(buf.join("\n"));
     buf = [];
     if (!texto) return;
     const t = h3 ? (h2 ? h2 + " > " + h3 : h3) : (h2 || "Introdução");
+    const acesso = acH2.concat(acH3.filter((a) => acH2.indexOf(a) < 0));
     const partes = dividir(texto);
-    partes.forEach((p, i) => secoes.push({ titulo: limparMd(t) + (partes.length > 1 ? " (parte " + (i + 1) + ")" : ""), texto: p }));
+    partes.forEach((p, i) => {
+      const s = { titulo: limparMd(t) + (partes.length > 1 ? " (parte " + (i + 1) + ")" : ""), texto: p };
+      if (acesso.length) s.acesso = acesso;
+      secoes.push(s);
+    });
   };
   for (const l of linhas) {
     let m;
     if ((m = /^#\s+(.+)$/.exec(l)) && !secoes.length && !h2) { titulo = limparMd(m[1]); continue; }
-    if ((m = /^##\s+(.+)$/.exec(l))) { fechar(); h2 = m[1].trim().replace(/^\d+(\.\d+)*\.?\s+/, ""); h3 = ""; continue; }
-    if ((m = /^#{3,6}\s+(.+)$/.exec(l))) { fechar(); h3 = m[1].trim().replace(/^\d+(\.\d+)*\.?\s+/, ""); continue; }
+    if ((m = /^##\s+(.+)$/.exec(l))) { fechar(); h2 = m[1].trim().replace(/^\d+(\.\d+)*\.?\s+/, ""); h3 = ""; acH2 = []; acH3 = []; continue; }
+    if ((m = /^#{3,6}\s+(.+)$/.exec(l))) { fechar(); h3 = m[1].trim().replace(/^\d+(\.\d+)*\.?\s+/, ""); acH3 = []; continue; }
+    const ac = acessosDaMarca(l, arquivo);
+    if (ac) { const alvo = h3 ? acH3 : acH2; ac.forEach((a) => { if (alvo.indexOf(a) < 0) alvo.push(a); }); continue; }
     buf.push(l);
   }
   fechar();
@@ -144,7 +183,12 @@ function gerar(pastaDocs) {
   for (const f of arquivos) {
     if (!MAPA[f]) continue;
     const m = lerManual(f, fs.readFileSync(path.join(pastaDocs, f), "utf8").replace(/\r\n/g, "\n"));
-    manuais.push({ arquivo: f, titulo: m.titulo, tela: MAPA[f].tela, perfis: MAPA[f].perfis || null, secoes: m.secoes });
+    const man = { arquivo: f, titulo: m.titulo, tela: MAPA[f].tela, perfis: MAPA[f].perfis || null, secoes: m.secoes };
+    if (MAPA[f].acesso) {
+      MAPA[f].acesso.forEach((a) => { if (!ACESSOS[a]) throw new Error(f + ": regra de acesso desconhecida no MAPA: " + a); });
+      man.acesso = MAPA[f].acesso.slice();
+    }
+    manuais.push(man);
   }
   const json = JSON.stringify(manuais);
   const versao = crypto.createHash("sha1").update(json).digest("hex").slice(0, 12);
@@ -155,7 +199,7 @@ function gerar(pastaDocs) {
   return { js, versao, semMapa, total: manuais.length, secoes: manuais.reduce((n, m) => n + m.secoes.length, 0) };
 }
 
-module.exports = { gerar, MAPA, IGNORAR, lerManual, limparMd };
+module.exports = { gerar, MAPA, IGNORAR, ACESSOS, lerManual, limparMd };
 
 if (require.main === module) {
   const arg = (n) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : null; };

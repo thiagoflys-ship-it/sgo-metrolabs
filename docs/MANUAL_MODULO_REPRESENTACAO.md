@@ -1,11 +1,6 @@
 # Manual do módulo Representação
 
-Metrolabs · SGO+ · versão de 11/11/2026 (régua de prazos do chamado da representada: estudar e agendar, relatório, peça, avaliação e pedido de mais prazo) · equipe da Metrolabs
-
-## Introdução
-
-<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
-Metrolabs · SGO+ · versão de 11/11/2026 (régua de prazos do chamado: estudar e agendar, relatório, peça, avaliação e pedido de mais prazo; imagens e vídeos do pedido e do chamado) · equipe da Metrolabs
+Metrolabs · SGO+ · versão de 11/11/2026 (régua de prazos do chamado da representada: estudar e agendar, relatório, peça, avaliação e pedido de mais prazo; imagens e vídeos do pedido e do chamado) · equipe da Metrolabs
 
 ## 1. Para que serve
 
@@ -23,37 +18,11 @@ O módulo Representação é a área do SGO+ em que a empresa representada (Bras
 ## 3. Primeira configuração
 
 1. Representação > Representadas > "Nova representada": nome, CNPJ, contrato, vigência, contato e prazos.
-2. Prazos (padrão do estudo, configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), prazo de atendimento do chamado (estudar o caso e agendar) em 1710 minutos úteis (3 dias úteis), relatório do atendimento em 2 dias úteis, avaliação depois da chegada da peça em 2 dias úteis (régua de prazos, seção 6.3), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis.
+2. Prazos (padrão do estudo, configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), prazo de atendimento do chamado (estudar o caso e agendar) em 1710 minutos úteis (3 dias úteis, decisão de 11/11/2026), relatório do atendimento em 2 dias úteis, avaliação depois da chegada da peça em 2 dias úteis (régua de prazos, seção 6.3), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis. A tela mostra o que o número quer dizer ("= 3 dias úteis"); um dia de expediente tem 570 minutos.
 3. Opções: consulta de CNPJ na base pública da Receita ao cadastrar cliente (ligada no padrão) e cancelamento pela representada antes da visita, com motivo (ligado no padrão).
 4. Catálogo de modelos: a própria representada cadastra os modelos dela (seção 10.1). A Metrolabs também pode incluir em Representação > Catálogo de modelos (código, nome, tipo de equipamento, família, garantia em meses e, se houver, o padrão do número de série).
 5. Assistência técnica > Regras da assistência > Representação: marque quem responde pela conta da representada. Sem ninguém marcado, vale quem faz a triagem.
 6. Administração > Usuários: crie as contas da representada.
-
-<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
-2. Prazos (configuráveis por representada): aceite do pedido em 240 minutos úteis (4 horas), prazo de atendimento do chamado em 1710 minutos úteis (3 dias úteis, decisão de 11/11/2026), alerta ao responsável a 75% do prazo, chamado sem registro em 3 dias úteis. A tela mostra o que o número quer dizer ("= 3 dias úteis"); um dia de expediente tem 570 minutos.
-
-## Régua de prazos do chamado da representada (11/11/2026)
-
-<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
-Decisão do dono (11/11/2026): o chamado da representada não tem um prazo único; anda por etapas, cada uma com quem responde e até quando (dias úteis do expediente da Metrolabs; o tempo com o cliente final não conta).
-
-1. Estudar o caso e agendar (Metrolabs): da abertura do chamado até o atendimento agendado; padrão 3 dias úteis. Cumprida ao ir para "Agendado" (ou quando o estudo conclui que precisa de peça).
-
-2. Relatório do atendimento (Metrolabs): depois de cada atendimento realizado, 2 dias úteis para gerar o relatório do atendimento na versão da representada (ficha do chamado > Relatórios do atendimento > "Gerar a versão da representada").
-
-3. Peça (representada): no "Aguardando peça", a representada informa a data prevista de chegada; enquanto não informa, a pendência é dela e o prazo da Metrolabs fica pausado (aviso RP09 e lembrete). Se ela informar por outro canal, a Metrolabs registra em nome dela. A Metrolabs registra a chegada da peça; o chamado volta para "Planejado".
-
-4. Avaliação depois da peça (Metrolabs): 2 dias úteis da chegada até novo atendimento, conclusão ou "Registrar a avaliação (próximo passo)".
-
-5. Pedir mais prazo: em qualquer etapa da Metrolabs, com motivo e nova data; a representada aceita (vale a nova data) ou recusa com motivo (segue o prazo vigente). Repetível; tudo no histórico e no A4.
-
-Onde: caixa "Régua de prazos" na ficha do chamado (Assistência técnica > chamado > Representação) e na ficha da representada; cartões do Kanban e Gantt ("Régua: etapa · até ..."); relatório A4 do atendimento (versões da representada e interna). Prazos configuráveis em Representação > Representadas.
-
-Quem age: na Metrolabs, a gestão da área Técnica e quem responde pela representação; na representada, o administrador e os atendentes.
-
-Avisos: RP09 (previsão da peça, à representada), RP10 (pedido de mais prazo, à representada), RP11 (resposta da representada, à Metrolabs), RP12 (etapa a 75% ou vencida; representada sem previsão há 1 dia útil).
-
-Na Assistência, o selo de prazo e a central seguem a etapa da Metrolabs que vale agora; com a pendência na representada, "pausado". Chamados abertos antes da régua não ficam falsamente vencidos: a etapa 1 conta até o agendamento registrado no histórico.
 
 ## 4. Painel: o que cada perfil vê e como cada número é contado
 
@@ -229,13 +198,13 @@ Decisão do dono: depois do aceite, a Metrolabs tem 3 dias úteis para estudar o
 
 O chamado que nasce do pedido da representada grava como prazo de atendimento o prazo da representada (Representação > Representadas > "Prazo de atendimento do chamado", padrão 1710 minutos úteis = 3 dias úteis), com a fonte "Prazo da representada". O prazo da Assistência pela prioridade (P1 = 4 h úteis etc.) não vale para ele; a prioridade continua decidindo o prazo da triagem, que nunca passa do prazo de atendimento.
 
-Trocar a prioridade na triagem mantém o prazo da representada. Chamado comum ligado depois à representada (urgência atendida antes) mantém o prazo com que nasceu.
+Trocar a prioridade na triagem mantém o prazo da representada.
 
 Mudar o prazo na representada vale para os chamados aceitos dali em diante (e na troca de prioridade); os já abertos ficam com o prazo gravado.
 
 Telas e documentos da Representação mostram o prazo em dias úteis quando ele é um número inteiro de dias de expediente ("3 dias úteis" em vez de "28 h 30 min úteis").
 
-Atenção: o SGO+ conta esse prazo até a conclusão do atendimento (como todo prazo de atendimento da Assistência), não até o agendamento.
+Como esse prazo é contado no chamado (etapa 1 da régua, até o atendimento agendado) e o que vem depois: seção 6.3.
 
 ## Imagens e vídeos do pedido e do chamado (11/11/2026)
 

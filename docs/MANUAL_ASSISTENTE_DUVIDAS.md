@@ -83,6 +83,12 @@ Se a informação não está nesses textos, o assistente diz que não encontrou,
 
 O Financeiro é sigiloso: a ajuda e os manuais do Financeiro (o painel, a conferência e o a pagar de Compras, a Conciliação Caju) e o que fala do Omie não entram nas respostas de quem está fora da lista de sigilo do Financeiro.
 
+Desde 17/11/2026, alguns manuais respondem só a quem abre a tela correspondente, e quem não abre a tela não recebe nada deles, nem o título:
+
+- **Ganhos dos vendedores:** quem vê a tela Ganhos dos vendedores (o Financeiro, a Diretoria, quem tem uma caixa dos ganhos e o vendedor com contrato ou da equipe comercial). O contrato de comissão de um vendedor fica só com a Diretoria e o Financeiro autorizado; o vendedor lê a parte de uso da tela.
+- **Portal do cliente (manual interno):** quem tem a caixa «Ver contratos de clientes». A parte do reajuste dos contratos fica com o Financeiro autorizado e a Diretoria. A conta de cliente não usa o assistente.
+- O manual do Financeiro responde só a quem está autorizado a ver o Financeiro.
+
 ## 5. O seu perfil
 
 O assistente sabe com qual perfil você entrou e ensina só o que esse perfil pode fazer. Quando a tarefa é de outro perfil, a resposta diz quem faz e como pedir. Exemplo: o ajuste de KM de um veículo é feito pela gestão; quem não é da gestão recebe a orientação de avisar a gestão, que confere e ajusta com o motivo registrado.

@@ -249,6 +249,7 @@ Além do e-mail, cada contrato na régua aparece na **central de pendências** e
 
 ## 17. Reajuste automático com os índices do Banco Central
 
+<!-- assistente: acesso=sigilo -->
 **Índices:** IPCA (série 433), INPC (188), IGP-M (189) e IPCA-E (10764), da API pública do Banco Central (Sistema Gerenciador de Séries Temporais). A rotina consulta uma vez por dia e grava cada mês em FIN_INDICES_ECONOMICOS, com o endereço consultado e a data da coleta. Sem internet, o sistema usa o último valor gravado e diz isso na tela. Nada é estimado: mês que o Banco Central ainda não publicou deixa o reajuste "aguardando o índice".
 
 **Cálculo:**
@@ -280,10 +281,14 @@ Aba **Representadas**. Cada representada mostra a vigência do cadastro, a ficha
 | Cadastros > Clientes > Dados | "Contrato e Portal do cliente": situação, selo "contrato a cadastrar", objeto, serviços e renovação. Sem valores |
 | Assistência técnica > ficha do chamado | "Contrato do cliente": cobertura, serviços e frequência, prazos do contrato (SLA) e a renovação. Sem valores. Qualquer pessoa da equipe vê |
 | Comercial | Oportunidade de renovação pela régua (sem duplicar), tarefa em Minhas atividades, pendências na área Comercial e a carta de reajuste |
-| Painel financeiro | Aba "Reajustes de contratos": índices do mês, acumulados de 12 meses, contratos a reajustar, valor atual e novo, a partir de quando faturar, aprovação e faturado |
 | Portal do cliente (Meus chamados) | "Meu contrato com a Metrolabs": número, objeto, serviços, unidades, vigência e o aviso de renovação a partir de 90 dias. Nunca valores, índice ou PDF |
 | Representação > Representadas | A vigência continua lá; um aviso leva à ficha do contrato |
 | Central de pendências, Caixa de decisões e relatório diário | Itens da régua (área Comercial) e a contagem dos reajustes a aprovar (Diretoria) e a faturar (Financeiro), sem valores |
+
+### 19.1 No Painel financeiro (lista de sigilo)
+
+<!-- assistente: acesso=sigilo -->
+Painel financeiro, aba "Reajustes de contratos": índices do mês, acumulados de 12 meses, contratos a reajustar, valor atual e novo, a partir de quando faturar, aprovação e faturado.
 
 ## 20. Caixas, regras e tabelas novas
 
@@ -299,11 +304,17 @@ Aba **Representadas**. Cada representada mostra a vigência do cadastro, a ficha
 |---|---|
 | A leitura pela IA está indisponível | Falta a chave da IA (GEMINI_API_KEY em Administração > Chaves e senhas). Preencha olhando o PDF; o cadastro funciona igual |
 | O cliente não recebeu o aviso de renovação | Na aba Vencimentos e reajustes, a coluna "Avisos já enviados" diz o motivo. Normalmente falta o e-mail do contato do contrato |
+| O cliente aparece com "contrato a cadastrar" | Cadastre o contrato real antes de 31/12/2026, ou marque "Revisado: sem contrato" na pré-carga |
+
+### 21.1 Problemas do reajuste (lista de sigilo)
+
+<!-- assistente: acesso=sigilo -->
+| Situação | O que fazer |
+|---|---|
 | O reajuste está "aguardando o índice" | O Banco Central ainda não publicou um mês do período. O sistema recalcula sozinho; nada é estimado |
 | O reajuste não aparece | O contrato precisa de índice do Banco Central, data-base e valor. O Painel financeiro lista os contratos que o sistema não calcula e o motivo |
 | "Você não aprova nem recusa reajustes" | Só o dono e a Diretoria aprovam, por decisão do dono. Peça a eles em Painel financeiro > Reajustes de contratos |
 | A carta de reajuste não sai | Ela sai só depois da aprovação da Diretoria, e com a caixa de valores |
-| O cliente aparece com "contrato a cadastrar" | Cadastre o contrato real antes de 31/12/2026, ou marque "Revisado: sem contrato" na pré-carga |
 
 ## 22. O que preencher em cada campo (novos)
 
@@ -313,6 +324,10 @@ Aba **Representadas**. Cada representada mostra a vigência do cadastro, a ficha
 - **Vigência provisória dos clientes sem contrato até:** padrão 31/12/2026; em branco, desliga.
 - **Marcos do vencimento e marcos do aviso prévio:** números de dias separados por vírgula.
 - **Avisar o cliente a partir de:** padrão 90 dias antes do fim.
+
+### 22.1 Campos do reajuste (lista de sigilo)
+
+<!-- assistente: acesso=sigilo -->
 - **Propor o reajuste com antecedência de, Defasagem do índice e Acumulado negativo:** padrões 45 dias, 1 mês e "manter o valor".
 
 </div>
