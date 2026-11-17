@@ -7,6 +7,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -475,7 +476,7 @@ test('telas: menu e casca no computador e no celular (390 px), cartão no padrã
   assert.match(css, /\.lic-op-acoes button, \.lic-op-acoes a \{ min-height: 44px;/);
   assert.match(css, /\.lic-ficha-num \{ grid-template-columns: 1fr 1fr; \}/);
   assert.doesNotMatch(pc.html, /setInterval/, 'sem atualização automática (nada redesenha formulário aberto)');
-  assert.match(pc.html, /\r\n/, 'JS_*.html em CRLF como os demais');
+  assert.ok(uniforme(pc.html), descTerm('JS_Licitacoes.html', pc.html));
 });
 
 test('integração na casca: menu só da Diretoria, rota, atalho do celular, ajuda das 3 telas, manual do assistente e item da sentinela', () => {

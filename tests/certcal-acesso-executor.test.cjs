@@ -8,7 +8,12 @@ const gas=require('./_simulacros_gas.cjs');
 function ambiente(perfil = 'CLIENTE') {
   const data = {clientes:[{ID:'C1',CNPJ:'111'},{ID:'C2',CNPJ:'222'}],equip:[{ID:'E',CLIENTE_ID:'C2',UNIDADE_ID:'U',STATUS:'ATIVO'}],unidades:[{ID:'U',CLIENTE_ID:'C2'}],cert:[{ID:'CERT',CLIENTE_ID:'C2',LINK_PDF_RELATORIO_INTERPRETATIVO:'https://drive.google.com/file/d/original/view',DADOS_JSON:'{}'}],tecnicos:[{ID:'T',STATUS:'ATIVO',NOME:'Executor'},{ID:'INATIVO',STATUS:'INATIVO',NOME:'Antigo'}]};
   const c=vm.createContext({SGO_UTILS:{safe:v=>String(v??'').trim(),safeUpper:v=>String(v??'').toUpperCase(),cnpjArmazenado:v=>v,formatCnpj:v=>v},exigirSessao:()=>({perfil,clienteId:'C1',usuario:'QA'}),SGO_CFG:{SHEETS:{CERT_CALIBRACAO:'cert',CAD_CLIENTES:'clientes',CAD_EQUIPAMENTOS:'equip',CAD_UNIDADES:'unidades',CAD_TECNICOS:'tecnicos'}},SGO_DATA:{getById:(s,id)=>data[s]?.find(x=>x.ID===id),getAll:s=>data[s]||[],getDB:()=>({getSheetByName:n=>n in data?{getName:()=>n}:null})},SGO_VINCULOS:{relation(){}},Session:gas.criarSession(),Utilities:gas.criarUtilities()});
-  vm.runInContext(fs.readFileSync('apps-script-imports/portal_sgo_versao_cnpj_db/SGO_CertCal_Main.js','utf8'),c);c.CertCal_bootstrap_=()=>{};c.CertCal_calcularBlocos_=()=>[];return c;
+  vm.runInContext(fs.readFileSync('apps-script-imports/portal_sgo_versao_cnpj_db/SGO_CertCal_Main.js','utf8'),c);
+  // 17/11/2026 (falhas antigas): na produção a emissão também confere o cadastro completo (SGO_CadastroQualidade.js, CadQ_exigirVinculosCompletos_,
+  // publicada em 11/11). Este teste não carrega aquele arquivo e não trata do cadastro: stub que aprova, como em _autoclave_ambiente.cjs.
+  // A trava em si é testada em tests/cadastro-qualidade.test.cjs.
+  vm.runInContext('if (typeof CadQ_exigirVinculosCompletos_ !== "function") { this.CadQ_exigirVinculosCompletos_ = function () {}; }',c);
+ c.CertCal_bootstrap_=()=>{};c.CertCal_calcularBlocos_=()=>[];return c;
 }
 test('cliente não acessa equipamentos, busca, snapshot ou relatório de outro cliente, inclusive link já emitido',()=>{
   const c=ambiente();for(const [fn,p]of [['CertCal_apiListarEquipamentosCliente',{clienteId:'C2'}],['CertCal_apiBuscarCertificadosPorCnpj',{cnpj:'222'}],['CertCal_apiReabrirCertificado',{certificadoId:'CERT'}],['CertCal_apiGerarRelatorioInterpretativo',{certificadoId:'CERT'}]])assert.throws(()=>c[fn]('S',p),/Acesso negado/);

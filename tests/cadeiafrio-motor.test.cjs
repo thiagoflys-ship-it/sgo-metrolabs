@@ -136,13 +136,22 @@ test('abertura de porta: tempo até sair da faixa e retorno calculados à mão; 
   assert.equal(crit(ctx, 'tempoAlvo').naoAvaliado, true);
 });
 
-test('evento iniciado com sensor fora da faixa e início do evento fora dos dados viram travas', () => {
+test('evento iniciado com sensor fora da faixa fica INCONCLUSIVO (não avaliável); início do evento fora dos dados vira trava', () => {
   const env = C.criarAmbiente();
   let ctx = ctxDe(env, porta({ tipo: 'QUEDA_ENERGIA', tempoAlvo: '10', s2Inicio: 8.6 }));
-  assert.ok(codigos(ctx).includes('EVENTO_INICIADO_FORA_DA_FAIXA'));
-  const t = ctx.travas.filter(x => x.codigo === 'EVENTO_INICIADO_FORA_DA_FAIXA')[0];
-  assert.match(t.oQue, /S2 \(8,60 °C\)/);
-  assert.ok(t.comoCorrigir.length > 20);
+  // 17/11/2026 (falhas antigas): a regra publicada mudou de trava (EVENTO_INICIADO_FORA_DA_FAIXA, que impedia a emissão) para
+  // resultado INCONCLUSIVO: o laudo sai dizendo que o tempo-alvo não é avaliável e que o estudo deve ser repetido após a
+  // estabilização, sem aprovar nem reprovar (SGO_CadeiaFrioRel_Engine.js e SGO_CadeiaFrioRel_Qualificacao.js de produção; base
+  // do assistente "Quando aparece Inconclusivo", SGO_AssistenteManuais.js). O teste confere a regra nova: nada é aprovado.
+  assert.equal(codigos(ctx).includes('EVENTO_INICIADO_FORA_DA_FAIXA'), false);
+  assert.equal(ctx.estudos[0].statusAprovacao, 'INCONCLUSIVO');
+  assert.equal(ctx.statusConsolidado, 'INCONCLUSIVO');
+  assert.match(ctx.resumoResultado, /inconclusivo/i);
+  const alvo = crit(ctx, 'tempoAlvo', 'QUEDA_ENERGIA');
+  assert.equal(alvo.naoAvaliado, true); assert.equal(alvo.conforme, null);
+  assert.match(alvo.obtido, /Não avaliável\. Repita o estudo após estabilização/);
+  const ini = crit(ctx, 'inicioNaFaixa', 'QUEDA_ENERGIA');
+  assert.equal(ini.conforme, false); assert.match(ini.obtido, /Fora da faixa: S2\b/);
   // Início 30 min depois da última leitura (ainda dentro da margem de 60 min do recorte).
   const fimDados = new Date(T0.getTime() + 179 * 10000);
   const pFora = porta({ tempoAlvo: '10', inicioEvento: C.quando(new Date(fimDados.getTime() + 30 * 60000)) });

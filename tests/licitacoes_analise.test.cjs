@@ -9,6 +9,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -647,8 +648,7 @@ test('telas: abas Arquivos e Análise (hash, situação da extração, fatos com
   for (const m of t.html.matchAll(/(?:^|[^-])width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 360, 'largura fixa ' + m[0]);
   for (const m of t.html.matchAll(/min-width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 200, 'largura mínima ' + m[0]);
   assert.doesNotMatch(t.html, /setInterval/);
-  assert.match(t.html, /\r\n/, 'JS_*.html em CRLF como os demais');
-  assert.doesNotMatch(t.html, /[^\r]\n/, 'nenhuma linha só com LF (edição por script em CRLF)');
+  assert.ok(uniforme(t.html), descTerm('JS_Licitacoes.html', t.html));
 });
 
 test('ajuda da tela, manual e base do assistente falam de Arquivos, Análise e da chave da IA', () => {

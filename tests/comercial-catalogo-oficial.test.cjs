@@ -105,7 +105,13 @@ test('implantação: cria os 26 com os preços do dono, desativa os repetidos da
   const antesPropostas = JSON.stringify(amb.tabelas.COM_PROPOSTAS || []);
   assert.match(amb.api('s_gaspar', 'catalogoOficialImplantar', {}).message, /é da Diretoria/);
   const { previa, aplicado } = implantar(amb);
-  assert.equal(previa.qtdCriar, 26); assert.equal(aplicado.criados, 26);
+  // 17/11/2026 (falhas antigas): a tabela publicada tem os 26 serviços com preço do dono MAIS as 9 etapas avulsas dos três pacotes
+  // completos (QUA-001, QUA-002 e QUA-005: QI, QO e QD separados, REGRA_PRECO NEGOCIADO, preço 0 = o vendedor informa o preço
+  // negociado por equipamento). Estão em SGO_Comercial_CatalogoOficial.js de produção e no cadastro real (output/poderes-20261110/
+  // precos-dump.txt, 10/11/2026). Total implantado: 35. Os 26 preços do dono continuam conferidos um a um abaixo.
+  const ETAPAS = ['QUA-001-QI', 'QUA-001-QO', 'QUA-001-QD', 'QUA-002-QI', 'QUA-002-QO', 'QUA-002-QD', 'QUA-005-QI', 'QUA-005-QO', 'QUA-005-QD'];
+  assert.equal(previa.qtdCriar, 26 + ETAPAS.length); assert.equal(aplicado.criados, 26 + ETAPAS.length);
+  ETAPAS.forEach((c) => { const p = prodCod(amb, c); assert.ok(p, c); assert.equal(p.REGRA_PRECO, 'NEGOCIADO', c); assert.equal(p.PRECO, 0, c); assert.equal(p.CATALOGO_OFICIAL, 'Tabela oficial da Diretoria', c); assert.equal(p.ATIVO, 'SIM', c); });
   const esperado = { 'CAL-001': 75.5, 'CAL-002': 75, 'CAL-003': 107.42, 'CAL-004': 150, 'CAL-005': 180.12, 'CAL-006': 150.09, 'CAL-007': 171.01, 'CAL-008': 95, 'CAL-009': 480.07, 'CAL-010': 580.93,
     'QUA-001': 4870, 'QUA-002': 4798, 'QUA-003': 1200, 'CAL-011': 194.23, 'QUA-004': 1865.46, 'QUA-005': 3500.75, 'QUA-006': 1845.96, 'QUA-007': 2976, 'QUA-008': 845.77, 'QUA-009': 590.86,
     'QUA-010': 200.67, 'NR13-001': 850, 'NR13-002': 735, 'NR13-003': 2933.33, 'QUA-011': 4865.88, 'QUA-012': 5450 };
@@ -130,14 +136,14 @@ test('implantação: cria os 26 com os preços do dono, desativa os repetidos da
   const total = amb.tabelas.COM_PRODUTOS.length;
   // reimplantação: 0 criados, nada desativado de novo
   const p2 = amb.ctx.Comercial_catalogoOficial20261101({ etapa: 'CATALOGO' });
-  assert.equal(p2.qtdCriar, 0); assert.equal(p2.qtdDesativar, 0); assert.equal(p2.existem.length, 26);
+  assert.equal(p2.qtdCriar, 0); assert.equal(p2.qtdDesativar, 0); assert.equal(p2.existem.length, 26 + ETAPAS.length);
   const a2 = amb.ctx.Comercial_catalogoOficial20261101({ etapa: 'CATALOGO', aplicar: true, marca: p2.marca });
   assert.equal(a2.criados, 0); assert.equal(amb.tabelas.COM_PRODUTOS.length, total);
   assert.equal(amb.ctx.Comercial_catalogoOficial20261101({ etapa: 'CATALOGO', aplicar: true, marca: 'velha' }).ok, false, 'aplicar exige a marca da prévia');
   // código usado por outro item: não cria por cima
   const amb2 = amb0(); amb2.tabelas.COM_PRODUTOS = [{ ID: 'x1', CODIGO: 'CAL-001', NOME: 'Outro item', PRECO: 1, ATIVO: 'SIM' }];
   const pc = amb2.ctx.Comercial_catalogoOficial20261101({ etapa: 'CATALOGO' });
-  assert.equal(pc.conflitos.length, 1); assert.equal(pc.qtdCriar, 25);
+  assert.equal(pc.conflitos.length, 1); assert.equal(pc.qtdCriar, 25 + ETAPAS.length);
 });
 
 test('sobra dos 26 pela ficha (só gestão e Diretoria): preço, custo, impostos GO, comissão, sobra R$ e %; o preço do dono não muda', () => {
@@ -145,7 +151,9 @@ test('sobra dos 26 pela ficha (só gestão e Diretoria): preço, custo, impostos
   assert.match(amb.api('s_vera', 'catalogoOficial', {}).message, /é da gestão comercial/);
   assert.equal(amb.api('s_fabio', 'catalogoOficial', {}).ok, false, 'Financeiro não vê');
   const t = ok(amb.api('s_gaspar', 'catalogoOficial', {}));
-  assert.equal(t.itens.length, 27, '26 oficiais + óxido de etileno (C1 mantido)'); assert.equal(t.implantados, 26); assert.equal(t.podeMudarPreco, false);
+  // 17/11/2026: 26 com preço do dono + 9 etapas QI/QO/QD de preço negociado (ver o teste da implantação) + óxido de etileno
+  assert.equal(t.itens.length, 36, '35 oficiais + óxido de etileno (C1 mantido)'); assert.equal(t.implantados, 35); assert.equal(t.podeMudarPreco, false);
+  assert.equal(t.itens.filter((i) => i.regra === 'NEGOCIADO').length, 9, 'as 9 etapas de preço negociado');
   const l = t.sobra.linhas.find((x) => x.codigo === 'QUA-012');
   assert.equal(l.preco, 5450); assert.equal(l.impostos, 776.63, '14,25% de Goiânia'); assert.equal(l.comissao, 163.5);
   assert.equal(l.sobra, Math.round((5450 - 776.63 - 163.5 - l.custo) * 100) / 100); assert.equal(l.fonte, 'C1:QT_AUTOCLAVE_BT');
@@ -300,7 +308,7 @@ test('reajuste da decisão: suspeitos (alta acima de 100% ou custo maior que o p
   ok(amb.api('s_gaspar', 'salvarProduto', { codigo: 'PECA-110', nome: 'Peça que sobe 110%', tipo: 'PRODUTO', preco: '100,00', custo: '90,00' }));
   ok(amb.api('s_gaspar', 'salvarProduto', { codigo: 'PECA-OK', nome: 'Peça normal', tipo: 'PRODUTO', preco: '50,00', custo: '40,00' }));
   const pv = ok(amb.api('s_dora', 'decisaoDonoPrecos', {}));
-  assert.equal(pv.limiteAltaPct, 100); assert.equal(pv.oficiais, 26);
+  assert.equal(pv.limiteAltaPct, 100); assert.equal(pv.oficiais, 35, '17/11/2026: 26 com preço do dono + 9 etapas QI/QO/QD negociadas, todas fora do reajuste');
   assert.deepEqual(pv.suspeitos.map((x) => x.codigo).sort(), ['PECA-110', 'PECA-ABS']);
   assert.match(pv.suspeitos.find((x) => x.codigo === 'PECA-ABS').motivo, /custo cadastrado \(R\$ 167\.890,00\) maior que o preço atual/);
   assert.ok(!pv.linhas.some((x) => /^(CAL|QUA|NR13)-/.test(x.codigo)), 'oficiais fora');

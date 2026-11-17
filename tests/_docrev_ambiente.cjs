@@ -103,6 +103,10 @@ function criarAmbiente(opcoes) {
   ctx.run(ler('SGO_DocRevisao.js'));
   for (const f of opcoes.arquivos || []) ctx.run(ler(f));
   if (opcoes.extra) ctx.run(opcoes.extra);
+  // 17/11/2026 (falhas antigas): na produção a emissão do certificado e do laudo NR-13 também confere o cadastro completo
+  // (SGO_CadastroQualidade.js, CadQ_exigirVinculosCompletos_, publicada em 11/11). Este ambiente não carrega aquele arquivo e não
+  // trata do cadastro: stub que aprova, como em _autoclave_ambiente.cjs. A trava em si é testada em tests/cadastro-qualidade.test.cjs.
+  ctx.run('if (typeof CadQ_exigirVinculosCompletos_ !== "function") { this.CadQ_exigirVinculosCompletos_ = function () {}; }');
   return { ctx, drive, props, planilhas, run: ctx.run, fn: nome => ctx[nome] || vm.runInContext(nome, ctx), api: (sid, fn, payload) => JSON.parse(JSON.stringify(vm.runInContext('DocRev_api', ctx)({ sessionId: sid, fn, payload: payload || {} }))) };
 }
 

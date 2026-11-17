@@ -6,6 +6,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -419,7 +420,7 @@ test('telas: lista (vigência, a vencer, valor, prontos para virar contrato), pr
   for (const m of css.matchAll(/(?:^|[^-])width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 360, 'largura fixa ' + m[0]);
   for (const m of css.matchAll(/minmax\((\d+)px/g)) assert.ok(Number(m[1]) <= 300, 'minmax ' + m[0]);
   assert.match(css, /\.lct-grade input, \.lct-grade select, \.lct-grade textarea \{[^}]*min-height: 44px/); assert.match(css, /\.lct-det summary \{[^}]*min-height: 44px/);
-  assert.doesNotMatch(css, /setInterval/); assert.match(css, /\r\n/, 'em CRLF');
+  assert.doesNotMatch(css, /setInterval/); assert.ok(uniforme(css), descTerm('estilo da tela', css));
 });
 
 test('integração na casca: menu, rota, inclusão do arquivo novo, ação do servidor, Kanban sem "etapa futura" em Contrato, ajuda das telas, manual com o levantamento e base do assistente', () => {
@@ -445,7 +446,7 @@ test('integração na casca: menu, rota, inclusão do arquivo novo, ação do se
   const textos = ['SGO_Licitacoes_Contratos.js', 'JS_Licitacoes_Contratos.html', 'SGO_Ajuda_LicitacoesContratos.js'].map(ler).join('\n') + manual;
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'sem emoji');
-  for (const f of ['SGO_Licitacoes_Contratos.js', 'JS_Licitacoes_Contratos.html', 'SGO_Ajuda_LicitacoesContratos.js']) assert.match(ler(f), /\r\n/, f + ' em CRLF');
+  for (const f of ['SGO_Licitacoes_Contratos.js', 'JS_Licitacoes_Contratos.html', 'SGO_Ajuda_LicitacoesContratos.js']) assert.ok(uniforme(ler(f)), descTerm(f, ler(f)));
 });
 
 // ---------------------------------------------------------------- revisão independente de 42a2c1f (um teste para cada ataque)

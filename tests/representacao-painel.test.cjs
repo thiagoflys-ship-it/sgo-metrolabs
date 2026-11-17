@@ -94,7 +94,8 @@ test('representada: índices com as fórmulas do manual (aceite no prazo, tempos
   assert.equal(p.pendencias.length, 1); assert.equal(p.pendencias[0].id, k.p3.id); assert.match(p.pendencias[0].pergunta, /foto do visor/);
   // Kanban: colunas pelas etapas REP_ETAPAS; cada cartão uma vez; cartão sem dado interno
   const cartoes = [].concat(...p.kanban.map((c) => c.itens));
-  assert.deepEqual(p.kanban.map((c) => c.n), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  // 16/11/2026 (fluxo da representada): etapas 13 a 15 entram na ordem em que acontecem, antes de "Encerrado"
+  assert.deepEqual(p.kanban.map((c) => c.n), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15, 11, 12]);
   assert.equal(p.kanban.find((c) => c.n === 2).itens[0].id, k.p3.id);
   assert.equal(p.kanban.find((c) => c.n === 2).itens[0].podeResponder, true);
   assert.equal(p.kanban.find((c) => c.n === 3).qtd, 1); // recusado nos últimos 30 dias

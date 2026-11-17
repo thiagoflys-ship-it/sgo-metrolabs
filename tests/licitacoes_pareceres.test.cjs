@@ -7,6 +7,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -432,7 +433,7 @@ test('integração: arquivos ligados no Index, menu, ajuda da tela, manual e bas
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'sem emoji');
   for (const f of ['SGO_Licitacoes_Pareceres.js', 'JS_Licitacoes_Pareceres.html', 'SGO_Ajuda_LicitacoesPareceres.js', 'JS_Licitacoes.html', 'SGO_Licitacoes.js', 'SGO_Licitacoes_Alertas.js', 'SGO_Licitacoes_Painel.js', 'SGO_Licitacoes_Disputa.js']) {
-    assert.match(lerCru(f), /\r\n/, f + ' em CRLF'); assert.doesNotMatch(lerCru(f), /[^\r]\n/, f + ' sem LF solto');
+    assert.ok(uniforme(lerCru(f)), descTerm(f, lerCru(f)));
   }
 });
 

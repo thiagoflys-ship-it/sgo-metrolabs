@@ -88,6 +88,37 @@ vê o botão apagado e, ao tocar, a mensagem com desde quando, por quem e o moti
 visíveis para quem é da conversa. Para religar, marque de novo e salve. A tela mostra a situação, a última alteração
 (quem, quando e motivo) e o histórico das últimas mudanças.
 
+## 2B. Enviar documento: PDF, Word ou Excel (só no SGO+, 16/11/2026)
+
+Antes o bate-papo recusava documentos ("o bate-papo só aceita imagens"). Agora o mesmo botão de anexar (clipe) aceita
+também **PDF, Word (.docx) e Excel (.xlsx)**.
+
+**Como enviar:**
+1. Abra a conversa e toque no botão de anexar (clipe), ao lado da caixa de mensagem. Escolha o arquivo. No computador
+   também dá para arrastar o arquivo para dentro da conversa.
+2. O nome e o tamanho do documento aparecem acima da caixa. Confira.
+3. Escreva na caixa a explicação: o que é o documento e o que a pessoa deve fazer com ele. É obrigatória (pelo menos 10
+   caracteres, com letras; no máximo 1.000), como na imagem.
+4. Toque em Enviar. «Tirar» desiste do documento. Se der erro, o documento e o texto continuam ali; leia a mensagem em
+   vermelho e toque em Enviar de novo.
+
+**Receber:** na conversa aparece um cartão com o ícone e o nome do arquivo e, embaixo, a explicação. Toque no cartão
+para baixar ou abrir o arquivo.
+
+**Limites:** PDF, Word (.docx) e Excel (.xlsx), até **5 MB** (o mesmo limite do arquivo de documentos de Cadastros), um
+por mensagem, até 20 por pessoa por hora. O tipo é conferido pelo conteúdo do arquivo, não pelo nome. Arquivo com macro
+(.docm, .xlsm ou com macro dentro) é recusado. Outros formatos (.doc, .xls, .zip, .txt...) são recusados com a mensagem
+"Formatos aceitos no bate-papo: imagens PNG, JPG, WEBP ou HEIC e documentos PDF, Word (.docx) ou Excel (.xlsx), de até
+5 MB"; salve em PDF e envie de novo.
+
+**Quem baixa:** só quem participa da conversa em que o documento foi enviado (quem sai do grupo deixa de baixar). O
+documento fica guardado como as imagens: na pasta restrita do bate-papo, sem link, não abre por endereço, não aparece
+nas pastas do servidor e não pode ser anexado a e-mail pelo número do arquivo. No COMMAND e no aviso fora do sistema
+aparece só o texto "Documento: nome do arquivo — explicação".
+
+**Imagens desligadas:** a chave da Diretoria desliga só as imagens. Com ela desligada, o botão de anexar continua
+aceitando documentos; ao escolher uma imagem, aparece a mensagem de quando e por que o envio de imagens foi desligado.
+
 ## 3. Aviso no WhatsApp quando você está fora do sistema
 
 Quando vira aviso:
@@ -155,6 +186,11 @@ Antes de ligar:
 | "Para sair do grupo, use o botão «Sair do grupo»." | Você tentou se remover pela lista; use o botão de sair. |
 | "Escreva a explicação da imagem…" | Escreva na caixa de mensagem o que a imagem mostra e por quê (pelo menos 10 caracteres) e toque em Enviar. |
 | "A imagem … não é PNG, JPG nem WEBP" / "… está em HEIC" | Escolha outra imagem; no iPhone, pela câmera ou pela galeria; no computador, salve como JPG. |
+| "O arquivo … não é um formato aceito. Por quê: Formatos aceitos no bate-papo: …" | Salve o arquivo em PDF (ou tire um print, se for imagem) e escolha de novo. |
+| "O documento tem … MB; o limite é 5 MB" | Reduza o PDF (salvar com qualidade menor) ou mande por e-mail. |
+| "O arquivo … tem macro" | Salve como PDF ou como .docx/.xlsx comum (sem macro) e envie de novo. |
+| "Escreva a explicação do documento…" | Diga na caixa o que é o documento e o que a pessoa deve fazer com ele (pelo menos 10 caracteres). |
+| "Você não participa da conversa deste documento." | Você saiu ou foi tirado da conversa; peça o arquivo a quem enviou. |
 | "O envio de imagens está desligado para todos…" | A Diretoria desligou (a mensagem diz quando, por quem e o motivo). Explique por escrito ou fale com a Diretoria. |
 | "Você já enviou 30 imagens na última hora…" | Espere alguns minutos ou mande por e-mail. |
 | "Você não participa da conversa desta imagem." | Você saiu ou foi tirado da conversa; peça a quem criou o grupo. |
@@ -170,3 +206,4 @@ Antes de ligar:
 | Administrador | Ligar os avisos fora do sistema, ajustar minutos e limites, ver os últimos envios e respostas. |
 | Diretoria e Administrador (SGO+) | Ligar ou desligar o envio de imagens para todos, com motivo; fica registrado quem mudou e quando. |
 | Todos no SGO+ | Enviar imagem com explicação, ver e baixar as imagens das conversas de que participam. |
+| Todos no SGO+ (16/11/2026) | Enviar documento PDF, Word (.docx) ou Excel (.xlsx) com explicação e baixar os documentos das conversas de que participam. |

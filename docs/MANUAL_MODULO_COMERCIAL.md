@@ -559,3 +559,14 @@ Em Comercial → Propostas, abra o orçamento e toque em **Marcar como investime
 Enquanto aguarda aprovação, ficam suspensos os retornos automáticos dessa proposta e os avisos de cobrança comercial. Se a oportunidade tiver outra proposta normal, ela continua no fluxo normal. A validade dos preços permanece: antes de aprovar uma proposta vencida, será necessária a revisão adequada. Pedidos já aprovados e cobranças financeiras não mudam. Tarefas manuais são preservadas.
 
 Quando o cliente estiver pronto para retomar, abra a proposta e use **Retomar fluxo normal**. Confira a próxima ação na oportunidade. Nenhuma proposta existente foi marcada automaticamente na publicação.
+
+<div style="text-align: justify">
+
+## Renovações e reajustes de contratos (17/11/2026)
+
+- **Régua de vencimento:** o responsável pelo contrato e a gestão comercial recebem os avisos de vencimento (120, 90, 60, 30, 15, 7 e 0 dias e o vencido) e do limite do aviso prévio, por e-mail no expediente e no resumo do dia; o item fica na central de pendências e na Caixa de decisões (área Comercial). No primeiro marco, o responsável recebe a tarefa "Renovação do contrato" em Minhas atividades.
+- **Oportunidade de renovação:** em Portal do cliente > Contratos de clientes (ficha do cliente ou aba Vencimentos e reajustes), toque em "Oportunidade de renovação". Ela nasce aqui no Comercial, pelas regras de sempre (funil Engenharia, origem "Cliente da carteira", contato e próxima ação), com a referência do contrato. Se já existir uma aberta, o sistema mostra o código e não cria outra.
+- **Contratos a cadastrar:** clientes com conta e sem contrato ficam com acesso provisório até 31/12/2026. Cadastre o contrato real de cada um (o PDF pode ser lido pela IA) antes dessa data.
+- **Reajuste:** com a caixa «Ver valores e reajustes dos contratos», a gestão comercial vê o índice, o percentual, os valores e a memória de cálculo e, depois da aprovação da Diretoria, gera a **carta de reajuste ao cliente** (A4). Aprovar é só do dono e da Diretoria; faturar é do Financeiro. O Comercial não vê faturamento nem movimento do Financeiro.
+
+</div>

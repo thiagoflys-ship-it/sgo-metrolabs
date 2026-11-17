@@ -12,6 +12,7 @@ O módulo Representação é a área do SGO+ em que a empresa representada (Bras
 - A conta é criada em Administração > Usuários: perfil Representada, a representada (empresa) e o papel dela: administrador da representada, atendente, financeiro de garantia ou leitura.
 - O perfil Representada vê só o módulo Representação. O servidor recusa qualquer outra função do SGO+ para essa sessão, e a conta não aparece nas listas de pessoas (responsáveis, avisos internos, bate-papo, conduta, ponto, atividades).
 - Representada inativa (Representação > Representadas) ou conta sem representada: a pessoa não entra, e a mensagem diz o motivo.
+- Contrato vencido (17/11/2026, Portal do cliente etapa 0): a data de fim da vigência da representada passa a valer, com a mesma carência do Portal do cliente (padrão 30 dias, em Portal do cliente > Contratos de clientes > Regras do portal). Passada a carência, a representada não entra e a mensagem diz quando o contrato terminou e o que fazer (renovar com a Metrolabs). Sem data de fim, vale só a situação, como antes. Antes de publicar, confira a data de fim de cada representada cadastrada.
 - Não há troca da própria senha pela pessoa nesta etapa: a senha é definida e redefinida em Administração > Usuários, como para as demais contas.
 
 ## 3. Primeira configuração
@@ -271,6 +272,7 @@ Mesmos índices do Painel, com as fórmulas da seção 4 (RepP_indices_ para rep
 
 ### 12.3 Onde gerar
 
+- 16/11/2026 (D8): no chamado de representada o botão livre virou "Ver prévia" (ficha do chamado, dos dois lados): a prévia do Dossiê do atendimento abre na tela e nada é gravado nem enviado. Os documentos que valem são o laudo de cada rodada e o Dossiê do atendimento (seção 12A.7.1).
 - Representada: ficha do chamado > "Gerar relatório"; Painel > "Relatório do período"; Painel > aba "Relatórios gerados".
 - Cliente: Meus chamados > "Lista e relatórios" > "Gerar relatório do atendimento" no chamado e "Relatório do período (últimos 90 dias)"; a lista "Relatórios gerados" fica logo abaixo.
 - Metrolabs: ficha do chamado na Assistência técnica > "Relatórios do atendimento" (as três versões); Painel da Representação > "Versão do relatório" e "Relatório do período" (interna, ou a da representada escolhida no filtro).
@@ -287,6 +289,92 @@ Mesmos índices do Painel, com as fórmulas da seção 4 (RepP_indices_ para rep
 - A foto do técnico (ATEC_FOTOS) só entra na versão externa depois de liberada na ficha do chamado, em "Quem vê nos relatórios": não liberada (padrão), só à representada, ou ao cliente e à representada. Libera a gestão da área Técnica e os responsáveis pela representação; a liberação fica no histórico da O.S. com quem e quando.
 - Ao liberar, a tela gera uma cópia reduzida (lado maior 1000 px, JPEG) e o servidor a guarda na pasta privada da O.S.; o A4 usa essa cópia. Foto acima de 450 KB sem a cópia reduzida fica de fora do A4, com o aviso para liberar de novo. Até 12 fotos por documento.
 
+## 12A. Processo do chamado da representada: do laudo ao dossiê (16/11/2026)
+
+Decisões D1 a D13 do dono (output/representacao-fluxo-20261116/ESPEC_FLUXO_REPRESENTACAO.md) e o detalhamento da linha do tempo (ESPEC_LINHA_DO_TEMPO.md). Código: SGO_Representacao_Fluxo.js (processo) e SGO_Representacao_Marcos.js (marcos, peças, testes, mídia por marco, avisos por marco).
+
+### 12A.1 O que mudou
+
+O chamado da representada é um processo só, com o mesmo número CH (D12). Ele não encerra mais ao fechar a O.S.: a O.S. encerrada leva o chamado a "Laudo técnico em elaboração" e o e-mail ao hospital diz "Visita técnica concluída. O caso segue em análise; avisaremos o próximo passo." O processo só termina com quatro condições: a decisão da representada registrada (ou "não se aplica", com motivo), as ações concluídas, o equipamento de volta ao cliente (ou o destino final registrado com o termo) e as confirmações do cliente e da representada (ou o prazo delas vencido). O.S. só existe quando alguém vai a campo ou trabalha no equipamento; cada nova ida é uma O.S. nova no mesmo chamado.
+
+Situações novas, só no chamado de representada: "Laudo técnico em elaboração", "Aguardando a decisão da representada" (o prazo da Metrolabs pausa) e "Concluído, aguardando confirmação". A representada lê "Em análise: laudo técnico em elaboração", "Laudo enviado: aguardando a sua decisão" e "Concluído: confirme o encerramento"; o hospital lê "Em análise", "Em análise pelo fabricante" e "Concluído: confirme o atendimento". A etapa "Concluído" da representada passou a se chamar "Atendimento realizado" (a visita terminou; o caso continua).
+
+### 12A.2 Quadro "Processo do chamado"
+
+Na ficha do chamado (Assistência técnica, parte Representação) e na ficha da representada o quadro se lê de cima para baixo, como um rastreio de encomenda:
+
+- **Agora** (faixa no alto): a etapa em que o processo está, **Próximo passo com** (Metrolabs, representada, cliente ou transporte), o **Prazo** (data, dias úteis que faltam e o selo "no prazo", "em risco" ou "vencido"; a cor da faixa acompanha) e **Onde está o equipamento**. Quando há decisão pedida, a pergunta ao fabricante aparece em destaque. Logo abaixo ficam os botões da etapa (o principal em verde) e o formulário que o botão abre. Na Metrolabs, a linha "Como fazer nesta etapa" explica o que fazer.
+- **Fases**: as seis bolinhas (Entrada, Diagnóstico, Decisão do fabricante, Peças, Reparo e testes, Devolução e encerramento): ✓ feita, número em destaque na atual, número claro nas que faltam.
+- **Passo a passo**: um passo por linha, do pedido até agora, com data e hora, quem registrou, o resumo, as peças (código, rastreio, nota, lote), os testes ("6 de 8 aprovados", com os valores medidos ao abrir; reprovados em vermelho) e as **miniaturas das fotos e dos vídeos do passo** (toque para ver grande ou tocar o vídeo; "+N" abre as demais; "só Metrolabs" marca a mídia que a representada não vê). Rodadas aparecem como etiqueta ("2ª rodada de peças"). O último passo fica em destaque; os **próximos passos previstos** aparecem esmaecidos, com quem vai agir. Passo registrado depois (regularização) mostra a data do fato e "registrado em".
+- Recolhidos, para consulta: "O que falta para encerrar" (a mesma lista que o servidor confere), as nove etapas, os documentos do processo e o **Histórico completo** (todos os registros do pedido, do chamado, das O.S. e da conversa, mais recente em cima, com "Ver como" Metrolabs, representada ou hospital).
+- Ações decididas, decisões do fabricante, peças e testes ficam também em tabela, abaixo do passo a passo. Cada campo dos formulários tem a explicação logo abaixo.
+
+A representada vê o mesmo quadro sem as notas internas, sem a mídia "só Metrolabs" e com os nomes dos passos escritos para ela (por exemplo, "Sua decisão é necessária"). O hospital, em "Meus chamados", vê a etapa em uma frase ("Agora: Em análise pelo fabricante"), sem o nome da representada.
+
+### 12A.3 Laudo técnico (um por rodada)
+
+"Preparar e enviar o laudo". Campos: testes realizados, defeito constatado, causa provável, recomendação técnica, peças necessárias, fotos e vídeos (pelo menos 1 foto e 1 vídeo já liberados à representada), a pergunta objetiva, o prazo para decidir (5 dias úteis; mudar pede motivo), a situação do equipamento enquanto aguarda e a pergunta de tecnovigilância (houve dano ou risco a paciente ou usuário? "Sim" avisa na hora a representada e a Diretoria). O laudo LTR-aaaa-nnnn-N sai nas versões da representada e interna. "Levar ao laudo" serve à análise só pelas fotos e pelo vídeo do pedido. "Registrar 'não se aplica'" (responsáveis pela representação) serve ao atendimento sem pedido de garantia.
+
+### 12A.4 Decisão
+
+Decidem o Administrador e o Financeiro de garantia da representada (D3); o Atendente acompanha. Resultados: garantia aprovada, aprovada em parte, negada, preciso de mais informação (abre a rodada seguinte do laudo) ou caso cancelado. Garantia negada com orçamento: a representada escolhe quem recebe o orçamento (D11). O hospital recebe o resultado em uma frase, sem o nome da representada (D5). Decisão recebida por e-mail ou telefone: só os responsáveis pela representação e o Administrador registram em nome dela, com o e-mail ou documento anexado (D4).
+
+Prazo (D2): lembrete 1 dia útil antes; no vencimento, e-mail à representada e ao contato comercial dela; 3 dias úteis depois, a gestão Técnica (Caixa de decisões, pendência "Decisão da representada vencida"); 10 dias úteis depois, a Diretoria; depois disso, lembrete semanal. Nunca encerra sozinho.
+
+### 12A.5 Execução, marcos, peças e testes
+
+Cada ação decidida vira um item com responsável. Equipamento fora do cliente faz entrar sozinha "Devolver o equipamento ao cliente (entrega com termo)"; a devolução só conclui com o equipamento de volta. "Registrar passo" registra os marcos com ordem conferida: retirada (M12, com o termo ou "termo não colhido" com o motivo; a assinatura vai no termo de entrega), conferência de entrada (M13), bancada (M14 e M15), orientação do fabricante (M25), peças solicitadas, previsão, envio, conferência e divergência (M30 a M35), montagem (M40, M41), testes (M42; M43 reprovados com o próximo passo; M44 aprovados com o valor medido de cada item do roteiro, RDC 665/2022, art. 129), liberação técnica (M45) e pronto para devolução (M50), além das exceções (substituição, envio à fábrica, retorno, devolvido sem reparo, aguardando o cliente, dano ou risco, cobrança por telefone). Vídeo obrigatório (L6) na falha reproduzida em bancada, no teste reprovado e no ciclo completo aprovado. A 2ª reprovação de testes avisa a gestão Técnica (L7).
+
+Fotos e vídeos: em qualquer passo, com legenda e quem vê (só a Metrolabs, também a representada, também o hospital); 60 por passo e 300 por chamado; o vídeo sobe pela galeria do chamado (até 100 MB, de preferência até 2 minutos).
+
+### 12A.6 Onde está o equipamento
+
+"Atualizar onde está o equipamento": no cliente, na oficina, no fabricante, em transporte ou destino final (substituído, baixado, devolvido ao fabricante), com desde quando e o documento. Sem termo, fica a pendência de anexar o comprovante. As O.S. de retirada, entrega e envio atualizam sozinhas.
+
+### 12A.7 Confirmação e dossiê
+
+Com tudo feito, o sistema pede as confirmações: cliente em 5 dias úteis (em "Meus chamados" ou registrada pela Metrolabs) e representada em 3 (D7). Sem resposta, vale "confirmado por prazo". "O problema continua" volta à triagem no mesmo chamado. Encerrado, saem uma vez os documentos finais (seção 12A.7.1). Nova emissão só como revisão com motivo. "Ver prévia do dossiê" mostra o documento como está agora, sem gravar, sem avisar e sem contar para a régua (D8).
+
+#### 12A.7.1 Documentos finais: o dossiê e os documentos do hospital (16/11/2026)
+
+Pedido do dono: um dossiê único, muito bem elaborado, para a Metrolabs e a representada; para o hospital, o resumo e os termos de retirada e de devolução.
+
+**Dossiê do atendimento (DOS-aaaa-nnnn), Metrolabs e representada.** O mesmo documento A4 (HTML e PDF) para os dois. Capa com o número do chamado, o equipamento (modelo, série, patrimônio ou TAG), cliente e unidade, representada e protocolo, período e situação final; sumário com as páginas; e as seções: 1. Resumo executivo (o que aconteceu, o que foi constatado, a decisão do fabricante, o que foi feito, testes e liberação, situação final, com os tempos: do pedido ao encerramento, equipamento fora do hospital, espera pelo fabricante e testes aprovados); 2. Identificação do serviço (RDC 665/2022, art. 129); 3. Linha do tempo pela data do fato, por fase, com quem fez, a rodada ("2ª rodada de peças", "2ª bateria de testes"), "registrado em" quando foi registrado depois e o número de fotos de cada passo; 4. Diagnóstico e laudos (visita, bancada, laudo de cada rodada com testes, defeito, causa, recomendação, pergunta e a resposta de tecnovigilância); 5. Decisões do fabricante (pergunta, prazo, quem decidiu e por onde, protocolo, o que fazer, fundamentação e a evidência anexada); 6. Peças (pedido, envio com NF e rastreio, recebimento, conferência, série ou lote da nova, destino da peça retirada, divergências); 7. Reparo; 8. Testes (cada bateria, inclusive as reprovadas, com método, instrumento e certificado, critério, valor encontrado e resultado, e a liberação técnica); 9. Evidências fotográficas por fase, com legenda, data, autor e os 8 primeiros caracteres do SHA-256 (até 40 fotos; vídeos com QR code e o endereço no SGO+, que abre com login); 10. Logística e guarda (retirada e termo, conferência de entrada, entrega e termo, período com a Metrolabs, histórico da guarda); 11. Confirmações e assinaturas (com a assinatura do termo de entrega colhida no aparelho); 12. Conclusão técnica, com o responsável técnico; 13. Anotações internas da Metrolabs (só na versão da Metrolabs: notas internas, cobranças, orçamentos e valores, pendências, regularização); 14. Documentos relacionados; 15. Controle e rastreabilidade (número, versão, motivo da revisão, quem emitiu, quando e o **código de verificação**, resumo SHA-256 do conteúdo, gravado no registro do documento). A versão da representada é o mesmo documento sem a seção 13 e sem nomes de colaboradores além do técnico executor e do responsável técnico; fotos e vídeos, só os liberados a ela.
+
+**Hospital (RSV-aaaa-nnnn): Resumo do serviço e termos.** Um documento em três partes, cada uma começando em folha nova: o Resumo do serviço em uma página (problema relatado, o que foi feito, a tabela dos testes que liberaram o equipamento com o valor medido, a liberação técnica e as recomendações); o Termo de retirada (data e hora, local, quem retirou e quem entregou, equipamento, acessórios, estado aparente, conferência na chegada e as assinaturas); e o Termo de entrega (data e hora, quem entregou e quem recebeu, situação do equipamento, período com a Metrolabs, itens, conferência e testes no local, declaração e assinaturas colhidas no aparelho). Vai ao hospital por e-mail com o PDF (L9) e fica em "Meus chamados > Relatórios gerados" como "Resumo do serviço e termos". Nunca leva o nome da representada nem das pessoas dela, nem assunto comercial: frases com garantia, protocolo, nota fiscal, rastreio, orçamento ou valores ficam de fora.
+
+**Retirada sem termo (registrada depois, como no CH-2026-0030).** O documento do hospital não finge assinatura: a parte da retirada sai como "Registro de retirada (sem assinatura)", sem linhas de assinatura, dizendo que o termo não foi colhido no ato e quando o registro foi feito. O Termo de entrega diz "O equipamento esteve com a Metrolabs de [retirada] até esta entrega" e a declaração de quem recebe inclui a ciência da retirada sem termo; o termo de entrega da O.S. (Assistência) traz o mesmo período.
+
+**Declaração na tela de assinatura (16/11/2026, opção B do dono).** No termo de entrega de equipamento que passou pela guarda da Metrolabs (retirada com ou sem termo, de representada ou não), a tela de assinatura do aplicativo do técnico mostra, antes do quadro, a declaração "Leia com quem vai assinar": quem recebe (nome, documento, setor), o equipamento com série e TAG, o estado na entrega e os acessórios, as verificações e os testes feitos no local e "o equipamento esteve na oficina da Metrolabs de … até a entrega" (com "retirado sem termo de retirada assinado; esta assinatura confirma também a retirada e esse período" quando for o caso). É exatamente o texto do PDF: uma função só monta os dois (`AstR_declaracaoEntregaTexto_` no SGO+ e `declaracaoEntregaTexto` no aplicativo, com o mesmo corpo, conferido por teste). O aplicativo manda junto da assinatura a marca (resumo SHA-256) do texto mostrado; o PDF escreve "Declaração mostrada a quem recebeu na tela de assinatura do aparelho, antes de assinar (marca …)" ou, se o termo mudou depois, avisa que o texto é diferente. Sem o nome da representada e sem frase comercial (garantia, protocolo, nota fiscal, rastreio, orçamento, valores). Os demais termos e telas de assinatura não mudaram. A prévia do hospital continua disponível como reforço.
+
+**Uma vez, revisão com motivo.** Os documentos saem sozinhos no encerramento, uma vez. "Emitir revisão do dossiê" (Metrolabs, com motivo de pelo menos 10 letras) emite a revisão das três peças juntas (dossiê da Metrolabs, da representada e do hospital), com o motivo escrito no documento e um código de verificação novo; as emissões anteriores continuam guardadas.
+
+**Prévia.** "Ver prévia do dossiê" (quadro do processo, nas três visões de "Ver como") e "Ver prévia" (Relatórios do atendimento, dos dois lados; portal do hospital) mostram o documento final como está agora, marcado PRÉVIA, sem número e sem código de verificação; para o hospital, a prévia é a do resumo do serviço com os termos.
+
+### 12A.8 Avisos
+
+Representada: e-mail a cada marco que ela lê; WhatsApp (modelos sgo_rep_etapa e sgo_rep_acao) nos marcos principais e nos que pedem ação dela, só aos contatos de aviso com o aceite registrado (até 3), no expediente, com teto de 2 por chamado e 6 por pessoa por dia; enquanto o modelo não estiver aprovado na Meta, só e-mail, com o motivo em NTF_ENVIOS. Marcos informativos do mesmo chamado em 30 minutos viram um aviso só; fora do expediente, saem no próximo dia útil. Hospital: só e-mail (L2), sem o nome da representada; e-mail semanal às sextas, 10:00, enquanto o equipamento estiver fora (L4). Representada sem conta ativa: o envio fica PULADO com o motivo e a central mostra "Representada sem conta". Padrões L1 a L12 em Chaves e senhas > Representação.
+
+### 12A.9 Regularização dos encerrados antes do processo novo (D9)
+
+Representação > Representadas > "Processo dos chamados de representada" lista os encerrados antes do processo novo. "Regularizar para o processo novo" (ficha do chamado) é só do dono, do Administrador e da Diretoria, com motivo de pelo menos 20 letras: reabre no laudo ou em "Aguardando a orientação/decisão do fabricante" (sobre o relatório que a representada já recebeu), guarda o encerramento anterior no evento "REABERTO PARA O FLUXO NOVO", não cria chamado novo (não conta reincidência), não reenvia e-mail antigo e conta o prazo a partir de hoje. Pode registrar a retirada que não foi lançada (sem termo, com o motivo) e a avaliação em bancada.
+
+### 12A.10 Administrador da representada (D13)
+
+"Convidar administrador da representada": cria a conta (Administrador ou Financeiro de garantia) e manda o link de uso único para a pessoa criar a senha (o mesmo mecanismo do convite do cliente). "Contatos de aviso": quem recebe os avisos por e-mail e WhatsApp.
+
 ## 13. Próximas etapas do projeto (ainda não estão no módulo)
 
 Marcos da visita, impedimentos e aceite do encerramento pela representada; remessa de peças com rastreio; garantia, tabela de preços e custos; fechamento mensal; andamento automático por e-mail ao cliente final e à representada com link público só daquele chamado; consulta automática de rastreio (Correios primeiro, com a chave configurada em Chaves e senhas; sem chave, rastreio manual).
+
+<div style="text-align: justify">
+
+## Ficha do contrato da representada e régua de vencimento (17/11/2026)
+
+A **vigência** da representada continua no cadastro dela (Representação > Representadas, campos "Vigência de" e "Vigência até") e é ela que libera o acesso. A Brasmedical vai até 31/12/2027.
+
+O **contrato completo** fica em Portal do cliente > Contratos de clientes > aba **Representadas**: número, objeto, PDF lido pela IA (com o trecho de cada sugestão), contato, valores, índice e data-base do reajuste, aviso prévio, prazos, multas e obrigações, com motivo e histórico. O formulário da representada mostra um aviso com o botão "Abrir a ficha do contrato".
+
+A **régua de vencimento** avisa o responsável pelo contrato e a gestão comercial aos 120, 90, 60, 30, 15, 7 e 0 dias do fim e antes do limite do aviso prévio; o contato da representada recebe o e-mail a partir de 90 dias. O **reajuste** pelos índices do Banco Central segue a mesma regra dos clientes: o sistema propõe, só o dono e a Diretoria aprovam (Painel financeiro) e o Financeiro fatura com o valor aprovado.
+
+</div>

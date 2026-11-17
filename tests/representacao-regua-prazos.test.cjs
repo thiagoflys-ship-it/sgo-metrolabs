@@ -197,7 +197,9 @@ test('régua completa: atendimento com falta de peça, previsão pela representa
   assert.equal(etapa(r, 'RELATORIO:2').estado, 'NO_PRAZO'); assert.equal(r.atual.chave, 'RELATORIO:2');
   a.mudar('2026-10-30T16:00:00-03:00');
   ok(a.rep('s_gil', 'relatorioAtendimento', { id: c.id, publico: 'REPRESENTADA' }));
-  mudar(a, c.id, 'ENCERRADO');
+  // 16/11/2026 (decisão D1 do dono): chamado de representada não encerra direto de "documentação pendente" (passa pelo laudo, pela decisão
+  // e pelas confirmações: tests/representacao-fluxo-20261116.test.cjs). Aqui simula o chamado encerrado antes da versão nova.
+  Object.assign(linha(a, c.id), { SITUACAO: 'ENCERRADO', ENCERRADO_EM: '2026-10-30T16:05:00' });
   r = regua(a, 's_gil', c.id);
   assert.ok(r.etapas.filter((e) => e.resp === 'METROLABS' && e.ateMs).every((e) => e.estado === 'CUMPRIDO'), JSON.stringify(r.etapas.map((e) => [e.chave, e.estado])));
   assert.equal(sla(a, c.id).estado, 'CUMPRIDO');

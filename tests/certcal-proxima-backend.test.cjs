@@ -30,6 +30,10 @@ function ambiente() {
   });
   // Em produção todos os .js são carregados juntos: SGO_UTILS real, moldura A4 (RelTecA4_paginar_) e cópia HTML (SGO_DocSalvar_htmlAoLado_).
   for (const f of ['SGO_Utilis.js', 'SGO_DocA4.js', 'SGO_RelTecA4.js', 'SGO_DocSalvar.js', 'SGO_DocRevisao.js', 'SGO_CertCal_Revisao.js', 'SGO_CertCal_Main.js']) vm.runInContext(fs.readFileSync(path.join(base, f), 'utf8'), ctx);
+  // 17/11/2026 (falhas antigas): na produção a emissão também confere o cadastro completo (SGO_CadastroQualidade.js, CadQ_exigirVinculosCompletos_,
+  // publicada em 11/11). Este teste não carrega aquele arquivo e não trata do cadastro: stub que aprova, como em _autoclave_ambiente.cjs.
+  // A trava em si é testada em tests/cadastro-qualidade.test.cjs.
+  vm.runInContext('if (typeof CadQ_exigirVinculosCompletos_ !== "function") { this.CadQ_exigirVinculosCompletos_ = function () {}; }', ctx);
   ctx.CertCal_bootstrap_ = () => {};
   ctx.CertCal_mapaPadroesAtivos_ = () => ({});
   ctx.CertCal_calcularBlocos_ = () => [{ titulo: 'Rotação' }];

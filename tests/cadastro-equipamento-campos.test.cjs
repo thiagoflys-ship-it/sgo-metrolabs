@@ -71,6 +71,13 @@ test('criar e editar no cadastro: campos novos gravados, edição parcial não a
   const dataSrc = ler('SGO_Data.js');
   const ini = dataSrc.indexOf('SGO_DATA.mesclarCampos_ = function');
   vm.runInContext(dataSrc.slice(ini, dataSrc.indexOf('\n};', ini) + 3), ctx);
+  // 17/11/2026 (falhas antigas): as funções de tela do cadastro devolvem a falha pelo texto ao operador (SGO_textoFalhaOperador_,
+  // SGO_Clientes.js, carregado junto na produção). Sem ele a falha virava ReferenceError e escondia o motivo real.
+  const cliSrc = ler('SGO_Clientes.js'), iniF = cliSrc.indexOf('function SGO_textoFalhaOperador_(');
+  vm.runInContext(cliSrc.slice(iniF, cliSrc.indexOf('\n}\n', iniF) + 3), ctx);
+  // 17/11/2026 (falhas antigas): o cadastro grava quem criou e o histórico pela Qualidade do cadastro (SGO_CadastroQualidade.js: CadQ_nomeSessao_,
+  // CadQ_registrar_, CadQ_diff_, CadQ_problemasEquipamento_), também carregada junto na produção; sem ela, criar dava ReferenceError.
+  vm.runInContext(ler('SGO_CadastroQualidade.js'), ctx);
   vm.runInContext(ler('SGO_Equipamentos.js'), ctx);
   const criar = vm.runInContext('equipamentosCriar', ctx), atualizar = vm.runInContext('equipamentosAtualizar', ctx);
   const r = criar('s', { CLIENTE_ID: 'c1', UNIDADE_ID: 'u1', TIPO: 'Autoclave', TAG: 'aut-9', SERIE: 'sn-1', SETOR: 'cme', PATRIMONIO: 'pat 77', ANO_FABRICACAO: '2019', CAPACIDADE: '150 L', NUM_CAMARAS: '1', RESPONSAVEL_CLIENTE: 'Enfermeira responsável (teste)' });

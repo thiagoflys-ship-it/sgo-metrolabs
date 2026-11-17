@@ -50,6 +50,23 @@ Se aparecer uma destas mensagens:
 
 A gestão também pode enviar o link para o seu e-mail, se você pedir. O link e as regras são os mesmos.
 
+## Recebi um convite de acesso (clientes, 16/11/2026)
+
+Quando a Metrolabs libera o acesso de um cliente, chega o e-mail **Seu acesso ao SGO+ da Metrolabs**. Ele traz o seu login (o seu próprio e-mail) e um botão para você criar a sua senha. A Metrolabs não sabe e não envia a sua senha.
+
+1. Abra o e-mail (veja também o lixo eletrônico) e toque em **Criar minha senha**.
+2. A página mostra "A Metrolabs liberou o seu acesso ao SGO+" e até quando o link vale.
+3. Digite a senha duas vezes (8 caracteres ou mais, com letras e números, nada fácil de adivinhar) e toque em **Criar minha senha**.
+4. Toque em **Ir para a entrada** e entre com o seu e-mail e a senha que você criou.
+
+- O link vale pelo prazo escrito no e-mail (72 horas, em geral) e só pode ser usado uma vez. Um convite novo cancela o anterior: use sempre o e-mail mais recente.
+- Se o link venceu ou não vale mais, a página diz o que aconteceu. Responda o e-mail do convite pedindo outro ou use **Esqueci minha senha** na tela de entrada, com o mesmo e-mail.
+- Dúvidas: responda o e-mail do convite; a resposta vai para a pessoa da Metrolabs que enviou.
+
+## Não consegui entrar: a mensagem fala do acesso da empresa (clientes, 17/11/2026)
+
+A conta de cliente entra só quando a empresa tem acesso ao Portal do cliente. Se a mensagem disser que o acesso da sua empresa está suspenso, que a empresa não tem contrato vigente ou que o cadastro está inativo, a senha está certa: quem resolve é a Metrolabs. Fale com o contato indicado na própria mensagem. Se você já estava dentro do SGO+, a sessão termina em até 5 minutos com a mesma mensagem.
+
 ## Trocar minha senha
 
 Para trocar a senha quando quiser:

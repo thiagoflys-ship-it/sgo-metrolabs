@@ -438,7 +438,11 @@ test('mesma pessoa em duas viagens nas mesmas datas é recusada; retirar e cance
 
 // ------------------------------------------------------------------ 11. tela, ajuda e manual
 function paginaCompleta() {
-  return ler('Index.html').replace(/<\?!=\s*include\('([^']+)'\);\s*\?>/g, (m, f) => ler(f + '.html'));
+  // 17/11/2026 (falhas antigas): desde 12/11/2026 o Index.html tem, além dos includes, o marcador que o servidor troca pela versão
+  // das telas (window.SGO_VERSAO_TELAS_PAGINA = <?!= JSON.stringify(...) ?>, SGO_VersaoTelas.js). A página completa de verdade sai
+  // com um texto ali; aqui ele vira "" (o mesmo formato que o servidor imprime), senão o <script> não compila no teste.
+  return ler('Index.html').replace(/<\?!=\s*include\('([^']+)'\);\s*\?>/g, (m, f) => ler(f + '.html'))
+    .replace(/<\?!=\s*JSON\.stringify\([\s\S]*?\?>/g, '""');
 }
 test('tela na página completa: item do menu (escondido até o servidor responder), include, ganchos da casca, scripts válidos, sem confirm/prompt', () => {
   const pg = paginaCompleta();

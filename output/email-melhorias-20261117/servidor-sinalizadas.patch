@@ -1,0 +1,68 @@
+diff -ru servidor-producao/dist/servicos/emailPessoal.js servidor/dist/servicos/emailPessoal.js
+--- servidor-producao/dist/servicos/emailPessoal.js	2026-11-17 10:49:15.692627500 -0300
++++ servidor/dist/servicos/emailPessoal.js	2026-11-17 10:54:55.266159800 -0300
+@@ -982,7 +982,7 @@
+             const pagina = Math.max(0, Number(d.pagina) || 0), porPagina = Math.min(100, Math.max(5, Number(d.porPagina) || 30));
+             const remEnd = new Set((d.remetentes?.enderecos ?? []).map((x) => String(x).toLowerCase())), remDom = new Set((d.remetentes?.dominios ?? []).map((x) => String(x).toLowerCase()));
+             const filtraRem = !!d.remetentes;
+-            const chave = `${c.id}|lista|${JSON.stringify([d.pasta, d.busca, d.naoLidas, d.comAnexo, filtraRem ? createHash("sha1").update([...remEnd, "|", ...remDom].sort().join(",")).digest("hex") : "", pagina, porPagina])}`;
++            const chave = `${c.id}|lista|${JSON.stringify([d.pasta, d.busca, d.naoLidas, d.comAnexo, !!d.sinalizadas, filtraRem ? createHash("sha1").update([...remEnd, "|", ...remDom].sort().join(",")).digest("hex") : "", pagina, porPagina])}`;
+             const guardada = cacheLer(chave);
+             if (guardada)
+                 return guardada;
+@@ -996,6 +996,9 @@
+                         crit.or = [{ from: busca }, { to: busca }, { subject: busca }];
+                     if (d.naoLidas)
+                         crit.seen = false;
++                    // 17/11/2026: filtro "Sinalizadas" da tela (como no Outlook)
++                    if (d.sinalizadas)
++                        crit.flagged = true;
+                     if (!Object.keys(crit).length)
+                         crit.all = true;
+                     const uids = ((await cl.search(crit, { uid: true })) || []).slice().sort((a, b) => b - a);
+@@ -1048,7 +1051,7 @@
+                         if (t)
+                             it.tratamento = { nome: t.nome, situacao: t.situacao, em: t.em, eu: t.usuario === q.dono };
+                     }
+-                    return { conta: c.id, pasta, itens, total, pagina, porPagina, temMais };
++                    return { conta: c.id, pasta, itens, total, pagina, porPagina, temMais, filtros: { sinalizadas: true } };
+                 }
+                 finally {
+                     lock.release();
+diff -ru servidor-producao/src/servicos/emailPessoal.ts servidor/src/servicos/emailPessoal.ts
+--- servidor-producao/src/servicos/emailPessoal.ts	2026-11-17 10:49:13.937412000 -0300
++++ servidor/src/servicos/emailPessoal.ts	2026-11-17 10:54:55.264163300 -0300
+@@ -874,13 +874,13 @@
+       });
+     },
+ 
+-    async listar(q: Quem, d: { conta?: string; pasta?: string; busca?: string; naoLidas?: boolean; comAnexo?: boolean; remetentes?: { enderecos?: string[]; dominios?: string[] }; pagina?: number; porPagina?: number }) {
++    async listar(q: Quem, d: { conta?: string; pasta?: string; busca?: string; naoLidas?: boolean; comAnexo?: boolean; sinalizadas?: boolean; remetentes?: { enderecos?: string[]; dominios?: string[] }; pagina?: number; porPagina?: number }) {
+       const c = await contaDe(q, d.conta);
+       trilhaAcesso(q, c, "abriu a caixa");
+       const pagina = Math.max(0, Number(d.pagina) || 0), porPagina = Math.min(100, Math.max(5, Number(d.porPagina) || 30));
+       const remEnd = new Set((d.remetentes?.enderecos ?? []).map((x) => String(x).toLowerCase())), remDom = new Set((d.remetentes?.dominios ?? []).map((x) => String(x).toLowerCase()));
+       const filtraRem = !!d.remetentes;
+-      const chave = `${c.id}|lista|${JSON.stringify([d.pasta, d.busca, d.naoLidas, d.comAnexo, filtraRem ? createHash("sha1").update([...remEnd, "|", ...remDom].sort().join(",")).digest("hex") : "", pagina, porPagina])}`;
++      const chave = `${c.id}|lista|${JSON.stringify([d.pasta, d.busca, d.naoLidas, d.comAnexo, !!d.sinalizadas, filtraRem ? createHash("sha1").update([...remEnd, "|", ...remDom].sort().join(",")).digest("hex") : "", pagina, porPagina])}`;
+       const guardada = cacheLer<any>(chave);
+       if (guardada) return guardada;
+       const r = await comCaixa(c, async (cl) => {
+@@ -891,6 +891,8 @@
+           const busca = String(d.busca ?? "").trim().slice(0, 100);
+           if (busca) crit.or = [{ from: busca }, { to: busca }, { subject: busca }];
+           if (d.naoLidas) crit.seen = false;
++          // 17/11/2026: filtro "Sinalizadas" da tela (como no Outlook)
++          if (d.sinalizadas) crit.flagged = true;
+           if (!Object.keys(crit).length) crit.all = true;
+           const uids = ((await cl.search(crit, { uid: true })) || []).slice().sort((a, b) => b - a);
+           const varre = d.comAnexo || filtraRem;
+@@ -927,7 +929,7 @@
+           itens.sort((a, b) => b.data.localeCompare(a.data) || b.uid - a.uid);
+           const tr = await tratamentos(c, itens.map((x) => x.messageId).filter(Boolean));
+           for (const it of itens) { const t = tr.get(it.messageId); if (t) it.tratamento = { nome: t.nome, situacao: t.situacao, em: t.em, eu: t.usuario === q.dono }; }
+-          return { conta: c.id, pasta, itens, total, pagina, porPagina, temMais };
++          return { conta: c.id, pasta, itens, total, pagina, porPagina, temMais, filtros: { sinalizadas: true } };
+         } finally { lock.release(); }
+       });
+       cacheGravar(chave, r, 20_000);

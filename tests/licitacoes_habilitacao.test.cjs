@@ -5,6 +5,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -384,7 +385,7 @@ test('telas: cadastro, aba Habilitação, Hoje e Painel com escape, link só htt
   for (const m of css.matchAll(/(?:^|[^-])width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 360, 'largura fixa ' + m[0]);
   assert.match(css, /minmax\(150px, 1fr\)/); assert.match(css, /\.lhb-det summary \{[^}]*min-height: 44px/);
   assert.doesNotMatch(css, /setInterval/);
-  assert.match(css, /\r\n/, 'JS_*.html em CRLF como os demais');
+  assert.ok(uniforme(css), descTerm('JS_Licitacoes_Habilitacao.html', css));
 });
 
 test('integração na casca: menu, rota, inclusão do arquivo, navegação, alertas, ajuda da tela e manual', () => {
@@ -400,7 +401,7 @@ test('integração na casca: menu, rota, inclusão do arquivo, navegação, aler
   const al = lerF('SGO_Licitacoes_Alertas.js');
   assert.match(al, /if \(Lic_s_\(a\.TIPO\) === 'DOCUMENTO'\) return typeof LicH_alertaSemValer_ === 'function'/);
   assert.match(al, /passo\('habilitacao', function \(\) \{ return typeof LicH_alertasProgramar_ === 'function'/);
-  for (const f of ['SGO_Licitacoes_Habilitacao.js', 'JS_Licitacoes_Habilitacao.html', 'SGO_Ajuda_LicitacoesHabilitacao.js']) assert.match(lerF(f), /\r\n/, f + ' em CRLF');
+  for (const f of ['SGO_Licitacoes_Habilitacao.js', 'JS_Licitacoes_Habilitacao.html', 'SGO_Ajuda_LicitacoesHabilitacao.js']) assert.ok(uniforme(lerF(f)), descTerm(f, lerF(f)));
   const a = amb();
   vm.runInContext(ler('SGO_Ajuda.js'), a.ctx);
   const t = a.ctx.SGO_ajudaTelas_LicitacoesHabilitacao_().licitacoes_habilitacao;
@@ -503,18 +504,20 @@ test('revisão MÉDIO 6: "vence antes da sessão" juntado por documento, das 8h 
 test('revisão MÉDIO 7: avisos de documento não gastam o teto diário dos alertas de prazo (e têm o teto próprio)', () => {
   const a = amb();
   assert.equal(a.api('s_cha', 'alertasCfgSalvar', { campos: { tetoDia: 1 }, motivo: 'teste do teto diário' }).ok, true);
-  const hojeIso = new Date().toISOString(); // 03/11/2026: data de hoje (fixa em 02/11 o teste quebrava depois da meia-noite)
+  // 17/11/2026 (falhas antigas): o relógio do ambiente (02/11/2026 10:00) vale para tudo. Com a data REAL (correção de 03/11) o CRF
+  // com validade 05/11 passou a estar vencido a partir de 06/11 e o aviso virava CANCELADO; o teto do dia e a validade agora usam a mesma data.
+  const agoraCtl = new Date(a.relogio.agora), hojeIso = agoraCtl.toISOString();
   const enviado = (i, tipo) => ({ ID: 'env' + i, AVISO_ID: 'LA00000e' + String(i).padStart(4, '0'), CHAVE: 'X|' + i, GRUPO: 'X|' + i, TIPO: tipo, USUARIO_ID: 'u_cha', USUARIO_NOME: 'CHARLES', SITUACAO: 'ENVIADO', EMAIL_EM: hojeIso, CRIADO_EM: hojeIso, CIENTE_EM: hojeIso });
   a.tabelas.LIC_ALERTAS.push(enviado(1, 'DOCUMENTO'));
   a.tabelas.LIC_OPORTUNIDADES.push(OP('op_mud', { SITUACAO: 'ANALISE' }));
   a.tabelas.LIC_ALERTAS.push({ ID: 'mud1', AVISO_ID: 'LA0000mud01', CHAVE: 'M|op_mud|x|u_cha', GRUPO: 'M|op_mud|x', OPORTUNIDADE_ID: 'op_mud', CODIGO: 'LIC-mud', TIPO: 'MUDANCA', PAPEL: 'TITULAR', ANTECEDENCIA: 'RETIFICACAO', NIVEL: 'IMPORTANTE', USUARIO_ID: 'u_cha', USUARIO_NOME: 'CHARLES DIRETOR TESTE', TITULO: 'Prazo alterado na fonte', TEXTO: 'mudou', ALVO_ISO: '', LIBERAR_EM: hojeIso, SITUACAO: 'PROGRAMADO', TENTATIVAS: 0 });
-  a.ctx.Lic_alertasEnviar_(new Date());
+  a.ctx.Lic_alertasEnviar_(agoraCtl);
   assert.equal(a.al({ ID: 'mud1' })[0].SITUACAO, 'ENVIADO', 'o aviso de documento de hoje não conta no teto de 1 dos alertas de prazo');
   // teto próprio: com 10 avisos de documento hoje, o 11º vai para o resumo
   for (let i = 2; i <= 10; i++) a.tabelas.LIC_ALERTAS.push(enviado(i, 'DOCUMENTO'));
   a.novo({ tipo: 'CRF_FGTS', validade: '2026-11-05', responsavelId: 'u_cha' }, PDF('crf'));
   const novo = a.al({ EVENTO_TIPO: 'HAB_VALIDADE' })[0];
-  assert.equal(novo.SITUACAO, 'PROGRAMADO'); a.ctx.Lic_alertasEnviar_(new Date());
+  assert.equal(novo.SITUACAO, 'PROGRAMADO'); a.ctx.Lic_alertasEnviar_(agoraCtl);
   assert.equal(a.al({ ID: novo.ID })[0].SITUACAO, 'NO_RESUMO'); assert.match(a.al({ ID: novo.ID })[0].CANCELADO_MOTIVO, /Teto de 10 avisos de documento de habilitação/);
 });
 

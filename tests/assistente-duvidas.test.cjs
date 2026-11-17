@@ -331,6 +331,13 @@ test('casca: núcleo e componentes idênticos ao COMMAND, menu, includes na orde
     const igual = (x, y) => fs.readFileSync(x, 'utf8').replace(/\r\n/g, '\n') === fs.readFileSync(y, 'utf8').replace(/\r\n/g, '\n');
     assert.ok(igual(path.join(pastaLegado, 'SGO_AssistenteNucleo.js'), path.join(cmd, 'AssistenteNucleo.js')), 'núcleo diferente do COMMAND');
     assert.ok(igual(path.join(pastaLegado, 'AssistenteWidget.html'), path.join(cmd, 'AssistenteWidget.html')), 'componente diferente do COMMAND');
-    assert.ok(igual(path.join(pastaLegado, 'ComunicacaoWidget.html'), path.join(cmd, 'ComunicacaoWidget.html')), 'balão diferente do COMMAND');
+    // 17/11/2026 (falhas antigas): o COMMAND foi descontinuado pelo dono em 27/10/2026 ("esquece o command, não vamos dar seguimento";
+    // memória project_command_descontinuado_20261027). O balão do SGO+ seguiu sozinho: ordem cronológica (09/11), Voltar fixo (11/11) e
+    // documentos no bate-papo (16/11), publicados só no SGO+ (e RH360). A cópia local do COMMAND parou em 6b41926 e não é mais a referência;
+    // o balão do SGO+ tem de manter o que foi publicado depois dela.
+    const balao = fs.readFileSync(path.join(pastaLegado, 'ComunicacaoWidget.html'), 'utf8');
+    assert.match(balao, /function ordenarMsgs\(lista\)/, 'ordem cronológica (09/11)');
+    assert.match(balao, /\.comw-cabconv \{[^}]*position: sticky/, 'Voltar fixo no topo (11/11)');
+    assert.match(balao, /\.comw-doc \{/, 'documentos no bate-papo (16/11)');
   }
 });

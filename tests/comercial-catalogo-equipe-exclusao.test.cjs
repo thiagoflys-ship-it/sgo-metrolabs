@@ -91,12 +91,20 @@ test('preço nunca abaixo do custo; redução dentro da alçada grava; acima (ac
   falha(editar(amb, 's_vito', Object.assign({}, g, { descricao: 'Texto novo' }), { preco: '3.000,00', motivoPreco: 'Outro motivo qualquer aqui' }), /já aguarda a decisão sobre o pedido de VERA/);
   // gestão aprova: preço novo, referência limpa, aviso e histórico
   falha(amb.api('s_gaspar', 'decidirPreco', { id: g.id, aprovar: true, texto: 'ok' }), /fundamentação/);
-  ok(amb.api('s_gaspar', 'decidirPreco', { id: g.id, aprovar: true, texto: 'Contrato anual com o hospital; mantém margem' }));
+  // 17/11/2026 (falhas antigas): decisão do dono de 11/11/2026 (SGO_Comercial_Propostas.js, ComP decidirPreco, publicada): preço
+  // abaixo do preço MÍNIMO do item (custo + impostos + sobra mínima) só a Diretoria aprova; a gestão comercial pode negar ou aprovar
+  // com o preço sugerido ou o mínimo. R$ 4.100,00 com custo de R$ 2.000,00 fica abaixo do mínimo (R$ 4.188,48): a gestão é recusada
+  // sem gravar nada e a Diretoria aprova.
+  falha(amb.api('s_gaspar', 'decidirPreco', { id: g.id, aprovar: true, texto: 'Contrato anual com o hospital; mantém margem' }),
+    /R\$ 4\.100,00 fica abaixo do preço mínimo do item QT-AC \(R\$ 4\.188,48\), e preço abaixo do mínimo só a Diretoria aprova/);
+  assert.equal(prod(amb, g.id).PRECO, 4500); assert.equal(prod(amb, g.id).PRECO_PEDIDO_SITUACAO, 'PENDENTE', 'a recusa não grava nada');
+  ok(amb.api('s_dora', 'decidirPreco', { id: g.id, aprovar: true, texto: 'Contrato anual com o hospital; mantém margem' }));
   const d = prod(amb, g.id);
   assert.equal(d.PRECO, 4100); assert.equal(d.PRECO_REFERENCIA, ''); assert.equal(d.PRECO_PEDIDO_SITUACAO, 'APROVADO');
+  assert.match(d.PRECO_DECISAO_TEXTO, /Contrato anual/);
   assert.ok(amb.tabelas.COM_AVISOS.some((v) => v.DESTINATARIO_ID === 'u_ven' && v.TIPO === 'PRECO_APROVADO'));
   const ha = hist(amb, g.id).find((h) => h.TIPO === 'PRECO_APROVADO');
-  assert.equal(ha.DE, 'R$ 4.500,00'); assert.equal(ha.PARA, 'R$ 4.100,00'); assert.equal(ha.USUARIO_ID, 'u_gc');
+  assert.equal(ha.DE, 'R$ 4.500,00'); assert.equal(ha.PARA, 'R$ 4.100,00'); assert.equal(ha.USUARIO_ID, 'u_dir');
   assert.equal(amb.ctx.SGO_Pendencias_listar('s_gaspar', { semCache: true }).itens.filter((i) => i.tipo === 'comercial_preco').length, 0);
   // negar: o preço fica
   ok(editar(amb, 's_vera', prod2(amb, g.id), { preco: '3.000,00', motivoPreco: 'Pedido do cliente para fechar o pacote' }));

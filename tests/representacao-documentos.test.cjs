@@ -126,7 +126,8 @@ test('documento salvo e registrado com o público certo; representada e cliente 
   assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', idDe(dm)), false);
   assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', idDe(dr)), false);
   assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.beta', idDe(dc)), false);
-  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', 'arquivo-de-outro-modulo'), true);
+  // 17/11/2026 (Portal do cliente, etapa 0, achado L2): arquivo que não é ligado a registro do cliente passa a ser NEGADO (antes abria)
+  assert.equal(a.ctx.Representacao_arquivoClientePermitido_('s_cliente.alfa', 'arquivo-de-outro-modulo'), false);
   // quem não é dono não gera
   assert.equal(a.rep('s_ana.alfa', 'relatorioAtendimento', { id: k.c.id }).ok, false);
   assert.equal(a.api('s_cliente.beta', 'relatorioAtendimento', { id: k.c.id }).ok, false);

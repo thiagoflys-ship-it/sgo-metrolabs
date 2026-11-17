@@ -1,0 +1,1532 @@
+--- base-legado/JS_Email.html	2026-11-17 10:54:45.510428900 -0300
++++ legado/JS_Email.html	2026-11-17 11:19:32.516311000 -0300
+@@ -104,6 +104,66 @@
+   .em-overlay.em-soltar .em-soltar-aviso { display: block; }
+   .em-pastas-celular { display: none; margin-bottom: 8px; }
+   .em-pastas-celular select { width: 100%; min-height: 42px; }
++  /* 17/11/2026: estilo Outlook — linhas com ações, seleção em lote, desfazer, pílulas de destinatário, contatos, "Como fazer" */
++  .em-item { display: flex; align-items: flex-start; gap: 4px; position: relative; padding: 8px 6px 8px 2px; transition: transform .12s ease-out; }
++  .em-item:focus-visible { outline: 2px solid var(--info, #1f5fa8); outline-offset: -2px; }
++  .em-item.foco { box-shadow: inset 3px 0 0 var(--info, #1f5fa8); }
++  .em-item.marcada { background: var(--info-bg, rgba(31,95,168,.08)); }
++  .em-item-check { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 30px; min-height: 30px; cursor: pointer; margin: 0; }
++  .em-item-check input { width: 18px; height: 18px; margin: 0; cursor: pointer; }
++  .em-item-corpo { flex: 1 1 auto; min-width: 0; }
++  .em-item-acoes { flex: 0 0 auto; display: flex; gap: 1px; align-items: center; }
++  .em-ia { visibility: hidden; width: 30px !important; height: 30px; min-height: 30px !important; padding: 0 !important; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; }
++  .em-ia.del { font-size: 22px; }
++  .em-ia:hover, .em-ia:focus-visible { border-color: var(--border); background: var(--card); color: var(--text); }
++  .em-ia.del:hover, .em-ia.del:focus-visible { color: var(--danger); border-color: var(--danger); }
++  .em-ia.flag.on { visibility: visible; color: var(--danger); }
++  .em-item:hover .em-ia, .em-item:focus-within .em-ia, .em-item.foco .em-ia { visibility: visible; }
++  @media (hover: none) { .em-ia { visibility: visible; } }
++  .em-pasta.alvo { outline: 2px dashed var(--info, #1f5fa8); outline-offset: -2px; background: var(--info-bg, rgba(31,95,168,.12)); }
++  .em-lote { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
++  .em-lote label.todos { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; min-height: 32px; }
++  .em-lote button, .em-lote select { min-height: 32px; width: auto !important; max-width: 100%; font-size: 12.5px; padding: 0 10px; }
++  .em-lote .qtd { font-weight: 800; }
++  .em-desfazer { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 8500; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; background: var(--text-strong, #1f2a24); color: var(--card, #fff); border-radius: 8px; padding: 10px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.25); font-size: 13px; }
++  .em-desfazer button { min-height: 36px; background: transparent; border: 1px solid currentColor; color: inherit; border-radius: 6px; padding: 0 12px; font-weight: 800; cursor: pointer; }
++  .em-como { margin: 0 0 12px; border: 1px solid var(--border); border-left: 4px solid var(--info, #1f5fa8); border-radius: 8px; background: var(--card); }
++  .em-como summary { cursor: pointer; padding: 10px 14px; font-weight: 700; font-size: 13px; }
++  .em-como .em-como-corpo { padding: 0 14px 10px; font-size: 12.5px; line-height: 1.55; }
++  .em-como p, .em-como li { text-align: justify; hyphens: auto; overflow-wrap: anywhere; margin: 4px 0; }
++  .em-como ul { margin: 4px 0 8px; padding-left: 20px; }
++  .em-como kbd { display: inline-block; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font: 11.5px/1.5 ui-monospace, Consolas, monospace; background: var(--bc-surface-2, #f4f5f4); color: var(--text); }
++  .em-faixa, div.em-dica, .em-ct .em-dica { text-align: justify; hyphens: auto; }
++  .em-check-linha { display: inline-flex !important; align-items: center; gap: 8px; font-weight: 700; cursor: pointer; min-height: 32px; }
++  .em-dest-caixa { position: relative; min-width: 0; }
++  .em-dest { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 38px; box-sizing: border-box; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); cursor: text; min-width: 0; }
++  .em-dest:focus-within { outline: 2px solid var(--info, #1f5fa8); outline-offset: 0; }
++  .em-pilulas { display: contents; }
++  .em-dest input { flex: 1 1 120px; min-width: 60px; border: 0 !important; outline: 0; box-shadow: none !important; background: transparent; min-height: 30px !important; padding: 0 2px; width: auto !important; }
++  .em-pilula { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--info-bg, rgba(31,95,168,.10)); color: var(--text); padding: 1px 2px 1px 10px; font-size: 12.5px; min-height: 26px; box-sizing: border-box; }
++  .em-pilula .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; max-width: 240px; }
++  .em-pilula button { width: 24px !important; height: 24px; min-height: 24px !important; padding: 0 !important; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 17px; line-height: 1; cursor: pointer; flex: 0 0 auto; }
++  .em-pilula button:hover, .em-pilula button:focus-visible { background: var(--card); color: var(--danger); }
++  .em-pilula.inv { background: var(--danger-bg, #fde8e8); border-color: var(--danger); color: var(--danger); }
++  .em-sug { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; margin-top: 2px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18); max-height: 280px; overflow-y: auto; }
++  .em-sug-item { display: block; width: 100% !important; text-align: left; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); padding: 7px 10px; cursor: pointer; min-height: 40px; }
++  .em-sug-item.ativo, .em-sug-item:hover { background: var(--info-bg, rgba(31,95,168,.12)); }
++  .em-sug-item .n { display: block; font-weight: 700; font-size: 13px; overflow-wrap: anywhere; }
++  .em-sug-item .e { display: block; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
++  .em-sug-tit { padding: 5px 10px; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
++  .em-ct-ferr { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
++  .em-ct-ferr input[type=search] { flex: 1 1 200px; min-width: 0; min-height: 40px; }
++  .em-ct-chips { border: 0 !important; padding: 0 0 8px !important; }
++  .em-ct-lista { display: grid; gap: 6px; }
++  .em-ct { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--card); min-width: 0; }
++  .em-ct .info { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
++  .em-ct .info .e { color: var(--muted); font-size: 12.5px; }
++  .em-ct .botoes { display: flex; flex-wrap: wrap; gap: 4px; }
++  .em-ct .botoes button { min-height: 34px; width: auto !important; }
++  .em-estrela { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--muted); font-size: 18px; cursor: pointer; width: 36px !important; min-height: 36px; padding: 0 !important; flex: 0 0 auto; }
++  .em-estrela.on { color: var(--warning, #c98a00); }
++  .em-auto { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-top: 6px; }
++  @media (max-width: 900px) { .em-desfazer { bottom: 76px; } .em-pilula .t { max-width: 180px; } }
+ </style>
+ 
+ <script>
+@@ -117,7 +177,9 @@
+   // política de conteúdo própria; imagens externas só com "Mostrar imagens"; link pede confirmação com o endereço.
+   // ==========================================================
+   var EM = { aba: "caixa", sit: null, conta: "", pasta: "INBOX", pastas: [], lista: null, pagina: 0, busca: "", filtros: {}, aberta: null, timer: null, timerTela: null,
+-    desde: "", avisadas: {}, comp: null, imagens: {}, clientes: null, adm: null };
++    desde: "", avisadas: {}, comp: null, imagens: {}, clientes: null, adm: null,
++    // 17/11/2026: sel = marcadas na lista; focoUid = linha em foco; pend = exclusões esperando o "Desfazer" e movimentos em curso; ct = contatos
++    sel: {}, focoUid: null, pend: [], ct: null, ctEm: 0, ctFiltro: "todos", ctBusca: "", lerSeq: 0, arrastando: null };
+   var EM_ICONE = { entrada: "fa-inbox", enviados: "fa-paper-plane", rascunhos: "fa-file-pen", lixeira: "fa-trash-can", spam: "fa-ban", arquivo: "fa-box-archive" };
+ 
+   function Email_esc_(v) { return escapeHtml_(v === 0 ? "0" : (v === null || v === undefined ? "" : String(v))); }
+@@ -162,7 +224,7 @@
+     if (EM.timer) clearInterval(EM.timer);
+     EM.timer = setInterval(function () { if (document.visibilityState === "visible") Email_verificar_(); }, 60 * 1000);
+   }
+-  function Email_parar_() { if (EM.timer) clearInterval(EM.timer); if (EM.timerTela) clearInterval(EM.timerTela); EM.timer = null; EM.timerTela = null; EM.sit = null; EM.lista = null; EM.aberta = null; EM.adm = null; }
++  function Email_parar_() { try { Email_confirmarPendentes_(); } catch (e) {} EM.ct = null; EM.sel = {}; EM.focoUid = null; if (EM.timer) clearInterval(EM.timer); if (EM.timerTela) clearInterval(EM.timerTela); EM.timer = null; EM.timerTela = null; EM.sit = null; EM.lista = null; EM.aberta = null; EM.adm = null; }
+   function Email_verificar_() {
+     google.script.run.withSuccessHandler(function (r) {
+       if (!r || !r.ok || !r.disponivel) return;
+@@ -216,6 +278,7 @@
+     var div = document.getElementById("conteudo");
+     if (!div) return;
+     window.SGO_MODULO_ATUAL = "email";
++    Email_instalarGlobais_();
+     if (ehMobileModo_()) atualizarTituloMobile_("E-mail");
+     div.innerHTML = '<div class="module-shell">' + Email_cabecalho_() + '<div id="emCorpo"><div class="em-vazio">Abrindo o e-mail...</div></div></div>';
+     Email_chamar_("Email_apiSituacao", [], function (r) {
+@@ -234,11 +297,12 @@
+   function Email_atualizar_() { EM.lista = null; EM.adm = null; Email_render_(); }
+ 
+   function Email_desenharAbas_() {
+-    var abas = [["caixa", "Caixa de e-mail"], ["minha", "Minha caixa e assinatura"]];
++    var abas = [["caixa", "Caixa de e-mail"], ["contatos", "Contatos"], ["minha", "Minha caixa e assinatura"]];
+     if (EM.sit && EM.sit.eu && EM.sit.eu.admin) abas.push(["compartilhadas", "Caixas compartilhadas"]);
+     var h = '<div class="em-tabs" role="tablist">' + abas.map(function (a) { return '<button type="button" role="tab" class="em-tab' + (EM.aba === a[0] ? " active" : "") + '" onclick="Email_irAba_(\'' + a[0] + '\')">' + a[1] + '</button>'; }).join("") + '</div><div id="emAba"></div>';
+     document.getElementById("emCorpo").innerHTML = h;
+     if (EM.aba === "minha") Email_renderMinha_();
++    else if (EM.aba === "contatos") Email_renderContatos_();
+     else if (EM.aba === "compartilhadas") Email_renderCompartilhadas_();
+     else Email_renderCaixa_();
+   }
+@@ -256,7 +320,7 @@
+     if (EM.sit.situacao.ensaio) faixa += '<div class="em-faixa aviso">Servidor em ensaio: dá para ler, mas nada é enviado, movido nem apagado.</div>';
+     var contas = (s.pessoal ? [s.pessoal] : []).concat(s.compartilhadas);
+     var seletor = contas.length > 1 ? '<select aria-label="Caixa" onchange="Email_trocarConta_(this.value)">' + contas.map(function (x) { return '<option value="' + Email_esc_(x.id) + '"' + (x.id === EM.conta ? " selected" : "") + '>' + Email_esc_(x.tipo === "pessoal" ? "Minha caixa (" + x.endereco + ")" : x.endereco + " (compartilhada)") + '</option>'; }).join("") + '</select>' : "";
+-    alvo.innerHTML = faixa +
++    alvo.innerHTML = faixa + Email_comoFazer_("caixa") +
+       '<div class="em-pastas-celular" id="emPastasCel"></div>' +
+       '<div class="em-grade" id="emGrade">' +
+         '<div class="em-col em-col-pastas"><div class="em-pastas">' + seletor + '<div id="emPastas"><div class="em-vazio">Carregando pastas...</div></div></div></div>' +
+@@ -264,25 +328,28 @@
+           '<div class="em-ferr"><input type="search" id="emBusca" placeholder="Procurar por remetente, destinatário ou assunto" value="' + Email_esc_(EM.busca) + '" onkeydown="if(event.key===\'Enter\'){Email_buscar_()}" aria-label="Procurar">' +
+           '<button type="button" class="btn-secondary" onclick="Email_buscar_()">Procurar</button></div>' +
+           '<div class="em-ferr" style="border-bottom:1px solid var(--border)">' +
+-            Email_chip_("naoLidas", "Não lidas") + Email_chip_("comAnexo", "Com anexo") + Email_chip_("deCliente", "De cliente") + '</div>' +
+-          '<div class="em-lista" id="emLista"><div class="em-vazio">Carregando mensagens...</div></div></div>' +
++            Email_chip_("naoLidas", "Não lidas") + Email_chip_("sinalizadas", "Sinalizadas") + Email_chip_("comAnexo", "Com anexo") + Email_chip_("deCliente", "De cliente") + '</div>' +
++          '<div class="em-lote" id="emLote"></div><div id="emAvisoLista" style="padding:0 8px"></div>' +
++          '<div class="em-lista" id="emLista" role="listbox" aria-label="Mensagens da pasta" aria-multiselectable="true"><div class="em-vazio">Carregando mensagens...</div></div></div>' +
+         '<div class="em-col em-col-leitor"><div class="em-leitor" id="emLeitor"><div class="em-vazio">Escolha uma mensagem na lista para ler.</div></div></div>' +
+       '</div>';
+     if (contas.length > 1) document.getElementById("emPastasCel").innerHTML = seletor;
++    Email_instalarLista_();
++    if (EM.avisoGuardado) { Email_avisoLista_("erro", EM.avisoGuardado); EM.avisoGuardado = ""; }
+     Email_carregarPastas_();
+     Email_carregarLista_();
+   }
+   function Email_chip_(k, t) { return '<button type="button" class="em-chip' + (EM.filtros[k] ? " on" : "") + '" aria-pressed="' + (EM.filtros[k] ? "true" : "false") + '" onclick="Email_filtro_(\'' + k + '\')">' + t + '</button>'; }
+-  function Email_filtro_(k) { EM.filtros[k] = !EM.filtros[k]; EM.pagina = 0; Email_renderCaixa_(); }
+-  function Email_buscar_() { var i = document.getElementById("emBusca"); EM.busca = i ? i.value.trim() : ""; EM.pagina = 0; Email_carregarLista_(); }
+-  function Email_trocarConta_(id) { EM.conta = id; EM.pasta = "INBOX"; EM.pagina = 0; EM.aberta = null; Email_renderCaixa_(); }
++  function Email_filtro_(k) { EM.filtros[k] = !EM.filtros[k]; EM.pagina = 0; EM.sel = {}; Email_renderCaixa_(); }
++  function Email_buscar_() { var i = document.getElementById("emBusca"); EM.busca = i ? i.value.trim() : ""; EM.pagina = 0; EM.sel = {}; Email_carregarLista_(); }
++  function Email_trocarConta_(id) { EM.conta = id; EM.pasta = "INBOX"; EM.pagina = 0; EM.aberta = null; EM.sel = {}; EM.focoUid = null; Email_renderCaixa_(); }
+ 
+   function Email_carregarPastas_() {
+     Email_chamar_("Email_apiPastas", [{ conta: EM.conta }], function (r) {
+       EM.pastas = r.pastas || [];
+       var el = document.getElementById("emPastas");
+       if (el) el.innerHTML = EM.pastas.map(function (p) {
+-        return '<button type="button" class="em-pasta' + (p.caminho === EM.pasta ? " active" : "") + '" onclick="Email_irPasta_(\'' + Email_esc_(p.caminho).replace(/'/g, "\\'") + '\')"><span><i class="fas ' + (EM_ICONE[p.especial] || "fa-folder") + '" aria-hidden="true"></i>&nbsp; ' + Email_esc_(p.nome) + '</span>' + (p.naoLidas ? '<span class="n">' + p.naoLidas + '</span>' : "") + '</button>';
++        return '<button type="button" class="em-pasta' + (p.caminho === EM.pasta ? " active" : "") + '" onclick="Email_irPasta_(' + Email_js_(p.caminho) + ')" ondragover="Email_pastaSobre_(event,this)" ondragleave="this.classList.remove(\'alvo\')" ondrop="Email_soltarNaPasta_(event,' + Email_js_(p.caminho) + ')"><span><i class="fas ' + (EM_ICONE[p.especial] || "fa-folder") + '" aria-hidden="true"></i>&nbsp; ' + Email_esc_(p.nome) + '</span>' + (p.naoLidas ? '<span class="n">' + p.naoLidas + '</span>' : "") + '</button>';
+       }).join("");
+       var cel = document.getElementById("emPastasCel");
+       if (cel) {
+@@ -290,9 +357,10 @@
+         cel.innerHTML = (antes ? antes.outerHTML : "") + '<select aria-label="Pasta" onchange="Email_irPasta_(this.value)">' + EM.pastas.map(function (p) { return '<option value="' + Email_esc_(p.caminho) + '"' + (p.caminho === EM.pasta ? " selected" : "") + '>' + Email_esc_(p.nome) + (p.naoLidas ? " (" + p.naoLidas + ")" : "") + '</option>'; }).join("") + '</select>';
+         cel.style.display = "";
+       }
++      Email_desenharLote_(); // "Mover para..." do lote depende das pastas
+     }, function (msg) { var el = document.getElementById("emPastas"); if (el) el.innerHTML = '<div class="em-msg erro">' + Email_esc_(msg) + '</div>'; }, { silencioso: true });
+   }
+-  function Email_irPasta_(caminho) { EM.pasta = caminho; EM.pagina = 0; EM.aberta = null; var g = document.getElementById("emGrade"); if (g) g.classList.remove("lendo"); Email_carregarPastas_(); Email_carregarLista_(); var l = document.getElementById("emLeitor"); if (l) l.innerHTML = '<div class="em-vazio">Escolha uma mensagem na lista para ler.</div>'; }
++  function Email_irPasta_(caminho) { EM.pasta = caminho; EM.pagina = 0; EM.aberta = null; EM.sel = {}; EM.focoUid = null; var g = document.getElementById("emGrade"); if (g) g.classList.remove("lendo"); Email_carregarPastas_(); Email_carregarLista_(); var l = document.getElementById("emLeitor"); if (l) l.innerHTML = '<div class="em-vazio">Escolha uma mensagem na lista para ler.</div>'; }
+   function Email_nomePasta_(c) { var p = EM.pastas.filter(function (x) { return x.caminho === c; })[0]; return p ? p.nome : c; }
+   function Email_especial_(c) { var p = EM.pastas.filter(function (x) { return x.caminho === c; })[0]; return p ? p.especial : ""; }
+ 
+@@ -300,7 +368,7 @@
+     var el = document.getElementById("emLista");
+     if (!el) return;
+     if (!silencioso) el.innerHTML = '<div class="em-vazio">Carregando mensagens...</div>';
+-    Email_chamar_("Email_apiListar", [{ conta: EM.conta, pasta: EM.pasta, busca: EM.busca, naoLidas: !!EM.filtros.naoLidas, comAnexo: !!EM.filtros.comAnexo, deCliente: !!EM.filtros.deCliente, pagina: EM.pagina, porPagina: 30 }], function (r) {
++    Email_chamar_("Email_apiListar", [{ conta: EM.conta, pasta: EM.pasta, busca: EM.busca, naoLidas: !!EM.filtros.naoLidas, sinalizadas: !!EM.filtros.sinalizadas, comAnexo: !!EM.filtros.comAnexo, deCliente: !!EM.filtros.deCliente, pagina: EM.pagina, porPagina: 30 }], function (r) {
+       EM.lista = r;
+       Email_desenharLista_();
+     }, function (msg) { var e = document.getElementById("emLista"); if (e) e.innerHTML = '<div class="em-msg erro">' + Email_esc_(msg) + '</div>'; }, { silencioso: true });
+@@ -310,46 +378,67 @@
+     var foco = document.activeElement;
+     return !!(foco && (/^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName) || foco.isContentEditable) && foco.closest("#conteudo"));
+   }
+-  function Email_atualizarListaSozinha_() { if (EM.aba !== "caixa" || Email_emEdicao_() || EM.pagina > 0) return; Email_carregarLista_(true); }
++  function Email_atualizarListaSozinha_() { if (EM.aba !== "caixa" || Email_emEdicao_() || EM.pagina > 0 || EM.arrastando) return; Email_carregarLista_(true); }
+ 
+   function Email_desenharLista_() {
+     var el = document.getElementById("emLista"), r = EM.lista;
+     if (!el || !r) return;
+-    if (!r.itens.length) {
+-      var filtro = EM.busca || EM.filtros.naoLidas || EM.filtros.comAnexo || EM.filtros.deCliente;
+-      el.innerHTML = '<div class="em-vazio">' + (filtro ? "Nenhuma mensagem com esse filtro nesta pasta. Tire o filtro ou procure em outra pasta." : "Nenhuma mensagem nesta pasta.") + '</div>';
++    var rolagem = el.scrollTop; // 17/11/2026: excluir, marcar ou atualizar não tira a lista do lugar
++    Email_desenharLote_();
++    var itens = Email_itensVisiveis_();
++    var parcial = r.sinalizadasParcial ? '<div class="em-dica" style="padding:6px 10px">O filtro «Sinalizadas» está valendo só para as mensagens desta página (o servidor de e-mail ainda não filtra a caixa toda). Use «Mais antigas» para ver as outras.</div>' : "";
++    if (!itens.length) {
++      var filtro = EM.busca || EM.filtros.naoLidas || EM.filtros.sinalizadas || EM.filtros.comAnexo || EM.filtros.deCliente;
++      el.innerHTML = parcial + '<div class="em-vazio">' + (filtro ? "Nenhuma mensagem com esse filtro nesta pasta. Tire o filtro ou procure em outra pasta." : "Nenhuma mensagem nesta pasta.") + '</div>' + Email_paginacao_(r);
+       return;
+     }
+-    var sel = EM.aberta ? EM.aberta.uid : null;
+-    el.innerHTML = r.itens.map(function (it) {
++    var sel = EM.aberta && EM.aberta.pasta === EM.pasta ? EM.aberta.uid : null;
++    if (EM.focoUid && !itens.some(function (it) { return it.uid === EM.focoUid; })) EM.focoUid = null;
++    var foco = EM.focoUid || sel;
++    var lix = Email_especial_(EM.pasta) === "lixeira", enviados = Email_especial_(EM.pasta) === "enviados" || Email_especial_(EM.pasta) === "rascunhos";
++    el.innerHTML = parcial + itens.map(function (it, k) {
+       var selos = (it.cliente ? '<span class="em-selo cli" title="' + (it.cliente.ambiguo ? "Endereço cadastrado em mais de um cliente" : it.cliente.por === "dominio" ? "Pelo domínio do e-mail do cliente" : "Remetente do cadastro de clientes") + '">Cliente: ' + Email_esc_(it.cliente.nome) + '</span>' : "") +
+         (it.temAnexo ? '<span class="em-selo anx"><i class="fas fa-paperclip" aria-hidden="true"></i> anexo</span>' : "") +
+         (it.respondida ? '<span class="em-selo resp">Respondida</span>' : "") +
+         (it.tratamento ? '<span class="em-selo trat">' + (it.tratamento.situacao === "respondida" ? "Respondida por " : "Respondendo: ") + Email_esc_(it.tratamento.nome) + '</span>' : "");
+-      var quem = Email_especial_(EM.pasta) === "enviados" || Email_especial_(EM.pasta) === "rascunhos" ? "Para: " + it.para : it.de;
+-      return '<button type="button" class="em-item' + (it.lida ? "" : " naolida") + (sel === it.uid ? " sel" : "") + '" onclick="Email_abrirMensagem_(\'' + Email_esc_(EM.pasta).replace(/'/g, "\\'") + '\',' + it.uid + ')">' +
+-        '<div class="l1"><span class="de">' + Email_esc_(quem || "(sem remetente)") + '</span><span class="dt">' + Email_dataCurta_(it.data) + '</span></div>' +
+-        '<div class="as">' + Email_esc_(it.assunto || "(sem assunto)") + '</div>' + (selos ? '<div class="l3">' + selos + '</div>' : "") + '</button>';
+-    }).join("") +
+-      '<div class="em-mais">' + (EM.pagina > 0 ? '<button type="button" class="btn-secondary" onclick="EM.pagina--;Email_carregarLista_()">Anteriores</button> ' : "") +
+-      (r.temMais ? '<button type="button" class="btn-secondary" onclick="EM.pagina++;Email_carregarLista_()">Mais antigas</button>' : "") +
++      var quem = enviados ? "Para: " + it.para : it.de, marcada = !!EM.sel[it.uid], assunto = it.assunto || "(sem assunto)";
++      var emFoco = foco ? foco === it.uid : k === 0;
++      return '<div class="em-item' + (it.lida ? "" : " naolida") + (sel === it.uid ? " sel" : "") + (foco === it.uid ? " foco" : "") + (marcada ? " marcada" : "") + '" role="option" aria-selected="' + (sel === it.uid || marcada) + '" tabindex="' + (emFoco ? "0" : "-1") + '" data-uid="' + it.uid + '" draggable="true" onclick="Email_cliqueItem_(event,' + it.uid + ')">' +
++        '<label class="em-item-check" title="Marcar para excluir, mover ou marcar várias de uma vez" onclick="event.stopPropagation()"><input type="checkbox" aria-label="Marcar a mensagem ' + Email_esc_(assunto) + '"' + (marcada ? " checked" : "") + ' onchange="Email_marcarSelecao_(' + it.uid + ',this.checked)"></label>' +
++        '<div class="em-item-corpo"><div class="l1"><span class="de">' + Email_esc_(quem || "(sem remetente)") + '</span><span class="dt">' + Email_dataCurta_(it.data) + '</span></div>' +
++        '<div class="as">' + Email_esc_(assunto) + '</div>' + (selos ? '<div class="l3">' + selos + '</div>' : "") + '</div>' +
++        '<div class="em-item-acoes">' +
++          '<button type="button" class="em-ia lida" tabindex="-1" title="' + (it.lida ? "Marcar como não lida (U)" : "Marcar como lida (U)") + '" aria-label="' + (it.lida ? "Marcar como não lida" : "Marcar como lida") + '" onclick="event.stopPropagation();Email_linhaLida_(' + it.uid + ')"><i class="fas ' + (it.lida ? "fa-envelope" : "fa-envelope-open") + '" aria-hidden="true"></i></button>' +
++          '<button type="button" class="em-ia flag' + (it.sinalizada ? " on" : "") + '" tabindex="-1" aria-pressed="' + !!it.sinalizada + '" title="' + (it.sinalizada ? "Tirar a sinalização (I)" : "Sinalizar para não esquecer (I)") + '" aria-label="' + (it.sinalizada ? "Tirar a sinalização" : "Sinalizar") + '" onclick="event.stopPropagation();Email_linhaSinalizar_(' + it.uid + ')"><i class="fas fa-flag" aria-hidden="true"></i></button>' +
++          '<button type="button" class="em-ia del" tabindex="-1" title="' + (lix ? "Apagar para sempre" : "Excluir sem abrir (Delete)") + '" aria-label="' + (lix ? "Apagar para sempre" : "Excluir") + ' a mensagem ' + Email_esc_(assunto) + '" onclick="event.stopPropagation();Email_excluirDaLista_([' + it.uid + '])">&times;</button>' +
++        '</div></div>';
++    }).join("") + Email_paginacao_(r);
++    el.scrollTop = rolagem;
++  }
++  function Email_paginacao_(r) {
++    return '<div class="em-mais">' + (EM.pagina > 0 ? '<button type="button" class="btn-secondary" onclick="Email_pagina_(-1)">Anteriores</button> ' : "") +
++      (r.temMais ? '<button type="button" class="btn-secondary" onclick="Email_pagina_(1)">Mais antigas</button>' : "") +
+       (r.total !== null && r.total !== undefined ? '<div class="em-dica">' + r.total + ' mensagem(ns) nesta pasta</div>' : "") + '</div>';
+   }
+ 
+   // ---------------- leitura ----------------
+   function Email_abrirMensagem_(pasta, uid) {
++    uid = Number(uid);
++    if (pasta === EM.pasta) { EM.focoUid = uid; Email_marcarFocoDom_(); }
++    var seq = EM.lerSeq = (EM.lerSeq || 0) + 1; // 17/11/2026: setas rápidas: só a última mensagem pedida aparece
+     var g = document.getElementById("emGrade"); if (g) g.classList.add("lendo");
+     var el = document.getElementById("emLeitor");
+     if (el) el.innerHTML = '<div class="em-vazio">Abrindo a mensagem...</div>';
+     var rasc = Email_especial_(pasta) === "rascunhos";
+     Email_chamar_("Email_apiLer", [{ conta: EM.conta, pasta: pasta, uid: uid, marcarLida: !rasc }], function (r) {
++      if (seq !== EM.lerSeq) return;
+       EM.aberta = r.mensagem;
+       if (rasc) { Email_escrever_({ rascunho: r.mensagem }); }
+       Email_desenharLeitor_();
+       (EM.lista && EM.lista.itens || []).forEach(function (it) { if (it.uid === uid) it.lida = true; });
+       Email_desenharLista_();
+       Email_verificar_();
+-    }, function (msg) { var e = document.getElementById("emLeitor"); if (e) e.innerHTML = '<button type="button" class="btn-secondary em-voltar" onclick="Email_fecharLeitor_()">Voltar à lista</button><div class="em-msg erro">' + Email_esc_(msg) + '</div>'; });
++    }, function (msg) { if (seq !== EM.lerSeq) return; var e = document.getElementById("emLeitor"); if (e) e.innerHTML = '<button type="button" class="btn-secondary em-voltar" onclick="Email_fecharLeitor_()">Voltar à lista</button><div class="em-msg erro">' + Email_esc_(msg) + '</div>'; });
+   }
+   function Email_abrirChamado_() {
+     var m = EM.aberta; if (!m || typeof Assistencia_abrirDeEmail_ !== "function") return;
+@@ -384,8 +473,10 @@
+         // 21/10/2026: e-mail de cliente pedindo atendimento vira chamado da Assistência técnica (JS_Assistencia.html), já com o texto e o cliente
+         (typeof Assistencia_abrirDeEmail_ === "function" ? '<button type="button" class="btn-secondary" onclick="Email_abrirChamado_()"><i class="fas fa-headset" aria-hidden="true"></i>&nbsp;Abrir chamado</button>' : "") +
+         '<button type="button" class="btn-secondary" onclick="Email_marcar_(false)">Marcar como não lida</button>' +
++        '<button type="button" class="btn-secondary" id="emBtnSinal" onclick="Email_sinalizarAberta_()"><i class="fas fa-flag" aria-hidden="true"></i>&nbsp;' + (Email_sinalAberta_() ? "Tirar sinalização" : "Sinalizar") + '</button>' +
++        (m.deEndereco && String(m.deEndereco).toLowerCase() !== String((Email_contaAtual_() || {}).endereco || "").toLowerCase() ? '<button type="button" class="btn-secondary" onclick="Email_salvarRemetente_()"><i class="fas fa-address-book" aria-hidden="true"></i>&nbsp;Salvar remetente nos contatos</button>' : "") +
+         (destinos.length ? '<select aria-label="Mover para" onchange="if(this.value){Email_mover_(this.value)}"><option value="">Mover para...</option>' + destinos.map(function (p) { return '<option value="' + Email_esc_(p.caminho) + '">' + Email_esc_(p.nome) + '</option>'; }).join("") + '</select>' : "") +
+-        '<button type="button" class="btn-secondary" onclick="Email_apagar_(' + (lix ? "true" : "false") + ')"><i class="fas fa-trash-can" aria-hidden="true"></i>&nbsp;' + (lix ? "Apagar para sempre" : "Apagar") + '</button>' +
++        '<button type="button" class="btn-secondary" title="' + (lix ? "Apagar para sempre" : "Excluir e abrir a próxima (Delete)") + '" onclick="Email_apagar_(' + (lix ? "true" : "false") + ')"><i class="fas fa-trash-can" aria-hidden="true"></i>&nbsp;' + (lix ? "Apagar para sempre" : "Excluir") + '</button>' +
+       '</div>' + imgs +
+       (m.anexos && m.anexos.length ? '<div class="em-anexos">' + m.anexos.map(function (a) { return '<button type="button" class="em-anexo" title="Baixar" onclick="Email_baixarAnexo_(\'' + Email_esc_(a.parte) + '\')"><i class="fas fa-paperclip" aria-hidden="true"></i> ' + Email_esc_(a.nome) + ' (' + Email_tamanho_(a.tamanho) + ')</button>'; }).join("") + '</div>' : "") +
+       '<iframe class="em-corpo" id="emCorpoMsg" title="Conteúdo do e-mail" sandbox="allow-same-origin" referrerpolicy="no-referrer"></iframe>';
+@@ -412,6 +503,7 @@
+           ev.preventDefault();
+           Email_abrirLink_(a.getAttribute("href"), a.textContent || "");
+         });
++        d.addEventListener("keydown", Email_teclas_); // atalhos também com o foco no texto da mensagem
+       } catch (e) { /* sem acesso ao conteúdo: altura padrão */ }
+     };
+   }
+@@ -439,14 +531,18 @@
+   }
+   function Email_marcar_(lida) {
+     var m = EM.aberta; if (!m) return;
++    var it = m.pasta === EM.pasta ? Email_itemPorUid_(m.uid) : null; if (it) it.lida = !!lida;
+     Email_chamar_("Email_apiMarcar", [{ conta: EM.conta, pasta: m.pasta, uids: [m.uid], lida: lida }], function () { Email_fecharLeitor_(); EM.aberta = null; var l = document.getElementById("emLeitor"); if (l) l.innerHTML = '<div class="em-vazio">Mensagem marcada como não lida.</div>'; Email_carregarLista_(true); Email_carregarPastas_(); Email_verificar_(); });
+   }
+   function Email_mover_(destino) {
+     var m = EM.aberta; if (!m) return;
++    if (m.pasta === EM.pasta && Email_itemPorUid_(m.uid)) { Email_moverUids_([m.uid], destino); return; } // 17/11/2026: abre a próxima
+     Email_chamar_("Email_apiMover", [{ conta: EM.conta, pasta: m.pasta, uids: [m.uid], destino: destino }], function () { Email_depoisDeTirar_("Mensagem movida para " + Email_nomePasta_(destino) + "."); }, null, { carregando: "Movendo..." });
+   }
+   function Email_apagar_(definitivo) {
+     var m = EM.aberta; if (!m) return;
++    // 17/11/2026: excluir com a mensagem aberta abre a próxima (a de baixo; se era a última, a de cima), com "Desfazer"
++    if (m.pasta === EM.pasta && Email_itemPorUid_(m.uid)) { Email_excluirDaLista_([m.uid]); return; }
+     if (definitivo && !confirm("Apagar esta mensagem para sempre? Ela sai da Lixeira e não volta mais (nem pelo webmail).")) return;
+     Email_chamar_("Email_apiApagar", [{ conta: EM.conta, pasta: m.pasta, uids: [m.uid], definitivo: !!definitivo, confirmado: !!definitivo }], function () { Email_depoisDeTirar_(definitivo ? "Mensagem apagada para sempre." : "Mensagem enviada para a Lixeira. Para desfazer, abra a Lixeira e mova de volta."); }, null, { carregando: "Apagando..." });
+   }
+@@ -561,16 +657,18 @@
+     var originais = origLista.map(function (a) { return typeof a === "string" ? { parte: "", nome: a, tamanho: 0, incluir: true } : { parte: String(a.parte || ""), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0, incluir: !!o.encaminhando }; });
+     var resposta = !!(o.respondendo || o.encaminhando);
+     var assId = r ? "__manter" : Email_assinaturaPadraoDe_(c, resposta);
++    if (EM.comp && EM.comp.timerAuto) clearInterval(EM.comp.timerAuto);
+     EM.comp = { conta: c.id, anexos: [], respondendo: o.respondendo || null, encaminhando: o.encaminhando ? { pasta: o.encaminhando.pasta, uid: o.encaminhando.uid } : null, rascunhoUid: r ? r.uid : null, sujo: false,
++      dest: {}, versao: 0, sug: null, salvando: false, rascAuto: false, rascManual: !!r, rascunhoPasta: r ? r.pasta : "",
+       originais: originais, doRascunho: r ? (r.anexos || []).map(function (a) { return { parte: String(a.parte), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0 }; }) : [], resposta: resposta, assinatura: assId };
+     var assHtml = r ? "" : Email_assinaturaHtml_(assId, c);
+     var corpoInicial = r ? r.html : (o.html || "<p><br></p>") + (assHtml ? "<div><br></div>" + assHtml : "") + (o.citacao || "");
+     Email_janela_('<h3>' + (o.respondendo ? "Responder" : o.encaminhando ? "Encaminhar" : r ? "Continuar rascunho" : "Escrever e-mail") + '</h3>' +
+       (contas.length > 1 ? '<div class="em-linha"><label for="emDe">De</label><select id="emDe" onchange="Email_trocarRemetente_(this.value)" style="min-height:38px">' + contas.map(function (x) { return '<option value="' + Email_esc_(x.id) + '"' + (x.id === c.id ? " selected" : "") + '>' + Email_esc_(x.endereco) + (x.tipo === "compartilhada" ? " (compartilhada)" : "") + '</option>'; }).join("") + '</select></div>'
+         : '<div class="em-linha"><label>De</label><div style="font-size:13px;overflow-wrap:anywhere">' + Email_esc_(c.endereco) + '</div></div>') +
+-      '<div class="em-linha"><label for="emPara">Para</label><input id="emPara" type="text" autocomplete="off" value="' + Email_esc_(r ? r.para : o.para || "") + '" placeholder="cliente@empresa.com.br; outro@empresa.com.br"></div>' +
+-      '<div class="em-linha"><label for="emCc">Cc</label><input id="emCc" type="text" autocomplete="off" value="' + Email_esc_(r ? r.cc : o.cc || "") + '"></div>' +
+-      '<div class="em-linha"><label for="emCco">Cco</label><input id="emCco" type="text" autocomplete="off" value=""></div>' +
++      // 17/11/2026: destinatários em pílulas com busca ao digitar (meus contatos e catálogo da empresa), como no Outlook
++      Email_campoDest_("emPara", r ? r.para : o.para || "") + Email_campoDest_("emCc", r ? r.cc : o.cc || "") + Email_campoDest_("emCco", r ? r.cco || "" : o.cco || "") +
++      '<div class="em-linha"><span></span><div class="em-dica">Digite parte do nome, do e-mail ou da empresa: aparecem os seus contatos e os da empresa, os usados por último primeiro. Escolha com as setas e Enter (ou Tab) ou com o mouse. Ponto e vírgula ou vírgula separa os endereços; colar uma lista também funciona. O × da pílula tira o destinatário; pílula vermelha é endereço errado: dê dois cliques para corrigir.</div></div>' +
+       '<div class="em-linha"><label for="emAssunto">Assunto</label><input id="emAssunto" type="text" value="' + Email_esc_(r ? r.assunto : o.assunto || "") + '"></div>' +
+       '<div class="em-barra" role="toolbar" aria-label="Formatação">' +
+         '<button type="button" class="btn-secondary" title="Negrito" onclick="Email_formatar_(\'bold\')"><b>N</b></button>' +
+@@ -586,11 +684,17 @@
+         '<span class="em-dica em-soltar-aviso"><b>Solte os arquivos para anexar.</b></span></div>' +
+       '<div id="emAnexosComp" class="em-anexos-comp"></div>' +
+       '<div id="emCompMsg"></div>' +
++      '<div class="em-auto"><label class="em-check-linha" style="font-weight:600"><input type="checkbox" id="emAutoRasc"' + (Email_autoRascunhoLigado_() ? " checked" : "") + ' onchange="Email_trocarAutoRascunho_(this.checked)"> Salvar rascunho sozinho a cada minuto</label><span class="em-dica" id="emAutoInfo" role="status"></span></div>' +
++      '<div class="em-dica">Com a opção ligada, o que você escreve vai para a pasta Rascunhos a cada minuto com mudança, para não perder o texto se a internet cair. Ao enviar, o rascunho sai de lá; ao descartar, o rascunho salvo sozinho vai para a Lixeira.</div>' +
+       '<div class="em-rodape"><span class="em-dica">Limite: ' + (lim.mensagensHora || 30) + ' mensagens ou ' + (lim.destinatariosHora || 100) + ' destinatários por hora; até ' + (lim.destinatariosMensagem || 50) + ' por mensagem.</span>' +
+       '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn-secondary" onclick="Email_descartar_()">Descartar</button><button type="button" class="btn-secondary" onclick="Email_salvarRascunho_()">Salvar rascunho</button><button type="button" class="btn-primary" id="emBtnEnviar" onclick="Email_enviar_()"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Enviar</button></span></div>');
+     var ed = document.getElementById("emEditor");
+-    ed.addEventListener("input", function () { if (EM.comp) EM.comp.sujo = true; });
+-    ["emPara", "emCc", "emCco", "emAssunto"].forEach(function (id) { var i = document.getElementById(id); if (i) i.addEventListener("input", function () { if (EM.comp) EM.comp.sujo = true; }); });
++    ed.addEventListener("input", Email_sujou_);
++    ["emAssunto"].forEach(function (id) { var i = document.getElementById(id); if (i) i.addEventListener("input", Email_sujou_); });
++    EM_DEST.forEach(Email_destIniciar_);
++    // contatos para as sugestões (uma vez a cada 5 minutos); quando chegam, as pílulas ganham o nome
++    Email_carregarContatos_(function (ct) { if (!ct || !EM.comp) return; EM_DEST.forEach(function (id) { (EM.comp.dest[id] || []).forEach(function (p) { if (!p.nome) p.nome = Email_nomeConhecido_(p.email); }); Email_destDesenhar_(id); }); });
++    Email_iniciarAutoRascunho_();
+     Email_soltarArquivos_(document.getElementById("emOverlay"));
+     Email_desenharAnexosComp_();
+     setTimeout(function () { var p = document.getElementById(o.para || r ? "emEditor" : "emPara"); if (p) p.focus(); }, 50);
+@@ -646,7 +750,7 @@
+       for (var i = 0; i < ed.children.length; i++) if (ed.children[i].tagName === "BLOCKQUOTE") { citacao = ed.children[i]; break; }
+       if (citacao) citacao.insertAdjacentHTML("beforebegin", "<div><br></div>" + html); else ed.insertAdjacentHTML("beforeend", "<div><br></div>" + html);
+     }
+-    EM.comp.assinatura = id; EM.comp.sujo = true;
++    EM.comp.assinatura = id; Email_sujou_();
+   }
+ 
+   // ---------------- anexos na janela de escrever (27/10/2026) ----------------
+@@ -677,7 +781,7 @@
+       if (EM.comp.anexos.length >= maxQtd) { erros.push("Limite de " + maxQtd + " arquivos por mensagem: «" + f.name + "» não foi anexado. Junte os arquivos num .zip ou mande em outra mensagem."); ler(i + 1); return; }
+       if (Email_totalComp_() + f.size > maxTot) { erros.push("«" + f.name + "» (" + Email_tamanho_(f.size) + ") passaria de " + Math.round(maxTot / MB) + " MB somados por mensagem. Tire algum anexo, compacte ou mande em outra mensagem."); ler(i + 1); return; }
+       var r = new FileReader();
+-      r.onload = function () { if (!EM.comp) return; EM.comp.anexos.push({ nome: f.name, tipo: f.type || "application/octet-stream", tamanho: f.size, base64: String(r.result).split(",")[1] || "" }); EM.comp.sujo = true; Email_desenharAnexosComp_(); ler(i + 1); };
++      r.onload = function () { if (!EM.comp) return; EM.comp.anexos.push({ nome: f.name, tipo: f.type || "application/octet-stream", tamanho: f.size, base64: String(r.result).split(",")[1] || "" }); Email_sujou_(); Email_desenharAnexosComp_(); ler(i + 1); };
+       r.onerror = function () { erros.push("Não consegui ler o arquivo «" + f.name + "» (ele pode estar aberto em outro programa ou ter sido movido). Feche o arquivo e anexe de novo."); ler(i + 1); };
+       r.readAsDataURL(f);
+     };
+@@ -706,17 +810,17 @@
+   function Email_originaisTodos_(v) { if (!EM.comp) return; EM.comp.originais.forEach(function (a) { if (a.parte) a.incluir = !!v; }); Email_conferirTotalOriginais_(); }
+   function Email_originalIncluir_(i, v) { if (!EM.comp || !EM.comp.originais[i]) return; EM.comp.originais[i].incluir = !!v; Email_conferirTotalOriginais_(); }
+   function Email_conferirTotalOriginais_() {
+-    EM.comp.sujo = true;
++    Email_sujou_();
+     var max = (Email_limites_().anexosMb || 18) * 1048576;
+     Email_desenharAnexosComp_();
+     if (Email_totalComp_() > max) Email_msgComp_("erro", "Com os anexos da mensagem original a mensagem passa de " + Math.round(max / 1048576) + " MB somados. Desmarque algum anexo da original ou tire um anexo seu antes de enviar.");
+     else Email_msgComp_("", "");
+   }
+-  function Email_tirarAnexo_(i) { if (!EM.comp) return; EM.comp.anexos.splice(i, 1); EM.comp.sujo = true; Email_desenharAnexosComp_(); }
+-  function Email_tirarAnexoRascunho_(i) { if (!EM.comp) return; EM.comp.doRascunho.splice(i, 1); EM.comp.sujo = true; Email_desenharAnexosComp_(); }
++  function Email_tirarAnexo_(i) { if (!EM.comp) return; EM.comp.anexos.splice(i, 1); Email_sujou_(); Email_desenharAnexosComp_(); }
++  function Email_tirarAnexoRascunho_(i) { if (!EM.comp) return; EM.comp.doRascunho.splice(i, 1); Email_sujou_(); Email_desenharAnexosComp_(); }
+   function Email_dadosComp_() {
+     var c = EM.comp, escolhe = c.originais.length && c.originais.every(function (a) { return a.parte; });
+-    return { conta: c.conta, para: document.getElementById("emPara").value, cc: document.getElementById("emCc").value, cco: document.getElementById("emCco").value,
++    return { conta: c.conta, para: Email_destTexto_("emPara"), cc: Email_destTexto_("emCc"), cco: Email_destTexto_("emCco"),
+       assunto: document.getElementById("emAssunto").value, html: document.getElementById("emEditor").innerHTML,
+       anexos: c.anexos.map(function (a) { return { nome: a.nome, tipo: a.tipo, base64: a.base64 }; }),
+       anexosOriginais: escolhe ? c.originais.filter(function (a) { return a.incluir; }).map(function (a) { return a.parte; }) : undefined,
+@@ -724,33 +828,64 @@
+       respondendo: c.respondendo, encaminhando: c.encaminhando, rascunhoUid: c.rascunhoUid };
+   }
+   function Email_msgComp_(tipo, texto) { var el = document.getElementById("emCompMsg"); if (el) el.innerHTML = texto ? '<div class="em-msg ' + tipo + '">' + Email_esc_(texto) + '</div>' : ""; }
+-  function Email_enviar_() {
++  function Email_enviar_(tentativa) {
++    if (!EM.comp) return;
++    // 17/11/2026: o rascunho automático em curso termina antes (senão ficaria um rascunho sobrando depois do envio)
++    if (EM.comp.salvando) {
++      if ((tentativa || 0) > 60) { Email_msgComp_("erro", "O rascunho automático não terminou de salvar (a conexão pode estar lenta). Espere alguns segundos e clique em Enviar de novo; nada foi enviado."); return; }
++      Email_autoInfo_("Terminando de salvar o rascunho; o envio sai em seguida...");
++      setTimeout(function () { Email_enviar_((tentativa || 0) + 1); }, 500);
++      return;
++    }
++    EM_DEST.forEach(function (id) { Email_destConfirmar_(id); Email_destFecharSug_(id); });
++    var invalidos = Email_destInvalidos_();
++    if (invalidos.length) { Email_msgComp_("erro", "Endereço errado: " + invalidos.join(", ") + ". O e-mail não foi enviado. Dê dois cliques na pílula vermelha para corrigir (precisa ter @ e o domínio, como nome@empresa.com.br) ou clique no × para tirar, e envie de novo."); return; }
+     var d = Email_dadosComp_(), maxTot = (Email_limites_().anexosMb || 18) * 1048576;
+     if (Email_totalComp_() > maxTot) { Email_msgComp_("erro", "Os anexos somam " + Email_tamanho_(Email_totalComp_()) + " e o limite é " + Math.round(maxTot / 1048576) + " MB por mensagem (acima disso Gmail e Outlook costumam recusar). Tire algum anexo ou desmarque anexos da mensagem original e envie de novo."); return; }
+-    if (!d.para.trim()) { Email_msgComp_("erro", "Informe o destinatário no campo Para."); document.getElementById("emPara").focus(); return; }
++    if (!d.para.trim()) { Email_msgComp_("erro", "Informe o destinatário no campo Para: digite o nome ou o e-mail e escolha na lista (ou termine o endereço e tecle Enter)."); document.getElementById("emPara").focus(); return; }
+     if (!d.assunto.trim()) { Email_msgComp_("erro", "Escreva o assunto antes de enviar."); document.getElementById("emAssunto").focus(); return; }
+     var btn = document.getElementById("emBtnEnviar"); if (btn) btn.disabled = true;
+     Email_chamar_("Email_apiEnviar", [d], function (r) {
+       var e = r.envio || {};
+-      Email_fecharJanela_(); EM.comp = null;
+-      alert("E-mail enviado de " + e.de + " para " + e.destinatarios + " destinatário(s)." + (e.salvoEmEnviados ? " A cópia está em Enviados." : " Atenção: a cópia não foi gravada em Enviados (o envio saiu normalmente)."));
++      Email_fecharJanela_(); EM.comp = null; EM.ctEm = 0; // contatos: o uso e os endereços guardados ao enviar entram na próxima busca
++      alert("E-mail enviado de " + e.de + " para " + e.destinatarios + " destinatário(s)." + (e.salvoEmEnviados ? " A cópia está em Enviados." : " Atenção: a cópia não foi gravada em Enviados (o envio saiu normalmente).") +
++        (r.contatosNovos ? " " + r.contatosNovos + (r.contatosNovos === 1 ? " endereço novo foi guardado" : " endereços novos foram guardados") + " nos seus contatos (aba Contatos)." : ""));
+       if (window.SGO_MODULO_ATUAL === "email" && EM.aba === "caixa") { Email_carregarLista_(true); Email_carregarPastas_(); }
+     }, function (msg) { if (btn) btn.disabled = false; Email_msgComp_("erro", msg); }, { carregando: "Enviando..." });
+   }
+-  function Email_salvarRascunho_() {
++  /** auto = rascunho automático (sem tela de "carregando", aviso discreto, para no primeiro erro desta janela). */
++  function Email_salvarRascunho_(auto) {
++    var comp = EM.comp; if (!comp || comp.salvando) return;
++    var versao = comp.versao, enviados = comp.anexos.slice();
++    comp.salvando = true;
++    if (auto) Email_autoInfo_("Salvando o rascunho...");
+     Email_chamar_("Email_apiRascunho", [Email_dadosComp_()], function (r) {
+-        if (!EM.comp) return;
++        comp.salvando = false;
++        if (EM.comp !== comp) return;
+         var rs = r.rascunho || {};
+-        // os anexos passam a morar no rascunho guardado: a janela manda só as partes dele (nada é enviado duas vezes)
+-        if (rs.uid && Array.isArray(rs.anexos)) { EM.comp.doRascunho = rs.anexos.map(function (a) { return { parte: String(a.parte), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0 }; }); EM.comp.anexos = []; Email_desenharAnexosComp_(); }
+-        EM.comp.rascunhoUid = rs.uid || EM.comp.rascunhoUid; EM.comp.sujo = false;
+-        Email_msgComp_("ok", "Rascunho salvo na pasta Rascunhos da caixa (" + new Date().toLocaleTimeString("pt-BR").slice(0, 5) + ")." + (EM.comp.originais.some(function (a) { return a.incluir; }) ? " Os anexos da mensagem original não ficam no rascunho: eles vão no envio, com esta janela aberta." : ""));
++        // os anexos passam a morar no rascunho guardado: a janela manda só as partes dele (nada é enviado duas vezes);
++        // arquivo anexado enquanto salvava continua na janela
++        if (rs.uid && Array.isArray(rs.anexos)) { comp.doRascunho = rs.anexos.map(function (a) { return { parte: String(a.parte), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0 }; }); comp.anexos = comp.anexos.filter(function (a) { return enviados.indexOf(a) < 0; }); Email_desenharAnexosComp_(); }
++        comp.rascunhoUid = rs.uid || comp.rascunhoUid; comp.rascunhoPasta = rs.pasta || comp.rascunhoPasta;
++        if (auto) { if (!comp.rascManual) comp.rascAuto = true; } else comp.rascManual = true;
++        comp.sujo = comp.versao !== versao;
++        var hora = new Date().toLocaleTimeString("pt-BR").slice(0, 5);
++        if (auto) Email_autoInfo_("Rascunho salvo sozinho às " + hora + ".");
++        else Email_msgComp_("ok", "Rascunho salvo na pasta Rascunhos da caixa (" + hora + ")." + (comp.originais.some(function (a) { return a.incluir; }) ? " Os anexos da mensagem original não ficam no rascunho: eles vão no envio, com esta janela aberta." : ""));
+       },
+-      function (msg) { Email_msgComp_("erro", msg); }, { carregando: "Salvando rascunho..." });
++      function (msg) {
++        comp.salvando = false;
++        if (auto) { comp.autoParou = true; Email_autoInfo_("O rascunho automático parou nesta janela: " + msg + " Use «Salvar rascunho» para tentar de novo."); }
++        else Email_msgComp_("erro", msg);
++      }, auto ? { silencioso: true } : { carregando: "Salvando rascunho..." });
+   }
+   function Email_descartar_() {
+-    if (EM.comp && EM.comp.sujo && !confirm("Descartar esta mensagem? O que foi escrito e não foi salvo como rascunho será perdido.")) return;
++    var c0 = EM.comp, soAuto = !!(c0 && c0.rascAuto && !c0.rascManual && c0.rascunhoUid && c0.rascunhoPasta);
++    if (c0 && (c0.sujo || soAuto) && !confirm("Descartar esta mensagem? O que foi escrito e não foi salvo como rascunho será perdido." + (soAuto ? " O rascunho que o sistema salvou sozinho vai para a Lixeira (dá para recuperar de lá)." : ""))) return;
+     var c = EM.comp;
++    if (c && c.timerAuto) clearInterval(c.timerAuto);
++    // 17/11/2026: rascunho criado só pelo salvamento automático sai junto (vai para a Lixeira, recuperável), como no Outlook
++    if (soAuto) google.script.run.withSuccessHandler(function () { if (window.SGO_MODULO_ATUAL === "email" && EM.aba === "caixa" && Email_especial_(EM.pasta) === "rascunhos") Email_carregarLista_(true); }).withFailureHandler(function () {}).Email_apiApagar(SGO_getSessionId(), { conta: c.conta, pasta: c.rascunhoPasta, uids: [c.rascunhoUid] });
+     if (c && c.respondendo && c.respondendo.messageId && (Email_contaAtual_() || {}).tipo === "compartilhada") google.script.run.withFailureHandler(function () {}).Email_apiTratar(SGO_getSessionId(), { conta: c.conta, messageId: c.respondendo.messageId, situacao: "livre" });
+     EM.comp = null; Email_fecharJanela_();
+   }
+@@ -764,7 +899,7 @@
+     var alvo = document.getElementById("emAba"), s = EM.sit.situacao, eu = EM.sit.eu || {}, p = s.pessoal;
+     var servidor = '<div class="em-dica">Servidor da empresa: leitura ' + Email_esc_(s.servidor.imap) + ', envio ' + Email_esc_(s.servidor.smtp) + '. Só caixas ' + s.servidor.dominios.map(function (d) { return "@" + d; }).join(", ") + '.</div>';
+     if (!p) {
+-      alvo.innerHTML = '<div class="em-faixa">Seu e-mail ainda não está conectado. Conectando, você lê e responde os clientes por aqui e o sistema avisa quando chega e-mail novo. <b>A senha fica guardada cifrada no servidor da Metrolabs: ninguém vê, nem o Administrador.</b> Para desconectar, é só um clique, e a senha guardada é apagada.</div>' +
++      alvo.innerHTML = Email_comoFazer_("minha") + '<div class="em-faixa">Seu e-mail ainda não está conectado. Conectando, você lê e responde os clientes por aqui e o sistema avisa quando chega e-mail novo. <b>A senha fica guardada cifrada no servidor da Metrolabs: ninguém vê, nem o Administrador.</b> Para desconectar, é só um clique, e a senha guardada é apagada.</div>' +
+         '<div class="em-caixa"><h3>Conectar meu e-mail</h3><div class="em-form">' +
+         '<div><label for="emEnd">Endereço da sua caixa</label><input type="email" id="emEnd" autocomplete="username" value="' + Email_esc_(eu.email || "") + '" placeholder="nome@metrolabs.com.br"></div>' +
+         '<div><label for="emSenha">Senha da caixa</label><input type="password" id="emSenha" autocomplete="current-password"><div class="em-dica">A mesma senha que você usa no webmail. Não é a senha do SGO+. Se não sabe, peça ao responsável pelos e-mails da empresa.</div></div>' +
+@@ -773,7 +908,7 @@
+         Email_caixaAssinaturas_();
+       return;
+     }
+-    alvo.innerHTML = '<div class="em-caixa"><h3>Minha caixa</h3>' +
++    alvo.innerHTML = Email_comoFazer_("minha") + '<div class="em-caixa"><h3>Minha caixa</h3>' +
+       '<div class="em-cab"><b>Endereço:</b> ' + Email_esc_(p.endereco) + '<br><b>Situação:</b> ' + (p.senhaRecusada ? '<span style="color:var(--danger)">senha recusada pelo servidor de e-mail</span>' : p.erro ? '<span style="color:var(--warning)">' + Email_esc_(p.erro) + '</span>' : 'conectada') +
+         (p.verificadoEm ? '<br><b>Última verificação:</b> ' + Email_dataLonga_(p.verificadoEm) : "") + '</div>' + servidor +
+       '<div class="em-acoes"><button type="button" class="btn-secondary" onclick="Email_mostrarTrocaSenha_()">Trocar a senha guardada</button>' +
+@@ -973,7 +1108,7 @@
+     var alvo = document.getElementById("emAba"), r = EM.adm;
+     var nomeArea = {}; (r.areas || []).forEach(function (a) { nomeArea[a.codigo] = a.nome; });
+     var nomePessoa = {}; (r.pessoas || []).forEach(function (p) { nomePessoa[p.chave] = p.nome; });
+-    alvo.innerHTML = '<div class="em-faixa">Caixas da empresa usadas por uma área (comercial@, financeiro@...). Você escolhe as áreas e as pessoas que abrem cada uma; cada mensagem mostra quem está respondendo e quem respondeu. A senha é testada antes de gravar e nunca mais aparece. As caixas pessoais não aparecem aqui: só o dono abre a dele.</div>' +
++    alvo.innerHTML = Email_comoFazer_("compartilhadas") + '<div class="em-faixa">Caixas da empresa usadas por uma área (comercial@, financeiro@...). Você escolhe as áreas e as pessoas que abrem cada uma; cada mensagem mostra quem está respondendo e quem respondeu. A senha é testada antes de gravar e nunca mais aparece. As caixas pessoais não aparecem aqui: só o dono abre a dele.</div>' +
+       '<div class="em-acoes"><button type="button" class="btn-primary" onclick="Email_editarCompartilhada_(null)"><i class="fas fa-plus" aria-hidden="true"></i>&nbsp;Cadastrar caixa compartilhada</button></div>' +
+       (r.caixas.length ? r.caixas.map(function (c) {
+         return '<div class="em-caixa"><h3>' + Email_esc_(c.endereco) + (c.nome ? " · " + Email_esc_(c.nome) : "") + '</h3><div class="em-cab">' +
+@@ -1020,4 +1155,645 @@
+     Email_chamar_("Email_apiConfigSalvar", [{ horasNaoLido: document.getElementById("emCfg1").value, horasSemResposta: document.getElementById("emCfg2").value, horasGestao: document.getElementById("emCfg3").value }],
+       function () { document.getElementById("emCfgMsg").innerHTML = '<div class="em-msg ok">Prazos salvos.</div>'; }, function (m) { document.getElementById("emCfgMsg").innerHTML = '<div class="em-msg erro">' + Email_esc_(m) + '</div>'; });
+   }
++
++  // ==========================================================
++  // 17/11/2026 — "IGUAL AO OUTLOOK" (pedido da equipe, repassado pelo dono)
++  //  - lista: × (excluir sem abrir), envelope (lida/não lida) e bandeira em cada linha (no mouse; no celular sempre à vista
++  //    e deslizar), seleção múltipla com barra de ações, arrastar para a pasta, teclas de atalho;
++  //  - excluir abre sozinho a próxima (a de baixo; se era a última, a de cima) e a lista não sai do lugar;
++  //  - "Desfazer" por alguns segundos: a exclusão só vai ao servidor depois do prazo (até lá a linha fica escondida);
++  //  - destinatário em pílulas com busca ao digitar (meus contatos + catálogo da empresa, recentes primeiro);
++  //  - aba Contatos; "Salvar remetente nos contatos"; rascunho automático; filtro "Sinalizadas".
++  // A atualização automática continua sem redesenhar formulário: a lista só é redesenhada sem janela aberta e sem foco
++  // em campo, preservando a rolagem, a seleção e as linhas escondidas pelo "Desfazer".
++  // ==========================================================
++  var EMAIL_DESFAZER_MS = 7000;
++  var EM_DEST = ["emPara", "emCc", "emCco"];
++  var EM_DEST_NOME = { emPara: "Para", emCc: "Cc", emCco: "Cco" };
++
++  function Email_semAcento_(s) { return String(s === null || s === undefined ? "" : s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
++  function Email_emailOk_(e) { return /^[^\s@<>(),;:"\[\]]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(String(e || "").trim()); }
++  function Email_js_(v) { return Email_esc_(JSON.stringify(String(v === null || v === undefined ? "" : v))); }
++  function Email_lerPref_(k, padrao) { try { var v = window.localStorage.getItem("sgo_email_" + k); return v === null || v === undefined ? padrao : v; } catch (e) { return padrao; } }
++  function Email_gravarPref_(k, v) { try { window.localStorage.setItem("sgo_email_" + k, String(v)); } catch (e) {} }
++  function Email_sujou_() { if (EM.comp) { EM.comp.sujo = true; EM.comp.versao = (EM.comp.versao || 0) + 1; } }
++
++  // ---------------- "Como fazer nesta aba" ----------------
++  var EM_COMO = {
++    caixa: '<p>Clique numa mensagem para ler. Para excluir sem abrir, passe o mouse na linha e clique no <b>×</b> (no celular o × fica sempre à vista, ou deslize a linha para a esquerda). Ao excluir a mensagem aberta, o sistema abre sozinho a de baixo (se era a última, a de cima) e a lista continua no mesmo lugar, para você seguir em sequência.</p>' +
++      '<ul><li>Errou? Clique em <b>Desfazer</b> no aviso escuro que aparece embaixo da tela (ou tecle <kbd>Ctrl</kbd>+<kbd>Z</kbd>) em até 7 segundos. Depois disso a mensagem já está na Lixeira, de onde dá para mover de volta.</li>' +
++      '<li>Na linha também ficam o envelope (marcar como lida ou não lida) e a bandeira (sinalizar para não esquecer; o filtro «Sinalizadas» mostra só essas). No celular, deslizar a linha para a direita marca como lida ou não lida.</li>' +
++      '<li>Várias de uma vez: marque as caixinhas à esquerda (ou <kbd>Ctrl</kbd>+clique; <kbd>Shift</kbd>+clique marca um intervalo) e use a barra logo acima da lista para excluir, mover, marcar como lida ou não lida e sinalizar.</li>' +
++      '<li>Para mover, arraste a mensagem (ou as marcadas) até a pasta à esquerda, ou use «Mover para...».</li>' +
++      '<li>«Procurar» busca no remetente, no destinatário e no assunto da pasta aberta; os filtros somam com a busca.</li></ul>' +
++      '<p class="em-teclas"><b>Teclas de atalho</b> (com a lista ou a mensagem em foco, fora dos campos de texto): <kbd>↓</kbd> e <kbd>↑</kbd> próxima e anterior; <kbd>Delete</kbd> excluir; <kbd>R</kbd> responder; <kbd>Shift</kbd>+<kbd>R</kbd> responder a todos; <kbd>F</kbd> encaminhar; <kbd>N</kbd> nova mensagem; <kbd>U</kbd> lida ou não lida; <kbd>I</kbd> ou <kbd>Insert</kbd> sinalizar; <kbd>/</kbd> procurar; <kbd>Esc</kbd> limpar a seleção; <kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer a exclusão.</p>',
++    contatos: '<p>Aqui ficam os seus contatos (só seus: ninguém mais vê, nem o Administrador) e o catálogo da empresa: colegas, clientes e contatos dos clientes do cadastro e, para quem já vê essas telas, fornecedores de Compras e contatos das representadas. Nada do Financeiro entra no catálogo.</p>' +
++      '<ul><li><b>Novo contato</b>: nome e e-mail (obrigatório), empresa, telefone e observação. Marque <b>Favorito</b> para ele aparecer primeiro nas sugestões.</li>' +
++      '<li>Na leitura de um e-mail, <b>Salvar remetente nos contatos</b> já traz o nome e o endereço de quem escreveu.</li>' +
++      '<li>Com <b>Guardar sozinho os endereços para quem eu escrevo</b> ligado, cada endereço novo para quem você envia pela sua caixa pessoal vira contato «Guardado ao enviar». O que você excluir não volta sozinho.</li>' +
++      '<li>Na janela de escrever, digite parte do nome, do e-mail ou da empresa nos campos Para, Cc ou Cco: os contatos aparecem embaixo, os usados por último primeiro. Acentos e maiúsculas não importam.</li>' +
++      '<li>Do catálogo da empresa dá para <b>Escrever</b> direto ou <b>Salvar nos meus contatos</b> para marcar como favorito e anotar uma observação.</li></ul>',
++    minha: '<p>Conecte a sua caixa @metrolabs uma vez (a senha da caixa, a mesma do webmail, fica cifrada no servidor e não volta para nenhuma tela). Em <b>Assinaturas</b>, crie uma ou mais e escolha qual entra nas mensagens novas e qual entra nas respostas. Para parar de usar, <b>Desconectar</b> apaga a senha guardada; as mensagens continuam na caixa.</p>',
++    compartilhadas: '<p>Cadastre as caixas da empresa usadas por uma área (comercial@, financeiro@...), marque as áreas e as pessoas que abrem cada uma e ajuste os prazos dos avisos de e-mail de cliente. A senha é testada antes de gravar e nunca mais aparece. A trilha mostra quem abriu, leu e respondeu, sem o conteúdo das mensagens.</p>'
++  };
++  function Email_comoFazer_(aba) {
++    var t = EM_COMO[aba]; if (!t) return "";
++    var aberto = Email_lerPref_("como_" + aba, (window.innerWidth || 1366) < 900 ? "0" : "1") === "1"; // celular: começa fechado (a tela é curta)
++    return '<details class="em-como" data-aba="' + aba + '"' + (aberto ? " open" : "") + ' ontoggle="Email_gravarPref_(\'como_' + aba + '\', this.open ? \'1\' : \'0\')"><summary>Como fazer nesta aba</summary><div class="em-como-corpo">' + t + '</div></details>';
++  }
++
++  // ---------------- endereços e sugestões ----------------
++  /** "Silva, Ana" <ana@x.com>; b@y.com -> [{ nome, email }]. Vírgula dentro de aspas ou de <> não separa; vários e-mails só com espaço também. */
++  function Email_partesEndereco_(texto) {
++    var s = String(texto || ""), partes = [], atual = "", aspas = false, ang = false;
++    for (var i = 0; i < s.length; i++) {
++      var ch = s.charAt(i);
++      if (ch === '"') aspas = !aspas;
++      else if (ch === "<" && !aspas) ang = true;
++      else if (ch === ">" && !aspas) ang = false;
++      if (!aspas && !ang && (ch === "," || ch === ";" || ch === "\n" || ch === "\r" || ch === "\t")) { partes.push(atual); atual = ""; continue; }
++      atual += ch;
++    }
++    partes.push(atual);
++    var out = [];
++    partes.forEach(function (p) {
++      p = p.trim(); if (!p) return;
++      var m = /^(.*)<([^>]*)>\s*$/.exec(p);
++      if (m) { out.push({ nome: m[1].trim().replace(/^"|"$/g, "").trim(), email: m[2].trim().toLowerCase() }); return; }
++      if ((p.match(/@/g) || []).length > 1) { p.split(/\s+/).forEach(function (x) { if (x) out.push({ nome: "", email: x.replace(/^mailto:/i, "").toLowerCase() }); }); return; }
++      out.push({ nome: "", email: p.replace(/^mailto:/i, "").toLowerCase() });
++    });
++    return out;
++  }
++  /**
++   * Sugestões ao digitar o destinatário (como no Outlook): meus contatos e o catálogo da empresa, por nome, e-mail ou
++   * empresa, sem acento e sem maiúscula. Ordem: recentes (último envio) primeiro, depois favoritos, meus contatos e a
++   * empresa. fontes: { contatos, empresa }; ja: e-mails já escolhidos (não repetem). Sem texto: só os recentes.
++   */
++  function Email_sugerir_(termo, fontes, ja, max) {
++    var t = Email_semAcento_(termo).trim(), lim = max || 8, fora = {}, f = fontes || {}, out = [], vistos = {};
++    (ja || []).forEach(function (e) { fora[String(e).toLowerCase()] = true; });
++    var nota = function (x) {
++      if (!t) return 1;
++      var n = Email_semAcento_(x.nome), e = Email_semAcento_(x.email), emp = Email_semAcento_(x.empresa);
++      if (e.indexOf(t) === 0 || n.indexOf(t) === 0) return 4;
++      if ((" " + n).indexOf(" " + t) >= 0 || e.split("@")[0].split(/[._-]/).some(function (p) { return p.indexOf(t) === 0; })) return 3;
++      if (n.indexOf(t) >= 0 || e.indexOf(t) >= 0) return 2;
++      return emp && emp.indexOf(t) >= 0 ? 1 : 0;
++    };
++    var pegar = function (lista, meu) {
++      (lista || []).forEach(function (x) {
++        var e = String(x.email || "").toLowerCase();
++        if (!e || fora[e] || vistos[e]) return;
++        var q = nota(x); if (!q) return;
++        var recente = meu && x.ultimoUso ? String(x.ultimoUso) : "";
++        if (!t && !recente) return;
++        vistos[e] = true;
++        out.push({ nome: x.nome || "", email: e, empresa: x.empresa || "", tipo: meu ? "meu" : (x.tipo || "empresa"), favorito: !!x.favorito, recente: recente, q: q,
++          grupo: recente ? 0 : x.favorito ? 1 : meu ? 2 : 3 });
++      });
++    };
++    pegar(f.contatos, true); pegar(f.empresa, false);
++    out.sort(function (a, b) { return a.grupo - b.grupo || (a.grupo === 0 ? b.recente.localeCompare(a.recente) : 0) || b.q - a.q || a.nome.localeCompare(b.nome, "pt-BR") || a.email.localeCompare(b.email); });
++    return out.slice(0, lim);
++  }
++  function Email_carregarContatos_(pronto, forcar) {
++    if (EM.ct && !forcar && Date.now() - (EM.ctEm || 0) < 5 * 60000) { if (pronto) pronto(EM.ct); return; }
++    Email_chamar_("Email_apiContatos", [], function (r) {
++      EM.ct = { contatos: r.contatos || [], empresa: r.empresa || [], prefs: r.prefs || { coletar: true }, max: r.max || 2000 }; EM.ctEm = Date.now();
++      if (pronto) pronto(EM.ct);
++    }, function (msg) { if (pronto) pronto(null, msg); }, { silencioso: true });
++  }
++  function Email_nomeConhecido_(e) {
++    var ct = EM.ct; if (!ct || !e) return "";
++    var a = (ct.contatos || []).filter(function (x) { return x.email === e; })[0] || (ct.empresa || []).filter(function (x) { return x.email === e; })[0];
++    return a ? a.nome : "";
++  }
++
++  // ---------------- destinatários em pílulas (Para, Cc, Cco) ----------------
++  function Email_campoDest_(id, valor) {
++    return '<div class="em-linha"><label for="' + id + '">' + EM_DEST_NOME[id] + '</label><div class="em-dest-caixa">' +
++      '<div class="em-dest" id="' + id + 'Cx" onclick="Email_focarDest_(event,\'' + id + '\')"><span class="em-pilulas" id="' + id + 'Pil"></span>' +
++      '<input id="' + id + '" type="text" autocomplete="off" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="' + id + 'Sug" data-inicial="' + Email_esc_(valor || "") + '"></div>' +
++      '<div class="em-sug" id="' + id + 'Sug" role="listbox" aria-label="Sugestões para ' + EM_DEST_NOME[id] + '" hidden></div></div></div>';
++  }
++  function Email_pilula_(x) { var e = String(x.email || "").trim().toLowerCase(); return { email: e, nome: String(x.nome || "").trim() || Email_nomeConhecido_(e), valido: Email_emailOk_(e) }; }
++  function Email_destIniciar_(id) {
++    var i = document.getElementById(id); if (!i || !EM.comp) return;
++    EM.comp.dest[id] = Email_partesEndereco_(i.getAttribute("data-inicial") || "").map(Email_pilula_);
++    i.removeAttribute("data-inicial");
++    i.addEventListener("keydown", function (ev) { Email_destTecla_(ev, id); });
++    i.addEventListener("input", function () { Email_sujou_(); Email_destSugerir_(id); });
++    i.addEventListener("focus", function () { Email_destSugerir_(id); });
++    i.addEventListener("blur", function () { setTimeout(function () { if (document.activeElement === i) return; Email_destConfirmar_(id); Email_destFecharSug_(id); }, 150); });
++    i.addEventListener("paste", function (ev) { Email_destColar_(ev, id); });
++    Email_destDesenhar_(id);
++  }
++  function Email_destDesenhar_(id) {
++    var el = document.getElementById(id + "Pil"), c = EM.comp; if (!el || !c) return;
++    var l = c.dest[id] || [];
++    el.innerHTML = l.map(function (p, k) {
++      var titulo = p.valido ? (p.nome ? p.nome + " <" + p.email + ">" : p.email) : p.email + ": endereço inválido. Dê dois cliques para corrigir ou clique no × para tirar.";
++      return '<span class="em-pilula' + (p.valido ? "" : " inv") + '" title="' + Email_esc_(titulo) + '" ondblclick="Email_destEditar_(\'' + id + '\',' + k + ')">' +
++        '<span class="t">' + Email_esc_(p.nome || p.email) + '</span><button type="button" aria-label="Tirar ' + Email_esc_(p.email) + '" title="Tirar" onclick="event.stopPropagation();Email_destTirar_(\'' + id + '\',' + k + ')">&times;</button></span>';
++    }).join("");
++    var i = document.getElementById(id);
++    if (i) i.placeholder = l.length ? "" : id === "emPara" ? "Digite o nome ou o e-mail" : "";
++  }
++  function Email_focarDest_(ev, id) { if (ev && ev.target && ev.target.closest && ev.target.closest(".em-pilula")) return; var i = document.getElementById(id); if (i) i.focus(); }
++  function Email_destAdicionar_(id, lista) {
++    var c = EM.comp; if (!c) return;
++    var atual = c.dest[id] || (c.dest[id] = []);
++    (lista || []).forEach(function (x) { var p = Email_pilula_(x); if (!p.email || atual.some(function (y) { return y.email === p.email; })) return; atual.push(p); });
++    Email_sujou_();
++    Email_destDesenhar_(id);
++  }
++  function Email_destConfirmar_(id) {
++    var i = document.getElementById(id); if (!i || !EM.comp) return;
++    var v = i.value.trim(); if (!v) return;
++    i.value = "";
++    Email_destAdicionar_(id, Email_partesEndereco_(v));
++  }
++  function Email_destTirar_(id, k) { var c = EM.comp; if (!c) return; (c.dest[id] || []).splice(k, 1); Email_sujou_(); Email_destDesenhar_(id); var i = document.getElementById(id); if (i) i.focus(); }
++  function Email_destEditar_(id, k) {
++    var c = EM.comp; if (!c) return; var p = (c.dest[id] || [])[k]; if (!p) return;
++    c.dest[id].splice(k, 1); Email_destDesenhar_(id);
++    var i = document.getElementById(id); if (i) { i.value = p.email; i.focus(); }
++  }
++  function Email_destColar_(ev, id) {
++    var t = ""; try { t = (ev.clipboardData || window.clipboardData).getData("text"); } catch (e) { t = ""; }
++    if (!t || (!/[;,\n]/.test(t) && (t.match(/@/g) || []).length < 2)) return; // um endereço só: o navegador cola normalmente
++    ev.preventDefault();
++    var i = document.getElementById(id), antes = i ? i.value : "";
++    if (i) i.value = "";
++    Email_destAdicionar_(id, Email_partesEndereco_(antes + t));
++    Email_destFecharSug_(id);
++  }
++  function Email_destJa_() { var c = EM.comp, l = []; if (!c) return l; EM_DEST.forEach(function (k) { (c.dest[k] || []).forEach(function (p) { l.push(p.email); }); }); return l; }
++  var EM_TIPO_SUG = { meu: "Meu contato", colega: "Colega", cliente: "Cliente", contato: "Contato do cliente", fornecedor: "Fornecedor", representada: "Representada" };
++  function Email_destSugerir_(id) {
++    var i = document.getElementById(id), box = document.getElementById(id + "Sug"); if (!i || !box || !EM.comp) return;
++    var termo = i.value, l = Email_sugerir_(termo, EM.ct || {}, Email_destJa_(), 8);
++    if (!l.length) { Email_destFecharSug_(id); return; }
++    EM.comp.sug = { id: id, lista: l, ativo: termo.trim() ? 0 : -1 };
++    box.innerHTML = (termo.trim() ? "" : '<div class="em-sug-tit">Usados por último</div>') + l.map(function (x, k) {
++      var tipo = x.tipo === "meu" && x.favorito ? "Favorito" : EM_TIPO_SUG[x.tipo] || "";
++      return '<button type="button" tabindex="-1" class="em-sug-item' + (k === EM.comp.sug.ativo ? " ativo" : "") + '" role="option" id="' + id + 'Sug' + k + '" aria-selected="' + (k === EM.comp.sug.ativo) + '" onmousedown="event.preventDefault()" onclick="Email_destEscolher_(\'' + id + '\',' + k + ')">' +
++        '<span class="n">' + Email_esc_(x.nome || x.email) + (tipo ? ' <span class="em-selo resp">' + tipo + '</span>' : "") + '</span><span class="e">' + Email_esc_(x.email) + (x.empresa && x.empresa !== x.nome ? " · " + Email_esc_(x.empresa) : "") + '</span></button>';
++    }).join("");
++    box.hidden = false; i.setAttribute("aria-expanded", "true");
++  }
++  function Email_destFecharSug_(id) {
++    var b = document.getElementById(id + "Sug"), i = document.getElementById(id);
++    if (b) { b.hidden = true; b.innerHTML = ""; }
++    if (i) { i.setAttribute("aria-expanded", "false"); i.removeAttribute("aria-activedescendant"); }
++    if (EM.comp && EM.comp.sug && EM.comp.sug.id === id) EM.comp.sug = null;
++  }
++  function Email_destEscolher_(id, k) {
++    var s = EM.comp && EM.comp.sug; if (!s || s.id !== id || !s.lista[k]) return;
++    var x = s.lista[k], i = document.getElementById(id);
++    if (i) i.value = "";
++    Email_destAdicionar_(id, [{ nome: x.nome, email: x.email }]);
++    Email_destFecharSug_(id);
++    if (i && document.activeElement !== i) i.focus();
++  }
++  function Email_destMover_(id, d) {
++    var s = EM.comp && EM.comp.sug; if (!s || s.id !== id || !s.lista.length) { Email_destSugerir_(id); return; }
++    s.ativo = s.ativo < 0 && d < 0 ? s.lista.length - 1 : (s.ativo + d + s.lista.length) % s.lista.length;
++    var box = document.getElementById(id + "Sug");
++    if (box) Array.prototype.forEach.call(box.querySelectorAll(".em-sug-item"), function (b, k) { b.classList.toggle("ativo", k === s.ativo); b.setAttribute("aria-selected", String(k === s.ativo)); if (k === s.ativo && b.scrollIntoView) b.scrollIntoView({ block: "nearest" }); });
++    var i = document.getElementById(id); if (i) i.setAttribute("aria-activedescendant", id + "Sug" + s.ativo);
++  }
++  function Email_destTecla_(ev, id) {
++    var i = ev.target, s = EM.comp && EM.comp.sug, aberta = !!(s && s.id === id && s.lista.length), k = ev.key;
++    if (k === "ArrowDown" || k === "ArrowUp") { ev.preventDefault(); Email_destMover_(id, k === "ArrowDown" ? 1 : -1); return; }
++    if (k === "Enter") { ev.preventDefault(); if (aberta && s.ativo >= 0) Email_destEscolher_(id, s.ativo); else { Email_destConfirmar_(id); Email_destFecharSug_(id); } return; }
++    if (k === "Tab") { if (i.value.trim()) { if (aberta && s.ativo >= 0) Email_destEscolher_(id, s.ativo); else Email_destConfirmar_(id); } Email_destFecharSug_(id); return; }
++    if (k === ";" || k === ",") { ev.preventDefault(); Email_destConfirmar_(id); Email_destFecharSug_(id); return; }
++    if (k === "Escape" || k === "Esc") { if (aberta) { ev.preventDefault(); ev.stopPropagation(); Email_destFecharSug_(id); } return; }
++    if (k === "Backspace" && !i.value && EM.comp && (EM.comp.dest[id] || []).length) { ev.preventDefault(); Email_destTirar_(id, EM.comp.dest[id].length - 1); }
++  }
++  /** Texto do campo para o servidor: só os e-mails das pílulas e o que ficou digitado, separados por vírgula. */
++  function Email_destTexto_(id) {
++    var c = EM.comp, l = ((c && c.dest && c.dest[id]) || []).map(function (p) { return p.email; });
++    var i = document.getElementById(id), v = i ? i.value.trim() : "";
++    if (v) Email_partesEndereco_(v).forEach(function (p) { if (l.indexOf(p.email) < 0) l.push(p.email); });
++    return l.join(", ");
++  }
++  function Email_destInvalidos_() {
++    var c = EM.comp, r = []; if (!c) return r;
++    EM_DEST.forEach(function (id) { (c.dest[id] || []).forEach(function (p) { if (!p.valido) r.push(EM_DEST_NOME[id] + ": «" + p.email + "»"); }); });
++    return r;
++  }
++
++  // ---------------- rascunho automático ----------------
++  function Email_autoRascunhoLigado_() { return Email_lerPref_("autorrascunho", "1") !== "0"; }
++  function Email_autoInfo_(t) { var el = document.getElementById("emAutoInfo"); if (el) el.textContent = t || ""; }
++  function Email_iniciarAutoRascunho_() {
++    var comp = EM.comp; if (!comp) return;
++    comp.timerAuto = setInterval(function () {
++      if (EM.comp !== comp || !document.getElementById("emOverlay")) { clearInterval(comp.timerAuto); return; }
++      if (!Email_autoRascunhoLigado_() || !comp.sujo || comp.salvando || comp.autoParou) return;
++      if (!Email_destTexto_("emPara") && !String((document.getElementById("emAssunto") || {}).value || "").trim() && !String((document.getElementById("emEditor") || {}).textContent || "").trim()) return;
++      Email_salvarRascunho_(true);
++    }, 60 * 1000);
++  }
++  function Email_trocarAutoRascunho_(v) { Email_gravarPref_("autorrascunho", v ? "1" : "0"); Email_autoInfo_(v ? "Rascunho automático ligado: a cada minuto com mudança, o sistema salva na pasta Rascunhos." : "Rascunho automático desligado: use «Salvar rascunho» para guardar."); }
++
++  // ---------------- lista: linhas, seleção, exclusão com Desfazer ----------------
++  function Email_pendente_(uid) { uid = Number(uid); return EM.pend.some(function (p) { return p.conta === EM.conta && p.pasta === EM.pasta && p.uids.indexOf(uid) >= 0; }); }
++  function Email_itensVisiveis_() { return EM.lista && EM.lista.itens ? EM.lista.itens.filter(function (it) { return !Email_pendente_(it.uid); }) : []; }
++  function Email_itemPorUid_(uid) { uid = Number(uid); return ((EM.lista && EM.lista.itens) || []).filter(function (it) { return it.uid === uid; })[0] || null; }
++  function Email_selecionados_() { return Object.keys(EM.sel).map(Number).filter(function (u) { return !!Email_itemPorUid_(u) && !Email_pendente_(u); }); }
++  function Email_limparSelecao_() { EM.sel = {}; Email_desenharLista_(); }
++  function Email_selecionarTodas_(v) { EM.sel = {}; if (v) Email_itensVisiveis_().forEach(function (it) { EM.sel[it.uid] = true; }); Email_desenharLista_(); }
++  function Email_marcarSelecao_(uid, v) {
++    if (v) EM.sel[uid] = true; else delete EM.sel[uid];
++    var row = document.querySelector('#emLista .em-item[data-uid="' + Number(uid) + '"]');
++    if (row) { row.classList.toggle("marcada", !!v); var cb = row.querySelector("input[type=checkbox]"); if (cb) cb.checked = !!v; }
++    Email_desenharLote_();
++  }
++  function Email_cliqueItem_(ev, uid) {
++    uid = Number(uid);
++    if (ev && (ev.ctrlKey || ev.metaKey)) { Email_marcarSelecao_(uid, !EM.sel[uid]); return; }
++    if (ev && ev.shiftKey && EM.focoUid) {
++      var vis = Email_itensVisiveis_(), a = -1, b = -1;
++      vis.forEach(function (it, k) { if (it.uid === EM.focoUid) a = k; if (it.uid === uid) b = k; });
++      if (a >= 0 && b >= 0) { for (var k = Math.min(a, b); k <= Math.max(a, b); k++) EM.sel[vis[k].uid] = true; Email_desenharLista_(); return; }
++    }
++    Email_abrirMensagem_(EM.pasta, uid);
++  }
++  function Email_marcarFocoDom_() {
++    var el = document.getElementById("emLista"); if (!el) return;
++    Array.prototype.forEach.call(el.querySelectorAll(".em-item"), function (r) { var u = Number(r.getAttribute("data-uid")); r.classList.toggle("foco", u === EM.focoUid); r.setAttribute("tabindex", u === EM.focoUid ? "0" : "-1"); });
++  }
++  function Email_focarLinha_() {
++    var el = document.getElementById("emLista"); if (!el || !EM.focoUid) return;
++    var a = document.activeElement;
++    if (a && a !== document.body && !el.contains(a) && !(a.closest && a.closest(".em-leitor"))) return; // não rouba o foco de campo
++    var row = el.querySelector('.em-item[data-uid="' + EM.focoUid + '"]');
++    if (!row) return;
++    try { row.focus({ preventScroll: true }); } catch (e) { try { row.focus(); } catch (e2) {} }
++    if (row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
++  }
++  function Email_pagina_(d) { EM.pagina = Math.max(0, EM.pagina + d); EM.sel = {}; Email_carregarLista_(); }
++  function Email_avisoLista_(tipo, texto) {
++    var el = document.getElementById("emAvisoLista");
++    if (!el) { if (tipo === "erro") EM.avisoGuardado = texto; return; } // fora da tela: aparece na próxima vez que a caixa abrir
++    el.innerHTML = texto ? '<div class="em-msg ' + tipo + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + Email_esc_(texto) + '</div>' : "";
++    if (tipo === "ok") setTimeout(function () { if (el.textContent === texto) el.innerHTML = ""; }, 5000);
++  }
++  function Email_desenharLote_() {
++    var el = document.getElementById("emLote"); if (!el) return;
++    var n = Email_selecionados_().length, vis = Email_itensVisiveis_(), todos = vis.length > 0 && n === vis.length;
++    var lix = Email_especial_(EM.pasta) === "lixeira";
++    var destinos = (EM.pastas || []).filter(function (p) { return p.caminho !== EM.pasta; });
++    el.innerHTML = '<label class="todos"><input type="checkbox"' + (todos ? " checked" : "") + (vis.length ? "" : " disabled") + ' onchange="Email_selecionarTodas_(this.checked)" aria-label="Selecionar todas as mensagens desta página"> ' +
++      (n ? '<span class="qtd">' + n + (n > 1 ? " selecionadas" : " selecionada") + '</span>' : "Selecionar todas") + '</label>' +
++      (n ? '<button type="button" class="btn-secondary" onclick="Email_loteExcluir_()"><i class="fas fa-trash-can" aria-hidden="true"></i>&nbsp;' + (lix ? "Apagar para sempre" : "Excluir") + '</button>' +
++        (destinos.length ? '<select aria-label="Mover as selecionadas para" onchange="if(this.value){Email_moverUids_(Email_selecionados_(),this.value)}"><option value="">Mover para...</option>' + destinos.map(function (p) { return '<option value="' + Email_esc_(p.caminho) + '">' + Email_esc_(p.nome) + '</option>'; }).join("") + '</select>' : "") +
++        '<button type="button" class="btn-secondary" onclick="Email_marcarUids_(Email_selecionados_(),{lida:true})">Lida</button>' +
++        '<button type="button" class="btn-secondary" onclick="Email_marcarUids_(Email_selecionados_(),{lida:false})">Não lida</button>' +
++        '<button type="button" class="btn-secondary" onclick="Email_marcarUids_(Email_selecionados_(),{sinalizada:true})"><i class="fas fa-flag" aria-hidden="true"></i>&nbsp;Sinalizar</button>' +
++        '<button type="button" class="btn-secondary" onclick="Email_marcarUids_(Email_selecionados_(),{sinalizada:false})">Tirar sinal</button>' +
++        '<button type="button" class="btn-secondary" onclick="Email_limparSelecao_()">Limpar seleção</button>'
++        : '<span class="em-dica">Marque as caixinhas para excluir, mover ou marcar várias de uma vez.</span>');
++  }
++  function Email_loteExcluir_() { Email_excluirDaLista_(Email_selecionados_()); }
++
++  /** Antes de tirar mensagens da lista: qual abrir depois (a de baixo; se era a última, a de cima). */
++  function Email_planoProximo_(uids) {
++    var fora = {}; uids.forEach(function (u) { fora[Number(u)] = true; });
++    var vis = Email_itensVisiveis_(), pos = [], proximo = null;
++    vis.forEach(function (it, k) { if (fora[it.uid]) pos.push(k); });
++    if (pos.length) {
++      for (var i = pos[pos.length - 1] + 1; i < vis.length && !proximo; i++) if (!fora[vis[i].uid]) proximo = vis[i];
++      for (var j = pos[0] - 1; j >= 0 && !proximo; j--) if (!fora[vis[j].uid]) proximo = vis[j];
++    }
++    var aberta = !!(EM.aberta && EM.aberta.pasta === EM.pasta && fora[EM.aberta.uid]);
++    return { proximo: proximo ? proximo.uid : null, abertaSaiu: aberta, focoSaiu: !!fora[EM.focoUid], fora: fora };
++  }
++  function Email_seguirPlano_(plano) {
++    Object.keys(plano.fora).forEach(function (u) { delete EM.sel[u]; });
++    var abrir = null;
++    if (plano.abertaSaiu || plano.focoSaiu) {
++      EM.focoUid = plano.proximo;
++      if (plano.abertaSaiu) {
++        // a próxima só abre sozinha com o painel de leitura à vista (no celular, com a lista na tela, fica na lista) e fora de
++        // Rascunhos (abrir rascunho abre a janela de escrever)
++        var leitor = document.getElementById("emLeitor"), leitorVisivel = !!(leitor && leitor.offsetParent !== null);
++        if (plano.proximo && leitorVisivel && Email_especial_(EM.pasta) !== "rascunhos") abrir = plano.proximo;
++        else {
++          EM.aberta = null; Email_fecharLeitor_();
++          var l = document.getElementById("emLeitor");
++          if (l) l.innerHTML = plano.proximo ? '<div class="em-vazio">Escolha uma mensagem na lista para ler.</div>' : '<div class="em-vazio">' + (EM.lista && EM.lista.temMais ? "Acabaram as mensagens desta página. Toque em «Mais antigas» para continuar." : "Não há mais mensagens nesta pasta.") + '</div>';
++        }
++      }
++    }
++    Email_desenharLista_();
++    if (abrir) Email_abrirMensagem_(EM.pasta, abrir); else Email_focarLinha_();
++  }
++  function Email_tirarPend_(p, removerDaLista) {
++    EM.pend = EM.pend.filter(function (x) { return x !== p; });
++    if (removerDaLista && EM.lista && EM.conta === p.conta && EM.pasta === p.pasta) {
++      EM.lista.itens = EM.lista.itens.filter(function (it) { return p.uids.indexOf(it.uid) < 0; });
++      if (typeof EM.lista.total === "number") EM.lista.total = Math.max(0, EM.lista.total - p.uids.length);
++    }
++    if (window.SGO_MODULO_ATUAL === "email" && EM.aba === "caixa") Email_desenharLista_();
++  }
++  /** Excluir pela linha (×, Delete, deslizar, barra de lote) ou com a mensagem aberta. Na Lixeira: para sempre, com confirmação. */
++  function Email_excluirDaLista_(uids) {
++    uids = (uids || []).map(Number).filter(function (u) { return u > 0 && !!Email_itemPorUid_(u) && !Email_pendente_(u); });
++    if (!uids.length) return;
++    var plano, um = uids.length === 1;
++    if (Email_especial_(EM.pasta) === "lixeira") {
++      if (!confirm((um ? "Apagar esta mensagem para sempre? Ela sai da Lixeira e não volta mais" : "Apagar " + uids.length + " mensagens para sempre? Elas saem da Lixeira e não voltam mais") + " (nem pelo webmail).")) return;
++      plano = Email_planoProximo_(uids);
++      var d = { conta: EM.conta, pasta: EM.pasta, uids: uids, tipo: "definitivo" };
++      EM.pend.push(d);
++      Email_seguirPlano_(plano);
++      Email_chamar_("Email_apiApagar", [{ conta: d.conta, pasta: d.pasta, uids: uids, definitivo: true, confirmado: true }], function () { Email_tirarPend_(d, true); Email_carregarPastas_(); Email_verificar_(); },
++        function (msg) { Email_tirarPend_(d, false); Email_avisoLista_("erro", "Não foi possível apagar para sempre: " + msg + " " + (um ? "A mensagem voltou" : "As mensagens voltaram") + " para a lista; tente de novo."); }, { silencioso: true });
++      return;
++    }
++    Email_confirmarPendentes_(); // só a última exclusão fica para desfazer
++    plano = Email_planoProximo_(uids);
++    var p = { conta: EM.conta, pasta: EM.pasta, uids: uids, tipo: "apagar" };
++    p.timer = setTimeout(function () { Email_confirmarExclusao_(p); }, EMAIL_DESFAZER_MS);
++    EM.pend.push(p);
++    Email_seguirPlano_(plano);
++    Email_mostrarDesfazer_(p);
++  }
++  function Email_confirmarExclusao_(p) {
++    if (EM.pend.indexOf(p) < 0 || p.enviando) return;
++    clearTimeout(p.timer); p.enviando = true;
++    Email_fecharDesfazer_(p);
++    var um = p.uids.length === 1;
++    Email_chamar_("Email_apiApagar", [{ conta: p.conta, pasta: p.pasta, uids: p.uids, definitivo: false, confirmado: false }], function () { Email_tirarPend_(p, true); Email_carregarPastas_(); Email_verificar_(); },
++      function (msg) { Email_tirarPend_(p, false); Email_avisoLista_("erro", "Não foi possível excluir " + (um ? "a mensagem" : p.uids.length + " mensagens") + ": " + msg + " " + (um ? "Ela voltou" : "Elas voltaram") + " para a lista; tente de novo."); }, { silencioso: true });
++  }
++  function Email_confirmarPendentes_() { EM.pend.filter(function (p) { return p.tipo === "apagar" && !p.enviando; }).forEach(Email_confirmarExclusao_); }
++  function Email_desfazer_() {
++    var p = EM.pend.filter(function (x) { return x.tipo === "apagar" && !x.enviando; }).pop();
++    if (!p) return false;
++    clearTimeout(p.timer);
++    EM.pend = EM.pend.filter(function (x) { return x !== p; });
++    Email_fecharDesfazer_(p);
++    if (EM.conta === p.conta && EM.pasta === p.pasta && window.SGO_MODULO_ATUAL === "email" && EM.aba === "caixa") {
++      EM.focoUid = p.uids[0]; Email_desenharLista_(); Email_focarLinha_();
++      Email_avisoLista_("ok", (p.uids.length === 1 ? "A mensagem voltou" : p.uids.length + " mensagens voltaram") + " para a lista. Nada foi apagado.");
++    }
++    return true;
++  }
++  function Email_mostrarDesfazer_(p) {
++    var t = document.getElementById("emDesfazer"); if (t) t.remove();
++    t = document.createElement("div"); t.id = "emDesfazer"; t.className = "em-desfazer"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite");
++    t.innerHTML = '<span>' + (p.uids.length === 1 ? "Mensagem excluída." : p.uids.length + " mensagens excluídas.") + ' Vai para a Lixeira em alguns segundos.</span><button type="button" onclick="Email_desfazer_()">Desfazer</button>';
++    t.__pend = p;
++    document.body.appendChild(t);
++  }
++  function Email_fecharDesfazer_(p) { var t = document.getElementById("emDesfazer"); if (t && (!p || t.__pend === p)) t.remove(); }
++  /** Mover (lote, arrastar, "Mover para..." da leitura): some da lista na hora e volta se o servidor recusar. */
++  function Email_moverUids_(uids, destino) {
++    uids = (uids || []).map(Number).filter(function (u) { return u > 0 && !!Email_itemPorUid_(u) && !Email_pendente_(u); });
++    if (!uids.length || !destino || destino === EM.pasta) return;
++    Email_confirmarPendentes_();
++    var plano = Email_planoProximo_(uids), p = { conta: EM.conta, pasta: EM.pasta, uids: uids, tipo: "mover" }, um = uids.length === 1;
++    EM.pend.push(p);
++    Email_seguirPlano_(plano);
++    Email_chamar_("Email_apiMover", [{ conta: p.conta, pasta: p.pasta, uids: uids, destino: destino }], function () {
++      Email_tirarPend_(p, true); Email_avisoLista_("ok", (um ? "Mensagem movida" : uids.length + " mensagens movidas") + " para " + Email_nomePasta_(destino) + "."); Email_carregarPastas_(); Email_verificar_();
++    }, function (msg) { Email_tirarPend_(p, false); Email_avisoLista_("erro", "Não foi possível mover: " + msg + " " + (um ? "A mensagem continua" : "As mensagens continuam") + " aqui; tente de novo."); }, { silencioso: true });
++  }
++  /** Lida/não lida e sinalizar pela linha ou em lote: muda na hora e volta como estava se o servidor recusar. */
++  function Email_marcarUids_(uids, o) {
++    var antes = (uids || []).map(Email_itemPorUid_).filter(Boolean).map(function (it) { return { it: it, lida: it.lida, sinalizada: it.sinalizada }; });
++    if (!antes.length) return;
++    antes.forEach(function (a) { if (o.lida !== undefined) a.it.lida = !!o.lida; if (o.sinalizada !== undefined) a.it.sinalizada = !!o.sinalizada; });
++    var lista = antes.map(function (a) { return a.it.uid; });
++    if (EM.aberta && EM.aberta.pasta === EM.pasta && lista.indexOf(EM.aberta.uid) >= 0 && o.sinalizada !== undefined) { EM.aberta.sinalizada = !!o.sinalizada; Email_botaoSinal_(); }
++    Email_desenharLista_();
++    Email_chamar_("Email_apiMarcar", [{ conta: EM.conta, pasta: EM.pasta, uids: lista, lida: o.lida, sinalizada: o.sinalizada }], function () { if (o.lida !== undefined) { Email_carregarPastas_(); Email_verificar_(); } },
++      function (msg) { antes.forEach(function (a) { a.it.lida = a.lida; a.it.sinalizada = a.sinalizada; }); Email_desenharLista_(); Email_avisoLista_("erro", "Não foi possível marcar: " + msg + " Nada mudou na caixa; tente de novo."); }, { silencioso: true });
++  }
++  function Email_linhaLida_(uid) { var it = Email_itemPorUid_(uid); if (it) Email_marcarUids_([it.uid], { lida: !it.lida }); }
++  function Email_linhaSinalizar_(uid) { var it = Email_itemPorUid_(uid); if (it) Email_marcarUids_([it.uid], { sinalizada: !it.sinalizada }); }
++  function Email_sinalAberta_() { var m = EM.aberta; if (!m) return false; var it = m.pasta === EM.pasta ? Email_itemPorUid_(m.uid) : null; return it ? !!it.sinalizada : !!m.sinalizada; }
++  function Email_botaoSinal_() { var b = document.getElementById("emBtnSinal"); if (b) b.innerHTML = '<i class="fas fa-flag" aria-hidden="true"></i>&nbsp;' + (Email_sinalAberta_() ? "Tirar sinalização" : "Sinalizar"); }
++  function Email_sinalizarAberta_() {
++    var m = EM.aberta; if (!m) return;
++    var novo = !Email_sinalAberta_();
++    if (m.pasta === EM.pasta && Email_itemPorUid_(m.uid)) { Email_marcarUids_([m.uid], { sinalizada: novo }); return; }
++    m.sinalizada = novo; Email_botaoSinal_();
++    Email_chamar_("Email_apiMarcar", [{ conta: EM.conta, pasta: m.pasta, uids: [m.uid], sinalizada: novo }], null, function (msg) { m.sinalizada = !novo; Email_botaoSinal_(); alert("Não foi possível sinalizar: " + msg); }, { silencioso: true });
++  }
++  function Email_irVizinha_(d) {
++    var vis = Email_itensVisiveis_(); if (!vis.length) return;
++    var atual = EM.focoUid || (EM.aberta && EM.aberta.pasta === EM.pasta ? EM.aberta.uid : null), k = -1;
++    vis.forEach(function (it, i) { if (it.uid === atual) k = i; });
++    var n = k < 0 ? 0 : Math.max(0, Math.min(vis.length - 1, k + d));
++    if (k === n) return;
++    Email_abrirMensagem_(EM.pasta, vis[n].uid); // como no painel de leitura do Outlook
++    Email_focarLinha_();
++  }
++
++  // ---------------- teclas de atalho ----------------
++  function Email_teclas_(ev) {
++    if (window.SGO_MODULO_ATUAL !== "email" || EM.aba !== "caixa" || document.getElementById("emOverlay") || !document.getElementById("emLista")) return;
++    var a = ev.target, tag = a && a.tagName ? String(a.tagName).toUpperCase() : "";
++    if (a && (a.isContentEditable || tag === "TEXTAREA" || tag === "SELECT" || (tag === "INPUT" && String(a.type).toLowerCase() !== "checkbox"))) return;
++    if (ev.altKey) return;
++    var k = ev.key, ctrl = ev.ctrlKey || ev.metaKey;
++    if (ctrl && (k === "z" || k === "Z")) { if (Email_desfazer_()) ev.preventDefault(); return; }
++    if (ctrl) return;
++    var alvo = function () { var s = Email_selecionados_(); if (s.length) return s; var u = EM.focoUid || (EM.aberta && EM.aberta.pasta === EM.pasta ? EM.aberta.uid : null); return u && Email_itemPorUid_(u) ? [u] : []; };
++    var l;
++    if (k === "Delete" || (k === "Backspace" && /Mac/i.test(String((window.navigator || {}).platform || "")))) { l = alvo(); if (l.length) { ev.preventDefault(); Email_excluirDaLista_(l); } return; }
++    if (k === "ArrowDown" || k === "j") { ev.preventDefault(); Email_irVizinha_(1); return; }
++    if (k === "ArrowUp" || k === "k") { ev.preventDefault(); Email_irVizinha_(-1); return; }
++    if (tag === "BUTTON" && (k === "Enter" || k === " ")) return;
++    if (k === "Enter" && EM.focoUid) { ev.preventDefault(); Email_abrirMensagem_(EM.pasta, EM.focoUid); return; }
++    var m = EM.aberta;
++    if (k === "r" && m) { ev.preventDefault(); Email_responder_(false); }
++    else if (k === "R" && m) { ev.preventDefault(); Email_responder_(true); }
++    else if ((k === "f" || k === "F") && m) { ev.preventDefault(); Email_encaminhar_(); }
++    else if (k === "n" || k === "N") { ev.preventDefault(); Email_escrever_({}); }
++    else if (k === "u" || k === "U") { l = alvo(); if (l.length) { ev.preventDefault(); var it = Email_itemPorUid_(l[0]); Email_marcarUids_(l, { lida: !(it && it.lida) }); } }
++    else if (k === "Insert" || k === "i" || k === "I") { l = alvo(); if (l.length) { ev.preventDefault(); var it2 = Email_itemPorUid_(l[0]); Email_marcarUids_(l, { sinalizada: !(it2 && it2.sinalizada) }); } }
++    else if (k === "/") { var b = document.getElementById("emBusca"); if (b) { ev.preventDefault(); b.focus(); } }
++    else if (k === "Escape" || k === "Esc") { if (Email_selecionados_().length) Email_limparSelecao_(); else { var g = document.getElementById("emGrade"); if (g && g.classList.contains("lendo")) Email_fecharLeitor_(); } }
++  }
++  function Email_instalarGlobais_() {
++    if (EM.globais) return;
++    EM.globais = true;
++    document.addEventListener("keydown", Email_teclas_);
++    // sair da página ou trocar de aba do navegador: a exclusão que esperava o "Desfazer" vai para o servidor agora
++    window.addEventListener("pagehide", Email_confirmarPendentes_);
++    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") Email_confirmarPendentes_(); });
++  }
++
++  // ---------------- arrastar para a pasta e deslizar no celular ----------------
++  function Email_instalarLista_() {
++    var el = document.getElementById("emLista"); if (!el || el.__emPronta) return;
++    el.__emPronta = true;
++    el.addEventListener("dragstart", function (ev) {
++      var row = ev.target && ev.target.closest ? ev.target.closest(".em-item") : null; if (!row) return;
++      var uid = Number(row.getAttribute("data-uid")), sel = Email_selecionados_();
++      EM.arrastando = sel.indexOf(uid) >= 0 ? sel : [uid];
++      try { ev.dataTransfer.setData("text/plain", EM.arrastando.length + " mensagem(ns)"); ev.dataTransfer.effectAllowed = "move"; } catch (e) {}
++    });
++    el.addEventListener("dragend", function () { setTimeout(function () { EM.arrastando = null; }, 0); Array.prototype.forEach.call(document.querySelectorAll(".em-pasta.alvo"), function (b) { b.classList.remove("alvo"); }); });
++    var ini = null;
++    el.addEventListener("touchstart", function (ev) {
++      var t = ev.target, row = t && t.closest ? t.closest(".em-item") : null;
++      ini = row && ev.touches.length === 1 && !t.closest("button, input, label, select") ? { x: ev.touches[0].clientX, y: ev.touches[0].clientY, row: row, dx: 0 } : null;
++    }, { passive: true });
++    el.addEventListener("touchmove", function (ev) {
++      if (!ini) return;
++      var dx = ev.touches[0].clientX - ini.x, dy = ev.touches[0].clientY - ini.y;
++      if (Math.abs(dy) > 30 && Math.abs(dy) > Math.abs(dx)) { ini.row.style.transform = ""; ini = null; return; }
++      ini.dx = dx;
++      if (Math.abs(dx) > 10) ini.row.style.transform = "translateX(" + Math.max(-120, Math.min(120, dx)) + "px)";
++    }, { passive: true });
++    el.addEventListener("touchend", function () {
++      if (!ini) return;
++      var r = ini.row, dx = ini.dx, uid = Number(r.getAttribute("data-uid"));
++      r.style.transform = ""; ini = null;
++      if (dx < -80) Email_excluirDaLista_([uid]);
++      else if (dx > 80) Email_linhaLida_(uid);
++    });
++  }
++  function Email_pastaSobre_(ev, b) { if (!EM.arrastando) return; ev.preventDefault(); try { ev.dataTransfer.dropEffect = "move"; } catch (e) {} b.classList.add("alvo"); }
++  function Email_soltarNaPasta_(ev, caminho) {
++    if (!EM.arrastando) return;
++    ev.preventDefault();
++    var u = EM.arrastando; EM.arrastando = null;
++    if (ev.currentTarget && ev.currentTarget.classList) ev.currentTarget.classList.remove("alvo");
++    Email_moverUids_(u, caminho);
++  }
++
++  // ---------------- aba Contatos ----------------
++  function Email_renderContatos_() {
++    var alvo = document.getElementById("emAba"); if (!alvo) return;
++    alvo.innerHTML = Email_comoFazer_("contatos") + '<div id="emCtCorpo"><div class="em-vazio">Carregando os contatos...</div></div>';
++    Email_carregarContatos_(function (ct, erro) {
++      var el = document.getElementById("emCtCorpo"); if (!el) return;
++      if (!ct) { el.innerHTML = '<div class="em-msg erro">Não foi possível carregar os contatos: ' + Email_esc_(erro) + ' Clique em Atualizar no alto da tela; se continuar, avise o Administrador.</div>'; return; }
++      Email_desenharContatos_();
++    }, true);
++  }
++  function Email_desenharContatos_() {
++    var el = document.getElementById("emCtCorpo"), ct = EM.ct; if (!el || !ct) return;
++    el.innerHTML = '<div class="em-caixa"><label class="em-check-linha"><input type="checkbox" id="emCtColetar"' + (ct.prefs.coletar ? " checked" : "") + ' onchange="Email_salvarColeta_(this.checked)"> Guardar sozinho os endereços para quem eu escrevo</label>' +
++        '<div class="em-dica">Ligado: cada endereço novo para quem você envia pela sua caixa pessoal vira um contato «Guardado ao enviar» e passa a aparecer nas sugestões. O que você excluir não volta sozinho. Envios por caixa compartilhada não entram. Desligado: as sugestões usam os contatos que você cadastrar e o catálogo da empresa.</div><div id="emCtPrefMsg"></div></div>' +
++      '<div class="em-ct-ferr"><button type="button" class="btn-primary" onclick="Email_editarContato_(null)"><i class="fas fa-user-plus" aria-hidden="true"></i>&nbsp;Novo contato</button>' +
++        '<input type="search" id="emCtBusca" placeholder="Procurar por nome, e-mail ou empresa" aria-label="Procurar contato" value="' + Email_esc_(EM.ctBusca || "") + '" oninput="EM.ctBusca=this.value;Email_desenharListaContatos_()"></div>' +
++      '<div class="em-dica" style="margin:-2px 0 8px">A busca ignora acentos e maiúsculas: «joao» acha «João». Para escrever, toque em «Escrever» no contato.</div>' +
++      '<div class="em-ferr em-ct-chips" id="emCtChips"></div><div id="emCtMsg"></div><div class="em-ct-lista" id="emCtLista"></div>';
++    Email_desenharListaContatos_();
++  }
++  function Email_contatosParaLista_() {
++    var ct = EM.ct || { contatos: [], empresa: [] }, emails = {};
++    var meus = ct.contatos.map(function (c) { emails[c.email] = true; return Object.assign({ meu: true }, c); });
++    var emp = ct.empresa.filter(function (c) { return !emails[c.email]; }).map(function (c) { return Object.assign({ meu: false }, c); });
++    return { meus: meus, emp: emp };
++  }
++  function Email_desenharListaContatos_() {
++    var el = document.getElementById("emCtLista"); if (!el || !EM.ct) return;
++    var g = Email_contatosParaLista_(), f = EM.ctFiltro || "todos", t = Email_semAcento_(EM.ctBusca || "").trim();
++    var filtros = { todos: g.meus.concat(g.emp), favoritos: g.meus.filter(function (c) { return c.favorito; }), meus: g.meus, automaticos: g.meus.filter(function (c) { return c.origem === "AUTOMATICO"; }), empresa: g.emp };
++    var nomes = [["todos", "Todos"], ["favoritos", "Favoritos"], ["meus", "Meus contatos"], ["automaticos", "Guardados ao enviar"], ["empresa", "Da empresa"]];
++    var chips = document.getElementById("emCtChips");
++    if (chips) chips.innerHTML = nomes.map(function (n) { return '<button type="button" class="em-chip' + (f === n[0] ? " on" : "") + '" aria-pressed="' + (f === n[0]) + '" onclick="EM.ctFiltro=\'' + n[0] + '\';Email_desenharListaContatos_()">' + n[1] + ' (' + filtros[n[0]].length + ')</button>'; }).join("");
++    var l = filtros[f] || filtros.todos;
++    if (t) l = l.filter(function (c) { return [c.nome, c.email, c.empresa].some(function (v) { return Email_semAcento_(v).indexOf(t) >= 0; }); });
++    var total = l.length;
++    if (!total) { el.innerHTML = '<div class="em-vazio">' + (t || f !== "todos" ? "Nenhum contato com esse filtro. Tire o filtro ou procure de outro jeito." : "Nenhum contato ainda. Toque em «Novo contato» ou salve o remetente ao ler um e-mail.") + '</div>'; return; }
++    var TIPO = { colega: "Colega", cliente: "Cliente", contato: "Contato do cliente", fornecedor: "Fornecedor", representada: "Representada" };
++    el.innerHTML = l.slice(0, 200).map(function (c) {
++      var estrela = c.meu ? '<button type="button" class="em-estrela' + (c.favorito ? " on" : "") + '" aria-pressed="' + !!c.favorito + '" aria-label="Favorito" title="' + (c.favorito ? "Tirar dos favoritos" : "Marcar como favorito: aparece primeiro nas sugestões") + '" onclick="Email_favoritoContato_(' + Email_js_(c.id) + ',' + !c.favorito + ')"><i class="' + (c.favorito ? "fa-solid" : "fa-regular") + ' fa-star" aria-hidden="true"></i></button>'
++        : '<span class="em-estrela" aria-hidden="true"><i class="fas fa-building"></i></span>';
++      return '<div class="em-ct">' + estrela + '<div class="info"><b>' + Email_esc_(c.nome || c.email) + '</b> <span class="em-selo ' + (c.meu ? "resp" : "cli") + '">' + (c.meu ? "Meu contato" : TIPO[c.tipo] || "Empresa") + '</span>' +
++        '<div class="e">' + Email_esc_(c.email) + (c.empresa && c.empresa !== c.nome ? " · " + Email_esc_(c.empresa) : "") + (c.telefone ? " · " + Email_esc_(c.telefone) : "") + '</div>' +
++        (c.meu ? '<div class="em-dica">' + Email_esc_(c.origemTexto || "") + (c.usos ? " · usado em " + c.usos + (c.usos === 1 ? " envio" : " envios") : "") + (c.obs ? " · " + Email_esc_(c.obs) : "") + '</div>' : "") + '</div>' +
++        '<div class="botoes"><button type="button" class="btn-secondary" onclick="Email_escreverContato_(' + Email_js_(c.email) + ')"><i class="fas fa-pen" aria-hidden="true"></i>&nbsp;Escrever</button>' +
++        (c.meu ? '<button type="button" class="btn-secondary" onclick="Email_editarContato_(' + Email_js_(c.id) + ')">Editar</button><button type="button" class="btn-secondary" aria-label="Excluir o contato ' + Email_esc_(c.email) + '" onclick="Email_excluirContato_(' + Email_js_(c.id) + ')"><i class="fas fa-trash-can" aria-hidden="true"></i>&nbsp;Excluir</button>'
++          : '<button type="button" class="btn-secondary" onclick="Email_copiarContato_(' + Email_js_(c.email) + ')">Salvar nos meus contatos</button>') + '</div></div>';
++    }).join("") + (total > 200 ? '<div class="em-dica">Mostrando 200 de ' + total + '. Procure pelo nome, e-mail ou empresa para achar os outros.</div>' : "");
++  }
++  function Email_msgContatos_(tipo, texto) { var el = document.getElementById("emCtMsg"); if (el) el.innerHTML = texto ? '<div class="em-msg ' + tipo + '">' + Email_esc_(texto) + '</div>' : ""; }
++  function Email_escreverContato_(email) { Email_escrever_({ para: email }); }
++  function Email_copiarContato_(email) {
++    var c = ((EM.ct && EM.ct.empresa) || []).filter(function (x) { return x.email === email; })[0]; if (!c) return;
++    Email_editarContato_(null, { nome: c.nome, email: c.email, empresa: c.empresa, origem: "MANUAL" });
++  }
++  function Email_campoContato_(id, rotulo, valor, dica, tipo, extra) {
++    return '<div><label for="' + id + '">' + rotulo + '</label><input type="' + (tipo || "text") + '" id="' + id + '" value="' + Email_esc_(valor || "") + '"' + (extra || "") + '><div class="em-dica">' + dica + '</div></div>';
++  }
++  /** Janela de criar ou editar contato. pre: { nome, email, empresa, origem } (salvar remetente, copiar do catálogo). */
++  function Email_editarContato_(id, pre) {
++    var c = id ? ((EM.ct && EM.ct.contatos) || []).filter(function (x) { return x.id === id; })[0] : (pre || {});
++    if (id && !c) { alert("Este contato não está mais na lista (pode ter sido excluído em outra janela). Clique em Atualizar."); return; }
++    var origem = (pre && pre.origem) || "MANUAL";
++    Email_janela_('<h3>' + (id ? "Editar contato" : origem === "REMETENTE" ? "Salvar remetente nos contatos" : "Novo contato") + '</h3><div class="em-form">' +
++      Email_campoContato_("emCtNome", "Nome", c.nome, "Como a pessoa aparece nas sugestões e na pílula do destinatário. Em branco, o sistema usa a parte antes do @.", "text", ' maxlength="120" autocomplete="off"') +
++      Email_campoContato_("emCtEmail", "E-mail", c.email, "Obrigatório. Um endereço só, por exemplo nome@empresa.com.br.", "email", ' maxlength="200" autocomplete="off"') +
++      Email_campoContato_("emCtEmpresa", "Empresa", c.empresa, "Opcional. Também entra na busca: procurar pela empresa acha o contato.", "text", ' maxlength="120"') +
++      Email_campoContato_("emCtTel", "Telefone", c.telefone, "Opcional, só para consulta.", "text", ' maxlength="40" inputmode="tel"') +
++      '<div><label for="emCtObs">Observação</label><textarea id="emCtObs" rows="3" maxlength="500" style="width:100%;box-sizing:border-box">' + Email_esc_(c.obs || "") + '</textarea><div class="em-dica">Opcional. Só você vê.</div></div>' +
++      '<div><label class="em-check-linha"><input type="checkbox" id="emCtFav"' + (c.favorito ? " checked" : "") + '> Favorito</label><div class="em-dica">Favoritos aparecem primeiro na lista de sugestões ao escrever e no filtro «Favoritos».</div></div>' +
++      '<div id="emCtEdMsg"></div></div><div class="em-rodape"><span class="em-dica">Seus contatos são só seus: ninguém mais vê, nem o Administrador.</span><span><button type="button" class="btn-secondary" onclick="Email_fecharJanela_()">Cancelar</button> ' +
++      '<button type="button" class="btn-primary" id="emCtSalvarBtn" onclick="Email_salvarContato_(' + Email_js_(id || "") + ',' + Email_js_(origem) + ')">Salvar contato</button></span></div>');
++    setTimeout(function () { var i = document.getElementById(c.email ? "emCtNome" : "emCtEmail"); if (i) i.focus(); }, 50);
++  }
++  function Email_salvarContato_(id, origem) {
++    var v = function (k) { var e = document.getElementById(k); return e ? e.value : ""; };
++    var d = { id: id || "", nome: v("emCtNome").trim(), email: v("emCtEmail").trim(), empresa: v("emCtEmpresa").trim(), telefone: v("emCtTel").trim(), obs: v("emCtObs").trim(), favorito: !!(document.getElementById("emCtFav") || {}).checked, origem: origem };
++    var msg = document.getElementById("emCtEdMsg");
++    if (!Email_emailOk_(d.email)) { if (msg) msg.innerHTML = '<div class="em-msg erro">O e-mail não é um endereço válido: confira se tem @ e o domínio (por exemplo nome@empresa.com.br) e salve de novo.</div>'; var i = document.getElementById("emCtEmail"); if (i) i.focus(); return; }
++    var btn = document.getElementById("emCtSalvarBtn"); if (btn) btn.disabled = true;
++    Email_chamar_("Email_apiContatoSalvar", [d], function (r) {
++      Email_fecharJanela_();
++      Email_atualizarContatoLocal_(r.contato);
++      var texto = "«" + (r.contato.nome || r.contato.email) + "» " + (r.novo ? "salvo nos seus contatos." : "atualizado nos seus contatos.");
++      if (EM.aba === "contatos") { Email_desenharListaContatos_(); Email_msgContatos_("ok", texto); }
++      else Email_avisoLista_("ok", texto);
++    }, function (m) { if (btn) btn.disabled = false; if (msg) msg.innerHTML = '<div class="em-msg erro">' + Email_esc_(m) + '</div>'; }, { carregando: "Salvando o contato..." });
++  }
++  function Email_atualizarContatoLocal_(c) {
++    if (!EM.ct || !c) return;
++    EM.ct.contatos = EM.ct.contatos.filter(function (x) { return x.id !== c.id && x.email !== c.email; });
++    EM.ct.contatos.unshift(c);
++  }
++  function Email_excluirContato_(id) {
++    var c = ((EM.ct && EM.ct.contatos) || []).filter(function (x) { return x.id === id; })[0]; if (!c) return;
++    if (!confirm("Excluir o contato «" + (c.nome || c.email) + "» (" + c.email + ")? Ele some da lista e das sugestões. Os e-mails trocados com ele continuam na caixa.")) return;
++    Email_chamar_("Email_apiContatoExcluir", [id], function () {
++      EM.ct.contatos = EM.ct.contatos.filter(function (x) { return x.id !== id; });
++      Email_desenharListaContatos_(); Email_msgContatos_("ok", "Contato «" + (c.nome || c.email) + "» excluído.");
++    }, function (m) { Email_msgContatos_("erro", m); }, { carregando: "Excluindo..." });
++  }
++  function Email_favoritoContato_(id, v) {
++    Email_chamar_("Email_apiContatoFavorito", [{ id: id, favorito: !!v }], function () {
++      (EM.ct.contatos || []).forEach(function (x) { if (x.id === id) x.favorito = !!v; });
++      Email_desenharListaContatos_();
++    }, function (m) { Email_msgContatos_("erro", m); }, { silencioso: true });
++  }
++  function Email_salvarColeta_(v) {
++    Email_chamar_("Email_apiContatosPrefs", [{ coletar: !!v }], function (r) {
++      if (EM.ct) EM.ct.prefs = r.prefs;
++      var el = document.getElementById("emCtPrefMsg"); if (el) el.innerHTML = '<div class="em-msg ok">' + (r.prefs.coletar ? "Ligado: os próximos endereços para quem você escrever entram nos seus contatos." : "Desligado: nenhum endereço novo entra sozinho nos seus contatos.") + '</div>';
++    }, function (m) { var el = document.getElementById("emCtPrefMsg"); if (el) el.innerHTML = '<div class="em-msg erro">' + Email_esc_(m) + '</div>'; var c = document.getElementById("emCtColetar"); if (c) c.checked = !v; });
++  }
++  /** Leitura: "Salvar remetente nos contatos" (já é contato: abre para editar). */
++  function Email_salvarRemetente_() {
++    var m = EM.aberta; if (!m || !m.deEndereco) return;
++    var nome = String(m.de || "").replace(/<[^>]*>/g, "").replace(/"/g, "").trim();
++    if (nome.toLowerCase() === String(m.deEndereco).toLowerCase()) nome = "";
++    Email_carregarContatos_(function (ct) {
++      var ja = ct && ct.contatos.filter(function (x) { return x.email === String(m.deEndereco).toLowerCase(); })[0];
++      if (ja) { Email_editarContato_(ja.id); return; }
++      Email_editarContato_(null, { nome: nome, email: m.deEndereco, empresa: m.cliente && !m.cliente.ambiguo ? m.cliente.nome : "", origem: "REMETENTE" });
++    });
++  }
+ </script>
+--- base-legado/SGO_Email.js	2026-11-17 10:54:45.721958400 -0300
++++ legado/SGO_Email.js	2026-11-17 11:19:32.830090200 -0300
+@@ -263,7 +263,11 @@
+     var eu = Email_eu_(sessionId), p = payload || {};
+     var d = { conta: p.conta || '', pasta: p.pasta || 'INBOX', busca: Email_s_(p.busca).slice(0, 100), naoLidas: !!p.naoLidas, comAnexo: !!p.comAnexo, pagina: Number(p.pagina) || 0, porPagina: Number(p.porPagina) || 30 };
+     if (p.deCliente) d.remetentes = Email_filtroClientes_();
++    if (p.sinalizadas) d.sinalizadas = true;
+     var r = Email_chamar_(eu, 'listar', d);
++    // 17/11/2026: filtro "Sinalizadas". O servidor atualizado filtra na caixa toda (devolve filtros.sinalizadas); o servidor
++    // antigo ignora o pedido: aí o filtro vale só para as mensagens desta página, e a tela avisa (sinalizadasParcial).
++    if (p.sinalizadas && !(r.filtros && r.filtros.sinalizadas)) { r.itens = (r.itens || []).filter(function (it) { return it.sinalizada === true; }); r.sinalizadasParcial = true; }
+     (r.itens || []).forEach(function (it) { var c = Email_clienteDe_(it.deEndereco); if (c) it.cliente = c; });
+     return r;
+   });
+@@ -309,7 +313,9 @@
+     var eu = Email_eu_(sessionId), p = Email_mensagemDaTela_(payload);
+     var r = Email_chamar_(eu, 'enviar', p);
+     Email_invalidarPendencias_();
+-    return { envio: r };
++    // 17/11/2026: contatos. Só envio pela caixa pessoal conta uso e guarda endereço novo (com a coleta ligada).
++    var novos = Email_contaEhPessoal_(eu, p.conta) ? Email_coletarDestinatarios_(eu, p) : 0;
++    return { envio: r, contatosNovos: novos };
+   });
+ }
+ function Email_apiRascunho(sessionId, payload) {
+@@ -400,6 +406,233 @@
+ }
+ 
+ /* ------------------------------------------------------------
++ * CONTATOS (17/11/2026, pedido da equipe: "igual ao Outlook")
++ * ------------------------------------------------------------
++ * Dois catálogos para a busca ao digitar o destinatário (Para, Cc, Cco) e para a aba Contatos:
++ *   - MEUS CONTATOS (EML_CONTATOS): de cada pessoa, só dela (USUARIO_ID da sessão; ninguém vê os contatos de outra pessoa,
++ *     nem o Administrador). Criar, editar, excluir (lógico: STATUS EXCLUIDO), favoritos, "salvar remetente como contato" e a
++ *     coleta automática dos endereços para quem a pessoa escreve pela CAIXA PESSOAL (configurável por pessoa; padrão ligado).
++ *     Envio por caixa compartilhada não coleta (a caixa é da área; o endereço não vira contato pessoal de ninguém).
++ *   - CATÁLOGO DA EMPRESA (só leitura, montado na hora): colegas ativos (CAD_USUARIOS, nunca cliente nem representada),
++ *     clientes ativos (CAD_CLIENTES.EMAIL) e contatos ativos dos clientes (CAD_CONTATOS), que a equipe interna já vê em
++ *     "Escrever para cliente"; fornecedores (Compras) só para quem já vê os fornecedores em Compras (Cmp_eu_ veValores);
++ *     contatos das representadas só para quem administra a Representação (RepI_podeAdministrar_).
++ *     NADA do Financeiro (abas FIN_*, Omie) entra no catálogo: o sigilo (OMIE_SIGILO_CONTAS) continua valendo.
++ * As sugestões são filtradas na tela (sem acento e sem maiúscula, recentes primeiro): o catálogo vem uma vez por janela.
++ */
++var EMAIL_ABA_CONTATOS = 'EML_CONTATOS';
++var EMAIL_COLUNAS_CONTATOS = ['ID', 'USUARIO_ID', 'NOME', 'EMAIL', 'EMPRESA', 'TELEFONE', 'OBS', 'FAVORITO', 'ORIGEM', 'USOS', 'ULTIMO_USO', 'STATUS', 'CRIADO_EM', 'ATUALIZADO_EM'];
++var EMAIL_CONTATOS_PREF_PROP = 'EMAIL_CONTATOS_PREFS';
++var EMAIL_CONTATOS_MAX = 2000;           // por pessoa
++var EMAIL_CONTATOS_COLETA_MAX = 50;      // endereços coletados por envio (o servidor aceita até 50 destinatários)
++var EMAIL_ORIGENS_CONTATO = { MANUAL: 'Cadastrado por você', REMETENTE: 'Salvo de um e-mail recebido', AUTOMATICO: 'Guardado ao enviar' };
++
++function Email_emailValido_(e) { return /^[^\s@<>(),;:"\[\]]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(Email_s_(e)); }
++/** "Nome <a@b>", "a@b; c@d", "<a@b>" -> [{ nome, email }] (só endereços válidos; minúsculas; sem repetir). */
++function Email_enderecosDe_(texto) {
++  var out = [], vistos = {};
++  String(texto || '').split(/[;,\n]+/).forEach(function (pedaco) {
++    var p = Email_s_(pedaco); if (!p) return;
++    var m = /^(.*)<([^>]+)>\s*$/.exec(p), nome = '', e = p;
++    if (m) { nome = Email_s_(m[1]).replace(/^"|"$/g, ''); e = Email_s_(m[2]); }
++    e = e.toLowerCase();
++    if (!Email_emailValido_(e) || vistos[e]) return;
++    vistos[e] = true; out.push({ nome: nome, email: e });
++  });
++  return out;
++}
++function Email_garantirAbaContatos_() {
++  if (typeof CertCal_garantirTabela_ === 'function') {
++    CertCal_garantirTabela_(EMAIL_ABA_CONTATOS, EMAIL_COLUNAS_CONTATOS);
++    EMAIL_COLUNAS_CONTATOS.forEach(function (c) { CertCal_garantirColuna_(EMAIL_ABA_CONTATOS, c); });
++  }
++}
++function Email_contatosLinhas_(euId) {
++  var l = [];
++  try { l = SGO_DATA.getAll(EMAIL_ABA_CONTATOS) || []; } catch (e) { l = []; }
++  return l.filter(function (r) { return Email_s_(r.USUARIO_ID) === Email_s_(euId) && !!Email_s_(euId); });
++}
++function Email_contatoAtivo_(r) { return SGO_UTILS.safeUpper(r.STATUS || 'ATIVO') !== 'EXCLUIDO'; }
++function Email_contatoParaTela_(r) {
++  var origem = SGO_UTILS.safeUpper(r.ORIGEM) || 'MANUAL';
++  return { id: Email_s_(r.ID), nome: Email_s_(r.NOME), email: Email_s_(r.EMAIL).toLowerCase(), empresa: Email_s_(r.EMPRESA), telefone: Email_s_(r.TELEFONE), obs: Email_s_(r.OBS),
++    favorito: SGO_UTILS.safeUpper(r.FAVORITO) === 'SIM', origem: origem, origemTexto: EMAIL_ORIGENS_CONTATO[origem] || EMAIL_ORIGENS_CONTATO.MANUAL,
++    usos: Number(r.USOS) || 0, ultimoUso: Email_s_(r.ULTIMO_USO) };
++}
++function Email_contatosAtivos_(euId) {
++  return Email_contatosLinhas_(euId).filter(Email_contatoAtivo_).map(Email_contatoParaTela_)
++    .sort(function (a, b) { return (b.favorito - a.favorito) || String(b.ultimoUso).localeCompare(String(a.ultimoUso)) || a.nome.localeCompare(b.nome, 'pt-BR') || a.email.localeCompare(b.email); });
++}
++/** Preferências de contatos da pessoa: { coletar } (coleta automática ao enviar; padrão ligada). */
++function Email_contatosPrefs_(euId) {
++  var t = {};
++  try { t = JSON.parse(PropertiesService.getScriptProperties().getProperty(EMAIL_CONTATOS_PREF_PROP) || '{}') || {}; } catch (e) { t = {}; }
++  var p = t[Email_s_(euId)] || {};
++  return { coletar: p.coletar !== false };
++}
++
++/** Catálogo da empresa: só o que a pessoa já pode ver em outras telas. Nada do Financeiro. */
++function Email_catalogoEmpresa_(sessionId, eu) {
++  var lista = [], vistos = {};
++  var por = function (email, nome, tipo, empresa) {
++    var e = Email_s_(email).toLowerCase();
++    if (!Email_emailValido_(e) || vistos[e]) return;
++    vistos[e] = true; lista.push({ email: e, nome: Email_s_(nome), tipo: tipo, empresa: Email_s_(empresa) });
++  };
++  try {
++    (SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_USUARIOS) || []).forEach(function (u) {
++      var perfil = SGO_UTILS.safeUpper(u.PERFIL);
++      if (SGO_UTILS.safeUpper(u.STATUS || 'ATIVO') !== 'ATIVO' || perfil === 'CLIENTE' || perfil === 'REPRESENTADA' || perfil === 'AUVO_SYNC') return;
++      if (Email_s_(u.ID) === eu.id) return;
++      por(u.EMAIL, Email_s_(u.NOME) || Email_s_(u.USUARIO), 'colega', 'Metrolabs');
++    });
++  } catch (e) {}
++  var nomesCli = {};
++  try {
++    (SGO_DATA.getAll(SGO_CFG.SHEETS.CAD_CLIENTES) || []).forEach(function (c) {
++      if (SGO_UTILS.safeUpper(c.STATUS || 'ATIVO') === 'INATIVO') return;
++      var nome = Email_s_(c.NOME_FANTASIA) || Email_s_(c.RAZAO_SOCIAL);
++      nomesCli[Email_s_(c.ID)] = nome;
++      Email_s_(c.EMAIL).split(/[\s,;]+/).forEach(function (e) { if (!Email_dominioProprio_(e.split('@')[1] || '')) por(e, nome, 'cliente', nome); });
++    });
++  } catch (e) {}
++  try {
++    (SGO_DATA.getAll('CAD_CONTATOS') || []).forEach(function (k) {
++      var cid = Email_s_(k.CLIENTE_ID);
++      if (!nomesCli[cid] || SGO_UTILS.safeUpper(k.STATUS || 'ATIVO') !== 'ATIVO') return;
++      var e = Email_s_(k.EMAIL).toLowerCase();
++      if (Email_dominioProprio_(e.split('@')[1] || '')) return;
++      por(e, Email_s_(k.NOME) || nomesCli[cid], 'contato', nomesCli[cid]);
++    });
++  } catch (e) {}
++  // fornecedores: só quem já vê os fornecedores em Compras (comprador, gestores e Financeiro autorizado)
++  try {
++    if (typeof Cmp_eu_ === 'function' && typeof CMP_ABAS !== 'undefined' && Cmp_eu_(sessionId).veValores) {
++      (SGO_DATA.getAll(CMP_ABAS.FORNECEDORES) || []).forEach(function (f) {
++        if (SGO_UTILS.safeUpper(f.ATIVO || 'SIM') === 'NAO') return;
++        var nome = Email_s_(f.NOME_FANTASIA) || Email_s_(f.RAZAO_SOCIAL);
++        por(f.EMAIL_PEDIDOS, Email_s_(f.CONTATO) || nome, 'fornecedor', nome);
++      });
++    }
++  } catch (e) {}
++  // representadas: só quem administra a Representação
++  try {
++    if (typeof RepI_podeAdministrar_ === 'function' && typeof REP_ABAS !== 'undefined' && RepI_podeAdministrar_({ id: eu.id, perfil: eu.perfil, diretoria: eu.perfil === 'DIRETORIA' })) {
++      (SGO_DATA.getAll(REP_ABAS.REPRESENTADAS) || []).forEach(function (r) {
++        por(r.CONTATO_EMAIL, Email_s_(r.CONTATO_NOME) || Email_s_(r.NOME), 'representada', Email_s_(r.NOME));
++      });
++    }
++  } catch (e) {}
++  return lista.sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR') || a.email.localeCompare(b.email); });
++}
++
++/** Aba Contatos e busca ao digitar: os meus contatos, o catálogo da empresa e a preferência de coleta. */
++function Email_apiContatos(sessionId) {
++  return Email_resposta_(function () {
++    var eu = Email_eu_(sessionId);
++    return { contatos: Email_contatosAtivos_(eu.id), empresa: Email_catalogoEmpresa_(sessionId, eu), prefs: Email_contatosPrefs_(eu.id), max: EMAIL_CONTATOS_MAX };
++  });
++}
++/** Criar ou editar um contato meu. Mesmo e-mail já salvo: atualiza o existente (um excluído volta). */
++function Email_apiContatoSalvar(sessionId, payload) {
++  return Email_resposta_(function () {
++    var eu = Email_eu_(sessionId), p = payload || {};
++    var bruto = Email_s_(p.email), m = /<([^>]+)>/.exec(bruto), email = (m ? m[1] : bruto).trim().toLowerCase();
++    if (!Email_emailValido_(email)) throw new Error('O e-mail "' + bruto + '" não é um endereço válido: confira se tem @ e o domínio (por exemplo nome@empresa.com.br) e salve de novo.');
++    var nome = Email_s_(p.nome).slice(0, 120) || email.split('@')[0];
++    var origem = ['MANUAL', 'REMETENTE'].indexOf(SGO_UTILS.safeUpper(p.origem)) >= 0 ? SGO_UTILS.safeUpper(p.origem) : 'MANUAL';
++    Email_garantirAbaContatos_();
++    var meus = Email_contatosLinhas_(eu.id);
++    var id = Email_s_(p.id), atual = null;
++    if (id) {
++      atual = meus.filter(function (r) { return Email_s_(r.ID) === id && Email_contatoAtivo_(r); })[0];
++      if (!atual) throw new Error('Este contato não foi encontrado entre os seus (pode ter sido excluído em outra janela). Atualize a aba Contatos e tente de novo.');
++    }
++    var mesmo = meus.filter(function (r) { return Email_s_(r.EMAIL).toLowerCase() === email && Email_s_(r.ID) !== id; })[0];
++    if (mesmo && id && Email_contatoAtivo_(mesmo)) throw new Error('Você já tem outro contato com o e-mail ' + email + ' ("' + Email_s_(mesmo.NOME) + '"). Edite aquele contato ou use outro e-mail.');
++    var agora = new Date().toISOString();
++    var campos = { NOME: nome, EMAIL: email, EMPRESA: Email_s_(p.empresa).slice(0, 120), TELEFONE: Email_s_(p.telefone).slice(0, 40), OBS: Email_s_(p.obs).slice(0, 500), STATUS: 'ATIVO', ATUALIZADO_EM: agora };
++    if (p.favorito !== undefined) campos.FAVORITO = p.favorito ? 'SIM' : 'NAO';
++    if (!atual && mesmo) {
++      // mesmo e-mail já guardado: o que a pessoa escreveu antes não é apagado por campo vazio (só preenche o que falta)
++      atual = mesmo;
++      if (Email_contatoAtivo_(mesmo)) ['NOME', 'EMPRESA', 'TELEFONE', 'OBS'].forEach(function (k) { if (Email_s_(mesmo[k]) && (!Email_s_(p[k.toLowerCase()]) || origem === 'REMETENTE')) delete campos[k]; });
++      if (SGO_UTILS.safeUpper(mesmo.ORIGEM) === 'AUTOMATICO') campos.ORIGEM = origem;
++    }
++    if (atual) {
++      SGO_DATA.update(EMAIL_ABA_CONTATOS, atual.ID, campos);
++      return { contato: Email_contatoParaTela_(Object.assign({}, atual, campos)), novo: false };
++    }
++    var ativos = meus.filter(Email_contatoAtivo_).length;
++    if (ativos >= EMAIL_CONTATOS_MAX) throw new Error('Você chegou ao limite de ' + EMAIL_CONTATOS_MAX + ' contatos. Exclua contatos que não usa mais (aba Contatos, filtro "Guardados ao enviar") e salve de novo.');
++    var novo = SGO_DATA.insert(EMAIL_ABA_CONTATOS, Object.assign({ USUARIO_ID: eu.id, FAVORITO: p.favorito ? 'SIM' : 'NAO', ORIGEM: origem, USOS: 0, ULTIMO_USO: '' }, campos));
++    return { contato: Email_contatoParaTela_(novo), novo: true };
++  });
++}
++function Email_contatoMeu_(eu, id) {
++  var r = Email_contatosLinhas_(eu.id).filter(function (x) { return Email_s_(x.ID) === Email_s_(id) && Email_contatoAtivo_(x); })[0];
++  if (!r) throw new Error('Este contato não foi encontrado entre os seus (pode ter sido excluído em outra janela). Atualize a aba Contatos.');
++  return r;
++}
++/** Excluir: some da lista e das sugestões (fica marcado EXCLUIDO; a coleta automática não o traz de volta sozinha). */
++function Email_apiContatoExcluir(sessionId, id) {
++  return Email_resposta_(function () {
++    var eu = Email_eu_(sessionId), r = Email_contatoMeu_(eu, id);
++    SGO_DATA.update(EMAIL_ABA_CONTATOS, r.ID, { STATUS: 'EXCLUIDO', ATUALIZADO_EM: new Date().toISOString() });
++    return { id: Email_s_(r.ID) };
++  });
++}
++function Email_apiContatoFavorito(sessionId, payload) {
++  return Email_resposta_(function () {
++    var eu = Email_eu_(sessionId), p = payload || {}, r = Email_contatoMeu_(eu, p.id);
++    SGO_DATA.update(EMAIL_ABA_CONTATOS, r.ID, { FAVORITO: p.favorito ? 'SIM' : 'NAO', ATUALIZADO_EM: new Date().toISOString() });
++    return { id: Email_s_(r.ID), favorito: !!p.favorito };
++  });
++}
++/** Liga ou desliga a coleta automática (só da própria pessoa). */
++function Email_apiContatosPrefs(sessionId, payload) {
++  return Email_resposta_(function () {
++    var eu = Email_eu_(sessionId), p = payload || {};
++    var props = PropertiesService.getScriptProperties(), t = {};
++    try { t = JSON.parse(props.getProperty(EMAIL_CONTATOS_PREF_PROP) || '{}') || {}; } catch (e) { t = {}; }
++    t[eu.id] = { coletar: p.coletar !== false };
++    props.setProperty(EMAIL_CONTATOS_PREF_PROP, JSON.stringify(t));
++    return { prefs: Email_contatosPrefs_(eu.id) };
++  });
++}
++/**
++ * Depois de um envio pela caixa pessoal: conta o uso (recentes primeiro nas sugestões) e, com a coleta ligada, guarda os
++ * endereços novos como contato "Guardado ao enviar". Endereço excluído pela pessoa não volta sozinho. Nunca lança erro.
++ */
++function Email_coletarDestinatarios_(eu, msg) {
++  try {
++    var lista = Email_enderecosDe_([msg.para, msg.cc, msg.cco].join(';')).filter(function (x) { return x.email !== eu.email; }).slice(0, EMAIL_CONTATOS_COLETA_MAX);
++    if (!lista.length) return 0;
++    var coletar = Email_contatosPrefs_(eu.id).coletar, meus = Email_contatosLinhas_(eu.id), porEmail = {}, agora = new Date().toISOString(), novos = 0;
++    meus.forEach(function (r) { porEmail[Email_s_(r.EMAIL).toLowerCase()] = r; });
++    var ativos = meus.filter(Email_contatoAtivo_).length;
++    Email_garantirAbaContatos_();
++    lista.forEach(function (x) {
++      var r = porEmail[x.email];
++      if (r) {
++        if (!Email_contatoAtivo_(r)) return;
++        SGO_DATA.update(EMAIL_ABA_CONTATOS, r.ID, { USOS: (Number(r.USOS) || 0) + 1, ULTIMO_USO: agora });
++        return;
++      }
++      if (!coletar || ativos >= EMAIL_CONTATOS_MAX) return;
++      SGO_DATA.insert(EMAIL_ABA_CONTATOS, { USUARIO_ID: eu.id, NOME: x.nome || x.email.split('@')[0], EMAIL: x.email, EMPRESA: '', TELEFONE: '', OBS: '', FAVORITO: 'NAO', ORIGEM: 'AUTOMATICO',
++        USOS: 1, ULTIMO_USO: agora, STATUS: 'ATIVO', ATUALIZADO_EM: agora });
++      ativos++; novos++;
++    });
++    return novos;
++  } catch (e) { return 0; }
++}
++/** A conta usada no envio é a caixa pessoal da pessoa? (envio por caixa compartilhada não coleta contato pessoal) */
++function Email_contaEhPessoal_(eu, conta) {
++  try { var s = Email_chamar_(eu, 'situacao'); return !!(s && s.pessoal && (!conta || s.pessoal.id === conta)); } catch (e) { return false; }
++}
++
++/* ------------------------------------------------------------
+  * CAIXAS COMPARTILHADAS (só Administrador)
+  * ------------------------------------------------------------ */
+ function Email_exigirAdmin_(sessionId) {
+--- base-legado/SGO_Ajuda_Email.js	2026-11-17 10:54:45.825399500 -0300
++++ legado/SGO_Ajuda_Email.js	2026-11-17 11:19:33.169345400 -0300
+@@ -6,27 +6,37 @@
+   return {
+     'email': {
+       titulo: 'E-mail',
+-      paraQueServe: 'A sua caixa de e-mail da Metrolabs dentro do SGO+: ler, escrever, responder o cliente, encaminhar, anexar arquivos, mover e apagar, sem sair do sistema. O sistema reconhece quando o remetente é cliente cadastrado, avisa quando chega e-mail novo e cobra o e-mail de cliente que ficou sem leitura ou sem resposta, para nenhum atendimento ficar esquecido.',
++      paraQueServe: 'A sua caixa de e-mail da Metrolabs dentro do SGO+: ler, escrever, responder o cliente, encaminhar, anexar arquivos, mover e apagar, sem sair do sistema, com lista de contatos e busca ao digitar o destinatário, como no Outlook. O sistema reconhece quando o remetente é cliente cadastrado, avisa quando chega e-mail novo e cobra o e-mail de cliente que ficou sem leitura ou sem resposta, para nenhum atendimento ficar esquecido.',
+       antesDeComecar: [
+         'Conecte a sua caixa uma vez: aba "Minha caixa e assinatura", informe o endereço @metrolabs.com.br e a senha da caixa (a do webmail, não a do SGO+) e toque em "Testar e conectar".',
+         'A senha é testada antes de gravar e fica guardada cifrada no servidor da Metrolabs. Ela nunca aparece na tela de novo e ninguém lê: nem o Administrador, nem a gestão.',
+         'A sua caixa só você abre. Caixas compartilhadas (comercial@, financeiro@...) aparecem para quem o Administrador liberou.'
+       ],
+       passos: [
+-        { titulo: 'Ler as mensagens', itens: ['Toque em "E-mail" no menu (grupo Principal).', 'Escolha a pasta à esquerda (no celular, na lista do topo): Entrada, Enviados, Rascunhos, Lixeira e as outras da sua caixa.', 'Toque na mensagem para ler. Em negrito estão as não lidas.', 'Use "Procurar" (remetente, destinatário ou assunto) e os filtros "Não lidas", "Com anexo" e "De cliente".'] },
++        { titulo: 'Ler as mensagens', itens: ['Toque em "E-mail" no menu (grupo Principal).', 'Escolha a pasta à esquerda (no celular, na lista do topo): Entrada, Enviados, Rascunhos, Lixeira e as outras da sua caixa.', 'Toque na mensagem para ler. Em negrito estão as não lidas.', 'Use "Procurar" (remetente, destinatário ou assunto) e os filtros "Não lidas", "Sinalizadas", "Com anexo" e "De cliente".'] },
++        { titulo: 'Excluir sem abrir e seguir para a próxima', itens: ['No computador, passe o mouse na linha da mensagem: aparecem o envelope (lida ou não lida), a bandeira (sinalizar) e o "×" (excluir). No celular eles ficam sempre à vista.', 'Toque no "×" para excluir sem abrir. No celular, deslizar a linha para a esquerda também exclui; para a direita, marca como lida ou não lida.', 'Ao excluir a mensagem aberta (botão "Excluir" ou tecla Delete), o sistema abre sozinho a de baixo; se era a última, a de cima. A lista continua no mesmo lugar.', 'Errou? Toque em "Desfazer" no aviso escuro que aparece embaixo da tela (ou Ctrl+Z) em até 7 segundos. Depois disso a mensagem está na Lixeira, de onde dá para mover de volta.'] },
++        { titulo: 'Várias mensagens de uma vez', itens: ['Marque a caixinha à esquerda de cada mensagem (ou Ctrl+clique; Shift+clique marca um intervalo). "Selecionar todas" marca a página inteira.', 'Na barra acima da lista: "Excluir", "Mover para...", "Lida", "Não lida", "Sinalizar", "Tirar sinal" e "Limpar seleção".', 'No computador, arraste a mensagem (ou as marcadas) até uma pasta à esquerda para mover.'] },
++        { titulo: 'Teclas de atalho', itens: ['Com a lista ou a mensagem em foco (fora dos campos de texto): seta para baixo e para cima abrem a próxima e a anterior; Delete exclui; R responde; Shift+R responde a todos; F encaminha; N abre mensagem nova.', 'U marca como lida ou não lida; I (ou Insert) sinaliza; / vai para "Procurar"; Esc limpa a seleção; Ctrl+Z desfaz a última exclusão.'] },
++        { titulo: 'Destinatário: busca ao digitar', itens: ['Na janela de escrever, digite parte do nome, do e-mail ou da empresa em Para, Cc ou Cco. Aparecem os seus contatos e os da empresa, os usados por último primeiro. Acentos e maiúsculas não importam.', 'Escolha com as setas e Enter (ou Tab), ou toque na sugestão. O destinatário vira uma "pílula" com "×" para tirar.', 'Ponto e vírgula ou vírgula fecha o endereço digitado. Colar uma lista de endereços separados por ponto e vírgula ou vírgula cria uma pílula para cada um.', 'Pílula vermelha é endereço errado (sem @ ou sem domínio): dê dois cliques para corrigir. O sistema não envia enquanto houver pílula vermelha.'] },
++        { titulo: 'Contatos', itens: ['Aba "Contatos": "Novo contato" (nome, e-mail, empresa, telefone, observação e favorito), "Editar", "Excluir" e a estrela de favorito.', 'Na leitura de um e-mail, "Salvar remetente nos contatos" já traz o nome e o endereço de quem escreveu.', 'Com "Guardar sozinho os endereços para quem eu escrevo" ligado, quem recebe e-mail seu pela caixa pessoal vira contato "Guardado ao enviar". Desligue na aba Contatos se preferir cadastrar só à mão.', 'O catálogo da empresa (colegas, clientes e contatos dos clientes; fornecedores e representadas para quem já vê essas telas) aparece junto, com "Escrever" e "Salvar nos meus contatos".'] },
++        { titulo: 'Rascunho automático', itens: ['Com "Salvar rascunho sozinho a cada minuto" marcado (vem ligado), o que você escreve vai para a pasta Rascunhos a cada minuto em que houve mudança.', 'Ao enviar, o rascunho sai da pasta. Ao descartar, o rascunho salvo sozinho vai para a Lixeira.', 'Desmarque a opção na própria janela de escrever se preferir salvar só pelo botão "Salvar rascunho".'] },
+         { titulo: 'Responder o cliente', itens: ['Abra a mensagem e toque em "Responder" (ou "Responder a todos").', 'Escreva a resposta. A assinatura padrão de respostas entra sozinha antes da mensagem original, que fica citada abaixo.', 'Para anexar, toque em "Anexar arquivo" ou arraste os arquivos para a janela. Se a mensagem original tinha anexos, marque "Incluir os anexos da mensagem original" para devolvê-los.', 'Toque em "Enviar". A cópia fica em Enviados e a mensagem original ganha o selo "Respondida".'] },
+         { titulo: 'Escrever um e-mail novo', itens: ['Toque em "Escrever" no topo da tela.', 'Preencha Para (vários separados por vírgula), Cc e Cco se precisar, e o Assunto.', 'Escreva o texto; use os botões N, I, S, lista e link para formatar.', 'A assinatura padrão de mensagens novas já vem no fim. Para trocar ou tirar, use o seletor "Assinatura" na barra do editor.', 'Toque em "Salvar rascunho" para continuar depois ou em "Enviar".'] },
+         { titulo: 'Assinaturas com imagem', itens: ['Aba "Minha caixa e assinatura" > "Assinaturas" > "Nova assinatura".', 'Dê um nome (por exemplo "Completa" ou "Respostas"), escreva o texto e, se quiser, toque em "Escolher imagem" (PNG ou JPG, como logotipo ou cartão de visita). O sistema reduz a imagem sozinho.', 'Ajuste a "Largura exibida da imagem" e a posição (abaixo ou acima do texto) olhando a pré-visualização. Toque em "Salvar assinatura".', 'Escolha qual assinatura entra em "Mensagens novas" e qual entra em "Respostas e encaminhamentos" (ou nenhuma).', 'A imagem vai embutida na mensagem: o cliente vê sem baixar nada e sem entrar em site.'] },
+         { titulo: 'Encaminhar', itens: ['Abra a mensagem e toque em "Encaminhar".', 'Os anexos da mensagem original já vêm marcados em "Manter os anexos da mensagem original". Desmarque os que não devem seguir.', 'Preencha Para e toque em "Enviar".'] },
+         { titulo: 'Cliente reconhecido', itens: ['Quando o remetente é cliente cadastrado (e-mail do cliente ou do contato, ou o domínio próprio do cliente), aparece a faixa verde "Cliente: nome". Endereços @metrolabs e domínios públicos (gmail, hotmail, outlook, yahoo, uol, bol, terra) nunca contam como cliente pelo domínio.', 'Se o mesmo endereço estiver no cadastro de mais de um cliente, aparece a faixa laranja com os nomes: o sistema não escolhe sozinho.', 'Toque em "Abrir cadastro" para ir ao cadastro do cliente.', 'Toque em "Registrar no cliente" para guardar um resumo do e-mail no histórico do cliente (com assunto, data e quem registrou).'] },
+         { titulo: 'Anexos e imagens', itens: ['Os anexos recebidos aparecem acima do texto, com nome e tamanho. Toque no anexo para baixar.', 'Imagens de fora ficam bloqueadas (elas avisam o remetente que você abriu). Se confia no remetente, toque em "Mostrar imagens".', 'Ao tocar num link, o sistema mostra o site de destino e pede confirmação.'] },
+-        { titulo: 'Organizar', itens: ['"Mover para..." leva a mensagem para outra pasta.', '"Apagar" manda para a Lixeira (dá para mover de volta).', 'Só dentro da Lixeira aparece "Apagar para sempre", com confirmação.', '"Marcar como não lida" volta a mensagem para negrito.'] },
++        { titulo: 'Organizar', itens: ['"Mover para..." leva a mensagem para outra pasta.', '"Excluir" manda para a Lixeira (dá para mover de volta) e abre a próxima mensagem.', '"Sinalizar" marca a mensagem com a bandeira vermelha, para não esquecer; o filtro "Sinalizadas" mostra só essas.', 'Só dentro da Lixeira aparece "Apagar para sempre", com confirmação.', '"Marcar como não lida" volta a mensagem para negrito.'] },
+         { titulo: 'Caixa compartilhada', itens: ['Se você tem acesso, escolha a caixa no seletor acima das pastas.', 'Ao tocar em "Responder", o sistema marca que você está respondendo; quem abrir a mesma mensagem vê o aviso.', 'Depois do envio, a mensagem mostra "Respondida por" com o seu nome.'] }
+       ],
+       cores: [
+         { nome: 'Número no menu E-mail', significado: 'Mensagens não lidas na Entrada (a sua caixa e as compartilhadas). Laranja: a caixa está sem conexão; abra E-mail para ver o motivo.' },
+         { nome: 'Selo verde "Cliente: nome"', significado: 'O remetente é e-mail (ou domínio próprio) de um cliente do cadastro. "Cliente: A ou B": o endereço está no cadastro de mais de um cliente.' },
+         { nome: 'Contorno tracejado na janela de escrever', significado: 'Você está arrastando arquivos: solte para anexar.' },
++        { nome: 'Bandeira vermelha na linha', significado: 'Mensagem sinalizada para não esquecer. Toque de novo na bandeira para tirar.' },
++        { nome: 'Linha com faixa azul à esquerda', significado: 'Mensagem em foco: as teclas de atalho (Delete, R, U, I) valem para ela.' },
++        { nome: 'Pílula vermelha no Para, Cc ou Cco', significado: 'Endereço errado (sem @ ou sem domínio). Dê dois cliques para corrigir ou toque no × para tirar.' },
++        { nome: 'Aviso escuro "Mensagem excluída" embaixo da tela', significado: 'A exclusão espera alguns segundos: toque em "Desfazer" para trazer a mensagem de volta.' },
+         { nome: 'Selo azul "Respondida"', significado: 'A mensagem já foi respondida por esta caixa.' },
+         { nome: 'Selo laranja "Respondendo" ou "Respondida por"', significado: 'Caixa compartilhada: alguém da equipe está respondendo ou já respondeu.' },
+         { nome: 'Faixa vermelha "senha recusada"', significado: 'A senha da caixa mudou no webmail. Grave a senha nova em "Minha caixa e assinatura" > "Trocar a senha guardada".' }
+@@ -35,6 +45,10 @@
+         { situacao: 'Aparece "O servidor de e-mail recusou a senha".', oQueFazer: 'Confira a senha no webmail. Se você trocou a senha da caixa, toque em "Trocar a senha guardada" e grave a atual. O sistema para de tentar até lá, para o provedor não bloquear a caixa.' },
+         { situacao: '"Só dá para conectar caixas da empresa".', oQueFazer: 'O sistema aceita só endereços @metrolabs.com.br. E-mail pessoal (Gmail, Hotmail) não entra, para proteger os dados dos clientes.' },
+         { situacao: '"Limite de envio atingido".', oQueFazer: 'Na última hora você passou do limite de mensagens ou de destinatários (proteção contra envio em massa). Salve como rascunho e envie mais tarde. Para comunicado a muitas pessoas, fale com a gestão.' },
++        { situacao: 'Excluí uma mensagem sem querer.', oQueFazer: 'Toque em "Desfazer" no aviso escuro embaixo da tela (ou Ctrl+Z) em até 7 segundos. Passou o prazo: abra a pasta Lixeira, abra a mensagem e use "Mover para..." de volta para a Entrada.' },
++        { situacao: 'O contato não aparece quando digito o nome no Para.', oQueFazer: 'A busca usa os seus contatos e o catálogo da empresa. Confira na aba Contatos se o contato existe; se não, cadastre em "Novo contato" ou digite o e-mail inteiro e tecle Enter. Contatos novos aparecem na busca na próxima janela de escrever.' },
++        { situacao: '"Endereço errado" ao enviar.', oQueFazer: 'Alguma pílula está vermelha: o endereço não tem @ ou domínio. Dê dois cliques na pílula para corrigir ou toque no × para tirar, e envie de novo.' },
++        { situacao: 'O filtro "Sinalizadas" avisa que vale só para esta página.', oQueFazer: 'O servidor de e-mail ainda não filtra a caixa toda: use "Mais antigas" para ver as outras páginas. Depois da atualização do servidor, o filtro vale para a caixa inteira.' },
+         { situacao: 'Uma pendência "e-mail de cliente não lido" apareceu no Início.', oQueFazer: 'Abra E-mail e leia. Se a mensagem pede resposta, responda. Se não precisa, mova para outra pasta: ela deixa de ser cobrada.' },
+         { situacao: 'A mensagem sumiu da lista.', oQueFazer: 'Ela pode ter sido movida ou apagada pelo webmail ou pelo celular. Procure nas outras pastas e na Lixeira.' },
+         { situacao: 'Anexo grande não baixa.', oQueFazer: 'O limite para baixar pelo sistema é 25 MB. Baixe pelo webmail da empresa.' },
+@@ -44,13 +58,16 @@
+         { situacao: 'A imagem da assinatura não apareceu para o cliente.', oQueFazer: 'Alguns programas (principalmente Outlook de empresa) escondem imagens até o destinatário liberar. Peça para tocar em "Baixar imagens" ou "Mostrar conteúdo". Por isso, mantenha nome e telefone também no texto da assinatura.' }
+       ],
+       quemPode: [
+-        { perfil: 'TODOS', pode: 'Conectar a própria caixa, ler, escrever, responder, anexar, mover, apagar, salvar rascunho, assinatura e registrar e-mail no cliente. Só o dono abre a própria caixa.' },
++        { perfil: 'TODOS', pode: 'Conectar a própria caixa, ler, escrever, responder, anexar, mover, excluir, sinalizar, salvar rascunho, assinatura, registrar e-mail no cliente e manter a própria lista de contatos. Só o dono abre a própria caixa e vê os próprios contatos.' },
+         { perfil: 'ADMIN', pode: 'Tudo acima e cadastrar caixas compartilhadas (áreas e pessoas com acesso), ver a trilha de acesso delas e ajustar os prazos dos avisos. Não abre a caixa pessoal de ninguém.' },
+         { perfil: 'GESTOR,DIRETORIA', pode: 'Recebem na Caixa de decisões quando alguém da área fica com e-mail de cliente sem resposta além do prazo: só o nome, o cliente e há quanto tempo. Não veem assunto nem texto.' },
+         { perfil: 'CLIENTE', pode: 'Não usa esta tela.' }
+       ],
+       perguntas: [
+         { p: 'Como fecho uma janela do E-mail (escrever, assinatura, registrar no cliente)?', r: 'Toque no "×" no alto da janela, que fica preso no topo mesmo quando a janela rola. Também fecham o Cancelar ou Descartar do rodapé, o voltar do celular, a tecla Esc e, no computador, o clique no fundo escuro em volta da janela. Se você já digitou algo, o sistema pergunta antes de fechar; na janela de escrever, salve o rascunho para continuar depois.' },
++        { p: 'Alguém vê a minha lista de contatos?', r: 'Não. Os seus contatos são só seus, como a caixa: nem o Administrador vê. O catálogo da empresa mostra só o que você já veria nas outras telas (colegas, clientes e contatos dos clientes; fornecedores e representadas para quem tem acesso). Nada do Financeiro entra no catálogo.' },
++        { p: 'De onde vêm os contatos "Guardados ao enviar"?', r: 'Dos endereços para quem você enviou pela sua caixa pessoal, com a opção "Guardar sozinho os endereços para quem eu escrevo" ligada (aba Contatos). Envios por caixa compartilhada não entram. Contato que você excluir não volta sozinho.' },
++        { p: 'Por que a mensagem excluída não some da caixa na hora?', r: 'Para dar tempo de desfazer, como no Outlook: a linha some na hora, mas a exclusão vai ao servidor depois de alguns segundos (ou quando você sai da página). Se o servidor recusar, a mensagem volta para a lista com o motivo.' },
+         { p: 'O Administrador ou o meu gestor conseguem ler os meus e-mails?', r: 'Não. A caixa pessoal só abre para quem conectou. A senha fica cifrada no servidor e não volta para nenhuma tela. A gestão só fica sabendo que existe e-mail de cliente parado, sem o conteúdo.' },
+         { p: 'Os meus e-mails ficam copiados no sistema?', r: 'Não. A leitura é feita direto na caixa, na hora. O sistema guarda só remetente, assunto e data das mensagens novas da Entrada por 30 dias, para o contador e as pendências.' },
+         { p: 'Quando o e-mail de cliente vira pendência?', r: 'Não lido há mais de 4 horas úteis, ou lido e sem resposta há mais de 8 horas úteis, aparece no seu Início. Sem resposta há mais de 2 dias úteis, entra na Caixa de decisões do gestor da sua área. Os prazos são ajustáveis pelo Administrador.' },
+--- base-legado/MANUAL_MODULO_EMAIL.md	2026-11-17 10:54:45.945151600 -0300
++++ ../../docs/MANUAL_MODULO_EMAIL.md	2026-11-17 11:17:27.989535000 -0300
+@@ -1,10 +1,10 @@
+ # Manual do módulo E-mail integrado (SGO+ e COMMAND)
+ 
+-Versão de 21/10/2026, atualizada em 27/10/2026 (assinaturas com imagem, anexos por arrastar e soltar e da mensagem original, correção do filtro "De cliente"). Telas: SGO+ › Principal › E-mail (`JS_Email.html`, `SGO_Email.js`); COMMAND › E-mail (`ModEmail.html`, `Email.js`). Servidor: `sgo_servidor/src/servicos/emailPessoal.ts` (caixa, leitura, envio, verificação), `cofre.ts` (senha cifrada), `htmlSeguro.ts` (limpeza do HTML), global `SGO_EMAIL` (`compat/email.ts`).
++Versão de 21/10/2026, atualizada em 17/11/2026 (contatos, destinatário em pílulas com busca ao digitar, excluir pela linha com Desfazer e seguir para a próxima, seleção múltipla, atalhos, Sinalizadas, rascunho automático: seção 6C) e em 27/10/2026 (assinaturas com imagem, anexos por arrastar e soltar e da mensagem original, correção do filtro "De cliente"). Telas: SGO+ › Principal › E-mail (`JS_Email.html`, `SGO_Email.js`); COMMAND › E-mail (`ModEmail.html`, `Email.js`). Servidor: `sgo_servidor/src/servicos/emailPessoal.ts` (caixa, leitura, envio, verificação), `cofre.ts` (senha cifrada), `htmlSeguro.ts` (limpeza do HTML), global `SGO_EMAIL` (`compat/email.ts`).
+ 
+ ## 1. Para que serve
+ 
+-Cada colaborador usa a própria caixa @metrolabs.com.br dentro do sistema: Entrada, Enviados, Rascunhos, Lixeira e as demais pastas do servidor de e-mail; busca; filtros Não lidas, Com anexo e De cliente; ler; escrever; responder; responder a todos; encaminhar; anexar; baixar anexo; salvar rascunho; mover; marcar como não lida; apagar para a Lixeira; apagar para sempre (só na Lixeira, com confirmação). O sistema reconhece o cliente pelo remetente, avisa e-mail novo e cobra o e-mail de cliente sem resposta.
++Cada colaborador usa a própria caixa @metrolabs.com.br dentro do sistema: Entrada, Enviados, Rascunhos, Lixeira e as demais pastas do servidor de e-mail; busca; filtros Não lidas, Sinalizadas, Com anexo e De cliente; contatos (seção 6C); ler; escrever; responder; responder a todos; encaminhar; anexar; baixar anexo; salvar rascunho; mover; marcar como não lida; apagar para a Lixeira; apagar para sempre (só na Lixeira, com confirmação). O sistema reconhece o cliente pelo remetente, avisa e-mail novo e cobra o e-mail de cliente sem resposta.
+ 
+ ## 2. Conectar a caixa
+ 
+@@ -114,3 +114,56 @@
+ - no computador, o clique no fundo escuro em volta da janela (no celular a janela ocupa a tela inteira e não há fundo).
+ 
+ Com algo digitado, o sistema pergunta "Fechar sem salvar?" antes. Na janela de escrever vale a pergunta do Descartar (o que não foi salvo como rascunho se perde). Abrir outro módulo pelo menu ou pela busca fecha a janela. No celular, o rodapé da janela (Salvar assinatura, Enviar) tem espaço embaixo para não ficar atrás dos botões redondos de ajuda e bate-papo.
++
++## 6C. Igual ao Outlook (17/11/2026): contatos, destinatário em pílulas, excluir pela linha e seguir para a próxima
++
++Pedido da equipe, repassado pelo dono: lista de contatos, busca ao digitar o destinatário, o "×" de excluir na própria linha sem abrir o e-mail e, ao excluir, o sistema seguir para a próxima mensagem. Arquivos: `JS_Email.html` (tela), `SGO_Email.js` (contatos, coleta ao enviar, filtro Sinalizadas), `SGO_Ajuda_Email.js` (ajuda da tela) e, no servidor, `emailPessoal.ts` (filtro Sinalizadas na caixa toda).
++
++### Lista de mensagens
++
++- Cada linha tem, à esquerda, a caixinha de seleção e, à direita, o envelope (marcar como lida ou não lida), a bandeira (sinalizar) e o "×" (excluir sem abrir). No computador os botões aparecem ao passar o mouse ou com a linha em foco; no celular ficam sempre à vista. Mensagem sinalizada mostra a bandeira vermelha o tempo todo.
++- No celular, deslizar a linha para a esquerda exclui; para a direita, marca como lida ou não lida.
++- Ao excluir a mensagem aberta (botão "Excluir" da leitura, tecla Delete ou o "×" da linha dela), o sistema abre sozinho a mensagem de baixo; se era a última da página, a de cima; se não sobrou nenhuma, mostra o aviso e, havendo mais páginas, indica "Mais antigas". A posição de rolagem da lista é mantida. Excluir pelo "×" de outra linha não troca a mensagem aberta.
++- **Desfazer**: a linha some na hora e aparece embaixo da tela o aviso escuro "Mensagem excluída" com "Desfazer" (também Ctrl+Z) por 7 segundos. Só depois disso a exclusão vai ao servidor (mover para a Lixeira). Uma nova exclusão confirma a anterior na hora (só a última pode ser desfeita). Sair da página ou trocar de aba do navegador confirma na hora; se o navegador fechar antes do envio, a mensagem simplesmente continua na caixa (nada se perde). Se o servidor recusar, a mensagem volta para a lista com o motivo.
++- Na Lixeira, o "×" e a tecla Delete apagam para sempre, com confirmação e sem "Desfazer" (como antes).
++- **Seleção múltipla**: caixinhas, Ctrl+clique (marca uma), Shift+clique (intervalo) e "Selecionar todas" (a página). A barra acima da lista oferece Excluir, Mover para..., Lida, Não lida, Sinalizar, Tirar sinal e Limpar seleção.
++- **Arrastar para a pasta** (computador): arraste a mensagem, ou as marcadas, até a pasta à esquerda.
++- **Filtro "Sinalizadas"** junto de Não lidas, Com anexo e De cliente. Com o servidor atualizado, o filtro vale para a caixa toda; com o servidor antigo, vale só para a página aberta e a tela avisa.
++- **Teclas de atalho** (com a lista ou a mensagem em foco, fora de campos de texto e com nenhuma janela aberta): seta para baixo e para cima (próxima e anterior, abrindo como o painel de leitura do Outlook), Delete (excluir), R (responder), Shift+R (responder a todos), F (encaminhar), N (nova), U (lida ou não lida), I ou Insert (sinalizar), / (procurar), Esc (limpar a seleção ou voltar à lista no celular), Ctrl+Z (desfazer a exclusão).
++- A atualização automática (a cada 60 s) continua sem redesenhar formulário: não roda com janela aberta, com foco em campo, em outra página da lista ou durante o arrastar; quando roda, mantém a rolagem, as marcadas e as linhas esperando o "Desfazer".
++
++### Destinatário com busca ao digitar (Para, Cc, Cco)
++
++- O destinatário vira uma "pílula" com o nome (ou o e-mail) e um "×" para tirar. Dois cliques na pílula voltam o endereço para edição. Backspace com o campo vazio tira a última.
++- Ao digitar, aparecem até 8 sugestões dos seus contatos e do catálogo da empresa, por nome, e-mail ou empresa, sem acento e sem maiúscula ("joao" acha "João"). Ordem: os usados por último primeiro, depois favoritos, seus contatos e a empresa. Com o campo vazio, o clique mostra os usados por último.
++- Setas para escolher, Enter ou Tab para confirmar, Esc fecha a lista (sem fechar a janela). Ponto e vírgula ou vírgula fecham o endereço digitado. Colar uma lista ("Nome" <a@x.com>; b@y.com, c@z.com) cria uma pílula por endereço; vírgula dentro de aspas não separa.
++- Endereço sem @ ou sem domínio fica vermelho; o sistema não envia enquanto houver pílula vermelha e diz qual corrigir. Ao servidor vão só os endereços, separados por vírgula (como antes).
++
++### Contatos
++
++- Aba **Contatos**: "Novo contato" (nome, e-mail obrigatório, empresa, telefone, observação, favorito), Editar, Excluir, estrela de favorito, busca (nome, e-mail ou empresa) e filtros Todos, Favoritos, Meus contatos, Guardados ao enviar e Da empresa (mostra até 200 por vez).
++- **Os contatos são de cada pessoa** (aba `EML_CONTATOS`, coluna `USUARIO_ID` vinda da sessão): ninguém vê os contatos de outra pessoa, nem o Administrador. Excluir marca `STATUS = EXCLUIDO` (some da lista e das sugestões). Mesmo e-mail salvo de novo atualiza o contato existente, sem apagar o que estava preenchido. Limite de 2.000 contatos por pessoa.
++- **Salvar remetente nos contatos**: botão na leitura; já traz o nome e o endereço (e o cliente, quando reconhecido). Se o remetente já é contato, abre para editar.
++- **Coleta automática** ("Guardar sozinho os endereços para quem eu escrevo", aba Contatos, por pessoa, padrão ligada; propriedade `EMAIL_CONTATOS_PREFS`): depois de um envio pela **caixa pessoal**, cada endereço novo vira contato "Guardado ao enviar" (até 50 por envio) e cada contato usado ganha a data do último uso (recentes primeiro nas sugestões). Envio por caixa compartilhada não coleta. Contato excluído não volta sozinho.
++- **Catálogo da empresa** (só leitura, montado na hora): colegas ativos (sem clientes nem representadas), clientes ativos e contatos ativos dos clientes (o que a equipe interna já vê em "Registrar no cliente"); fornecedores de Compras só para quem já vê os fornecedores em Compras; contatos das representadas só para quem administra a Representação. **Nada do Financeiro** (abas FIN_*, Omie) entra no catálogo: o sigilo da lista `OMIE_SIGILO_CONTAS` continua valendo.
++
++### Rascunho automático
++
++- Na janela de escrever, "Salvar rascunho sozinho a cada minuto" (vem ligado; a escolha fica no navegador da pessoa). A cada minuto em que houve mudança e há destinatário, assunto ou texto, o sistema salva na pasta Rascunhos sem tela de espera; o aviso ao lado mostra a hora.
++- Enviar com um salvamento em curso espera ele terminar (senão sobraria um rascunho). Descartar uma mensagem que só o salvamento automático guardou manda esse rascunho para a Lixeira (recuperável). Se o salvamento automático falhar (por exemplo servidor em ensaio), ele para naquela janela e diz o motivo; o botão "Salvar rascunho" continua valendo.
++
++### "Como fazer nesta aba"
++
++Cada aba do E-mail (Caixa, Contatos, Minha caixa e assinatura, Caixas compartilhadas) começa com o quadro "Como fazer nesta aba", com texto justificado. No computador ele começa aberto e no celular começa fechado (a tela é curta); quem abrir ou fechar o quadro encontra ele do mesmo jeito na próxima vez (fica guardado no navegador).
++
++### Erros e o que fazer
++
++| Mensagem | O que fazer |
++|---|---|
++| Endereço errado: Para: «x» | Dê dois cliques na pílula vermelha para corrigir (precisa de @ e domínio) ou clique no × para tirar, e envie de novo. |
++| Não foi possível excluir ... Ela voltou para a lista | O servidor de e-mail recusou (conexão, senha, servidor em ensaio). Tente de novo; se repetir, veja a faixa da caixa no alto da tela. |
++| O e-mail ... não é um endereço válido (contato) | Corrija o e-mail do contato (um endereço só, com @ e domínio). |
++| Você já tem outro contato com o e-mail ... | Edite o contato que já existe ou use outro e-mail. |
++| Você chegou ao limite de 2000 contatos | Exclua contatos que não usa mais (filtro "Guardados ao enviar"). |
++| O filtro «Sinalizadas» está valendo só para as mensagens desta página | O servidor ainda não tem a atualização do filtro: use "Mais antigas" para ver as outras páginas. |
++| O rascunho automático parou nesta janela | Use "Salvar rascunho"; se o servidor estiver em ensaio, rascunhos não são gravados. |

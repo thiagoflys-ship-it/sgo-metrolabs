@@ -237,6 +237,19 @@ G1 recebido × pago em 12 meses, com a linha do resultado; G2 saldo previsto de 
 
 Atividade de um módulo do Financeiro (Financeiro, Omie, Caju, Conciliação Caju, Compras do Financeiro) é sempre restrita e só é vista pelo responsável, por quem lançou e por quem está na lista de sigilo. O RH e a gestão fora da lista não a veem (nem na lista, nem no detalhe, nem na central de pendências, na Caixa de decisões ou na cobrança da SEDNA). O responsável precisa estar na lista: "A atividade do Financeiro só pode ser de alguém da lista de sigilo. Para pedir algo a outra pessoa, crie a atividade sem valores e sem nome de cliente, fora do Financeiro." As atividades restritas do Programa de conduta continuam como antes (RH e gestão de decisões veem). O assistente geral "Tire sua dúvida" não tem mais a ajuda nem os manuais do Financeiro (Painel financeiro, Conciliação Caju, conferência de Compras): essas dúvidas ficam no "Como usar esta tela" do próprio Painel e, depois, no especialista financeiro.
 
+## 8e. Reajustes de contratos (17/11/2026, pedido do dono)
+
+Pedido do dono: "reajuste automático para o financeiro faturar com os índices já calculados no painel do financeiro". A aba **Reajustes de contratos** mostra:
+
+- **Índices do mês (Banco Central):** IPCA, IGP-M, INPC e IPCA-E, com a variação do último mês publicado, o acumulado de 12 meses e a data da coleta. A rotina consulta a API pública do Banco Central uma vez por dia; sem internet, a tela avisa e o sistema usa os últimos valores gravados. Nada é estimado.
+- **Contratos a reajustar:** cada contrato com índice, data-base e valor (cadastrados pelo Comercial em Portal do cliente > Contratos de clientes), com o aniversário, o período do índice, o acumulado, o valor atual e o novo e a data a partir da qual se fatura. "Memória de cálculo" abre a conta mês a mês, com a fonte.
+- **Aprovar ou recusar:** só o dono do sistema e a Diretoria, dentro da lista de sigilo (regra "Aprovação só do dono e da Diretoria"). A recusa exige o motivo. Aprovado, o valor do contrato é atualizado (versão nova no histórico do contrato) e o Financeiro recebe o aviso, sem valores.
+- **Marcar como faturado:** o Financeiro fatura pelas telas de sempre, com o valor aprovado, escreve o número da nota ou do pedido e toca em "Marcar como faturado". **Nada é gravado no Omie por esta aba.**
+- **Atualizar os índices agora:** consulta o Banco Central na hora e recalcula os reajustes ainda não decididos.
+- **Contratos que o sistema não calcula:** índice "outro" (cálculo manual), sem data-base ou sem valor. Complete o contrato em Portal do cliente > Contratos de clientes.
+
+Sigilo: as quatro consultas da aba passam pela trava do Financeiro (lista de sigilo e caixa de consulta) e ficam no registro de acessos ("Reajustes de contratos", "Decisão de reajuste de contrato", "Reajuste marcado como faturado", "Índices do Banco Central atualizados"). O Comercial vê o índice e gera a carta de reajuste ao cliente na tela de contratos; ele não vê faturamento nem movimento. As pendências e o relatório diário levam só a contagem.
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
@@ -490,5 +503,11 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 ### Sigilo e acessos
 
 - **Motivo:** por que a lista muda (ex.: nova pessoa no Financeiro, saída de alguém). Obrigatório; fica no registro de acessos.
+
+### Reajustes de contratos
+
+- **Situação:** mostra os reajustes aguardando a aprovação da Diretoria, os aprovados para faturar, os que aguardam o índice do Banco Central, os faturados ou os recusados.
+- **Observação ou motivo:** opcional para aprovar; obrigatório para recusar (pelo menos 10 letras). Fica no histórico do contrato.
+- **Nota ou pedido em que foi faturado:** o número da nota fiscal ou do pedido com o valor novo. Marca o reajuste como faturado; nada vai ao Omie por aqui.
 
 </div>

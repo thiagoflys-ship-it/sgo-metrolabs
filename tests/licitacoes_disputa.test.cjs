@@ -6,6 +6,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -380,7 +381,7 @@ test('telas: prévia (bloqueios com o caminho, itens, sessão e intervalo), pain
   for (const m of css.matchAll(/(?:^|[^-])width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 360, 'largura fixa ' + m[0]);
   for (const m of css.matchAll(/minmax\((\d+)px/g)) assert.ok(Number(m[1]) <= 300, 'minmax ' + m[0]);
   assert.match(css, /\.ldp-lance input \{[^}]*min-height: 44px/); assert.match(css, /\.ldp-det summary \{[^}]*min-height: 44px/);
-  assert.doesNotMatch(css, /setInterval/); assert.match(css, /\r\n/, 'em CRLF');
+  assert.doesNotMatch(css, /setInterval/); assert.ok(uniforme(css), descTerm('estilo da tela', css));
   // Kanban: a explicação de "Concluir o resultado" e o atalho para a aba Disputa
   assert.ok(t.ctx.LIC_KB_EXPLICA.resultado[0] === 'Concluir o resultado');
   assert.match(t.html['JS_Licitacoes.html'], /Lic_irFicha_\(c\.id, g\.aba \|\| "resumo"\)/);
@@ -408,7 +409,7 @@ test('integração na casca: menu, rota, inclusão do arquivo novo, ação do se
   const textos = ['SGO_Licitacoes_Disputa.js', 'JS_Licitacoes_Disputa.html', 'SGO_Ajuda_LicitacoesDisputas.js'].map(ler).join('\n') + manual;
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'sem emoji');
-  for (const f of ['SGO_Licitacoes_Disputa.js', 'JS_Licitacoes_Disputa.html', 'SGO_Ajuda_LicitacoesDisputas.js']) assert.match(ler(f), /\r\n/, f + ' em CRLF');
+  for (const f of ['SGO_Licitacoes_Disputa.js', 'JS_Licitacoes_Disputa.html', 'SGO_Ajuda_LicitacoesDisputas.js']) assert.ok(uniforme(ler(f)), descTerm(f, ler(f)));
 });
 
 // ---------------------------------------------------------------- revisão independente de bddf933 (um teste para cada ataque)

@@ -8,6 +8,10 @@ const tables={CAD_CLIENTES:fixture.clientes,CAD_UNIDADES:fixture.unidades,CAD_EQ
 const s={exigirSessao:()=>({perfil:'TECNICO',usuario:'qa'}),SGO_CFG:{SHEETS:{CAD_CLIENTES:'CAD_CLIENTES',CAD_UNIDADES:'CAD_UNIDADES',CAD_EQUIPAMENTOS:'CAD_EQUIPAMENTOS',CAD_TECNICOS:'CAD_TECNICOS'}},SGO_UTILS:{safe:v=>String(v??'').trim(),safeUpper:v=>String(v??'').trim().toUpperCase(),formatCnpj:v=>v||'',cnpjArmazenado:v=>String(v||'').replace(/\D/g,'')},SGO_DATA:{getById:(table,id)=>(tables[table]||[]).find(r=>r.ID===id)},Session:gas.criarSession(),Utilities:gas.criarUtilities()};
 vm.createContext(s);
 for(const file of ['SGO_CertCal_Config.js','SGO_CertCal_Calculo.js','SGO_Vinculos.js','SGO_CertCal_Main.js'])vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),s);
+// 17/11/2026 (falhas antigas): na produção a emissão também confere o cadastro completo (SGO_CadastroQualidade.js, CadQ_exigirVinculosCompletos_,
+// publicada em 11/11). Este teste cruza o VÍNCULO cliente/unidade/equipamento (fixture anonimizada, sem os demais campos): stub que aprova, como em _autoclave_ambiente.cjs.
+// A trava em si é testada em tests/cadastro-qualidade.test.cjs.
+vm.runInContext('if (typeof CadQ_exigirVinculosCompletos_ !== "function") { this.CadQ_exigirVinculosCompletos_ = function () {}; }',s);
 let accepted=0,blocked=[];
 for(const e of fixture.equipamentos){
   const payload={clienteId:e.CLIENTE_ID,equipamentoId:e.ID,tecnicoExecutorLivre:'Executor de teste',dataCalibracao:'08/10/2026',blocos:[{titulo:'Grandeza sintética de teste',unidade:'unidade QA',padroesIds:['PAD'],pontos:[{nominal:10,leituras:[9,10,11]}]}]};

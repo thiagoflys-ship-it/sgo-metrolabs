@@ -14,7 +14,11 @@ const AREAS = [['DIRETORIA', 'Diretoria'], ['ADMINISTRATIVO', 'Administrativo'],
 
 const ARQUIVOS = ['SGO_Utilis.js', 'SGO_Expediente.js', 'SGO_Notificar.js', 'SGO_Areas.js', 'SGO_Atividades.js', 'SGO_Atividades_Avisos.js', 'SGO_PonteCommand.js',
   'SGO_Alertas_Central.js', 'SGO_DocA4.js', 'SGO_Documentos_RelatorioA4.js', 'SGO_Gestao_Decisoes.js', 'SGO_Gestao_Escada.js', 'SGO_Gestao_Avaliacao.js',
-  'SGO_Avisos.js', 'SGO_Avisos_Gestao.js', 'SGO_Avisos_Matriz.js', 'SGO_Avisos_Setores.js', 'SGO_Sedna.js'];
+  'SGO_Avisos.js', 'SGO_Avisos_Gestao.js', 'SGO_Avisos_Matriz.js', 'SGO_Avisos_Setores.js', 'SGO_Sedna.js',
+  // 17/11/2026 (falhas antigas): o resumo do dia (SGO_Avisos_Matriz.js, Mtz_pendenciasCadastroAssinatura_) também lista as correções de
+  // cadastro atribuídas (CadQ_historico_, CadQ_problemas*_ de SGO_CadastroQualidade.js, carregado junto na produção). Sem ele o resumo
+  // do dia caía inteiro com ReferenceError (CadQ_historico_ is not defined) e nenhum e-mail saía.
+  'SGO_CadastroQualidade.js'];
 
 function ambiente(opcoes) {
   const o = opcoes || {};

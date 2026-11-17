@@ -1,10 +1,10 @@
 # Manual do módulo E-mail integrado (SGO+ e COMMAND)
 
-Versão de 21/10/2026, atualizada em 27/10/2026 (assinaturas com imagem, anexos por arrastar e soltar e da mensagem original, correção do filtro "De cliente"). Telas: SGO+ › Principal › E-mail (`JS_Email.html`, `SGO_Email.js`); COMMAND › E-mail (`ModEmail.html`, `Email.js`). Servidor: `sgo_servidor/src/servicos/emailPessoal.ts` (caixa, leitura, envio, verificação), `cofre.ts` (senha cifrada), `htmlSeguro.ts` (limpeza do HTML), global `SGO_EMAIL` (`compat/email.ts`).
+Versão de 21/10/2026, atualizada em 17/11/2026 (contatos, destinatário em pílulas com busca ao digitar, excluir pela linha com Desfazer e seguir para a próxima, seleção múltipla, atalhos, Sinalizadas, rascunho automático: seção 6C) e em 27/10/2026 (assinaturas com imagem, anexos por arrastar e soltar e da mensagem original, correção do filtro "De cliente"). Telas: SGO+ › Principal › E-mail (`JS_Email.html`, `SGO_Email.js`); COMMAND › E-mail (`ModEmail.html`, `Email.js`). Servidor: `sgo_servidor/src/servicos/emailPessoal.ts` (caixa, leitura, envio, verificação), `cofre.ts` (senha cifrada), `htmlSeguro.ts` (limpeza do HTML), global `SGO_EMAIL` (`compat/email.ts`).
 
 ## 1. Para que serve
 
-Cada colaborador usa a própria caixa @metrolabs.com.br dentro do sistema: Entrada, Enviados, Rascunhos, Lixeira e as demais pastas do servidor de e-mail; busca; filtros Não lidas, Com anexo e De cliente; ler; escrever; responder; responder a todos; encaminhar; anexar; baixar anexo; salvar rascunho; mover; marcar como não lida; apagar para a Lixeira; apagar para sempre (só na Lixeira, com confirmação). O sistema reconhece o cliente pelo remetente, avisa e-mail novo e cobra o e-mail de cliente sem resposta.
+Cada colaborador usa a própria caixa @metrolabs.com.br dentro do sistema: Entrada, Enviados, Rascunhos, Lixeira e as demais pastas do servidor de e-mail; busca; filtros Não lidas, Sinalizadas, Com anexo e De cliente; contatos (seção 6C); ler; escrever; responder; responder a todos; encaminhar; anexar; baixar anexo; salvar rascunho; mover; marcar como não lida; apagar para a Lixeira; apagar para sempre (só na Lixeira, com confirmação). O sistema reconhece o cliente pelo remetente, avisa e-mail novo e cobra o e-mail de cliente sem resposta.
 
 ## 2. Conectar a caixa
 
@@ -114,3 +114,56 @@ Toda janela do E-mail (Escrever, Responder, Encaminhar, Continuar rascunho, Nova
 - no computador, o clique no fundo escuro em volta da janela (no celular a janela ocupa a tela inteira e não há fundo).
 
 Com algo digitado, o sistema pergunta "Fechar sem salvar?" antes. Na janela de escrever vale a pergunta do Descartar (o que não foi salvo como rascunho se perde). Abrir outro módulo pelo menu ou pela busca fecha a janela. No celular, o rodapé da janela (Salvar assinatura, Enviar) tem espaço embaixo para não ficar atrás dos botões redondos de ajuda e bate-papo.
+
+## 6C. Igual ao Outlook (17/11/2026): contatos, destinatário em pílulas, excluir pela linha e seguir para a próxima
+
+Pedido da equipe, repassado pelo dono: lista de contatos, busca ao digitar o destinatário, o "×" de excluir na própria linha sem abrir o e-mail e, ao excluir, o sistema seguir para a próxima mensagem. Arquivos: `JS_Email.html` (tela), `SGO_Email.js` (contatos, coleta ao enviar, filtro Sinalizadas), `SGO_Ajuda_Email.js` (ajuda da tela) e, no servidor, `emailPessoal.ts` (filtro Sinalizadas na caixa toda).
+
+### Lista de mensagens
+
+- Cada linha tem, à esquerda, a caixinha de seleção e, à direita, o envelope (marcar como lida ou não lida), a bandeira (sinalizar) e o "×" (excluir sem abrir). No computador os botões aparecem ao passar o mouse ou com a linha em foco; no celular ficam sempre à vista. Mensagem sinalizada mostra a bandeira vermelha o tempo todo.
+- No celular, deslizar a linha para a esquerda exclui; para a direita, marca como lida ou não lida.
+- Ao excluir a mensagem aberta (botão "Excluir" da leitura, tecla Delete ou o "×" da linha dela), o sistema abre sozinho a mensagem de baixo; se era a última da página, a de cima; se não sobrou nenhuma, mostra o aviso e, havendo mais páginas, indica "Mais antigas". A posição de rolagem da lista é mantida. Excluir pelo "×" de outra linha não troca a mensagem aberta.
+- **Desfazer**: a linha some na hora e aparece embaixo da tela o aviso escuro "Mensagem excluída" com "Desfazer" (também Ctrl+Z) por 7 segundos. Só depois disso a exclusão vai ao servidor (mover para a Lixeira). Uma nova exclusão confirma a anterior na hora (só a última pode ser desfeita). Sair da página ou trocar de aba do navegador confirma na hora; se o navegador fechar antes do envio, a mensagem simplesmente continua na caixa (nada se perde). Se o servidor recusar, a mensagem volta para a lista com o motivo.
+- Na Lixeira, o "×" e a tecla Delete apagam para sempre, com confirmação e sem "Desfazer" (como antes).
+- **Seleção múltipla**: caixinhas, Ctrl+clique (marca uma), Shift+clique (intervalo) e "Selecionar todas" (a página). A barra acima da lista oferece Excluir, Mover para..., Lida, Não lida, Sinalizar, Tirar sinal e Limpar seleção.
+- **Arrastar para a pasta** (computador): arraste a mensagem, ou as marcadas, até a pasta à esquerda.
+- **Filtro "Sinalizadas"** junto de Não lidas, Com anexo e De cliente. Com o servidor atualizado, o filtro vale para a caixa toda; com o servidor antigo, vale só para a página aberta e a tela avisa.
+- **Teclas de atalho** (com a lista ou a mensagem em foco, fora de campos de texto e com nenhuma janela aberta): seta para baixo e para cima (próxima e anterior, abrindo como o painel de leitura do Outlook), Delete (excluir), R (responder), Shift+R (responder a todos), F (encaminhar), N (nova), U (lida ou não lida), I ou Insert (sinalizar), / (procurar), Esc (limpar a seleção ou voltar à lista no celular), Ctrl+Z (desfazer a exclusão).
+- A atualização automática (a cada 60 s) continua sem redesenhar formulário: não roda com janela aberta, com foco em campo, em outra página da lista ou durante o arrastar; quando roda, mantém a rolagem, as marcadas e as linhas esperando o "Desfazer".
+
+### Destinatário com busca ao digitar (Para, Cc, Cco)
+
+- O destinatário vira uma "pílula" com o nome (ou o e-mail) e um "×" para tirar. Dois cliques na pílula voltam o endereço para edição. Backspace com o campo vazio tira a última.
+- Ao digitar, aparecem até 8 sugestões dos seus contatos e do catálogo da empresa, por nome, e-mail ou empresa, sem acento e sem maiúscula ("joao" acha "João"). Ordem: os usados por último primeiro, depois favoritos, seus contatos e a empresa. Com o campo vazio, o clique mostra os usados por último.
+- Setas para escolher, Enter ou Tab para confirmar, Esc fecha a lista (sem fechar a janela). Ponto e vírgula ou vírgula fecham o endereço digitado. Colar uma lista ("Nome" <a@x.com>; b@y.com, c@z.com) cria uma pílula por endereço; vírgula dentro de aspas não separa.
+- Endereço sem @ ou sem domínio fica vermelho; o sistema não envia enquanto houver pílula vermelha e diz qual corrigir. Ao servidor vão só os endereços, separados por vírgula (como antes).
+
+### Contatos
+
+- Aba **Contatos**: "Novo contato" (nome, e-mail obrigatório, empresa, telefone, observação, favorito), Editar, Excluir, estrela de favorito, busca (nome, e-mail ou empresa) e filtros Todos, Favoritos, Meus contatos, Guardados ao enviar e Da empresa (mostra até 200 por vez).
+- **Os contatos são de cada pessoa** (aba `EML_CONTATOS`, coluna `USUARIO_ID` vinda da sessão): ninguém vê os contatos de outra pessoa, nem o Administrador. Excluir marca `STATUS = EXCLUIDO` (some da lista e das sugestões). Mesmo e-mail salvo de novo atualiza o contato existente, sem apagar o que estava preenchido. Limite de 2.000 contatos por pessoa.
+- **Salvar remetente nos contatos**: botão na leitura; já traz o nome e o endereço (e o cliente, quando reconhecido). Se o remetente já é contato, abre para editar.
+- **Coleta automática** ("Guardar sozinho os endereços para quem eu escrevo", aba Contatos, por pessoa, padrão ligada; propriedade `EMAIL_CONTATOS_PREFS`): depois de um envio pela **caixa pessoal**, cada endereço novo vira contato "Guardado ao enviar" (até 50 por envio) e cada contato usado ganha a data do último uso (recentes primeiro nas sugestões). Envio por caixa compartilhada não coleta. Contato excluído não volta sozinho.
+- **Catálogo da empresa** (só leitura, montado na hora): colegas ativos (sem clientes nem representadas), clientes ativos e contatos ativos dos clientes (o que a equipe interna já vê em "Registrar no cliente"); fornecedores de Compras só para quem já vê os fornecedores em Compras; contatos das representadas só para quem administra a Representação. **Nada do Financeiro** (abas FIN_*, Omie) entra no catálogo: o sigilo da lista `OMIE_SIGILO_CONTAS` continua valendo.
+
+### Rascunho automático
+
+- Na janela de escrever, "Salvar rascunho sozinho a cada minuto" (vem ligado; a escolha fica no navegador da pessoa). A cada minuto em que houve mudança e há destinatário, assunto ou texto, o sistema salva na pasta Rascunhos sem tela de espera; o aviso ao lado mostra a hora.
+- Enviar com um salvamento em curso espera ele terminar (senão sobraria um rascunho). Descartar uma mensagem que só o salvamento automático guardou manda esse rascunho para a Lixeira (recuperável). Se o salvamento automático falhar (por exemplo servidor em ensaio), ele para naquela janela e diz o motivo; o botão "Salvar rascunho" continua valendo.
+
+### "Como fazer nesta aba"
+
+Cada aba do E-mail (Caixa, Contatos, Minha caixa e assinatura, Caixas compartilhadas) começa com o quadro "Como fazer nesta aba", com texto justificado. No computador ele começa aberto e no celular começa fechado (a tela é curta); quem abrir ou fechar o quadro encontra ele do mesmo jeito na próxima vez (fica guardado no navegador).
+
+### Erros e o que fazer
+
+| Mensagem | O que fazer |
+|---|---|
+| Endereço errado: Para: «x» | Dê dois cliques na pílula vermelha para corrigir (precisa de @ e domínio) ou clique no × para tirar, e envie de novo. |
+| Não foi possível excluir ... Ela voltou para a lista | O servidor de e-mail recusou (conexão, senha, servidor em ensaio). Tente de novo; se repetir, veja a faixa da caixa no alto da tela. |
+| O e-mail ... não é um endereço válido (contato) | Corrija o e-mail do contato (um endereço só, com @ e domínio). |
+| Você já tem outro contato com o e-mail ... | Edite o contato que já existe ou use outro e-mail. |
+| Você chegou ao limite de 2000 contatos | Exclua contatos que não usa mais (filtro "Guardados ao enviar"). |
+| O filtro «Sinalizadas» está valendo só para as mensagens desta página | O servidor ainda não tem a atualização do filtro: use "Mais antigas" para ver as outras páginas. |
+| O rascunho automático parou nesta janela | Use "Salvar rascunho"; se o servidor estiver em ensaio, rascunhos não são gravados. |

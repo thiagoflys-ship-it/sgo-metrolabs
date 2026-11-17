@@ -170,3 +170,37 @@ Para o perfil **Cliente**, as listas de Unidades e Equipamentos:
 - não mostram os números, os selos e as faixas **"Cadastro incompleto"** e **"Vínculo pendente"**, que são da rotina interna da Metrolabs (ele não corrige o cadastro). Continuam: Total, Ativos, Inativos, Documento vencido ou vencendo e Sem documento.
 
 **Conferência no servidor (sem mudança necessária):** com um cliente entrando e pedindo direto ao servidor os dados de outro cliente, todas as chamadas desta área devolveram só a própria empresa ou "Acesso negado": `cadastrosPainel` (clientes, unidades, equipamentos, documentos), `cadastrosDetalhe`, `equipamentosListar`, `equipamentosPesquisar`, `equipamentosObter`, `equipamentosListarClientesAtivos`, `equipamentosListarUnidadesAtivasPorCliente`, `qualifEquipamentoListar`, `qrcodeGerarParaEquipamento`, `qrcodeAcessar`, `inventarioListarClientesAtivos`, `inventarioListarUnidadesAtivasPorCliente` e `inventarioGerar` (mesmo pedindo o outro cliente no filtro). O recorte é feito pelo `clienteId` da sessão (`CadPainel_base_`, `SGO_EQUIPAMENTOS`, `SGO_QEQ_equipamentoVisivel_`, `SGO_VINCULOS.units`). O filtro na tela era só aparência: não havia vazamento.
+
+## O que a conta de cliente recebe e abre (17/11/2026, Portal do cliente etapa 0)
+
+A conta de cliente (perfil Cliente) recebe de Clientes, Unidades, Equipamentos, Arquivo de documentos e do painel de
+cadastros só as colunas públicas: identificação, endereço, cidade e UF, tipo, fabricante, modelo, série, TAG, setor,
+patrimônio, situação, nomes, contagens e vencimentos. Origem, autor do cadastro, QR, observações internas, nota fiscal,
+pastas, responsável interno da unidade e links do Drive não chegam ao cliente; o link do documento vira a rota do SGO+
+com login (/arquivos/...). A equipe interna continua vendo tudo. O cliente abre só os arquivos ligados aos registros
+da própria empresa, e a entrada depende do contrato cadastrado em Portal do cliente > Contratos de clientes (cliente com
+acesso suspenso, sem acesso ou com cadastro inativo não entra). Detalhes em
+[Manual do Portal do cliente](MANUAL_MODULO_PORTAL_CLIENTE.md).
+
+## Enviar acesso ao portal para o contato do cliente (16/11/2026)
+
+Na ficha do cliente, toque em **Mais > Enviar acesso ao portal (login do cliente)**. A janela já vem com a empresa
+escolhida e mostra as contas de cliente que ela tem:
+
+- **Conta que já existe:** toque em **Enviar para esta conta**. A janela mostra a situação do último envio e os envios
+  anteriores; toque em **Enviar de novo** (ou **Enviar o convite**).
+- **Contato novo:** preencha o nome e o e-mail (os contatos cadastrados do cliente aparecem para tocar e preencher) e
+  toque em **Enviar o convite**. O sistema cria a conta de cliente (perfil Cliente, ligada a esta empresa) e envia.
+
+O contato recebe por e-mail o login (o próprio e-mail) e um link de uso único para criar a senha, que vale 72 horas. A
+senha nunca vai por e-mail e ninguém da Metrolabs a vê. Enviar de novo cancela o link anterior. Quem pode: o dono,
+Administrador, Diretoria e Gestor. Cliente inativo não recebe acesso novo: reative antes. Detalhes, registro e regras
+em [Manual da gestão: segurança do acesso](MANUAL_SEGURANCA_ACESSO_GESTAO.md), seção "Enviar acesso ao cliente".
+
+<div style="text-align: justify">
+
+## Contrato do cliente na ficha (17/11/2026)
+
+Na ficha do cliente (Cadastros > Clientes > aba Dados), a parte **"Contrato e Portal do cliente"** mostra a situação do cliente no Portal, o contrato vigente com a vigência, o objeto, os serviços e a renovação. Cliente com conta de cliente (ou com pista de contrato) e sem nenhum contrato cadastrado aparece com o selo **"contrato a cadastrar"**: ele tem acesso completo até 31/12/2026 (decisão do dono), e o Comercial cadastra o contrato real antes dessa data. Valores não aparecem aqui. Quem tem a caixa «Ver contratos de clientes» abre os contratos pelo botão da própria parte.
+
+</div>

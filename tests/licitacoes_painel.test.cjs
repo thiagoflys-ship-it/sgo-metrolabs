@@ -7,6 +7,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -405,8 +406,8 @@ test('integração: menu da Diretoria com Painel, Kanban e Gantt; ajuda das trê
   const html = ler('JS_Licitacoes.html');
   for (const m of html.matchAll(/(?:^|[^-])width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 360, 'largura fixa ' + m[0]);
   assert.doesNotMatch(html, /setInterval/);
-  assert.match(fs.readFileSync(path.join(pastaLegado, 'JS_Licitacoes.html'), 'utf8'), /\r\n/, 'CRLF preservado');
-  assert.doesNotMatch(fs.readFileSync(path.join(pastaLegado, 'JS_Licitacoes.html'), 'utf8'), /[^\r]\n/, 'nenhuma linha em LF solto');
+  { const jl = fs.readFileSync(path.join(pastaLegado, 'JS_Licitacoes.html'), 'utf8'); assert.ok(uniforme(jl), descTerm('JS_Licitacoes.html', jl)); }
+  // 17/11/2026: "nenhuma linha em LF solto" está coberta pela conferência de fim de linha uniforme logo acima (tests/_terminacao.cjs)
 });
 
 // ------------------------------------------------------------------ revisão independente de 914f4fc (02/11/2026)

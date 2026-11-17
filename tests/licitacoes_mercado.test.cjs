@@ -9,6 +9,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -419,7 +420,7 @@ test('ligações: menu, navegação, aba da ficha, quadro do parecer, ajuda da t
   // nenhum nome de fabricante nos textos novos (equipamentos com nome genérico)
   for (const f of ['SGO_Licitacoes_Mercado.js', 'JS_Licitacoes_Mercado.html', 'SGO_Ajuda_LicitacoesMercado.js']) assert.doesNotMatch(lerCru(f), /\b(Baumer|Cristófoli|Sercon|Philips|Mindray|Dräger|Fluke|Testo|Novus|Siemens|GE Healthcare)\b/i, f);
   for (const f of ['SGO_Licitacoes_Mercado.js', 'JS_Licitacoes_Mercado.html', 'SGO_Ajuda_LicitacoesMercado.js', 'SGO_Licitacoes.js', 'SGO_Licitacoes_Pareceres.js', 'JS_Licitacoes.html', 'JS_Licitacoes_Pareceres.html', 'Index.html', 'SGO_Ajuda.js', 'SGO_Ajuda_Licitacoes.js', 'SGO_AssistenteManuais.js']) {
-    const t = lerCru(f); assert.ok(t.includes('\r\n') && !/[^\r]\n/.test(t), f + ' em CRLF');
+    const t = lerCru(f); assert.ok(uniforme(t), descTerm(f, t));
   }
-  const t = fs.readFileSync(path.join(raiz, 'docs/MANUAL_MODULO_LICITACOES.md'), 'utf8'); assert.ok(!/[^\r]\n/.test(t), 'manual em CRLF');
+  const t = fs.readFileSync(path.join(raiz, 'docs/MANUAL_MODULO_LICITACOES.md'), 'utf8'); assert.ok(uniforme(t), descTerm('docs/MANUAL_MODULO_LICITACOES.md', t));
 });

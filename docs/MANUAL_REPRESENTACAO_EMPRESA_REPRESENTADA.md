@@ -51,6 +51,16 @@ O Painel é a primeira tela da sua área.
 - Pediu por telefone, e-mail ou WhatsApp? A Metrolabs pode abrir o pedido em nome da sua empresa. Ele aparece em "Chamados" com a faixa "Aberto pela Metrolabs (nome) a pedido de (quem pediu), por (canal)" e segue igual aos seus. Um chamado aberto antes (por exemplo, numa urgência) também pode ser ligado à sua empresa: aparece com quem ligou e o motivo. Você recebe e-mail nos dois casos.
 - Você recebe e-mail quando o pedido é aceito, quando a Metrolabs pede complemento ou recusa, e quando ela escreve na conversa.
 
+## 5A. Laudo, decisão e encerramento (16/11/2026)
+
+Na ficha do chamado, o quadro "Processo do chamado" começa pela faixa **Agora**: a etapa, com quem está o próximo passo ("Sua empresa" quando a decisão é sua), o prazo e onde está o equipamento; a pergunta que a sua empresa precisa responder aparece em destaque, com o botão "Registrar a decisão". Abaixo, o **Passo a passo** mostra cada passo do pedido até agora, com data, quem registrou, peças, testes e as fotos e os vídeos liberados à sua empresa (toque na miniatura para ver grande); os próximos passos previstos aparecem esmaecidos. O histórico completo e os registros antigos ficam recolhidos no fim.
+
+A visita técnica não encerra o atendimento. Depois dela, a Metrolabs envia o laudo técnico com uma pergunta objetiva e o prazo para decidir (5 dias úteis). No alto da ficha aparece "Sua decisão é necessária até ...", com o link do laudo. Decidem o Administrador e o Financeiro de garantia da sua empresa, em "Registrar a decisão": garantia aprovada, aprovada em parte, negada, preciso de mais informação ou cancelar o caso; o que fazer; quem fornece a peça; o seu protocolo de garantia; e, se quiser, a frase que o hospital recebe (o nome da sua empresa não aparece para o hospital). Garantia negada com orçamento: você escolhe quem recebe e aprova o orçamento. O Atendente acompanha e responde pela conversa.
+
+Peças: informe a previsão e o envio (nota fiscal ou rastreio) em "Registrar passo". A Metrolabs confere as peças ao receber; divergência é avisada a você. No fim, confirme o encerramento ou diga que o problema continua em até 3 dias úteis; sem resposta, vale "confirmado por prazo". O Dossiê do atendimento fica em "Documentos do processo": é o mesmo documento da Metrolabs (linha do tempo, laudos, decisões, peças com nota fiscal e rastreio, testes com os valores medidos, fotos e vídeos liberados, termos, conclusão técnica e o código de verificação), sem as anotações internas dela. O hospital recebe só o resumo do serviço e os termos de retirada e de entrega, sem o nome da sua empresa. "Ver prévia" mostra o dossiê como está agora, sem gravar nada.
+
+Avisos: e-mail a cada etapa; WhatsApp só aos contatos de aviso com o aceite registrado (até 3), cadastrados pelo administrador na aba Equipe > "Contatos de aviso".
+
 ## 6. Relatórios do atendimento e do período
 
 - Na ficha do chamado, toque em "Gerar relatório". O documento A4 abre numa aba nova e fica salvo em HTML e PDF.

@@ -285,7 +285,9 @@ test('revisão 2: pedido em nome sem administrador: vão os atendentes; sem ning
   const r0 = abrirC();
   assert.equal(r0.semAviso, true);
   assert.match(r0.message, /nenhum e-mail saiu para a REPRESENTADA GAMA TESTE[\s\S]*cadastre a conta em Administração > Usuários \(perfil Representada, papel Administrador da representada ou Atendente\)/);
-  assert.equal(av.length, 0);
+  // 16/11/2026 (fluxo da representada, furo F11): sem conta ativa o aviso não some em silêncio: o notificador recebe só o registro PULADO
+  // (com o motivo, em NTF_ENVIOS), sem nenhuma conta da representada como destinatário
+  assert.equal(av.filter((x) => x.length).length, 0);
   a.tabelas.CAD_USUARIOS.push({ ID: 'rc_at', USUARIO: 'gil.gama', NOME: 'GILDA GAMA TESTE', PERFIL: 'REPRESENTADA', STATUS: 'ATIVO', EMAIL: 'gilda@gama.exemplo.test', REPRESENTADA_ID: 'repC', REPRESENTACAO_PAPEL: 'ATENDENTE' });
   const r1 = abrirC();
   assert.ok(!r1.semAviso); assert.match(r1.message, /O aviso por e-mail foi para 1 pessoa/);

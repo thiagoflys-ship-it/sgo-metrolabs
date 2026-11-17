@@ -8,6 +8,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -358,6 +359,6 @@ test('ligações: menu, navegação, tela, abas da lista, ajuda da tela, manual 
   assert.match(man, /Revisar o filtro do ramo/); assert.match(man, /Descartadas pela IA/); assert.match(man, /tipo de serviço/i);
   assert.match(lerCru('SGO_AssistenteManuais.js'), /Revisar o filtro do ramo/);
   for (const f of ['SGO_Licitacoes_Ramo.js', 'JS_Licitacoes_Ramo.html', 'SGO_Licitacoes.js', 'SGO_Licitacoes_Config.js', 'SGO_Licitacoes_Painel.js', 'JS_Licitacoes.html', 'Index.html', 'SGO_Ajuda.js', 'SGO_Ajuda_Licitacoes.js', 'SGO_AssistenteManuais.js']) {
-    assert.ok(!/[^\r]\n/.test(lerCru(f)), f + ' em CRLF');
+    assert.ok(uniforme(lerCru(f)), descTerm(f, lerCru(f)));
   }
 });

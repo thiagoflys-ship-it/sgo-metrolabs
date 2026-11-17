@@ -6,6 +6,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -341,7 +342,7 @@ test('telas: aba Proposta (bloqueios, itens, trechos com a origem, retiradas, ve
     const css = t.html[f];
     for (const m of css.matchAll(/(?:^|[^-])width:\s*(\d+)px/g)) assert.ok(Number(m[1]) <= 360, f + ' largura fixa ' + m[0]);
     for (const m of css.matchAll(/minmax\((\d+)px/g)) assert.ok(Number(m[1]) <= 300, f + ' minmax ' + m[0]);
-    assert.doesNotMatch(css, /setInterval/); assert.match(css, /\r\n/, f + ' em CRLF');
+    assert.doesNotMatch(css, /setInterval/); assert.ok(uniforme(css), descTerm(f, css));
   }
   assert.match(t.html['JS_Licitacoes_Proposta.html'], /\.lpp-det summary \{[^}]*min-height: 44px/);
   // o A4 da moldura tem o ajuste de tela pequena (folha e tabela)
@@ -373,7 +374,7 @@ test('integração na casca: menu, rota, inclusão dos arquivos novos, navegaç�
   const textos = ['SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js', 'JS_Licitacoes_Proposta.html', 'JS_Licitacoes_Relatorios.html', 'SGO_Ajuda_LicitacoesRelatorios.js'].map(ler).join('\n') + manual;
   assert.doesNotMatch(textos, /antiburro/i);
   assert.doesNotMatch(textos, /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'sem emoji');
-  for (const f of ['SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js', 'SGO_Ajuda_LicitacoesRelatorios.js']) assert.match(ler(f), /\r\n/, f + ' em CRLF');
+  for (const f of ['SGO_Licitacoes_Proposta.js', 'SGO_Licitacoes_Relatorios.js', 'SGO_Ajuda_LicitacoesRelatorios.js']) assert.ok(uniforme(ler(f)), descTerm(f, ler(f)));
 });
 
 // ---------------------------------------------------------------- revisão independente de 9dc456f (um teste para cada ataque)

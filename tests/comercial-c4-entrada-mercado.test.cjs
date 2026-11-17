@@ -4,6 +4,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { terminacaoUniforme: uniforme, descreverTerminacao: descTerm } = require('./_terminacao.cjs'); // 17/11/2026: fim de linha uniforme (ver o arquivo)
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
@@ -244,8 +245,8 @@ test('menu, ajuda, manual e base do assistente: Quadro e Gantt dentro de Oportun
   for (const r of [/O que você quer fazer agora\?/, /Completar quem ganhou/, /Preço proposto × ganho ou perdido/]) assert.match(manual, r);
   const base = fs.readFileSync(path.join(pasta, 'SGO_AssistenteManuais.js'), 'utf8');
   assert.match(base, /Completar quem ganhou/);
-  // CRLF preservado nos arquivos que já eram CRLF
-  for (const f of ['JS_Comercial.html', 'Index.html', 'SGO_Comercial_Propostas.js']) { const s = ler(f); assert.equal((s.match(/\r\n/g) || []).length, (s.match(/\n/g) || []).length, f + ' com CRLF em todas as linhas'); }
+  // fim de linha preservado (17/11/2026: uniforme, todas CRLF ou todas LF; ver tests/_terminacao.cjs)
+  for (const f of ['JS_Comercial.html', 'Index.html', 'SGO_Comercial_Propostas.js']) { const s = ler(f); assert.ok(uniforme(s), descTerm(f, s)); }
 });
 
 test('revisão da C4: reabrir a perda limpa o vencedor no banco e Oportunidades pelo menu abre na Lista', () => {
