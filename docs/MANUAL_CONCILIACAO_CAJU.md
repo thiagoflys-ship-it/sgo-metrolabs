@@ -135,3 +135,9 @@ Motivos, conforme a ação:
 - (Resolver divergência) **Motivo:** o que foi verificado e decidido (ex.: comprovante apresentado; diferença é taxa do estabelecimento). Vai para o histórico e para o A4 do fechamento. Mínimo de 15 letras.
 
 **Sigilo na tela.** A Conciliação Caju mostra uma marca d'água discreta com o nome, o login, a data e a hora de quem está vendo, também na impressão (com o rodapé "Impresso por").
+
+## Recarga Caju da rotina na conciliação (18/11/2026)
+
+A conciliação também liga as transações à Recarga Caju da rotina (Painel financeiro > Recarga Caju). Para quem é portador da rotina: o crédito da recarga liga à carga registrada; a devolução liga ao acerto da recarga; o gasto liga ao gasto lançado em Minha recarga Caju pelo valor exato e pela data (a linha escolhida pelo técnico ao comprovar tem prioridade). Dentro da janela de uma viagem, o gasto da viagem vem primeiro. Fora das viagens, a transação do portador sem comprovante vira "Recarga: gasto do cartão sem comprovante", do portador, em vez de "Gasto fora do período da viagem". Quem não é portador continua como antes.
+
+Divergências da recarga (todas começam com "Recarga:"): sem comprovante, valor diferente e gasto sem transação são do portador; fora da política, leitura do comprovante diferente, comprovante repetido, saldo parado e crédito sem recarga são do Financeiro. Ninguém resolve a divergência do próprio cartão. Os valores e o detalhe ficam só para a lista de sigilo do Financeiro.

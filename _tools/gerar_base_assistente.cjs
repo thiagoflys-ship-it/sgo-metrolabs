@@ -24,6 +24,8 @@ const MAPA = {
   "MANUAL_DEPOSITO_VIAGEM.md": { tela: "deposito_viagem" },
   // 11/11/2026: Conciliação Caju (Financeiro; a Diretoria acompanha)
   "MANUAL_CONCILIACAO_CAJU.md": { tela: "conciliacao_caju", perfis: ["ADMIN", "DIRETORIA", "FINANCEIRO"] },
+  // 18/11/2026: Recarga Caju da rotina, manual do colaborador (pedir e prestar contas; sem valores nem gestão, que ficam no Painel financeiro)
+  "MANUAL_RECARGA_CAJU.md": { tela: "recarga_caju" },
   "MANUAL_CLIENTES_UNIDADES_VINCULOS.md": { tela: "vinculos" },
   "MANUAL_CONDUTA_COLABORADOR.md": { tela: "conduta" },
   "MANUAL_CONDUTA_FISCAL.md": { tela: "conduta", perfis: ["ADMIN", "GESTOR", "DIRETORIA", "RH"] },

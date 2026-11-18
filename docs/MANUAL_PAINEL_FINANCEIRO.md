@@ -46,6 +46,7 @@ Regras que valem sempre:
 | Régua de cobrança | Quadro (Kanban) dos títulos a receber por etapa da cobrança, com as ações registradas, a decisão da Diretoria e as pendências (seção 8f). Não grava no Omie nem manda nada ao cliente. |
 | Agenda financeira | O que vence a receber e a pagar nos próximos 30, 60 ou 90 dias (Gantt) e a previsão de caixa de 90 dias, otimista e realista (seção 8g). |
 | Relatórios semanais | Relatório A4 de saúde financeira de cada semana, aberto só no SGO+, com a lista de quem foi avisado (seção 8h). |
+| Recarga Caju | Recarga Caju da rotina dos técnicos: pedidos e cargas, prestações gasto a gasto, portadores, divergências, política, painel e relatórios A4 (seção 8i). |
 | Sigilo e acessos | Quem pode ver o Financeiro; para a Diretoria, o registro de consultas, planilhas baixadas e recusas. Só o responsável pelo sistema altera a lista. |
 
 ## 4. Visão geral
@@ -312,6 +313,35 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **Configuração** (Chaves e senhas > Regras do Financeiro; sem valor = padrão): relatório ligado; dia (segunda); hora (07:00); quem recebe (o dono e a Diretoria da lista de sigilo); forma do aviso (só o link); análise pela IA (sim). A aba Relatórios semanais mostra a configuração em vigor e quem recebe de fato.
 
+## 8i. Recarga Caju da rotina (18/11/2026, Bloco C da onda 3)
+
+**Para que serve.** Os técnicos da rotina (peças, insumos, oficina, deslocamento local) usam o cartão Caju da empresa. O técnico **pede** a recarga em Operação de campo > Minha recarga Caju, **gasta**, **presta contas** gasto a gasto com a foto do comprovante e, no fim do período, **devolve o que sobrou**. A gestão fica nesta aba, só para a lista de sigilo do Financeiro. O manual do técnico é o docs/MANUAL_RECARGA_CAJU.md.
+
+**Decisões do dono que valem como estão.**
+- Modelo **pedido avulso + prestação + devolução** (não é fundo rotativo). Fundo, limite do Financeiro e tetos existem na política, mas ficam **vazios**: vazio quer dizer sem limite automático, e cada pedido é decidido na aprovação. Nenhum valor foi inventado.
+- **Só o dono e a Diretoria aprovam** (regra "Aprovação só do dono e da Diretoria" em Chaves e senhas). A Wanessa faz a carga, confere e concilia, mas não aprova.
+- **Quem pede não aprova** o próprio pedido; **quem aprova não faz a carga** quando há outra pessoa da lista que possa fazer. Se só restar quem aprovou, a carga é registrada como "aprovada e carregada pela mesma pessoa" e aparece no relatório semanal.
+- O **portador nunca carrega nem confere** o próprio cartão. Se a Wanessa for portadora, a Diretoria aprova e confere a prestação dela.
+- **Não comprovado vira devolução.** O sistema não faz desconto em folha; isso só com acordo assinado, depois de revisar com o RH e o contador.
+- **Termo do portador**: texto padrão profissional, configurável na Política e marcado "revisar com o RH e o contador". Mudar o texto pede novo aceite de cada portador.
+- **WhatsApp desligado** na cobrança do portador. A cobrança é no sistema e por e-mail, só em dia útil e no expediente, sem valores no assunto.
+- **Período mensal** (configurável para quinzenal). Prazos: comprovante em 2 dias úteis depois do gasto; fechamento em 3 dias úteis depois do fim do período; trava com pendência há mais de 10 dias úteis.
+- **Categoria ou carteira própria no Caju para a rotina: a confirmar com o Caju.** Fica configurável na Política; sem ela, a separação entre viagem e rotina é feita pelo SGO+ (janela da viagem e gasto lançado).
+
+**Pedidos e cargas.** Cada pedido mostra o valor, a justificativa, para que vai ser usado e a situação do portador (gastos a comprovar, saldo da rotina, valor a devolver, trava). O dono ou a Diretoria aprova (pode aprovar valor menor, com fundamentação), devolve para ajuste ou nega (fundamentação obrigatória). Aprovado, quem tem a caixa da carga faz a **carga pelo Caju** (modo API: o SGO+ cria o pedido "RECARGA" com o número, paga com o saldo da conta Caju e registra a carga quando o Caju creditar) ou **registra a carga feita** no portal, com o comprovante. A carga nunca passa do aprovado e não há dois pedidos de crédito para a mesma recarga.
+
+**Prestações.** Para cada portador: carregado, gasto lançado, a conferir, aceito, glosado, gasto do extrato sem comprovante, a devolver e a reembolsar. Cada gasto traz o comprovante, para que foi, o vínculo, os apontamentos da política (termo proibido no nome ou no ramo do CNPJ, fim de semana ou feriado, acima do teto, possível fracionamento) e a diferença entre o que a leitura do comprovante viu e o que foi digitado. **Aceite** ou **glose** (total ou parcial, com o motivo de 15 letras ou mais, que o portador vê). Fechado o período pelo portador, ou vencido o prazo dele (com o motivo), toque em **Concluir o período**: a conta (nunca digitada) é carregado menos o aceito no cartão menos o devolvido. Registre a **devolução** (recolhimento do saldo no Caju ou depósito/PIX) ou o **reembolso** (gasto pago com dinheiro próprio), com o comprovante. Acertado, o período fica encerrado.
+
+**Conciliação com o extrato.** Roda sozinha depois de cada importação do extrato na Conciliação Caju e depois de cada gasto lançado. O gasto da recarga é ligado à transação pelo valor exato e pela data (a IA nunca liga). Dentro da janela de uma viagem, o gasto da viagem tem prioridade. Fora das viagens, a transação do portador sem comprovante vira "Recarga: gasto do cartão sem comprovante" (do portador) em vez de "fora do período". Quem não é portador continua como antes. Divergências novas: sem comprovante, valor diferente, gasto sem transação (do portador); fora da política, leitura diferente, comprovante repetido, saldo parado e crédito sem recarga (do Financeiro). Elas aparecem em Divergências desta aba e na Conciliação Caju, onde são resolvidas com o motivo. Ninguém resolve a divergência do próprio cartão.
+
+**Portadores.** Quem tem o CPF vinculado ao Caju pode ser habilitado ("Usa o cartão na rotina", com motivo). A trava (pendência além do prazo) impede nova recarga e também o depósito de viagem; só a Diretoria libera, com motivo e validade de 1 a 30 dias. Ao desabilitar quem tem saldo ou valor a devolver, a tela avisa para recolher o saldo e concluir o período.
+
+**Política.** Modelo, período, prazos, trava, saldo parado, fundo, limite do Financeiro, gasto sem comprovante, fim de semana e feriado, categoria do Caju, finalidades, tetos, termos proibidos e o texto do termo. Cada gravação pede o motivo e vira uma versão; cada recarga lembra a versão que valeu. Só a Diretoria altera.
+
+**Painel e relatórios.** Índices do período (carregado, gasto no extrato, % com comprovante, % conciliado sozinho, prazo médio do comprovante, comprovantes vencidos, divergências por tipo, % fora da política, glosado, saldo parado), gráficos (por finalidade, por pessoa, evolução mensal e prazo médio por pessoa com a linha do prazo), quadro de leitura e gasto por vínculo (o cartão da rotina não tem centro de custo próprio). Relatórios A4: individual (com o extrato do período linha a linha; com o período concluído, é o A4 de fechamento), geral e pendências. Cada geração fica registrada. O relatório semanal de saúde financeira traz a recarga na seção 7, e o gráfico G8 soma viagem e recarga.
+
+**Sigilo.** Valores e dados só para a lista de sigilo do Financeiro e para o próprio portador (que vê só os dele). Pendências e avisos para quem está fora da lista saem sem valor. Toda abertura e toda recusa ficam no registro de Sigilo e acessos.
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
@@ -463,6 +493,14 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 2. Toque em "Abrir": o relatório aparece abaixo, com a sua identificação e um código em cada página. A abertura fica registrada em Sigilo e acessos.
 3. "Imprimir ou salvar em PDF" imprime essa cópia identificada. Não repasse o arquivo: o código mostra de quem é a cópia.
 4. "Gerar agora" monta o relatório da semana em curso, marcado como parcial, sem avisar ninguém. A configuração (dia, hora, quem recebe, IA) muda em Chaves e senhas > Regras do Financeiro.
+
+**Recarga Caju.** Acompanhar a recarga Caju da rotina dos técnicos: decidir os pedidos, fazer a carga, conferir os comprovantes gasto a gasto, concluir o período e registrar a devolução do que sobrou.
+
+1. Em "Pedidos e cargas", cada pedido mostra a justificativa e a situação do portador (gastos a comprovar, saldo, travas). Só o dono e a Diretoria aprovam; quem pediu nunca decide o próprio pedido.
+2. Aprovado, quem tem a caixa da carga faz a carga pelo Caju (modo API) ou registra a carga feita no portal, com o comprovante. A carga nunca passa do aprovado, e quem aprovou não carrega se outra pessoa da lista puder.
+3. Em "Prestações", aceite ou glose cada gasto (a glosa pede o motivo). Fechado o período pelo portador, ou vencido o prazo dele, toque em "Concluir o período" e registre a devolução ou o reembolso com o comprovante.
+4. Divergências do extrato (gasto sem comprovante, valor diferente, fora da política) aparecem em "Divergências" e na Conciliação Caju. Portador travado: a Diretoria decide a liberação em "Portadores".
+5. "Política" guarda as regras com versão e motivo; "Painel" mostra os índices, os gráficos e o quadro; "Relatórios A4" gera o individual (com o extrato), o geral e o de pendências.
 
 **Sigilo e acessos.** Ver quem pode acessar o Financeiro e quem consultou o quê.
 
@@ -618,3 +656,17 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 - **Nota ou pedido em que foi faturado:** o número da nota fiscal ou do pedido com o valor novo. Marca o reajuste como faturado; nada vai ao Omie por aqui.
 
 </div>
+
+### Recarga Caju
+
+- **Valor aprovado:** pode ser menor que o pedido. Nunca passa do fundo sem a Diretoria. A carga não passa deste valor.
+- **Fundamentação:** por que aprovou, devolveu ou negou. Obrigatória para devolver, negar e aprovar valor menor (pelo menos 15 letras); quem pediu lê esta resposta.
+- **Data da carga, valor carregado e comprovante da carga:** a data em que a carga foi feita no portal do Caju; no máximo o que falta carregar do aprovado (menor pede a observação); o print ou PDF da carga.
+- **Valor glosado:** só para glosar: o valor não aceito. Vazio glosa o gasto inteiro; parcial aceita o resto.
+- **Motivo da glosa:** por que o gasto não foi aceito, total ou parcialmente (ex.: "gasto pessoal, fora da política"). Pelo menos 15 letras; o portador vê.
+- **Motivo (o portador não fechou):** quando o prazo do portador passou sem o fechamento; o que não foi comprovado vira valor a devolver.
+- **Forma, data, valor e comprovante do acerto:** como o portador devolveu (recolhimento do saldo no Caju ou depósito/PIX) ou como a empresa reembolsou; no máximo o que está a acertar.
+- **Usa o cartão na rotina:** marcado, a pessoa vê Minha recarga Caju e pode pedir recarga. Só aparece para quem já tem o CPF vinculado ao Caju.
+- **Fundo desta pessoa:** o saldo máximo do cartão para a rotina (só no modelo fundo rotativo). Em branco, vale o padrão da política.
+- **Motivo da mudança da política:** o que mudou e por quê. A versão anterior fica guardada e cada recarga lembra a versão que valeu.
+- **Liberar a trava:** motivo (20 letras ou mais) e validade de 1 a 30 dias. A pendência continua devida e a cobrança continua.
