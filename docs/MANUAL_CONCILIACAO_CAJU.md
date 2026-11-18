@@ -136,6 +136,12 @@ Motivos, conforme a ação:
 
 **Sigilo na tela.** A Conciliação Caju mostra uma marca d'água discreta com o nome, o login, a data e a hora de quem está vendo, também na impressão (com o rodapé "Impresso por").
 
+## Cargas do Caju no Omie (18/11/2026, Painel financeiro)
+
+<!-- assistente: acesso=sigilo -->
+
+Esta seção é só para a lista de sigilo do Financeiro. Por decisão do dono, o SGO+ é o registro principal e o Omie é o espelho. Cada carga paga ao Caju (de viagem ou da Recarga Caju da rotina; pela API ou registrada à mão) vira conta a pagar no Omie pelo Painel financeiro > Compras e Caju no Omie, com prévia e confirmação. Quando o Caju cobrou taxa de serviço, a taxa vira outra conta a pagar, na sua própria categoria (de-para das Regras do Financeiro; sem regra, o Financeiro escolhe). A observação do título leva a viagem ou a recarga, o colaborador e o centro de custo. O centro de custo só vai como departamento do Omie quando a Diretoria ligar essa opção nas Regras do Financeiro, depois da definição do contador. O pagamento segue a Aprovação de pagamentos. Nada muda nesta tela. Detalhes no manual do Painel financeiro, seção 8q.
+
 ## Recarga Caju da rotina na conciliação (18/11/2026)
 
 A conciliação também liga as transações à Recarga Caju da rotina (Painel financeiro > Recarga Caju). Para quem é portador da rotina: o crédito da recarga liga à carga registrada; a devolução liga ao acerto da recarga; o gasto liga ao gasto lançado em Minha recarga Caju pelo valor exato e pela data (a linha escolhida pelo técnico ao comprovar tem prioridade). Dentro da janela de uma viagem, o gasto da viagem vem primeiro. Fora das viagens, a transação do portador sem comprovante vira "Recarga: gasto do cartão sem comprovante", do portador, em vez de "Gasto fora do período da viagem". Quem não é portador continua como antes.

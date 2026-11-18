@@ -51,6 +51,7 @@ Regras que valem sempre:
 | Recarga Caju | Recarga Caju da rotina dos técnicos: pedidos e cargas, prestações gasto a gasto, portadores, divergências, política, painel e relatórios A4 (seção 8i). |
 | Especialista financeiro | Dúvidas de uso do Painel, regras financeiras e leitura da situação de hoje pela fotografia, com propostas de ação e de atividade que só viram atividade com a sua confirmação (seção 8j). Não grava no Omie, não aprova e não envia mensagem. |
 | Trilha das operações | Toda gravação feita pelo SGO+ no Omie, com o resultado, e os pedidos de estorno de baixa e de exclusão de título, que só o dono e a Diretoria confirmam (seção 8m). |
+| Compras e Caju no Omie | As compras faturadas e por boleto já conferidas em Compras, as faturas dos cartões fechadas na conciliação e as cargas pagas ao Caju (viagens e Recarga Caju, com a taxa em separado), para lançar no Omie como conta a pagar pela prévia de Lançamentos e baixas, e a conferência do que foi lançado contra o Omie (seção 8q). |
 | Aprovação de pagamentos | Lista diária das contas a pagar (vencidas, de hoje e as que o Financeiro escolher) enviada para aprovação; o dono ou a Diretoria aprova num toque ou recusa e adia item por item. A baixa de conta a pagar só é liberada depois (seção 8n). |
 | Orçamento anual | Orçamento do ano por categoria e mês, com versão, motivo e aprovação do dono ou da Diretoria; acompanhamento orçado × realizado do Omie (seção 8o). |
 | Sigilo e acessos | Quem pode ver o Financeiro; para a Diretoria, o registro de consultas, planilhas baixadas e recusas. Só o responsável pelo sistema altera a lista. |
@@ -112,7 +113,7 @@ As caixas de acesso ficam em Administração > Acessos, no módulo Financeiro:
 | Registrar ações da régua de cobrança | Contato, lembrete, promessa, acordo e encaminhamento à Diretoria na Régua de cobrança (18/11/2026). |
 | Gerar o relatório semanal de saúde financeira agora (parcial) | "Gerar agora" em Relatórios semanais (18/11/2026). |
 
-As abas Contas fixas, Fechamento do mês e Trilha das operações (18/11/2026) não têm caixa própria: ver é da lista de sigilo; cadastrar conta fixa, marcar item do fechamento e pedir estorno ou exclusão usam a caixa "Lançar, alterar e baixar títulos no Omie"; confirmar estorno e exclusão, dispensar item, reabrir mês e alterar a lista do fechamento são do dono e da Diretoria da lista.
+As abas Contas fixas, Fechamento do mês e Trilha das operações (18/11/2026) não têm caixa própria: ver é da lista de sigilo; cadastrar conta fixa, marcar item do fechamento e pedir estorno ou exclusão usam a caixa "Lançar, alterar e baixar títulos no Omie"; confirmar estorno e exclusão, dispensar item, reabrir mês e alterar a lista do fechamento são do dono e da Diretoria da lista. A aba Compras e Caju no Omie (18/11/2026) também não tem caixa própria: ver e "Conferir com o Omie" são da lista de sigilo; preparar o lançamento, "Já lancei direto no Omie", "Dispensar" e "Desfazer" usam a caixa "Lançar, alterar e baixar títulos no Omie".
 
 **Sigilo (16/11/2026, decisão do dono).** Acima das caixas existe a lista de sigilo do Financeiro. Quem não está nela não abre o painel, não vê o botão, não recebe as sugestões de recebimentos do Omie em Ganhos dos vendedores e não consegue nada pelo endereço do sistema, qualquer que seja o perfil. Em Administração > Acessos, as caixas do Financeiro dessa pessoa aparecem como "Sigiloso: fora da lista do módulo" e não podem ser marcadas; modelo e "copiar de outra pessoa" pulam essas caixas.
 
@@ -444,6 +445,30 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **Lançamento avulso na conta corrente.** Para registrar no Omie o que o banco já fez e não tem título: tarifa, juros ou IOF (saída, em categoria de despesa), rendimento, aporte ou devolução (entrada, em categoria de receita) e transferência entre contas da própria empresa (conta de destino; categoria vazia ou de transferência). Em Lançamentos e baixas, toque em "Lançamento avulso na conta", preencha, confira a prévia e confirme. Não passa pela aprovação de pagamentos, porque não paga conta a pagar. Entra na trilha como "Lançamento avulso na conta corrente". **A confirmar na primeira operação acompanhada:** o SGO+ envia o valor sempre positivo e o Omie decide saída ou entrada pela categoria; na transferência, se o Omie cria sozinho a entrada na conta de destino. Depois do primeiro envio, confira o extrato da conta no Omie.
 
+## 8q. Compras e Caju no Omie (18/11/2026, Onda B, itens B2, B3 e B4)
+
+**Decisão do dono.** O SGO+ é o registro principal e o Omie é o espelho, gravado pela API. A compra conferida, a fatura do cartão fechada e a carga paga ao Caju viram conta a pagar no Omie sem digitar de novo. Criar a conta a pagar não é aprovar gasto: o gasto já foi aprovado no módulo de origem. O pagamento continua passando pela Aprovação de pagamentos (seção 8n): só o dono e a Diretoria aprovam. Nenhuma alçada nova foi criada.
+
+**O que aparece.** A aba Compras e Caju no Omie começa no mês da primeira abertura (o que é anterior foi lançado como antes, à mão) e mostra:
+
+- **Compras faturadas e por boleto** conferidas pelo Financeiro em Compras > Conferência do Financeiro, um item por vencimento (referência CMP-<requisição>-<parcela>). A compra ainda não conferida, ou com a conferência divergente, fica em "Aguardando a origem", com o que falta. A compra no cartão de crédito entra pela fatura; a compra paga na hora (PIX, débito, transferência, dinheiro) e o reembolso a colaborador não entram por aqui (veja "O que ficou para depois").
+- **Faturas dos cartões da empresa** fechadas em Compras > Conciliação das faturas (também as fechadas com ressalva), pelo total do extrato, já com os estornos (referência FAT-<final>-<AAAAMM>). O vencimento é o dia cadastrado no cartão; sem ele, a tela pede o vencimento.
+- **Cargas do Caju**: as cargas de viagem do Depósito de viagem e as da Recarga Caju da rotina, feitas pela API do Caju ou registradas à mão (referências CJU-V-<carga> e CJU-R-<carga>). Quando o Caju cobrou taxa de serviço, a taxa é um item separado (referência terminada em -TX), para ir na sua própria categoria. A viagem (número, destino, colaborador e centro de custo) ou a recarga (número, período e colaborador) vai na observação do título.
+
+**Lançar.** "Preparar lançamento" abre Lançamentos e baixas com o novo lançamento preenchido: documento (a nota, quando houver), valor, vencimento, observação e a referência única. O fornecedor vem pela busca do Omie com o CNPJ do fornecedor de Compras; se não estiver no Omie, "Cadastrar no Omie" faz o cadastro com prévia. Depois do primeiro lançamento, o SGO+ lembra o fornecedor do mesmo CNPJ, o emissor do mesmo cartão e o Caju. A categoria vem do de-para das Regras do Financeiro (tipos por finalidade da compra, fatura do cartão, carga de viagem, carga da recarga e taxa do Caju); sem regra, a categoria fica vazia e você escolhe. Escolha a conta corrente, confira a prévia (ela mostra a origem no SGO+ e avisa se o valor digitado for diferente) e confirme. Confirmado no Omie, o item vai para "Lançados no Omie". A mesma referência não é lançada duas vezes, nem pela aba nem digitada no novo lançamento, e o item não é parcelado por aqui.
+
+**Pagar.** A conta a pagar lançada aparece na Aprovação de pagamentos como qualquer outra. Aprovada e com a baixa registrada pelo SGO+, o item fica "Pago"; na compra, o vencimento passa a pago em Compras > A pagar sozinho (só a data e quem pagou; o resto da compra não muda). Compra e carga do Caju que já estavam pagas antes do lançamento também passam pela lista: a prévia avisa e a baixa vai com a data do pagamento.
+
+**Já lançado ou fora do Omie.** "Já lancei direto no Omie" (o que foi conferido, pelo menos 10 letras, e o número do título, se souber) e "Dispensar" (por que não vai ao Omie, pelo menos 15 letras) tiram o item de "Para lançar" e podem ser desfeitos com o motivo. Item lançado pelo SGO+ não se desfaz por aqui: para apagar o título, peça a exclusão na Trilha das operações.
+
+**Conferir com o Omie (B4).** O botão lê no Omie, sem gravar, até 20 títulos lançados por toque e compara valor e situação. "Diferenças com o Omie" mostra, com o que fazer: valor diferente no Omie, título cancelado ou não encontrado no Omie, fatura reaberta em Compras depois do lançamento, valor mudado na origem, vencimento cancelado em Compras depois do lançamento e compra paga em Compras > A pagar sem a baixa no Omie. Título pago direto no Omie fica registrado como pago, sem mexer em Compras. A conferência fica no registro de acessos, sem valores.
+
+**Centro de custo.** A estrutura de centros de custo e o rateio ainda não foram decididos (dependem do contador). Por isso, o padrão é não enviar departamento ao Omie: o centro de custo vai escrito na observação. Em Chaves e senhas > Regras do Financeiro, "Compras e Caju no Omie: centro de custo como departamento" pode ser ligado depois; aí a carga de viagem vai com o departamento igual ao "Código no Omie" do centro de custo (100%). A Recarga Caju da rotina não tem centro de custo.
+
+**Pendências e faixa.** O item que chega ao vencimento sem estar no Omie e as diferenças com o Omie viram pendências só para o Financeiro da lista de sigilo, com a contagem e sem valor nem descrição. Em Lançamentos e baixas, uma faixa mostra quantos itens estão para lançar e o atalho para a aba.
+
+**A confirmar na primeira operação acompanhada:** o formato do departamento no Omie (distribuição com o código e 100%), quando for ligado; se a conta a pagar de carga já paga ao Caju com o saldo da conta Caju deve ter a baixa na conta corrente do Caju no Omie (combinar com o contador); e o fornecedor do Omie a usar para cada cartão (o banco ou o emissor).
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
@@ -485,6 +510,9 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 | Orçamento: importação "categorias não existem no Omie" | Corrija os códigos na planilha (use "Carregar categorias" para ver os válidos) e importe de novo; nada foi importado. |
 | Orçamento: "Já existe uma versão em preparação" | Continue na versão em preparação, descarte o rascunho ou, se estiver aguardando, retire-o da aprovação. |
 | Parcelado: "Já lançadas no Omie: 1 de 3 parcelas" | As lançadas não se repetem. Em Envios a conferir, "Continuar as parcelas" ou, se lançou o restante direto no Omie, "Encerrar sem as que faltam". |
+| Compras e Caju no Omie: a compra conferida não aparece | Só entram compras faturadas ou por boleto, conferidas, com vencimento a partir do mês de início. Veja "Aguardando a origem": a coluna "O que falta" diz o que fazer. Compra no cartão entra pela fatura. |
+| "A referência ... já foi lançada no Omie" | O item já tem conta a pagar no Omie. Nada foi preparado. Se o título foi excluído no Omie, desfaça o registro com o motivo e lance de novo. |
+| Diferenças com o Omie: "Paga em Compras > A pagar ..., mas a baixa no Omie ainda não foi registrada" | Inclua o título na Aprovação de pagamentos e registre a baixa com a data do pagamento; se já foi baixado direto no Omie, toque em "Conferir com o Omie". |
 | Lançamento avulso: "não é de despesa" ou "não é de receita" | Saída usa categoria de despesa; entrada, de receita; transferência, vazia ou de transferência. |
 
 ## 10. Como fazer em cada aba
@@ -671,6 +699,14 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 3. Pronto, escreva o motivo e toque em "Enviar para aprovação". O dono ou a Diretoria aprova a versão vigente ou recusa com o motivo; quem preparou não aprova. Para ajustar uma versão enviada, "Retirar da aprovação".
 4. No acompanhamento, escolha o mês e toque em "Ver"; para atualizar o realizado do mês, "Ler o realizado deste mês no Omie" (só leitura). O desvio em destaque é despesa acima ou receita abaixo do orçado.
 5. O Omie não recebe orçamento pela API: o SGO+ é a fonte. Para ter o mesmo orçamento no Omie, baixe a planilha da versão vigente e digite lá.
+
+**Compras e Caju no Omie.** Levar ao Omie, sem digitar de novo, as compras faturadas e por boleto, as faturas dos cartões da empresa e as cargas pagas ao Caju, e conferir o que foi lançado.
+
+1. A lista começa no mês da primeira abertura. Em "Para lançar" aparecem: as compras faturadas e por boleto já conferidas em Compras (um item por vencimento), as faturas dos cartões fechadas na conciliação e as cargas do Caju creditadas ou registradas, com a taxa de serviço como item separado.
+2. Toque em "Preparar lançamento": a aba Lançamentos e baixas abre com a conta a pagar preenchida (documento, valor, vencimento, observação e a referência única). O fornecedor vem pela busca do CNPJ; se não estiver no Omie, use "Cadastrar no Omie". A categoria vem do de-para das Regras do Financeiro, se houver regra; senão, escolha.
+3. Escolha a conta corrente, toque em "Conferir prévia" e depois em "Confirmar no Omie". Confirmado, o item passa para "Lançados no Omie". O pagamento segue a Aprovação de pagamentos; quitada a baixa de uma compra, o vencimento fica pago em Compras > A pagar sozinho.
+4. Se o item já está no Omie, toque em "Já lancei direto no Omie"; se não vai ao Omie, em "Dispensar". Os dois pedem o motivo e podem ser desfeitos. "Aguardando a origem" diz o que falta no módulo de origem (por exemplo, a conferência da compra).
+5. "Conferir com o Omie" lê no Omie os títulos lançados e compara valor e situação. "Diferenças com o Omie" lista o que não bate (valor mudado, fatura reaberta, compra paga sem baixa no Omie, título cancelado) e diz o que fazer.
 
 **Sigilo e acessos.** Ver quem pode acessar o Financeiro e quem consultou o quê.
 
@@ -908,6 +944,13 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 - **Ou cole aqui o conteúdo:** a planilha no mesmo formato, quando não tiver o arquivo.
 - **Motivo da versão:** o que é esta versão e o que mudou (pelo menos 15 letras). Quem aprova lê o motivo.
 - **Motivo da decisão:** opcional para aprovar; obrigatório para recusar (pelo menos 10 letras). Quem preparou lê o motivo.
+
+### Compras e Caju no Omie
+
+- **Mostrar:** tudo ou só um grupo: as compras faturadas e por boleto (já conferidas em Compras), as faturas dos cartões da empresa (fechadas na conciliação) ou as cargas do Caju (viagens e Recarga Caju).
+- **Motivo:** em "Já lancei direto no Omie", o que você conferiu no Omie, como a data e o documento (pelo menos 10 letras); em "Dispensar", por que este item não vai ao Omie (pelo menos 15 letras); em "Desfazer", por que está desfazendo. Fica registrado com o seu nome.
+- **Número do título no Omie (opcional):** o "Código do lançamento" da conta a pagar no Omie, só algarismos. Com ele, "Conferir com o Omie" também confere este item.
+- **Departamento no Omie (no novo lançamento):** aparece só quando o centro de custo como departamento estiver ligado nas Regras do Financeiro; vem do centro de custo da viagem e vai com 100% do valor.
 
 ### Sigilo e acessos
 

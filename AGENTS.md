@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R82, imagem
-  `sha256:243aeb801d0e2ec5880628ea414cfebeb7fd6915ca0de439e4162e7351c3c12f`,
-  tag `metrolabs/rh:secullum-revisao-identidade-prova-20261118-r82`.
-  Evidência: `output/rh360-20261118-r82/PUBLICADO_RH360_R82_20261118.txt`.
-  Preserva as entregas anteriores; 797 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R85, imagem
+  `sha256:9734736ae033d540b57de6db74d582ab1c2b78eb9d4879c2455569b0eb32665b`,
+  tag `metrolabs/rh:ponto-revisao-origem-20261118-r85`.
+  Evidência: `output/rh360-20261118-r85/PUBLICADO_RH360_R85_20261118.txt`.
+  Preserva as entregas anteriores; 805 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -955,3 +955,43 @@ Evidências e limites: output/rh360-20261118-r82/PUBLICADO_RH360_R82_20261118.tx
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 18/11/2026 — PUBLICADO financeiro-pagamentos-orcamento-20261118 (sha babf53c9…; base financeiro-onda-a-20261118; cand24). Financeiro B1 Aprovação de pagamentos (lista 'a pagar hoje' aprovada em lote só pelo dono/Charles; FIN_PAG_DISPENSA_ABAIXO vazio = toda baixa de conta a pagar pelo SGO+ espera aprovação; pagamento direto no Omie não é bloqueado), C3 Orçamento anual (SGO fonte, versão aprovada só dono/Charles, orçado×realizado em Indicadores I15/G7 e relatório semanal; Omie não tem API de gravação de orçamento → planilha para digitar), lançamento avulso de conta corrente (IncluirLancCC) e parcelamento 1–48. Itens [A CONFIRMAR NA 1ª OPERAÇÃO] no relatório. Suíte 2587/0. Relatório: output/financeiro-20261118-b1-c3/RELATORIO.md. Produção atual = cand24.
+
+
+RH360 R83 — publicada/verificada em 18/11/2026 11:52 BRT
+Imagem: sha256:03cd1c4766d512cb0e9891b4a818da8c3f0e3baad29605d8d07d1d06949704c4
+Tag: metrolabs/rh:provas-rh-finalidade-20261118-r83
+Manifesto: 826e0d71fad38321e063ff02d3c2f90e4823dbdcf6fca694e714b0568dc3ec5e
+Provas RH neutras por finalidade.
+R83 é a base vigente sobre R82, 797 pins preservados, dez alterações existentes e nenhum novo arquivo fonte.
+Próxima entrega: ingestão controlada de observações canônicas com revisão humana, contrato explícito de data/fuso, proveniência e deduplicação.
+Evidências e limites: output/rh360-20261118-r83/PUBLICADO_RH360_R83_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R84 — publicada/verificada em 18/11/2026 12:18 BRT
+Imagem: sha256:b4e055a5acb812d45764c378c596010b5d6f86c47b1fb66cca1f1a53f45f68d3
+Tag: metrolabs/rh:ponto-observacoes-canonicas-20261118-r84
+Manifesto: 3336f200f6687cc6b5bdc191fb752859e56e602d9a5aa0fa6f39bafb3fd857b5
+Contrato temporal e observações canônicas de ponto.
+R84 entrega em software o contrato temporal persistido e ingestão canônica manual de observações; não tratá-los novamente como somente prévia. A ativação/validação real permanece pendente.
+Novos namespaces cifrados TIME_CONTRACTS, CANONICAL_MONTH/KEYS/OPERATION; contrato declarativo R77 continua usable_for_import=false e external_identity_verified=false.
+802 pins (798 fontes, quatro metadados), 12 deltas com cinco fontes novas; demais 786 fontes preservadas.
+Continuar por cobertura/reconciliação e jornada/memória de apuração, aproveitando os módulos existentes e mantendo financeiros/disciplinar fora da ativação.
+Evidências e limites: output/rh360-20261118-r84/PUBLICADO_RH360_R84_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R85 — publicada/verificada em 18/11/2026 12:42 BRT
+Imagem: sha256:9734736ae033d540b57de6db74d582ab1c2b78eb9d4879c2455569b0eb32665b
+Tag: metrolabs/rh:ponto-revisao-origem-20261118-r85
+Manifesto: a8e62ed37464360512af192a53f4567b576bf49b8a180696772b4c68fc0cc6a1
+Revisão comprovada de versão recebida da ocorrência.
+R85 é a base vigente sobre R84, 805 pins (801 fontes e quatro metadados), dez deltas com três fontes novas; demais 791 fontes preservadas.
+Novo namespace RH_SECULLUM_OBSERVATION_REVISIONS_V1, aditivo ao diário original R84. A guarda de ingestão permanece desligada e os registros reais continuam não criados por esta tarefa.
+Próximo foco é programação versionada de jornada/calendário e memória de intervalos com prova e estados desconhecidos explícitos. Aproveitar JORNADA do vínculo oficial; não inferir ausência ou horas por páginas incompletas.
+Evidências e limites: output/rh360-20261118-r85/PUBLICADO_RH360_R85_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 18/11/2026 — PUBLICADO financeiro-espelho-omie-20261118 (sha 34d97fe1…; base financeiro-pagamentos-orcamento-20261118; cand25). Financeiro B2/B3/B4 + M8: aba 'Compras e Caju no Omie' (compras faturadas/boleto conferidas CMP-, faturas fechadas FAT-, cargas Caju CJU-V-/CJU-R- + taxa -TX) com prévia/confirmação e referência única; pagamento segue B1; conferência com o Omie; 8 tipos no de-para de categorias (vazio); FIN_ESPELHO_DEPARTAMENTO vazio; M8 estorno da fatura como linha própria casada com a compra. Lista começa em 11/2026 (marcar 'Já lancei direto no Omie' o que foi lançado à mão). Suíte 2604/0. Relatório: output/financeiro-20261118-onda-b/RELATORIO.md. Produção atual = cand25.

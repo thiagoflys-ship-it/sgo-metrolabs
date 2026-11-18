@@ -276,6 +276,7 @@ test('6. nenhum parágrafo da base anterior se perdeu sem justificativa', { skip
     /^(Onde: caixa "Régua de prazos"|Quem age: na Metrolabs|Avisos: RP09|Na Assistência, o selo de prazo e a central seguem)/, // P10
     /^Trocar a prioridade na triagem mantém o prazo da representada\. Chamado comum ligado depois/, // P11
     /^Atenção: o SGO\+ conta esse prazo até a conclusão do atendimento/, // P11
+    /^4\. "Importar e conciliar" grava os lançamentos e casa sozinho: mesmo final, valor com diferença até R\$ 0,05.*estorno e crédito são ignorados com o motivo/, // P12 (18/11/2026, achado M8: o estorno deixou de ser ignorado; o item 4 foi reescrito e o 5 explica o estorno)
     // Ganhos dos vendedores e Portal não estavam na base anterior; nada deles conta aqui
   ];
   const perdidos = [];

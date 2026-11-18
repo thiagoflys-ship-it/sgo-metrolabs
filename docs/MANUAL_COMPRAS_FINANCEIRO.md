@@ -38,7 +38,8 @@ As compras do fluxo normal (pedido de compra) também ganham as parcelas quando 
 1. Compras > Conciliação das faturas: escolha o cartão e o mês da fatura (mês do vencimento). A tela mostra o total do extrato, o total das compras informadas, a diferença e os itens em aberto.
 2. Exporte a fatura pelo banco em CSV, Excel (.xlsx) ou OFX. As colunas são reconhecidas pelo nome (data, descrição ou estabelecimento, valor, parcela e final do cartão, quando houver).
 3. Escolha o arquivo e toque em "Ver a prévia": mostra cada lançamento e com que compra ele casa. Nada é gravado.
-4. "Importar e conciliar" grava os lançamentos e casa sozinho: mesmo final, valor com diferença até R$ 0,05, data da compra até 3 dias e, quando o extrato traz "02/03", a mesma parcela. Lançamento já importado não entra duas vezes; pagamento da fatura, saldo, estorno e crédito são ignorados com o motivo. O arquivo fica guardado e listado em "Importações".
+4. "Importar e conciliar" grava os lançamentos e casa sozinho: mesmo final, valor com diferença até R$ 0,05, data da compra até 3 dias e, quando o extrato traz "02/03", a mesma parcela. Lançamento já importado não entra duas vezes; pagamento e saldo da fatura são ignorados com o motivo. O arquivo fica guardado e listado em "Importações".
+5. Estorno ou crédito na fatura (valor negativo que não é pagamento) entra como linha própria (desde 18/11/2026). O sistema casa sozinho o estorno com a compra de origem: mesmo cartão, mesmo valor (até R$ 0,05), descrição parecida e data igual ou anterior, em qualquer fatura do cartão. A compra fica marcada como "Estornada na fatura"; se a compra não tinha sido informada, a linha dela é justificada sozinha e a cobrança ao responsável acaba. O total do extrato e o das compras informadas passam a contar o estorno, e a soma fecha.
 
 Situações:
 
@@ -49,6 +50,8 @@ Situações:
 | Justificada | Lançamento explicado sem compra, com o motivo | "Reabrir" volta a cobrar |
 | Não está na fatura | Compra informada que não veio no extrato deste mês | "Próxima fatura" (compra perto do fechamento) ou "Divergente" (quem comprou é avisado) |
 | Divergente | Compra com problema apontado | Resolva com quem comprou e toque em "Voltar a conciliar" |
+| Estorno casado com a compra | Crédito na fatura ligado à compra estornada | Nada. "Desfazer" tira a ligação, com o motivo |
+| Estorno sem a compra de origem | Crédito que o sistema não ligou a nenhuma compra | "Casar com a compra" (escolha a compra; as de valor mais perto vêm primeiro) ou, se não é de compra informada (devolução de tarifa ou anuidade), "Justificar". Conta como item em aberto para fechar a fatura |
 
 Toda ação manual pede o motivo (pelo menos 15 letras) e vai para a trilha, com antes, depois, quem e quando. Quem comprou ou informou a compra não concilia a própria; outra pessoa do Financeiro ou a Diretoria faz.
 
@@ -99,6 +102,12 @@ Em Painel de compras > Relatórios (e na conciliação, o da fatura). Todos com 
 ## Regras
 
 Em Compras > Regras de compras, quadro "Compra informada depois de feita": limite da compra direta, prazo para informar, até quantos dias atrás qualquer pessoa informa, quantas vezes a média é "acima do comum", prazo do reembolso, quando a cobrança vai por e-mail e quando vai à Caixa de decisões e ao Conduta. Cada mudança vira uma versão com motivo.
+
+## Compras e faturas no Omie (18/11/2026, Painel financeiro)
+
+<!-- assistente: acesso=sigilo -->
+
+Esta seção é só para a lista de sigilo do Financeiro. Por decisão do dono, o SGO+ é o registro principal e o Omie é o espelho. A compra faturada ou por boleto conferida pelo Financeiro e a fatura do cartão fechada nesta tela viram conta a pagar no Omie pelo Painel financeiro > Compras e Caju no Omie, com prévia e confirmação, sem digitar de novo. A conta a pagar segue a Aprovação de pagamentos (só o dono ou a Diretoria aprovam); quitada a baixa no Omie pelo SGO+, o vencimento da compra fica pago em Compras > A pagar, sem outro passo. Se a fatura for reaberta depois de lançada no Omie, ou o vencimento da compra for cancelado, o Painel financeiro mostra a diferença com o Omie e o que fazer. Para quem é de Compras, nada muda nesta tela. Detalhes no manual do Painel financeiro, seção 8q.
 
 ## Integração
 
