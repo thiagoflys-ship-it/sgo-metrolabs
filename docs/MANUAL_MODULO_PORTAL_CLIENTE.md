@@ -149,6 +149,7 @@ A representada passa a ser tratada como ativa só quando a SITUACAO é ATIVA **e
 | Suspender e reativar o acesso de um cliente (`PORTAL_CLIENTE_SUSPENDER`) | Administrador e Diretoria |
 | Alterar as regras do portal (`PORTAL_CLIENTE_REGRAS`) | Administrador e Diretoria |
 | Enviar acesso ao cliente (`USUARIOS_CLIENTES_ENVIAR_ACESSO`, a caixa do convite, grupo "Contas e acessos"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor |
+| Responder pedidos e conversas do portal (`PORTAL_CLIENTE_CONVERSAR`, etapa 2): aba "Conversas do portal", parte "Portal do cliente" da ficha do chamado, nota interna e retirada de anexo | Equipe interna da área Técnica, gestores, Diretoria e Administrador |
 
 O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa.
 
@@ -160,6 +161,7 @@ O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca 
 - `PCL_FUNCOES_OBSERVADAS`: uma linha por dia, função e pessoa, com a contagem.
 - `PCL_REGRAS_HIST`: as mudanças das regras e da lista de funções.
 - Etapa 1 (18/11/2026): `PCL_PEDIDOS_EQUIPE`, `PCL_TERMOS_ACEITE` e `PCL_CONTAS_HIST` (seção 23.9) e as colunas `CLIENTE_*` em `CAD_USUARIOS`.
+- Etapa 2 (18/11/2026): `PCL_MENSAGENS`, `PCL_ANEXOS` e `PCL_AVISOS_FILA` e as colunas novas de `ATEC_SOLICITACOES` e `ATEC_CHAMADOS` (seção 24.9).
 
 As datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua.
 
@@ -424,5 +426,111 @@ Enquanto o termo não é aceito, o servidor recusa as ações do portal que grav
 | A pessoa diz que a tela pede o termo de uso | É o primeiro acesso ou o texto mudou. Ela lê e toca em "Li e estou ciente" |
 | Uma conta foi inativada por falta de entrada e ainda é usada | Reative com o motivo e marque "manter" |
 | O gestor do cliente desligou alguém por engano | Reative a conta com o motivo; a pessoa entra com a senha que já tinha |
+
+## 24. Chamados pelo Portal (etapa 2, 18/11/2026)
+
+A conta de cliente ganhou a tela **Portal do cliente > Chamados**, com três abas: "Chamados" (lista, Kanban e Gantt), "Abrir chamado" e "Conversa geral". O botão "Pedir atendimento" de "Meus chamados" passou a abrir o mesmo formulário. A equipe da Metrolabs continua tratando os pedidos em Assistência técnica > Solicitações dos clientes, agora com tudo o que o cliente informou, e responde às mensagens na aba nova **Conversas do portal** ou na parte "Portal do cliente" da ficha do chamado.
+
+### 24.1 Abrir chamado (o que o cliente preenche)
+
+O formulário tem cinco passos: 1) Equipamento, 2) Problema, 3) Contato no local, 4) Fotos e 5) Conferir e enviar. O servidor confere cada campo e devolve a lista do que falta, com o campo marcado em vermelho e o que preencher.
+
+| Passo | Campos | Regra |
+|---|---|---|
+| Equipamento | Unidade, equipamento (ou "Equipamento não está na lista" com a descrição), setor | Só as unidades e os equipamentos ativos do acesso da pessoa. Equipamento de outra unidade ou de outro cliente recebe "Não encontrado. Atualize a lista." e a tentativa fica registrada (`ESCOPO_RECUSADO`) |
+| Problema | O que está acontecendo (30 letras ou mais), desde quando, código no visor (ou "Não exibe código"), situação do equipamento (Parado, Funciona com limitação ou Funcionando), risco de continuar usando, o que já foi tentado | O cliente **não escolhe a prioridade**: a triagem define P1 a P4 ao aceitar |
+| Contato no local | Nome, telefone com DDD, e-mail, melhor horário e o número interno do cliente | Telefone com 10 ou 11 números; e-mail válido |
+| Fotos | Fotos do equipamento e do visor (até 10), da etiqueta (até 3) e um vídeo | Foto recomendada, não obrigatória (decisão 10a). Imagem e PDF até 10 MB; vídeo até 8 MB nesta etapa. Tipo conferido no servidor. Aviso fixo: não fotografar pacientes, prontuários nem documentos de pessoas |
+
+**Pedido repetido.** Se o equipamento já tem pedido ou chamado aberto, a tela mostra o atendimento e pergunta "É o mesmo problema?". "Sim" leva para a conversa daquele atendimento; "Não, é outro problema" abre o pedido mesmo assim.
+
+**Limites.** Até 20 pedidos por pessoa por dia e 60 mensagens por hora (Regras do portal). Passou do limite, a mensagem diz o quê, por quê e o que fazer.
+
+**Fora do expediente.** A resposta diz que o pedido foi recebido e que a análise acontece no próximo horário útil. Com o equipamento parado, mostra também o telefone de plantão, se ele estiver cadastrado em Regras do portal.
+
+### 24.2 Quem abre (papel e contrato)
+
+- **Gestor do cliente e Solicitante** abrem; a **Consulta** não abre (recusa no servidor, com o papel e o caminho na mensagem).
+- Com o contrato vigente ou em carência (PLENO ou CARENCIA), o pedido é normal e leva o contrato da unidade (`CONTRATO_ID`).
+- Em **modo consulta** (CONSULTA), o botão vira **"Pedir atendimento avulso"**: o pedido entra marcado `SEM_CONTRATO`, sem contrato, e a Metrolabs envia o orçamento antes de atender (decisão 3). O chamado recebe no histórico a orientação "orçar antes de atender".
+- Termo de uso pendente trava os envios até o aceite.
+
+### 24.3 O que a Metrolabs faz com o pedido
+
+Em Assistência técnica > Solicitações dos clientes, o cartão do pedido do portal mostra: o papel de quem pediu, o contrato (ou "atendimento avulso: orçar antes"), o setor, o contato no local, a situação informada, o melhor horário, o número interno do cliente, as fotos e o **prazo para responder** (padrão 240 minutos úteis, em Regras do portal). As ações:
+
+- **Aceitar (vira chamado):** pelo `AstC_converter_` de sempre, com a prioridade escolhida na hora. O prazo de atendimento é o do contrato quando ele está em Regras da assistência > Contratos (`SLA_FONTE = CONTRATO`); o chamado recebe o `CONTRATO_ID` do pedido. O cliente vê "Pedido aceito: virou o chamado ..." e recebe e-mail (PC02).
+- **Pedir complemento:** o pedido volta ao cliente com a pergunta (etapa "Complemento pedido") e o prazo fica pausado até a resposta. O cliente responde na ficha, com fotos se quiser.
+- **Recusar com motivo:** o cliente lê o motivo na ficha e recebe e-mail. Escreva de forma clara e profissional.
+- **Conversa com o cliente:** abre, no próprio cartão, o relato, as fotos e a conversa, com resposta e nota interna.
+
+O equipamento "fora da lista" entra marcado assim; cadastre o equipamento ao converter, pela regra do cadastro.
+
+### 24.4 As 8 etapas que o cliente vê
+
+| n | Etapa | Situações internas |
+|---|---|---|
+| 1 | Recebido | pedido NOVA; chamado ABERTO |
+| 2 | Complemento pedido | pedido COMPLEMENTO |
+| 3 | Em análise | EM_TRIAGEM, AGUARDANDO_CLIENTE, LAUDO, AGUARDANDO_REPRESENTADA e AGUARDANDO_ORCAMENTO sem orçamento enviado |
+| 4 | Aguardando sua aprovação | AGUARDANDO_ORCAMENTO com orçamento enviado ao cliente |
+| 5 | Aguardando peça | AGUARDANDO_PECA |
+| 6 | Visita agendada | PLANEJADO, AGENDADO, EM_DESLOCAMENTO |
+| 7 | Em atendimento | NO_LOCAL, EM_EXECUCAO, PAUSADO, DOC_PENDENTE |
+| 8 | Concluído | RESOLVIDO_REMOTO, ENCERRADO, AGUARDANDO_ENCERRAMENTO |
+| 0 | Recusado ou cancelado | pedido DESCARTADA ou CANCELADA; chamado CANCELADO (com o motivo) |
+
+A tela antiga "Meus chamados" e os documentos A4 continuam com as 5 etapas de antes até a troca definitiva (etapa 6).
+
+**Ficha do chamado:** número, equipamento, unidade, setor, contato, o relato enviado, a etapa e a linha do tempo pública (autor interno aparece como "Metrolabs"), o prazo do contrato e se está dentro dele (só quando o prazo veio do contrato), a data da visita e o **nome do técnico só nas etapas 6 e 7, com a visita agendada ou em andamento** (nome e sobrenome, sem telefone), o número da O.S., o orçamento (resposta só do Gestor do cliente), o relatório da O.S. na versão do cliente, a galeria (fotos do cliente e fotos do técnico liberadas para o cliente) e a conversa. O cliente **nunca** recebe prioridade, triagem, fila livre, prazo interno, custo, casos, compras nem nota interna.
+
+### 24.5 Conversa
+
+Uma conversa por pedido e por chamado (a do chamado junta a do pedido que deu origem a ele) e a **conversa geral** do cliente, para assuntos fora de um chamado. A mensagem da Metrolabs aparece para o cliente com o primeiro nome seguido de "(Metrolabs)". A **nota interna** fica só para a equipe. A mensagem do cliente avisa quem faz a triagem e o técnico do chamado (PI06). A Consulta só lê. Anexo: foto ou PDF de até 10 MB.
+
+### 24.6 Cancelar antes da visita
+
+O cliente cancela, com motivo (10 letras ou mais), o pedido em "Recebido" ou "Complemento pedido" e o chamado ainda sem técnico a caminho (ABERTO, EM_TRIAGEM, AGUARDANDO_ORCAMENTO, AGUARDANDO_PECA, PLANEJADO e AGENDADO). Depois disso, só pela conversa. O Solicitante cancela só o que abriu. Quem faz a triagem, a gestão da área Técnica e o técnico do chamado são avisados (PI07).
+
+### 24.7 Aceite do atendimento
+
+Com o chamado encerrado (concluído depois da publicação desta etapa), a ficha mostra:
+
+- **"Confirmar atendimento"**, com comentário opcional (`CLIENTE_ACEITE_TIPO = CONFIRMADO`);
+- **"O problema continua"**, com o relato obrigatório (30 letras ou mais): abre um **pedido novo ligado ao chamado** (`REABRE_CHAMADO_ID`), o chamado fica `REABERTO`, a gestão da área Técnica recebe o aviso PI03 e a Caixa de decisões mostra "O problema continua". Ao aceitar o pedido, o chamado novo entra como reincidência (mesmo equipamento em 30 dias);
+- sem resposta em **5 dias úteis**, a rotina marca "confirmado por prazo" (`PRAZO`). O prazo é configurável em Regras do portal.
+
+O chamado de representada continua com o fluxo próprio (confirmação no mesmo chamado).
+
+### 24.8 Avisos
+
+- **Ao cliente, só por e-mail** (nunca WhatsApp): PC01 "Pedido recebido", na hora, para quem abriu e para o contato no local; PC02 "Pedido aceito", "falta uma informação" e "não pôde ser atendido", no horário comercial (fora dele, o e-mail espera na fila `PCL_AVISOS_FILA` e sai na rotina seguinte dentro do expediente).
+- Visita (PC03), orçamento (PC04) e conclusão (PC05) continuam pelos avisos de sempre da Assistência até a etapa 4. A mensagem da Metrolabs na conversa (PC06) aparece no Portal; o resumo por e-mail chega na etapa 4.
+- **Internos:** AT09 (pedido novo, para quem faz a triagem), PI03 (o problema continua), PI06 (mensagem do cliente) e PI07 (cancelamento pelo cliente). Pendências na Caixa de decisões: `pcl_pedido`, `pcl_pedido_vencido` e `pcl_reaberto`.
+
+### 24.9 Regras, tabelas e caixas
+
+**Regras do portal > Chamados do portal (Administrador e Diretoria, com motivo):** telefone de plantão (em branco, não mostra), prazo para responder ao pedido (240 minutos úteis), confirmação automática do atendimento (5 dias úteis), pedidos por pessoa por dia (20) e mensagens por pessoa por hora (60).
+
+**Tabelas novas:** `PCL_MENSAGENS` (só inclusão; nota interna com `INTERNA = SIM`), `PCL_ANEXOS` (fotos, vídeo e anexos; retirada com motivo em `REMOVIDO_*`, o registro fica) e `PCL_AVISOS_FILA` (e-mails que esperam o horário comercial).
+
+**Colunas novas, por acréscimo:** em `ATEC_SOLICITACOES`, `CONTRATO_ID`, `URGENCIA_CLIENTE` (situação informada), `POR_PAPEL`, `SEM_CONTRATO`, `EQUIP_FORA_LISTA_TEXTO`, `HORARIO_PREFERIDO`, `REABRE_CHAMADO_ID` e `PROTOCOLO_CLIENTE`; em `ATEC_CHAMADOS`, `CONTRATO_ID`, `CLIENTE_ACEITE_POR_ID` e `REABERTO_POR_SOL_ID` (as colunas `CLIENTE_ACEITE_EM`, `_POR_NOME`, `_TIPO` e `_TEXTO` já existiam).
+
+**Caixa nova:** «Responder pedidos e conversas do portal» (`PORTAL_CLIENTE_CONVERSAR`), padrão para a equipe interna da área Técnica, gestores, Diretoria e Administrador. Aceitar, pedir complemento e recusar seguem a regra de sempre da Assistência técnica.
+
+**Trava de arquivo:** o anexo de `PCL_ANEXOS` abre só para o próprio cliente, não retirado e não interno; o do pedido ou do chamado, só para quem tem a unidade; o da conversa geral, para todas as pessoas do cliente.
+
+**Registro de acessos (`PCL_ACESSOS`):** pedido, pedido recusado, complemento, cancelamento, mensagem, anexo, chamado aberto na ficha, atendimento confirmado, "o problema continua", anexo retirado e toda tentativa fora do escopo.
+
+### 24.10 Problemas comuns (chamados)
+
+| Situação | O que fazer |
+|---|---|
+| O cliente diz que o botão virou "Pedir atendimento avulso" | O contrato terminou e o acesso está em consulta. Para o atendimento pelo contrato, registre ou renove o contrato em Portal do cliente > Contratos |
+| O pedido não aparece para um Solicitante | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes |
+| O cliente não recebeu o e-mail de complemento | Fora do horário comercial, o e-mail espera a fila e sai na rotina seguinte dentro do expediente |
+| O prazo do contrato não aparece na ficha do cliente | O prazo só aparece quando o contrato está em Regras da assistência > Contratos; sem ele, vale o prazo da prioridade, que o cliente não vê |
+| Uma foto do cliente mostra um paciente | Na parte "Portal do cliente" do chamado (ou em "Conversa com o cliente"), toque em "Retirar" e escreva o motivo |
+| O cliente marcou "O problema continua" | Trate o pedido novo na fila; ele vem com a faixa "o problema continua no chamado ..." e vira reincidência ao aceitar |
 
 </div>
