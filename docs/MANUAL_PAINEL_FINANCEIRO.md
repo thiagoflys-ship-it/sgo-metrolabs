@@ -40,6 +40,8 @@ Regras que valem sempre:
 | Fluxo de caixa | Saldos e movimentos de uma conta no período, e o orçamento do mês por categoria. |
 | Resultado do mês | Recebido, pago e resultado do mês pelo dia do pagamento, por categoria do plano de contas do Omie; transferências entre contas à parte. |
 | Provisões | Previsões do Omie e provisões internas do SGO+ (estas não criam título no Omie). |
+| Contas fixas | Cadastro das despesas que se repetem todo mês e a conta de cada mês para lançar no Omie pela prévia de Lançamentos e baixas (seção 8k). |
+| Fechamento do mês | Checklist do fechamento de cada mês, com quem fez e quando; cada item é uma atividade sigilosa do Financeiro (seção 8l). |
 | Comissões | Leva a Ganhos dos vendedores. |
 | Regras do Financeiro | Configurações em vigor, aprovações pendentes (só o dono do sistema e a Diretoria decidem) e o de-para de categorias. |
 | Indicadores | Nota de saúde financeira e os indicadores I01 a I19 com gráficos, lidos da fotografia diária (seção 8d). |
@@ -48,6 +50,7 @@ Regras que valem sempre:
 | Relatórios semanais | Relatório A4 de saúde financeira de cada semana, aberto só no SGO+, com a lista de quem foi avisado (seção 8h). |
 | Recarga Caju | Recarga Caju da rotina dos técnicos: pedidos e cargas, prestações gasto a gasto, portadores, divergências, política, painel e relatórios A4 (seção 8i). |
 | Especialista financeiro | Dúvidas de uso do Painel, regras financeiras e leitura da situação de hoje pela fotografia, com propostas de ação e de atividade que só viram atividade com a sua confirmação (seção 8j). Não grava no Omie, não aprova e não envia mensagem. |
+| Trilha das operações | Toda gravação feita pelo SGO+ no Omie, com o resultado, e os pedidos de estorno de baixa e de exclusão de título, que só o dono e a Diretoria confirmam (seção 8m). |
 | Sigilo e acessos | Quem pode ver o Financeiro; para a Diretoria, o registro de consultas, planilhas baixadas e recusas. Só o responsável pelo sistema altera a lista. |
 
 ## 4. Visão geral
@@ -106,6 +109,8 @@ As caixas de acesso ficam em Administração > Acessos, no módulo Financeiro:
 | Registrar e cancelar provisões do Financeiro | Provisões internas. |
 | Registrar ações da régua de cobrança | Contato, lembrete, promessa, acordo e encaminhamento à Diretoria na Régua de cobrança (18/11/2026). |
 | Gerar o relatório semanal de saúde financeira agora (parcial) | "Gerar agora" em Relatórios semanais (18/11/2026). |
+
+As abas Contas fixas, Fechamento do mês e Trilha das operações (18/11/2026) não têm caixa própria: ver é da lista de sigilo; cadastrar conta fixa, marcar item do fechamento e pedir estorno ou exclusão usam a caixa "Lançar, alterar e baixar títulos no Omie"; confirmar estorno e exclusão, dispensar item, reabrir mês e alterar a lista do fechamento são do dono e da Diretoria da lista.
 
 **Sigilo (16/11/2026, decisão do dono).** Acima das caixas existe a lista de sigilo do Financeiro. Quem não está nela não abre o painel, não vê o botão, não recebe as sugestões de recebimentos do Omie em Ganhos dos vendedores e não consegue nada pelo endereço do sistema, qualquer que seja o perfil. Em Administração > Acessos, as caixas do Financeiro dessa pessoa aparecem como "Sigiloso: fora da lista do módulo" e não podem ser marcadas; modelo e "copiar de outra pessoa" pulam essas caixas.
 
@@ -369,6 +374,40 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **O assistente geral "Tire sua dúvida".** Para quem está fora da lista de sigilo, a base do assistente geral não tem a ajuda nem os manuais do Financeiro (Painel financeiro, Conciliação Caju, conferência de Compras, gestão da Recarga Caju). Para quem está na lista, o manual do Painel financeiro continua lá; as perguntas de regra e de análise ficam no especialista.
 
+## 8k. Contas fixas (18/11/2026, Onda A, item A1)
+
+**O que é.** Um cadastro no SGO+ das despesas que se repetem todo mês (aluguel, internet, softwares, contador, seguros): descrição, fornecedor do Omie, categoria de despesa, conta corrente, dia do vencimento, valor fixo ou "valor varia — confirmar no mês", e os meses de início e de fim. A lista começa vazia: o sistema não traz nenhuma conta nem valor prontos.
+
+**Todo mês.** Dez dias antes de cada vencimento, a rotina do Financeiro (a mesma da fotografia diária) prepara a conta do mês, que aparece em "Para lançar". "Preparar lançamento" abre a aba Lançamentos e baixas com o novo lançamento preenchido: fornecedor, documento (FX + ano e mês + código da conta), valor, vencimento, categoria, conta corrente, observação e a referência única FIX-<conta>-<AAAAMM>, que impede lançar o mesmo mês duas vezes. Com valor variável, o valor vem em branco e é digitado conforme a fatura. Nada vai ao Omie sem "Conferir prévia" e "Confirmar no Omie"; valem as alçadas e a trilha de sempre. Confirmado pelo Omie, o mês sai de "Para lançar" sozinho. Dia 31 em mês mais curto vira o último dia do mês.
+
+**Sem passar pelo lançamento.** "Já lancei direto no Omie" (com o que foi conferido, 10 letras ou mais) e "Dispensar este mês" (com o motivo, 15 letras ou mais). As duas podem ser desfeitas, com motivo. A conta lançada pelo SGO+ já está no Omie: se foi engano, peça a exclusão do título na Trilha das operações.
+
+**Alterar.** Toda alteração pede o motivo (15 letras ou mais) e grava só o que mudou; o histórico guarda o antes, o depois e quem alterou. O mês já preparado continua com o valor da época; a alteração vale a partir do próximo mês preparado. Para encerrar uma conta, informe o mês de fim.
+
+**Pendência.** A conta do mês que chega ao vencimento sem ser lançada vira pendência só para as pessoas do Financeiro da lista de sigilo (sem ninguém, o dono e a Diretoria da lista), só com a contagem, sem descrição nem valor. Lançamentos e baixas mostra no topo quantas contas fixas estão para lançar.
+
+**Agenda e previsão.** As contas fixas ainda não lançadas entram no Gantt da Agenda financeira (grupo "Contas fixas a pagar ainda não lançadas no Omie") e na previsão de caixa de 90 dias, como saída no vencimento (as já vencidas, hoje), nas duas curvas e no relatório semanal. As de valor variável aparecem no Gantt sem valor e ficam fora da soma; a premissa diz quantas. Depois de lançada, a conta entra pela fotografia do Omie e não é contada duas vezes.
+
+**Quem pode.** Ver: a lista de sigilo. Cadastrar, alterar, preparar, dispensar e marcar como já lançada: quem tem a caixa "Lançar, alterar e baixar títulos no Omie".
+
+## 8l. Fechamento do mês (18/11/2026, Onda A, item A3)
+
+**A lista.** A lista padrão recomendada tem seis itens: conciliação de todas as contas correntes; notas recebidas do mês lançadas; Caju fechado (viagens e Recarga Caju da rotina); provisões revistas; títulos vencidos revistos; relatório do mês para a Diretoria. Cada item tem quem faz (Financeiro, ou o dono e a Diretoria) e o prazo em dias úteis do mês seguinte (5, e 7 para o relatório). O dono e a Diretoria aprovam ou alteram a lista em "Aprovar ou alterar a lista", sempre com motivo; cada gravação é uma versão nova e vale para os checklists abertos depois dela. Enquanto ninguém grava, vale a lista padrão (versão 0).
+
+**Abertura.** No primeiro dia útil do mês, dentro do expediente, a rotina do Financeiro abre o checklist do mês anterior. Cada item vira uma atividade sigilosa do Financeiro (restrita, módulo Financeiro) para a pessoa do Financeiro da lista de sigilo, com o prazo às 18:00 do dia útil do item. Na primeira rodada depois da publicação nada é aberto: o primeiro checklist automático é o do mês da publicação, aberto no mês seguinte. Meses anteriores (até três) são abertos à mão em "Abrir o checklist de".
+
+**Marcar.** "Marcar como feito" registra o nome, a data e a hora do servidor e a observação, e conclui a atividade. "Desfazer a marcação" (quem marcou ou a Diretoria) pede o motivo e devolve a atividade para "A fazer". Dispensar um item, reabrir um mês fechado e alterar a lista são só do dono e da Diretoria, com motivo (segue a regra de aprovação do Painel). O mês fica fechado quando todos os itens estão feitos ou dispensados; reaberto, fecha de novo quando tudo estiver resolvido. Nenhum valor é gravado e nada vai ao Omie.
+
+## 8m. Trilha das operações, estorno de baixa e exclusão de título (18/11/2026, Onda A, item A4)
+
+**Trilha.** Toda gravação que o SGO+ faz no Omie (lançamento, alteração, baixa, estorno, exclusão, boleto, cadastro de cliente ou fornecedor, faturamento e importação de nota) vira uma linha que nunca é alterada nem apagada: quando, quem, de qual tela, a operação, o título, o documento, o valor, a data, a conta corrente, o código da baixa devolvido pelo Omie, o código de integração e o resultado (feito no Omie; recusado pelo Omie, nada feito; não executado por limite do Omie, nada feito; sem resposta, conferir no Omie). Leituras não entram. O que foi feito direto no Omie não aparece. A aba só abre para a lista de sigilo; a planilha CSV sai identificada e fica no registro de acessos.
+
+**Estorno de baixa.** Na linha da baixa feita pelo SGO+, "Pedir estorno" mostra a prévia (lida no Omie, sem gravar): o título, a situação no Omie, a baixa a desfazer, quem fez, o código da baixa e o efeito (o valor volta a ficar em aberto e o movimento sai da conta corrente no Omie; o banco não é mexido). Quem pede (lista de sigilo com a caixa de lançar) escreve o motivo (15 letras ou mais) e envia. O pedido aparece em "Pedidos de estorno e exclusão" e na Caixa de decisões do dono e da Diretoria, sem valor no título. Por decisão do dono, só o dono do sistema e a Diretoria (o Charles) confirmam; quem pediu nunca confirma o próprio pedido. "Confirmar e fazer no Omie" confere de novo o título e chama CancelarRecebimento ou CancelarPagamento com o código da baixa; "Recusar" pede o motivo. Com APROVACAO_SO_DIRETORIA = NAO, outra pessoa da lista confirma. Quem pediu pode retirar o pedido enquanto aguarda. Baixa feita antes desta versão, ou direto no Omie, não tem o código e é estornada no próprio Omie.
+
+**Exclusão de título.** Conta a pagar lançada pelo SGO+ por engano e ainda sem baixa: "Pedir exclusão", com o mesmo caminho (prévia, motivo, confirmação do dono ou da Diretoria, ExcluirContaPagar). Título com baixa é recusado: estorne a baixa antes. A exclusão de conta a receber ainda não é feita pelo SGO+, porque o método do Omie não foi confirmado: faça no Omie.
+
+**Sem resposta do Omie.** Se o Omie não responder à confirmação, o pedido fica "sem resposta" e vira pendência para quem pediu e quem confirmou. Nada é reenviado sozinho: confira o título no Omie e registre "foi feito" ou "não foi feito". Se o Omie recusar, nada foi feito e o pedido é encerrado com o motivo do Omie.
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
@@ -397,6 +436,12 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 | Especialista responde a análise com o texto padrão do sistema | A IA está desligada para dados da empresa, a chave não está cadastrada, o limite de 15 análises do dia foi atingido ou a IA não respondeu. A faixa no topo da aba e o aviso da resposta dizem qual foi. |
 | "A proposta expirou (ela vale 30 minutos) ou já foi usada" | Nada foi criado. Faça a pergunta de novo e confirme a nova proposta em até 30 minutos. |
 | "proposta(s) da IA foram descartadas pelo sistema" | O responsável estava fora da lista de sigilo, o prazo fora de 1 a 30 dias úteis, a aba não existe ou havia número fora dos dados. Se a atividade for necessária, crie pelo módulo de Atividades. |
+| Contas fixas: "já foi lançada (título … no Omie)" | A conta daquele mês já está no Omie. Nada foi preparado. Se foi engano, peça a exclusão do título na Trilha das operações. |
+| Trilha: "Esta baixa não tem o código da baixa do Omie" | Baixa feita antes da trilha ou sem o código devolvido pelo Omie. Estorne direto no Omie. |
+| Trilha: "Você não confirma nem recusa estorno ou exclusão no Omie" | Só o dono e a Diretoria confirmam. Acompanhe o pedido em "Pedidos de estorno e exclusão". |
+| Trilha: "O Omie não confirmou o envio" ao confirmar um pedido | Pode ter sido feito. Confira o título no Omie e registre "foi feito" ou "não foi feito" no pedido. |
+| Fechamento: "Por decisão do dono, só o dono do sistema e a Diretoria ... dispensam item" | Marque o que foi feito e peça à Diretoria a dispensa do item que não se aplica, com o motivo. |
+| Fechamento: "O mês já está fechado" | A Diretoria reabre o mês com o motivo; depois, desfaça a marcação do item a refazer. |
 
 ## 10. Como fazer em cada aba
 
@@ -435,6 +480,7 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 5. Depois de confirmar, toque em Atualizar e confira o título na lista. A baixa registra o pagamento no Omie; ela não transfere dinheiro no banco.
 6. A baixa confere o saldo em aberto do título e não aceita título já pago ou cancelado. Juros, multa e desconto ficam em zero até a primeira baixa acompanhada.
 7. Se o Omie não respondeu a um envio, ele aparece em "Envios a conferir no Omie": confira no Omie e registre se foi feito ou não.
+8. Contas fixas para lançar aparecem numa faixa no topo, com o atalho para a aba Contas fixas. Para estornar uma baixa ou excluir um título lançado por engano, use a aba Trilha das operações: o pedido vai ao dono ou à Diretoria.
 
 **Cobranças.** Consultar, gerar ou prorrogar o boleto de um título a receber.
 
@@ -483,6 +529,21 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 1. Para consultar, escolha a origem e o período e toque em Consultar.
 2. Para registrar uma provisão interna, abra o formulário, preencha tipo, descrição, valor e vencimento previsto e toque em "Registrar provisão".
 3. A provisão interna fica só no SGO+: ela não cria título no Omie.
+
+**Contas fixas.** Cadastrar as despesas que se repetem todo mês e lançar a conta de cada mês no Omie sem digitar tudo de novo.
+
+1. A lista começa vazia. Em "Cadastro das contas fixas", toque em "Nova conta fixa" e preencha a descrição, o fornecedor do Omie, a categoria de despesa, a conta corrente, o dia, o valor (fixo ou "valor varia") e o mês de início.
+2. Alguns dias antes de cada vencimento, a conta do mês aparece em "Para lançar". Toque em "Preparar lançamento": a aba Lançamentos e baixas abre com o novo lançamento preenchido.
+3. Confira os campos (com valor variável, digite o valor do mês), toque em "Conferir prévia" e depois em "Confirmar no Omie". Nada vai ao Omie sem essa confirmação; confirmado, o mês sai de "Para lançar" sozinho.
+4. Se a conta já foi lançada direto no Omie, toque em "Já lancei direto no Omie"; se não será paga neste mês, em "Dispensar este mês". As duas pedem o motivo e podem ser desfeitas.
+5. A conta que chega ao vencimento sem ser lançada vira pendência para o Financeiro da lista de sigilo. As contas ainda não lançadas aparecem na Agenda financeira e entram na previsão de caixa (as de valor variável, sem valor).
+
+**Fechamento do mês.** Fechar o mês com um checklist: o que precisa estar feito, quem fez e quando.
+
+1. O checklist do mês abre sozinho no primeiro dia útil do mês seguinte, e cada item vira uma atividade sigilosa do Financeiro com prazo. Para começar antes, escolha o mês em "Abrir o checklist de" e toque em "Abrir o checklist".
+2. Feito um item, toque em "Marcar como feito" e escreva, se quiser, uma observação. Fica registrado quem fez e quando, e a atividade é concluída junto. "Desfazer a marcação" pede o motivo.
+3. Item que não se aplica no mês só é dispensado pelo dono ou pela Diretoria, com o motivo. O mês fica fechado quando todos os itens estão feitos ou dispensados; reabrir também é da Diretoria, com o motivo.
+4. A lista é aprovada e alterada pelo dono e pela Diretoria em "Aprovar ou alterar a lista". Cada gravação é uma versão nova e vale para os checklists abertos depois dela.
 
 **Comissões.** Mostrar onde ficam as comissões dos vendedores.
 
@@ -540,6 +601,13 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 3. Abaixo de cada resposta aparecem as fontes, o aviso quando o assunto é do contador ou do jurídico e os botões "Resolveu" e "Não resolveu".
 4. Proposta de atividade: confira o título, a descrição, o responsável (só da lista de sigilo), o prazo e a prioridade e toque em "Criar atividade". Sem esse toque nada é criado; a proposta vale 30 minutos.
 5. O especialista não grava nada no Omie, não aprova nada e não envia mensagem a ninguém. A conversa some ao sair do Painel. A "Base de regras financeiras", no fim da aba, mostra as regras usadas; só o dono e a Diretoria as alteram.
+
+**Trilha das operações.** Ver toda gravação que o SGO+ fez no Omie e pedir o estorno de uma baixa ou a exclusão de um título lançado por engano.
+
+1. Cada linha é uma gravação: quando, quem, de qual tela, a operação, o título, o valor, o resultado (feito, recusado, não executado ou sem resposta) e os códigos do Omie. Use os filtros e toque em Consultar; "Baixar planilha (CSV)" sai identificada com o seu nome.
+2. Para desfazer uma baixa feita pelo SGO+, toque em "Pedir estorno" na linha da baixa; para apagar uma conta a pagar lançada por engano (sem baixa), em "Pedir exclusão". Leia a prévia, escreva o motivo e envie o pedido.
+3. O pedido não muda nada no Omie. O dono do sistema ou a Diretoria lê a prévia e o motivo em "Pedidos de estorno e exclusão" e toca em "Confirmar e fazer no Omie" (o SGO+ faz na hora) ou em "Recusar". Quem pediu não confirma o próprio pedido; enquanto aguarda, pode retirá-lo.
+4. Se o Omie não responder à confirmação, o pedido fica "sem resposta": confira o título no Omie e registre "foi feito" ou "não foi feito". Baixa feita antes desta versão ou direto no Omie não tem o código e é estornada no próprio Omie.
 
 **Sigilo e acessos.** Ver quem pode acessar o Financeiro e quem consultou o quê.
 
@@ -701,6 +769,46 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
   - **Confirmar com:** escolha o contador (impostos, contabilidade, folha) ou o jurídico (protesto, negativação, cobrança judicial) quando a decisão depender deles. A resposta que usar esta regra leva o aviso.
   - **Motivo da mudança:** o que mudou e por quê (pelo menos 15 letras). A versão anterior fica guardada.
   - **Texto revisado com a contabilidade:** marque só quando o contador tiver lido e aprovado esta versão. Sem a marca, as respostas avisam que a base é o texto padrão.
+
+### Contas fixas
+
+- **Descrição:** o nome da conta como a equipe a conhece (ex.: "Aluguel da sede", "Internet do escritório"). Aparece em "Para lançar", na Agenda financeira e na observação do título no Omie.
+- **Fornecedor no Omie:** a quem a conta é paga. Digite o CNPJ (ou CPF) ou parte do nome, toque em Buscar e depois em "Usar este". Se ele não estiver no Omie, use "Cadastrar no Omie".
+- **Categoria de despesa:** em que linha do plano de contas do Omie a conta entra (ex.: aluguel, telefonia e internet, softwares). Só aparecem categorias de despesa; a prévia de cada mês confere de novo no Omie.
+- **Conta corrente:** o banco de onde a conta costuma ser paga. Vai preenchida no lançamento; dá para trocar na hora.
+- **Dia do vencimento:** de 1 a 31. Em mês mais curto vale o último dia do mês (dia 31 em fevereiro vira 28 ou 29). Se cair em fim de semana ou feriado, ajuste a data no lançamento.
+- **Valor:** "Valor fixo" quando a conta é sempre igual (ex.: aluguel); "Valor varia — confirmar no mês" quando muda com a fatura (ex.: energia). Com valor variável, o lançamento abre sem valor e a previsão de caixa não soma a conta até ela ser lançada.
+- **Valor fixo (R$):** o valor de cada mês, com vírgula nos centavos (ex.: 1.250,00). Uma alteração vale para os meses ainda não preparados.
+- **Início (mês):** o primeiro mês em que a conta é preparada para lançar.
+- **Fim (mês, se houver):** o último mês da conta (ex.: fim do contrato). Deixe vazio se não há fim previsto. Para encerrar uma conta, altere e informe o fim.
+- **Observação:** o que ajuda no lançamento (ex.: número do contrato, forma de pagamento). Vai junto na observação do título no Omie.
+- **Motivo da alteração:** o que mudou e por quê (pelo menos 15 letras, ex.: "reajuste anual do aluguel"). Fica no histórico com o antes e o depois.
+- **Motivo:** em "Dispensar este mês", por que a conta não será paga neste mês (pelo menos 15 letras); em "Já lancei direto no Omie", o que você conferiu no Omie, como a data e o documento (pelo menos 10 letras); em "Desfazer", por que está desfazendo. Fica registrado com o seu nome.
+
+### Fechamento do mês
+
+- **Mês:** o checklist mostrado abaixo. "Aberto" ainda tem item pendente; "fechado" teve todos os itens feitos ou dispensados.
+- **Abrir o checklist de:** abre à mão o checklist de um mês que ainda não tem (o atual ou até 3 meses atrás), com as atividades do Financeiro. Normalmente ele abre sozinho no primeiro dia útil do mês seguinte.
+- **Observação:** o que foi feito ou onde está a conferência (opcional, ex.: "conciliadas as 3 contas; tarifa lançada"). Fica com o seu nome, a data e a hora; a atividade é concluída junto.
+- **Motivo:** ao desfazer, por que o item volta a pendente (pelo menos 10 letras); ao dispensar (só o dono e a Diretoria), por que o item não se aplica neste mês (pelo menos 15 letras).
+- **Motivo da reabertura:** por que o mês fechado precisa ser reaberto (pelo menos 15 letras, ex.: "nota de outubro recebida depois do fechamento"). Só o dono e a Diretoria reabrem.
+- **Título:** o que precisa estar feito, em poucas palavras (ex.: "Conciliação de todas as contas correntes"). Deixe vazio para retirar o item da lista.
+- **Quem faz:** o Financeiro (a atividade vai para a pessoa do Financeiro da lista de sigilo) ou o dono e a Diretoria.
+- **Prazo:** em qual dia útil do mês seguinte o item deve estar feito (de 1 a 15). Feriados cadastrados no expediente não contam.
+- **Como conferir:** o que exatamente marca o item como feito. Vai na descrição da atividade.
+- **Motivo:** por que a lista está sendo aprovada ou alterada (pelo menos 15 letras). Cada gravação é uma versão nova, com o seu nome.
+
+### Trilha das operações
+
+- **De e Até:** o período das gravações (pela data em que o SGO+ enviou ao Omie). Vazio mostra tudo.
+- **Até:** o último dia do período.
+- **Operação:** lançamento, alteração, baixa, estorno, exclusão, boleto, cadastro ou faturamento.
+- **Resultado:** feito no Omie, recusado pelo Omie, não executado (Omie ocupado) ou sem resposta (conferir no Omie).
+- **Buscar:** parte do nome de quem fez, do documento, do código do título ou dos códigos da baixa.
+- **Motivo do pedido:** o que aconteceu e por que desfazer (pelo menos 15 letras, ex.: "baixa lançada no título errado; o pagamento era da NF 1234"). Quem confirma lê o motivo e a prévia acima.
+- **Motivo da decisão:** opcional para confirmar; obrigatório para recusar (pelo menos 10 letras). Quem pediu lê o motivo.
+- Por que está retirando o pedido (pelo menos 10 letras). Nada foi enviado ao Omie.
+- **O que você conferiu no Omie (pelo menos 10 letras, ex.:** "a baixa não aparece mais no título"). "Foi feito" encerra sem repetir; "não foi feito" encerra e permite um pedido novo.
 
 ### Sigilo e acessos
 
