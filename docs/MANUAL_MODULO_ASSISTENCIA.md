@@ -375,6 +375,25 @@ versão nova nasce sem motivo. Correção depois do encerramento é da gestão: 
 (Rev. 01, 02...), a anterior fica arquivada como substituída, o histórico de revisões entra no documento (registro
 comum de revisões do SGO+) e a revisão precisa ser enviada ao cliente de novo.
 
+### Reabrir para correção (18/11/2026)
+
+Quando o erro não é só de texto (foto errada ou faltando, assinatura cortada, resposta ou peça errada), a O.S. encerrada
+pode ser **reaberta para correção** pelo dono (Administrador), pela Diretoria e pela gestão da área (gestor da área Técnica
+ou o gestor do setor da O.S.). Na ficha da O.S., bloco **"Correção"**, toque em **"Reabrir para correção (com motivo)"** e
+escreva o motivo (pelo menos 10 letras). O.S. com a documentação pendente também pode ser reaberta.
+
+- A O.S. volta para **Em execução**. O técnico é avisado e, ao atualizar o Meu dia, o SGO+ Campo mostra "Reaberta para
+  correção" com quem reabriu e o motivo, e libera fotos, respostas, relato, peças e assinaturas.
+- A gestão também corrige pela própria ficha: anexa fotos, corrige respostas, relato e peças, e salva.
+- Nada é apagado: a conclusão anterior, a foto retirada e a assinatura antiga ficam registradas; o histórico mostra
+  "Reaberta para correção", "Conclusão desfeita" e "Correção pedida", com quem, quando e o motivo.
+- Ao concluir de novo, a O.S. é encerrada e o relatório sai como a **revisão seguinte** do mesmo número (Rev. 01, 02...),
+  com o motivo da reabertura; o chamado não anda de novo. Envie a revisão ao cliente.
+
+**Pedido do técnico.** No aplicativo, antes do encerramento o próprio técnico usa "Desfazer conclusão para corrigir" (com
+motivo). Depois do encerramento ele toca em "Pedir correção": a gestão da área recebe o aviso "Correção pedida na OS-..." e
+o pedido aparece no bloco "Correção" da ficha até a O.S. ser reaberta.
+
 ## Documento e envio ao cliente
 
 O envio do PDF ao cliente é sempre ato de uma pessoa: o técnico, no aplicativo, ao concluir (O.S. encerrada > "Enviar ao

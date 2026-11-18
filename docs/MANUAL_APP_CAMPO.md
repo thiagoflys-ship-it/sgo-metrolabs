@@ -248,6 +248,28 @@ Sem sinal: cada toque fica guardado no aparelho na hora e entra na fila (um regi
 
 Depois do encerramento: o equipamento fora de uso vira chamado sozinho (um por equipamento, sem repetir), a calibração ou qualificação vencida vira sugestão ao Comercial, e o relatório da ronda é gerado para a gestão e para o cliente. "Enviar ao cliente por e-mail" funciona como nas outras O.S.
 
+## 3c. Fotos, assinatura em tela cheia e correção (18/11/2026)
+
+### Fotos: câmera e galeria
+
+- **Tirar foto** abre a câmera do celular; **Escolher do celular** abre a galeria e aceita até 20 fotos de uma vez. Cada foto é reduzida no aparelho (lado maior até 1600 px, cerca de 300 KB) e leva a O.S., a data e a hora gravadas na imagem.
+- Se aparecer **"A foto não chegou ao app"**, o celular fechou o SGO+ Campo enquanto a câmera ou a galeria estava aberta, por falta de memória. Nada do que estava guardado se perdeu. Feche os outros aplicativos e toque de novo; se repetir, tire a foto pela câmera do próprio celular e use "Escolher do celular".
+- Foto **HEIC** (padrão do iPhone) que o navegador não abre: o app diz o motivo. Use "Tirar foto" pelo app ou, no iPhone, Ajustes > Câmera > Formatos > "Mais compatível".
+- Celular **sem espaço**: o app avisa que não conseguiu guardar a foto e o que fazer (liberar espaço e tentar de novo).
+
+### Assinatura em tela cheia
+
+- Na tela da assinatura (do cliente ou a sua), toque em **Assinar em tela cheia**. O quadro ocupa a tela inteira, com a linha de base ("Assine sobre a linha") e o nome de quem assina no alto.
+- No Android, o app entra em tela cheia e vira o quadro na horizontal quando o celular permite. No iPhone aparece a dica "vire o celular de lado"; virar não é obrigatório e o que já foi assinado não se perde ao girar.
+- **Limpar** apaga e recomeça; **Cancelar** volta sem mudar nada; **Confirmar** passa a assinatura para o quadro da tela. Confira o nome e toque em **Guardar assinatura**.
+- O quadro normal também ficou maior: a altura acompanha a tela do celular.
+
+### Errei: como corrigir
+
+- **Antes de a O.S. ser encerrada no servidor** (concluída no aparelho, ou concluída com a documentação ainda pendente): na O.S., toque em **Desfazer conclusão para corrigir** e escreva o motivo (pelo menos 10 letras). A O.S. volta a aceitar fotos, respostas, relato, peças e assinaturas (botão **Refazer** na assinatura). Corrija e toque em **Concluí** de novo.
+- **Depois de encerrada no servidor**: toque em **Pedir correção** e escreva o motivo. A gestão da área recebe o pedido como aviso. Se ela concordar, reabre a O.S. no SGO+ ("Reabrir para correção"); atualize o Meu dia e a O.S. aparece como **Reaberta para correção**, com quem reabriu e o motivo. Corrija e conclua de novo.
+- Nada é apagado: a conclusão anterior, o motivo, quem corrigiu e quando ficam no histórico da O.S. O novo encerramento gera a revisão seguinte do relatório (Rev. 01, 02...), que precisa ser enviada de novo ao cliente.
+
 ## 4. Sem sinal (subsolo, centro cirúrgico, estrada)
 
 - Trabalhe normalmente. Tudo o que você faz fica guardado no celular, inclusive fotos e assinatura, mesmo que o app seja

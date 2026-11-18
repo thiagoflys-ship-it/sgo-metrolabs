@@ -7,10 +7,10 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R95, imagem
-  `sha256:632447683743c3e1357b6f69f365e8f7ec55d1236ba79555912250a95a84a170`,
-  tag `metrolabs/rh:cct-auditoria-versoes-20261118-r95`.
-  Evidência: `output/rh360-20261118-r95/PUBLICADO_RH360_R95_20261118.txt`.
+- Última publicação RH registrada nesta revisão: R98, imagem
+  `sha256:c881a9dbbdc6437a4f5efdb64262c19bec97ade258a14b9de51ffb577086b825`,
+  tag `metrolabs/rh:ponto-causalidade-20261118-r98`.
+  Evidência: `output/rh360-20261118-r98/PUBLICADO_RH360_R98_20261118.txt`.
   Preserva as entregas anteriores; 847 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
@@ -1131,3 +1131,49 @@ Evidências e limites: output/rh360-20261118-r95/PUBLICADO_RH360_R95_20261118.tx
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 18/11/2026 — PUBLICADO pedidos-p4-viagem-recarga-20261118 (base pedidos-p3-pendencias-chat-email-20261118; cand29). Pacote 4: Depósito de viagem — recarga = total / % da política (vazio, opção oculta) / valor fixo com motivo; combustível pelo consumo real do veículo (Frota, 3 intervalos; PQB4394 9,80 km/L, PRP8J05 8,03 km/L; GFU5G11 e PRD6C57 sem leituras suficientes; GFU5G11 tem KM 127,2 suspeito) e preço do último abastecimento; 'sem combustível' (cartão Itaú da frota / tanque cheio); sobra no Caju vira pendência ao Financeiro (2 dias úteis). Recarga semanal como tipo da Recarga Caju: programação da semana (puxa O.S. do SGO+ e tarefas do Auvo), valor = previsto − saldo, só dono/Diretoria aprovam, previsto × realizado. Suíte 2665/0. Relatório: output/pedidos-20261118/p4/RELATORIO.md. Produção atual = cand29. FILA de 18/11 (P1–P4) CONCLUÍDA.
+
+
+RH360 R96 — publicada/verificada em 18/11/2026 18:16 BRT
+Imagem: sha256:a0453e9f6aaa4e0e838b837ca6776c7b32d7f73620fcc4659170a35e1f129652
+Tag: metrolabs/rh:cct-diferencas-duracao-20261118-r96
+Manifesto: 477c232060c8f9c342bd4afd51f2197c7c781395fce95d154d9ec902b2163e49
+DiferenÃ§as tÃ©cnicas de duraÃ§Ã£o com origem governada e atualidade compatÃ­vel.
+847 pins; 13 fontes sobre R95, nenhum novo esquema/arquivo de fonte ou autoridade.
+Hashes/diÃ¡rios V1 continuam como prova de integridade; semÃ¢ntica V2 sÃ³ rege atualidade e prevenÃ§Ã£o de cÃ³pia sem mudanÃ§a relevante.
+Evidências e limites: output/rh360-20261118-r96/PUBLICADO_RH360_R96_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R97 — publicada/verificada em 18/11/2026 18:52 BRT
+Imagem: sha256:ccfdf19e021a2e1acd39d553148f540e97419f9d487ba76175b8d3b06849ae38
+Tag: metrolabs/rh:ponto-sobreposicao-dias-20261118-r97
+Manifesto: eed614f4c068428d2ce31d794fc465a127425e95766883ec409b09775e691b46
+Conferências de ponto sem dupla contagem entre dias vizinhos.
+847 pins; cinco fontes sobre R96, sem novo esquema, índice ou autoridade.
+Cálculo e integridade V1 preservados; confronto adicional somente para preparação e uso atual.
+Evidências e limites: output/rh360-20261118-r97/PUBLICADO_RH360_R97_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R98 — publicada/verificada em 18/11/2026 19:16 BRT
+Imagem: sha256:c881a9dbbdc6437a4f5efdb64262c19bec97ade258a14b9de51ffb577086b825
+Tag: metrolabs/rh:ponto-causalidade-20261118-r98
+Manifesto: 0663b20584185713f35d8ec8e8c8379dd079620af21aad3488a8a4b85108c84b
+Intervalos de ponto declarados somente após o término.
+847 pins; cinco fontes sobre R97, sem novo esquema ou autoridade.
+Integridade e cálculo V1 preservados; causalidade adicional na preparação e no uso atual. Declaração antecipada não se valida pela simples passagem do tempo.
+Evidências e limites: output/rh360-20261118-r98/PUBLICADO_RH360_R98_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 18/11/2026 — DECISÃO DO DONO: Auvo cancelado. Retirar do SGO+ toda integração, rotinas, pendências, avisos, alertas e menus do Auvo; histórico fica só para consulta (nada apagado do banco). Próximo trabalho depois do app de campo.
+
+
+ENCERRAMENTO DA JORNADA RH — 18/11/2026 20:00 BRT
+17 entregas R82–R98 publicadas/verificadas; base sha256:c881a9dbbdc6437a4f5efdb64262c19bec97ade258a14b9de51ffb577086b825.
+Relatório total, 26 áreas, matriz de 15 critérios e roteiro: output/rh360-jornada-20261118/.
+Próximo desenho de expressão CCT V2 preparado, NÃO implementado/homologado.
+Projeto integral aberto; aceite real adiado, guardas de operação/ingestão de ponto desligadas e dados/decisões reais não inventados.
+Entrega/limites: output/rh360-jornada-20261118/ENTREGA_ATE_2000.txt. Conferir produção real antes de retomar.
+- 18/11/2026 — PUBLICADO campo-foto-hotfix-20261118 (correção mínima: foto depois de concluir, input sem hidden, quadro maior) e em seguida campo-foto-assinatura-correcao-20261118 (sha 5538eb2a…; app 7eeb3c773ab4; legado cand30). App de campo: causa principal da foto perdida = celular fecha o app com a câmera/galeria aberta (memória) — agora o app guarda o alvo e avisa 'A foto não chegou ao app'; mensagens claras (HEIC, não imagem, celular cheio); 'Assinar em tela cheia'; 'Desfazer conclusão para corrigir' (antes de encerrar no servidor) e 'Pedir correção' (depois); web: 'Reabrir para correção' (dono, Diretoria, gestores da área) com revisão do relatório. Suíte 2668/0. Relatório: output/campo-20261118/RELATORIO.md. Produção atual = cand30.
