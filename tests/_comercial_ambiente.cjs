@@ -176,7 +176,9 @@ function ambiente(opcoes) {
 
 /** Cria um contato e uma oportunidade de teste para a vendedora (devolve { contato, oportunidade }). */
 function oportunidadeDeTeste(amb, sid, extra) {
-  const ct = amb.api(sid || 's_vera', 'salvarContato', { clienteId: 'c1', unidadeId: 'un1', nome: 'Ana Enfermeira Teste', cargo: 'Coordenadora da CME', papel: 'USA', email: 'ana@alfa.exemplo.test' });
+  // 18/11/2026 (Pacote 2, item 7): o contato repetido é recusado; a segunda oportunidade do mesmo teste usa o contato existente
+  // (o botão "Usar o contato existente" da tela), como a vendedora faria.
+  const ct = amb.api(sid || 's_vera', 'salvarContato', { clienteId: 'c1', unidadeId: 'un1', nome: 'Ana Enfermeira Teste', cargo: 'Coordenadora da CME', papel: 'USA', email: 'ana@alfa.exemplo.test', usarExistente: true });
   if (!ct.ok) throw new Error(ct.message);
   const r = amb.api(sid || 's_vera', 'salvarOportunidade', Object.assign({ titulo: 'Qualificação térmica da autoclave AC-01', clienteId: 'c1', unidadeId: 'un1', contatoId: ct.contato.id, equipamentos: ['eq1'],
     funil: 'ENGENHARIA', etapa: 'ENG_1', origem: 'Indicação', valor: '4.500,00', proxima: { acao: 'Ligar para entender o escopo', data: '2026-10-20', hora: '10:00', tipo: 'LIGACAO' } }, extra || {}));

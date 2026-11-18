@@ -77,6 +77,10 @@ test('2. nenhuma regra de conta mudou: os arquivos do servidor do Comercial são
   // 18/11/2026 (Pacote 1, item 5): SGO_Comercial_Propostas.js e SGO_Comercial_Painel.js ganharam o aprovador delegado do preço (ComDel_*),
   // sem mexer nas contas de preço e viagem; coberto por tests/pedidos-20261118-p1-comercial.test.cjs.
   const P1 = ['SGO_Comercial_Propostas.js', 'SGO_Comercial_Painel.js'];
+  // 18/11/2026 (Pacote 2): contatos repetidos, equipamento opcional na calibração e na qualificação, duplicar proposta e itens mais usados
+  // (SGO_Comercial_Contatos/DadosEmissao/Documento/Assistente/Oportunidades.js), sem mexer nas contas de preço e viagem; coberto por
+  // tests/pedidos-20261118-p2-*.test.cjs.
+  P1.push('SGO_Comercial_Contatos.js', 'SGO_Comercial_DadosEmissao.js', 'SGO_Comercial_Documento.js', 'SGO_Comercial_Assistente.js', 'SGO_Comercial_Oportunidades.js');
   for (const f of arquivos.filter((x) => x !== 'SGO_Comercial_Precificacao.js' && x !== CAT && P1.indexOf(x) < 0)) assert.equal(ler(f), fs.readFileSync(path.join(BASE, f), 'utf8'), f + ' mudou');
 });
 

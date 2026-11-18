@@ -16,6 +16,9 @@ const TEM = fs.existsSync(path.join(PASTA, 'SGO_Comercial_DadosEmissao.js'));
 const EXTRAS = ['SGO_Clientes.js', 'SGO_Unidades.js', 'SGO_CadastroQualidade.js', 'SGO_Comercial_Rotas.js', 'SGO_Comercial_DadosEmissao.js'];
 
 function ambiente(o) {
+  // 18/11/2026 (Pacote 2, item 6): estes testes tratam do equipamento OBRIGATÓRIO para emitir (regra de 11/11/2026), que continua
+  // existindo como opção; o padrão agora é o vínculo opcional na calibração e na qualificação (tests/pedidos-20261118-p2-*.test.cjs).
+  o = Object.assign({}, o || {}); o.props = Object.assign({ COM_DADOS_EMISSAO_CFG: JSON.stringify({ equipamentoOpcional: false }) }, o.props || {});
   const a = ambienteBase(Object.assign({ custoAvulso: 0.3 }, o || {}));
   a.ctx.SGO_DATA.mesclarCampos_ = (atual, norm, pedido, campos) => { const s = {}; campos.forEach((c) => { s[c] = Object.prototype.hasOwnProperty.call(pedido || {}, c) ? norm[c] : (atual && atual[c] != null ? atual[c] : ''); }); return s; };
   a.ctx.SGO_DATA.validarCadastroUnico_ = () => {};

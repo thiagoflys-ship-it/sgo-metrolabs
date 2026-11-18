@@ -145,6 +145,32 @@ A especialista não envia nada ao cliente, não muda a etapa e não cria ativida
 
 Só o rascunho é editado. Antes do envio use "Editar (volta para rascunho)"; depois do envio, "Nova revisão" (mesmo número, revisão seguinte; a anterior fica substituída). A proposta vencida sem resposta é marcada pela rotina. Editam a proposta o responsável por ela e a gestão comercial.
 
+### Orçamento rápido: vários itens de uma vez, mais usados e copiar (18/11/2026)
+
+Pedido do Matheus de 18/11/2026: os representantes levavam tempo demais para montar o orçamento. O que mudou:
+
+- "Nova proposta" na oportunidade abre duas saídas. "Em branco": o contato principal do cliente (ou o único) entra no A/C quando a oportunidade não tem contato, e as condições de pagamento, garantia e frete vêm da última proposta do cliente (o local também, se for a mesma unidade); o histórico registra de onde vieram. "Copiar esta": lista as propostas anteriores do cliente que você vê, com o resumo dos itens.
+- "Duplicar proposta", na proposta aberta, cria uma oportunidade nova do mesmo cliente com um rascunho igual: itens, quantidades, parâmetros técnicos, tipo de equipamento, equipamentos ainda ativos, condições, escopo e viagem. Os preços vêm da tabela de hoje (não o preço negociado antes). O desconto, as aprovações e a validação do escopo não são copiados: a proposta nova passa por todas as regras. Item que saiu do catálogo vem como avulso, com o preço antigo e o aviso; equipamento inativo fica fora, com o aviso. O histórico das duas propostas registra a cópia.
+- "Do catálogo" marca vários itens de uma vez, cada um com a quantidade, e mostra no topo os mais usados nos últimos 12 meses (os seus; os da equipe enquanto você tem menos de 5 propostas no período). A busca pode mudar à vontade: o que foi marcado continua marcado. Item igual que já está na proposta (mesmo serviço, sem equipamento, no prazo da proposta) soma na quantidade, em vez de repetir.
+- A lista colada do cliente continua pelo Orçamentista (botão no passo 1).
+- O editor guarda neste aparelho o que foi mudado e ainda não salvo. Se a página fechar ou o celular perder a conexão, ao abrir a proposta aparece o aviso com "Recuperar e salvar" e "Descartar". Ao salvar, a cópia do aparelho é apagada. A cópia vale só para a mesma versão da proposta: se alguém salvou a proposta depois, ela é descartada.
+
+Antes e depois para um orçamento típico de 10 serviços de calibração do catálogo (medido no código e nas telas; detalhes no relatório do Pacote 2): antes, cada item era uma busca e um toque ("Acrescentar item" ou "Do catálogo", digitar, escolher), e a emissão exigia identificar cada equipamento (um por unidade do item: tipo, marca, modelo, série e setor). Agora são 1 toque para abrir "Do catálogo", 1 toque por item marcado, a quantidade digitada só onde não é 1 e 1 toque para acrescentar; a emissão pede só o tipo de equipamento, que vem da descrição do catálogo.
+
+### Equipamento na calibração e na qualificação: o vínculo é opcional (18/11/2026)
+
+Pedido do Matheus de 17/11/2026. Nos itens de calibração e de qualificação (QI, QO e QD), vincular cada equipamento é opcional (padrão). A proposta é emitida com a quantidade e o "Tipo de equipamento" do item. Em branco, vale o tipo da descrição do catálogo ("Calibração de termômetro digital" dá "termômetro digital"; "Qualificação de instalação (QI) de termodesinfectora" dá "termodesinfectora"); se a descrição não diz o tipo, o quadro "Faltam dados para emitir" pede o tipo, com o porquê e o que fazer.
+
+- Com parte dos equipamentos identificados, o documento lista os identificados e diz que os demais são identificados na execução.
+- O documento A4 diz, no item: "Tipo de equipamento: ... Os equipamentos são identificados (marca, modelo, número de série e local) na execução do serviço e constam do certificado ou relatório." O escopo da especialista diz a quantidade e o tipo, "identificados na execução do serviço".
+- O quadro "Equipamentos identificados na execução" (na proposta, também depois do envio e da aprovação) lista, por item, o tipo e quantos faltam identificar; é aviso, não trava.
+- Na passagem aos setores, a atividade da Área técnica traz "Equipamentos: tipo; N equipamentos a identificar na execução (triagem do chamado e certificado)", e o chamado da Assistência leva o tipo. A técnica liga cada equipamento do cadastro na triagem ("Ligar ao equipamento do cadastro"), como em qualquer chamado sem equipamento.
+- Preço, parâmetros técnicos do catálogo oficial e quantidade não dependem do vínculo. Dois itens do mesmo serviço para tipos diferentes (termômetro digital e termômetro de vidro) não são "repetidos".
+- Manutenção, NR-13, ensaio e inspeção continuam exigindo o equipamento identificado, um por unidade do item.
+- A Diretoria, o Administrador ou o dono voltam a exigir o vínculo em Metodologia comercial > "Equipamento na calibração e na qualificação" (com motivo, no histórico). A propriedade do servidor é a mesma da conferência dos dados (COM_DADOS_EMISSAO_CFG, chave equipamentoOpcional); mudar uma chave não mexe na outra.
+
+Na proposta guiada, o passo 4 tem "Sem vincular equipamentos": cada linha é um tipo, uma quantidade e o serviço (calibração, qualificação completa, QI, QO ou QD). No passo 5, cada linha recebe o serviço do catálogo pela mesma sugestão dos equipamentos, e a proposta nasce com o item, a quantidade e o tipo.
+
 ### A proposta em quatro passos
 
 O rascunho abre em quatro passos. Toque no número do passo ou em "Próximo"; no celular, o Voltar do topo volta ao passo anterior. Nenhum passo apaga o que foi digitado em outro.
@@ -404,7 +430,7 @@ As cláusulas do contrato (1. Do objeto, 2. Do prazo de entrega, 3. Da forma de 
 <!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
 Pedido do dono: não deixar a proposta sair com cadastro ou dado faltando; faltando, o vendedor pede ao cliente e só emite com os dados completos. O rascunho continua livre para salvar e concluir. Emitir é gerar o documento A4; o envio, o link de assinatura e o "Entregue por outro meio" dependem dele.
 
-Obrigatórios para emitir: cadastro do cliente completo (CNPJ ou CPF válido, razão social, endereço de faturamento com CEP, logradouro, número, bairro, cidade e UF, e-mail para nota fiscal e cobrança, responsável e telefone); unidade com cidade e UF (local de execução) e CNPJ válido quando informado; contato da proposta com e-mail e telefone; o equipamento de cada serviço técnico identificado, um por unidade do item (do cadastro do cliente ou com tipo, marca, modelo, número de série, setor e, para autoclave, lavadora, termodesinfectora, secadora, estufa e câmaras, a capacidade); e o escopo escrito e validado pelo vendedor. Produto, peça e serviço sem equipamento (treinamento, consultoria, documentos, taxa) não pedem equipamento.
+Obrigatórios para emitir: cadastro do cliente completo (CNPJ ou CPF válido, razão social, endereço de faturamento com CEP, logradouro, número, bairro, cidade e UF, e-mail para nota fiscal e cobrança, responsável e telefone); unidade com cidade e UF (local de execução) e CNPJ válido quando informado; contato da proposta com e-mail e telefone; o equipamento de cada serviço técnico identificado, um por unidade do item (do cadastro do cliente ou com tipo, marca, modelo, número de série, setor e, para autoclave, lavadora, termodesinfectora, secadora, estufa e câmaras, a capacidade), exceto na calibração e na qualificação, em que desde 18/11/2026 bastam o tipo de equipamento e a quantidade (veja "Equipamento na calibração e na qualificação"); e o escopo escrito e validado pelo vendedor. Produto, peça e serviço sem equipamento (treinamento, consultoria, documentos, taxa) não pedem equipamento.
 
 Na proposta, o quadro "Faltam N dados para emitir" diz, para cada falta, o quê, por quê e o que fazer, com os botões "Preencher agora" (dado que o cliente já informou, com a marca "Ciente"), "Identificar equipamentos" (no item do rascunho) e "Pedir ao cliente".
 
@@ -442,6 +468,20 @@ Unidade de execução é onde ficam os equipamentos (pode ser outro hospital). S
 No passo 2, informe a cidade de origem (de onde sai o veículo, preenchida pela unidade) e a de destino como "Cidade/UF" e toque em "Calcular km e pedágio": primeiro o banco de rotas (rotas conferidas pela equipe), depois o cálculo automático da rota (com a chave do serviço de rotas cadastrada pelo dono) e a tabela de distâncias do Programa de conduta. A tela mostra de onde veio cada número; os números continuam editáveis. "Conferir e guardar no banco de rotas" grava a rota para as próximas propostas.
 
 Valores por estado aprovados pelo dono: km rodado pelo estado da origem (Rio de Janeiro R$ 3,00; Goiânia R$ 2,50); hotel e alimentação pelo estado do destino (RJ: hotel R$ 200, alimentação R$ 100; GO: hotel R$ 150, alimentação R$ 100). Outros estados: a Diretoria acrescenta em Metodologia; vazio usa o padrão. Propostas gravadas mantêm o que gravaram.
+
+## Contatos repetidos (18/11/2026)
+
+Pedido do Matheus de 17/11/2026: o sistema não aceita cadastrar de novo um contato com os mesmos dados e une os repetidos.
+
+Repetido é o contato ATIVO do MESMO cliente com o mesmo nome (sem acento, sem maiúsculas e sem espaços a mais), o mesmo e-mail ou o mesmo celular (11 dígitos com DDD). O telefone fixo sozinho não conta, porque a central do hospital é de muita gente; os nomes genéricos da migração ("Contato do cadastro do cliente", "Responsável da unidade") também não. Contatos de clientes diferentes nunca são unidos: a mesma pessoa pode atender dois clientes.
+
+- Cadastro: em "Novo contato" (oportunidade e escolha do cliente) e nos responsáveis da proposta guiada, o contato repetido não é gravado. A tela mostra o existente (nome, cargo, e-mail, celular e o que coincide) e o botão "Usar o contato existente", que completa só os campos em branco dele com o que foi digitado (nada preenchido é trocado; o histórico registra). Na edição, só a mudança que cria a repetição é recusada: o contato que já era repetido continua editável até a unificação. O "Preencher agora" e a conferência dos dados do cliente usam o contato existente quando o informado repete um.
+- Aviso na oportunidade: "Este cliente tem contatos repetidos", com os grupos. A gestão comercial toca em "Unificar"; a equipe comercial toca em "Pedir para unificar" (aviso no sistema e por e-mail à gestão comercial).
+- "Unificar contatos duplicados" (Painel comercial, gestão comercial, Diretoria e Administrador): lista os grupos de todos os clientes. Em cada grupo, a janela mostra os contatos com as propostas, as oportunidades e os contatos registrados ligados a cada um; o sugerido para ficar é o de mais ligações, depois o de mais dados, depois o principal, depois o mais antigo. A prévia ("Como fica") não grava nada.
+- Ao unificar (motivo obrigatório): os campos em branco do que fica recebem os dos outros (merge; nada preenchido é apagado); valor diferente que não cabe (outro e-mail, outro celular) vai para as observações dele; se algum era o principal do cliente, o que fica passa a ser. Propostas, oportunidades e contatos registrados (CRM e atividades do Comercial) passam para o que fica. Os outros ficam INATIVOS com a indicação de para quem foram unificados (nunca apagados) e o e-mail deles continua identificando o cliente no e-mail integrado. O histórico de cada contato e o registro de correções de cadastro guardam quem, quando, o motivo e o que passou.
+- Nada é unificado sozinho: o sistema sugere e a gestão confirma depois da prévia.
+
+Leitura da produção em 18/11/2026 (só leitura): 568 contatos (566 ativos), 52 grupos repetidos com 108 contatos, em 52 clientes; 48 grupos de dois e 4 de três. Motivos: o mesmo celular em 39 grupos, o mesmo nome em 23 e o mesmo e-mail em 7 (um grupo pode ter mais de um). Quase todos vêm da migração de 21/10/2026, que trouxe o contato do cadastro do cliente e o responsável da unidade como dois contatos.
 
 ## Pedido aprovado e setores
 

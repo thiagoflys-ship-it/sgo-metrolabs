@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R87, imagem
-  `sha256:605899e9408340076353e7dddc3a60647c0920e92a47e3191c7236c4387c00cc`,
-  tag `metrolabs/rh:memoria-diaria-intervalos-20261118-r87`.
-  Evidência: `output/rh360-20261118-r87/PUBLICADO_RH360_R87_20261118.txt`.
-  Preserva as entregas anteriores; 821 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R89, imagem
+  `sha256:073c3ae2cd561e5b08833ed8d1d2a53d8830438b81d8cbbbbeeebd4200a04ba4`,
+  tag `metrolabs/rh:competencia-versoes-20261118-r89`.
+  Evidência: `output/rh360-20261118-r89/PUBLICADO_RH360_R89_20261118.txt`.
+  Preserva as entregas anteriores; 829 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -1024,3 +1024,32 @@ Evidências e limites: output/rh360-20261118-r87/PUBLICADO_RH360_R87_20261118.tx
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 18/11/2026 — PUBLICADO pedidos-p1-compras-preco-20261118 (sha 47a1c596…; base financeiro-espelho-omie-20261118; cand26). Pacote 1 dos pedidos de 18/11: (1) período de vencimento de/até em Lançamentos e baixas e Aprovação de pagamentos (Wanessa); (2) ciclo ao informar compra corrigido + campo 'Para onde vai a compra' (Matriz GO / Filial RJ) sem duplicidade entre destinos (Matheus); (3) Matheus aprova/reprova/pede novo orçamento em Compras com critérios (3 orçamentos, mais em conta ou justificado, 30 min desde a postagem, não pediu nem cotou, teto vazio); (4) WhatsApp a qualquer hora para dono, Charles e Matheus (GS08–GS11, modelos da gestão já aprovados); (5) preço fora da política no Comercial: Matheus autoriza após 15 min, sem item abaixo do mínimo do catálogo (desconto máx. vazio). Resto do Financeiro só dono/Charles. Suíte 2624/0. Relatório: output/pedidos-20261118/p1/RELATORIO.md. Produção atual = cand26.
+
+
+RH360 R88 — publicada/verificada em 18/11/2026 14:31 BRT
+Imagem: sha256:ef09604207077bab776d246f928aa2ee61a84a6b674da446724e07050621e404
+Tag: metrolabs/rh:competencia-memoria-20261118-r88
+Manifesto: a9171b5c839d2f246c8edc5528fc470e363f1a8ea213c8d5d5e43f31c6463d55
+Consolidação técnica por competência e exportação da memória.
+R88 entrega calendário mensal completo, somas técnicas atuais/condicionadas e exportação local JSON sobre as memórias R87, sem inferir zero ou cobertura. Não reimplementar estes componentes como ausentes.
+824 pins (820 fontes e quatro metadados), 11 deltas com três fontes novas; 809 fontes anteriores preservadas. Imagem final é candidato2, com correção de especificidade CSS somente em relação à C1.
+Nenhuma competência oficial ou dado real criado; soma conhecida de um subconjunto é explicitamente diferente de total mensal. Gravação operacional permanece desligada.
+Próximo foco: arquivo versionado da conferência mensal e diferenças entre revisões, com prova e dependências atuais, sem fechamento de folha ou efeitos financeiros.
+Evidências e limites: output/rh360-20261118-r88/PUBLICADO_RH360_R88_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R89 — publicada/verificada em 18/11/2026 14:52 BRT
+Imagem: sha256:073c3ae2cd561e5b08833ed8d1d2a53d8830438b81d8cbbbbeeebd4200a04ba4
+Tag: metrolabs/rh:competencia-versoes-20261118-r89
+Manifesto: 7d437f4a71d37f7a5b79c234eaaa5a182afab62c157aa7a961aa782fcc7b34ae
+Arquivo versionado da competência com prova e comparação.
+R89 entrega arquivo mensal versionado com prova, comparação e retirada sobre R88/R87; não reimplementar a memória ou o histórico como ausentes. Novo namespace RH_POINT_MONTH_ARCHIVES_V1.
+829 pins (825 fontes e quatro metadados), 12 deltas com cinco fontes novas; 813 fontes anteriores preservadas. Imagem final candidato2, somente tradução da comparação em relação à C1.
+Versão parcial permanece parcial; delta de desconhecido para zero não vira diferença numérica. Guarda real não ativada e nenhum dado/aprovação real criado.
+Próximo foco: critérios CCT com origem explícita na memória de ponto, integrados à versão submetida ao jurídico/Diretoria e ao enquadramento individual atual; sem converter correspondência técnica em direito, pagamento ou penalidade.
+Evidências e limites: output/rh360-20261118-r89/PUBLICADO_RH360_R89_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 18/11/2026 — PUBLICADO pedidos-p2-comercial-20261118 (base pedidos-p1-compras-preco-20261118; cand27). Pacote 2 Comercial: equipamento opcional na calibração/qualificação (tipo + quantidade; vínculo na triagem; volta a exigir só Diretoria/Admin/dono com motivo), contato duplicado (recusa ao cadastrar + 'Usar o existente'; 'Unificar contatos duplicados' com prévia e merge; produção: 52 grupos/108 contatos, maioria da migração 21/10), orçamento mais rápido (vários itens do catálogo de uma vez, mais usados, nova proposta com contato/condições do cliente, duplicar proposta, rascunho no aparelho; 10 itens: ~52→~15 toques). Suíte 2641/0. Relatório: output/pedidos-20261118/p2/RELATORIO.md. Produção atual = cand27.
