@@ -13,7 +13,7 @@ const { ambiente: ambienteViagem, criarCompleta, PASTA } = require('./_viagem_am
 // 18/11/2026 (Bloco C da onda 3 do Financeiro): a Recarga Caju da rotina carrega junto (quando existe na pasta), para a conciliação e a
 // trava conjunta rodarem com ela em todos os testes do Caju e do Financeiro (regressão de conciliacao-caju e deposito-viagem com o módulo).
 const ARQUIVOS_CAJU = ['SGO_Caju.js', 'SGO_Caju_Api.js', 'SGO_Caju_Colaboradores.js', 'SGO_Caju_Conciliacao.js', 'SGO_Caju_Extrato.js', 'SGO_Caju_Pedidos.js',
-  'SGO_RecargaCaju.js', 'SGO_RecargaCaju_Prestacao.js', 'SGO_RecargaCaju_Relatorios.js'].filter((f) => f.indexOf('SGO_RecargaCaju') < 0 || fs.existsSync(path.join(PASTA, f)));
+  'SGO_RecargaCaju.js', 'SGO_RecargaCaju_Prestacao.js', 'SGO_RecargaCaju_Relatorios.js', 'SGO_RecargaCaju_Semanal.js'] // 18/11/2026 (pacote 4): recarga semanal.filter((f) => f.indexOf('SGO_RecargaCaju') < 0 || fs.existsSync(path.join(PASTA, f)));
 const CRED = { CAJU_CLIENT_ID: 'cliente-metrolabs-teste', CAJU_CLIENT_SECRET: 'segredo-super-secreto-123', CAJU_INTEGRACAO_ID: 'integracao-teste-01', CAJU_INTEGRACAO_SENHA: 'senha-integracao-999', CAJU_AMBIENTE: 'producao' };
 // CPFs válidos fictícios (dígitos de conferência certos)
 const CPF = { tiago: '52998224725', paulo: '11144477735', gil: '39053344705', novo: '15350946056' };

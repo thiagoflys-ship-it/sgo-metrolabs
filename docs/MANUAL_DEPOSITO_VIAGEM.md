@@ -262,3 +262,29 @@ Trava: quem tem prestação vencida não pode ser escolhido como responsável pe
 ## 20. O que fica fora desta etapa
 
 A conciliação com o extrato do cartão Caju (importação do extrato ou leitura pela API do Caju e o casamento de cada transação com a carga, os gastos e os acertos) vai ser um módulo próprio do Financeiro. A prestação já deixa os dados organizados para ele: cada gasto com número, categoria, linha do orçamento, valor, valor aceito, valor glosado, se foi pago com o cartão ou com dinheiro próprio, centro de custo (com o código usado no Caju) e a pessoa do cartão; cada carga e cada acerto com o centro de custo e a pessoa.
+
+
+## 21. Recarga no cartão, combustível pelo veículo e sobra a recolher (18/11/2026)
+
+**Recarga no cartão Caju.** O total da solicitação continua sendo a soma das linhas do orçamento. No fim da etapa 5, o quadro "Recarga no cartão Caju" define quanto vai para o cartão de quem leva o dinheiro:
+
+- **Valor total da solicitação:** como sempre foi; é o padrão.
+- **Percentual do total:** o percentual definido pela gestão na política de viagem. Enquanto a política não tiver o percentual (ele começa vazio), essa opção não aparece.
+- **Valor fixo informado:** um valor menor ou igual ao total, com o motivo (10 letras ou mais), por exemplo "hotel pago pela empresa direto ao fornecedor".
+
+O valor da recarga entra na aprovação, aparece para quem aprova, no relatório A4 e no aviso ao Financeiro. A carga no cartão, manual ou pelo Caju, nunca passa desse valor. O que faltar durante a viagem é pago com dinheiro próprio e entra na prestação de contas como reembolso, conferido pelo Financeiro. A política de viagem diz se quem pede escolhe o modo (padrão) ou se ele é sempre o mesmo.
+
+**Combustível pelo consumo real do veículo.** Com um veículo da Frota escolhido na etapa 4, a linha de combustível tem o botão "Calcular pelo veículo". Ele preenche:
+
+- o consumo (km por litro): a mediana dos intervalos entre abastecimentos registrados na Frota para aquele veículo, com pelo menos 3 intervalos coerentes (a mesma regra da Frota);
+- o preço do litro: o do último abastecimento do veículo com valor registrado; sem abastecimento, o preço de referência da política de viagem (vazio por padrão).
+
+Embaixo da linha aparece "Como foi calculado", que vai também para quem aprova e para o A4. Se o veículo ainda não tem leituras suficientes, a tela diz quantos intervalos ele tem e pede o consumo e o preço. Consumo digitado mais de 15% diferente do real do veículo vira apontamento para quem aprova.
+
+**Sem combustível nesta viagem.** Quando o carro é abastecido pelo cartão da frota (Itaú, uma vez por semana) ou sai com o tanque cheio e a distância cabe na autonomia, toque no atalho correspondente na categoria Combustível. A categoria fica como "Não se aplica", com o motivo, e o combustível sai do total e da recarga.
+
+**Sobra no cartão a recolher (Financeiro).** Quando a prestação de contas é enviada e o cartão ficou com saldo, o Financeiro (só quem está na lista de sigilo e confere viagens) recebe o aviso "Sobra no cartão Caju a recolher" por sistema e e-mail (o valor vai só no corpo da mensagem) e a pendência "Recolher a sobra de R$ ... do cartão Caju de ...", com o prazo da política (padrão: 2 dias úteis depois do envio). O valor a recolher é o menor entre o saldo do cartão (carregado menos os gastos com o cartão menos o que já foi recolhido) e a devolução prevista pela conta; o que for de glosa a pessoa devolve por depósito ou PIX. Vencido o prazo, o aviso sai mais uma vez e a pendência fica crítica. Depois da conferência, o item do acerto mostra o mesmo valor e prazo.
+
+Para registrar: recolha no portal do Caju e, no quadro "Acerto do saldo", escolha Devolução, "Recolhimento do saldo no Caju", a data do recolhimento e o comprovante. A data fica no registro, no histórico e no A4 de fechamento, e a Conciliação Caju liga o recolhimento ao extrato.
+
+**Política de viagem.** Os campos novos são: quem define o valor da recarga, o percentual da recarga proporcional (vazio), o preço do litro de referência (vazio) e o prazo para recolher a sobra (2 dias úteis). Cada gravação vira uma versão nova, com o motivo.

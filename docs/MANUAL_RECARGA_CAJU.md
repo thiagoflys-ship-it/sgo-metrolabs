@@ -82,3 +82,25 @@ Em cada período, toque em "Relatório A4 deste período". O relatório traz só
 | "Este comprovante já foi usado." | Escolha o arquivo certo. Cada comprovante entra uma vez só. |
 | Perdi o comprovante. | Peça a segunda via ou um recibo. Sem comprovante, o gasto vira valor a devolver. |
 | A leitura automática errou. | Corrija o campo olhando o papel. A diferença fica registrada para o Financeiro. |
+
+
+## 10. Recarga semanal com a programação da semana (18/11/2026)
+
+A recarga semanal é um tipo de pedido da própria Recarga Caju: o mesmo cartão, o mesmo termo, a mesma prestação de contas gasto a gasto e a mesma devolução do que sobrar. A diferença é que, em vez de dizer o valor, você declara o que está previsto para a semana, e o valor sai dessa programação.
+
+Como pedir:
+
+1. Em "Pedir recarga", toque em "Recarga semanal (com a programação)" e escolha a semana (de segunda a domingo; a atual ou uma das próximas).
+2. Toque em "Puxar da minha agenda". As O.S. do SGO+ e os atendimentos do Auvo já agendados para você naquela semana entram como itens, com o dia, o cliente e o número. Nada é alterado na agenda.
+3. Complete cada item: dia, cidade, cliente, O.S. ou tarefa (quando houver), atividade prevista, finalidade do gasto e valor previsto. Item sem gasto fica com valor zero. Use "Incluir um item" para o que não está na agenda.
+4. Confira os números no fim do quadro: o previsto da semana, o saldo da rotina que já está no seu cartão e o valor do pedido (previsto menos o saldo). O valor não é digitado.
+5. Toque em "Enviar a recarga semanal".
+
+Regras:
+
+- Quem aprova é sempre o dono ou a Diretoria. Quem aprova pode aprovar um valor menor, com a fundamentação.
+- Se o saldo que já está no cartão cobre o previsto, a tela avisa que não é preciso recarga naquela semana.
+- É uma recarga semanal por semana. Se a programação mudar depois, faça um pedido avulso com a justificativa da diferença.
+- A política da recarga pode ter um teto semanal; hoje ele está vazio (sem teto). Quando houver teto e o previsto passar dele, escreva o motivo na observação.
+
+Durante e depois da semana, o pedido mostra o previsto × realizado: o que foi lançado em gastos com data na semana, por dia e por finalidade, e o que do extrato ainda falta comprovar. A sobra volta no fechamento do período ou fica no cartão para a semana seguinte, quando ela é descontada do próximo pedido.

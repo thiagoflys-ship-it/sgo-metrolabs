@@ -39,8 +39,9 @@ function ambiente(opcoes) {
   a.ctx.SGO_DATA.remove = (t, id) => { const l = a.tabelas[t] || [], i = l.findIndex((x) => String(x.ID) === String(id)); if (i < 0) return false; l.splice(i, 1); return true; };
   a.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
   // 18/11/2026 (Bloco C): SGO_Caju_Comprovante.js tem o miolo da leitura do comprovante pela IA (compartilhado com a Recarga Caju)
-  const arquivos = ['SGO_Avisos.js', 'SGO_Avisos_Matriz.js', 'SGO_Avisos_Gestao.js', 'SGO_Poderes.js', 'SGO_Ajuda.js', 'SGO_Ajuda_DepositoViagem.js', 'SGO_Gantt_Layout.js', 'SGO_Caju_Comprovante.js', 'SGO_Viagem_Prestacao.js', 'SGO_Viagem_Fechamento.js', 'SGO_Viagem.js', 'SGO_Viagem_Documento.js', 'SGO_Viagem_Painel.js']
-    .filter((f) => !(o.semArquivos || []).includes(f) && (f !== 'SGO_Caju_Comprovante.js' || fs.existsSync(path.join(PASTA, f))));
+  const arquivos = ['SGO_Avisos.js', 'SGO_Avisos_Matriz.js', 'SGO_Avisos_Gestao.js', 'SGO_Poderes.js', 'SGO_Ajuda.js', 'SGO_Ajuda_DepositoViagem.js', 'SGO_Gantt_Layout.js', 'SGO_Caju_Comprovante.js', 'SGO_Viagem_Prestacao.js', 'SGO_Viagem_Fechamento.js', 'SGO_Viagem.js', 'SGO_Viagem_Documento.js', 'SGO_Viagem_Painel.js', 'SGO_Viagem_Recarga.js']
+    // 18/11/2026 (pacote 4): SGO_Viagem_Recarga.js (recarga proporcional ou fixa, combustível pelo veículo, sobra a recolher) quando existe na pasta
+    .filter((f) => !(o.semArquivos || []).includes(f) && (['SGO_Caju_Comprovante.js', 'SGO_Viagem_Recarga.js'].indexOf(f) < 0 || fs.existsSync(path.join(PASTA, f))));
   for (const f of arquivos) {
     const p = path.join(PASTA, f);
     vm.runInContext(fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n'), a.ctx, { filename: f });

@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R92, imagem
-  `sha256:f084cb41988a6221c35205e3d8283755646daa09adafcc4fc0b34181c6cdedae`,
-  tag `metrolabs/rh:cct-acompanhamento-competencia-20261118-r92`.
-  Evidência: `output/rh360-20261118-r92/PUBLICADO_RH360_R92_20261118.txt`.
-  Preserva as entregas anteriores; 840 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R95, imagem
+  `sha256:632447683743c3e1357b6f69f365e8f7ec55d1236ba79555912250a95a84a170`,
+  tag `metrolabs/rh:cct-auditoria-versoes-20261118-r95`.
+  Evidência: `output/rh360-20261118-r95/PUBLICADO_RH360_R95_20261118.txt`.
+  Preserva as entregas anteriores; 847 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -1093,3 +1093,41 @@ Evidências e limites: output/rh360-20261118-r92/PUBLICADO_RH360_R92_20261118.tx
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 18/11/2026 — PUBLICADO pedidos-p3-pendencias-chat-email-20261118 (base pedidos-p2-comercial-20261118; cand28). Pacote 3: chamado agendado/reagendado para data futura sai das pendências até a data (prazo do contrato continua no selo/histórico/indicadores; volta se a visita não for registrada); O.S. do Auvo lida após a varredura e já finalizada/reagendada sai; produção: itens de prazo 8→6 (CH-2026-0027, CH-2026-0029). Bate-papo: botão vermelho com contador, pisca 3x, '(n)' na aba, notificação do navegador opcional (desligada). E-mail: leitura 462→754 px (tela cheia 1066), redação 820→1120 px + Maximizar, fonte/tamanho/cor/destaque com HTML limpo, Anexar na linha do Assunto. ACHADO: varredura completa das O.S. do Auvo parada desde 12/11. Suíte 2653/0. Relatório: output/pedidos-20261118/p3/RELATORIO.md. Produção atual = cand28.
+- 18/11/2026 — ACHADO (só leitura): desde 12/11/2026 o Auvo recusa o login da API ('API integration is disabled for this account'); todas as rotinas Auvo (incremental 30 min, reversa 04:00, pendências 05:00) falham. Lista de O.S. abertas congelada em 12/11. Ação do dono: religar a integração por API na conta do Auvo.
+
+
+RH360 R93 — publicada/verificada em 18/11/2026 17:02 BRT
+Imagem: sha256:f2f5aa36d46e0789b9aa40f029987da75d414ce612d6cee26732d53291bee679
+Tag: metrolabs/rh:cct-registro-conferencia-20261118-r93
+Manifesto: a1cdcb10ef1ce42099397b28c190a85d0f66529495de2bc3c81cc881d0179d84
+Registro comprovado e versionado da conferência técnica CCT.
+845 pins; incremento em uma camada sobre R92 publicada, preservando a base equivalente e todas as entregas anteriores.
+Registro técnico exige prova e confirmação; leitura de histórico não é aprovação ou revalidação.
+Evidências e limites: output/rh360-20261118-r93/PUBLICADO_RH360_R93_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R94 — publicada/verificada em 18/11/2026 17:20 BRT
+Imagem: sha256:456c038bd5500f95cd1a38ab2d6a239bcd26c0a3b51ac7bbc8fea4192d5074a8
+Tag: metrolabs/rh:cct-registros-acompanhamento-20261118-r94
+Manifesto: ed79b69ad407db23a2ea45122ad2f6d5220d68d5f59c64ca4fb1c92351c33c03
+Registros técnicos atuais no acompanhamento CCT por competência.
+845 pins; sete fontes sobre a R93 publicada, sem nova fonte, esquema, cadastro ou autoridade.
+Falha de consulta aparece como indisponibilidade; registros preservados permanecem distintos da comparação técnica de origens.
+Evidências e limites: output/rh360-20261118-r94/PUBLICADO_RH360_R94_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R95 — publicada/verificada em 18/11/2026 17:52 BRT
+Imagem: sha256:632447683743c3e1357b6f69f365e8f7ec55d1236ba79555912250a95a84a170
+Tag: metrolabs/rh:cct-auditoria-versoes-20261118-r95
+Manifesto: 41a2d4bd412792fdcdddcd2e675ffb5a336d51974cba917bbd757e3a74c966f5
+Auditoria, comparação e exportação das versões técnicas CCT.
+847 pins; oito fontes sobre a R94 publicada, duas novas fontes puras de comparação e nenhuma mudança de esquema ou autoridade.
+Downloads exigem ação explícita do operador e mantêm rótulo histórico; prova e declarações continuam dentro da finalidade/autorização RH existente.
+Evidências e limites: output/rh360-20261118-r95/PUBLICADO_RH360_R95_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 18/11/2026 — PUBLICADO pedidos-p4-viagem-recarga-20261118 (base pedidos-p3-pendencias-chat-email-20261118; cand29). Pacote 4: Depósito de viagem — recarga = total / % da política (vazio, opção oculta) / valor fixo com motivo; combustível pelo consumo real do veículo (Frota, 3 intervalos; PQB4394 9,80 km/L, PRP8J05 8,03 km/L; GFU5G11 e PRD6C57 sem leituras suficientes; GFU5G11 tem KM 127,2 suspeito) e preço do último abastecimento; 'sem combustível' (cartão Itaú da frota / tanque cheio); sobra no Caju vira pendência ao Financeiro (2 dias úteis). Recarga semanal como tipo da Recarga Caju: programação da semana (puxa O.S. do SGO+ e tarefas do Auvo), valor = previsto − saldo, só dono/Diretoria aprovam, previsto × realizado. Suíte 2665/0. Relatório: output/pedidos-20261118/p4/RELATORIO.md. Produção atual = cand29. FILA de 18/11 (P1–P4) CONCLUÍDA.

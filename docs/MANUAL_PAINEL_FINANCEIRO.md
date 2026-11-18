@@ -481,6 +481,16 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **Mensagens.** Data inválida, "de" depois de "até" e intervalo maior que 400 dias são recusados com o que fazer, sem ler o Omie.
 
+## 8s. Recarga semanal e sobra de viagem a recolher (18/11/2026, pacote 4)
+
+**Recarga semanal (aba Recarga Caju).** O portador pode pedir a recarga da semana declarando a programação prevista (dia, cidade, cliente e O.S., atividade, finalidade e valor previsto de cada item), puxada da agenda de O.S. do SGO+ e do Auvo quando houver. O valor pedido é o previsto menos o saldo da rotina que já está no cartão (pelo extrato importado ou, sem ele, pelo que foi lançado). Em "Pedidos e cargas", o pedido semanal mostra a programação, o previsto e o saldo descontado; só o dono e a Diretoria aprovam, mesmo com a regra do Financeiro desligada. Começada a semana, o pedido mostra o previsto × realizado por dia. A carga, a conferência, o período e a devolução seguem como em toda recarga.
+
+Na Política da recarga, os campos novos são: recarga semanal (ligada), descontar o saldo do cartão (ligado), teto semanal (vazio, sem teto) e valor de referência por dia (vazio). Nenhum valor foi preenchido pelo sistema: a decisão do dono é "é solicitado e devolvemos".
+
+**Sobra de viagem a recolher (Depósito de viagem).** Quando a prestação de contas de uma viagem chega e o cartão ficou com saldo, quem confere viagens e está na lista de sigilo recebe o aviso e a pendência "Recolher a sobra de R$ ... do cartão Caju de ...", com o prazo da política de viagem (padrão: 2 dias úteis depois do envio). O registro de quando foi recolhido é a devolução "Recolhimento do saldo no Caju", com a data e o comprovante, no quadro "Acerto do saldo". No relatório diário da empresa o item aparece só na contagem do Financeiro.
+
+**Recarga da viagem proporcional ou fixa.** A solicitação de viagem pode carregar no cartão o total, um percentual do total (vazio na política até a gestão decidir) ou um valor fixo com o motivo. A carga e o pedido de crédito no Caju (Conciliação Caju > Créditos) seguem a recarga aprovada, e a divergência "crédito acima do aprovado" compara com ela.
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
