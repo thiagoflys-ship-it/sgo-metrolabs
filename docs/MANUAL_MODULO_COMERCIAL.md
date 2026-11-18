@@ -259,6 +259,20 @@ Sem pedágio nas contas a, b, c, d e f (o banco de rotas ainda não tem as praç
 
 A situação aparece como "Aguardando aprovação", seguida do motivo real: desconto acima do limite, sobra abaixo da mínima, item sem custo, custo sem cotação válida, preço do catálogo não aprovado, preço abaixo ou acima da tabela e valores da viagem abaixo da regra. Até 12/11/2026 a tela dizia "Aguardando aprovação do desconto" mesmo com desconto zero. Os motivos ficam gravados no pedido e aparecem na lista de propostas, na proposta, na Caixa de decisões (título e detalhe) e na mensagem de quem tenta gerar o documento antes da decisão. Para pedidos anteriores, o motivo é calculado de novo ao abrir.
 
+### Preço fora da política: o aprovador delegado (decisão do dono de 18/11/2026)
+
+O preço que só a Diretoria aprova (sobra abaixo da mínima, item sem custo válido, custo sem cotação válida, preço do catálogo ainda não aprovado) continua sendo aprovado pelo dono e pelo Charles a qualquer momento. Para não atrasar o comercial, se eles não decidirem em 15 minutos desde o pedido (padrão, configurável), o aprovador delegado, o Matheus (a conta interna "MATHEUS GODOI", da gestão comercial), pode autorizar com este critério de preço:
+
+1. Sem desconto máximo definido na regra (é o padrão, porque o dono não deu número): nenhum item abaixo do preço mínimo do catálogo (o preço que garante a sobra mínima da política, calculado pelo custo). Item sem custo válido não tem mínimo conferível; nesse caso, só o dono e a Diretoria aprovam.
+2. Com desconto máximo definido (por exemplo 10%): o desconto da proposta sobre a tabela pode chegar a esse percentual.
+3. O Matheus não autoriza proposta da qual é o responsável nem o pedido de aprovação que ele mesmo fez (concluiu a proposta).
+
+Na proposta, o quadro "Prazo do dono e da Diretoria" mostra até quando vai o prazo, quanto falta (a contagem anda sozinha) e o critério, cumprido ou o que falta. Vencido o prazo com o critério cumprido, o botão aparece como "Autorizar (aprovador delegado)". A autorização fica na proposta e no histórico com o critério ("prazo de 15 minutos vencido às ... sem decisão do dono e da Diretoria; nenhum item abaixo do preço mínimo do catálogo; não é o responsável pela proposta"), vale na conferência antes do envio ao cliente e avisa o dono e o Charles na hora, por WhatsApp e e-mail. Negar continua com a gestão comercial, como antes.
+
+No preço do catálogo abaixo do mínimo, o aprovador delegado só aprova com o desconto máximo definido na regra, depois do prazo e sem ter pedido o preço.
+
+A regra fica em Comercial > Metodologia, no quadro "Aprovador delegado do preço fora da política", com versão e motivo; só o dono e a Diretoria alteram. O quadro mostra quem recebe os avisos e o final do celular de cada um, ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail".
+
 ### Proposta errada: editar, excluir ou cancelar
 
 - Rascunho: edite e salve. Aguardando aprovação ou pronta (ainda não enviada): "Editar (volta para rascunho)", corrija e conclua de novo (a política de desconto é conferida outra vez).
@@ -553,6 +567,8 @@ No quadro "Banco de preços" da gestão, a taxa de ganho por serviço passou par
 ## Avisos
 
 No sistema, na hora (Início e esta tela). E-mail só no expediente. O Comercial não manda WhatsApp: os retornos são atividades e entram no resumo diário das atividades, no máximo uma mensagem por dia. Nenhum aviso leva valor. Nada vai ao cliente sozinho: o que vai ao cliente é sempre o envio feito pelo vendedor.
+
+Exceção autorizada pelo dono em 18/11/2026: cada pedido de aprovação de preço (proposta fora da política e preço do catálogo acima da alçada) chega na hora, a qualquer hora, inclusive fora do expediente, ao dono, à Diretoria e ao aprovador delegado, por WhatsApp e e-mail, com a proposta ou o item, o total e quem pediu (GS11; o dono e a Diretoria recebem pelo aviso da Diretoria de sempre, sem mensagem repetida). Também avisam: o prazo vencido com o critério cumprido (GS09, ao delegado e à Diretoria) e a autorização do delegado (GS10, ao dono e à Diretoria).
 
 ## Metodologia comercial
 

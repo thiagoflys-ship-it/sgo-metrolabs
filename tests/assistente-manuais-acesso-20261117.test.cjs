@@ -277,6 +277,9 @@ test('6. nenhum parágrafo da base anterior se perdeu sem justificativa', { skip
     /^Trocar a prioridade na triagem mantém o prazo da representada\. Chamado comum ligado depois/, // P11
     /^Atenção: o SGO\+ conta esse prazo até a conclusão do atendimento/, // P11
     /^4\. "Importar e conciliar" grava os lançamentos e casa sozinho: mesmo final, valor com diferença até R\$ 0,05.*estorno e crédito são ignorados com o motivo/, // P12 (18/11/2026, achado M8: o estorno deixou de ser ignorado; o item 4 foi reescrito e o 5 explica o estorno)
+    // 18/11/2026 (Pacote 1, decisão do dono): "WhatsApp nunca pelo Compras" deixou de ser verdade (GS08 a GS10 para o dono, a Diretoria e o
+    // aprovador delegado): o parágrafo dos avisos de Compras foi reescrito
+    /^Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã .*WhatsApp nunca pelo Compras/,
     // Ganhos dos vendedores e Portal não estavam na base anterior; nada deles conta aqui
   ];
   const perdidos = [];

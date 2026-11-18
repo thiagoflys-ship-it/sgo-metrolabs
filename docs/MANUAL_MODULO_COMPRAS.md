@@ -91,6 +91,21 @@ A compra fica "Aguardando aprovação" e entra na Caixa de decisões do aprovado
 
 "Aprovar" (observação opcional): o comprador recebe a atividade "Fazer o pedido de compra" (crítica: no mesmo dia; demais: 1 dia útil) e o aviso no sistema e no resumo de e-mail. "Reprovar" exige o motivo: a compra volta para cotação, o comprador recebe o motivo no sistema e a atividade "Rever a cotação". Orçamento vencido não é aprovado: reprove com o motivo para o comprador pedir a revalidação.
 
+"Pedir novo orçamento" (desde 18/11/2026): quem decide escolhe o fornecedor do cadastro ou escreve o contato (nome, telefone ou e-mail) e o que pedir. A compra volta para cotação, o comprador recebe a atividade "Pedir novo orçamento a [contato]" e, com o orçamento novo lançado, escolhe de novo. Não conta como reprovação.
+
+## Aprovador delegado das compras (decisão do dono de 18/11/2026)
+
+Vale com a aprovação só do dono e da Diretoria ligada (padrão). O dono e a Diretoria (o Charles) aprovam a qualquer momento. Se não decidirem dentro do prazo, o aprovador delegado, o Matheus (a conta interna "MATHEUS GODOI"; a conta de representação com o mesmo nome nunca conta), pode aprovar, reprovar ou pedir novo orçamento a um contato específico.
+
+1. O prazo começa quando o pedido é postado (configurável: ou quando o orçamento escolhido vai à aprovação). O padrão recomendado é de 30 minutos.
+2. O pedido só vai à aprovação com 3 orçamentos de fornecedores diferentes, cada um com o fornecedor, o valor e o arquivo (PDF, foto ou print). Com menos, o comprador escreve a justificativa (fornecedor único, urgência) e a decisão fica só com o dono e a Diretoria.
+3. O comprador escolhe o orçamento mais em conta ou justifica por escrito por que escolheu outro.
+4. Vencido o prazo sem decisão, o Matheus decide se: há pelo menos 3 orçamentos válidos; o escolhido é o mais em conta ou a escolha está justificada; ele não pediu nem cotou a compra; o valor cabe no teto da regra (vazio = sem teto, como está hoje, porque o dono não informou valor).
+5. A ficha da compra mostra, em "Prazo do dono e da Diretoria", até quando vai o prazo e quanto falta (a contagem anda sozinha), cada critério cumprido ou o que falta, e para o Matheus a frase exata do que ainda impede a decisão.
+6. Toda decisão do Matheus fica no histórico e nas aprovações com o critério cumprido ("prazo de 30 minutos vencido às ... sem decisão do dono e da Diretoria; 3 orçamentos válidos; escolhido o mais em conta; não pediu nem cotou") e avisa o dono e o Charles na hora, por WhatsApp e e-mail.
+
+O resto do Financeiro (aprovação de pagamentos, estorno, orçamento anual, recarga do Caju) continua só com o dono e o Charles: o aprovador delegado vale apenas para as compras e para o preço do Comercial.
+
 ## Pedido de compra ao fornecedor
 
 Com a compra "Aprovada", o comprador toca em "Emitir o pedido de compra", informa a previsão de entrega combinada e a forma de pagamento (cartão de crédito ou débito com os 4 últimos números e as parcelas, PIX, boleto com o vencimento, transferência, faturado com a condição ou reembolso a um colaborador). Nunca se digita o número inteiro do cartão.
@@ -130,8 +145,9 @@ Desde 31/10/2026 (pedido do dono), quem compra com o cartão da empresa, faturad
 
 O sistema confere na hora e grava com o apontamento, para o Financeiro olhar:
 
-- Compra parecida já informada (mesmo cartão ou mesma pessoa, mesmo valor, data próxima) ou o mesmo arquivo de comprovante: mostra a compra parecida e pede que você explique se é outra.
+- Compra parecida já informada (mesmo cartão ou mesma pessoa, mesmo valor, data próxima) ou o mesmo arquivo de comprovante: mostra a compra parecida e pede que você explique se é outra. Desde 18/11/2026, no quadro 1 há "Para onde vai a compra" (Matriz Goiânia/GO ou Filial Rio de Janeiro/RJ, opcional): compras iguais para destinos diferentes não são acusadas; o mesmo arquivo de comprovante é acusado sempre.
 - Informada depois do prazo (2 dias úteis no padrão): pede o motivo do atraso. Compra de mais de 90 dias só o Financeiro e a gestão informam.
+- Quando as duas perguntas aparecem (atraso e compra parecida), elas ficam juntas na tela, com o que você já escreveu. Responda as duas (pelo menos 10 letras cada) e toque de novo em "Enviar ao Financeiro": a compra grava e as respostas vão para os apontamentos do Financeiro e para o histórico. (Até 18/11/2026 a segunda pergunta apagava a primeira resposta e o envio voltava às mesmas perguntas.)
 - Valor acima do limite da compra direta (R$ 1.000 no padrão): vai também para a ciência da gestão na Caixa de decisões.
 - Valor bem acima da sua média de compras dos últimos 90 dias: marcado "acima do comum".
 
@@ -173,9 +189,17 @@ Padrão aprovado pelo dono em 21/10/2026:
 
 Compras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código.
 
+Quadro "Aprovador delegado" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; quem decide depois do prazo (padrão: a conta interna "MATHEUS GODOI"; só conta interna ativa, nunca o dono ou a Diretoria); prazo em minutos (padrão 30); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo.
+
 ## Avisos
 
-Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã (um por pessoa por dia, a partir das 8 h, no expediente); WhatsApp nunca pelo Compras. Nenhum aviso leva valor em reais. Quem fez a ação não é avisado.
+Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã (um por pessoa por dia, a partir das 8 h, no expediente); WhatsApp pelo Compras só nas exceções do dono, logo abaixo. Nenhum aviso aos demais leva valor em reais. Quem fez a ação não é avisado.
+
+Exceção autorizada pelo dono em 18/11/2026, só para o dono, a Diretoria e o aprovador delegado, a qualquer hora, inclusive fora do expediente (WhatsApp e e-mail pela fila dos avisos da gestão, mais o alerta na tela; podem levar o valor, porque são os aprovadores):
+- GS08, nova solicitação de compra: número, quem pediu, o que é, urgência e o link.
+- GS09, prazo do dono e da Diretoria vencido com os critérios cumpridos: o delegado já pode decidir (uma vez por pedido).
+- GS10, decisão do delegado: o que decidiu, o valor e o critério cumprido (para o dono e a Diretoria).
+Quem não tem celular no cadastro recebe pelo e-mail e pelo sistema. Com o WhatsApp a qualquer hora desligado em Regras de compras, esses avisos vão só pelo sistema e pelo e-mail.
 
 - Especificação incompleta ou devolvida: quem pediu, no sistema até completar; a devolução também vai no resumo de e-mail.
 - Pedido cancelado: quem pediu (e o vendedor, se for de pedido do Comercial), só no sistema.

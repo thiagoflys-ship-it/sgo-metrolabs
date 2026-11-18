@@ -1,0 +1,44 @@
+Exemplos dos WhatsApp novos (Pacote 1, 18/11/2026). Gerados pelo código real com dados fictícios (Omie, Meta e e-mail simulados).
+Todos saem pelo modelo da gestão já aprovado na Meta (sgo_gestao_item; se ele não estiver aprovado, o sgo_gestao_acao), pela fila dos
+avisos da gestão, a qualquer hora, só para o dono, a Diretoria e o aprovador delegado. O e-mail leva o texto completo; o alerta na tela também.
+
+Texto do modelo sgo_gestao_item:
+  Olá, {{1}}. Há um registro no SGO+ sob a sua responsabilidade.
+  Situação: {{2}}
+  Item: {{3}}
+  Para conferir e decidir no sistema, com login, acesse: {{4}}
+  Metrolabs — SGO+
+
+1) GS08 — nova solicitação de compra (dono, Diretoria e Matheus; nunca quem pediu)
+  Olá, Matheus. Há um registro no SGO+ sob a sua responsabilidade.
+  Situação: nova solicitação de compra, para conhecimento
+  Item: Compras: Nova solicitação de compra REQ-2026-0001, de TIAGO TECNICO TESTE: Alicate amperímetro digital
+  Para conferir e decidir no sistema, com login, acesse: https://sgo.metrolabs.com.br/?aviso=AG...
+  Metrolabs — SGO+
+  (urgência crítica ou alta acrescenta "(urgência crítica)" / "(urgência alta)" no item)
+
+2) GS09 — prazo do dono e da Diretoria vencido, o Matheus já pode decidir (compra)
+  Olá, Matheus. Há um registro no SGO+ sob a sua responsabilidade.
+  Situação: prazo do dono e da Diretoria vencido; o aprovador delegado já pode decidir
+  Item: Compras: Prazo vencido na compra REQ-2026-0001 (Alicate amperímetro digital), R$ 380,00: MATHEUS GODOI já pode decidir
+  Para conferir e decidir no sistema, com login, acesse: https://sgo.metrolabs.com.br/?aviso=AG...
+
+3) GS10 — decisão do Matheus (para o dono e o Charles)
+  Olá, Thiago. Há um registro no SGO+ sob a sua responsabilidade.
+  Situação: decisão do aprovador delegado, para conhecimento
+  Item: Compras: MATHEUS GODOI aprovou a compra REQ-2026-0001 (Alicate amperímetro digital), R$ 380,00, depois do prazo
+  (reprovar: "reprovou a compra ..."; novo orçamento: "pediu novo orçamento para a compra ...")
+  O e-mail traz o critério cumprido: "prazo de 30 minutos da postagem do pedido de compra vencido em 19/10/2026 10:30 sem decisão do dono
+  e da Diretoria; 3 orçamentos válidos de fornecedores diferentes (mínimo 3); escolhido o mais em conta (R$ 380,00); sem teto de valor na
+  regra; não pediu nem cotou esta compra".
+
+4) GS11 — pedido de aprovação de preço no Comercial (Matheus; o dono e o Charles recebem o mesmo pedido pelo GS04/GS06 de sempre)
+  Olá, Matheus. Há um registro no SGO+ sob a sua responsabilidade.
+  Situação: preço fora da política, aguarda a decisão
+  Item: Comercial: Aprovação · Comercial: preço fora da política em PROP-2026-0001 rev.00 (Hospital ...), total R$ 2.447,00, pedido de VERA VENDEDORA TESTE
+  Catálogo: "Comercial: Aprovação · Comercial: preço do catálogo QT-01 (Qualificação térmica de teste), R$ 2.600,00, pedido de VERA VENDEDORA TESTE"
+  No e-mail, a linha: "Se o dono e a Diretoria não decidirem até 19/10/2026 21:45 (15 minutos), MATHEUS GODOI pode autorizar: só sem item
+  abaixo do preço mínimo do catálogo e com o custo de todos os itens conferido."
+
+5) GS09 (Comercial) — "Comercial: Prazo vencido na proposta PROP-2026-0001 rev.00 (Hospital ...): MATHEUS GODOI já pode autorizar o preço"
+6) GS10 (Comercial) — "Comercial: MATHEUS GODOI autorizou o preço da proposta PROP-2026-0001 rev.00 (Hospital ...), total R$ 2.447,00, depois do prazo"

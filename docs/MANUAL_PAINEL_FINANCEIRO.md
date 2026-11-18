@@ -469,6 +469,18 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **A confirmar na primeira operação acompanhada:** o formato do departamento no Omie (distribuição com o código e 100%), quando for ligado; se a conta a pagar de carga já paga ao Caju com o saldo da conta Caju deve ter a baixa na conta corrente do Caju no Omie (combinar com o contador); e o fornecedor do Omie a usar para cada cartão (o banco ou o emissor).
 
+## 8r. Período de vencimento em Lançamentos e baixas e na Aprovação de pagamentos (18/11/2026, pedido da Wanessa)
+
+**Para que serve.** Ver e montar a lista do que vence numa semana, num mês ou em qualquer intervalo, e não só "vencidos, vencem hoje, a vencer ou todos".
+
+**Como usar.** Abaixo da situação há "Vencimento de" e "até", em dd/mm/aaaa (a barra entra sozinha enquanto digita), e os atalhos "Esta semana" (segunda a domingo), "Este mês", "Próximo mês" e "Sem período". Toque em "Aplicar o período". O período combina com a situação: por exemplo, "A vencer" com o próximo mês. Uma data em branco deixa aquele lado aberto ("a partir de" ou "até").
+
+**O que o sistema faz.** O Omie lista os títulos na ordem em que foram cadastrados e não pelo vencimento. Por isso, com o período, o SGO+ lê todas as páginas da situação escolhida (até 60 páginas de 100 títulos) e fica só com os títulos que vencem no período, em ordem de vencimento, 50 por página, com a quantidade e o total do período. Se a situação tiver mais títulos do que isso, a tela avisa que a lista pode estar incompleta e pede uma situação mais estreita ou um período menor. A leitura pode levar alguns segundos; nada é gravado no Omie.
+
+**Na Aprovação de pagamentos.** Com o período, "A pagar no período" traz as contas a pagar em aberto que vencem nele, sem o limite dos 30 dias: as vencidas e as de hoje vêm marcadas; as a vencer, para o Financeiro escolher. As listas de aprovação (aguardando, aprovados e histórico) mostram só as contas com esse vencimento. O envio confere de novo no Omie com o mesmo período. "Sem período" volta à lista do dia.
+
+**Mensagens.** Data inválida, "de" depois de "até" e intervalo maior que 400 dias são recusados com o que fazer, sem ler o Omie.
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
@@ -543,7 +555,7 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 2. Toque em "Preparar conta a receber": o lançamento abre preenchido com cliente, documento e valor.
 3. Confira a categoria, a conta e o vencimento, toque em "Conferir prévia" e depois em "Confirmar no Omie".
 
-**Lançamentos e baixas.** Cadastrar ou corrigir títulos no Omie e registrar pagamentos e recebimentos (baixas).
+**Lançamentos e baixas.** Cadastrar ou corrigir títulos no Omie e registrar pagamentos e recebimentos (baixas). Para ver o que vence num período, preencha "Vencimento de" e "até" (dd/mm/aaaa) ou use Esta semana, Este mês ou Próximo mês, e toque em "Aplicar o período" (seção 8r).
 
 1. Para um título novo: toque em "Novo lançamento", preencha os campos na ordem da tela (cada um diz o que é) e toque em "Conferir prévia".
 2. Cliente ou fornecedor: busque pelo CNPJ ou pelo nome. Se não estiver no Omie, "Cadastrar no Omie" faz o cadastro com prévia, sem sair do lançamento.
@@ -684,7 +696,7 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 3. O pedido não muda nada no Omie. O dono do sistema ou a Diretoria lê a prévia e o motivo em "Pedidos de estorno e exclusão" e toca em "Confirmar e fazer no Omie" (o SGO+ faz na hora) ou em "Recusar". Quem pediu não confirma o próprio pedido; enquanto aguarda, pode retirá-lo.
 4. Se o Omie não responder à confirmação, o pedido fica "sem resposta": confira o título no Omie e registre "foi feito" ou "não foi feito". Baixa feita antes desta versão ou direto no Omie não tem o código e é estornada no próprio Omie.
 
-**Aprovação de pagamentos.** Aprovar, antes da baixa, as contas a pagar do dia: o Financeiro monta e envia a lista; o dono ou a Diretoria aprova num toque.
+**Aprovação de pagamentos.** Aprovar, antes da baixa, as contas a pagar do dia: o Financeiro monta e envia a lista; o dono ou a Diretoria aprova num toque. Para montar a lista de um período (a semana, o próximo mês), use "Vencimento de" e "até" e toque em "Aplicar o período" (seção 8r).
 
 1. Financeiro: em "A pagar até hoje", as contas vencidas e as que vencem hoje já vêm marcadas. Para incluir as próximas, escolha "Também as que vencem em até 30 dias" e toque em Atualizar. Confira e toque em "Enviar para aprovação".
 2. O pedido não paga nada nem grava no Omie. Enquanto aguarda, a lista mostra quem aprova e desde quando; a baixa desses títulos fica travada em Lançamentos e baixas, com o mesmo aviso.

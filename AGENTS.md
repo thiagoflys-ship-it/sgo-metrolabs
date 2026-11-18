@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R85, imagem
-  `sha256:9734736ae033d540b57de6db74d582ab1c2b78eb9d4879c2455569b0eb32665b`,
-  tag `metrolabs/rh:ponto-revisao-origem-20261118-r85`.
-  Evidência: `output/rh360-20261118-r85/PUBLICADO_RH360_R85_20261118.txt`.
-  Preserva as entregas anteriores; 805 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R87, imagem
+  `sha256:605899e9408340076353e7dddc3a60647c0920e92a47e3191c7236c4387c00cc`,
+  tag `metrolabs/rh:memoria-diaria-intervalos-20261118-r87`.
+  Evidência: `output/rh360-20261118-r87/PUBLICADO_RH360_R87_20261118.txt`.
+  Preserva as entregas anteriores; 821 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -995,3 +995,32 @@ Evidências e limites: output/rh360-20261118-r85/PUBLICADO_RH360_R85_20261118.tx
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 18/11/2026 — PUBLICADO financeiro-espelho-omie-20261118 (sha 34d97fe1…; base financeiro-pagamentos-orcamento-20261118; cand25). Financeiro B2/B3/B4 + M8: aba 'Compras e Caju no Omie' (compras faturadas/boleto conferidas CMP-, faturas fechadas FAT-, cargas Caju CJU-V-/CJU-R- + taxa -TX) com prévia/confirmação e referência única; pagamento segue B1; conferência com o Omie; 8 tipos no de-para de categorias (vazio); FIN_ESPELHO_DEPARTAMENTO vazio; M8 estorno da fatura como linha própria casada com a compra. Lista começa em 11/2026 (marcar 'Já lancei direto no Omie' o que foi lançado à mão). Suíte 2604/0. Relatório: output/financeiro-20261118-onda-b/RELATORIO.md. Produção atual = cand25.
+
+
+RH360 R86 — publicada/verificada em 18/11/2026 13:13 BRT
+Imagem: sha256:bea22ed42f0532494acee9c0cced7b279283b85fbc1a4b2e064c0f0a77afb7ac
+Tag: metrolabs/rh:jornada-calendario-20261118-r86
+Manifesto: 7c76562bcb2e3ead38eaaaf35efd36ecd556410dc2cd0ec6a51a836b25344150
+Jornada e calendário previstos com memória diária.
+R86 entrega programação versionada de jornada/calendário e memória diária de tempo previsto. Não tratar esses componentes como somente texto/ensaio ou implementá-los novamente.
+Novo namespace RH_POINT_WORK_PROGRAMS_V1; dados reais continuam sem catálogo/vínculo oficial/programação criada por esta tarefa. Exige JORNADA do vínculo oficial e prova neutra, sem ampliar acesso pessoal/médico.
+812 pins (808 fontes e quatro metadados), 14 deltas com sete fontes novas; 794 fontes anteriores preservadas.
+Próximo passo: memória diária persistida dos intervalos explicitamente conferidos pelo responsável sobre as observações versionadas R84/R85, revalidando cada origem/prova, sem pareamento automático e sem converter ausência de fonte em zero.
+Evidências e limites: output/rh360-20261118-r86/PUBLICADO_RH360_R86_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R87 — publicada/verificada em 18/11/2026 14:07 BRT
+Imagem: sha256:605899e9408340076353e7dddc3a60647c0920e92a47e3191c7236c4387c00cc
+Tag: metrolabs/rh:memoria-diaria-intervalos-20261118-r87
+Manifesto: 0dbfe2eff1b8b1848901f29e60011274af9a0b5ce3367ac2e262c3911753bca0
+Memória diária versionada de intervalos conferidos.
+R87 entrega memória diária persistida, revisada e retirada com histórico sobre origens R84/R85 e programação R86. Não reimplementar como funcionalidade ausente.
+821 pins (817 fontes e quatro metadados), 16 deltas com nove fontes novas; 801 fontes anteriores preservadas. Novo namespace RH_POINT_DAY_REVIEWS_V1.
+Construção incremental passa a usar COPY payload/ /app/ em uma camada, preservando base, hashes e reversão. Primeiro build por cópias individuais falhou antes da imagem; não conta como PASS.
+Próximo foco: consolidação técnica por competência com dias desconhecidos explícitos e dependências revalidadas, sem fechamento ou efeitos financeiros.
+Evidências e limites: output/rh360-20261118-r87/PUBLICADO_RH360_R87_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 18/11/2026 — PUBLICADO pedidos-p1-compras-preco-20261118 (sha 47a1c596…; base financeiro-espelho-omie-20261118; cand26). Pacote 1 dos pedidos de 18/11: (1) período de vencimento de/até em Lançamentos e baixas e Aprovação de pagamentos (Wanessa); (2) ciclo ao informar compra corrigido + campo 'Para onde vai a compra' (Matriz GO / Filial RJ) sem duplicidade entre destinos (Matheus); (3) Matheus aprova/reprova/pede novo orçamento em Compras com critérios (3 orçamentos, mais em conta ou justificado, 30 min desde a postagem, não pediu nem cotou, teto vazio); (4) WhatsApp a qualquer hora para dono, Charles e Matheus (GS08–GS11, modelos da gestão já aprovados); (5) preço fora da política no Comercial: Matheus autoriza após 15 min, sem item abaixo do mínimo do catálogo (desconto máx. vazio). Resto do Financeiro só dono/Charles. Suíte 2624/0. Relatório: output/pedidos-20261118/p1/RELATORIO.md. Produção atual = cand26.

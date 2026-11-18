@@ -27,7 +27,9 @@ function emAprovacao(amb, preco, sid) {
   ok(amb.api('s_carlos', 'iniciarCotacao', { id: r.id }));
   const q = ok(amb.api('s_carlos', 'requisicao', { id: r.id })).requisicao;
   const t = ok(amb.api('s_carlos', 'salvarCotacao', { requisicaoId: q.id, fornecedorId: amb.fs[0].id, precos: [{ itemId: q.itens[0].id, precoUnitario: preco }], prazoDias: 5, validade: '2026-11-10', arquivo: C.PDF })).requisicao;
-  const extra = Number(String(preco).replace(/\./g, '').replace(',', '.')) > 1000 ? { justificativaMinimo: 'Fornecedor único da peça no ensaio automático' } : {};
+  // 18/11/2026 (Pacote 1, decisão do dono): com SIM, a compra vai à aprovação com 3 orçamentos (regra do aprovador delegado); com 1 só, o
+  // comprador justifica em qualquer faixa. Ajustado de propósito: antes a justificativa só era pedida acima de R$ 1.000 (faixas).
+  const extra = Number(String(preco).replace(/\./g, '').replace(',', '.')) > 1000 || amb.props.APROVACAO_SO_DIRETORIA !== 'NAO' ? { justificativaMinimo: 'Fornecedor único da peça no ensaio automático' } : {};
   const e = ok(amb.api('s_carlos', 'escolher', Object.assign({ requisicaoId: q.id, cotacaoId: t.cotacoes[0].id }, extra)));
   return { id: q.id, e };
 }

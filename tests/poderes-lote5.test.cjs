@@ -178,7 +178,9 @@ test('4) a alçada em R$ continua valendo: SIM na faixa do comprador não aprova
   assert.equal(a.ctx.Cmp_faixaDe_(800, regras).aprovador, 'COMPRADOR');
   assert.equal(a.ctx.Cmp_faixaDe_(5000, regras).aprovador, 'GESTOR_AREA');
   assert.equal(a.ctx.Cmp_faixaDe_(50000, regras).aprovador, 'DIRETORIA');
-  assert.equal(lerLegado('SGO_Compras_Config.js').match(/var CMP_REGRAS_PADRAO[\s\S]*?\n\}/)[0], lerAntes('SGO_Compras_Config.js').match(/var CMP_REGRAS_PADRAO[\s\S]*?\n\}/)[0], 'faixas padrão intactas');
+  // 18/11/2026 (Pacote 1, decisão do dono): CMP_REGRAS_PADRAO ganhou o bloco "delegado" (aprovador delegado); as FAIXAS continuam intactas
+  const faixasDe = (t) => t.match(/var CMP_REGRAS_PADRAO[\s\S]*?\n\}/)[0].match(/faixas: \[[\s\S]*?\]/)[0];
+  assert.equal(faixasDe(lerLegado('SGO_Compras_Config.js')), faixasDe(lerAntes('SGO_Compras_Config.js')), 'faixas padrão intactas');
   // quem cotou, acima da faixa do comprador, não aprova (fixo) mesmo com SIM da área
   salvarExc(a, 'elisa', [{ codigo: 'COMPRAS_APROVAR_DA_AREA', valor: 'SIM' }], 'Teste: quem cotou não aprova');
   const r = Object.assign(pedido('GESTOR_AREA', 'RH'), { ESCOLHA_POR_ID: a.idDe('elisa') });

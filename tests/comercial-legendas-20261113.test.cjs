@@ -74,7 +74,10 @@ test('2. nenhuma regra de conta mudou: os arquivos do servidor do Comercial são
     String.raw`  var posCal011 = L\.length;\n  for \(var iCal = 0;[^\n]*\n  L\.splice\(posCal011, 0, `);
   assert.match(ler(CAT), trechoOrdem, 'trecho da ordem do CAL-011');
   assert.equal(ler(CAT).replace(trechoOrdem, '  L.splice(13, 0, '), fs.readFileSync(path.join(BASE, CAT), 'utf8'), CAT + ' mudou além da ordem do CAL-011');
-  for (const f of arquivos.filter((x) => x !== 'SGO_Comercial_Precificacao.js' && x !== CAT)) assert.equal(ler(f), fs.readFileSync(path.join(BASE, f), 'utf8'), f + ' mudou');
+  // 18/11/2026 (Pacote 1, item 5): SGO_Comercial_Propostas.js e SGO_Comercial_Painel.js ganharam o aprovador delegado do preço (ComDel_*),
+  // sem mexer nas contas de preço e viagem; coberto por tests/pedidos-20261118-p1-comercial.test.cjs.
+  const P1 = ['SGO_Comercial_Propostas.js', 'SGO_Comercial_Painel.js'];
+  for (const f of arquivos.filter((x) => x !== 'SGO_Comercial_Precificacao.js' && x !== CAT && P1.indexOf(x) < 0)) assert.equal(ler(f), fs.readFileSync(path.join(BASE, f), 'utf8'), f + ' mudou');
 });
 
 // ---------------------------------------------------------------- navegador (página completa)
