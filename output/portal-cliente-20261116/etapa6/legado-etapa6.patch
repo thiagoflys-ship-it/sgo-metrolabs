@@ -1,0 +1,1470 @@
+diff --git a/cand18/Index.html b/cand19/Index.html
+index f9c5da0..ab9c94f 100644
+--- a/cand18/Index.html
++++ b/cand19/Index.html
+@@ -305,6 +305,8 @@
+         <div class="sidebar-section menu-grupo" data-grupo="portal_cliente" id="menu-secao-portal_cliente">
+           <button type="button" class="menu-grupo-cab" aria-expanded="true" aria-controls="menu-grupo-itens-portal_cliente" onclick="Menu_alternarGrupo_('portal_cliente')"><span class="menu-grupo-nome">Portal do cliente</span><span class="menu-grupo-qtd" aria-hidden="true"></span><i class="fas fa-chevron-down menu-grupo-seta" aria-hidden="true"></i></button>
+           <div class="menu-grupo-itens" id="menu-grupo-itens-portal_cliente">
++          <!-- 18/11/2026: Portal do cliente, etapa 6 (JS_PortalCliente_Inicio.html / SGO_PortalCliente_Troca.js). "Início" e "Relatórios de ciclo": só a conta de cliente (aplicarRegrasDeAcesso_ mostra). As telas antigas do cliente abrem as do Portal (SGO_clienteRota_). -->
++          <button type="button" class="menu-btn" data-mod="portal_cliente_inicio" data-busca="inicio portal do cliente cartoes chamados abertos proxima visita vencimentos documentos novos o que precisa de voce manual" id="menu-btn-portal_cliente_inicio" style="display:none;" onclick="abrir('portal_cliente_inicio')"><span class="menu-btn-icon"><i class="fas fa-house" aria-hidden="true"></i></span>Início</button>
+           <button type="button" class="menu-btn" data-mod="portal_cliente_contratos" data-busca="portal do cliente contratos contrato cliente vigencia carencia consulta suspenso acesso pre-carga" id="menu-btn-portal_cliente_contratos" style="display:none;" onclick="abrir('portal_cliente_contratos')"><span class="menu-btn-icon"><i class="fas fa-file-signature" aria-hidden="true"></i></span>Contratos de clientes</button>
+           <!-- 18/11/2026: Portal do cliente, etapa 1 (JS_PortalCliente_Acessos.html / SGO_PortalCliente_Acessos.js). "Acessos de clientes": quem tem a caixa «Enviar acesso ao cliente» (PortalCli_iniciar_ mostra). "Minha conta e equipe": só a conta de cliente (PclCli_iniciar_ mostra). -->
+           <button type="button" class="menu-btn" data-mod="portal_cliente_acessos" data-busca="portal do cliente acessos pessoas convite papel unidades gestor solicitante consulta desligar reativar termo de uso" id="menu-btn-portal_cliente_acessos" style="display:none;" onclick="abrir('portal_cliente_acessos')"><span class="menu-btn-icon"><i class="fas fa-user-shield" aria-hidden="true"></i></span>Acessos de clientes</button>
+@@ -317,6 +319,7 @@
+           <button type="button" class="menu-btn" data-mod="portal_cliente_vencimentos" data-busca="vencimentos cronograma agendado previsto validade proxima calibracao inspecao ronda visita" id="menu-btn-portal_cliente_vencimentos" style="display:none;" onclick="abrir('portal_cliente_vencimentos')"><span class="menu-btn-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span>Vencimentos e cronograma</button>
+           <!-- 18/11/2026: Portal do cliente, etapa 5 (JS_PortalCliente_Painel.html / SGO_PortalCliente_Painel.js). "Indicadores": conta de cliente com papel Gestor do cliente ou Solicitante (PclCli_iniciar_ mostra). "Uso do portal": quem tem a caixa «Ver o uso do portal e o registro de acessos» (PortalCli_iniciar_ mostra). -->
+           <button type="button" class="menu-btn" data-mod="portal_cliente_indicadores" data-busca="indicadores chamados abertos concluidos tempo medio visita conclusao prazo contrato equipamentos em dia vencimentos reincidencia relatorio do periodo pdf" id="menu-btn-portal_cliente_indicadores" style="display:none;" onclick="abrir('portal_cliente_indicadores')"><span class="menu-btn-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>Indicadores</button>
++          <button type="button" class="menu-btn" data-mod="portal_cliente_ciclos" data-busca="relatorios de ciclo lavadora ultrassonica lote sgolav gerar assinar" id="menu-btn-portal_cliente_ciclos" style="display:none;" onclick="abrir('portal_cliente_ciclos')"><span class="menu-btn-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span>Relatórios de ciclo</button>
+           <button type="button" class="menu-btn" data-mod="portal_cliente_uso" data-busca="uso do portal clientes entradas convites documentos abertos avisos linha do tempo registro de acessos ip planilha" id="menu-btn-portal_cliente_uso" style="display:none;" onclick="abrir('portal_cliente_uso')"><span class="menu-btn-icon"><i class="fas fa-chart-column" aria-hidden="true"></i></span>Uso do portal</button>
+           <button type="button" class="menu-btn" data-mod="portal_cliente_conversas" data-busca="conversas do portal cliente mensagem nota interna resposta pedido" id="menu-btn-portal_cliente_conversas" style="display:none;" onclick="abrir('portal_cliente_conversas')"><span class="menu-btn-icon"><i class="fas fa-comments" aria-hidden="true"></i></span>Conversas do portal</button>
+           </div>
+@@ -471,6 +474,7 @@
+ <?!= include('JS_PortalCliente_Chamados'); ?>
+ <?!= include('JS_PortalCliente_Documentos'); ?>
+ <?!= include('JS_PortalCliente_Painel'); ?>
++<?!= include('JS_PortalCliente_Inicio'); ?>
+ <?!= include('JS_Contratos_Financeiro'); ?>
+ <?!= include('JS_PainelAtendimento'); ?>
+ <?!= include('JS_Assistencia'); ?>
+diff --git a/cand18/JS_Assistencia.html b/cand19/JS_Assistencia.html
+index e06e639..72ac029 100644
+--- a/cand18/JS_Assistencia.html
++++ b/cand19/JS_Assistencia.html
+@@ -126,7 +126,8 @@
+     if (o.carregando) SGO_iniciarCarregamento_(o.carregando);
+     var fim = function () { if (o.carregando) SGO_finalizarCarregamento_(); };
+     var falhou = function (m) { fim(); if (erro) erro(m); else alert(m); };
+-    google.script.run.withSuccessHandler(function (r) {
++    // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente chama a Assistência pela entrada do Portal (só as ações do cliente)
++    (typeof SGO_run_ === "function" ? SGO_run_() : google.script.run).withSuccessHandler(function (r) {
+       if (!r || (!r.ok && !r.duplicado && !r.conflito)) { falhou((r && r.message) || "Não foi possível concluir: o servidor não respondeu como esperado. Tente de novo."); return; }
+       fim();
+       try { if (ok) ok(r); } catch (e) { console.error("Assistência " + acao + ":", e); alert("Não foi possível mostrar o resultado na tela: " + (e && e.message ? e.message : e) + ". Atualize a página (F5) e tente de novo."); }
+diff --git a/cand18/JS_Core.html b/cand19/JS_Core.html
+index 34866b2..2bbcebe 100644
+--- a/cand18/JS_Core.html
++++ b/cand19/JS_Core.html
+@@ -249,6 +249,8 @@
+           exibirAppLogado_();
+           aplicarContextoUsuario_();
+           if (SGO_ehRepresentada_()) { SGO_iniciarRepresentada_(); return; }
++          // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente entra só com o que o Portal usa (JS_PortalCliente_Inicio.html)
++          if (typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_() && typeof SGO_iniciarClientePortal_ === "function") { SGO_iniciarClientePortal_(); return; }
+           resetarOciosidade_();
+           iniciarMonitorOciosidade_();
+           iniciarPollingAuvo_();
+@@ -360,6 +362,8 @@
+         exibirAppLogado_();
+         aplicarContextoUsuario_();
+         if (SGO_ehRepresentada_()) { SGO_iniciarRepresentada_(); return; }
++        // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente entra só com o que o Portal usa (JS_PortalCliente_Inicio.html)
++        if (typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_() && typeof SGO_iniciarClientePortal_ === "function") { SGO_iniciarClientePortal_(); return; }
+         resetarOciosidade_();
+         iniciarMonitorOciosidade_();
+         iniciarPollingAuvo_();
+@@ -605,20 +609,21 @@
+             `;
+           }
+ 
+-          google.script.run
+-            .withSuccessHandler(function (res) {
+-              if (res && res.success && res.equipamento) {
+-                renderProntuarioDigital_(res.redirectUrl || "", res.equipamento, res.avisoPasta || "");
+-              } else {
+-                alert(res ? res.message : "Não foi possível abrir os dados do equipamento. Tente de novo; se repetir, avise o administrador.");
+-                irTelaInicial_();
+-              }
+-            })
+-            .withFailureHandler(function () {
+-              alert("Falha na comunicação com o servidor ao processar o QR Code.");
++          const qrOk = function (res) {
++            if (res && res.success && res.equipamento) {
++              renderProntuarioDigital_(res.redirectUrl || "", res.equipamento, res.avisoPasta || "");
++            } else {
++              alert(res ? res.message : "Não foi possível abrir os dados do equipamento. Tente de novo; se repetir, avise o administrador.");
+               irTelaInicial_();
+-            })
+-            .qrcodeAcessar(SESSION, equipId);
++            }
++          };
++          const qrFalha = function () {
++            alert("Falha na comunicação com o servidor ao processar o QR Code.");
++            irTelaInicial_();
++          };
++          // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente abre o prontuário pela entrada do Portal (ponte fechada)
++          if (typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_() && typeof SGO_legadoCliente_ === "function") SGO_legadoCliente_("qrcodeAcessar", [equipId], qrOk, qrFalha);
++          else google.script.run.withSuccessHandler(qrOk).withFailureHandler(qrFalha).qrcodeAcessar(SESSION, equipId);
+         } else if (location.parameters && location.parameters.aviso && /^[A-Za-z0-9-]{4,40}$/.test(String(location.parameters.aviso[0] || ""))) {
+           // 01/11/2026: links dos avisos da gestão (?aviso=...) abrem o item exato depois do login (SGO_Avisos_Gestao.js, JS_AvisosMatriz.html).
+           irTelaInicial_();
+@@ -729,15 +734,16 @@
+       var elQ = document.getElementById("qrQualificacao"), elD = document.getElementById("qrDocPastas");
+       if (elQ) { elQ.style.display = ""; elQ.textContent = "Carregando os relatórios de qualificação…"; }
+       if (elD) elD.style.display = "none";
+-      google.script.run
+-        .withSuccessHandler(function (res) {
+-          var el = document.getElementById("qrQualificacao");
+-          if (!el) return;
+-          if (res && res.success && typeof SGO_QVinc !== "undefined") el.innerHTML = SGO_QVinc.htmlQualificacoes(res, { cliente: true, via: "qr" });
+-          else el.textContent = (res && res.message) || "Não foi possível carregar a qualificação deste equipamento.";
+-        })
+-        .withFailureHandler(function () { var el = document.getElementById("qrQualificacao"); if (el) el.textContent = "Não foi possível carregar a qualificação agora. Tente de novo em instantes."; })
+-        .qrcodeQualificacao(SESSION, eqp.ID);
++      var qOk = function (res) {
++        var el = document.getElementById("qrQualificacao");
++        if (!el) return;
++        if (res && res.success && typeof SGO_QVinc !== "undefined") el.innerHTML = SGO_QVinc.htmlQualificacoes(res, { cliente: true, via: "qr" });
++        else el.textContent = (res && res.message) || "Não foi possível carregar a qualificação deste equipamento.";
++      };
++      var qFalha = function () { var el = document.getElementById("qrQualificacao"); if (el) el.textContent = "Não foi possível carregar a qualificação agora. Tente de novo em instantes."; };
++      // 18/11/2026 (Portal do cliente, etapa 6): conta de cliente pela entrada do Portal
++      if (typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_() && typeof SGO_legadoCliente_ === "function") SGO_legadoCliente_("qrcodeQualificacao", [eqp.ID], qOk, qFalha);
++      else google.script.run.withSuccessHandler(qOk).withFailureHandler(qFalha).qrcodeQualificacao(SESSION, eqp.ID);
+     } catch (eQual) { console.error("Qualificação do QR:", eQual); }
+   }
+ 
+@@ -902,6 +908,9 @@
+         btn.style.display = SGO_TELAS_RH.indexOf(mod) >= 0 ? "" : "none";
+       });
+     }
++    // 18/11/2026 (Portal do cliente, etapa 6): conta de cliente — só o grupo "Portal do cliente" (Início, Chamados, Documentos técnicos, Meus
++    // equipamentos, Vencimentos e cronograma, Indicadores, Relatórios de ciclo e Minha conta e equipe). As telas antigas abrem as do Portal (abrir).
++    if (isCliente && typeof SGO_aplicarMenuCliente_ === "function") SGO_aplicarMenuCliente_();
+     if (typeof Menu_iniciar_ === "function") Menu_iniciar_();
+   }
+ 
+@@ -915,6 +924,9 @@
+     try { document.documentElement.classList.remove("sgo-flut-recolhido"); } catch (e0) {} // Etapa 3: botões redondos de volta ao trocar de tela
+     // 31/10/2026: "Trocar minha senha" (todos os perfis) abre a janela da troca por cima da tela atual (JS_SegurancaAcesso.html)
+     if (mod === "trocar_senha") { if (typeof SegAcesso_abrirTrocarMinha_ === "function") SegAcesso_abrirTrocarMinha_(); return; }
++    // 18/11/2026 (Portal do cliente, etapa 6): conta de cliente — tela antiga (Início da equipe, Unidades, Equipamentos, Arquivo de documentos,
++    // Meus chamados, Relatórios de ciclo; atalho, busca ou link antigo) abre a tela do Portal que a substitui (SGO_clienteRota_).
++    if (typeof SGO_clienteRota_ === "function") mod = SGO_clienteRota_(mod);
+     // Perfil REPRESENTADA: qualquer outra tela (atalho, busca, link antigo) leva ao módulo Representação.
+     if (SGO_ehRepresentada_() && SGO_TELAS_REPRESENTADA.indexOf(String(mod || "")) < 0) mod = "representacao";
+     // Perfil RH: tela fora do perfil (busca, atalho antigo, link) mostra o motivo e o caminho de volta.
+@@ -936,7 +948,7 @@
+     if (mod !== "acessos" && typeof AcessosTela_antesDeSair_ === "function" && !AcessosTela_antesDeSair_()) return;
+     try { MenuConta_fechar_(true); } catch (e) {}
+     // Celular: na tela inicial não há para onde voltar (esconde o botão Voltar via CSS).
+-    try { const appNav = document.getElementById("app"); if (appNav) appNav.classList.toggle("mobile-na-home", mod === "mobile_home"); } catch (e) {}
++    try { const appNav = document.getElementById("app"); if (appNav) appNav.classList.toggle("mobile-na-home", mod === "mobile_home" || (mod === "portal_cliente_inicio" && typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_())); } catch (e) {}
+     // Celular: a barra do topo mostra o nome da tela (do menu) antes de o módulo montar; telas que
+     // têm título próprio (atualizarTituloMobile_) sobrescrevem depois. Sem isto ficava "Menu".
+     try {
+@@ -1173,6 +1185,16 @@
+       PclCli_render_();
+       return;
+     }
++    // PORTAL DO CLIENTE, ETAPA 6 (18/11/2026) — "Início" do Portal (conta de cliente) e "Relatórios de ciclo" dentro do Portal (a tela da lavadora,
++    // com as chamadas pela entrada do Portal). Ver JS_PortalCliente_Inicio.html / SGO_PortalCliente_Troca.js.
++    if (mod === "portal_cliente_inicio" && typeof PclIni_render_ === "function") {
++      PclIni_render_();
++      return;
++    }
++    if (mod === "portal_cliente_ciclos" && typeof LavCiclo_render_ === "function") {
++      LavCiclo_render_();
++      return;
++    }
+     // PORTAL DO CLIENTE, ETAPA 2 (18/11/2026) — "Chamados" (conta de cliente: abrir, acompanhar, conversar, cancelar e confirmar) e "Conversas do
+     // portal" (equipe). Ver JS_PortalCliente_Chamados.html / SGO_PortalCliente_Chamados.js. O servidor confere papel, unidades e contrato.
+     if (mod === "portal_cliente_chamados" && typeof PclCh_render_ === "function") {
+@@ -5113,6 +5135,8 @@
+     if (!div) return;
+ 
+     const isCliente = !!(USER_CONTEXT && USER_CONTEXT.perfil === "CLIENTE");
++    // 18/11/2026 (Portal do cliente, etapa 6): no celular, a conta de cliente tem como início o Início do Portal (cartões e atalhos)
++    if (isCliente && typeof PclIni_render_ === "function") { window.SGO_MODULO_ATUAL = "portal_cliente_inicio"; PclIni_render_(); return; }
+ 
+     const itens = [];
+     // 22/10/2026 (dono): "Portões" em primeiro, só para quem pode abrir algum portão ou a porta agora (o servidor decide em AutPred_iniciar_).
+@@ -7060,6 +7084,8 @@
+       portal_cliente_vencimentos: "Vencimentos e cronograma",
+       portal_cliente_indicadores: "Indicadores",
+       portal_cliente_uso: "Uso do portal",
++      portal_cliente_inicio: "Início",
++      portal_cliente_ciclos: "Relatórios de ciclo",
+       omie: "Painel financeiro",
+       modo_personalizado: "Modo personalizado"
+     };
+@@ -7237,7 +7263,8 @@
+   // 11/11/2026 (pedido do dono): bate-papo e "Tire sua dúvida" pela barra do topo. Os widgets continuam os mesmos (arquivos
+   // compartilhados com o COMMAND e o RH360); os botões do topo só acionam os botões deles, que ficam escondidos pelo CSS.
+   window.Topo_abrirChat_ = function () { const b = document.querySelector(".comw-botao"); if (b) b.click(); };
+-  window.Topo_abrirDuvida_ = function () { const b = document.querySelector(".asw-botao"); if (b) b.click(); };
++  // 18/11/2026 (Portal do cliente, etapa 6): o assistente é da equipe; na conta de cliente, "Dúvida" abre a ajuda da tela do Portal ("Como usar esta tela")
++  window.Topo_abrirDuvida_ = function () { if (typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_() && typeof Ajuda_abrir_ === "function") { Ajuda_abrir_(); return; } const b = document.querySelector(".asw-botao"); if (b) b.click(); };
+   setInterval(function () {
+     try {
+       const chat = document.querySelector(".comw-botao"), duv = document.querySelector(".asw-botao");
+@@ -9372,7 +9399,8 @@
+     Ajuda_render_(p, null, "Carregando a ajuda desta tela...");
+     if (AJUDA.cache[k]) { Ajuda_render_(p, AJUDA.cache[k]); return; }
+     const meu = ++AJUDA.pedido;
+-    google.script.run
++    // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente pede a ajuda pela entrada do Portal (SGO_run_)
++    (typeof SGO_run_ === "function" ? SGO_run_() : google.script.run)
+       .withSuccessHandler(function (res) {
+         if (meu !== AJUDA.pedido || !document.getElementById("ajudaPainel")) return;
+         if (!res || !res.ok) { Ajuda_render_(p, null, "", (res && res.message) || "Não foi possível abrir a ajuda: o servidor não respondeu como esperado. Toque em \"Tentar de novo\"."); return; }
+@@ -9496,7 +9524,7 @@
+     const w = window.open("", "_blank");
+     if (!w) { alert("O navegador bloqueou a janela do manual. Permita janelas deste site (ícone na barra de endereço) e toque de novo em \"Manual completo do módulo\"."); return; }
+     try { w.opener = null; w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;color:#374151;font-size:16px'>Montando o manual do módulo, aguarde...</p>"); } catch (e) {}
+-    google.script.run
++    (typeof SGO_run_ === "function" ? SGO_run_() : google.script.run)
+       .withSuccessHandler(function (res) {
+         if (w.closed) return;
+         if (!res || !res.ok || !res.html) {
+diff --git a/cand18/JS_DocumentosPastas.html b/cand19/JS_DocumentosPastas.html
+index 5d4d61f..dd440f4 100644
+--- a/cand18/JS_DocumentosPastas.html
++++ b/cand19/JS_DocumentosPastas.html
+@@ -259,7 +259,8 @@
+       var b = el.querySelector(".dpst-tentar"); if (b) b.onclick = function () { carregar(el, params, opts); };
+     };
+     try {
+-      google.script.run
++      // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente lê as pastas pela entrada do Portal
++      (typeof SGO_run_ === "function" ? SGO_run_() : google.script.run)
+         .withSuccessHandler(function (res) {
+           if (el.__dpstPedido !== pedido || !el.isConnected) return;
+           if (!res || res.success !== true) { falhar((res && res.message) || "Não foi possível carregar os documentos agora. Por quê: o servidor não confirmou a leitura. O que fazer: toque em \"Tentar de novo\"; se repetir, avise o administrador."); return; }
+diff --git a/cand18/JS_Inicio.html b/cand19/JS_Inicio.html
+index 8369dd7..acc5b91 100644
+--- a/cand18/JS_Inicio.html
++++ b/cand19/JS_Inicio.html
+@@ -321,6 +321,14 @@
+ 
+   function Inicio_executarAcao_(acao) {
+     if (!acao) return;
++    // 18/11/2026 (Portal do cliente, etapa 6): na conta de cliente, o equipamento abre a ficha em "Meus equipamentos" e o certificado ou
++    // documento abre "Documentos técnicos" já com a busca (as telas antigas de Cadastros e do Certificado são da equipe)
++    if (typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_() && /^(equipamento|certificado|documento)$/.test(String(acao.tipo || ""))) {
++      if (acao.tipo === "equipamento" && acao.id) { if (typeof PCLD !== "undefined" && PCLD) PCLD.irEq = acao.id; abrir("portal_cliente_equipamentos"); return; }
++      if (typeof PCLD !== "undefined" && PCLD) { PCLD.fd = Object.assign({}, PCLD.fd, { busca: String(acao.numero || acao.termo || "") }); PCLD.irAba = "documentos"; }
++      abrir("portal_cliente_documentos");
++      return;
++    }
+     switch (acao.tipo) {
+       case "modulo": abrir(acao.mod); break;
+       case "atalho": Menu_atalho_(acao.alvo); break;
+@@ -498,7 +506,8 @@
+     }
+     Busca_render_(grupos, "Procurando em cadastros, certificados e padrões…");
+     BUSCA.timer = setTimeout(function () {
+-      google.script.run
++      // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente busca pela entrada do Portal
++      (typeof SGO_run_ === "function" ? SGO_run_() : google.script.run)
+         .withSuccessHandler(function (res) {
+           if (seq !== BUSCA.seq) return;
+           if (!res || !res.ok) { Busca_render_(grupos, (res && res.message) || "Não foi possível buscar agora."); return; }
+diff --git a/cand18/JS_LavCiclo.html b/cand19/JS_LavCiclo.html
+index aa3f73e..2b834f5 100644
+--- a/cand18/JS_LavCiclo.html
++++ b/cand19/JS_LavCiclo.html
+@@ -99,7 +99,8 @@
+     if (carregando && typeof SGO_iniciarCarregamento_ === "function") SGO_iniciarCarregamento_(carregando);
+     var fim = function () { if (carregando && typeof SGO_finalizarCarregamento_ === "function") SGO_finalizarCarregamento_(); };
+     var falhou = function (m, r) { (erro || function (x) { alert(x); })(m, r || {}); };
+-    google.script.run.withSuccessHandler(function (r) {
++    // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente chama os relatórios de ciclo pela entrada do Portal
++    (typeof SGO_run_ === "function" ? SGO_run_() : google.script.run).withSuccessHandler(function (r) {
+       fim();
+       if (r && r.ok) { try { ok(r); } catch (e) { console.error("Relatório do ciclo " + acao + ":", e); falhou("A tela não conseguiu mostrar a resposta (" + ((e && e.message) || e) + "). Atualize a página (F5); nada foi perdido no servidor."); } }
+       else falhou((r && r.message) || "Não foi possível concluir. Tente de novo.", r);
+diff --git a/cand18/JS_PortalCliente.html b/cand19/JS_PortalCliente.html
+index f2c71da..15fb4c8 100644
+--- a/cand18/JS_PortalCliente.html
++++ b/cand19/JS_PortalCliente.html
+@@ -18,6 +18,9 @@
+   .pcl-caixa h3 { margin: 0 0 8px; font-size: 15px; }
+   .pcl-falta { color: #9B1C1C; font-size: 12.5px; font-weight: 600; }
+   .pcl-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
++  /* 18/11/2026 (etapa 6): painel "Pronto para ligar?" da aba Segurança */
++  .pcl-lista-pronto { margin: 8px 0 10px; padding-left: 18px; } .pcl-lista-pronto li { text-align: justify; margin: 0 0 6px; }
++  #pclProntoLigar h4 { margin: 10px 0 6px; font-size: 13.5px; } #pclProntoLigar ol li { margin: 0 0 4px; }
+   .pcl-tabela-caixa { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+   .pcl-tabela-caixa .cadx-tabela td, .pcl-tabela-caixa .cadx-tabela th { vertical-align: top; }
+   .pcl-busca-res { display: grid; gap: 4px; margin-top: 4px; }
+@@ -339,15 +342,35 @@
+   }
+ 
+   // ---------- Segurança ----------
++  /** 18/11/2026 (etapa 6): painel "Pronto para ligar?" — dias de observação, funções fora da lista, as duas travas e o passo a passo. */
++  function PclT_prontidaoHtml_(g) {
++    var p = g.prontidao; if (!p) return "";
++    var selo = function (ok) { return PclT_sit_(ok ? "PLENO" : "CARENCIA", ok ? "Pronto" : "Ainda não"); };
++    var est = function (lig, sim, nao) { return PclT_sit_(lig ? "SUSPENSO" : "CONSULTA", lig ? sim : nao); };
++    var h = '<div class="pcl-caixa" id="pclProntoLigar"><h3>Pronto para ligar? ' + selo(p.prontoTrava) + "</h3>" +
++      '<div class="pclch-dados"><div><small>Dias de observação</small>' + PclT_esc_(p.diasObservacao) + " de " + PclT_esc_(p.periodo) + (p.desde ? " (desde " + PclT_esc_(p.desde) + ")" : "") + "</div>" +
++      "<div><small>Trava do legado</small>" + est(p.travaLegado, "Ligada", "Desligada") + "</div><div><small>Recusa do servidor</small>" + est(p.recusaServidor, "Ligada", "Desligada (observação)") + "</div>" +
++      "<div><small>Lista usada pelo servidor</small>" + PclT_esc_(p.listaMinima ? "Mínima" : "Transição") + "</div></div>" +
++      '<ul class="pcl-lista-pronto">' + p.itens.map(function (i) { return "<li>" + selo(i.ok) + " <b>" + PclT_esc_(i.titulo) + "</b>. " + PclT_esc_(i.texto) + "</li>"; }).join("") + "</ul>";
++    h += '<h4>Funções fora da lista mínima chamadas por contas de cliente</h4>' + (p.fora.length ? '<div class="pcl-tabela-caixa"><table class="cadx-tabela"><thead><tr><th>Função</th><th>Na lista de transição</th><th>Chamadas nos últimos ' + PclT_esc_(p.periodo) + " dias</th><th>Pessoas</th><th>Total</th><th>Última</th></tr></thead><tbody>" +
++      p.fora.map(function (f) { return "<tr><td><code>" + PclT_esc_(f.funcao) + "</code>" + (f.interna ? " <small>(interna)</small>" : "") + "</td><td>" + (f.naTransicao ? "Sim" : "<b>Não</b>") + "</td><td>" + f.recentes + "</td><td>" + f.pessoas + "</td><td>" + f.chamadas + "</td><td>" + PclT_esc_(f.ultima) + "</td></tr>"; }).join("") + "</tbody></table></div>"
++      : '<p class="pcl-just">Nenhuma chamada fora da lista mínima registrada.</p>');
++    h += '<details class="pclch-passo"><summary>Passo a passo para ligar (e para voltar atrás)</summary><ol>' + p.passos.map(function (x) { return '<li class="pcl-just">' + PclT_esc_(x) + "</li>"; }).join("") + "</ol>" +
++      '<p class="pcl-just"><small>Lista mínima: ' + p.listaMinimaFuncoes.map(PclT_esc_).join(", ") + ".</small></p></details></div>";
++    return h;
++  }
+   function PclT_desenharSeguranca_(r) {
+     var g = r.seguranca, pode = !!r.podeAlterar;
+-    var h = '<div class="pcl-caixa"><h3>Lista fechada de funções da conta de cliente: ' + (g.modo === "RECUSAR" ? "recusa LIGADA" : "modo observação (recusa desligada)") + "</h3>" +
++    PCL.seguranca = g;
++    var h = PclT_prontidaoHtml_(g) + '<div class="pcl-caixa"><h3>Lista fechada de funções da conta de cliente: ' + (g.modo === "RECUSAR" ? "recusa LIGADA" : "modo observação (recusa desligada)") + "</h3>" +
+       '<p class="pcl-just">' + PclT_esc_(g.instrucao) + "</p><p>Observação: " + PclT_esc_(g.dias) + " dias" + (g.desde ? ", desde " + PclT_esc_(g.desde) + " até " + PclT_esc_(g.ate) : ", ainda sem chamadas") + (g.alteradoPor ? ". Última alteração: " + PclT_esc_(g.alteradoPor) + " em " + PclT_esc_(g.alteradoEm) : "") + ".</p></div>";
+     h += '<div class="pcl-caixa"><h3>Funções chamadas por contas de cliente (' + g.funcoes.length + "; fora da lista: " + g.foraDaLista + ")</h3>" + (g.funcoes.length ? '<div class="pcl-tabela-caixa"><table class="cadx-tabela"><thead><tr><th>Função</th><th>Na lista</th><th>Chamadas</th><th>Recusadas</th><th>Pessoas</th><th>Clientes</th><th>Última</th></tr></thead><tbody>' +
+       g.funcoes.map(function (f) { return "<tr><td><code>" + PclT_esc_(f.funcao) + "</code></td><td>" + (f.naLista ? "Sim" : f.nunca ? "Não (interna)" : "<b>Não</b>") + "</td><td>" + f.chamadas + "</td><td>" + f.recusadas + "</td><td>" + f.pessoas + "</td><td>" + f.clientes + "</td><td>" + PclT_esc_(f.ultima) + "</td></tr>"; }).join("") + "</tbody></table></div>" : "<p>Nenhuma chamada registrada ainda. O registro começa quando o servidor estiver com o patch da etapa 0.</p>") + "</div>";
+     h += '<details class="pcl-caixa"><summary>Lista atual (' + (g.lista.length + g.extras.length) + " funções)</summary><p><small>" + g.lista.concat(g.extras).map(PclT_esc_).join(", ") + "</small></p></details>";
+     if (pode) h += '<div class="pcl-caixa"><h3>Alterar</h3><div class="pcl-form">' +
+       '<label>Chave de recusa<select id="pclSegModo"><option value="OBSERVAR"' + (g.modo !== "RECUSAR" ? " selected" : "") + '>Desligada (observar)</option><option value="RECUSAR"' + (g.modo === "RECUSAR" ? " selected" : "") + ">Ligada (recusar fora da lista)</option></select></label>" +
++      '<label>Trava do legado<select id="pclSegTravaLegado"><option value="DESLIGADA"' + (!g.travaLegado ? " selected" : "") + '>Desligada (padrão)</option><option value="LIGADA"' + (g.travaLegado ? " selected" : "") + ">Ligada (cliente só pelo Portal)</option></select></label>" +
++      '<label>Lista usada pelo servidor<select id="pclSegLista"><option value="TRANSICAO"' + (!g.listaMinima ? " selected" : "") + '>Transição (padrão)</option><option value="MINIMA"' + (g.listaMinima ? " selected" : "") + ">Mínima (Portal e o básico da sessão)</option></select></label>" +
+       '<label>Dias de observação<input id="pclSegDias" type="number" min="1" max="60" value="' + PclT_esc_(g.dias) + '"></label>' +
+       '<label>Acrescentar função à lista<input id="pclSegAcrescentar" type="text" maxlength="120" placeholder="nome exato da função"></label>' +
+       '<label>Retirar função acrescentada<select id="pclSegRetirar"><option value="">Nenhuma</option>' + g.extras.map(function (f) { return '<option value="' + PclT_esc_(f) + '">' + PclT_esc_(f) + "</option>"; }).join("") + "</select></label>" +
+@@ -355,9 +378,15 @@
+     PclT_$("pclCorpo").innerHTML = h;
+   }
+   function PclT_gravarSeg_() {
+-    var modo = PclT_v_("pclSegModo"), d = { modo: modo, dias: PclT_v_("pclSegDias"), acrescentar: PclT_v_("pclSegAcrescentar"), retirar: PclT_v_("pclSegRetirar"), motivo: PclT_v_("pclSegMotivo") };
+-    var vai = function () { PclT_chamar_("salvarSeguranca", d, function (r) { PclT_desenharSeguranca_({ seguranca: r.seguranca, podeAlterar: true }); PclT_msg_(r.message, "ok"); }); };
+-    if (modo === "RECUSAR" && typeof fsPerguntar_ === "function") fsPerguntar_("Ligar a recusa?", "Com a recusa ligada, toda função fora da lista é recusada para as contas de cliente. Confira antes a tabela: as funções marcadas \"Não\" deixam de funcionar para os clientes. O servidor precisa estar com o patch da etapa 0.", [{ rotulo: "Voltar", fn: function () {} }, { rotulo: "Gravar", prim: true, fn: vai }]);
++    var modo = PclT_v_("pclSegModo"), d = { modo: modo, dias: PclT_v_("pclSegDias"), acrescentar: PclT_v_("pclSegAcrescentar"), retirar: PclT_v_("pclSegRetirar"), motivo: PclT_v_("pclSegMotivo"),
++      travaLegado: PclT_v_("pclSegTravaLegado"), lista: PclT_v_("pclSegLista") };
++    var g = (PCL.seguranca || {}), ligaTrava = d.travaLegado === "LIGADA" && !g.travaLegado, ligaMin = d.lista === "MINIMA" && !g.listaMinima;
++    var vai = function () { PclT_chamar_("salvarSeguranca", d, function (r) { PCL.seguranca = r.seguranca; PclT_desenharSeguranca_({ seguranca: r.seguranca, podeAlterar: true }); PclT_msg_(r.message, "ok"); }); };
++    var avisos = [];
++    if (modo === "RECUSAR" && g.modo !== "RECUSAR") avisos.push("Com a recusa do servidor ligada, toda função fora da lista é recusada para as contas de cliente. Confira antes a tabela: as funções marcadas \"Não\" deixam de funcionar para os clientes. O servidor precisa estar com o patch da etapa 0.");
++    if (ligaTrava) avisos.push("Com a trava do legado ligada, a conta de cliente só usa as telas do Portal; qualquer outra parte do SGO+ recusa na hora, com o caminho. Confira antes o painel \"Pronto para ligar?\".");
++    if (ligaMin) avisos.push("Com a lista mínima, o servidor só aceita do cliente a entrada do Portal e o básico da sessão. Escolha só quando \"fora da lista mínima\" estiver em zero.");
++    if (avisos.length && typeof fsPerguntar_ === "function") fsPerguntar_("Confirmar a mudança?", avisos.join(" "), [{ rotulo: "Voltar", fn: function () {} }, { rotulo: "Gravar", prim: true, fn: vai }]);
+     else vai();
+   }
+ 
+diff --git a/cand18/JS_PortalCliente_Ajuda.html b/cand19/JS_PortalCliente_Ajuda.html
+index df39e66..f4004a4 100644
+--- a/cand18/JS_PortalCliente_Ajuda.html
++++ b/cand19/JS_PortalCliente_Ajuda.html
+@@ -28,6 +28,9 @@ var PCL_DICAS = {
+   pclCtSuspenderMotivo: 'Motivo: interno, para o histórico. O cliente vê apenas "acesso suspenso, fale com a Metrolabs". Só Administrador e Diretoria suspendem.',
+   pclPcMotivo: 'Motivo da revisão: por que o cliente fica sem contrato (ex.: "cliente avulso, atende por orçamento"). Ao marcar, as contas dele deixam de entrar.',
+   pclSegModo: 'Chave de recusa: desligada, o sistema só registra as funções que as contas de cliente chamam; ligada, recusa toda função fora da lista com a mensagem do quê, por quê e o que fazer.',
++  // 18/11/2026 (etapa 6): trava do legado e lista usada pelo servidor (aba Segurança)
++  pclSegTravaLegado: 'Trava do legado: desligada (padrão), nada muda; ligada, a conta de cliente só usa as telas do Portal e qualquer outra parte do SGO+ recusa na hora, com a mensagem do quê, por quê e o que fazer. Vale sem depender do servidor. Ligue só com o painel "Pronto para ligar?" verde.',
++  pclSegLista: 'Lista usada pelo servidor: transição (padrão) aceita também as funções das telas antigas; mínima aceita só a entrada do Portal e o básico da sessão. Só vale com a recusa do servidor ligada. Escolha a mínima quando "fora da lista mínima" estiver em zero.',
+   pclSegDias: 'Dias de observação: quanto tempo observar antes de pensar em ligar a recusa (padrão 7, de 1 a 60). Conta da primeira chamada registrada.',
+   pclSegAcrescentar: 'Acrescentar função: o nome exato de uma função que o cliente precisa e está "fora da lista" na tabela. Funções de módulos internos (Comercial, Financeiro, Conduta, Licitações, bate-papo) nunca entram.',
+   pclSegRetirar: 'Retirar função: tira da lista uma função acrescentada antes. A lista básica muda só com publicação.',
+@@ -214,7 +217,8 @@ var PCL_GUIAS = {
+   seguranca: ['Acompanhar as funções que as contas de cliente chamam e decidir quando ligar a recusa.', [
+     'Durante a observação nada é recusado: a tabela mostra cada função, se está na lista e quantas vezes foi chamada.',
+     'Terminado o período, acrescente à lista o que o cliente realmente precisa (com motivo).',
+-    'Escolha "Ligada", escreva o motivo e grave. Funções fora da lista passam a ser recusadas para os clientes.']],
++    'Escolha "Ligada", escreva o motivo e grave. Funções fora da lista passam a ser recusadas para os clientes.',
++    'O painel "Pronto para ligar?" (etapa 6) junta os dias de observação, as funções fora da lista e o estado da trava do legado e da recusa do servidor, com o passo a passo para ligar e para voltar atrás. As duas chaves nascem desligadas.']],
+   // 18/11/2026 (etapa 1): Acessos de clientes (equipe) e Minha conta e equipe (conta de cliente)
+   acessos: ['Cuidar das pessoas de cada cliente no Portal: convite, papel, unidades, troca de e-mail, desligamento, reativação e os pedidos dos gestores dos clientes.', [
+     'Escolha o cliente na lista (ou busque pelo nome ou CNPJ). A faixa amarela diz quando o convite está travado e o que fazer (cadastrar ou renovar o contrato).',
+@@ -260,6 +264,15 @@ var PCL_GUIAS = {
+     'Em "Chamados do portal": o telefone de plantão, o prazo para responder ao pedido, a confirmação automática do atendimento e os limites de envio.',
+     'Em "Avisos ao cliente por e-mail": se os avisos vão para as pessoas do portal, o horário comercial, a hora dos resumos, o intervalo do resumo das mensagens e a cópia ao e-mail do cadastro.',
+     'A régua de vencimento e o reajuste têm o próprio botão e o próprio motivo. Cada mudança fica no histórico das regras, no fim da aba.']],
++  // 18/11/2026 (etapa 6): Início do Portal, prontuário por pastas e unidades da empresa (conta de cliente)
++  inicio: ['Ver de relance o que está acontecendo com os equipamentos da sua empresa e o que depende de você.', [
++    'Veja os cartões: chamados abertos, próxima visita, vencimentos nos próximos 30 dias e documentos novos. Toque num cartão para abrir a tela.',
++    'Trate o que está em "O que precisa de você": complemento pedido, orçamento aguardando aprovação e atendimento para confirmar.',
++    'Para um problema novo, toque em "Abrir chamado". "Manual do Portal" abre o manual completo para ler ou imprimir.']],
++  unidades: ['Ver as unidades da sua empresa, com endereço, quantidade de equipamentos e os documentos de cada uma.', [
++    'Cada unidade mostra CNPJ, telefone, endereço e quantos equipamentos ativos ela tem.',
++    '"Ver os equipamentos" abre a lista já filtrada pela unidade.',
++    '"Documentos da unidade" abre as pastas da unidade, com PGT, POP e registros.']],
+   // 18/11/2026 (etapa 3)
+   documentos: ['Guardar e baixar os documentos técnicos dos seus equipamentos para auditorias e para a Vigilância Sanitária.', [
+     'Filtre por unidade, equipamento, tipo, data de emissão ou validade.',
+diff --git a/cand18/JS_PortalCliente_Chamados.html b/cand19/JS_PortalCliente_Chamados.html
+index 0e12887..dcfb2a3 100644
+--- a/cand18/JS_PortalCliente_Chamados.html
++++ b/cand19/JS_PortalCliente_Chamados.html
+@@ -218,6 +218,11 @@
+         (p.reabrir ? '<label>Telefone para falarmos com você<input id="pclReabrirTel" type="tel" maxlength="20" placeholder="(62) 98765-4321"></label>' : "") + '</div><div class="pcl-acoes"><button type="button" class="cadx-btn" data-ch="reabrir">Enviar: o problema continua</button></div></details>' : "") + "</div>";
+     else if (ch && it.aceite && it.aceite.tipo) h += '<p class="pclch-meta">' + PclCh_esc_(it.aceite.nome) + (it.aceite.em ? " em " + PclCh_esc_(it.aceite.em) : "") + (it.aceite.texto ? ": " + PclCh_esc_(it.aceite.texto) : "") + "</p>";
+     else if (ch && it.confirmadoTexto) h += '<p class="pclch-meta">' + PclCh_esc_(it.confirmadoTexto) + "</p>";
++    // 18/11/2026 (etapa 6): relatório A4 do atendimento (versão do cliente) e a prévia, que ficavam em "Meus chamados"
++    if (ch && it.etapa >= 6) h += '<div class="pcl-caixa"><h3>Relatório do atendimento</h3><p class="pcl-just">' + (it.etapa === 8
++      ? 'O relatório do atendimento em A4 reúne as etapas, a visita, o serviço executado, as fotos liberadas e as recomendações. Ele fica também em Documentos técnicos.</p><div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-ch="relAtend">Gerar relatório do atendimento</button></div>'
++      : 'A prévia mostra o resumo do serviço e os termos de retirada e de entrega como estão agora, sem gravar nada. O relatório oficial fica disponível depois da conclusão.</p><div class="pcl-acoes"><button type="button" class="cadx-btn" data-ch="previa">Ver prévia</button></div>') +
++      '<div id="pclRelMsg" aria-live="polite"></div></div>';
+     // galeria
+     h += '<div class="pcl-caixa"><h3>Fotos e arquivos</h3>' + ((r.galeria || []).length ? '<div class="pclch-galeria">' + r.galeria.map(function (g) {
+       return '<a href="' + PclCh_esc_(g.url) + '" target="_blank" rel="noopener" title="' + PclCh_esc_(g.tipoNome + " · " + g.por + " · " + g.em) + '">' + (g.midia === "IMAGEM" ? '<img src="' + PclCh_esc_(g.url) + '" alt="' + PclCh_esc_(g.legenda || g.tipoNome) + '" loading="lazy">' : "") + "<span>" + PclCh_esc_((g.midia === "VIDEO" ? "Vídeo · " : g.midia ? "" : "Arquivo · ") + (g.legenda || g.tipoNome) + " · " + g.por) + "</span></a>";
+@@ -329,6 +334,13 @@
+     if (a === "enviarPedido") return PclCh_enviarPedido_(false);
+     if (a === "enviarMesmoAssim") return PclCh_enviarPedido_(true);
+     if (a === "mesmoProblema") return PclCh_ficha_(alvo.getAttribute("data-tipo"), alvo.getAttribute("data-id"), "pclMsgTexto");
++    // 18/11/2026 (etapa 6): relatório A4 do atendimento e a prévia, que ficavam em "Meus chamados" (Assistência, pela entrada do Portal)
++    if ((a === "relAtend" || a === "previa") && it && typeof At_chamar_ === "function") {
++      var relMsg = PclCh_$("pclRelMsg");
++      if (a === "previa") return At_chamar_("previaAtendimento", { id: it.id }, function (r) { if (typeof RpF_previa_ === "function") RpF_previa_(r.html, "Prévia do resumo do serviço e dos termos"); }, function (m) { if (relMsg) relMsg.innerHTML = '<div class="pclch-faixa erro" role="alert">' + PclCh_esc_(m) + "</div>"; }, { carregando: "Montando a prévia…" });
++      return At_chamar_("relatorioAtendimento", { id: it.id }, function (r) { if (typeof PnA_docGerado_ === "function") PnA_docGerado_(relMsg, r); else if (relMsg) relMsg.innerHTML = '<div class="pclch-faixa">' + PclCh_esc_(r.message || "Relatório gerado.") + "</div>"; },
++        function (m) { if (relMsg) relMsg.innerHTML = '<div class="pclch-faixa erro" role="alert">' + PclCh_esc_(m) + "</div>"; }, { carregando: "Gerando o relatório do atendimento…" });
++    }
+     var recarregar = function (r) { PclCh_ficha_(f.tipo, it.id); setTimeout(function () { PclCh_msg_(r.message, "ok"); }, 400); };
+     if (a === "enviarMsg") {
+       var ref = alvo.getAttribute("data-ref"), id = alvo.getAttribute("data-id");
+diff --git a/cand18/JS_PortalCliente_Documentos.html b/cand19/JS_PortalCliente_Documentos.html
+index 0c1f50c..9d4b4b7 100644
+--- a/cand18/JS_PortalCliente_Documentos.html
++++ b/cand19/JS_PortalCliente_Documentos.html
+@@ -76,18 +76,58 @@
+     t.addEventListener("click", PclD_clique_);
+     t.addEventListener("keydown", function (ev) { if (ev.key === "Enter" && ev.target && /^(pclDocBusca|pclEqBusca)$/.test(ev.target.id)) { ev.preventDefault(); PclD_buscar_(); } if (ev.key === "Enter" && ev.target.closest && ev.target.closest(".pclch-card[data-dc]")) { ev.preventDefault(); ev.target.closest(".pclch-card[data-dc]").click(); } });
+     PCLD.ocupado = false;
+-    if (PCLD.tela === "documentos") { PclD_$("pclAbas").style.display = "none"; return PclD_documentos_(); }
+-    if (PCLD.tela === "equipamentos") { PclD_$("pclAbas").style.display = "none"; var alvo = (extra && extra.id) || PCLD.irEq || ""; PCLD.irEq = ""; return alvo ? PclD_ficha_(alvo) : PclD_equipamentos_(); }
+-    PclD_irAba_(extra && extra.aba === "cronograma" ? "cronograma" : PCLD.aba || "vencimentos");
++    // 18/11/2026 (etapa 6): "Documentos técnicos" ganha a aba "Por pastas (prontuário)" (o antigo Arquivo de documentos, com PGT e POP, O.S. e
++    // qualificação: pedido da Priscilla de 17/11) e "Meus equipamentos" ganha a aba "Unidades" (a antiga tela Unidades). PCLD.irAba vem da casca.
++    var irAba = (extra && extra.aba) || PCLD.irAba || ""; PCLD.irAba = "";
++    if (PCLD.tela === "documentos") return PclD_irAba_(irAba === "pastas" ? "pastas" : "documentos");
++    if (PCLD.tela === "equipamentos") { var alvo = (extra && extra.id) || PCLD.irEq || ""; PCLD.irEq = ""; if (alvo) { PclD_abasHtml_("equipamentos"); return PclD_ficha_(alvo); } return PclD_irAba_(irAba === "unidades" ? "unidades" : "equipamentos"); }
++    PclD_irAba_(irAba === "cronograma" ? "cronograma" : PCLD.aba === "cronograma" ? "cronograma" : "vencimentos");
++  }
++  var PCLD_ABAS = { documentos: [["documentos", "Documentos técnicos"], ["pastas", "Por pastas (prontuário)"]], equipamentos: [["equipamentos", "Equipamentos"], ["unidades", "Unidades"]],
++    vencimentos: [["vencimentos", "Vencimentos"], ["cronograma", "Cronograma"]] };
++  function PclD_abasHtml_(aba) {
++    PclD_$("pclAbas").style.display = "";
++    PclD_$("pclAbas").innerHTML = (PCLD_ABAS[PCLD.tela] || []).map(function (a) { return '<button type="button" class="vg-aba' + (aba === a[0] ? " is-atual" : "") + '" role="tab" aria-selected="' + (aba === a[0]) + '" data-dc-aba="' + a[0] + '">' + a[1] + "</button>"; }).join("");
+   }
+   function PclD_irAba_(aba) {
+-    PCLD.aba = aba;
+-    PclD_$("pclAbas").innerHTML = [["vencimentos", "Vencimentos"], ["cronograma", "Cronograma"]].map(function (a) { return '<button type="button" class="vg-aba' + (aba === a[0] ? " is-atual" : "") + '" role="tab" aria-selected="' + (aba === a[0]) + '" data-dc-aba="' + a[0] + '">' + a[1] + "</button>"; }).join("");
++    if (PCLD.tela === "vencimentos") PCLD.aba = aba;
++    PclD_abasHtml_(aba);
+     PclD_msg_(""); PclD_$("pclCorpo").innerHTML = '<p class="vg-sub">Carregando…</p>';
++    if (aba === "documentos") return PclD_documentos_();
++    if (aba === "pastas") return PclD_pastas_();
++    if (aba === "equipamentos") return PclD_equipamentos_();
++    if (aba === "unidades") return PclD_unidades_();
+     if (typeof PclAj_aba_ === "function") PclAj_aba_(aba);
+     if (aba === "cronograma") return PclD_chamar_("cronograma", PCLD.fc, PclD_desenharCronograma_, PclD_erroCorpo_);
+     PclD_chamar_("vencimentos", PCLD.fv, PclD_desenharVencimentos_, PclD_erroCorpo_);
+   }
++  // ---------- etapa 6: prontuário por pastas e unidades da empresa ----------
++  /** Documentos por pastas (o mesmo componente do QR Code e do antigo Arquivo de documentos), pela entrada do Portal. escopo: cliente, unidade ou equipamento. */
++  function PclD_carregarPastas_(el, escopo, id) {
++    if (!el) return;
++    if (!window.SGO_DocPastas) { el.innerHTML = '<p class="pcld-just">O prontuário por pastas não está disponível nesta página. Atualize a página (F5).</p>'; return; }
++    SGO_DocPastas.carregar(el, { escopo: escopo, id: id || "", via: "portal" }, { contexto: "portal", semFiltros: escopo !== "cliente" });
++  }
++  function PclD_pastas_() {
++    // sem o guia do Portal aqui: o componente de pastas já traz o próprio "Como fazer nesta aba"
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("pastas");
++    PclD_$("pclCorpo").innerHTML = '<div class="pcl-caixa"><p class="pcld-just">Todos os documentos emitidos para a sua empresa, organizados por pasta, como no prontuário do equipamento: certificados, qualificações, ' +
++      'relatórios e ordens de serviço, PGT e POP da unidade, laudos de NR-13 e os demais. Use a busca e os filtros de unidade e equipamento; toque no documento para abrir.</p><div id="pclDocPastas"></div></div>';
++    PclD_carregarPastas_(PclD_$("pclDocPastas"), "cliente", "");
++  }
++  function PclD_unidades_() {
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("unidades");
++    PclD_chamar_("unidades", {}, function (r) {
++      var h = '<div class="pcl-caixa"><p class="pclch-meta">' + PclD_esc_(r.todas ? "Todas as unidades da sua empresa." : "As unidades liberadas para o seu acesso.") + "</p>" + (r.unidades.length ? '<div class="pclch-cards">' + r.unidades.map(function (u) {
++        return '<div class="pclch-card" style="--pclch-cor:#1A4F8C"><b>' + PclD_esc_(u.nome) + "</b>" + (u.ativa ? "" : ' <span class="pclch-selo">Inativa</span>') +
++          '<p class="pclch-meta">' + PclD_esc_([u.cnpj ? "CNPJ " + u.cnpj : "", u.telefone].filter(Boolean).join(" · ")) + "</p>" +
++          '<p class="pclch-meta">' + PclD_esc_([u.endereco, u.cidade, u.cep ? "CEP " + u.cep : ""].filter(Boolean).join(" · ") || "Endereço não informado") + "</p>" +
++          '<p class="pclch-meta">' + u.equipamentos + (u.equipamentos === 1 ? " equipamento ativo" : " equipamentos ativos") + "</p>" +
++          '<div class="pcl-acoes"><button type="button" class="cadx-btn" data-dc="unEquip" data-id="' + PclD_esc_(u.id) + '">Ver os equipamentos</button><button type="button" class="cadx-btn" data-dc="unDocs" data-id="' + PclD_esc_(u.id) + '">Documentos da unidade</button></div>' +
++          '<div class="pcld-undocs" id="pclUnDocs_' + PclD_esc_(u.id) + '"></div></div>'; }).join("") + "</div>" : '<div class="pclch-vazio">Nenhuma unidade liberada para o seu acesso. Fale com o Gestor do cliente da sua empresa.</div>') + "</div>";
++      PclD_$("pclCorpo").innerHTML = h;
++    }, PclD_erroCorpo_);
++  }
+   function PclD_buscar_() {
+     if (PCLD.tela === "documentos") { PCLD.fd = { unidadeId: PclD_v_("pclDocUnidade"), equipamentoId: PclD_v_("pclDocEquipamento"), tipo: PclD_v_("pclDocTipo"), periodo: PclD_v_("pclDocPeriodo"), venceAte: PclD_v_("pclDocVence"), busca: PclD_v_("pclDocBusca") }; return PclD_documentos_(); }
+     if (PCLD.tela === "equipamentos") { PCLD.fe = { unidadeId: PclD_v_("pclEqUnidade"), farol: PclD_v_("pclEqFarol"), busca: PclD_v_("pclEqBusca") }; return PclD_equipamentos_(); }
+@@ -171,6 +211,9 @@
+     h += '<div class="pcl-caixa pcld-bloco"><h3>Vencimentos <small>calibração, qualificação, NR-13, manutenção e outros documentos</small></h3>' + (r.vencimentos.length ? '<div class="pclch-cards">' + r.vencimentos.map(function (v) {
+       return '<div class="pclch-card" style="--pclch-cor:' + ({ vencido: "#9B1C1C", vencendo: "#a36a00" }[v.situacao] || "#2f7a4f") + '"><b>' + PclD_esc_(v.categoriaNome) + '</b> <span class="pcld-farol pcld-f-' + PclD_esc_(v.situacao) + '">' + PclD_esc_(v.situacaoTexto) + '</span><p class="pclch-meta">' + PclD_esc_(v.origem) + "</p></div>"; }).join("") + "</div>" : '<p class="pcld-just">Nenhum documento com validade registrado para este equipamento.</p>') + "</div>";
+     h += '<div class="pcl-caixa pcld-bloco"><h3>Documentos <small>' + r.documentos.length + "</small></h3>" + (r.documentos.length ? '<div class="pclch-cards">' + r.documentos.map(PclD_docHtml_).join("") + "</div>" : '<p class="pcld-just">Nenhum documento deste equipamento liberado no Portal. Se faltar algum, avise a Metrolabs pela Conversa geral.</p>') + "</div>";
++    // 18/11/2026 (etapa 6): o prontuário por pastas do equipamento (o mesmo do QR Code: PGT e POP da unidade, O.S., qualificação e os demais)
++    h += '<div class="pcl-caixa pcld-bloco"><h3>Prontuário por pastas <small>todos os documentos do equipamento, como no QR Code</small></h3><p class="pcld-just">Inclui os documentos da unidade que valem para o equipamento (PGT, POP e registros), as ordens de serviço e as qualificações.</p>' +
++      '<div class="pcl-acoes"><button type="button" class="cadx-btn" data-dc="eqPastas" data-id="' + PclD_esc_(e.id) + '">Abrir o prontuário por pastas</button></div><div id="pclEqPastas"></div></div>';
+     h += '<div class="pcl-caixa pcld-bloco pcld-hist"><h3>Histórico de atendimentos <small>só os atendimentos concluídos</small></h3>' + (r.historico.length ? '<ul class="pclch-tempo">' + r.historico.map(function (a) {
+       return "<li><b>" + PclD_esc_(a.data) + "</b> · " + PclD_esc_(a.tipo) + (a.numero ? " · nº " + PclD_esc_(a.numero) : "") + (a.relato ? "<p>" + PclD_esc_(a.relato) + "</p>" : "") + "</li>"; }).join("") + "</ul>" : '<p class="pcld-just">Nenhum atendimento concluído registrado para este equipamento.</p>') + "</div>";
+     h += '<div class="pcl-caixa pcld-bloco"><h3>Chamados <small>' + r.chamados.length + "</small></h3>" + (r.chamados.length ? '<div class="pclch-cards">' + r.chamados.map(function (c) {
+@@ -219,6 +262,15 @@
+     var b = ev.target.closest && ev.target.closest("[data-dc]"); if (!b) return;
+     var a = b.getAttribute("data-dc");
+     if (a === "buscar") return PclD_buscar_();
++    // 18/11/2026 (etapa 6): unidades da empresa e prontuário por pastas (da unidade e do equipamento)
++    if (a === "unEquip") { PCLD.fe = { unidadeId: b.getAttribute("data-id"), farol: "", busca: "" }; return PclD_irAba_("equipamentos"); }
++    if (a === "unDocs" || a === "eqPastas") {
++      var alvoP = PclD_$(a === "unDocs" ? "pclUnDocs_" + b.getAttribute("data-id") : "pclEqPastas");
++      if (!alvoP) return;
++      if (alvoP.getAttribute("data-aberto") === "1") { alvoP.innerHTML = ""; alvoP.setAttribute("data-aberto", "0"); return; }
++      alvoP.setAttribute("data-aberto", "1");
++      return PclD_carregarPastas_(alvoP, a === "unDocs" ? "unidade" : "equipamento", b.getAttribute("data-id"));
++    }
+     if (a === "limpar") { PCLD.fd = { unidadeId: "", equipamentoId: "", tipo: "", periodo: "", venceAte: "", busca: "" }; return PclD_documentos_(); }
+     if (a === "abrirDoc") return PclD_abrirDoc_(b.getAttribute("data-k"));
+     if (a === "fichaEq") return PclD_ficha_(b.getAttribute("data-id"));
+diff --git a/cand19/JS_PortalCliente_Inicio.html b/cand19/JS_PortalCliente_Inicio.html
+new file mode 100644
+index 0000000..3572d08
+--- /dev/null
++++ b/cand19/JS_PortalCliente_Inicio.html
+@@ -0,0 +1,174 @@
++<style>
++  /* PORTAL DO CLIENTE — ETAPA 6, TROCA DEFINITIVA (18/11/2026). Servidor: SGO_PortalCliente_Troca.js e SGO_PortalCliente_Manual.js.
++     1) Conta de cliente: "Início" do Portal (cartões, "O que precisa de você", atalhos e o manual do Portal).
++     2) Casca da conta de cliente: só as telas do Portal no menu e na grade do celular; as telas antigas (Início da equipe, Unidades,
++        Equipamentos, Arquivo de documentos, Meus chamados, Relatórios de ciclo) abrem as telas do Portal (SGO_clienteRota_).
++     3) Ponte: as funções antigas que continuam valendo dentro do Portal (prontuário por pastas e pelo QR Code, Assistência técnica do
++        cliente, relatórios de ciclo, ajuda e busca) passam pela entrada única PortalCliente_api (SGO_legadoCliente_).
++     Visual do SGO+ (tokens --bc-*, cadx-*, vg-*, pcl-*, pclch-*). Texto corrido justificado. Sem window.alert/confirm/prompt. */
++  #pclIniTela .pclini-cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin: 0 0 12px; }
++  #pclIniTela .pclini-cartao { text-align: left; border: 1px solid var(--bc-line, #E2E0D8); border-left: 4px solid var(--pclini-cor, #1A4F8C); border-radius: 10px; padding: 10px 12px;
++    background: var(--bc-surface, #fff); min-width: 0; min-height: 44px; cursor: pointer; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 2px; }
++  #pclIniTela .pclini-cartao:hover, #pclIniTela .pclini-cartao:focus-visible { box-shadow: 0 2px 8px rgba(0, 0, 0, .08); outline: none; }
++  #pclIniTela .pclini-cartao b { font-size: 22px; line-height: 1.2; overflow-wrap: anywhere; }
++  #pclIniTela .pclini-cartao span { font-weight: 700; }
++  #pclIniTela .pclini-cartao small { color: var(--bc-text-2, #4A4F4B); text-align: left; overflow-wrap: break-word; }
++  #pclIniTela .pclini-precisa { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
++  #pclIniTela .pclini-precisa button { width: 100%; text-align: left; font: inherit; color: inherit; background: var(--bc-warn-bg, #FAF0D7); border: 1px solid var(--bc-warn-line, #E6D3A2);
++    border-radius: 8px; padding: 8px 10px; min-height: 44px; cursor: pointer; overflow-wrap: anywhere; }
++  #pclIniTela .pclini-atalhos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
++  #pclIniTela .pclini-atalhos button { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 10px; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 10px;
++    background: var(--bc-surface, #fff); font: inherit; color: inherit; cursor: pointer; text-align: left; min-width: 0; }
++  #pclIniTela .pclini-atalhos i { width: 20px; text-align: center; color: var(--bc-info, #1E4F7A); flex: 0 0 auto; }
++  #pclIniTela .pclini-just { text-align: justify; }
++  #pclIniTela .pclini-un { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
++  #pclIniTela .pclini-atalhos span { overflow-wrap: normal; word-break: normal; hyphens: manual; }
++  @media (max-width: 360px) { #pclIniTela .pclini-atalhos { grid-template-columns: 1fr !important; } }
++  @media (max-width: 420px) { #pclIniTela .pclini-cartoes { grid-template-columns: 1fr 1fr; } #pclIniTela .pclini-cartao b { font-size: 18px; } #pclIniTela .pclini-atalhos { grid-template-columns: 1fr 1fr; } }
++</style>
++<script>
++  // ==========================================================
++  // PORTAL DO CLIENTE — ETAPA 6, TROCA DEFINITIVA (18/11/2026). Casca: abrir('portal_cliente_inicio') -> PclIni_render_ e
++  // abrir('portal_cliente_ciclos') -> LavCiclo_render_ (JS_Core.html). A conta de cliente entra por SGO_iniciarClientePortal_ (sem os
++  // inícios dos módulos internos) e só vê as telas de SGO_TELAS_CLIENTE (aplicarRegrasDeAcesso_). O servidor confere tudo de novo.
++  // ==========================================================
++  var SGO_TELAS_CLIENTE = ["portal_cliente_inicio", "portal_cliente_chamados", "portal_cliente_documentos", "portal_cliente_equipamentos", "portal_cliente_vencimentos",
++    "portal_cliente_indicadores", "portal_cliente_ciclos", "portal_cliente_conta"];
++  /** Telas antigas da conta de cliente -> tela do Portal que as substitui (e a aba que abre). Tabela "antes -> depois" do relatório da etapa 6. */
++  var SGO_PCL_TROCA = {
++    dashboard: { mod: "portal_cliente_inicio" }, mobile_home: { mod: "portal_cliente_inicio" },
++    assistencia_portal: { mod: "portal_cliente_chamados" },
++    unidades: { mod: "portal_cliente_equipamentos", aba: "unidades" }, equipamentos: { mod: "portal_cliente_equipamentos", aba: "equipamentos" },
++    documentos: { mod: "portal_cliente_documentos", aba: "pastas" }, lavadora_ciclos: { mod: "portal_cliente_ciclos" },
++    meus_avisos: { mod: "portal_cliente_conta" }
++  };
++  function SGO_ehClientePortal_() { try { return !!(typeof USER_CONTEXT !== "undefined" && USER_CONTEXT && String(USER_CONTEXT.perfil || "").toUpperCase() === "CLIENTE"); } catch (e) { return false; } }
++  /** Conta de cliente: troca a tela pedida pela do Portal (tela fora do Portal -> Início do Portal). Equipe: devolve a mesma tela. */
++  function SGO_clienteRota_(mod) {
++    mod = String(mod || "");
++    if (!SGO_ehClientePortal_() || mod === "trocar_senha") return mod;
++    var t = SGO_PCL_TROCA[mod];
++    if (t) { if (t.aba && typeof PCLD !== "undefined" && PCLD) PCLD.irAba = t.aba; return t.mod; }
++    return SGO_TELAS_CLIENTE.indexOf(mod) >= 0 ? mod : "portal_cliente_inicio";
++  }
++  /**
++   * Ponte do Portal: chama uma função antiga que continua valendo dentro do Portal pela entrada única (PortalCliente_api, ação "legado").
++   * ok recebe a resposta da função como antes; falha recebe um Error com a mensagem (recusa ou falta de conexão).
++   */
++  function SGO_legadoCliente_(fn, args, ok, falha) {
++    google.script.run
++      .withSuccessHandler(function (r) {
++        if (r && r.ok) { if (ok) ok(r.resultado); return; }
++        if (falha) falha(new Error((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e tente de novo."));
++      })
++      .withFailureHandler(function (e) { if (falha) falha(e); })
++      .PortalCliente_api(SGO_getSessionId(), "legado", { fn: fn, args: args || [] });
++  }
++  /** Funções antigas que a conta de cliente ainda usa dentro do Portal (a mesma lista fechada do servidor, PCL_LEGADO_CLIENTE). */
++  var SGO_PCL_PONTE = ["documentosPastas", "qrcodeAcessar", "qrcodeQualificacao", "Assistencia_api", "LavCiclo_api", "SGO_Ajuda_apiTela", "SGO_Ajuda_apiManual", "Inicio_apiBuscar"];
++  /**
++   * google.script.run para a equipe; para a conta de cliente, um objeto com a mesma forma (withSuccessHandler, withFailureHandler e as funções da
++   * ponte) que passa pela entrada do Portal. Uso: (typeof SGO_run_ === "function" ? SGO_run_() : google.script.run).withSuccessHandler(...)...
++   */
++  function SGO_run_() {
++    if (!SGO_ehClientePortal_()) return google.script.run;
++    var ok = null, falha = null, o = {};
++    o.withSuccessHandler = function (f) { ok = f; return o; };
++    o.withFailureHandler = function (f) { falha = f; return o; };
++    o.withUserObject = function () { return o; };
++    SGO_PCL_PONTE.forEach(function (fn) { o[fn] = function () { SGO_legadoCliente_(fn, Array.prototype.slice.call(arguments, 1), ok, falha); }; });
++    return o;
++  }
++  /** Entrada da conta de cliente: só o que o Portal usa (sem os inícios dos módulos internos da Metrolabs). */
++  function SGO_iniciarClientePortal_() {
++    try { resetarOciosidade_(); iniciarMonitorOciosidade_(); } catch (e) {}
++    if (typeof PortalCli_iniciar_ === "function") { try { PortalCli_iniciar_(); } catch (e1) { console.error("Portal do cliente:", e1); } }
++    try { verificarRedirecionamentoQR_(); } catch (e2) { console.error("Entrada do Portal:", e2); try { irTelaInicial_(); } catch (e3) {} }
++  }
++  /** Menu da conta de cliente: só o grupo "Portal do cliente" com as telas dele (o servidor decide o resto; Indicadores fica com PclCli_iniciar_). */
++  function SGO_aplicarMenuCliente_() {
++    document.querySelectorAll("#menu .menu-btn").forEach(function (btn) {
++      var mod = btn.getAttribute("data-mod");
++      if (mod === "portal_cliente_indicadores") return;
++      btn.style.display = mod && SGO_TELAS_CLIENTE.indexOf(mod) >= 0 ? "" : "none";
++    });
++    document.querySelectorAll("#menu .menu-grupo").forEach(function (g) { g.style.display = g.id === "menu-secao-portal_cliente" ? "" : "none"; });
++  }
++
++  // ---------- Início do Portal (item 4.1.1) ----------
++  var PCLINI = { r: null };
++  function PclIni_esc_(v) { return String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function PclIni_$(id) { return document.getElementById(id); }
++  function PclIni_render_() {
++    var div = PclIni_$("conteudo"); if (!div) return;
++    try { if (typeof atualizarTituloMobile_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Início"); } catch (e) {}
++    div.innerHTML = '<div class="module-shell cadx" id="pclTela"><div id="pclIniTela"><div class="module-header"><div class="module-header-left"><h2 class="content-title" id="pclIniTitulo">Início</h2>' +
++      '<p class="content-subtitle" id="pclIniSub">O que está acontecendo com os equipamentos da sua empresa e o que depende de você.</p></div>' +
++      '<div class="module-header-right" id="pclIniTopo"></div></div><div id="pclMsg" aria-live="polite"></div><div id="pclCorpo"><p class="vg-sub">Carregando…</p></div></div></div>';
++    var t = PclIni_$("pclIniTela");
++    t.addEventListener("click", PclIni_clique_);
++    if (typeof PclAj_aba_ === "function") { try { PclAj_aba_("inicio"); } catch (e) {} }
++    google.script.run
++      .withSuccessHandler(function (r) {
++        if (!PclIni_$("pclCorpo")) return;
++        if (!r || !r.ok) { PclIni_$("pclCorpo").innerHTML = '<div class="pclch-faixa erro" role="alert">' + PclIni_esc_((r && r.message) || "Não foi possível abrir o Início agora. Atualize a página (F5).") + "</div>" + PclIni_atalhosHtml_({ pode: {} }); return; }
++        PCLINI.r = r; PclIni_desenhar_(r);
++      })
++      .withFailureHandler(function (e) { var c = PclIni_$("pclCorpo"); if (c) c.innerHTML = '<div class="pclch-faixa erro" role="alert">Sem resposta do servidor: ' + PclIni_esc_((e && e.message) || e) + ". Confira a conexão e toque em Atualizar.</div>" + PclIni_atalhosHtml_({ pode: {} }); })
++      .PortalCliente_api(SGO_getSessionId(), "inicio", {});
++  }
++  function PclIni_atalhosHtml_(r) {
++    var p = r.pode || {};
++    var l = [["portal_cliente_chamados", "fa-headset", "Chamados"], ["abrir", "fa-plus", p.avulso ? "Pedir atendimento avulso" : "Abrir chamado"], ["portal_cliente_documentos", "fa-file-shield", "Documentos técnicos"],
++      ["portal_cliente_equipamentos", "fa-stethoscope", "Meus equipamentos"], ["portal_cliente_vencimentos", "fa-calendar-check", "Vencimentos e cronograma"]]
++      .concat(p.indicadores ? [["portal_cliente_indicadores", "fa-chart-line", "Indicadores"]] : [])
++      .concat([["portal_cliente_ciclos", "fa-receipt", "Relatórios de ciclo"], ["portal_cliente_conta", "fa-id-card", p.equipe ? "Minha conta e equipe" : "Minha conta"], ["manual", "fa-book-open", "Manual do Portal"]]);
++    return '<div class="pcl-caixa"><h3>Atalhos</h3><div class="pclini-atalhos">' + l.filter(function (a) { return a[0] !== "abrir" || p.abrir; }).map(function (a) {
++      return '<button type="button" data-ini="' + a[0] + '"><i class="fas ' + a[1] + '" aria-hidden="true"></i><span>' + PclIni_esc_(a[2]) + "</span></button>"; }).join("") + "</div></div>";
++  }
++  function PclIni_desenhar_(r) {
++    var tit = PclIni_$("pclIniTitulo"); if (tit) tit.textContent = typeof Inicio_saudacao_ === "function" ? Inicio_saudacao_(r.nome) : "Olá" + (r.nome ? ", " + r.nome : "") + ".";
++    var sub = PclIni_$("pclIniSub"); if (sub) sub.textContent = [r.empresa, r.papelNome ? "seu acesso: " + r.papelNome : ""].filter(Boolean).join(" · ") || sub.textContent;
++    var topo = PclIni_$("pclIniTopo");
++    if (topo) topo.innerHTML = '<button type="button" class="cadx-btn" data-ini="atualizar"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Atualizar</button>' +
++      (r.pode && r.pode.abrir ? '<button type="button" class="cadx-btn cadx-btn-primario" data-ini="abrir">' + (r.pode.avulso ? "Pedir atendimento avulso" : "Abrir chamado") + "</button>" : "");
++    var cores = { abertos: "#1A4F8C", visita: "#2f6fd6", vencimentos: "#a36a00", documentos: "#2f7a4f" };
++    var h = r.faixa ? '<div class="pclch-faixa aviso pclini-just">' + PclIni_esc_(r.faixa) + "</div>" : "";
++    if ((r.cartoes || []).length) h += '<div class="pclini-cartoes">' + r.cartoes.map(function (c) {
++      return '<button type="button" class="pclini-cartao" style="--pclini-cor:' + (cores[c.k] || "#1A4F8C") + '" data-ini="' + PclIni_esc_(c.tela) + '"' + (c.ref ? ' data-tipo="' + PclIni_esc_(c.ref.tipo) + '" data-id="' + PclIni_esc_(c.ref.id) + '"' : "") + ">" +
++        "<b>" + PclIni_esc_(c.valor) + "</b><span>" + PclIni_esc_(c.rotulo) + "</span><small>" + PclIni_esc_(c.texto) + "</small></button>"; }).join("") + "</div>";
++    h += '<div class="pcl-caixa"><h3>O que precisa de você</h3>' + ((r.precisa || []).length ? '<ul class="pclini-precisa">' + r.precisa.map(function (p) {
++      return '<li><button type="button" data-ini="ficha" data-tipo="' + PclIni_esc_(p.tipo) + '" data-id="' + PclIni_esc_(p.id) + '"><b>' + PclIni_esc_(p.numero) + "</b> · " + PclIni_esc_(p.texto) + "</button></li>"; }).join("") + "</ul>"
++      : '<p class="pclini-just">Nada depende de você agora. Quando a Metrolabs pedir uma informação, enviar um orçamento ou concluir um atendimento, o item aparece aqui.</p>') + "</div>";
++    if (r.pode && !r.pode.abrir && r.pode.motivoAbrir) h += '<div class="pclch-faixa pclini-just">' + PclIni_esc_(r.pode.motivoAbrir) + "</div>";
++    if ((r.falhas || []).length) h += '<div class="pclch-faixa aviso pclini-just">Parte do Início não pôde ser carregada agora (' + PclIni_esc_(r.falhas.join("; ")) + "). O restante vale; toque em Atualizar para tentar de novo.</div>";
++    h += PclIni_atalhosHtml_(r);
++    PclIni_$("pclCorpo").innerHTML = h;
++  }
++  function PclIni_irChamado_(tipo, id) {
++    if (typeof abrir === "function") abrir("portal_cliente_chamados");
++    if (tipo && id && typeof PclCh_render_ === "function") PclCh_render_("ficha", { tipo: tipo, id: id });
++  }
++  /** Manual do Portal: a janela nasce no toque (o navegador não bloqueia) e recebe o A4 quando o servidor responde. */
++  function PclIni_manual_() {
++    var w = null; try { w = window.open("", "_blank"); } catch (e) { w = null; }
++    if (w && w.document) { try { w.document.write("<p style='font-family:Arial,sans-serif;padding:40px;font-size:16px'>Montando o manual do Portal…</p>"); } catch (e) {} }
++    google.script.run
++      .withSuccessHandler(function (r) {
++        if (!r || !r.ok || !r.html) { try { if (w && !w.closed) w.close(); } catch (e) {} var m = PclIni_$("pclMsg"); if (m) m.innerHTML = '<div class="vg-faixa is-erro" role="alert">' + PclIni_esc_((r && r.message) || "Não foi possível montar o manual agora. Tente de novo em instantes.") + "</div>"; return; }
++        if (w && !w.closed) { w.document.open(); w.document.write(r.html); w.document.close(); }
++        else if (window.SGO_NAV && SGO_NAV.abrirDocumento) { try { var u = URL.createObjectURL(new Blob([r.html], { type: "text/html" })); SGO_NAV.abrirDocumento({ url: u, titulo: r.titulo || "Manual do Portal" }); } catch (e) {} }
++      })
++      .withFailureHandler(function (e) { try { if (w && !w.closed) w.close(); } catch (x) {} var m = PclIni_$("pclMsg"); if (m) m.innerHTML = '<div class="vg-faixa is-erro" role="alert">Sem resposta do servidor: ' + PclIni_esc_((e && e.message) || e) + ". Confira a conexão e tente de novo.</div>"; })
++      .PortalCliente_api(SGO_getSessionId(), "manual", {});
++  }
++  function PclIni_clique_(ev) {
++    var b = ev.target.closest && ev.target.closest("[data-ini]"); if (!b) return;
++    var a = b.getAttribute("data-ini");
++    if (a === "atualizar") return PclIni_render_();
++    if (a === "manual") return PclIni_manual_();
++    if (a === "abrir") { if (typeof PclCh_abrirNovo_ === "function") PclCh_abrirNovo_(""); else abrir("portal_cliente_chamados"); return; }
++    if (a === "ficha" || (a === "portal_cliente_chamados" && b.getAttribute("data-id"))) return PclIni_irChamado_(b.getAttribute("data-tipo"), b.getAttribute("data-id"));
++    if (/^portal_cliente_/.test(a) && typeof abrir === "function") abrir(a);
++  }
++</script>
+diff --git a/cand18/SGO_Ajuda.js b/cand19/SGO_Ajuda.js
+index 23638c1..6d24ed2 100644
+--- a/cand18/SGO_Ajuda.js
++++ b/cand19/SGO_Ajuda.js
+@@ -88,7 +88,10 @@ var SGO_AJUDA_NOMES = {
+   portal_cliente_vencimentos: 'Vencimentos e cronograma',
+   // 18/11/2026: Portal do cliente, etapa 5 (indicadores da conta de cliente e o uso do portal da equipe)
+   portal_cliente_indicadores: 'Indicadores',
+-  portal_cliente_uso: 'Uso do portal'
++  portal_cliente_uso: 'Uso do portal',
++  // 18/11/2026: Portal do cliente, etapa 6 (Início do Portal e Relatórios de ciclo dentro do Portal, conta de cliente)
++  portal_cliente_inicio: 'Início do Portal',
++  portal_cliente_ciclos: 'Relatórios de ciclo'
+ };
+ 
+ /**
+diff --git a/cand18/SGO_Ajuda_PortalCliente.js b/cand19/SGO_Ajuda_PortalCliente.js
+index c4f49fb..9e449a9 100644
+--- a/cand18/SGO_Ajuda_PortalCliente.js
++++ b/cand19/SGO_Ajuda_PortalCliente.js
+@@ -28,7 +28,8 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { titulo: 'Suspender ou reativar o acesso (Administrador e Diretoria)', itens: ['Na ficha do cliente, escreva o motivo interno e toque em "Suspender o acesso".', 'As contas do cliente não entram mais; quem estiver dentro sai em até 5 minutos. O cliente vê só "acesso suspenso, fale com a Metrolabs".', 'Para voltar, escreva o motivo e toque em "Reativar o acesso".'] },
+         { titulo: 'Documentos no portal (o que o cliente vê)', itens: ['Abra a aba "Documentos no portal" (caixa «Ocultar ou liberar documento no portal»), busque o cliente e veja cada documento com "Aparece" ou "Não aparece" e o porquê.', 'Para esconder um documento do cliente, escolha "Oculto no portal", escreva o motivo e grave: ele some da lista e não abre em nenhuma tela do cliente. Para mostrar um documento de tipo fora da lista, escolha "Liberado um a um".', 'A lista de tipos que aparecem sozinhos fica em Regras do portal > Documentos no portal (decisão do dono: calibração, qualificação, NR-13, atendimento, cronograma, ciclo da lavadora e ronda).'] },
+         { titulo: 'Avisos ao cliente por e-mail (Regras do portal)', itens: ['Com os avisos ligados, as pessoas do portal recebem por e-mail, no horário comercial (padrão 08:00 às 18:00, dias úteis): visita agendada, reagendada ou cancelada, orçamento para aprovação (só o Gestor do cliente), atendimento concluído e o aviso de fim de contrato, carência ou modo consulta (texto neutro).', 'Os resumos saem pela rotina: mensagens da Metrolabs (no máximo um a cada 2 horas úteis por pessoa), documentos novos (diário, a partir das 08:30) e vencimentos em 60, 30 e 7 dias e vencidos (semanal, no primeiro dia útil; o vencido só entra se venceu a partir de 30 dias antes do início dos avisos, configurável; os mais antigos ficam só no Portal). Cada pessoa desliga esses três em Minha conta.', 'Cliente sem pessoa do portal na unidade continua recebendo os avisos da Assistência no e-mail do cadastro, como antes. Com portal, o e-mail do cadastro continua recebendo esses avisos enquanto "Cópia ao e-mail do cadastro" estiver em Sim (padrão na transição, porque as contas atuais ainda não foram revisadas); o mesmo endereço nunca recebe duas vezes. Com "Não", só as pessoas do portal recebem.', 'O e-mail nunca leva anexo, valor nem nome de outro cliente. O que já saiu fica registrado e não se repete.'] },
+-        { titulo: 'Acompanhar a segurança das contas de cliente', itens: ['A aba "Segurança" mostra cada função que as contas de cliente chamaram, se está na lista do portal e quantas vezes.', 'A recusa nasce desligada (observação de 7 dias). Terminado o período, acrescente à lista o que o cliente precisa, escolha "Ligada", escreva o motivo e grave.', 'Com a recusa ligada, função fora da lista é recusada para os clientes com a mensagem do quê, por quê e o que fazer.'] }
++        { titulo: 'Acompanhar a segurança das contas de cliente', itens: ['A aba "Segurança" mostra cada função que as contas de cliente chamaram, se está na lista do portal e quantas vezes.', 'A recusa nasce desligada (observação de 7 dias). Terminado o período, acrescente à lista o que o cliente precisa, escolha "Ligada", escreva o motivo e grave.', 'Com a recusa ligada, função fora da lista é recusada para os clientes com a mensagem do quê, por quê e o que fazer.'] },
++        { titulo: 'Ligar a troca definitiva (etapa 6): Pronto para ligar?', itens: ['No topo da aba Segurança, o painel "Pronto para ligar?" mostra os dias de observação, as funções fora da lista chamadas por clientes nos últimos dias e o estado da trava do legado e da recusa do servidor.', 'As duas chaves nascem desligadas. Com o painel verde, ligue primeiro a "Trava do legado" (vale na hora: a conta de cliente só usa as telas do Portal), depois a "Chave de recusa" do servidor e, por último, "Lista usada" = Mínima.', 'Cada mudança pede motivo e fica no histórico das regras. Para voltar atrás, escolha "Desligada" (ou "Transição") e grave; vale em até 1 minuto.'] }
+       ],
+       cores: [
+         { nome: 'Selo verde "Acesso completo"', significado: 'Há contrato vigente: o cliente usa tudo o que o papel dele permite.' },
+@@ -147,7 +148,8 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { titulo: 'Acompanhar', itens: ['Na aba "Chamados", veja a Lista, o Kanban ou o Gantt. As etapas são: Recebido, Complemento pedido, Em análise, Aguardando sua aprovação, Aguardando peça, Visita agendada, Em atendimento e Concluído.', 'Toque num chamado para abrir a ficha: a visita (com o nome do técnico quando ela está agendada ou em andamento), o prazo do contrato, o orçamento, o relatório, as fotos e a linha do tempo.', 'Em "O que precisa de você" aparece o que depende da sua empresa.'] },
+         { titulo: 'Conversar com a Metrolabs', itens: ['Na ficha, escreva em "Mensagem" e, se precisar, anexe uma foto ou um PDF.', 'Para assuntos fora de um chamado, use a aba "Conversa geral".', 'A resposta vem no horário de trabalho (08:00 às 18:00, dias úteis).'] },
+         { titulo: 'Cancelar', itens: ['Antes da visita, abra a ficha, toque em "Cancelar", escreva o motivo e confirme.', 'Depois que o técnico sai para a visita, combine pela conversa.'] },
+-        { titulo: 'Confirmar o atendimento', itens: ['Depois da conclusão, toque em "Confirmar atendimento" (o comentário é opcional) ou em "O problema continua" e descreva o que acontece: um pedido novo é aberto, ligado ao chamado.', 'Sem resposta em 5 dias úteis, o atendimento fica confirmado por prazo.'] }
++        { titulo: 'Confirmar o atendimento', itens: ['Depois da conclusão, toque em "Confirmar atendimento" (o comentário é opcional) ou em "O problema continua" e descreva o que acontece: um pedido novo é aberto, ligado ao chamado.', 'Sem resposta em 5 dias úteis, o atendimento fica confirmado por prazo.'] },
++        { titulo: 'Relatório do atendimento', itens: ['Com o chamado concluído, toque em "Gerar relatório do atendimento" na ficha: o A4 traz as etapas, a visita, o serviço, as fotos liberadas e as recomendações, e fica também em Documentos técnicos.', 'Com a visita agendada ou o atendimento em andamento, "Ver prévia" mostra o resumo do serviço como está agora, sem gravar nada.'] }
+       ],
+       cores: [{ nome: 'Faixa amarela', significado: 'Depende de você (complemento, orçamento ou confirmação) ou o acesso da empresa está em modo consulta.' }, { nome: 'Faixa vermelha', significado: 'O pedido foi recusado ou cancelado; o motivo aparece na faixa.' }],
+       problemas: [
+@@ -201,7 +203,8 @@ function SGO_ajudaTelas_PortalCliente_() {
+       passos: [
+         { titulo: 'Encontrar um documento', itens: ['Filtre por unidade, equipamento, tipo, data de emissão ou validade ("Vence até").', 'Use "Buscar" para o número do certificado, a TAG, a série ou o nome do documento.', 'Toque em "Limpar" para ver todos de novo.'] },
+         { titulo: 'Abrir', itens: ['Toque em "Abrir": o PDF abre numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.', 'Quando um documento tem revisões, a mais nova fica na frente e as anteriores ficam em "Versões anteriores".'] },
+-        { titulo: 'Se faltar um documento', itens: ['Avise a Metrolabs pela Conversa geral (Chamados > Conversa geral), dizendo o equipamento e o documento que falta.'] }
++        { titulo: 'Por pastas (prontuário)', itens: ['Toque na aba "Por pastas (prontuário)": aparecem todos os documentos emitidos para a sua empresa, organizados por pasta, como no prontuário do equipamento pelo QR Code.', 'Ali ficam também PGT e POP da unidade, as ordens de serviço e as qualificações. Use a busca e os filtros de unidade e equipamento e toque no documento para abrir.'] },
++        { titulo: 'Se faltar um documento', itens: ['Veja também a aba "Por pastas (prontuário)".', 'Se não estiver em nenhuma das duas, avise a Metrolabs pela Conversa geral (Chamados > Conversa geral), dizendo o equipamento e o documento que falta.'] }
+       ],
+       cores: [{ nome: 'Selo verde', significado: 'Documento em dia.' }, { nome: 'Selo âmbar', significado: 'Vence em até 30 dias.' }, { nome: 'Selo vermelho', significado: 'Validade vencida: fale com a Metrolabs para renovar.' }],
+       problemas: [
+@@ -212,7 +215,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+       ],
+       quemPode: [{ perfil: 'CLIENTE', pode: 'Todas as pessoas do Portal veem os documentos das unidades liberadas para elas: o Gestor do cliente, todas; o Solicitante e a Consulta, as unidades marcadas no acesso.' }],
+       perguntas: [
+-        { p: 'Por que um documento que eu tinha não aparece aqui?', r: 'O Portal mostra os tipos de documento técnico combinados com a sua empresa. Se precisar de um documento de outro tipo, peça à Metrolabs pela Conversa geral; ela pode liberar aquele documento para você.' },
++        { p: 'Por que um documento que eu tinha não aparece aqui?', r: 'A aba "Documentos técnicos" mostra os tipos de documento técnico combinados com a sua empresa. Os demais (PGT e POP, por exemplo) ficam na aba "Por pastas (prontuário)". Se ainda faltar, peça à Metrolabs pela Conversa geral.' },
+         { p: 'Fica registrado que eu abri um documento?', r: 'Sim. A abertura fica no histórico de uso do Portal da sua empresa, como em qualquer sistema com login.' }
+       ]
+     },
+@@ -228,7 +231,9 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { titulo: 'Ver a situação', itens: ['No alto, os totais de vencidos, que vencem em até 30 dias e em dia.', 'Filtre por unidade ou situação, ou busque pela TAG, série, modelo ou setor.'] },
+         { titulo: 'Abrir a ficha', itens: ['Toque no equipamento.', 'A ficha mostra os dados do cadastro, os vencimentos, os documentos, o histórico dos atendimentos concluídos e os chamados.'] },
+         { titulo: 'Pedir atendimento', itens: ['Na ficha, toque em "Abrir chamado para este equipamento": o formulário já vem com ele escolhido.'] },
+-        { titulo: 'Corrigir o cadastro', itens: ['Em "Informar correção de cadastro", escreva o dado certo e toque em "Enviar à Metrolabs".', 'A mensagem vai pela Conversa geral; a equipe corrige o cadastro.'] }
++        { titulo: 'Corrigir o cadastro', itens: ['Em "Informar correção de cadastro", escreva o dado certo e toque em "Enviar à Metrolabs".', 'A mensagem vai pela Conversa geral; a equipe corrige o cadastro.'] },
++        { titulo: 'Prontuário por pastas', itens: ['Na ficha, toque em "Abrir o prontuário por pastas": aparecem todos os documentos do equipamento, como no QR Code, inclusive PGT e POP da unidade, ordens de serviço e qualificações.'] },
++        { titulo: 'Unidades', itens: ['Na aba "Unidades", veja cada unidade da empresa com CNPJ, endereço, telefone e quantidade de equipamentos.', '"Ver os equipamentos" abre a lista filtrada pela unidade; "Documentos da unidade" abre as pastas da unidade (PGT, POP e registros).'] }
+       ],
+       cores: [{ nome: 'Verde', significado: 'Em dia.' }, { nome: 'Âmbar', significado: 'Vence em até 30 dias.' }, { nome: 'Vermelho', significado: 'Vencido.' }, { nome: 'Cinza', significado: 'Sem registro.' }],
+       problemas: [
+@@ -293,6 +298,52 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { p: 'O relatório em PDF traz os mesmos números?', r: 'Traz o resumo dos chamados do período, com gráficos, o Gantt e a lista, filtrado pelas mesmas unidades.' }
+       ]
+     },
++    // 18/11/2026 (etapa 6): Início do Portal e Relatórios de ciclo dentro do Portal (conta de cliente; texto do cliente, sem recurso administrativo)
++    'portal_cliente_inicio': {
++      titulo: 'Início do Portal do cliente',
++      paraQueServe: 'Ver de relance o que está acontecendo com os equipamentos da sua empresa e o que depende de você: chamados abertos, a próxima visita, os vencimentos dos próximos 30 dias, os documentos novos e os itens à espera da sua resposta.',
++      antesDeComecar: [
++        'Os números contam só as unidades liberadas para o seu acesso.',
++        'Documentos novos são os emitidos desde a sua entrada anterior no Portal (na primeira entrada, os dos últimos 30 dias).',
++        'O menu do Portal tem todas as telas: Chamados, Documentos técnicos, Meus equipamentos, Vencimentos e cronograma, Indicadores, Relatórios de ciclo e Minha conta e equipe.'
++      ],
++      passos: [
++        { titulo: 'Ver a situação', itens: ['Leia os quatro cartões. Toque num cartão para abrir a tela correspondente.', 'Se houver faixa amarela no topo, ela explica a situação do contrato da empresa e o caminho para renovar.'] },
++        { titulo: 'Tratar o que depende de você', itens: ['Em "O que precisa de você", toque no item: abre a ficha do chamado no ponto certo (complemento, orçamento ou confirmação).'] },
++        { titulo: 'Abrir chamado e outras telas', itens: ['Toque em "Abrir chamado" para um problema novo.', 'Use os atalhos para as outras telas. "Manual do Portal" abre o manual completo em A4, para ler ou imprimir.'] }
++      ],
++      cores: [{ nome: 'Faixa amarela', significado: 'Situação do contrato que pede atenção (carência ou modo consulta) ou parte do Início que não carregou.' }],
++      problemas: [
++        { situacao: 'Um cartão mostra "—".', oQueFazer: 'Não há nada daquele tipo agora (por exemplo, nenhuma visita agendada).' },
++        { situacao: 'Aparece que parte do Início não pôde ser carregada.', oQueFazer: 'Toque em "Atualizar". Se continuar, abra a tela pelo menu e avise a Metrolabs pela Conversa geral.' },
++        { situacao: 'Uma tela antiga que eu usava não aparece no menu.', oQueFazer: 'As telas antigas foram trocadas pelas do Portal: Unidades fica em Meus equipamentos > Unidades; o Arquivo de documentos, em Documentos técnicos > Por pastas; Meus chamados, em Chamados.' }
++      ],
++      quemPode: [{ perfil: 'CLIENTE', pode: 'Todas as pessoas do Portal. O botão "Abrir chamado" aparece para o Gestor do cliente e o Solicitante; os indicadores, para os dois.' }],
++      perguntas: [
++        { p: 'Onde está o manual do Portal?', r: 'No Início, em "Manual do Portal". Ele abre numa aba nova, pronto para ler ou imprimir.' },
++        { p: 'Onde ficaram Unidades, Equipamentos, Arquivo de documentos e Meus chamados?', r: 'Dentro do Portal: Meus equipamentos (com a aba Unidades), Documentos técnicos (com a aba Por pastas, que inclui PGT e POP) e Chamados. Atalhos e links antigos já abrem a tela nova.' }
++      ]
++    },
++    'portal_cliente_ciclos': {
++      titulo: 'Relatórios de ciclo da lavadora (Portal do cliente)',
++      paraQueServe: 'Consultar os relatórios de cada ciclo das lavadoras da sua empresa e gerar o relatório a partir do arquivo do ciclo que a lavadora grava, com a assinatura do responsável do local.',
++      antesDeComecar: [
++        'Aparecem só as lavadoras das unidades liberadas para o seu acesso.',
++        'O mesmo ciclo (lote) nunca gera dois relatórios: se já existir, a tela mostra o que já foi gerado.',
++        'Depois de assinado, o relatório fica travado; uma correção vira versão nova, feita pela Metrolabs com motivo.'
++      ],
++      passos: [
++        { titulo: 'Consultar', itens: ['Busque pela TAG, série, lote ou data, ou veja todas as lavadoras.', 'Toque no relatório para abrir o A4.'] },
++        { titulo: 'Gerar o relatório de um ciclo', itens: ['Escolha a lavadora e importe o arquivo do ciclo.', 'Confira lote, data, horário, receita e resultado antes de confirmar.', 'Assine na tela, se for o responsável do local.'] }
++      ],
++      cores: [{ nome: 'Selo verde', significado: 'Ciclo aprovado.' }, { nome: 'Selo laranja', significado: 'Processo concluído com a liberação bloqueada.' }, { nome: 'Selo vermelho', significado: 'Ciclo reprovado ou cancelado; a falha aparece em destaque.' }],
++      problemas: [
++        { situacao: 'A lavadora não aparece.', oQueFazer: 'Ela pode estar numa unidade que não está liberada para o seu acesso. Fale com o Gestor do cliente da sua empresa.' },
++        { situacao: 'O arquivo não é aceito.', oQueFazer: 'Confira se é o arquivo do ciclo gravado pela lavadora e se a lavadora escolhida é a certa. Se continuar, avise a Metrolabs pela Conversa geral.' }
++      ],
++      quemPode: [{ perfil: 'CLIENTE', pode: 'Todas as pessoas do Portal, para as lavadoras das unidades liberadas a elas.' }],
++      perguntas: [{ p: 'Posso gerar pelo QR Code da lavadora?', r: 'Sim. O prontuário aberto pelo QR Code mostra "Gerar relatório do ciclo" para as lavadoras.' }]
++    },
+     // 18/11/2026 (etapa 5): Uso do portal (equipe, caixa «Ver o uso do portal e o registro de acessos»)
+     'portal_cliente_uso': {
+       titulo: 'Uso do portal (Portal do cliente)',
+diff --git a/cand18/SGO_AssistenteErros.js b/cand19/SGO_AssistenteErros.js
+index 2e038da..cb53974 100644
+--- a/cand18/SGO_AssistenteErros.js
++++ b/cand19/SGO_AssistenteErros.js
+@@ -84,7 +84,7 @@ var SGO_ASSIST_ERRO_HTML = {
+   JS_CronExec: 'cronograma_execucao', JS_DeclaracaoExecQIQO: 'declaracao_qiqo', JS_DeclaracaoExec: 'declaracao_exec', JS_CertCal: 'certificado_calibracao',
+   JS_RelCal: 'relatorio_calibracao', JS_SegurancaAcesso: 'seguranca_acesso', JS_Acessos: 'acessos', JS_Chaves: 'chaves', JS_Admin: 'admin',
+   JS_Avisos: 'meus_avisos', JS_AvisosMatriz: 'avisos_matriz', JS_CadastroCorrecoes: 'cadastro_correcoes', JS_Cadastros: 'clientes',
+-  JS_Equipamentos: 'equipamentos', JS_Inventario: 'inventario', JS_Qualidade: 'qualidade', JS_PortalCliente: 'portal_cliente_contratos', JS_PortalCliente_Acessos: 'portal_cliente_acessos', JS_PortalCliente_Chamados: 'portal_cliente_chamados', JS_PortalCliente_Documentos: 'portal_cliente_documentos', JS_PortalCliente_Painel: 'portal_cliente_indicadores',
++  JS_Equipamentos: 'equipamentos', JS_Inventario: 'inventario', JS_Qualidade: 'qualidade', JS_PortalCliente: 'portal_cliente_contratos', JS_PortalCliente_Acessos: 'portal_cliente_acessos', JS_PortalCliente_Chamados: 'portal_cliente_chamados', JS_PortalCliente_Documentos: 'portal_cliente_documentos', JS_PortalCliente_Painel: 'portal_cliente_indicadores', JS_PortalCliente_Inicio: 'portal_cliente_inicio',
+   JS_ModoPersonalizado: 'modo_personalizado', JS_Licitacoes: 'licitacoes', JS_Omie: 'omie', JS_ConciliacaoCaju: 'conciliacao_caju',
+   JS_GanhosVendedores: 'ganhos_vendedores', JS_Financeiro_Indicadores: 'omie', JS_Contratos_Financeiro: 'omie', JS_Padroes_Documentos: 'padroes'
+ };
+diff --git a/cand18/SGO_AssistenteManuais.js b/cand19/SGO_AssistenteManuais.js
+index 10d5f8e..b0602ad 100644
+--- a/cand18/SGO_AssistenteManuais.js
++++ b/cand19/SGO_AssistenteManuais.js
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "8944bb70927d",
++ "versao": "3882e38a343e",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -4615,7 +4615,7 @@ var SGO_ASSIST_MANUAIS = {
+   },
+   {
+    "arquivo": "MANUAL_MODULO_PORTAL_CLIENTE.md",
+-   "titulo": "Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail; etapa 5: indicadores e uso do portal)",
++   "titulo": "Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail; etapa 5: indicadores e uso do portal; etapa 6: troca definitiva, trava do legado e manual do cliente)",
+    "tela": "portal_cliente_contratos",
+    "perfis": null,
+    "secoes": [
+@@ -4653,11 +4653,11 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Segurança das contas de cliente (lista fechada de funções) (parte 1)",
+-     "texto": "A aba Segurança mostra cada função do servidor que as contas de cliente chamaram, com contagem, pessoas, clientes e se a função está na lista do portal.\nModo observação (padrão; a chave de recusa nasce DESLIGADA): o sistema registra o que as contas de cliente chamam e não recusa nada. O período é de 7 dias, configurável de 1 a 60, e conta a partir da primeira chamada registrada. Terminado o período, a tela avisa.\nLista inicial: o básico da sessão e da segurança do acesso (entrada, saída, código, troca de senha, \"Esqueci minha senha\") e as funções das telas do cliente: Assistencia_api, LavCiclo_api, PortalCliente_api, cadastros (clientes, unidades, equipamentos, documentos, painel de cadastros) e a ajuda.\nFunções que nunca entram: as dos módulos internos (Comercial, Financeiro/Omie, Conduta, bate-papo, Licitações, Compras, Ganhos, Depósito de viagem, Frota, Ponto, Gestão, Usuários, Acessos e outros). Nem a Diretoria consegue acrescentá-las.\n\nComo ligar a recusa (instrução para a Diretoria):\n1. Confira que o servidor está com o patch da etapa 0 aplicado (output/portal-cliente-20261116/etapa0/servidor/etapa0-servidor.patch). Sem o patch, nada é observado nem recusado: a tabela fica vazia.\n2. Espere o fim da observação (7 dias) e abra a aba Segurança.\n3. Veja as funções marcadas \"Não\" na coluna \"Na lista\". Se o cliente precisa de alguma, escreva o nome em Acrescentar função à lista, preencha o motivo e grave.\n4. Em Chave de recusa, escolha Ligada (recusar fora da lista), escreva o motivo e toque em Gravar. A tela pede confirmação.\n5. A partir daí, e em até 1 minuto, função fora da lista volta para o cliente com a mensagem: \"Esta função é da equipe Metrolabs e não faz parte do Portal do cliente. Por quê: ... O que fazer: ...\". Cada recusa fica registrada."
++     "texto": "A aba Segurança mostra cada função do servidor que as contas de cliente chamaram, com contagem, pessoas, clientes e se a função está na lista do portal.\n\nDesde a etapa 6, a mesma aba tem o painel \"Pronto para ligar?\", a Trava do legado e a Lista usada pelo servidor (transição ou mínima), todas desligadas por padrão. Veja a seção 28.\nModo observação (padrão; a chave de recusa nasce DESLIGADA): o sistema registra o que as contas de cliente chamam e não recusa nada. O período é de 7 dias, configurável de 1 a 60, e conta a partir da primeira chamada registrada. Terminado o período, a tela avisa.\nLista inicial: o básico da sessão e da segurança do acesso (entrada, saída, código, troca de senha, \"Esqueci minha senha\") e as funções das telas do cliente: Assistencia_api, LavCiclo_api, PortalCliente_api, cadastros (clientes, unidades, equipamentos, documentos, painel de cadastros) e a ajuda.\nFunções que nunca entram: as dos módulos internos (Comercial, Financeiro/Omie, Conduta, bate-papo, Licitações, Compras, Ganhos, Depósito de viagem, Frota, Ponto, Gestão, Usuários, Acessos e outros). Nem a Diretoria consegue acrescentá-las."
+     },
+     {
+      "titulo": "Segurança das contas de cliente (lista fechada de funções) (parte 2)",
+-     "texto": "Para voltar atrás, escolha Desligada (observar), escreva o motivo e grave. Cada mudança fica no histórico das regras (PCL_REGRAS_HIST).\n\nDetalhe técnico: o servidor Node consulta PortalCliente_portaoFuncao_ no /api/run quando a sessão é de cliente e guarda a decisão por 60 segundos, por sessão e função. Por isso, a coluna \"Chamadas\" conta no máximo uma chamada por minuto, por função e pessoa."
++     "texto": "Como ligar a recusa (instrução para a Diretoria):\n1. Confira que o servidor está com o patch da etapa 0 aplicado (output/portal-cliente-20261116/etapa0/servidor/etapa0-servidor.patch). Sem o patch, nada é observado nem recusado: a tabela fica vazia.\n2. Espere o fim da observação (7 dias) e abra a aba Segurança.\n3. Veja as funções marcadas \"Não\" na coluna \"Na lista\". Se o cliente precisa de alguma, escreva o nome em Acrescentar função à lista, preencha o motivo e grave.\n4. Em Chave de recusa, escolha Ligada (recusar fora da lista), escreva o motivo e toque em Gravar. A tela pede confirmação.\n5. A partir daí, e em até 1 minuto, função fora da lista volta para o cliente com a mensagem: \"Esta função é da equipe Metrolabs e não faz parte do Portal do cliente. Por quê: ... O que fazer: ...\". Cada recusa fica registrada.\n\nPara voltar atrás, escolha Desligada (observar), escreva o motivo e grave. Cada mudança fica no histórico das regras (PCL_REGRAS_HIST).\n\nDetalhe técnico: o servidor Node consulta PortalCliente_portaoFuncao_ no /api/run quando a sessão é de cliente e guarda a decisão por 60 segundos, por sessão e função. Por isso, a coluna \"Chamadas\" conta no máximo uma chamada por minuto, por função e pessoa."
+     },
+     {
+      "titulo": "Trava de arquivo da conta de cliente",
+@@ -4972,7 +4972,43 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Problemas comuns (indicadores e uso)",
+-     "texto": "Situação | O que fazerUm índice aparece com \"—\" | Não há chamado que entre na conta no período (o motivo aparece embaixo). Escolha um período maior\nO número não mudou depois de um atendimento | O cache guarda por 2 minutos. Toque em \"Atualizar agora\"\nO Solicitante diz que o relatório do período não traz uma unidade | Ele recebe só as unidades marcadas no acesso. Confira em Acessos de clientes\nO tempo até a visita parece baixo | Só entram os concluídos com chegada do técnico registrada; os resolvidos a distância ficam fora dessa conta\nO cliente diz que não recebeu um aviso marcado como enviado | A devolução do provedor do cliente (\"e-mail que voltou\") ainda não chega ao SGO+. Confira o endereço na linha da pessoa e a caixa de saída do e-mail da Metrolabs\nA aba \"Uso do portal\" não aparece | Falta a caixa «Ver o uso do portal e o registro de acessos». Peça em Administração > Acessos\n</div>"
++     "texto": "Situação | O que fazerUm índice aparece com \"—\" | Não há chamado que entre na conta no período (o motivo aparece embaixo). Escolha um período maior\nO número não mudou depois de um atendimento | O cache guarda por 2 minutos. Toque em \"Atualizar agora\"\nO Solicitante diz que o relatório do período não traz uma unidade | Ele recebe só as unidades marcadas no acesso. Confira em Acessos de clientes\nO tempo até a visita parece baixo | Só entram os concluídos com chegada do técnico registrada; os resolvidos a distância ficam fora dessa conta\nO cliente diz que não recebeu um aviso marcado como enviado | A devolução do provedor do cliente (\"e-mail que voltou\") ainda não chega ao SGO+. Confira o endereço na linha da pessoa e a caixa de saída do e-mail da Metrolabs\nA aba \"Uso do portal\" não aparece | Falta a caixa «Ver o uso do portal e o registro de acessos». Peça em Administração > Acessos"
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6)",
++     "texto": "A partir da etapa 6, a conta de cliente usa só as telas do Portal. As telas antigas que o cliente via fora do Portal passam a abrir a tela nova que as substitui, sem perder nada do que ele fazia. A trava do legado e a lista fechada mínima ficam prontas, mas nascem desligadas: quem liga é a Diretoria, pelo painel \"Pronto para ligar?\", depois da observação."
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > O menu do cliente: antes e depois (parte 1)",
++     "texto": "Antes (o que o cliente via) | Depois (o que abre agora) | Onde ficou cada coisaInício (pendências da central, índices e alertas) | Início do Portal | Cartões de chamados abertos, próxima visita, vencimentos em 30 dias e documentos novos; \"O que precisa de você\"; atalhos; \"Manual do Portal\"\nMeus chamados (Assistência técnica) | Chamados | Pedir atendimento (formulário completo), lista, Kanban e Gantt, orçamento (aprovação do Gestor), confirmação, relatório da O.S. e, na ficha, \"Gerar relatório do atendimento\" e \"Ver prévia\". Rondas: em Documentos técnicos (tipo Ronda) e no Cronograma. Relatório do período: em Indicadores\nUnidades (Cadastros) | Meus equipamentos > Unidades | Nome, CNPJ, endereço, telefone e equipamentos de cada unidade; \"Documentos da unidade\" abre as pastas da unidade (PGT, POP e registros)\nEquipamentos (Cadastros) | Meus equipamentos | Lista com farol, ficha com vencimentos, documentos, prontuário por pastas, histórico e chamados\nArquivo de documentos (Cadastros) | Documentos técnicos > Por pastas (prontuário) | Todos os documentos emitidos para a empresa, por pasta, inclusive PGT e POP, O.S. e qualificação (pedido da Priscilla de 17/11)\nRelatórios de ciclo (Cadastros) | Relatórios de ciclo (no grupo Portal do cliente) | A mesma tela da lavadora (consultar, gerar e assinar), chamada pela entrada do Portal\nProntuário pelo QR Code | O mesmo prontuário | Pela entrada do Portal (qrcodeAcessar, documentosPastas e \"Gerar relatório do ciclo\")\nBusca rápida (Ctrl K) | A mesma busca | O equipamento abre a ficha em Meus equipamentos; o certificado ou documento abre Documentos técnicos já com a busca\n\"Dúvida\" no topo | \"Como usar esta tela\" | O assistente é da equipe;"
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > O menu do cliente: antes e depois (parte 2)",
++     "texto": "para o cliente, o botão abre a ajuda da tela do Portal\nBate-papo no topo | Sem mudança | O bate-papo da equipe já recusa a conta de cliente e se esconde; a conversa do cliente é a do Portal (Chamados > Conversa geral)\nAtalho, busca ou link antigo de e-mail para uma tela que não é do Portal leva ao Início do Portal. A equipe não muda: para ela, Unidades, Equipamentos e as demais telas continuam como estavam.\n\nAs 5 etapas antigas (AST_ETAPAS_CLIENTE) continuam só dentro dos documentos A4 (relatório do atendimento e do período) e da Representação, que dependem delas para as cores e a linha do tempo. Todas as telas do cliente mostram as 8 etapas do Portal."
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > Ponte do Portal (telas antigas que continuam valendo)",
++     "texto": "Oito funções antigas continuam úteis ao cliente dentro do Portal: as pastas de documentos (documentosPastas), o prontuário pelo QR Code e a qualificação dele (qrcodeAcessar, qrcodeQualificacao), a Assistência técnica só nas ações do cliente (Assistencia_api: relatório do atendimento, prévia, orçamento), os relatórios de ciclo (LavCiclo_api, menos as referências), a ajuda e o manual da tela do Portal (SGO_Ajuda_apiTela, SGO_Ajuda_apiManual) e a busca rápida (Inicio_apiBuscar). Para a conta de cliente, a tela as chama pela entrada única do Portal (PortalCliente_api, ação legado), numa lista fechada (PCL_LEGADO_CLIENTE). Cada função continua com as próprias travas (empresa, unidades e papel). Fora da lista, a resposta é a recusa com o caminho e a tentativa fica em PCL_ACESSOS (FUNCAO_RECUSADA). Assim, o cliente chama do servidor só PortalCliente_api e o básico da sessão."
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > Painel \"Pronto para ligar?\" (aba Segurança)",
++     "texto": "No topo da aba Segurança (Portal do cliente > Contratos de clientes), o painel mostra:\nos dias de observação (desde a primeira chamada de conta de cliente registrada pelo servidor; o servidor está em observação desde 18/11/2026 00:16);\nas funções fora da lista chamadas por contas de cliente, com as chamadas dos últimos 7 dias, as pessoas e se a função está na lista de transição;\no estado da trava do legado, da recusa do servidor e da lista usada;\no passo a passo para ligar e para voltar atrás.\n\nO selo \"Pronto\" aparece quando a observação completou o período e nenhuma função fora da lista de transição foi chamada nos últimos dias. As funções de módulos internos (marcadas \"interna\") nunca entram na lista; vê-las na tabela antes de ligar é esperado, porque elas serão recusadas."
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > Como ligar (Administrador e Diretoria, sempre com motivo)",
++     "texto": "1. Espere os 7 dias de observação e confira o painel. Se uma função de tela que o cliente ainda usa aparecer fora da lista, não ligue: avise o desenvolvimento ou acrescente a função com motivo.\n2. Em Trava do legado, escolha Ligada (cliente só pelo Portal), escreva o motivo e grave. Vale na hora e não depende do servidor: fora das telas do Portal, a conta de cliente recebe \"Esta parte do SGO+ não faz parte do Portal do cliente. Por quê: ... O que fazer: ...\". Acompanhe um dia útil pela Conversa geral e pelo Uso do portal.\n3. Em Chave de recusa, escolha Ligada, com a lista de transição. Vale em até 1 minuto, com o servidor atualizado.\n4. Quando \"fora da lista mínima\" estiver em zero, troque Lista usada pelo servidor para Mínima: o servidor passa a aceitar do cliente só PortalCliente_api, o básico da sessão e o bate-papo (que se recusa sozinho).\n5. Para voltar atrás, a qualquer momento: escolha \"Desligada\" (ou \"Transição\") na mesma chave, escreva o motivo e grave. Nada é apagado; tudo fica no histórico das regras (PCL_REGRAS_HIST, chave FUNCOES_CLIENTE)."
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > Manual do cliente",
++     "texto": "Dentro do Portal: Início > \"Manual do Portal\" abre o manual em A4, para ler ou imprimir (texto de SGO_PortalCliente_Manual.js). A abertura fica em PCL_ACESSOS (MANUAL_ABERTO).\nPara enviar ao cliente: docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md, com a versão A4 em docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.html e .pdf, com capturas reais do sistema (dados fictícios). Os dois saem do mesmo texto, por output/portal-cliente-20261116/etapa6/gerar-manual-cliente.cjs."
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > Tabelas, código e chaves",
++     "texto": "Código novo: SGO_PortalCliente_Troca.js (Início, Unidades, ponte, trava do legado, lista mínima e \"Pronto para ligar?\"), SGO_PortalCliente_Manual.js (manual do cliente) e JS_PortalCliente_Inicio.html (tela Início, menu do cliente e ponte da tela).\nChaves novas em PCL_FUNCOES_CFG (propriedade do script): travaLegado e listaMinima, as duas false por padrão.\nAções novas do cliente em PortalCliente_api: inicio, unidades, legado e manual. Nenhuma função nova fora de PortalCliente_api é chamada pela tela do cliente.\nNenhuma tabela nova. Registros novos em PCL_ACESSOS: MANUAL_ABERTO e FUNCAO_RECUSADA vindo da ponte."
++    },
++    {
++     "titulo": "Troca definitiva (etapa 6) > Problemas comuns (troca definitiva)",
++     "texto": "Problema | O que fazerO cliente diz que a tela Unidades sumiu | Ela está em Meus equipamentos > Unidades\nO cliente não acha o PGT ou o POP | Documentos técnicos > Por pastas (prontuário), pasta \"PGT e POP\"; ou a ficha do equipamento > \"Abrir o prontuário por pastas\"\nCom a trava ligada, o cliente vê \"não faz parte do Portal do cliente\" | Veja no painel \"Pronto para ligar?\" qual função ele chamou. Se for de tela que ele precisa, desligue a trava (com motivo) e avise o desenvolvimento\nO painel diz \"Ainda não\" mesmo depois de 7 dias | Alguma função fora da lista foi chamada nos últimos 7 dias. Confira a tabela; funções internas antigas (anteriores à etapa 6) deixam de contar quando saem da janela de 7 dias\nA recusa do servidor não tem efeito | Confira se o patch da etapa 0 do servidor está aplicado. A trava do legado não depende dele\n</div>"
+     }
+    ],
+    "acesso": [
+diff --git a/cand18/SGO_Auth.js b/cand19/SGO_Auth.js
+index 25a07fd..97026e2 100644
+--- a/cand18/SGO_Auth.js
++++ b/cand19/SGO_Auth.js
+@@ -698,6 +698,14 @@ function exigirSessao(sessionId) {
+     throw new Error(MSG_REPRESENTADA_AUTH);
+   }
+ 
++  // 18/11/2026 (Portal do cliente, etapa 6, item 0.1): com a "Trava do legado" ligada (Portal do cliente > aba Segurança; nasce DESLIGADA), a sessão
++  // CLIENTE só vale dentro das entradas do Portal, que ligam SGO_PCL_MODULO (PortalCliente_api e a trava de arquivo), no mesmo molde da
++  // Representação. Desligada (padrão) ou sem o módulo do Portal carregado, nada muda.
++  if (SGO_UTILS.safeUpper(validacao.data && validacao.data.perfil) === "CLIENTE" && !(typeof SGO_PCL_MODULO !== "undefined" && SGO_PCL_MODULO === true) &&
++      typeof PCl_travaLegadoLigada_ === "function" && PCl_travaLegadoLigada_()) {
++    throw new Error(typeof MSG_PCL_FORA_PORTAL !== "undefined" ? MSG_PCL_FORA_PORTAL : "Acesso negado: o seu usuário de cliente usa só o Portal do cliente. Abra o menu Portal do cliente.");
++  }
++
+   return validacao.data;
+ }
+ 
+diff --git a/cand18/SGO_PortalCliente.js b/cand19/SGO_PortalCliente.js
+index 999396c..fbc2263 100644
+--- a/cand18/SGO_PortalCliente.js
++++ b/cand19/SGO_PortalCliente.js
+@@ -23,7 +23,11 @@ var PCL_ACOES_CLIENTE = { situacao: true, meuContrato: true, minhaConta: true, a
+   documentos: true, abrirDocumento: true, equipamentos: true, equipamento: true, vencimentos: true, cronograma: true,
+   // 18/11/2026 (etapa 5, indicadores; SGO_PortalCliente_Painel.js): indicadores e o relatório do período filtrado pelas unidades da pessoa
+   // (Gestor do cliente e Solicitante; a Consulta recebe a recusa com o caminho)
+-  indicadores: true, relatorioPeriodo: true };
++  indicadores: true, relatorioPeriodo: true,
++  // 18/11/2026 (etapa 6, troca definitiva; SGO_PortalCliente_Troca.js): Início do Portal, unidades da empresa, o manual do cliente e a ponte
++  // fechada para as telas antigas que continuam valendo dentro do Portal (prontuário por pastas e pelo QR Code, relatório do atendimento,
++  // orçamento, relatórios de ciclo, ajuda e busca rápida; PCL_LEGADO_CLIENTE)
++  inicio: true, unidades: true, legado: true, manual: true };
+ var PCL_ACOES_INTERNAS = {
+   iniciar: '', lista: 'PORTAL_CLIENTE_CONTRATOS_VER', ficha: 'PORTAL_CLIENTE_CONTRATOS_VER', preCarga: 'PORTAL_CLIENTE_CONTRATOS_VER', buscarClientes: 'PORTAL_CLIENTE_CONTRATOS_VER',
+   salvar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR', encerrar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR', revisar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR',
+@@ -95,6 +99,7 @@ function PortalCliente_api(sessionId, acao, dados) {
+       else if (typeof PCLCH_ACOES_CLIENTE !== 'undefined' && PCLCH_ACOES_CLIENTE[acao]) r = PClCh_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 2): chamados e conversa
+       else if (typeof PCLD_ACOES_CLIENTE !== 'undefined' && PCLD_ACOES_CLIENTE[acao]) r = PClD_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 3): documentos, equipamentos, vencimentos e cronograma
+       else if (typeof PCLP_ACOES_CLIENTE !== 'undefined' && PCLP_ACOES_CLIENTE[acao]) r = PClP_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 5): indicadores e relatório do período
++      else if (typeof PCLT_ACOES_CLIENTE !== 'undefined' && PCLT_ACOES_CLIENTE[acao]) r = PClT_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 6): Início, unidades, manual e a ponte
+       else if (acao === 'situacao') { var s = PCl_situacaoAcesso_(eu.clienteId, '', ''); r = { situacao: s.situacao, nome: s.provisoria ? PCL_SITUACOES.PLENO : s.nome, ate: s.ateBr, texto: s.textoCliente, completo: s.completo }; }
+       else if (typeof PClA_acaoCliente_ === 'function') r = PClA_acaoCliente_(eu, acao, dados);
+       else throw PCl_erro_('ACAO', 'Esta parte do Portal do cliente ainda não está disponível neste servidor. O que fazer: atualize a página (F5); se continuar, avise a Metrolabs.'); // 18/11/2026 (etapa 1): Minha conta, termo de uso e Minha equipe
+diff --git a/cand19/SGO_PortalCliente_Manual.js b/cand19/SGO_PortalCliente_Manual.js
+new file mode 100644
+index 0000000..f29885c
+--- /dev/null
++++ b/cand19/SGO_PortalCliente_Manual.js
+@@ -0,0 +1,186 @@
++/****************************************************
++ * PORTAL DO CLIENTE — MANUAL DO CLIENTE (etapa 6, 18/11/2026).
++ *
++ * Texto único do manual para as pessoas dos clientes, sem termos internos. Usado em dois lugares:
++ *  - dentro do Portal: Início > "Manual do Portal" (ação "manual" de PortalCliente_api), em A4 para ler e imprimir, sem as imagens;
++ *  - no arquivo docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md e na versão A4 com as capturas reais do sistema
++ *    (output/portal-cliente-20261116/etapa6/gerar-manual-cliente.cjs chama PClM_manualHtml_ com as imagens).
++ * Quem mudar uma tela do Portal atualiza este texto no mesmo commit (regra do projeto: manual em toda tela).
++ ****************************************************/
++
++var PCL_MANUAL_CLIENTE = {
++  titulo: 'Manual do Portal do cliente',
++  edicao: '18/11/2026',
++  apresentacao: [
++    'O Portal do cliente é o canal da sua empresa com a Metrolabs para pedir atendimento técnico, acompanhar cada chamado até o relatório final e consultar, a qualquer hora, os documentos, os equipamentos e os vencimentos das suas unidades.',
++    'Cada pessoa da empresa tem o próprio acesso, com e-mail e senha individuais. O que cada pessoa vê e pode fazer depende do papel dela no Portal e das unidades liberadas para ela, conforme a tabela abaixo. O papel e as unidades são definidos pela Metrolabs, a pedido do Gestor do cliente.',
++    'Este manual segue a ordem do menu do Portal. Os nomes entre aspas são os botões exatamente como aparecem na tela.'
++  ],
++  papeis: [
++    ['Gestor do cliente', 'Vê todas as unidades liberadas, abre e acompanha chamados, aprova orçamentos, confirma atendimentos, vê os indicadores, cuida da equipe da empresa no Portal (pede a inclusão de pessoas e desliga acessos).'],
++    ['Solicitante', 'Abre e acompanha chamados das unidades dele, conversa com a Metrolabs, vê documentos, equipamentos e indicadores dessas unidades. Não aprova orçamento.'],
++    ['Consulta', 'Só consulta documentos, equipamentos, vencimentos e chamados das unidades dele. Não abre chamado, não envia mensagem e não aprova orçamento.']
++  ],
++  secoes: [
++    { id: 'entrar', titulo: 'Entrar no Portal e aceitar o termo de uso', capturas: [['entrar.jpg', 'Tela de entrada do sistema.'], ['termo.jpg', 'Termo de uso no primeiro acesso.']],
++      texto: ['O acesso começa pelo convite que a Metrolabs envia para o seu e-mail de trabalho. O convite tem um link de uso único, com validade, para você criar a sua senha. Se o link vencer, peça um novo ao Gestor do cliente da sua empresa ou à Metrolabs.'],
++      passos: ['Abra o e-mail do convite e toque no link para criar a sua senha.', 'Na tela de entrada, escreva o seu e-mail e a senha e toque em "Entrar".',
++        'Se aparecer o pedido de um código de confirmação, digite os números que chegaram pelo canal indicado na própria tela.',
++        'No primeiro acesso aparece o "Termo de uso do Portal do cliente". Leia, marque "Li o termo de uso e estou ciente" e toque em "Li e estou ciente". Se não concordar, toque em "Sair do Portal" e fale com a Metrolabs.'],
++      notas: ['O termo é pedido de novo sempre que o texto mudar. A data e a versão do seu aceite ficam em Minha conta e equipe.', 'Esqueceu a senha? Na tela de entrada, use "Esqueci minha senha". A senha nunca é enviada por mensagem.'] },
++    { id: 'inicio', titulo: 'Início', capturas: [['inicio.jpg', 'Início do Portal no computador.'], ['inicio-celular.jpg', 'Início do Portal no celular.']],
++      texto: ['O Início mostra de relance o que está acontecendo com os equipamentos da sua empresa e o que depende de você.'],
++      passos: ['Veja os quatro cartões: chamados abertos, próxima visita, vencimentos nos próximos 30 dias e documentos novos desde a sua entrada anterior. Toque num cartão para abrir a tela correspondente.',
++        'Trate os itens de "O que precisa de você": complemento pedido pela Metrolabs, orçamento aguardando aprovação e atendimento para confirmar.',
++        'Para um problema novo, toque em "Abrir chamado".', 'Os atalhos levam às outras telas do Portal. "Manual do Portal" abre este manual para ler ou imprimir.'],
++      notas: ['Se o contrato da sua empresa estiver em período de carência ou em modo consulta, uma faixa no topo explica a situação e o caminho para renovar.'] },
++    { id: 'abrir', titulo: 'Abrir um chamado', capturas: [['abrir-chamado.jpg', 'Formulário de abertura do chamado.']],
++      texto: ['O chamado é aberto em cinco partes. Quanto mais completo o relato, mais rápido o técnico chega com a peça certa. A Metrolabs define a prioridade pelo que você informa sobre a situação do equipamento e o risco.'],
++      passos: ['Abra Chamados e toque em "Abrir chamado" (ou, na ficha do equipamento, em "Abrir chamado para este equipamento").',
++        'Equipamento: escolha a unidade e o equipamento pela TAG, série ou setor. Se ele não aparece, marque "Equipamento não está na lista" e descreva tipo, marca, modelo, número de série e setor.',
++        'Problema: descreva o que acontece (pelo menos 30 letras), desde quando, o código que aparece no visor (ou marque "Não exibe código"), a situação do equipamento (parado, funciona com limitação ou funcionando), o risco de continuar usando e o que já foi tentado.',
++        'Contato no local: quem recebe o técnico, com telefone com DDD e e-mail. Informe também o melhor horário para a visita e, se houver, o número do chamado no sistema da sua empresa.',
++        'Fotos: envie fotos do equipamento, do visor e da etiqueta, e um vídeo curto, se ajudar. Não fotografe pacientes, prontuários nem documentos de pessoas.',
++        'Confira o resumo e toque em "Enviar". Se faltar algo, cada campo mostra o que corrigir.'],
++      notas: ['Se já houver chamado aberto para o mesmo equipamento, o Portal pergunta se é o mesmo problema. "Sim" leva à conversa daquele chamado; "Não" abre o pedido mesmo assim.',
++        'Fora do horário de trabalho da Metrolabs (08:00 às 18:00, dias úteis), o pedido é recebido e analisado no próximo horário útil.',
++        'Com o contrato em modo consulta, o botão vira "Pedir atendimento avulso": o pedido é orçado antes de ser atendido.'] },
++    { id: 'acompanhar', titulo: 'Acompanhar os chamados', capturas: [['chamados.jpg', 'Lista de chamados com as etapas.'], ['ficha-chamado.jpg', 'Ficha do chamado.']],
++      texto: ['Cada pedido passa por até oito etapas, sempre na mesma ordem. A etapa atual aparece na lista e na ficha, com a explicação do que acontece agora.'],
++      etapas: [['Recebido', 'A Metrolabs recebeu o pedido e vai analisar.'], ['Complemento pedido', 'A Metrolabs precisa de mais uma informação para seguir.'], ['Em análise', 'A equipe técnica está avaliando o caso.'],
++        ['Aguardando sua aprovação', 'Há orçamento enviado para o Gestor do cliente aprovar.'], ['Aguardando peça', 'O atendimento depende da chegada de uma peça.'], ['Visita agendada', 'A data da visita está marcada; o nome do técnico aparece aqui.'],
++        ['Em atendimento', 'O técnico está no local ou o serviço está em andamento.'], ['Concluído', 'O atendimento terminou; o relatório fica disponível.']],
++      passos: ['Abra Chamados. Filtre por unidade, etapa ou período, ou busque pelo número do chamado (CH-...) ou do pedido (SOL-...), pela série, TAG ou setor.',
++        'As abas Kanban e Gantt mostram os mesmos chamados por etapa e numa linha do tempo.',
++        'Toque num chamado para abrir a ficha: relato enviado, etapa, prazo do contrato, data da visita e técnico (só com a visita agendada ou em andamento), ordem de serviço, orçamento, fotos, conversa e linha do tempo.'],
++      notas: ['Para cancelar, use "Cancelar o chamado" na ficha, com o motivo, antes da saída do técnico para a visita. Depois disso, combine pela conversa.'] },
++    { id: 'conversar', titulo: 'Conversar com a Metrolabs', capturas: [['conversa.jpg', 'Conversa na ficha do chamado.']],
++      texto: ['Cada chamado tem a sua conversa com a equipe da Metrolabs. Para assuntos fora de um chamado (dúvida, documento que falta, correção de cadastro), use a "Conversa geral".'],
++      passos: ['Na ficha do chamado, escreva em "Mensagem" e, se quiser, anexe uma foto ou um PDF de até 10 MB.', 'Toque em "Enviar mensagem". A resposta aparece na mesma conversa, no horário de trabalho da Metrolabs.',
++        'Para a conversa geral, abra Chamados e toque na aba "Conversa geral".'],
++      notas: ['Não escreva dados de pacientes nas mensagens.', 'No papel Consulta, a conversa fica só para leitura.'] },
++    { id: 'orcamento', titulo: 'Aprovar um orçamento (Gestor do cliente)', capturas: [['orcamento.jpg', 'Orçamento na ficha do chamado.']],
++      texto: ['Quando o atendimento depende de orçamento, o chamado fica na etapa "Aguardando sua aprovação" e o Gestor do cliente recebe um aviso por e-mail. Só o Gestor do cliente responde; para os outros papéis, o orçamento aparece para consulta, com o nome de quem aprova.'],
++      passos: ['Abra a ficha do chamado (ou toque no item em "O que precisa de você", no Início).', 'Toque em "Baixar o orçamento em PDF" e confira os itens, os valores e as condições.',
++        'Para aprovar, toque em "Aprovar", informe nome completo, cargo ou função e, se quiser, o CPF, assine com o dedo ou o mouse, marque que leu e concorda e toque em "Aprovar".',
++        'Para pedir mudança, toque em "Pedir ajuste" e diga o que precisa mudar. Para recusar, toque em "Recusar" e escreva o motivo.'],
++      notas: ['A resposta fica registrada com data, hora e protocolo e não pode ser trocada depois. O comprovante fica no chamado.'] },
++    { id: 'confirmar', titulo: 'Confirmar o atendimento e o relatório', capturas: [['confirmar.jpg', 'Confirmação do atendimento e relatório.']],
++      texto: ['Com a ordem de serviço encerrada e o relatório emitido, a ficha do chamado pergunta se o atendimento resolveu. A sua resposta ajuda a Metrolabs a melhorar.'],
++      passos: ['Toque em "Confirmar atendimento"; o comentário é opcional.', 'Se o problema voltou ou não foi resolvido, abra "O problema continua", descreva o que acontece e toque em "Enviar: o problema continua". Um pedido novo é aberto, ligado a este chamado.',
++        'Para baixar o relatório da ordem de serviço, use o link na ficha. Para o relatório completo do atendimento em A4 (etapas, visita, serviço e fotos liberadas), toque em "Gerar relatório do atendimento". Com o atendimento ainda em andamento, "Ver prévia" mostra como ele está.'],
++      notas: ['Sem resposta em 5 dias úteis, o atendimento fica confirmado por prazo.'] },
++    { id: 'documentos', titulo: 'Documentos técnicos', capturas: [['documentos.jpg', 'Documentos técnicos.'], ['documentos-pastas.jpg', 'Documentos por pastas (prontuário).']],
++      texto: ['A tela reúne os documentos técnicos dos seus equipamentos para auditorias e para a Vigilância Sanitária: certificados de calibração, relatórios de qualificação, laudos de NR-13, relatórios de atendimento e de ronda, relatórios do ciclo da lavadora e o cronograma de execução.',
++        'A aba "Por pastas (prontuário)" mostra todos os documentos da empresa organizados por pasta, como no prontuário do equipamento: inclui PGT e POP, ordens de serviço, qualificações e os demais documentos emitidos para a sua empresa.'],
++      passos: ['Na aba "Documentos técnicos", filtre por unidade, equipamento, tipo, data de emissão ou "Vence até", ou busque pelo número, TAG, série ou nome.', 'Toque em "Abrir" para ver o PDF. Versões anteriores ficam guardadas abaixo de cada documento.',
++        'Na aba "Por pastas (prontuário)", toque numa pasta para abri-la e use a busca e os filtros de unidade e equipamento.'],
++      notas: ['Se faltar algum documento, avise pela Conversa geral.', 'No celular, o documento abre dentro do sistema, com "Voltar" e "Imprimir".'] },
++    { id: 'equipamentos', titulo: 'Meus equipamentos e unidades', capturas: [['equipamentos.jpg', 'Meus equipamentos com o farol.'], ['ficha-equipamento.jpg', 'Ficha do equipamento.'], ['unidades.jpg', 'Unidades da empresa.']],
++      texto: ['A lista mostra os equipamentos das suas unidades com um farol por categoria (calibração, qualificação, NR-13 e manutenção): verde em dia, âmbar vence em até 30 dias, vermelho vencido e cinza sem registro.'],
++      passos: ['Filtre por unidade ou situação, ou busque pela TAG, série, modelo ou setor. Toque no equipamento para abrir a ficha.',
++        'A ficha mostra os dados do cadastro, os vencimentos, os documentos, o prontuário por pastas, o histórico dos atendimentos concluídos e os chamados.',
++        'Em "Informar correção de cadastro", escreva o dado certo e toque em "Enviar à Metrolabs". A equipe corrige o cadastro.',
++        'A aba "Unidades" lista as unidades da empresa com endereço e quantidade de equipamentos; "Documentos da unidade" abre as pastas da unidade (PGT, POP e registros).'],
++      notas: ['O QR Code colado no equipamento abre o prontuário dele direto, depois da entrada no Portal.'] },
++    { id: 'vencimentos', titulo: 'Vencimentos e cronograma', capturas: [['vencimentos.jpg', 'Vencimentos.'], ['cronograma.jpg', 'Cronograma.']],
++      texto: ['A aba Vencimentos lista, por equipamento e categoria, a data de validade do documento mais recente e quantos dias faltam. A aba Cronograma separa o que está agendado do que está apenas previsto.'],
++      passos: ['Em Vencimentos, escolha a unidade, a categoria e a janela (vencidos e os próximos 30, 60 ou 90 dias, ou todos). Toque em "Ver o equipamento" para abrir a ficha.',
++        'Em Cronograma, "Agendado" mostra visitas, rondas e ordens de serviço com data combinada; "Previsto" mostra a próxima calibração, qualificação, inspeção ou manutenção calculada pela validade dos documentos e pelo contrato; "Documento do cronograma" traz o PDF emitido pela Metrolabs.'],
++      notas: ['Previsto não é data confirmada. A data só fica confirmada quando aparece em Agendado.'] },
++    { id: 'indicadores', titulo: 'Indicadores e relatório do período', capturas: [['indicadores.jpg', 'Indicadores.']],
++      texto: ['Os indicadores mostram chamados abertos e concluídos, tempo médio até a visita e até a conclusão, atendimento dentro do prazo do contrato, equipamentos em dia, vencimentos e reincidência. Estão disponíveis para o Gestor do cliente (todas as unidades) e para o Solicitante (as unidades dele).'],
++      passos: ['Escolha o período (30, 90, 180 ou 365 dias) e, se quiser, uma unidade, e toque em "Mostrar". Cada número traz embaixo "Como é contado".',
++        'Toque em "Relatório do período (PDF)" para gerar o documento A4 com o mesmo período e a mesma unidade. Os relatórios já gerados ficam na lista logo abaixo.'],
++      notas: ['Os tempos contam só as horas do expediente, em dias úteis, como o prazo do contrato.'] },
++    { id: 'ciclos', titulo: 'Relatórios de ciclo da lavadora', capturas: [['ciclos.jpg', 'Relatórios de ciclo da lavadora.']],
++      texto: ['Para as lavadoras da empresa com registro de ciclo, a tela mostra os relatórios de cada ciclo e permite gerar o relatório a partir do arquivo do ciclo que a lavadora grava.'],
++      passos: ['Abra "Relatórios de ciclo" e busque pela TAG, série, lote ou data.', 'Para gerar um relatório, escolha a lavadora, importe o arquivo do ciclo, confira o lote, a data e a receita e confirme.', 'O relatório pode ser assinado na tela pelo responsável do local. Depois de assinado, só a Metrolabs abre uma versão nova, com motivo.'],
++      notas: ['O botão "Gerar relatório do ciclo" também aparece no prontuário aberto pelo QR Code da lavadora.'] },
++    { id: 'conta', titulo: 'Minha conta e equipe', capturas: [['minha-conta.jpg', 'Meus dados e avisos por e-mail.'], ['minha-equipe.jpg', 'Minha equipe (Gestor do cliente).']],
++      texto: ['Em "Meus dados" você confere o seu papel e as suas unidades, corrige nome, cargo e telefone e escolhe os avisos por e-mail. O e-mail de acesso só a Metrolabs troca.',
++        'A aba "Minha equipe" aparece para o Gestor do cliente: lista as pessoas da empresa no Portal, com papel, unidades, situação e última entrada, e o registro das ações da empresa.'],
++      passos: ['Para incluir uma pessoa, o Gestor preenche nome completo, e-mail de trabalho (individual, nunca de setor), cargo, papel, unidades e o motivo, e toca em "Pedir acesso". A Metrolabs confere e envia o convite.',
++        'Para tirar o acesso de quem saiu da empresa, o Gestor toca em "Desligar acesso" na linha da pessoa, escreve o motivo e confirma. O acesso cai na hora.'],
++      notas: ['O Gestor não desliga o próprio acesso; para isso, fale com a Metrolabs.'] },
++    { id: 'avisos', titulo: 'Avisos por e-mail (preferências)', capturas: [],
++      texto: ['A Metrolabs envia os avisos para o seu e-mail de acesso, em dias úteis, das 08:00 às 18:00. O pedido recebido, a visita marcada para o mesmo dia e as mudanças no seu acesso chegam na hora. O e-mail nunca leva anexo nem valores: o documento, o orçamento e o relatório abrem no Portal, com o seu login.'],
++      tabela: [['Sempre enviados', 'Pedido recebido, aceito ou recusado; visita agendada, reagendada ou cancelada; orçamento para aprovação (Gestor do cliente); atendimento concluído; mudanças no seu acesso; fim do contrato.'],
++        ['Você pode desligar', 'Mensagem da Metrolabs na conversa (resumo a cada 2 horas úteis); documento novo disponível (resumo diário); vencimentos dos equipamentos (resumo semanal, para o Gestor do cliente).']],
++      passos: ['Abra Minha conta e equipe > Meus dados.', 'Em "Avisos por e-mail", marque ou desmarque os avisos que podem ser desligados.', 'Toque em "Gravar meus dados".'] },
++    { id: 'ajuda', titulo: 'Senha, ajuda e saída', capturas: [],
++      texto: ['No topo da tela ficam "Trocar senha" e "Sair". Em cada tela, "Como usar esta tela" explica os campos e os botões daquela tela, e o Início tem o "Manual do Portal" para ler ou imprimir.'],
++      passos: ['Para trocar a senha, toque em "Trocar senha", informe a senha atual e a nova e confirme. As suas outras entradas abertas são encerradas.', 'Ao terminar, toque em "Sair", principalmente em computador compartilhado.'],
++      notas: ['Por segurança, o sistema encerra a entrada depois de um tempo sem uso.'] }
++  ],
++  problemas: [
++    ['O link do convite venceu ou não chegou.', 'Confira a caixa de spam. Se não estiver lá, peça um novo convite ao Gestor do cliente da sua empresa ou à Metrolabs.'],
++    ['Aparece "Não encontrado. Atualize a lista."', 'O registro é de uma unidade que não está liberada para o seu acesso, ou foi alterado. Atualize a tela; se continuar, fale com o Gestor do cliente.'],
++    ['O botão "Abrir chamado" não aparece.', 'No papel Consulta, o Portal não abre chamado. Peça ao Gestor do cliente da sua empresa.'],
++    ['Um documento que eu procuro não está na lista.', 'Veja a aba "Por pastas (prontuário)". Se não estiver em nenhuma das duas, avise pela Conversa geral.'],
++    ['Aparece uma mensagem dizendo que a tela não faz parte do Portal.', 'Abra o que precisa pelo menu do Portal. Se algo que você usava parou de funcionar, avise a Metrolabs pela Conversa geral.'],
++    ['O acesso da empresa aparece suspenso ou em modo consulta.', 'Fale com a Metrolabs pelo contato indicado na faixa do topo.']
++  ]
++};
++
++/** Texto do manual em Markdown (para docs/). imagem(nome) -> caminho da imagem no Markdown ('' = sem imagem). */
++function PClM_manualMarkdown_(imagem) {
++  var m = PCL_MANUAL_CLIENTE, l = [];
++  l.push('# ' + m.titulo, '', '_Edição de ' + m.edicao + '. Metrolabs._', '');
++  m.apresentacao.forEach(function (p) { l.push(p, ''); });
++  l.push('| Papel | O que faz no Portal |', '|---|---|');
++  m.papeis.forEach(function (p) { l.push('| ' + p[0] + ' | ' + p[1] + ' |'); });
++  l.push('');
++  m.secoes.forEach(function (s, i) {
++    l.push('## ' + (i + 1) + '. ' + s.titulo, '');
++    (s.texto || []).forEach(function (p) { l.push(p, ''); });
++    if (s.etapas) { l.push('| Etapa | O que quer dizer |', '|---|---|'); s.etapas.forEach(function (e, k) { l.push('| ' + (k + 1) + '. ' + e[0] + ' | ' + e[1] + ' |'); }); l.push(''); }
++    if (s.tabela) { l.push('| Aviso | Quais |', '|---|---|'); s.tabela.forEach(function (e) { l.push('| ' + e[0] + ' | ' + e[1] + ' |'); }); l.push(''); }
++    if ((s.passos || []).length) { l.push('**Passo a passo**', ''); s.passos.forEach(function (p, k) { l.push((k + 1) + '. ' + p); }); l.push(''); }
++    (s.notas || []).forEach(function (p) { l.push('> ' + p, ''); });
++    (s.capturas || []).forEach(function (c) { var src = imagem ? imagem(c[0]) : ''; if (src) l.push('![' + c[1] + '](' + src + ')', '', '_' + c[1] + '_', ''); });
++  });
++  l.push('## ' + (m.secoes.length + 1) + '. Se algo der errado', '', '| O que aconteceu | O que fazer |', '|---|---|');
++  m.problemas.forEach(function (p) { l.push('| ' + p[0] + ' | ' + p[1] + ' |'); });
++  l.push('');
++  return l.join('\n');
++}
++
++/**
++ * Manual em A4 (padrão SGO_DocA4: capa, sumário e texto justificado). o.imagem(nome) -> endereço da imagem (data: ou caminho); sem ele,
++ * o manual sai só com o texto (versão do Portal). Sem o SGO_DocA4 carregado, sai um HTML simples, também justificado.
++ */
++function PClM_manualHtml_(o) {
++  o = o || {};
++  var m = PCL_MANUAL_CLIENTE;
++  var esc = typeof SGO_DocA4_esc_ === 'function' ? SGO_DocA4_esc_ : function (v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
++  var par = function (l) { return (l || []).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join(''); };
++  var tab = function (cab, linhas) { return '<table class="t duas"><thead><tr>' + cab.map(function (c) { return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
++    linhas.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>'; };
++  var corpo = [];
++  corpo.push('<section>' + par(m.apresentacao) + tab(['Papel', 'O que faz no Portal'], m.papeis) + '</section>');
++  m.secoes.forEach(function (s, i) {
++    var h = '<section class="quebra"><h2 id="pclm-' + s.id + '">' + (i + 1) + '. ' + esc(s.titulo) + '</h2>' + par(s.texto);
++    if (s.etapas) h += tab(['Etapa', 'O que quer dizer'], s.etapas.map(function (e, k) { return [(k + 1) + '. ' + e[0], e[1]]; }));
++    if (s.tabela) h += tab(['Aviso', 'Quais'], s.tabela);
++    if ((s.passos || []).length) h += '<h3>Passo a passo</h3><ol class="passos">' + s.passos.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ol>';
++    if ((s.notas || []).length) h += '<div class="uso">' + par(s.notas) + '</div>';
++    if (o.imagem) (s.capturas || []).forEach(function (c) { var src = o.imagem(c[0]); if (src) h += '<figure class="cap"><img src="' + esc(src) + '" alt="' + esc(c[1]) + '"><figcaption>' + esc(c[1]) + '</figcaption></figure>'; });
++    corpo.push(h + '</section>');
++  });
++  corpo.push('<section class="quebra"><h2 id="pclm-problemas">' + (m.secoes.length + 1) + '. Se algo der errado</h2>' + tab(['O que aconteceu', 'O que fazer'], m.problemas) + '</section>');
++  var estilo = '<style>ol.passos{margin:0 0 3mm 5mm;padding:0}ol.passos li{margin:0 0 1.2mm;text-align:justify}' +
++    '.uso{background:#f5f7fa;border-left:2.5pt solid #9fb3c8;padding:2.6mm 3.6mm;margin:1mm 0 4mm}.uso p{margin:0 0 1mm}' +
++    'p{text-align:justify;hyphens:auto}table.t.duas td:first-child,table.t.duas th:first-child{width:32%}' +
++    'figure.cap{margin:3mm 0 5mm;break-inside:avoid;page-break-inside:avoid;text-align:center}figure.cap img{max-width:100%;max-height:120mm;border:.6pt solid #c9d2dc;border-radius:2mm}' +
++    'figure.cap figcaption{font-size:8.5pt;color:#55606b;margin-top:1.2mm}</style>';
++  if (typeof SGO_DocA4_inicioDocumento_ === 'function' && typeof SGO_DocA4_fimDocumento_ === 'function') {
++    var html = SGO_DocA4_inicioDocumento_({ titulo: m.titulo, subtitulo: 'Como usar o Portal do cliente da Metrolabs, passo a passo.', tituloCurto: 'Manual do Portal do cliente', rotuloNumero: 'Edição',
++      numero: m.edicao, revisao: m.edicao, capa: { tipo: 'Manual', linhas: [['Assunto', 'Portal do cliente'], ['Edição', m.edicao], ['Para', 'Pessoas das empresas clientes da Metrolabs']] }, sumario: true }) +
++      estilo + corpo.join('') + SGO_DocA4_fimDocumento_();
++    return html.replace(/<title>[^<]*<\/title>/, '<title>' + esc(m.titulo) + '</title>');
++  }
++  return '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>' + esc(m.titulo) + '</title>' + estilo +
++    '<style>body{font-family:Arial,sans-serif;font-size:10.5pt;color:#1f2933;max-width:180mm;margin:12mm auto;line-height:1.45}h2{color:#0b3d6e;border-bottom:.8pt solid #0b3d6e}table{border-collapse:collapse;width:100%;margin:0 0 4mm}th,td{border:.6pt solid #c9d2dc;padding:1.5mm 2mm;text-align:left;vertical-align:top}</style></head><body>' +
++    '<h1>' + esc(m.titulo) + '</h1><p>Edição de ' + esc(m.edicao) + '. Metrolabs.</p>' + corpo.join('') + '</body></html>';
++}
+diff --git a/cand18/SGO_PortalCliente_Seguranca.js b/cand19/SGO_PortalCliente_Seguranca.js
+index 9a9673c..32206b2 100644
+--- a/cand18/SGO_PortalCliente_Seguranca.js
++++ b/cand19/SGO_PortalCliente_Seguranca.js
+@@ -18,6 +18,9 @@
+  *       mensagem do quê, por quê e o que fazer. Funções internas (PCL_FUNCOES_NUNCA) nunca entram na lista.
+  *    A CHAVE DE RECUSA NASCE DESLIGADA. Como ligar: Portal do cliente > Contratos de clientes > aba "Segurança" > "Chave de
+  *    recusa" = Ligada, com motivo, e Gravar (Administrador ou Diretoria, caixa PORTAL_CLIENTE_REGRAS). Requer o patch do servidor.
++ *    18/11/2026 (etapa 6, SGO_PortalCliente_Troca.js): na mesma aba, a "Trava do legado" (exigirSessao recusa a sessão CLIENTE fora do
++ *    Portal) e a "Lista usada" (transição = PCL_FUNCOES_CLIENTE; mínima = PCL_FUNCOES_CLIENTE_MINIMA), as duas DESLIGADAS por padrão,
++ *    e o painel "Pronto para ligar?" (PClT_prontidao_). A trava de arquivo liga SGO_PCL_MODULO enquanto confere o arquivo.
+  ****************************************************/
+ 
+ var PCL_FUNCOES_PROP = 'PCL_FUNCOES_CFG';
+@@ -47,16 +50,22 @@ function PCl_funcoesCfg_() {
+   var dias = Math.round(Number(g.dias));
+   return { modo: g.modo === 'RECUSAR' ? 'RECUSAR' : 'OBSERVAR', dias: dias >= 1 && dias <= 60 ? dias : PCL_OBSERVACAO_DIAS_PADRAO, desde: PCl_s_(g.desde),
+     extras: (Array.isArray(g.extras) ? g.extras : []).map(PCl_s_).filter(function (f) { return /^[A-Za-z][A-Za-z0-9]*(_[A-Za-z0-9]+)*$/.test(f) && !PCL_FUNCOES_NUNCA.test(f); }),
+-    alteradoPor: PCl_s_(g.alteradoPor), alteradoEm: PCl_s_(g.alteradoEm) };
++    alteradoPor: PCl_s_(g.alteradoPor), alteradoEm: PCl_s_(g.alteradoEm),
++    // 18/11/2026 (etapa 6): trava do legado (exigirSessao recusa a sessão CLIENTE fora do Portal) e a lista usada pelo servidor (transição ou mínima).
++    // As duas nascem DESLIGADAS: sem a chave gravada, nada muda.
++    travaLegado: g.travaLegado === true, listaMinima: g.listaMinima === true };
+ }
+ function PCl_funcaoNaLista_(fn, cfg) {
+   fn = PCl_s_(fn);
+   if (!fn || /_$/.test(fn) || PCL_FUNCOES_NUNCA.test(fn)) return false;
+-  return PCL_FUNCOES_CLIENTE.indexOf(fn) >= 0 || (cfg || PCl_funcoesCfg_()).extras.indexOf(fn) >= 0;
++  cfg = cfg || PCl_funcoesCfg_();
++  // 18/11/2026 (etapa 6): com "Lista usada = Mínima", só PortalCliente_api e o básico da sessão (PCL_FUNCOES_CLIENTE_MINIMA)
++  var base = cfg.listaMinima && typeof PCL_FUNCOES_CLIENTE_MINIMA !== 'undefined' ? PCL_FUNCOES_CLIENTE_MINIMA : PCL_FUNCOES_CLIENTE;
++  return base.indexOf(fn) >= 0 || cfg.extras.indexOf(fn) >= 0;
+ }
+ function PCl_msgFuncaoRecusada_(fn) {
+-  return 'Esta função é da equipe Metrolabs e não faz parte do Portal do cliente (' + PCl_s_(fn) + '). Por quê: o seu acesso de cliente usa só as telas do Portal (Início, Unidades, Equipamentos, ' +
+-    'Arquivo de documentos e Meus chamados). O que fazer: abra o que precisa por essas telas; se algo que você usava parou de funcionar, avise a Metrolabs.';
++  return 'Esta função é da equipe Metrolabs e não faz parte do Portal do cliente (' + PCl_s_(fn) + '). Por quê: o seu acesso de cliente usa só as telas do Portal (Início, Chamados, Documentos técnicos, ' +
++    'Meus equipamentos, Vencimentos e cronograma, Indicadores, Relatórios de ciclo e Minha conta e equipe). O que fazer: abra o que precisa pelo menu do Portal; se algo que você usava parou de funcionar, avise a Metrolabs pela Conversa geral.';
+ }
+ /** Fim do período de observação ('' enquanto ninguém chamou). */
+ function PCl_observacaoAte_(cfg) { return cfg.desde ? PCl_diaMais_(cfg.desde.slice(0, 10), cfg.dias) : ''; }
+@@ -116,7 +125,11 @@ function PClS_resumo_() {
+   }).sort(function (a, b) { return (a.naLista - b.naLista) || b.chamadas - a.chamadas; });
+   var ate = PCl_observacaoAte_(cfg), hoje = PCl_hoje_();
+   return { modo: cfg.modo, dias: cfg.dias, desde: PCl_brHora_(cfg.desde), ate: PCl_br_(ate), terminou: !!ate && hoje >= ate, alteradoPor: cfg.alteradoPor, alteradoEm: PCl_brHora_(cfg.alteradoEm),
+-    lista: PCL_FUNCOES_CLIENTE.slice(), extras: cfg.extras, funcoes: funcoes, foraDaLista: funcoes.filter(function (f) { return !f.naLista; }).length,
++    lista: (cfg.listaMinima && typeof PCL_FUNCOES_CLIENTE_MINIMA !== 'undefined' ? PCL_FUNCOES_CLIENTE_MINIMA : PCL_FUNCOES_CLIENTE).slice(), extras: cfg.extras, funcoes: funcoes, foraDaLista: funcoes.filter(function (f) { return !f.naLista; }).length,
++    // 18/11/2026 (etapa 6): trava do legado, lista usada e o painel "Pronto para ligar?" (SGO_PortalCliente_Troca.js)
++    travaLegado: cfg.travaLegado, listaMinima: cfg.listaMinima, listaTransicao: PCL_FUNCOES_CLIENTE.slice(),
++    listaMinimaFuncoes: typeof PCL_FUNCOES_CLIENTE_MINIMA !== 'undefined' ? PCL_FUNCOES_CLIENTE_MINIMA.slice() : [],
++    prontidao: typeof PClT_prontidao_ === 'function' ? PClT_prontidao_() : null,
+     instrucao: cfg.modo === 'RECUSAR' ? 'A recusa está LIGADA: função fora da lista é recusada para as contas de cliente, com a mensagem do quê, por quê e o que fazer.'
+       : 'A recusa está DESLIGADA (modo observação): nada é recusado; cada função chamada por conta de cliente fica registrada abaixo. ' +
+         (ate ? (hoje >= ate ? 'O período de observação terminou em ' + PCl_br_(ate) + '. ' : 'O período de observação vai até ' + PCl_br_(ate) + '. ') : 'O período começa na primeira chamada de uma conta de cliente. ') +
+@@ -152,11 +165,23 @@ function PClS_salvar_(eu, d) {
+     if (modo !== cfg.modo) msgs.push(modo === 'RECUSAR' ? 'recusa LIGADA' : 'recusa desligada (volta à observação)');
+     g.modo = modo;
+   }
+-  if (!msgs.length) throw PCl_erro_('NADA', 'Nada mudou: escolha o que alterar (ligar ou desligar a recusa, os dias de observação ou uma função da lista).');
++  // 18/11/2026 (etapa 6): trava do legado (LIGADA ou DESLIGADA) e a lista usada pelo servidor (MINIMA ou TRANSICAO). Sem o campo no pedido, fica como está.
++  if (d.travaLegado) {
++    var tl = PCl_up_(d.travaLegado) === 'LIGADA';
++    if (tl !== cfg.travaLegado) msgs.push(tl ? 'trava do legado LIGADA' : 'trava do legado desligada');
++    g.travaLegado = tl;
++  }
++  if (d.lista) {
++    var lm = PCl_up_(d.lista) === 'MINIMA';
++    if (lm !== cfg.listaMinima) msgs.push(lm ? 'lista usada: mínima (Portal do cliente e o básico da sessão)' : 'lista usada: transição');
++    g.listaMinima = lm;
++  }
++  if (!msgs.length) throw PCl_erro_('NADA', 'Nada mudou: escolha o que alterar (a recusa do servidor, a trava do legado, a lista usada, os dias de observação ou uma função da lista).');
+   g.extras = extras; g.alteradoPor = eu.nome; g.alteradoEm = PCl_agoraIso_();
+   if (!g.modo) g.modo = cfg.modo;
+   PCl_gravarConfig_(PCL_FUNCOES_PROP, 'FUNCOES_CLIENTE', antes, g, motivo, eu);
+-  return { message: 'Gravado: ' + msgs.join('; ') + '.' + (g.modo === 'RECUSAR' ? ' A partir de agora, função fora da lista é recusada para as contas de cliente (vale em até 1 minuto, com o servidor atualizado).' : ''), seguranca: PClS_resumo_() };
++  return { message: 'Gravado: ' + msgs.join('; ') + '.' + (g.modo === 'RECUSAR' ? ' A partir de agora, função fora da lista é recusada para as contas de cliente (vale em até 1 minuto, com o servidor atualizado).' : '') +
++    (g.travaLegado === true && !cfg.travaLegado ? ' A trava do legado vale na hora: fora das telas do Portal, a conta de cliente recebe a recusa com o caminho.' : ''), seguranca: PClS_resumo_() };
+ }
+ 
+ // ------------------------------------------------------------
+@@ -223,7 +248,10 @@ function PCl_ctxArquivo_(cid) {
+  */
+ function PortalCliente_arquivoPermitido_(sessionId, arquivoId) {
+   var s = null, id = PCl_s_(arquivoId);
++  // 18/11/2026 (etapa 6): a trava de arquivo é entrada do Portal (como PortalCliente_api): com a trava do legado ligada, exigirSessao aceita a sessão aqui dentro
++  var moduloAntes = typeof SGO_PCL_MODULO === 'undefined' ? false : SGO_PCL_MODULO;
+   try {
++    SGO_PCL_MODULO = true;
+     PCl_memoLimpar_();
+     if (!id) return false;
+     s = typeof exigirSessao === 'function' ? exigirSessao(sessionId) : PCl_sessaoGravada_(sessionId);
+@@ -258,6 +286,8 @@ function PortalCliente_arquivoPermitido_(sessionId, arquivoId) {
+   } catch (e) {
+     try { console.error('Portal do cliente, trava de arquivo: ' + ((e && e.message) || e)); } catch (x2) {}
+     return false;
++  } finally {
++    SGO_PCL_MODULO = moduloAntes;
+   }
+ }
+ /** 18/11/2026 (etapa 5): documento A4 da Representação (versão do cliente) nas unidades da pessoa: com UNIDADES_JSON, todas precisam estar no acesso; senão, a unidade do registro ou a do chamado. */
+diff --git a/cand19/SGO_PortalCliente_Troca.js b/cand19/SGO_PortalCliente_Troca.js
+new file mode 100644
+index 0000000..96c6f60
+--- /dev/null
++++ b/cand19/SGO_PortalCliente_Troca.js
+@@ -0,0 +1,221 @@
++/****************************************************
++ * PORTAL DO CLIENTE — ETAPA 6, TROCA DEFINITIVA (18/11/2026). Especificação: output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md,
++ * "Etapa 6", item 0.1 e seção 5 (o dono aceitou todas as recomendações).
++ *
++ * 1) INÍCIO DO PORTAL (item 4.1.1, ação "inicio"): saudação, situação do acesso, quatro cartões (chamados abertos, próxima visita,
++ *    vencimentos em 30 dias, documentos novos desde a entrada anterior), "O que precisa de você" e os atalhos do papel. Substitui, para a
++ *    conta de cliente, o Início da equipe (central de pendências, painel de índices e alertas).
++ * 2) UNIDADES DA EMPRESA (ação "unidades"): substitui a tela antiga Cadastros > Unidades para o cliente (só os campos públicos).
++ * 3) PONTE DO PORTAL (ação "legado", PCL_LEGADO_CLIENTE): as poucas telas antigas que continuam valendo para o cliente dentro do Portal
++ *    (prontuário por pastas e pelo QR Code, relatório do atendimento e orçamento da Assistência, relatórios de ciclo da lavadora, ajuda
++ *    e busca rápida) passam a ser chamadas pela entrada única do Portal. Lista FECHADA: função fora dela é recusada com o quê, por quê
++ *    e o que fazer. Cada função chamada pela ponte continua com as próprias travas (cliente, unidades, papel).
++ * 4) TRAVA DO LEGADO (item 0.1): com a chave ligada, exigirSessao (SGO_Auth.js) recusa a sessão CLIENTE fora das entradas que ligam
++ *    SGO_PCL_MODULO (PortalCliente_api e a trava de arquivo), no mesmo molde de SGO_REP_MODULO. A CHAVE NASCE DESLIGADA: o servidor está
++ *    em observação do portão desde 18/11/2026 00:16 e a recomendação é ligar só depois de 7 dias de observação e da revisão das funções
++ *    "fora da lista". Ligar e desligar: aba Segurança do Portal (Administrador e Diretoria, com motivo; PClS_salvar_).
++ * 5) LISTA FECHADA MÍNIMA (PCL_FUNCOES_CLIENTE_MINIMA): PortalCliente_api, o básico da sessão e o bate-papo (que já se recusa sozinho à
++ *    conta de cliente e se esconde). Preparada e escolhível na aba Segurança; nasce DESLIGADA (vale a lista de transição).
++ * 6) "PRONTO PARA LIGAR?" (PClT_prontidao_): dias de observação, funções fora da lista chamadas por clientes, o estado das duas travas
++ *    e o passo a passo para ligar e para voltar atrás.
++ * Nenhuma resposta leva Date cru.
++ ****************************************************/
++
++/** Telas do Portal que a conta de cliente usa (a casca troca as telas antigas por estas: JS_PortalCliente_Inicio.html). */
++var PCL_TELAS_CLIENTE = ['portal_cliente_inicio', 'portal_cliente_chamados', 'portal_cliente_documentos', 'portal_cliente_equipamentos', 'portal_cliente_vencimentos',
++  'portal_cliente_indicadores', 'portal_cliente_conta', 'portal_cliente_ciclos'];
++
++/** Lista fechada mínima (para quando a recusa do servidor for ligada com ela): a entrada do Portal e o básico da sessão e da segurança. */
++var PCL_FUNCOES_CLIENTE_MINIMA = [
++  'getSessaoAtual', 'validarSessao', 'logout', 'login', 'getPublicConfig', 'verificarCodigoAcesso', 'reenviarCodigoAcesso', 'trocarSenhaAcesso',
++  'pedirRedefinicaoSenha', 'abrirRedefinicaoSenha', 'codigoRedefinicaoSenha', 'concluirRedefinicaoSenha',
++  'PortalCliente_api',
++  // o bate-papo da equipe se recusa sozinho à conta de cliente ("SEM_ACESSO") e esconde o botão; recusado pelo servidor, mostraria "Sem conexão"
++  'comApi'
++];
++
++/** Mensagem da trava do legado (exigirSessao, SGO_Auth.js): o quê, por quê e o que fazer. */
++var MSG_PCL_FORA_PORTAL = 'Esta parte do SGO+ não faz parte do Portal do cliente. Por quê: o seu acesso de cliente usa só as telas do Portal ' +
++  '(Início, Chamados, Documentos técnicos, Meus equipamentos, Vencimentos e cronograma, Indicadores, Relatórios de ciclo e Minha conta e equipe). ' +
++  'O que fazer: abra o que precisa pelo menu do Portal do cliente; se algo que você usava parou de funcionar, avise a Metrolabs pela Conversa geral (Chamados > Conversa geral).';
++
++/** A trava do legado está ligada? (aba Segurança; nasce desligada). Leitura direta da propriedade, sem gravar nada. */
++function PCl_travaLegadoLigada_() {
++  try {
++    var g = JSON.parse(PropertiesService.getScriptProperties().getProperty(typeof PCL_FUNCOES_PROP !== 'undefined' ? PCL_FUNCOES_PROP : 'PCL_FUNCOES_CFG') || '{}') || {};
++    return g.travaLegado === true;
++  } catch (e) { return false; }
++}
++
++// ------------------------------------------------------------
++// PONTE DO PORTAL (ação "legado")
++// ------------------------------------------------------------
++/**
++ * Funções das telas antigas que o cliente continua usando DENTRO do Portal. Cada item: tela (para a mensagem), fn (a função, conferida na
++ * hora da chamada) e confere(args) -> '' (pode) ou o motivo da recusa. O sessionId é sempre o da própria pessoa, nunca o que vem da tela.
++ */
++var PCL_LEGADO_CLIENTE = {
++  documentosPastas: { tela: 'prontuário por pastas (documentos da empresa, da unidade e do equipamento)', fn: function () { return typeof documentosPastas === 'function' ? documentosPastas : null; },
++    confere: function (a) { var p = a[0] || {}; return ['cliente', 'unidade', 'equipamento'].indexOf(PCl_s_(p.escopo).toLowerCase()) >= 0 ? '' : 'o pedido não diz de qual empresa, unidade ou equipamento são os documentos'; } },
++  qrcodeAcessar: { tela: 'prontuário do equipamento pelo QR Code', fn: function () { return typeof qrcodeAcessar === 'function' ? qrcodeAcessar : null; } },
++  qrcodeQualificacao: { tela: 'qualificação do equipamento pelo QR Code', fn: function () { return typeof qrcodeQualificacao === 'function' ? qrcodeQualificacao : null; } },
++  Assistencia_api: { tela: 'relatório do atendimento e orçamento', fn: function () { return typeof Assistencia_api === 'function' ? Assistencia_api : null; },
++    confere: function (a) { var ac = PCl_s_(a[0]); return (typeof AST_ACOES_CLIENTE !== 'undefined' && AST_ACOES_CLIENTE.indexOf(ac) >= 0) ? '' : 'a ação "' + ac + '" da Assistência técnica é da equipe Metrolabs'; } },
++  LavCiclo_api: { tela: 'relatórios de ciclo da lavadora', fn: function () { return typeof LavCiclo_api === 'function' ? LavCiclo_api : null; },
++    confere: function (a) { var ac = PCl_s_(a[0]); return ac && ac !== 'referencias' ? '' : 'as referências por receita da lavadora são cadastradas pela Metrolabs'; } },
++  SGO_Ajuda_apiTela: { tela: 'ajuda da tela', fn: function () { return typeof SGO_Ajuda_apiTela === 'function' ? SGO_Ajuda_apiTela : null; },
++    confere: function (a) { return /^portal_cliente_/.test(PCl_s_(a[0])) ? '' : 'a ajuda pedida é de uma tela da equipe Metrolabs'; } },
++  SGO_Ajuda_apiManual: { tela: 'manual da tela', fn: function () { return typeof SGO_Ajuda_apiManual === 'function' ? SGO_Ajuda_apiManual : null; },
++    confere: function (a) { return /^portal_cliente_/.test(PCl_s_(a[0])) ? '' : 'o manual pedido é de uma tela da equipe Metrolabs'; } },
++  Inicio_apiBuscar: { tela: 'busca rápida', fn: function () { return typeof Inicio_apiBuscar === 'function' ? Inicio_apiBuscar : null; } }
++};
++/** d: { fn, args }. Devolve { resultado } com a resposta da função como ela é. */
++function PClT_legado_(eu, d) {
++  d = d || {};
++  var nome = PCl_s_(d.fn), item = Object.prototype.hasOwnProperty.call(PCL_LEGADO_CLIENTE, nome) ? PCL_LEGADO_CLIENTE[nome] : null;
++  var quem = { id: eu.id, nome: eu.nome, email: eu.email, clienteId: eu.clienteId };
++  if (!item) {
++    PCl_registrarAcesso_(quem, 'FUNCAO_RECUSADA', 'Ponte do Portal: ' + nome.slice(0, 80), { tipo: 'FUNCAO', id: nome.slice(0, 80) }, typeof PClA_ctxSessao_ === 'function' ? PClA_ctxSessao_(eu) : {});
++    throw PCl_erro_('LEGADO', 'Não foi possível abrir: esta parte do SGO+ é da equipe Metrolabs e não faz parte do Portal do cliente. Por quê: o seu acesso usa só as telas do Portal. ' +
++      'O que fazer: abra o que precisa pelo menu do Portal; se algo parou de funcionar, avise a Metrolabs pela Conversa geral.');
++  }
++  var args = Array.isArray(d.args) ? d.args.slice(0, 4) : [];
++  var porque = item.confere ? item.confere(args) : '';
++  if (porque) throw PCl_erro_('LEGADO', 'Não foi possível concluir: ' + porque + '. Por quê: o Portal do cliente só abre o que é da sua empresa. O que fazer: use os botões da tela; se algo parou de funcionar, avise a Metrolabs pela Conversa geral.');
++  var f = item.fn();
++  if (!f) throw PCl_erro_('LEGADO', 'Não foi possível abrir o ' + item.tela + ': esta parte ainda não está disponível neste servidor. O que fazer: atualize a página (F5); se continuar, avise a Metrolabs.');
++  var r = f.apply(null, [eu.sid].concat(args));
++  return { resultado: r === undefined ? null : r };
++}
++
++// ------------------------------------------------------------
++// INÍCIO DO PORTAL (item 4.1.1)
++// ------------------------------------------------------------
++function PClT_primeiroNome_(n) { var p = PCl_s_(n).split(/\s+/)[0] || ''; return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : ''; }
++/** "dd/mm/aaaa hh:mm" (ou "dd/mm/aaaa") -> chave ordenável "aaaa-mm-ddThh:mm"; '' se não reconhece. */
++function PClT_chaveData_(t) { var m = /(\d{2})\/(\d{2})\/(\d{4})(?:\D+(\d{2}):(\d{2}))?/.exec(PCl_s_(t)); return m ? m[3] + '-' + m[2] + '-' + m[1] + 'T' + (m[4] || '00') + ':' + (m[5] || '00') : ''; }
++/** Dia da entrada anterior da pessoa (a mais recente antes da atual), pelo registro de acessos; '' se não houver. */
++function PClT_entradaAnterior_(uid) {
++  var l = PCl_ler_(PCL_ABAS.ACESSOS).filter(function (r) { return PCl_s_(r.USUARIO_ID) === uid && PCl_up_(r.ACAO) === 'ENTRADA'; })
++    .map(function (r) { return PCl_s_(r.EM); }).sort().reverse();
++  return l.length > 1 ? l[1].slice(0, 10) : '';
++}
++function PClT_inicio_(eu) {
++  var esc = PCl_escopo_(eu.id);
++  if (!esc) throw PCl_erro_('CONTA', 'Não foi possível abrir o Início: a sua conta de cliente não foi encontrada. O que fazer: saia e entre de novo; se continuar, fale com a Metrolabs.');
++  var sit = PCl_situacaoAcesso_(esc.clienteId, '', ''), cli = null;
++  try { cli = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_CLIENTES || 'CAD_CLIENTES', esc.clienteId); } catch (e) { cli = null; }
++  var r = { nome: PClT_primeiroNome_(esc.nome || eu.nome), empresa: PCl_s_(cli && (cli.NOME_FANTASIA || cli.RAZAO_SOCIAL)), papel: esc.papel, papelNome: esc.papelNome,
++    situacao: sit.situacao, faixa: sit.provisoria ? '' : (sit.situacao === 'PLENO' ? '' : sit.textoCliente), cartoes: [], precisa: [], falhas: [],
++    pode: { abrir: false, avulso: false, motivoAbrir: '', indicadores: !!esc.pode.indicadores, equipe: !!esc.pode.equipe },
++    unidades: esc.todas ? 'Todas as unidades da empresa' : '' };
++  if (!sit.podeEntrar) { r.faixa = sit.textoCliente; return r; }
++  // chamados: abertos, próxima visita e o que precisa da pessoa (a mesma conta da tela Chamados)
++  try {
++    var ch = PClCh_acaoCliente_(eu, 'chamados', {});
++    var abertos = (ch.itens || []).filter(function (i) { return i.aberto && !i.cancelado; });
++    var visitas = abertos.filter(function (i) { return i.visita && PClT_chaveData_(i.visita).slice(0, 10) >= PCl_hoje_(); })
++      .sort(function (a, b) { return PClT_chaveData_(a.visita).localeCompare(PClT_chaveData_(b.visita)); });
++    r.cartoes.push({ k: 'abertos', valor: String(abertos.length), rotulo: abertos.length === 1 ? 'chamado aberto' : 'chamados abertos', tela: 'portal_cliente_chamados',
++      texto: abertos.length ? 'Do pedido recebido até o atendimento em andamento.' : 'Nenhum chamado em andamento.' });
++    r.cartoes.push({ k: 'visita', valor: visitas.length ? visitas[0].visita : '—', rotulo: 'próxima visita', tela: 'portal_cliente_chamados',
++      texto: visitas.length ? visitas[0].numero + ' · ' + visitas[0].equipamento : 'Nenhuma visita agendada.', ref: visitas.length ? { tipo: visitas[0].tipo, id: visitas[0].id } : null });
++    r.precisa = (ch.precisaDeVoce || []).slice(0, 20);
++    r.pode.abrir = !!(ch.acesso && ch.acesso.podeAbrir); r.pode.avulso = !!(ch.acesso && ch.acesso.avulso); r.pode.motivoAbrir = PCl_s_(ch.acesso && ch.acesso.motivoAbrir);
++  } catch (e1) { r.falhas.push('chamados: ' + String((e1 && e1.message) || e1)); }
++  // vencimentos em 30 dias e documentos novos desde a entrada anterior
++  try {
++    var xd = PClD_ctx_(eu);
++    var v = PClD_vencimentosTela_(xd, { janela: '30' }).vencimentos || [];
++    var venc = v.filter(function (x) { return x.situacao === 'vencido'; }).length, prox = v.filter(function (x) { return x.situacao !== 'vencido'; }).length;
++    r.cartoes.push({ k: 'vencimentos', valor: String(venc + prox), rotulo: 'vencimentos até 30 dias', tela: 'portal_cliente_vencimentos',
++      texto: venc ? venc + (venc === 1 ? ' já vencido' : ' já vencidos') + (prox ? ' e ' + prox + ' nos próximos 30 dias.' : '.') : prox ? prox + ' nos próximos 30 dias.' : 'Nada vence nos próximos 30 dias.' });
++    var desde = PClT_entradaAnterior_(esc.usuarioId) || PCl_diaMais_(PCl_hoje_(), -30);
++    var docs = (PCl_documentos_(xd, {}).documentos || []).filter(function (dd) { return PCl_s_(dd.emitidoIso).slice(0, 10) >= desde; });
++    r.cartoes.push({ k: 'documentos', valor: String(docs.length), rotulo: docs.length === 1 ? 'documento novo' : 'documentos novos', tela: 'portal_cliente_documentos',
++      texto: 'Emitidos desde ' + PCl_br_(desde) + (PClT_entradaAnterior_(esc.usuarioId) ? ' (a sua entrada anterior).' : ' (últimos 30 dias).') });
++  } catch (e2) { r.falhas.push('documentos e vencimentos: ' + String((e2 && e2.message) || e2)); }
++  return r;
++}
++
++// ------------------------------------------------------------
++// UNIDADES DA EMPRESA (substitui Cadastros > Unidades para o cliente)
++// ------------------------------------------------------------
++function PClT_unidades_(eu) {
++  var esc = PCl_escopo_(eu.id);
++  if (!esc) throw PCl_erro_('CONTA', 'Não foi possível abrir: a sua conta de cliente não foi encontrada. O que fazer: saia e entre de novo; se continuar, fale com a Metrolabs.');
++  var sit = PCl_situacaoAcesso_(esc.clienteId, '', '');
++  if (!sit.podeEntrar) throw PCl_erro_('SEM_ACESSO', 'Não foi possível abrir: ' + sit.textoCliente);
++  var qtd = {};
++  PCl_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS || 'CAD_EQUIPAMENTOS').forEach(function (e) { if (PCl_s_(e.CLIENTE_ID) === esc.clienteId && PCl_up_(e.STATUS || 'ATIVO') === 'ATIVO') qtd[PCl_s_(e.UNIDADE_ID)] = (qtd[PCl_s_(e.UNIDADE_ID)] || 0) + 1; });
++  var l = PCl_ler_(SGO_CFG.SHEETS.CAD_UNIDADES || 'CAD_UNIDADES').filter(function (u) { return PCl_s_(u.CLIENTE_ID) === esc.clienteId && PCl_escopoUnidade_(esc, u.ID); }).map(function (u) {
++    var p = PCl_unPublica_(u);
++    var end = PCl_s_(p.ENDERECO) || [PCl_s_(p.LOGRADOURO), PCl_s_(p.NUMERO), PCl_s_(p.COMPLEMENTO), PCl_s_(p.BAIRRO)].filter(Boolean).join(', ');
++    return { id: PCl_s_(p.ID), nome: PCl_s_(p.NOME_UNIDADE) || 'Unidade', cnpj: PCl_s_(p.CNPJ_UNIDADE), endereco: end, cidade: [PCl_s_(p.CIDADE), PCl_s_(p.UF)].filter(Boolean).join('/'),
++      cep: PCl_s_(p.CEP), telefone: PCl_s_(p.TELEFONE), ativa: PCl_up_(p.STATUS || 'ATIVO') === 'ATIVO', equipamentos: qtd[PCl_s_(p.ID)] || 0 };
++  }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
++  return { unidades: l, todas: esc.todas };
++}
++
++// ------------------------------------------------------------
++// "PRONTO PARA LIGAR?" (aba Segurança)
++// ------------------------------------------------------------
++function PClT_prontidao_() {
++  var cfg = PCl_funcoesCfg_(), hoje = PCl_hoje_(), desde = PCl_s_(cfg.desde).slice(0, 10);
++  var diasObs = desde ? Math.max(0, Math.round((PCl_diaMs_(hoje) - PCl_diaMs_(desde)) / 86400000)) : 0;
++  var janelaDe = PCl_diaMais_(hoje, -cfg.dias);
++  var naTransicao = function (f) { return PCL_FUNCOES_CLIENTE.indexOf(f) >= 0 || cfg.extras.indexOf(f) >= 0; };
++  var naMinima = function (f) { return PCL_FUNCOES_CLIENTE_MINIMA.indexOf(f) >= 0 || cfg.extras.indexOf(f) >= 0; };
++  var por = {};
++  PCl_ler_(PCL_ABAS.FUNCOES).forEach(function (r) {
++    var f = PCl_s_(r.FUNCAO); if (!f) return;
++    var x = por[f] || (por[f] = { funcao: f, chamadas: 0, recentes: 0, pessoas: {}, ultima: '' });
++    var n = Number(r.CHAMADAS) || 0; x.chamadas += n;
++    if (PCl_s_(r.DIA) >= janelaDe) { x.recentes += n; if (PCl_s_(r.USUARIO_ID)) x.pessoas[PCl_s_(r.USUARIO_ID)] = 1; }
++    if (PCl_s_(r.ULTIMA_EM) > x.ultima) x.ultima = PCl_s_(r.ULTIMA_EM);
++  });
++  var fora = Object.keys(por).map(function (k) { var x = por[k];
++    return { funcao: x.funcao, chamadas: x.chamadas, recentes: x.recentes, pessoas: Object.keys(x.pessoas).length, ultima: PCl_brHora_(x.ultima), naTransicao: naTransicao(x.funcao), naMinima: naMinima(x.funcao), interna: PCL_FUNCOES_NUNCA.test(x.funcao) };
++  }).filter(function (x) { return !x.naMinima; }).sort(function (a, b) { return b.recentes - a.recentes || b.chamadas - a.chamadas; });
++  var foraTransRecente = fora.filter(function (x) { return !x.naTransicao && x.recentes > 0; }).length;
++  var foraMinRecente = fora.filter(function (x) { return x.recentes > 0; }).length;
++  var obsOk = !!desde && diasObs >= cfg.dias;
++  var itens = [
++    { k: 'observacao', ok: obsOk, titulo: 'Observação de pelo menos ' + cfg.dias + ' dias', texto: desde ? 'Começou em ' + PCl_brHora_(cfg.desde) + ': ' + diasObs + (diasObs === 1 ? ' dia' : ' dias') + ' de observação.' : 'Ainda nenhuma chamada de conta de cliente registrada pelo servidor.' },
++    { k: 'telas', ok: true, titulo: 'Telas antigas do cliente trocadas pelas telas do Portal', texto: 'Feito na etapa 6: Unidades, Equipamentos, Arquivo de documentos, Meus chamados, Relatórios de ciclo e o Início abrem as telas do Portal, e as telas antigas que continuam valendo passam pela entrada do Portal.' },
++    { k: 'foraTransicao', ok: obsOk && !foraTransRecente, titulo: 'Nenhuma função fora da lista de transição nos últimos ' + cfg.dias + ' dias', texto: foraTransRecente ? foraTransRecente + ' função(ões) fora da lista chamadas por clientes no período: confira a tabela abaixo antes de ligar.' : 'Nada fora da lista no período.' },
++    { k: 'foraMinima', ok: obsOk && !foraMinRecente, titulo: 'Nenhuma função fora da lista mínima nos últimos ' + cfg.dias + ' dias', texto: foraMinRecente ? foraMinRecente + ' função(ões) fora da lista mínima no período. A lista mínima só deve ser escolhida quando isto estiver em zero.' : 'Nada fora da lista mínima no período.' }
++  ];
++  return {
++    hoje: PCl_br_(hoje), diasObservacao: diasObs, periodo: cfg.dias, desde: PCl_brHora_(cfg.desde),
++    travaLegado: cfg.travaLegado, recusaServidor: cfg.modo === 'RECUSAR', listaMinima: cfg.listaMinima,
++    prontoTrava: obsOk && !foraTransRecente, prontoMinima: obsOk && !foraMinRecente,
++    itens: itens, fora: fora.slice(0, 60), listaMinimaFuncoes: PCL_FUNCOES_CLIENTE_MINIMA.slice(),
++    passos: [
++      'Espere os ' + cfg.dias + ' dias de observação e confira a tabela "Funções fora da lista". Funções de módulos internos (marcadas "interna") nunca entram: serão recusadas, e é isso que se quer.',
++      'Se uma função de tela que o cliente ainda usa aparecer fora da lista, não ligue: avise o desenvolvimento para trazer a tela para o Portal, ou acrescente a função à lista com motivo.',
++      'Ligue a "Trava do legado" (Ligada, com motivo) num dia útil pela manhã. Ela vale na hora e não depende do servidor. Acompanhe a Conversa geral e o Uso do portal por um dia.',
++      'Depois, ligue a "Chave de recusa" do servidor (Ligada) com a lista de transição. O efeito vale em até 1 minuto.',
++      'Por último, quando "fora da lista mínima" estiver em zero, troque "Lista usada" para "Mínima".',
++      'Para voltar atrás, a qualquer momento: escolha "Desligada" (ou "Transição") na mesma chave, escreva o motivo e grave. Nada é apagado; as chamadas continuam registradas.'
++    ]
++  };
++}
++
++// ------------------------------------------------------------
++// AÇÕES DO CLIENTE DESTE ARQUIVO
++// ------------------------------------------------------------
++var PCLT_ACOES_CLIENTE = { inicio: 1, unidades: 1, legado: 1, manual: 1 };
++function PClT_acaoCliente_(eu, acao, d) {
++  if (acao === 'inicio') return PClT_inicio_(eu);
++  if (acao === 'unidades') return PClT_unidades_(eu);
++  if (acao === 'legado') return PClT_legado_(eu, d || {});
++  if (acao === 'manual') return PClT_manual_(eu);
++  throw PCl_erro_('ACAO', 'Ação desconhecida do Portal do cliente. Atualize a página (F5).');
++}
++/** Manual do cliente em A4 (texto de SGO_PortalCliente_Manual.js), para ler e imprimir dentro do Portal. */
++function PClT_manual_(eu) {
++  if (typeof PClM_manualHtml_ !== 'function') throw PCl_erro_('MANUAL', 'O manual do Portal ainda não está disponível neste servidor. O que fazer: use "Como usar esta tela" no topo de cada tela; se precisar, peça o manual à Metrolabs.');
++  try { PCl_registrarAcesso_({ id: eu.id, nome: eu.nome, email: eu.email, clienteId: eu.clienteId }, 'MANUAL_ABERTO', 'Abriu o manual do Portal do cliente', { tipo: 'CLIENTE', id: eu.clienteId }, typeof PClA_ctxSessao_ === 'function' ? PClA_ctxSessao_(eu) : {}); } catch (e) {}
++  return { html: PClM_manualHtml_(), titulo: 'Manual do Portal do cliente' };
++}

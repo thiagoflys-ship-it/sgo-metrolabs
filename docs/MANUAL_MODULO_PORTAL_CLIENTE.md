@@ -1,4 +1,4 @@
-# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail; etapa 5: indicadores e uso do portal)
+# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail; etapa 5: indicadores e uso do portal; etapa 6: troca definitiva, trava do legado e manual do cliente)
 
 **Versão:** 18/11/2026. **Especificação:** `output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md` (o dono aceitou todas as recomendações).
 **Tela:** menu **Portal do cliente > Contratos de clientes** (`JS_PortalCliente.html`) e **Portal do cliente > Acessos de clientes** (`JS_PortalCliente_Acessos.html`). **Servidor:** `SGO_PortalCliente.js`, `SGO_PortalCliente_Config.js`, `SGO_PortalCliente_Contratos.js`, `SGO_PortalCliente_Seguranca.js`, `SGO_PortalCliente_Acessos.js`.
@@ -95,6 +95,8 @@ Na ficha do cliente, escreva o motivo, que é interno, e toque em **Suspender o 
 ## 6. Segurança das contas de cliente (lista fechada de funções)
 
 A aba **Segurança** mostra cada função do servidor que as contas de cliente chamaram, com contagem, pessoas, clientes e se a função está na lista do portal.
+
+Desde a etapa 6, a mesma aba tem o painel **"Pronto para ligar?"**, a **Trava do legado** e a **Lista usada pelo servidor** (transição ou mínima), todas desligadas por padrão. Veja a seção 28.
 
 - **Modo observação (padrão; a chave de recusa nasce DESLIGADA):** o sistema registra o que as contas de cliente chamam e não recusa nada. O período é de **7 dias**, configurável de 1 a 60, e conta a partir da primeira chamada registrada. Terminado o período, a tela avisa.
 - **Lista inicial:** o básico da sessão e da segurança do acesso (entrada, saída, código, troca de senha, "Esqueci minha senha") e as funções das telas do cliente: `Assistencia_api`, `LavCiclo_api`, `PortalCliente_api`, cadastros (clientes, unidades, equipamentos, documentos, painel de cadastros) e a ajuda.
@@ -808,4 +810,72 @@ Por cliente (período de 30, 90, 180 ou 365 dias), com "Como cada número é con
 | O cliente diz que não recebeu um aviso marcado como enviado | A devolução do provedor do cliente ("e-mail que voltou") ainda não chega ao SGO+. Confira o endereço na linha da pessoa e a caixa de saída do e-mail da Metrolabs |
 | A aba "Uso do portal" não aparece | Falta a caixa «Ver o uso do portal e o registro de acessos». Peça em Administração > Acessos |
 
+
+## 28. Troca definitiva (etapa 6)
+
+A partir da etapa 6, a conta de cliente usa só as telas do Portal. As telas antigas que o cliente via fora do Portal passam a abrir a tela nova que as substitui, sem perder nada do que ele fazia. A trava do legado e a lista fechada mínima ficam prontas, mas **nascem desligadas**: quem liga é a Diretoria, pelo painel "Pronto para ligar?", depois da observação.
+
+### 28.1 O menu do cliente: antes e depois
+
+| Antes (o que o cliente via) | Depois (o que abre agora) | Onde ficou cada coisa |
+|---|---|---|
+| Início (pendências da central, índices e alertas) | **Início** do Portal | Cartões de chamados abertos, próxima visita, vencimentos em 30 dias e documentos novos; "O que precisa de você"; atalhos; "Manual do Portal" |
+| Meus chamados (Assistência técnica) | **Chamados** | Pedir atendimento (formulário completo), lista, Kanban e Gantt, orçamento (aprovação do Gestor), confirmação, relatório da O.S. e, na ficha, "Gerar relatório do atendimento" e "Ver prévia". Rondas: em Documentos técnicos (tipo Ronda) e no Cronograma. Relatório do período: em Indicadores |
+| Unidades (Cadastros) | **Meus equipamentos > Unidades** | Nome, CNPJ, endereço, telefone e equipamentos de cada unidade; "Documentos da unidade" abre as pastas da unidade (PGT, POP e registros) |
+| Equipamentos (Cadastros) | **Meus equipamentos** | Lista com farol, ficha com vencimentos, documentos, **prontuário por pastas**, histórico e chamados |
+| Arquivo de documentos (Cadastros) | **Documentos técnicos > Por pastas (prontuário)** | Todos os documentos emitidos para a empresa, por pasta, inclusive **PGT e POP**, O.S. e qualificação (pedido da Priscilla de 17/11) |
+| Relatórios de ciclo (Cadastros) | **Relatórios de ciclo** (no grupo Portal do cliente) | A mesma tela da lavadora (consultar, gerar e assinar), chamada pela entrada do Portal |
+| Prontuário pelo QR Code | O mesmo prontuário | Pela entrada do Portal (`qrcodeAcessar`, `documentosPastas` e "Gerar relatório do ciclo") |
+| Busca rápida (Ctrl K) | A mesma busca | O equipamento abre a ficha em Meus equipamentos; o certificado ou documento abre Documentos técnicos já com a busca |
+| "Dúvida" no topo | "Como usar esta tela" | O assistente é da equipe; para o cliente, o botão abre a ajuda da tela do Portal |
+| Bate-papo no topo | Sem mudança | O bate-papo da equipe já recusa a conta de cliente e se esconde; a conversa do cliente é a do Portal (Chamados > Conversa geral) |
+
+Atalho, busca ou link antigo de e-mail para uma tela que não é do Portal leva ao Início do Portal. A equipe não muda: para ela, Unidades, Equipamentos e as demais telas continuam como estavam.
+
+**As 5 etapas antigas** (`AST_ETAPAS_CLIENTE`) continuam só dentro dos documentos A4 (relatório do atendimento e do período) e da Representação, que dependem delas para as cores e a linha do tempo. Todas as telas do cliente mostram as 8 etapas do Portal.
+
+### 28.2 Ponte do Portal (telas antigas que continuam valendo)
+
+Oito funções antigas continuam úteis ao cliente dentro do Portal: as pastas de documentos (`documentosPastas`), o prontuário pelo QR Code e a qualificação dele (`qrcodeAcessar`, `qrcodeQualificacao`), a Assistência técnica só nas ações do cliente (`Assistencia_api`: relatório do atendimento, prévia, orçamento), os relatórios de ciclo (`LavCiclo_api`, menos as referências), a ajuda e o manual da tela do Portal (`SGO_Ajuda_apiTela`, `SGO_Ajuda_apiManual`) e a busca rápida (`Inicio_apiBuscar`). Para a conta de cliente, a tela as chama pela entrada única do Portal (`PortalCliente_api`, ação `legado`), numa lista fechada (`PCL_LEGADO_CLIENTE`). Cada função continua com as próprias travas (empresa, unidades e papel). Fora da lista, a resposta é a recusa com o caminho e a tentativa fica em `PCL_ACESSOS` (`FUNCAO_RECUSADA`). Assim, o cliente chama do servidor só `PortalCliente_api` e o básico da sessão.
+
+### 28.3 Painel "Pronto para ligar?" (aba Segurança)
+
+No topo da aba Segurança (Portal do cliente > Contratos de clientes), o painel mostra:
+
+- os **dias de observação** (desde a primeira chamada de conta de cliente registrada pelo servidor; o servidor está em observação desde 18/11/2026 00:16);
+- as **funções fora da lista** chamadas por contas de cliente, com as chamadas dos últimos 7 dias, as pessoas e se a função está na lista de transição;
+- o estado da **trava do legado**, da **recusa do servidor** e da **lista usada**;
+- o passo a passo para ligar e para voltar atrás.
+
+O selo "Pronto" aparece quando a observação completou o período e nenhuma função fora da lista de transição foi chamada nos últimos dias. As funções de módulos internos (marcadas "interna") nunca entram na lista; vê-las na tabela antes de ligar é esperado, porque elas serão recusadas.
+
+### 28.4 Como ligar (Administrador e Diretoria, sempre com motivo)
+
+1. Espere os 7 dias de observação e confira o painel. Se uma função de tela que o cliente ainda usa aparecer fora da lista, não ligue: avise o desenvolvimento ou acrescente a função com motivo.
+2. Em **Trava do legado**, escolha **Ligada (cliente só pelo Portal)**, escreva o motivo e grave. Vale na hora e não depende do servidor: fora das telas do Portal, a conta de cliente recebe "Esta parte do SGO+ não faz parte do Portal do cliente. Por quê: ... O que fazer: ...". Acompanhe um dia útil pela Conversa geral e pelo Uso do portal.
+3. Em **Chave de recusa**, escolha **Ligada**, com a lista de transição. Vale em até 1 minuto, com o servidor atualizado.
+4. Quando "fora da lista mínima" estiver em zero, troque **Lista usada pelo servidor** para **Mínima**: o servidor passa a aceitar do cliente só `PortalCliente_api`, o básico da sessão e o bate-papo (que se recusa sozinho).
+5. **Para voltar atrás**, a qualquer momento: escolha "Desligada" (ou "Transição") na mesma chave, escreva o motivo e grave. Nada é apagado; tudo fica no histórico das regras (`PCL_REGRAS_HIST`, chave `FUNCOES_CLIENTE`).
+
+### 28.5 Manual do cliente
+
+- **Dentro do Portal:** Início > "Manual do Portal" abre o manual em A4, para ler ou imprimir (texto de `SGO_PortalCliente_Manual.js`). A abertura fica em `PCL_ACESSOS` (`MANUAL_ABERTO`).
+- **Para enviar ao cliente:** `docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md`, com a versão A4 em `docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.html` e `.pdf`, com capturas reais do sistema (dados fictícios). Os dois saem do mesmo texto, por `output/portal-cliente-20261116/etapa6/gerar-manual-cliente.cjs`.
+
+### 28.6 Tabelas, código e chaves
+
+- **Código novo:** `SGO_PortalCliente_Troca.js` (Início, Unidades, ponte, trava do legado, lista mínima e "Pronto para ligar?"), `SGO_PortalCliente_Manual.js` (manual do cliente) e `JS_PortalCliente_Inicio.html` (tela Início, menu do cliente e ponte da tela).
+- **Chaves novas** em `PCL_FUNCOES_CFG` (propriedade do script): `travaLegado` e `listaMinima`, as duas `false` por padrão.
+- **Ações novas do cliente** em `PortalCliente_api`: `inicio`, `unidades`, `legado` e `manual`. Nenhuma função nova fora de `PortalCliente_api` é chamada pela tela do cliente.
+- **Nenhuma tabela nova.** Registros novos em `PCL_ACESSOS`: `MANUAL_ABERTO` e `FUNCAO_RECUSADA` vindo da ponte.
+
+### 28.7 Problemas comuns (troca definitiva)
+
+| Problema | O que fazer |
+|---|---|
+| O cliente diz que a tela Unidades sumiu | Ela está em Meus equipamentos > Unidades |
+| O cliente não acha o PGT ou o POP | Documentos técnicos > Por pastas (prontuário), pasta "PGT e POP"; ou a ficha do equipamento > "Abrir o prontuário por pastas" |
+| Com a trava ligada, o cliente vê "não faz parte do Portal do cliente" | Veja no painel "Pronto para ligar?" qual função ele chamou. Se for de tela que ele precisa, desligue a trava (com motivo) e avise o desenvolvimento |
+| O painel diz "Ainda não" mesmo depois de 7 dias | Alguma função fora da lista foi chamada nos últimos 7 dias. Confira a tabela; funções internas antigas (anteriores à etapa 6) deixam de contar quando saem da janela de 7 dias |
+| A recusa do servidor não tem efeito | Confira se o patch da etapa 0 do servidor está aplicado. A trava do legado não depende dele |
 </div>

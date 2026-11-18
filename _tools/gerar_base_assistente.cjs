@@ -98,7 +98,9 @@ const MARCA_ACESSO = /<!--\s*assistente:\s*acesso\s*=\s*([a-z_,\s]+?)\s*-->/;
 /** Manuais que não são deste SGO+ (cartão financeiro do sistema antigo).
  *  17/11/2026 (decisão do dono): Painel financeiro, Ganhos dos vendedores e Portal do cliente saíram desta lista e entraram no MAPA com
  *  a regra de acesso de cada um (antes ficavam fora do assistente). */
-const IGNORAR = ["MANUAL_FINANCEIRO_FLASH_USO_OPERACIONAL.md", "MANUAL_USO_FIN_FLASH_V2.md"];
+// 18/11/2026 (Portal do cliente, etapa 6): o manual do cliente (docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md) é para a conta de cliente,
+// que lê o mesmo texto dentro do Portal ("Manual do Portal"); a equipe tem o manual interno (seção 28). Fica fora da base do assistente.
+const IGNORAR = ["MANUAL_FINANCEIRO_FLASH_USO_OPERACIONAL.md", "MANUAL_USO_FIN_FLASH_V2.md", "MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md"];
 const MAX_SECAO = 1800;
 
 function limparMd(t) {

@@ -404,6 +404,9 @@ test('telas: prontuário no celular (390/320 px), ficha do cliente (1366 px) e v
       const sid = sess[quem];
       if (fn === 'getSessaoAtual' || fn === 'validarSessao') return { ok: true, valor: { success: true, valid: true, session: { sessionId: sid, email: usuario.EMAIL, nome: usuario.NOME, perfil: usuario.PERFIL, clienteId: usuario.CLIENTE_ID || '' } } };
       if (['documentosPastas', 'cadastrosPainel', 'cadastrosDetalhe', 'qrcodeAcessar', 'qualifEquipamentoListar'].includes(fn)) { try { return { ok: true, valor: j(a.ctx[fn].apply(null, [sid].concat(args.slice(1)))) }; } catch (e) { return { ok: false, erro: e.message }; } }
+      // 18/11/2026 (Portal do cliente, etapa 6): a conta de cliente chama as pastas e o QR Code pela entrada do Portal (PortalCliente_api, ação
+      // "legado", ponte fechada); o servidor simulado repassa à mesma função, como faz PClT_legado_
+      if (fn === 'PortalCliente_api' && args[1] === 'legado' && ['documentosPastas', 'qrcodeAcessar', 'qrcodeQualificacao'].includes((args[2] || {}).fn)) { try { return { ok: true, valor: { ok: true, resultado: j(a.ctx[args[2].fn].apply(null, [sid].concat(args[2].args || []))) } }; } catch (e) { return { ok: false, erro: e.message }; } }
       return { ok: true, valor: { success: true } };
     });
     await page.addInitScript((sid) => {
