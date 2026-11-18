@@ -51,6 +51,8 @@ Regras que valem sempre:
 | Recarga Caju | Recarga Caju da rotina dos técnicos: pedidos e cargas, prestações gasto a gasto, portadores, divergências, política, painel e relatórios A4 (seção 8i). |
 | Especialista financeiro | Dúvidas de uso do Painel, regras financeiras e leitura da situação de hoje pela fotografia, com propostas de ação e de atividade que só viram atividade com a sua confirmação (seção 8j). Não grava no Omie, não aprova e não envia mensagem. |
 | Trilha das operações | Toda gravação feita pelo SGO+ no Omie, com o resultado, e os pedidos de estorno de baixa e de exclusão de título, que só o dono e a Diretoria confirmam (seção 8m). |
+| Aprovação de pagamentos | Lista diária das contas a pagar (vencidas, de hoje e as que o Financeiro escolher) enviada para aprovação; o dono ou a Diretoria aprova num toque ou recusa e adia item por item. A baixa de conta a pagar só é liberada depois (seção 8n). |
+| Orçamento anual | Orçamento do ano por categoria e mês, com versão, motivo e aprovação do dono ou da Diretoria; acompanhamento orçado × realizado do Omie (seção 8o). |
 | Sigilo e acessos | Quem pode ver o Financeiro; para a Diretoria, o registro de consultas, planilhas baixadas e recusas. Só o responsável pelo sistema altera a lista. |
 
 ## 4. Visão geral
@@ -408,6 +410,40 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **Sem resposta do Omie.** Se o Omie não responder à confirmação, o pedido fica "sem resposta" e vira pendência para quem pediu e quem confirmou. Nada é reenviado sozinho: confira o título no Omie e registre "foi feito" ou "não foi feito". Se o Omie recusar, nada foi feito e o pedido é encerrado com o motivo do Omie.
 
+## 8n. Aprovação de pagamentos (18/11/2026, Onda B, item B1)
+
+**Decisão do dono (permanente).** Toda conta a pagar é aprovada pelo dono do sistema ou pelo Charles (Diretoria) antes de ser paga. O Financeiro (a Wanessa) monta e envia a lista; nunca aprova. Quem enviou um item não decide esse item. O campo "Aprovação de pagamentos: dispensa abaixo de (R$)", em Chaves e senhas > Regras do Financeiro, existe mas fica vazio: vazio quer dizer que nenhuma conta é dispensada.
+
+**A lista do dia.** Na aba Aprovação de pagamentos, "A pagar até hoje" traz, lidas do Omie, as contas a pagar vencidas e as que vencem hoje, já marcadas. Para incluir as próximas, escolha "Também as que vencem em até 30 dias" e toque em Atualizar; elas aparecem desmarcadas. Confira, escreva uma observação para quem aprova (opcional) e toque em "Enviar para aprovação". O SGO+ confere cada título de novo no Omie (em aberto, sem pedido ativo, não adiado). Nada é pago nem gravado no Omie.
+
+**Aprovar.** O dono e a Diretoria recebem o aviso no SGO+ e por e-mail, dentro do expediente (a lista enviada fora dele é avisada no início do próximo expediente), e a pendência na Caixa de decisões. O aviso não traz valor nem fornecedor: os detalhes ficam só no Painel. Em "Para a sua aprovação", "Aprovar todos" aprova de uma vez; para recusar ou adiar um item, use o botão do item e escreva o motivo (o adiamento pede a data). No topo do Painel, a faixa "pagamento(s) aguardando a sua aprovação" leva à lista.
+
+**Pagar.** Aprovado, o item vai para "Aprovados: liberados para pagar". "Registrar a baixa" abre Lançamentos e baixas com a baixa do título. A prévia mostra quem aprovou e até que valor. A baixa acima do aprovado é recusada; baixa parcial deixa o restante liberado. Confirmada a baixa no Omie, o item vira "Pago". A baixa continua sem pagar no banco: o pagamento no banco é feito como sempre.
+
+**Trava da baixa.** Sem aprovação, "Registrar baixa" de conta a pagar não prepara nada e diz por quê: "ainda não passou pela lista" (envie), "está aguardando aprovação desde ... (enviado por ...). Quem aprova: ..." (avise quem aprova se for urgente), "foi recusado" ou "foi adiado" (com quem, quando e o motivo). A lista de Lançamentos e baixas mostra a mesma situação em cada conta a pagar. A aprovação é conferida de novo na hora de confirmar.
+
+**Retirar da lista.** Se o valor do boleto mudou ou a conta não será paga, "Retirar da lista" (com o motivo) tira o item; para pagar depois, envie de novo. Item com pagamento já registrado não sai.
+
+## 8o. Orçamento anual (18/11/2026, Onda C, item C3)
+
+**O SGO+ é a fonte.** O orçamento é cadastrado no SGO+ por categoria do plano de contas do Omie e por mês, com versão e motivo. A API do Omie só permite ler o orçamento (ListarOrcamentos); não há como gravar orçamento no Omie pelo SGO+. Para ter o mesmo orçamento no Omie, baixe a planilha da versão vigente e digite lá.
+
+**Preparar (Financeiro).** Escolha o ano e o ponto de partida: em branco, cópia da versão vigente do ano anterior, realizado do ano anterior lido do Omie (os meses ainda não lidos ficam vazios e a tela diz quais) ou revisão da versão vigente do ano. Preencha a grade (vazio = sem orçamento no mês) e toque em "Gravar o rascunho": só as células mudadas são gravadas. "Incluir categoria" acrescenta uma linha (só categorias ativas de despesa ou receita do Omie). "Importar planilha" lê um CSV com uma linha por categoria (código; descrição opcional; janeiro a dezembro, separados por ponto e vírgula, com vírgula nos centavos); célula vazia mantém o valor do rascunho; código inexistente no Omie recusa a importação inteira.
+
+**Aprovar (dono ou Diretoria).** Pronto o rascunho, escreva o motivo da versão e toque em "Enviar para aprovação". O dono e a Diretoria recebem o aviso (sem valores) e a pendência. Aprovar torna a versão vigente; a anterior fica como substituída. Recusar pede o motivo e mantém a vigente. Quem preparou não aprova. Versão enviada ou aprovada não muda: para revisar, crie uma versão nova a partir dela.
+
+**Acompanhar.** Escolha o mês: "Ver" usa o realizado já guardado; "Ler o realizado deste mês no Omie" lê o mês de novo (só leitura). Cada categoria mostra o orçado, o realizado, o desvio em reais e em porcentagem e o acumulado do ano, que soma só os meses com realizado lido. Em destaque, despesa acima ou receita abaixo do orçado. Categoria com realizado no Omie e sem orçamento aparece como "sem orçamento". A fotografia diária guarda sozinha o realizado do mês corrente.
+
+**Indicadores e relatório semanal.** Com versão vigente, o indicador I15 (orçado × realizado) e o gráfico G7 usam o orçado do SGO+ (despesas) e o realizado do Omie; sem versão vigente, continuam com o previsto cadastrado no Omie, como antes. O relatório semanal ganhou a seção "Orçamento: orçado × realizado", logo depois de Resultado, com os totais do mês, o desvio acumulado e os maiores desvios.
+
+**A confirmar na primeira leitura acompanhada:** se o "realizado" do Omie (nValorRealilzado) é só o que já foi pago ou inclui o que está a pagar, e se a lista traz categorias sem previsto no Omie.
+
+## 8p. Parcelamento e lançamento avulso na conta corrente (18/11/2026, pendências da onda 1)
+
+**Parcelamento.** Em Lançamentos e baixas > Novo lançamento, informe "Parcelas" (1 a 48) e o "Intervalo entre as parcelas" (mensal, no mesmo dia, ou a cada 7 a 30 dias). Com mais de uma parcela, o "Valor do documento" é o total e o "Vencimento" é o da 1ª parcela; o SGO+ divide em partes iguais e o centavo que sobra vai na última. A prévia mostra cada parcela (001/003, 002/003...) com vencimento, valor e referência (a referência informada com -1, -2...). O envio é uma parcela por vez. Se o Omie recusar ou estiver ocupado no meio, as parcelas já lançadas não são repetidas: em "Envios a conferir no Omie", "Continuar as parcelas" segue da que falhou (por até 24 horas) e "Encerrar sem as que faltam" fecha o lançamento (com o que você fez). Se o Omie não responder, confira a parcela no Omie e registre "foi feito" ou "não foi feito"; depois continue. A alçada vale pelo total. Lançamento de pedido aprovado e de conta fixa não é parcelado por aqui.
+
+**Lançamento avulso na conta corrente.** Para registrar no Omie o que o banco já fez e não tem título: tarifa, juros ou IOF (saída, em categoria de despesa), rendimento, aporte ou devolução (entrada, em categoria de receita) e transferência entre contas da própria empresa (conta de destino; categoria vazia ou de transferência). Em Lançamentos e baixas, toque em "Lançamento avulso na conta", preencha, confira a prévia e confirme. Não passa pela aprovação de pagamentos, porque não paga conta a pagar. Entra na trilha como "Lançamento avulso na conta corrente". **A confirmar na primeira operação acompanhada:** o SGO+ envia o valor sempre positivo e o Omie decide saída ou entrada pela categoria; na transferência, se o Omie cria sozinho a entrada na conta de destino. Depois do primeiro envio, confira o extrato da conta no Omie.
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
@@ -442,6 +478,14 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 | Trilha: "O Omie não confirmou o envio" ao confirmar um pedido | Pode ter sido feito. Confira o título no Omie e registre "foi feito" ou "não foi feito" no pedido. |
 | Fechamento: "Por decisão do dono, só o dono do sistema e a Diretoria ... dispensam item" | Marque o que foi feito e peça à Diretoria a dispensa do item que não se aplica, com o motivo. |
 | Fechamento: "O mês já está fechado" | A Diretoria reabre o mês com o motivo; depois, desfaça a marcação do item a refazer. |
+| Baixa de conta a pagar: "ainda não passou pela lista de aprovação" | Envie o título em Aprovação de pagamentos; aprovado, registre a baixa. |
+| Baixa de conta a pagar: "está aguardando aprovação desde ..." | A mensagem diz quem aprova. Se for urgente, avise o dono ou a Diretoria; nada foi preparado. |
+| Baixa de conta a pagar: "passa do valor aprovado" | O valor mudou depois da aprovação. Retire o título da lista com o motivo e envie de novo. |
+| Aprovação de pagamentos: "Você não aprova pagamentos" | Só o dono e a Diretoria aprovam. O Financeiro envia e acompanha. |
+| Orçamento: importação "categorias não existem no Omie" | Corrija os códigos na planilha (use "Carregar categorias" para ver os válidos) e importe de novo; nada foi importado. |
+| Orçamento: "Já existe uma versão em preparação" | Continue na versão em preparação, descarte o rascunho ou, se estiver aguardando, retire-o da aprovação. |
+| Parcelado: "Já lançadas no Omie: 1 de 3 parcelas" | As lançadas não se repetem. Em Envios a conferir, "Continuar as parcelas" ou, se lançou o restante direto no Omie, "Encerrar sem as que faltam". |
+| Lançamento avulso: "não é de despesa" ou "não é de receita" | Saída usa categoria de despesa; entrada, de receita; transferência, vazia ou de transferência. |
 
 ## 10. Como fazer em cada aba
 
@@ -481,6 +525,9 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 6. A baixa confere o saldo em aberto do título e não aceita título já pago ou cancelado. Juros, multa e desconto ficam em zero até a primeira baixa acompanhada.
 7. Se o Omie não respondeu a um envio, ele aparece em "Envios a conferir no Omie": confira no Omie e registre se foi feito ou não.
 8. Contas fixas para lançar aparecem numa faixa no topo, com o atalho para a aba Contas fixas. Para estornar uma baixa ou excluir um título lançado por engano, use a aba Trilha das operações: o pedido vai ao dono ou à Diretoria.
+9. Parcelado: em "Novo lançamento", informe as parcelas e o intervalo; o valor do documento é o total. A prévia mostra cada parcela; o envio é uma parcela por vez e, se parar no meio, "Envios a conferir" mostra de onde continuar.
+10. Conta a pagar: a baixa só é preparada depois da aprovação do dono ou da Diretoria na aba Aprovação de pagamentos. A lista mostra, em cada título, se está aguardando (de quem e desde quando), aprovado ou recusado.
+11. Tarifa, rendimento ou transferência entre contas (movimento sem título): toque em "Lançamento avulso na conta", confira a prévia e confirme.
 
 **Cobranças.** Consultar, gerar ou prorrogar o boleto de um título a receber.
 
@@ -609,6 +656,22 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 3. O pedido não muda nada no Omie. O dono do sistema ou a Diretoria lê a prévia e o motivo em "Pedidos de estorno e exclusão" e toca em "Confirmar e fazer no Omie" (o SGO+ faz na hora) ou em "Recusar". Quem pediu não confirma o próprio pedido; enquanto aguarda, pode retirá-lo.
 4. Se o Omie não responder à confirmação, o pedido fica "sem resposta": confira o título no Omie e registre "foi feito" ou "não foi feito". Baixa feita antes desta versão ou direto no Omie não tem o código e é estornada no próprio Omie.
 
+**Aprovação de pagamentos.** Aprovar, antes da baixa, as contas a pagar do dia: o Financeiro monta e envia a lista; o dono ou a Diretoria aprova num toque.
+
+1. Financeiro: em "A pagar até hoje", as contas vencidas e as que vencem hoje já vêm marcadas. Para incluir as próximas, escolha "Também as que vencem em até 30 dias" e toque em Atualizar. Confira e toque em "Enviar para aprovação".
+2. O pedido não paga nada nem grava no Omie. Enquanto aguarda, a lista mostra quem aprova e desde quando; a baixa desses títulos fica travada em Lançamentos e baixas, com o mesmo aviso.
+3. Dono ou Diretoria: em "Para a sua aprovação", confira os itens e toque em "Aprovar todos". Para recusar ou adiar um item, use o botão do item e escreva o motivo; o restante continua para o "Aprovar todos". Quem enviou não decide.
+4. Aprovado: em "Aprovados: liberados para pagar", "Registrar a baixa" abre Lançamentos e baixas com a baixa do título; confira a prévia e confirme no Omie. A baixa não paga no banco: pague pelo banco como sempre e registre aqui.
+5. Valor da conta mudou depois da aprovação: retire o título da lista (com o motivo) e envie de novo. Recusado ou adiado: a lista diz por quem e por quê.
+
+**Orçamento anual.** Preparar o orçamento do ano por categoria e mês, com versão e aprovação, e acompanhar o orçado contra o realizado do Omie.
+
+1. Escolha o ano e toque em "Abrir o ano". Sem versão em preparação, escolha o ponto de partida (em branco, cópia do ano anterior, realizado do ano anterior ou revisão da vigente) e toque em "Criar rascunho".
+2. Na grade, digite o valor de cada categoria em cada mês e toque em "Gravar o rascunho" (só as células mudadas são gravadas). "Incluir categoria" acrescenta uma linha; "Importar planilha" preenche a partir de um CSV.
+3. Pronto, escreva o motivo e toque em "Enviar para aprovação". O dono ou a Diretoria aprova a versão vigente ou recusa com o motivo; quem preparou não aprova. Para ajustar uma versão enviada, "Retirar da aprovação".
+4. No acompanhamento, escolha o mês e toque em "Ver"; para atualizar o realizado do mês, "Ler o realizado deste mês no Omie" (só leitura). O desvio em destaque é despesa acima ou receita abaixo do orçado.
+5. O Omie não recebe orçamento pela API: o SGO+ é a fonte. Para ter o mesmo orçamento no Omie, baixe a planilha da versão vigente e digite lá.
+
 **Sigilo e acessos.** Ver quem pode acessar o Financeiro e quem consultou o quê.
 
 1. A lista mostra as contas autorizadas. Só o responsável pelo sistema altera, marcando as contas e escrevendo o motivo.
@@ -649,6 +712,22 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 - **Previsão financeira:** preencha só se você espera o dinheiro em outra data (ex.: o cliente costuma pagar alguns dias depois). Deixa o fluxo de caixa mais realista. Em branco, vale o vencimento.
 - **Emissão:** a data do documento (nota ou fatura). Em branco, vale a data de hoje.
 - **Observação:** o que ajuda quem consultar depois (ex.: parcela 1 de 3, combinado por e-mail com o cliente). Vai junto para o Omie.
+
+- **Parcelas:** em quantas vezes o documento será pago ou recebido (1 a 48). Com mais de uma, o "Valor do documento" é o total: o SGO+ divide em partes iguais (o centavo que sobra vai na última) e o "Vencimento" é o da 1ª parcela.
+- **Intervalo entre as parcelas:** mensal (mesmo dia de cada mês; em mês mais curto, o último dia) ou a cada tantos dias. A prévia mostra o vencimento e o valor de cada parcela antes do envio.
+
+### Lançamento avulso na conta corrente
+
+- **Tipo do lançamento:** saída (tarifa bancária, juros, IOF), entrada (rendimento, aporte, devolução) ou transferência entre contas da própria empresa. Pagamento a fornecedor e recebimento de cliente não entram aqui: são baixas de títulos.
+- **Conta corrente:** o banco ou o caixa em que o movimento aconteceu (na transferência, a conta de onde o dinheiro saiu). Confira no extrato.
+- **Conta de destino:** na transferência, a conta da empresa que recebeu o dinheiro. Precisa ser diferente da conta de origem.
+- **Data:** o dia do movimento no extrato do banco.
+- **Valor (R$):** o valor do movimento, sempre positivo. O sentido (saída ou entrada) vem do tipo e da categoria; na primeira operação acompanhada, confira no extrato do Omie.
+- **Categoria:** na saída, uma categoria de despesa (ex.: tarifas bancárias); na entrada, uma de receita (ex.: rendimentos de aplicação). Na transferência, deixe vazia ou escolha a de transferência.
+- **Tipo de documento:** como o movimento aparece no banco (débito, crédito, TED, transferência). Vazio usa o mais comum para o tipo do lançamento.
+- **Número do documento (opcional):** o número que aparece no extrato ou no comprovante, para achar o lançamento depois.
+- **Referência única:** um código deste lançamento (já vem sugerido; até 20 caracteres). Impede que o mesmo lançamento seja enviado duas vezes.
+- **Observação:** o que explica o movimento (ex.: "tarifa do pacote de serviços de novembro"). Vai junto para o Omie.
 
 ### Registrar baixa
 
@@ -809,6 +888,26 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 - **Motivo da decisão:** opcional para confirmar; obrigatório para recusar (pelo menos 10 letras). Quem pediu lê o motivo.
 - Por que está retirando o pedido (pelo menos 10 letras). Nada foi enviado ao Omie.
 - **O que você conferiu no Omie (pelo menos 10 letras, ex.:** "a baixa não aparece mais no título"). "Foi feito" encerra sem repetir; "não foi feito" encerra e permite um pedido novo.
+
+### Aprovação de pagamentos
+
+- **Contas para a lista:** "Vencidas e de hoje" mostra as contas a pagar do Omie que vencem até hoje (já vêm marcadas); "Também as que vencem em até 30 dias" acrescenta as próximas, para você escolher o que entra na lista de hoje.
+- **Observação para quem aprova:** o que ajuda a decidir (opcional, ex.: "fornecedor cobra multa a partir de amanhã"). Vale para todas as contas enviadas agora. Não escreva valores que já estão na lista.
+- **Motivo (recusar ou adiar):** por que recusa ou adia este pagamento (pelo menos 10 letras, ex.: "aguardar a entrada do cliente X"). Quem enviou lê o motivo na lista e na trava da baixa.
+- **Adiar para:** a partir de que dia o pagamento pode voltar para a lista. Até lá, a baixa fica travada e o título não pode ser enviado de novo.
+- **Por que está retirando o título da lista:** pelo menos 10 letras, ex.: "fornecedor mandou boleto com outro valor". Para pagar depois, envie de novo para aprovação.
+
+### Orçamento anual
+
+- **Ano:** o ano do orçamento. A tela mostra a versão vigente (aprovada) e a que está em preparação.
+- **Mês (acompanhamento):** "Ver" usa o realizado já guardado; "Ler o realizado deste mês no Omie" lê o mês de novo no Omie (só leitura, uma chamada).
+- **Ponto de partida:** em branco; cópia da versão vigente do ano anterior; o realizado do ano anterior lido do Omie (os meses ainda não lidos ficam vazios e a tela diz quais); ou revisão da versão vigente deste ano.
+- **Grade:** cada célula é o valor orçado da categoria no mês, em reais (ex.: 1.250,00). Vazio = sem orçamento naquele mês. Só as células alteradas são gravadas.
+- **Incluir categoria:** uma categoria do plano de contas do Omie (despesa ou receita, ativa). Toque em "Carregar categorias", escolha e toque em "Incluir".
+- **Arquivo da planilha:** CSV (até 200 KB) com uma linha por categoria: código no Omie; descrição (opcional); janeiro a dezembro, separados por ponto e vírgula. Célula vazia mantém o valor que já está no rascunho.
+- **Ou cole aqui o conteúdo:** a planilha no mesmo formato, quando não tiver o arquivo.
+- **Motivo da versão:** o que é esta versão e o que mudou (pelo menos 15 letras). Quem aprova lê o motivo.
+- **Motivo da decisão:** opcional para aprovar; obrigatório para recusar (pelo menos 10 letras). Quem preparou lê o motivo.
 
 ### Sigilo e acessos
 

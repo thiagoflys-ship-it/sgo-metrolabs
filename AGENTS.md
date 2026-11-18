@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R81, imagem
-  `sha256:6f5698b73f31b941cb2c7b2c015fdaaa44d0678b707ca4df6004244be4a19a1c`,
-  tag `metrolabs/rh:secullum-previa-data-fuso-20261117-r81`.
-  Evidência: `output/rh360-20261117-r81/PUBLICADO_RH360_R81_20261117.txt`.
-  Preserva as entregas anteriores; 792 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R82, imagem
+  `sha256:243aeb801d0e2ec5880628ea414cfebeb7fd6915ca0de439e4162e7351c3c12f`,
+  tag `metrolabs/rh:secullum-revisao-identidade-prova-20261118-r82`.
+  Evidência: `output/rh360-20261118-r82/PUBLICADO_RH360_R82_20261118.txt`.
+  Preserva as entregas anteriores; 797 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -940,3 +940,18 @@ RH360 R81 publicada/verificada em 17/11/2026 16:13 BRT: sha256:6f5698b73f31b941c
 - 18/11/2026 — PUBLICADO financeiro-recarga-caju-20261118 (sha aefa525a…; base financeiro-cobranca-agenda-relatorio-20261118; cand21). Financeiro onda 3 BLOCO C — Recarga Caju da rotina (R1–R6): pedido avulso + prestação no celular (foto, IA) + devolução; política com teto/fundo/limites VAZIOS (decisão do dono: solicitado e devolvido); só dono+Diretoria aprovam, Wanessa carrega/confere; conciliação com 8 divergências RCJ_*; régua por sistema+e-mail em expediente, WhatsApp desligado; trava conjunta recarga+viagem após 10 dias úteis (só Diretoria libera); aba Recarga Caju no Painel (só sigilo), A4 individual/geral/pendências, seção 7 do relatório semanal. Termo do portador: revisar com RH/contador antes de habilitar o 1º técnico. Suíte 2529/0. 1 linha 'Error' no log pós-troca = recusa normal de permissão do Conduta. Relatório: output/financeiro-20261118-bloco-c/RELATORIO.md. Produção atual = cand21.
 - 18/11/2026 — PUBLICADO financeiro-especialista-ia-20261118 (sha bb169f5e…; base financeiro-recarga-caju-20261118; cand22). Financeiro E10/E11 — Especialista financeiro (aba + botão no Painel, só lista de sigilo): modos Como fazer (manual), Regra financeira (base de 10 regras, revisar com contador) e Analisar (fotografia pseudonimizada); conferência de números (inclui valores pequenos); atividades só com toque e só para a lista de sigilo; registro FIN_IA_USO com guarda 12 meses (FIN_IA_USO_GUARDA_MESES); sem chave = manual/base/texto padrão. E10: assistente geral já sem manuais do Financeiro fora do sigilo (testado). Suíte 2541/0. Relatório: output/financeiro-20261118-especialista/RELATORIO.md. Produção atual = cand22. ESPEC_ONDA2 (itens 1–4, E1–E11, R1–R6) CONCLUÍDA; ondas A–D dependem de decisões do dono/contador.
 - 18/11/2026 — PUBLICADO financeiro-onda-a-20261118 (sha 6b9753c5…; base financeiro-especialista-ia-20261118; cand23). Financeiro ONDA A: A1 Contas fixas (cadastro vazio, prévia mensal 10 dias antes com ref FIX-<conta>-<AAAAMM>, só a Wanessa confirma; entra no Gantt/previsão/relatório), A3 Fechamento do mês (lista padrão 6 itens versionada pelo dono/Diretoria; abre no 1º dia útil como atividades sigilosas; 1º automático 01/12/2026 = novembro), A4 Trilha FIN_OMIE_OPERACOES (toda gravação no Omie via Omie_requisitar_) + estorno de baixa (Wanessa pede, só dono/Charles confirmam) + exclusão só de conta a pagar sem baixa. Fora: A2/A5 (contador), lançamentos avulsos de conta corrente e parcelamento (próxima etapa). Suíte 2566/0. Relatório: output/financeiro-20261118-onda-a/RELATORIO.md. Produção atual = cand23.
+
+
+RH360 R82 — publicada/verificada em 18/11/2026 11:11 BRT
+Imagem: sha256:243aeb801d0e2ec5880628ea414cfebeb7fd6915ca0de439e4162e7351c3c12f
+Tag: metrolabs/rh:secullum-revisao-identidade-prova-20261118-r82
+Manifesto: 89e227225524523cf435f329dac436ab2966cd467a11fd619ff0348ea27c5f13
+Revisão humana de associação Secullum com prova íntegra.
+R82 fecha em software a revisão humana persistida prevista após R81; não reimplementar como pendente.
+Nova fonte privada RH_SECULLUM_IDENTITY_DECISIONS_V1; R77 permanece declarativo, com usable_for_import=false e external_identity_verified=false.
+Dados reais: 18 ativos, 18 setores e 2 admissões faltantes; zero capturas, associações/revisões reais e versões CCT aprovadas no recorte.
+Próximo passo: reforçar o contrato de finalidade da prova administrativa e avançar em lote de ingestão/fatos canônicos de ponto, sem ligar as guardas Dev.
+Evidências e limites: output/rh360-20261118-r82/PUBLICADO_RH360_R82_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 18/11/2026 — PUBLICADO financeiro-pagamentos-orcamento-20261118 (sha babf53c9…; base financeiro-onda-a-20261118; cand24). Financeiro B1 Aprovação de pagamentos (lista 'a pagar hoje' aprovada em lote só pelo dono/Charles; FIN_PAG_DISPENSA_ABAIXO vazio = toda baixa de conta a pagar pelo SGO+ espera aprovação; pagamento direto no Omie não é bloqueado), C3 Orçamento anual (SGO fonte, versão aprovada só dono/Charles, orçado×realizado em Indicadores I15/G7 e relatório semanal; Omie não tem API de gravação de orçamento → planilha para digitar), lançamento avulso de conta corrente (IncluirLancCC) e parcelamento 1–48. Itens [A CONFIRMAR NA 1ª OPERAÇÃO] no relatório. Suíte 2587/0. Relatório: output/financeiro-20261118-b1-c3/RELATORIO.md. Produção atual = cand24.
