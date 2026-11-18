@@ -1,0 +1,1272 @@
+diff --git a/cand17/Index.html b/cand18/Index.html
+index 2a6896c..f9c5da0 100644
+--- a/cand17/Index.html
++++ b/cand18/Index.html
+@@ -315,6 +315,9 @@
+           <button type="button" class="menu-btn" data-mod="portal_cliente_documentos" data-busca="documentos tecnicos certificado calibracao qualificacao laudo nr13 relatorio atendimento ronda ciclo lavadora cronograma abrir pdf" id="menu-btn-portal_cliente_documentos" style="display:none;" onclick="abrir('portal_cliente_documentos')"><span class="menu-btn-icon"><i class="fas fa-file-shield" aria-hidden="true"></i></span>Documentos técnicos</button>
+           <button type="button" class="menu-btn" data-mod="portal_cliente_equipamentos" data-busca="meus equipamentos farol calibracao qualificacao nr13 manutencao historico atendimentos ficha correcao cadastro" id="menu-btn-portal_cliente_equipamentos" style="display:none;" onclick="abrir('portal_cliente_equipamentos')"><span class="menu-btn-icon"><i class="fas fa-stethoscope" aria-hidden="true"></i></span>Meus equipamentos</button>
+           <button type="button" class="menu-btn" data-mod="portal_cliente_vencimentos" data-busca="vencimentos cronograma agendado previsto validade proxima calibracao inspecao ronda visita" id="menu-btn-portal_cliente_vencimentos" style="display:none;" onclick="abrir('portal_cliente_vencimentos')"><span class="menu-btn-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span>Vencimentos e cronograma</button>
++          <!-- 18/11/2026: Portal do cliente, etapa 5 (JS_PortalCliente_Painel.html / SGO_PortalCliente_Painel.js). "Indicadores": conta de cliente com papel Gestor do cliente ou Solicitante (PclCli_iniciar_ mostra). "Uso do portal": quem tem a caixa «Ver o uso do portal e o registro de acessos» (PortalCli_iniciar_ mostra). -->
++          <button type="button" class="menu-btn" data-mod="portal_cliente_indicadores" data-busca="indicadores chamados abertos concluidos tempo medio visita conclusao prazo contrato equipamentos em dia vencimentos reincidencia relatorio do periodo pdf" id="menu-btn-portal_cliente_indicadores" style="display:none;" onclick="abrir('portal_cliente_indicadores')"><span class="menu-btn-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span>Indicadores</button>
++          <button type="button" class="menu-btn" data-mod="portal_cliente_uso" data-busca="uso do portal clientes entradas convites documentos abertos avisos linha do tempo registro de acessos ip planilha" id="menu-btn-portal_cliente_uso" style="display:none;" onclick="abrir('portal_cliente_uso')"><span class="menu-btn-icon"><i class="fas fa-chart-column" aria-hidden="true"></i></span>Uso do portal</button>
+           <button type="button" class="menu-btn" data-mod="portal_cliente_conversas" data-busca="conversas do portal cliente mensagem nota interna resposta pedido" id="menu-btn-portal_cliente_conversas" style="display:none;" onclick="abrir('portal_cliente_conversas')"><span class="menu-btn-icon"><i class="fas fa-comments" aria-hidden="true"></i></span>Conversas do portal</button>
+           </div>
+         </div>
+@@ -467,6 +470,7 @@
+ <?!= include('JS_PortalCliente_Acessos'); ?>
+ <?!= include('JS_PortalCliente_Chamados'); ?>
+ <?!= include('JS_PortalCliente_Documentos'); ?>
++<?!= include('JS_PortalCliente_Painel'); ?>
+ <?!= include('JS_Contratos_Financeiro'); ?>
+ <?!= include('JS_PainelAtendimento'); ?>
+ <?!= include('JS_Assistencia'); ?>
+diff --git a/cand17/JS_Assistencia.html b/cand18/JS_Assistencia.html
+index 4ac922b..e06e639 100644
+--- a/cand17/JS_Assistencia.html
++++ b/cand18/JS_Assistencia.html
+@@ -1849,7 +1849,7 @@
+     var bp = el.querySelector("#atPoRelPer");
+     // 18/11/2026: o relatório do período junta todas as unidades; para quem tem unidades marcadas, o botão some com a explicação
+     var apR = AT.portal && AT.portal.acessoPortal;
+-    if (bp && apR && !apR.podeRelatorioPeriodo) { var nota = document.createElement("p"); nota.className = "at-meta"; nota.textContent = "O relatório do período junta todas as unidades da empresa e é do Gestor do cliente. Peça a ele, se precisar."; bp.parentNode.insertBefore(nota, bp); bp.remove(); bp = null; }
++    if (bp && apR && !apR.podeRelatorioPeriodo) { var nota = document.createElement("p"); nota.className = "at-meta"; nota.textContent = "O relatório do período é do Gestor do cliente e do Solicitante (este recebe só as unidades dele). No papel Consulta, peça ao Gestor do cliente da sua empresa, se precisar."; bp.parentNode.insertBefore(nota, bp); bp.remove(); bp = null; }
+     if (bp) bp.onclick = function () { At_chamar_("relatorioPeriodoCliente", { dias: 90 }, function (r) { PnA_docGerado_(msg(), r); listar(); }, function (m) { At_msg_(msg(), m); }, { carregando: "Gerando o relatório do período…" }); };
+     el.querySelectorAll("[data-po-previa]").forEach(function (b) { b.onclick = function () { At_chamar_("previaAtendimento", { id: b.getAttribute("data-po-previa") }, function (r) { if (typeof RpF_previa_ === "function") RpF_previa_(r.html, "Prévia do resumo do serviço e dos termos"); }, function (m) { At_msg_(msg(), m); }, { carregando: "Montando a prévia…" }); }; });
+     el.querySelectorAll("[data-po-conf]").forEach(function (b) { b.onclick = function () { At_chamar_("confirmarAtendimento", { id: b.getAttribute("data-po-conf"), confirmo: true }, function (r) { At_msg_(msg(), r.message, "ok"); }, function (m) { At_msg_(msg(), m); }); }; });
+diff --git a/cand17/JS_Core.html b/cand18/JS_Core.html
+index 9e5f122..34866b2 100644
+--- a/cand17/JS_Core.html
++++ b/cand18/JS_Core.html
+@@ -1185,6 +1185,16 @@
+       PclD_render_(mod.replace("portal_cliente_", ""));
+       return;
+     }
++    // PORTAL DO CLIENTE, ETAPA 5 (18/11/2026) — "Indicadores" (conta de cliente: Gestor do cliente e Solicitante) e "Uso do portal" (equipe, caixa
++    // PORTAL_CLIENTE_USO_VER). Ver JS_PortalCliente_Painel.html / SGO_PortalCliente_Painel.js. O servidor confere papel, unidades e caixa.
++    if (mod === "portal_cliente_indicadores" && typeof PclP_render_ === "function") {
++      PclP_render_();
++      return;
++    }
++    if (mod === "portal_cliente_uso" && typeof PortalCli_render_ === "function") {
++      PortalCli_render_("uso");
++      return;
++    }
+     if (mod === "portal_cliente_conversas" && typeof PortalCli_render_ === "function") {
+       PortalCli_render_("conversas");
+       return;
+@@ -5158,6 +5168,9 @@
+       itens.push({ icone: '<i class="fas fa-stethoscope" aria-hidden="true"></i>', legenda: "Meus equipamentos", mod: "portal_cliente_equipamentos" });
+       itens.push({ icone: '<i class="fas fa-calendar-check" aria-hidden="true"></i>', legenda: "Vencimentos", mod: "portal_cliente_vencimentos" });
+     }
++    // 18/11/2026 (Portal do cliente, etapa 5): "Indicadores" (Gestor do cliente e Solicitante; a Consulta não vê)
++    if (isCliente && typeof PclP_render_ === "function" && !(typeof PCLCLI !== "undefined" && PCLCLI && PCLCLI.conta && PCLCLI.conta.conta && PCLCLI.conta.conta.papel === "CONSULTA"))
++      itens.push({ icone: '<i class="fas fa-chart-line" aria-hidden="true"></i>', legenda: "Indicadores", mod: "portal_cliente_indicadores" });
+     itens.push({ icone: '<i class="fas fa-location-dot" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
+     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
+     // 31/10/2026: relatório do ciclo da lavadora (equipe e cliente; o servidor mostra só os equipamentos do cliente)
+@@ -7045,6 +7058,8 @@
+       portal_cliente_documentos: "Documentos técnicos",
+       portal_cliente_equipamentos: "Meus equipamentos",
+       portal_cliente_vencimentos: "Vencimentos e cronograma",
++      portal_cliente_indicadores: "Indicadores",
++      portal_cliente_uso: "Uso do portal",
+       omie: "Painel financeiro",
+       modo_personalizado: "Modo personalizado"
+     };
+diff --git a/cand17/JS_PortalCliente.html b/cand18/JS_PortalCliente.html
+index a49f13b..f2c71da 100644
+--- a/cand17/JS_PortalCliente.html
++++ b/cand18/JS_PortalCliente.html
+@@ -63,6 +63,8 @@
+     var ba = PclT_$("menu-btn-portal_cliente_acessos"); if (ba) ba.style.display = PCL.ini && PCL.ini.acessos ? "" : "none";
+     // 18/11/2026 (etapa 2): "Conversas do portal" para quem tem a caixa PORTAL_CLIENTE_CONVERSAR
+     var bc = PclT_$("menu-btn-portal_cliente_conversas"); if (bc) bc.style.display = PCL.ini && PCL.ini.conversar ? "" : "none";
++    // 18/11/2026 (etapa 5): "Uso do portal" para quem tem a caixa PORTAL_CLIENTE_USO_VER
++    var bu = PclT_$("menu-btn-portal_cliente_uso"); if (bu) bu.style.display = PCL.ini && PCL.ini.usoVer ? "" : "none";
+     if (typeof Menu_atualizarGrupos_ === "function") Menu_atualizarGrupos_();
+   }
+   function PortalCli_iniciar_() {
+@@ -111,19 +113,22 @@
+     PCL.ocupado = false;
+     google.script.run.withSuccessHandler(function (r) {
+       PCL.ini = r && r.ok ? r : null; PortalCli_mostrarMenu_();
+-      if (!PCL.ini || !(PCL.ini.ver || PCL.ini.acessos || PCL.ini.conversar || PCL.ini.docLiberar)) { PclT_$("pclCorpo").innerHTML = '<div class="vg-faixa is-erro">Contratos, acessos e conversas de clientes são da equipe interna com a caixa certa (Administrador, Diretoria, gestores, gestão comercial e a área Técnica). Esta conta não tem a caixa «Ver contratos de clientes», «Enviar acesso ao cliente» nem «Responder pedidos e conversas do portal». Se precisar, peça a liberação ao responsável pelo sistema em Administração &gt; Acessos.</div>'; return; }
++      if (!PCL.ini || !(PCL.ini.ver || PCL.ini.acessos || PCL.ini.conversar || PCL.ini.docLiberar || PCL.ini.usoVer)) { PclT_$("pclCorpo").innerHTML = '<div class="vg-faixa is-erro">Contratos, acessos e conversas de clientes são da equipe interna com a caixa certa (Administrador, Diretoria, gestores, gestão comercial e a área Técnica). Esta conta não tem a caixa «Ver contratos de clientes», «Enviar acesso ao cliente» nem «Responder pedidos e conversas do portal». Se precisar, peça a liberação ao responsável pelo sistema em Administração &gt; Acessos.</div>'; return; }
+       // 18/11/2026 (etapa 2): quem só conversa com os clientes abre direto na aba "Conversas do portal"
+       if (!PCL.ini.ver && PCL.aba !== "acessos" && PCL.aba !== "conversas" && PCL.aba !== "docsportal") PCL.aba = PCL.ini.acessos ? "acessos" : PCL.ini.conversar ? "conversas" : "docsportal";
+       if (!PCL.ini.docLiberar && PCL.aba === "docsportal") PCL.aba = PCL.ini.ver ? "contratos" : PCL.ini.acessos ? "acessos" : "conversas";
+       if (!PCL.ini.acessos && PCL.aba === "acessos") PCL.aba = PCL.ini.ver ? "contratos" : "conversas";
+       if (!PCL.ini.conversar && PCL.aba === "conversas") PCL.aba = PCL.ini.ver ? "contratos" : "acessos";
++      // 18/11/2026 (etapa 5): "Uso do portal" só com a caixa; quem só tem esta caixa abre direto nela
++      if (PCL.aba === "uso" && !PCL.ini.usoVer) PCL.aba = PCL.ini.ver ? "contratos" : PCL.ini.acessos ? "acessos" : "conversas";
++      if (PCL.ini.usoVer && !(PCL.ini.ver || PCL.ini.acessos || PCL.ini.conversar || PCL.ini.docLiberar)) PCL.aba = "uso";
+       PclT_abas_(); PclT_irAba_(PCL.aba || "contratos");
+     }).withFailureHandler(function (e) { PclT_$("pclCorpo").innerHTML = '<div class="vg-faixa is-erro"><b>A tela não abriu.</b> ' + PclT_esc_((e && e.message) || e) + "</div>"; })
+       .PortalCliente_api(SGO_getSessionId(), "iniciar", {});
+   }
+   function PclT_abas_() {
+     var abas = (PCL.ini && PCL.ini.ver ? [["contratos", "Contratos"], ["vencimentos", "Vencimentos e reajustes"], ["representadas", "Representadas"], ["precarga", "Pré-carga"]] : [])
+-      .concat(PCL.ini && PCL.ini.acessos ? [["acessos", "Acessos de clientes"]] : []).concat(PCL.ini && PCL.ini.conversar ? [["conversas", "Conversas do portal"]] : []).concat(PCL.ini && PCL.ini.docLiberar ? [["docsportal", "Documentos no portal"]] : []).concat(PCL.ini && PCL.ini.ver ? [["seguranca", "Segurança"], ["regras", "Regras do portal"]] : []);
++      .concat(PCL.ini && PCL.ini.acessos ? [["acessos", "Acessos de clientes"]] : []).concat(PCL.ini && PCL.ini.conversar ? [["conversas", "Conversas do portal"]] : []).concat(PCL.ini && PCL.ini.docLiberar ? [["docsportal", "Documentos no portal"]] : []).concat(PCL.ini && PCL.ini.usoVer ? [["uso", "Uso do portal"]] : []).concat(PCL.ini && PCL.ini.ver ? [["seguranca", "Segurança"], ["regras", "Regras do portal"]] : []);
+     PclT_$("pclAbas").innerHTML = abas.map(function (a) { return '<button type="button" class="vg-aba' + (PCL.aba === a[0] ? " is-atual" : "") + '" role="tab" aria-selected="' + (PCL.aba === a[0]) + '" data-aba="' + a[0] + '">' + a[1] + "</button>"; }).join("");
+   }
+   function PclT_irAba_(aba) {
+@@ -139,6 +144,7 @@
+     if (aba === "acessos" && typeof PclAc_render_ === "function") return PclAc_render_(); // 18/11/2026: etapa 1 (JS_PortalCliente_Acessos.html)
+     if (aba === "conversas" && typeof PclChI_render_ === "function") return PclChI_render_(); // 18/11/2026: etapa 2 (JS_PortalCliente_Chamados.html)
+     if (aba === "docsportal" && typeof PclDI_render_ === "function") return PclDI_render_(); // 18/11/2026: etapa 3 (JS_PortalCliente_Documentos.html)
++    if (aba === "uso" && typeof PclPI_render_ === "function") return PclPI_render_(); // 18/11/2026: etapa 5 (JS_PortalCliente_Painel.html)
+   }
+ 
+   // ---------- Contratos: lista ----------
+@@ -612,6 +618,7 @@
+     PclT_msg_("");
+     if (/^ac[A-Z]/.test(a) && typeof PclAc_clique_ === "function") return PclAc_clique_(a, b); // 18/11/2026: Acessos de clientes
+     if (/^pclDp[A-Z]/.test(a) && typeof PclDI_clique_ === "function" && PclDI_clique_(a, b)) return; // 18/11/2026 (etapa 3): Documentos no portal
++    if (/^pp[A-Z]/.test(a) && typeof PclPI_clique_ === "function" && PclPI_clique_(a, b)) return; // 18/11/2026 (etapa 5): Uso do portal
+     if (a === "filtrar") { PCL.busca = PclT_v_("pclFiltroBusca"); PCL.situacao = PclT_v_("pclFiltroSituacao"); return PclT_lista_(); }
+     if (a === "ficha") { PCL.aba = "contratos"; PclT_abas_(); return PclT_ficha_(cid); }
+     if (a === "voltarLista") return PclT_lista_();
+diff --git a/cand17/JS_PortalCliente_Acessos.html b/cand18/JS_PortalCliente_Acessos.html
+index e560423..fae0e53 100644
+--- a/cand17/JS_PortalCliente_Acessos.html
++++ b/cand18/JS_PortalCliente_Acessos.html
+@@ -167,7 +167,8 @@
+     ["portal_cliente_documentos", "portal_cliente_equipamentos", "portal_cliente_vencimentos"].forEach(function (m) { var bd = document.getElementById("menu-btn-" + m); if (bd) bd.style.display = ""; }); // 18/11/2026 (etapa 3)
+     var g = document.getElementById("menu-secao-portal_cliente"); if (g) g.style.display = "";
+     if (typeof Menu_atualizarGrupos_ === "function") Menu_atualizarGrupos_();
+-    PclCli_chamar_("minhaConta", {}, function (r) { PCLCLI.conta = r; if (r.termo && r.termo.pendente) PclCli_termo_(r.termo, true); }, function () {});
++    // 18/11/2026 (etapa 5): "Indicadores" para o Gestor do cliente e o Solicitante (a Consulta não vê; o servidor recusa de qualquer forma)
++    PclCli_chamar_("minhaConta", {}, function (r) { PCLCLI.conta = r; var bi = document.getElementById("menu-btn-portal_cliente_indicadores"); if (bi) bi.style.display = r.conta && r.conta.papel !== "CONSULTA" ? "" : "none"; if (typeof Menu_atualizarGrupos_ === "function") Menu_atualizarGrupos_(); if (r.termo && r.termo.pendente) PclCli_termo_(r.termo, true); }, function () {});
+   }
+   function PclCli_paragrafos_(t) { return String(t || "").split(/\n\s*\n/).map(function (p) { return "<p>" + PclAc_esc_(p.trim()) + "</p>"; }).join(""); }
+   function PclCli_termo_(termo, obrigatorio) {
+diff --git a/cand17/JS_PortalCliente_Ajuda.html b/cand18/JS_PortalCliente_Ajuda.html
+index ed24fde..df39e66 100644
+--- a/cand17/JS_PortalCliente_Ajuda.html
++++ b/cand18/JS_PortalCliente_Ajuda.html
+@@ -182,6 +182,11 @@ var PCL_DICAS = {
+   pclRgAvIntervalo: 'Resumo das mensagens: cada pessoa recebe no máximo um e-mail sobre as mensagens da Metrolabs a cada tantos minutos úteis (padrão 120, 2 horas). As mensagens chegam juntas no próximo resumo.',
+   pclRgAvCopia: 'Cópia ao e-mail do cadastro: com "Sim" (padrão na transição), o e-mail da unidade (ou do cliente) continua recebendo os avisos da Assistência (visita, peça, conclusão) também quando o cliente tem portal, sem repetir quando é o mesmo endereço de uma pessoa. Fica em "Sim" enquanto as contas antigas não forem revisadas, para ninguém deixar de receber o aviso que recebe hoje. Com "Não", só as pessoas do portal recebem.',
+   pclRgAvVencidoDias: 'Vencidos antigos no resumo semanal: o resumo de vencimentos só lista o equipamento vencido se ele venceu a partir de tantos dias antes do início dos avisos (padrão 30, de 0 a 365). Os vencidos mais antigos nunca vão no e-mail, para o primeiro resumo não virar uma lista enorme; eles continuam visíveis no Portal, em Vencimentos e cronograma.',
++  // 18/11/2026 (etapa 5): Indicadores (conta de cliente) e Uso do portal (equipe)
++  pclIndPeriodo: 'Período: os indicadores contam os chamados concluídos neste período; os abertos aparecem sempre.',
++  pclIndUnidade: 'Unidade: limita os números a uma unidade (o Gestor vê todas). O Solicitante vê só as unidades liberadas para ele.',
++  pclUsoPeriodo: 'Período: conta os pedidos, os documentos abertos, os avisos e as tentativas fora do acesso deste período. As entradas são sempre dos últimos 30 dias.',
++  pclUsoBusca: 'Buscar cliente: nome ou CNPJ. Filtra a lista abaixo; a planilha leva sempre todos os clientes.',
+   pclRgDocTipos: 'Tipos de documento visíveis: os tipos que aparecem sozinhos no Portal do cliente. A lista recomendada (decisão do dono) tem sete: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros só aparecem quando liberados um a um em "Documentos no portal".'
+ };
+ var PCL_GUIAS = {
+@@ -276,6 +281,15 @@ var PCL_GUIAS = {
+     'Agendado: visitas, rondas e ordens de serviço com data combinada.',
+     'Previsto: calculado pela validade dos documentos e pela periodicidade do contrato. Não é data confirmada; ela só fica confirmada quando aparece em Agendado.',
+     'Documento do cronograma: o PDF do Cronograma de execução emitido pela Metrolabs.']],
++  // 18/11/2026 (etapa 5)
++  indicadores: ['Acompanhar de relance como estão os chamados e os equipamentos da sua empresa e gerar o relatório do período em PDF.', [
++    'Escolha o período (30, 90, 180 ou 365 dias) e, se quiser, uma unidade; toque em "Mostrar".',
++    'Cada número traz embaixo "Como é contado". Quando não há base para a conta (por exemplo, nenhum chamado concluído no período), aparece "—" com o motivo.',
++    '"Relatório do período (PDF)" gera o documento A4 com o mesmo período e a mesma unidade. "Ver no Kanban e no Gantt" abre a tela Chamados.']],
++  uso: ['Ver como cada cliente usa o Portal: pessoas, convites, entradas, pedidos, documentos abertos, avisos e a linha do tempo de cada pessoa.', [
++    'Escolha o período e toque em "Mostrar". "Baixar planilha (CSV)" leva a tabela de todos os clientes.',
++    'Em "Pessoas e avisos", veja as pessoas do cliente, os avisos enviados e os que falharam. "Ver" abre a linha do tempo da pessoa, com IP e navegador.',
++    'Os números ficam guardados por 2 minutos para a tela abrir rápido; "Atualizar agora" conta de novo.']],
+   documentosPortal: ['Conferir o que cada cliente vê no Portal e ocultar ou liberar um documento, sempre com motivo.', [
+     'Busque o cliente pelo nome ou pelo CNPJ e toque nele. A lista mostra cada documento que pode chegar ao cliente e se ele aparece ou não, com o porquê.',
+     'Em "Mudar no portal", escolha "Oculto no portal" (some da lista e não abre para o cliente), "Liberado um a um" (aparece mesmo com o tipo fora da lista) ou "Segue a regra do tipo", escreva o motivo e toque em Gravar.',
+diff --git a/cand18/JS_PortalCliente_Painel.html b/cand18/JS_PortalCliente_Painel.html
+new file mode 100644
+index 0000000..03e89e5
+--- /dev/null
++++ b/cand18/JS_PortalCliente_Painel.html
+@@ -0,0 +1,230 @@
++<style>
++  /* PORTAL DO CLIENTE — ETAPA 5 (e), INDICADORES (18/11/2026). Servidor: SGO_PortalCliente_Painel.js.
++     1) Conta de cliente (Gestor do cliente e Solicitante): "Indicadores", com período, unidade, "como é contado" embaixo de cada índice e o
++        "Relatório do período (PDF)". O Kanban e o Gantt continuam na tela Chamados.
++     2) Equipe: aba "Uso do portal" da tela Portal do cliente (caixa PORTAL_CLIENTE_USO_VER), com a linha do tempo de cada pessoa e a planilha.
++     Visual do SGO+ (tokens --bc-*, cadx-*, vg-*, pcl-*). Texto corrido justificado. Sem window.alert/confirm/prompt. */
++  #pclTela .pclp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin: 0 0 14px; }
++  #pclTela .pclp-card { border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; padding: 10px 12px; background: var(--bc-surface, #fff); min-width: 0; display: flex; flex-direction: column; gap: 4px; }
++  #pclTela .pclp-card h4 { margin: 0; font-size: 13px; font-weight: 700; color: var(--bc-text-2, #4A4F4B); }
++  #pclTela .pclp-card .v { font-size: 24px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
++  #pclTela .pclp-card .s { font-size: 12.5px; color: var(--bc-text-2, #4A4F4B); }
++  #pclTela .pclp-card .m { font-size: 12.5px; color: #8A5A00; text-align: justify; }
++  #pclTela .pclp-como { font-size: 12px; line-height: 1.45; color: var(--bc-muted, #475569); text-align: justify; margin: 4px 0 0; border-top: 1px dashed var(--bc-line, #E2E0D8); padding-top: 4px; }
++  #pclTela .pclp-como b { color: var(--bc-text-2, #4A4F4B); }
++  #pclTela .pclp-meta { font-size: 12.5px; color: var(--bc-text-2, #4A4F4B); margin: 0 0 10px; text-align: justify; overflow-wrap: anywhere; }
++  #pclTela .pclp-barra { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 2fr) auto; gap: 8px; align-items: center; font-size: 13px; margin: 4px 0; }
++  #pclTela .pclp-barra .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
++  #pclTela .pclp-barra .b { background: var(--bc-surface-2, #F1F0EA); border-radius: 4px; height: 10px; overflow: hidden; }
++  #pclTela .pclp-barra .b i { display: block; height: 100%; background: #1A4F8C; }
++  #pclTela .pclp-barra .n { font-variant-numeric: tabular-nums; font-weight: 700; }
++  #pclTela .pclp-tab { width: 100%; border-collapse: collapse; font-size: 13px; }
++  #pclTela .pclp-tab th, #pclTela .pclp-tab td { border-bottom: 1px solid var(--bc-line, #E2E0D8); padding: 6px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
++  #pclTela .pclp-tab td.n, #pclTela .pclp-tab th.n { text-align: right; font-variant-numeric: tabular-nums; }
++  #pclTela .pclp-comos { margin: 6px 0 0 18px; padding: 0; font-size: 12.5px; } #pclTela .pclp-comos li { margin: 0 0 4px; text-align: justify; }
++  #pclTela .pclp-alerta { color: #9B1C1C; font-weight: 700; }
++  @media (max-width: 760px) {
++    #pclTela .pclp-tab thead { display: none; }
++    #pclTela .pclp-tab, #pclTela .pclp-tab tbody, #pclTela .pclp-tab tr, #pclTela .pclp-tab td { display: block; width: 100%; box-sizing: border-box; }
++    #pclTela .pclp-tab tr { border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; margin-bottom: 8px; padding: 6px 8px; }
++    #pclTela .pclp-tab td { border: 0; padding: 2px 0; text-align: left !important; }
++    #pclTela .pclp-tab td[data-r]::before { content: attr(data-r) ": "; font-weight: 700; color: var(--bc-text-2, #4A4F4B); }
++    #pclTela .pclp-barra { grid-template-columns: minmax(0, 1fr) 70px auto; }
++  }
++  #app.modo-mobile #pclTela .pclp-tab thead { display: none; }
++  #app.modo-mobile #pclTela .pclp-tab, #app.modo-mobile #pclTela .pclp-tab tbody, #app.modo-mobile #pclTela .pclp-tab tr, #app.modo-mobile #pclTela .pclp-tab td { display: block; width: 100%; box-sizing: border-box; }
++  #app.modo-mobile #pclTela .pclp-tab td[data-r]::before { content: attr(data-r) ": "; font-weight: 700; }
++</style>
++<script>
++  // ==========================================================
++  // PORTAL DO CLIENTE — INDICADORES (etapa 5 e, 18/11/2026). Casca: abrir('portal_cliente_indicadores') -> PclP_render_ (conta de cliente; o
++  // botão do menu aparece pelo PclCli_iniciar_ para o Gestor do cliente e o Solicitante). Equipe: PclPI_render_ (aba "Uso do portal" de
++  // PortalCli_render_; também abrir('portal_cliente_uso')). Explicação de cada campo: JS_PortalCliente_Ajuda.html (PCL_DICAS / PCL_GUIAS).
++  // O servidor confere sessão, papel, unidades, situação de acesso e caixa em toda chamada; a tela só mostra.
++  // ==========================================================
++  var PCLP = { f: { periodo: "90", unidadeId: "" }, r: null, ocupado: false };
++  var PCLPI = { f: { periodo: "90", busca: "" }, r: null, cliente: "", detalhe: null, pessoa: null };
++  function PclP_esc_(v) { return typeof PclT_esc_ === "function" ? PclT_esc_(v) : String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function PclP_$(id) { return document.getElementById(id); }
++  function PclP_v_(id) { var e = PclP_$(id); return e ? String(e.value || "").trim() : ""; }
++  function PclP_msg_(m, tipo) { var e = PclP_$("pclMsg"); if (e) { e.innerHTML = m ? '<div class="vg-faixa ' + (tipo === "erro" ? "is-erro" : "is-ok") + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + PclP_esc_(m) + "</div>" : ""; if (m && e.scrollIntoView) e.scrollIntoView({ block: "nearest" }); } }
++  function PclP_chamar_(acao, dados, ok, erro) {
++    if (PCLP.ocupado) return;
++    PCLP.ocupado = true;
++    var t = PclP_$("pclTela"); if (t) t.querySelectorAll("button[data-pp]").forEach(function (b) { b.disabled = true; });
++    var fim = function () { PCLP.ocupado = false; var t2 = PclP_$("pclTela"); if (t2) t2.querySelectorAll("button[data-pp]").forEach(function (b) { b.disabled = false; }); };
++    google.script.run.withSuccessHandler(function (r) {
++      fim();
++      if (!r || !r.ok) { (erro || function (m) { PclP_msg_(m, "erro"); })((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e tente de novo.", r); return; }
++      try { ok(r); } catch (e) { console.error("Portal do cliente, indicadores:", e); PclP_msg_("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5).", "erro"); }
++    }).withFailureHandler(function (e) { fim(); PclP_msg_("Sem resposta do servidor: " + ((e && e.message) || e) + ". Confira a conexão e tente de novo.", "erro"); })
++      .PortalCliente_api(SGO_getSessionId(), acao, dados || {});
++  }
++  function PclP_erroCorpo_(m) { var c = PclP_$("pclCorpo"); if (c) c.innerHTML = '<div class="vg-faixa is-erro" role="alert">' + PclP_esc_(m) + "</div>"; }
++  function PclP_opcoes_(lista, atual, vazio) { return (vazio !== null ? '<option value="">' + PclP_esc_(vazio) + "</option>" : "") + (lista || []).map(function (o) { return '<option value="' + PclP_esc_(o[0]) + '"' + (String(atual) === String(o[0]) ? " selected" : "") + ">" + PclP_esc_(o[1]) + "</option>"; }).join(""); }
++  function PclP_periodos_(atual) { return PclP_opcoes_([["30", "Últimos 30 dias"], ["90", "Últimos 90 dias"], ["180", "Últimos 180 dias"], ["365", "Últimos 365 dias"]], atual, null); }
++  function PclP_barras_(l, vazio) {
++    l = (l || []).filter(function (x) { return x && x.qtd > 0; });
++    if (!l.length) return '<p class="pclp-meta">' + PclP_esc_(vazio) + "</p>";
++    var max = Math.max.apply(null, l.map(function (x) { return x.qtd; }).concat([1]));
++    return l.map(function (x) { return '<div class="pclp-barra"><span class="t" title="' + PclP_esc_(x.t) + '">' + PclP_esc_(x.t) + '</span><span class="b"><i style="width:' + Math.round(x.qtd * 100 / max) + '%"></i></span><span class="n">' + PclP_esc_(x.qtd) + "</span></div>"; }).join("");
++  }
++  /** Planilha (CSV com ponto e vírgula, abre no Excel em pt-BR). Fica só no aparelho de quem baixa. */
++  function PclP_csv_(nome, cab, linhas) {
++    var cel = function (v) { var s = String(v === null || v === undefined ? "" : v); if (/^[=+@\-]/.test(s) && !/^-?\d+(,\d+)?$/.test(s)) s = "'" + s; return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
++    var txt = "﻿" + [cab].concat(linhas).map(function (l) { return l.map(cel).join(";"); }).join("\r\n");
++    try {
++      var url = URL.createObjectURL(new Blob([txt], { type: "text/csv;charset=utf-8" })), a = document.createElement("a");
++      a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
++      PclP_msg_("Planilha " + nome + " baixada (" + linhas.length + (linhas.length === 1 ? " linha)." : " linhas)."), "ok");
++    } catch (e) { PclP_msg_("Não foi possível baixar a planilha neste navegador. Tente pelo computador.", "erro"); }
++  }
++
++  // ---------- CONTA DE CLIENTE: Indicadores ----------
++  function PclP_render_() {
++    var div = PclP_$("conteudo"); if (!div) return;
++    try { if (typeof atualizarTituloMobile_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_("Indicadores"); } catch (e) {}
++    div.innerHTML = '<div class="module-shell cadx" id="pclTela"><span id="pclIndTela" hidden></span><div class="module-header"><div class="module-header-left"><h2 class="content-title">Indicadores</h2>' +
++      '<p class="content-subtitle">Como estão os chamados e os equipamentos da sua empresa: chamados abertos e concluídos, tempos de atendimento, prazo do contrato, equipamentos em dia, vencimentos e reincidência.</p></div></div>' +
++      '<div class="vg-abas" id="pclAbas" style="display:none"></div><div id="pclMsg" aria-live="polite"></div><div id="pclCorpo"><p class="vg-sub">Carregando…</p></div></div>';
++    PclP_$("pclTela").addEventListener("click", PclP_clique_);
++    PCLP.ocupado = false;
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("indicadores");
++    PclP_carregar_(false);
++  }
++  function PclP_carregar_(atualizar) {
++    PclP_chamar_("indicadores", { periodo: PCLP.f.periodo, unidadeId: PCLP.f.unidadeId, atualizar: !!atualizar }, function (r) { PCLP.r = r; PclP_desenhar_(r); }, PclP_erroCorpo_);
++  }
++  function PclP_cardHtml_(k) {
++    return '<div class="pclp-card" data-ind="' + PclP_esc_(k.k) + '"><h4>' + PclP_esc_(k.titulo) + '</h4><div class="v">' + PclP_esc_(k.valor) + "</div>" +
++      (k.sub ? '<div class="s">' + PclP_esc_(k.sub) + "</div>" : "") + (k.motivo && /—/.test(k.valor) ? '<div class="m">Sem base para a conta: ' + PclP_esc_(k.motivo) + "</div>" : "") +
++      '<p class="pclp-como"><b>Como é contado:</b> ' + PclP_esc_(k.como) + "</p></div>";
++  }
++  function PclP_desenhar_(r) {
++    var f = PCLP.f, a = r.acesso || {};
++    var h = (a.faixa ? '<div class="pclch-faixa aviso">' + PclP_esc_(a.faixa) + "</div>" : "") +
++      '<div class="pcl-caixa"><div class="pcl-filtros">' +
++      '<label>Período<select id="pclIndPeriodo">' + PclP_periodos_(String(r.periodo || f.periodo)) + "</select></label>" +
++      '<label>Unidade<select id="pclIndUnidade">' + PclP_opcoes_((r.unidades || []).map(function (u) { return [u.id, u.nome]; }), r.unidadeId || "", (r.unidades || []).length > 1 ? "Todas as suas unidades" : null) + "</select></label></div>" +
++      '<div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-pp="filtrar">Mostrar</button><button type="button" class="cadx-btn" data-pp="atualizar">Atualizar agora</button>' +
++      '<button type="button" class="cadx-btn" data-pp="pdf">Relatório do período (PDF)</button><button type="button" class="cadx-btn" data-pp="kanban">Ver no Kanban e no Gantt</button></div>' +
++      '<p class="pclp-meta">Período: ' + PclP_esc_(r.de) + " a " + PclP_esc_(r.ate) + " · " + PclP_esc_(r.escopo) + (r.geradoEm ? " · números de " + PclP_esc_(r.geradoEm) : "") + '.</p><div id="pclPpDoc"></div></div>';
++    h += '<div class="pclp-cards">' + (r.cards || []).map(PclP_cardHtml_).join("") + "</div>";
++    h += '<div class="pcl-caixa"><h3>Chamados abertos agora, por etapa</h3>' + PclP_barras_(r.abertosPorEtapa, "Nenhum chamado aberto agora nas unidades do seu acesso.") +
++      '<p class="pclp-como"><b>Como é contado:</b> cada pedido ou chamado aberto aparece na etapa em que está hoje, como na tela Chamados.</p></div>';
++    h += '<div class="pcl-caixa"><h3>Equipamentos em dia, por categoria</h3><table class="pclp-tab"><thead><tr><th>Categoria</th><th class="n">Em dia</th><th class="n">Vencem em até 30 dias</th><th class="n">Vencidos</th><th class="n">%</th></tr></thead><tbody>' +
++      (r.equipamentos || []).map(function (e) {
++        return "<tr><td data-r=\"Categoria\"><b>" + PclP_esc_(e.nome) + "</b>" + (e.total ? "" : '<br><small>' + PclP_esc_(e.motivo) + "</small>") + '</td><td class="n" data-r="Em dia">' + PclP_esc_(e.total ? e.emDia + " de " + e.total : "—") +
++          '</td><td class="n" data-r="Vencem em até 30 dias">' + PclP_esc_(e.vencendo) + '</td><td class="n" data-r="Vencidos">' + PclP_esc_(e.vencidos) + '</td><td class="n" data-r="%">' + PclP_esc_(e.pctTxt) + "</td></tr>";
++      }).join("") + '</tbody></table><p class="pclp-como"><b>Como é contado:</b> em dia ÷ equipamentos ativos que têm aquela categoria. Vale a validade do documento mais recente de cada equipamento, a mesma de "Meus equipamentos". Sem documento com validade, o equipamento não entra na conta daquela categoria.</p></div>';
++    h += '<div class="pcl-caixa"><h3>Vencimentos, por categoria</h3><table class="pclp-tab"><thead><tr><th>Categoria</th><th class="n">Em até 30 dias</th><th class="n">Em até 60 dias</th><th class="n">Já vencidos</th></tr></thead><tbody>' +
++      (r.vencimentos || []).map(function (v) { return '<tr><td data-r="Categoria"><b>' + PclP_esc_(v.nome) + '</b></td><td class="n" data-r="Em até 30 dias">' + PclP_esc_(v.ate30) + '</td><td class="n" data-r="Em até 60 dias">' + PclP_esc_(v.ate60) + '</td><td class="n" data-r="Já vencidos">' + PclP_esc_(v.vencidos) + "</td></tr>"; }).join("") +
++      '</tbody></table><p class="pclp-como"><b>Como é contado:</b> documentos com validade que vencem de hoje até 30 e até 60 dias (a coluna de 60 inclui a de 30). A lista de cada um fica em "Vencimentos e cronograma".</p></div>';
++    var rel = r.relatorios || [];
++    h += '<div class="pcl-caixa"><h3>Relatórios do período já gerados</h3>' + (rel.length ? '<table class="pclp-tab"><thead><tr><th>Relatório</th><th>Gerado</th><th>Abrir</th></tr></thead><tbody>' + rel.map(function (d) {
++      return '<tr><td data-r="Relatório"><b>' + PclP_esc_(d.numero) + "</b><br>" + PclP_esc_([d.periodo, d.unidades].filter(Boolean).join(" · ")) + '</td><td data-r="Gerado">' + PclP_esc_(d.em) + "<br>" + PclP_esc_(d.por) + '</td><td data-r="Abrir">' +
++        (d.htmlUrl ? '<a href="' + PclP_esc_(d.htmlUrl) + '" target="_blank" rel="noopener">A4</a>' : "") + (d.pdfUrl ? ' · <a href="' + PclP_esc_(d.pdfUrl) + '" target="_blank" rel="noopener">PDF</a>' : "") + "</td></tr>";
++    }).join("") + "</tbody></table>" : '<p class="pclp-meta">Nenhum relatório do período gerado ainda. Toque em "Relatório do período (PDF)".</p>') + "</div>";
++    PclP_$("pclCorpo").innerHTML = h;
++  }
++  function PclP_clique_(ev) {
++    var b = ev.target.closest && ev.target.closest("[data-pp]"); if (!b || b.disabled) return;
++    var a = b.getAttribute("data-pp");
++    if (a === "filtrar" || a === "atualizar") { PCLP.f = { periodo: PclP_v_("pclIndPeriodo") || "90", unidadeId: PclP_v_("pclIndUnidade") }; PclP_msg_(""); return PclP_carregar_(a === "atualizar"); }
++    if (a === "pdf") {
++      PCLP.f = { periodo: PclP_v_("pclIndPeriodo") || PCLP.f.periodo, unidadeId: PclP_v_("pclIndUnidade") };
++      var el = PclP_$("pclPpDoc"); if (el) el.innerHTML = '<p class="vg-sub">Gerando o relatório do período…</p>';
++      return PclP_chamar_("relatorioPeriodo", { periodo: PCLP.f.periodo, unidadeId: PCLP.f.unidadeId }, function (r) {
++        if (typeof PnA_docGerado_ === "function") PnA_docGerado_(PclP_$("pclPpDoc"), r); else PclP_msg_(r.message, "ok");
++      }, function (m) { var e2 = PclP_$("pclPpDoc"); if (e2) e2.innerHTML = ""; PclP_msg_(m, "erro"); });
++    }
++    if (a === "kanban") { try { if (typeof PCLCH !== "undefined" && PCLCH) PCLCH.vista = "kanban"; } catch (e) {} if (typeof abrir === "function") abrir("portal_cliente_chamados"); }
++  }
++
++  // ---------- EQUIPE: Uso do portal (aba da tela Portal do cliente) ----------
++  function PclPI_render_() {
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("uso");
++    PCLPI.cliente = ""; PCLPI.detalhe = null; PCLPI.pessoa = null;
++    PclPI_carregar_(false);
++  }
++  function PclPI_carregar_(atualizar) {
++    var c = PclP_$("pclCorpo"); if (c && !PCLPI.r) c.innerHTML = '<p class="vg-sub">Carregando…</p>';
++    PclT_chamar_("uso", { periodo: PCLPI.f.periodo, clienteId: PCLPI.cliente, atualizar: !!atualizar }, function (r) { PCLPI.r = r; PCLPI.detalhe = r.detalhe || null; PclPI_desenhar_(); });
++  }
++  function PclPI_desenhar_() {
++    var r = PCLPI.r || {}, t = r.totais || {}, q = String(PCLPI.f.busca || "").toLowerCase();
++    if (PCLPI.pessoa) return PclPI_desenharPessoa_();
++    if (PCLPI.detalhe) return PclPI_desenharCliente_();
++    var lista = (r.clientes || []).filter(function (c) { return !q || (c.nome + " " + c.cnpj).toLowerCase().indexOf(q) >= 0; });
++    var h = '<div class="pcl-caixa"><div class="pcl-filtros"><label>Período<select id="pclUsoPeriodo">' + PclP_periodos_(String(r.periodo || PCLPI.f.periodo)) + "</select></label>" +
++      '<label>Buscar cliente<input id="pclUsoBusca" type="search" value="' + PclP_esc_(PCLPI.f.busca) + '" placeholder="Nome ou CNPJ"></label></div>' +
++      '<div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-pcl="ppFiltrar">Mostrar</button><button type="button" class="cadx-btn" data-pcl="ppAtualizar">Atualizar agora</button><button type="button" class="cadx-btn" data-pcl="ppCsv">Baixar planilha (CSV)</button></div>' +
++      '<p class="pclp-meta">Período: ' + PclP_esc_(r.de) + " a " + PclP_esc_(r.ate) + (r.geradoEm ? " · números de " + PclP_esc_(r.geradoEm) : "") + ". Em cada cliente, \"Pessoas e avisos\" mostra as pessoas, os avisos enviados e a linha do tempo de cada pessoa.</p></div>";
++    h += '<div class="pclp-cards">' + [["Clientes com Portal", t.clientes], ["Contas ativas", t.contasAtivas], ["Convites pendentes / vencidos", (t.convitesPendentes || 0) + " / " + (t.convitesVencidos || 0)], ["Entradas em 30 dias", t.entradas30],
++      ["Pedidos pelo portal", (t.pedidosPortal || 0) + " de " + (t.pedidosTotal || 0) + " (" + (t.pctPortalTxt || "—") + ")"], ["Documentos abertos", t.docsAbertos], ["Avisos enviados / com falha", (t.avisosEnviados || 0) + " / " + (t.avisosFalharam || 0)],
++      ["Contas sem entrada há " + (r.limiteParado || 90) + " dias", t.semEntrada]].map(function (x) { return '<div class="pclp-card"><h4>' + PclP_esc_(x[0]) + '</h4><div class="v">' + PclP_esc_(x[1] === undefined ? 0 : x[1]) + "</div></div>"; }).join("") + "</div>";
++    h += '<div class="pcl-caixa"><h3>Por cliente</h3>' + (lista.length ? '<table class="pclp-tab"><thead><tr><th>Cliente</th><th>Contas ativas</th><th>Convites</th><th>Última entrada</th><th class="n">Entradas em 30 dias</th><th>Pedidos pelo portal</th><th class="n">Documentos abertos</th><th>Aceite do pedido</th><th>Avisos</th><th class="n">Sem entrada</th><th class="n">Fora do acesso</th></tr></thead><tbody>' +
++      lista.map(function (c) {
++        var pp = c.porPapel || {};
++        return '<tr><td data-r="Cliente"><b>' + PclP_esc_(c.nome) + "</b><br><small>" + PclP_esc_(c.situacaoNome) + '</small><br><button type="button" class="cadx-btn" data-pcl="ppCliente" data-cid="' + PclP_esc_(c.id) + '">Pessoas e avisos</button></td>' +
++          '<td data-r="Contas ativas">' + PclP_esc_(c.contasAtivas) + "<br><small>" + PclP_esc_("Gestor " + (pp.GESTOR || 0) + " · Solicitante " + (pp.SOLICITANTE || 0) + " · Consulta " + (pp.CONSULTA || 0) + (pp.NAO_REVISADO ? " · não revisado " + pp.NAO_REVISADO : "")) + "</small></td>" +
++          '<td data-r="Convites">' + PclP_esc_(c.convitesPendentes + (c.convitesPendentes === 1 ? " pendente · " : " pendentes · ") + c.convitesVencidos + (c.convitesVencidos === 1 ? " vencido" : " vencidos")) + '</td><td data-r="Última entrada">' + PclP_esc_(c.ultimaEntrada || "Nunca") + '</td><td class="n" data-r="Entradas em 30 dias">' + PclP_esc_(c.entradas30) + "</td>" +
++          '<td data-r="Pedidos pelo portal">' + PclP_esc_(c.pedidosPortal + " de " + c.pedidosTotal + " · " + c.pctPortalTxt) + (c.pctPortalMotivo ? "<br><small>" + PclP_esc_(c.pctPortalMotivo) + "</small>" : "") + '</td><td class="n" data-r="Documentos abertos">' + PclP_esc_(c.docsAbertos) + "</td>" +
++          '<td data-r="Aceite do pedido">' + PclP_esc_(c.aceiteTxt) + (c.aceiteMotivo ? "<br><small>" + PclP_esc_(c.aceiteMotivo) + "</small>" : "<br><small>" + PclP_esc_("base: " + c.aceiteBase) + "</small>") + "</td>" +
++          '<td data-r="Avisos">' + PclP_esc_(c.avisosEnviados + (c.avisosEnviados === 1 ? " enviado · " : " enviados · ") + c.avisosFalharam + " com falha") + (c.emailsInvalidos ? '<br><small class="pclp-alerta">' + PclP_esc_(c.emailsInvalidos + (c.emailsInvalidos === 1 ? " conta com e-mail inválido" : " contas com e-mail inválido")) + "</small>" : "") + "</td>" +
++          '<td class="n" data-r="Sem entrada">' + PclP_esc_(c.semEntrada) + '</td><td class="n" data-r="Fora do acesso">' + PclP_esc_(c.recusas) + "</td></tr>";
++      }).join("") + "</tbody></table>" : '<p class="pclp-meta">' + (q ? "Nenhum cliente com esse nome ou CNPJ." : "Nenhum cliente tem conta no Portal ainda.") + "</p>") + "</div>";
++    h += '<div class="pcl-caixa"><h3>Como cada número é contado</h3><ul class="pclp-comos">' + (r.como || []).map(function (x) { return "<li><b>" + PclP_esc_(x[0]) + ":</b> " + PclP_esc_(x[1]) + "</li>"; }).join("") + "</ul></div>";
++    PclP_$("pclCorpo").innerHTML = h;
++  }
++  function PclPI_desenharCliente_() {
++    var d = PCLPI.detalhe, c = d.cliente || {}, lim = d.limiteParado || 90;
++    var h = '<div class="pcl-acoes"><button type="button" class="cadx-btn" data-pcl="ppVoltar">Voltar à lista</button><button type="button" class="cadx-btn" data-pcl="ppCsvContas">Baixar as pessoas (CSV)</button><button type="button" class="cadx-btn" data-pcl="ppCsvAvisos">Baixar os avisos (CSV)</button></div>' +
++      '<div class="pcl-caixa"><h3>' + PclP_esc_(c.nome) + " <small>" + PclP_esc_(c.cnpj) + "</small></h3>" + (d.contas.length ? '<table class="pclp-tab"><thead><tr><th>Pessoa</th><th>Papel e unidades</th><th>Situação</th><th>Última entrada</th><th class="n">Entradas em 30 dias</th><th class="n">Documentos abertos</th><th>Linha do tempo</th></tr></thead><tbody>' +
++      d.contas.map(function (p) {
++        return '<tr><td data-r="Pessoa"><b>' + PclP_esc_(p.nome) + "</b><br><small" + (p.emailOk ? "" : ' class="pclp-alerta"') + ">" + PclP_esc_(p.email + (p.emailOk ? "" : " (e-mail inválido: não recebe avisos)")) + '</small></td><td data-r="Papel e unidades">' + PclP_esc_(p.papelNome) + "<br><small>" + PclP_esc_(p.unidades) + "</small></td>" +
++          '<td data-r="Situação">' + PclP_esc_(p.situacaoNome) + (p.parada ? '<br><small class="pclp-alerta">' + PclP_esc_("Sem entrada há " + p.diasSemEntrada + " dias (limite " + lim + ")") + "</small>" : "") + '</td><td data-r="Última entrada">' + PclP_esc_(p.ultimaEntrada) + "</td>" +
++          '<td class="n" data-r="Entradas em 30 dias">' + PclP_esc_(p.entradas30) + '</td><td class="n" data-r="Documentos abertos">' + PclP_esc_(p.docsAbertos) + '</td><td data-r="Linha do tempo"><button type="button" class="cadx-btn" data-pcl="ppPessoa" data-uid="' + PclP_esc_(p.id) + '">Ver (' + PclP_esc_(p.registros) + ")</button></td></tr>";
++      }).join("") + "</tbody></table>" : '<p class="pclp-meta">Este cliente ainda não tem pessoas no Portal.</p>') + "</div>";
++    h += '<div class="pcl-caixa"><h3>Avisos enviados ao cliente (últimos 200)</h3>' + (d.avisos.length ? '<table class="pclp-tab"><thead><tr><th>Quando</th><th>Aviso</th><th>Para</th><th>Situação</th></tr></thead><tbody>' + d.avisos.map(function (v) {
++      return '<tr><td data-r="Quando">' + PclP_esc_(v.em) + '</td><td data-r="Aviso">' + PclP_esc_(v.evento + " · " + v.eventoNome) + '</td><td data-r="Para">' + PclP_esc_(v.email) + '</td><td data-r="Situação">' + PclP_esc_(v.situacao) + "</td></tr>"; }).join("") + "</tbody></table>" :
++      '<p class="pclp-meta">Nenhum aviso ao cliente enviado ainda.</p>') + "</div>";
++    h += '<div class="pcl-caixa"><h3>Avisos com falha no envio</h3>' + (d.falhas.length ? '<table class="pclp-tab"><thead><tr><th>Quando</th><th>Para</th><th>Assunto</th><th>Motivo</th></tr></thead><tbody>' + d.falhas.map(function (v) {
++      return '<tr><td data-r="Quando">' + PclP_esc_(v.em) + '</td><td data-r="Para">' + PclP_esc_(v.email) + '</td><td data-r="Assunto">' + PclP_esc_(v.assunto) + '</td><td data-r="Motivo">' + PclP_esc_(v.motivo) + "</td></tr>"; }).join("") + "</tbody></table>" :
++      '<p class="pclp-meta">Nenhuma falha de envio registrada para este cliente. A devolução que o provedor do cliente manda depois (e-mail que "voltou") ainda não chega ao SGO+; confira a caixa de saída do e-mail da Metrolabs se o cliente disser que não recebeu.</p>') + "</div>";
++    PclP_$("pclCorpo").innerHTML = h;
++  }
++  function PclPI_desenharPessoa_() {
++    var p = PCLPI.pessoa, pe = p.pessoa || {};
++    var h = '<div class="pcl-acoes"><button type="button" class="cadx-btn" data-pcl="ppVoltarCliente">Voltar ao cliente</button><button type="button" class="cadx-btn" data-pcl="ppCsvPessoa">Baixar a linha do tempo (CSV)</button></div>' +
++      '<div class="pcl-caixa"><h3>Linha do tempo · ' + PclP_esc_(pe.nome) + " <small>" + PclP_esc_(pe.email + " · " + pe.cliente) + "</small></h3>" +
++      '<p class="pclp-meta">Registro de acessos do Portal (entradas, saídas, recusas, documentos abertos, pedidos, mensagens, aceites). O IP e o navegador aparecem só para a equipe; o Gestor do cliente vê o registro da empresa sem eles.' + (p.total > p.linhas.length ? " Mostrando os " + p.linhas.length + " mais recentes de " + p.total + "." : "") + "</p>" +
++      (p.linhas.length ? '<table class="pclp-tab"><thead><tr><th>Quando</th><th>Ação</th><th>Detalhe</th><th>IP</th><th>Navegador</th></tr></thead><tbody>' + p.linhas.map(function (l) {
++        return '<tr><td data-r="Quando">' + PclP_esc_(l.em) + '</td><td data-r="Ação">' + PclP_esc_(l.acaoNome) + '</td><td data-r="Detalhe">' + PclP_esc_(l.detalhe) + (l.ref ? "<br><small>" + PclP_esc_(l.ref) + "</small>" : "") + '</td><td data-r="IP">' + PclP_esc_(l.ip || "—") + '</td><td data-r="Navegador"><small>' + PclP_esc_(l.navegador || "—") + "</small></td></tr>";
++      }).join("") + "</tbody></table>" : '<p class="pclp-meta">Nenhum registro desta pessoa ainda.</p>') + "</div>";
++    PclP_$("pclCorpo").innerHTML = h;
++  }
++  /** Cliques da aba "Uso do portal" (data-pcl="pp..."), chamados por PclT_clique_. Devolve true quando tratou. */
++  function PclPI_clique_(a, b) {
++    var r = PCLPI.r || {};
++    if (a === "ppFiltrar" || a === "ppAtualizar") { PCLPI.f = { periodo: PclP_v_("pclUsoPeriodo") || "90", busca: PclP_v_("pclUsoBusca") }; PCLPI.cliente = ""; PCLPI.detalhe = null; PCLPI.pessoa = null; PclPI_carregar_(a === "ppAtualizar"); return true; }
++    if (a === "ppCliente") { PCLPI.cliente = b.getAttribute("data-cid") || ""; PCLPI.pessoa = null; PclPI_carregar_(false); return true; }
++    if (a === "ppVoltar") { PCLPI.cliente = ""; PCLPI.detalhe = null; PCLPI.pessoa = null; PclPI_desenhar_(); return true; }
++    if (a === "ppVoltarCliente") { PCLPI.pessoa = null; PclPI_desenhar_(); return true; }
++    if (a === "ppPessoa") { PclT_chamar_("usoPessoa", { usuarioId: b.getAttribute("data-uid") }, function (x) { PCLPI.pessoa = x; PclPI_desenhar_(); }); return true; }
++    if (a === "ppCsv") {
++      PclP_csv_("uso-do-portal-" + (r.periodo || 90) + "-dias.csv", ["Cliente", "CNPJ", "Situação", "Contas ativas", "Gestor", "Solicitante", "Consulta", "Papel não revisado", "Convites pendentes", "Convites vencidos", "Última entrada", "Entradas em 30 dias",
++        "Pedidos pelo portal", "Todos os pedidos", "% pelo portal", "Documentos abertos", "Aceite médio (h úteis)", "Avisos enviados", "Avisos com falha", "Contas com e-mail inválido", "Contas sem entrada", "Tentativas fora do acesso"],
++        (r.clientes || []).map(function (c) { var pp = c.porPapel || {}; return [c.nome, c.cnpj, c.situacaoNome, c.contasAtivas, pp.GESTOR || 0, pp.SOLICITANTE || 0, pp.CONSULTA || 0, pp.NAO_REVISADO || 0, c.convitesPendentes, c.convitesVencidos, c.ultimaEntrada,
++          c.entradas30, c.pedidosPortal, c.pedidosTotal, c.pctPortalTxt, c.docsAbertos, c.aceiteMedioMin === null ? "—" : String(Math.round(c.aceiteMedioMin / 6) / 10).replace(".", ","), c.avisosEnviados, c.avisosFalharam, c.emailsInvalidos, c.semEntrada, c.recusas]; }));
++      return true;
++    }
++    if (a === "ppCsvContas" && PCLPI.detalhe) { var d = PCLPI.detalhe; PclP_csv_("pessoas-" + String(d.cliente.nome || "cliente").replace(/[^\w-]+/g, "-").slice(0, 40) + ".csv", ["Nome", "E-mail", "Papel", "Unidades", "Situação", "Última entrada", "Dias sem entrada", "Entradas em 30 dias", "Documentos abertos"],
++      d.contas.map(function (p) { return [p.nome, p.email, p.papelNome, p.unidades, p.situacaoNome, p.ultimaEntrada, p.diasSemEntrada === null ? "" : p.diasSemEntrada, p.entradas30, p.docsAbertos]; })); return true; }
++    if (a === "ppCsvAvisos" && PCLPI.detalhe) { var d2 = PCLPI.detalhe; PclP_csv_("avisos-" + String(d2.cliente.nome || "cliente").replace(/[^\w-]+/g, "-").slice(0, 40) + ".csv", ["Quando", "Aviso", "Nome do aviso", "Para", "Situação"],
++      d2.avisos.map(function (v) { return [v.em, v.evento, v.eventoNome, v.email, v.situacao]; })); return true; }
++    if (a === "ppCsvPessoa" && PCLPI.pessoa) { var p2 = PCLPI.pessoa; PclP_csv_("linha-do-tempo-" + String(p2.pessoa.nome || "pessoa").replace(/[^\w-]+/g, "-").slice(0, 40) + ".csv", ["Quando", "Ação", "Detalhe", "Referência", "IP", "Navegador"],
++      p2.linhas.map(function (l) { return [l.em, l.acaoNome, l.detalhe, l.ref, l.ip, l.navegador]; })); return true; }
++    return false;
++  }
++</script>
+diff --git a/cand17/SGO_Ajuda.js b/cand18/SGO_Ajuda.js
+index d73fe44..23638c1 100644
+--- a/cand17/SGO_Ajuda.js
++++ b/cand18/SGO_Ajuda.js
+@@ -85,7 +85,10 @@ var SGO_AJUDA_NOMES = {
+   // 18/11/2026: Portal do cliente, etapa 3 (documentos técnicos, equipamentos, vencimentos e cronograma da conta de cliente)
+   portal_cliente_documentos: 'Documentos técnicos',
+   portal_cliente_equipamentos: 'Meus equipamentos',
+-  portal_cliente_vencimentos: 'Vencimentos e cronograma'
++  portal_cliente_vencimentos: 'Vencimentos e cronograma',
++  // 18/11/2026: Portal do cliente, etapa 5 (indicadores da conta de cliente e o uso do portal da equipe)
++  portal_cliente_indicadores: 'Indicadores',
++  portal_cliente_uso: 'Uso do portal'
+ };
+ 
+ /**
+diff --git a/cand17/SGO_Ajuda_Assistencia.js b/cand18/SGO_Ajuda_Assistencia.js
+index ede0924..cf639b0 100644
+--- a/cand17/SGO_Ajuda_Assistencia.js
++++ b/cand18/SGO_Ajuda_Assistencia.js
+@@ -188,7 +188,7 @@ function SGO_ajudaTelas_Assistencia_() {
+         { titulo: 'Pedir atendimento', itens: ['Toque em "Pedir atendimento": abre o formulário completo em Portal do cliente > Chamados > Abrir chamado.', 'Escolha a unidade e o equipamento, descreva o problema, a situação do equipamento e o risco, informe o contato no local e envie fotos, se puder.', 'Toque em "Conferir e enviar". A equipe técnica analisa e abre o chamado; você acompanha as 8 etapas, a conversa e as fotos em Portal do cliente > Chamados.'] },
+         { titulo: 'Acompanhar', itens: ['No alto: chamados abertos (e quantos em análise e com visita agendada), em atendimento agora, a próxima visita e os concluídos nos últimos 90 dias com o tempo médio até a conclusão (da abertura à conclusão, em horas úteis do expediente da Metrolabs).', 'Kanban: um cartão por pedido ou chamado na etapa em que está: Recebido, Em análise, Visita agendada, Em atendimento e Concluído (concluídos dos últimos 30 dias). A etapa muda sozinha conforme o atendimento.', 'Gantt: cada barra vai da abertura até a conclusão (ou até hoje); a cor é a etapa e o losango é a visita agendada.', 'Toque num cartão ou numa barra para ver o chamado em "Lista e relatórios". Concluído, toque em "Baixar o relatório do atendimento".', 'A tela não muda sozinha: toque em "Atualizar".'] },
+         { titulo: 'Confirmar o atendimento', itens: ['Quando o atendimento é concluído num chamado acompanhado pelo fabricante, aparece "Confirme o atendimento até ...". Toque em "Confirmo o atendimento" ou em "O problema continua" (conte o que continua). Sem resposta até a data, o atendimento é dado como confirmado.', 'O resultado da análise do fabricante aparece em uma frase no cartão do chamado.'] },
+-        { titulo: 'Relatórios do atendimento e do período', itens: ['Na aba "Lista e relatórios", toque em "Gerar relatório do atendimento" no chamado. O documento A4 abre numa aba nova e fica salvo em HTML e PDF.', 'A primeira folha traz a situação do chamado, a visita, a conclusão e o próximo passo. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Depois vêm o sumário, as 5 etapas do atendimento com as datas, a linha do tempo, a visita, o serviço realizado, as peças, as fotos liberadas pela Metrolabs (com data, hora e quem tirou), as recomendações, a assinatura de quem recebeu o atendimento e o que quer dizer cada etapa.', '"Relatório do período" gera o resumo dos seus chamados nos últimos 90 dias: na capa, os chamados em aberto, os concluídos e a próxima visita; depois índices, gráficos por etapa, por mês (quando há dois meses ou mais), por equipamento e por unidade, o Gantt, a lista e as definições.', 'Em "Relatórios gerados" ficam os documentos para abrir de novo. Cada emissão é uma versão nova. O relatório da ordem de serviço continua em "Relatórios das ordens de serviço".'] },
++        { titulo: 'Relatórios do atendimento e do período', itens: ['Na aba "Lista e relatórios", toque em "Gerar relatório do atendimento" no chamado. O documento A4 abre numa aba nova e fica salvo em HTML e PDF.', 'A primeira folha traz a situação do chamado, a visita, a conclusão e o próximo passo. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Depois vêm o sumário, as 5 etapas do atendimento com as datas, a linha do tempo, a visita, o serviço realizado, as peças, as fotos liberadas pela Metrolabs (com data, hora e quem tirou), as recomendações, a assinatura de quem recebeu o atendimento e o que quer dizer cada etapa.', '"Relatório do período" gera o resumo dos seus chamados nos últimos 90 dias (no papel Solicitante, só os das unidades liberadas para você; o Portal do cliente > Indicadores também gera, com o período e a unidade à escolha): na capa, os chamados em aberto, os concluídos e a próxima visita; depois índices, gráficos por etapa, por mês (quando há dois meses ou mais), por equipamento e por unidade, o Gantt, a lista e as definições.', 'Em "Relatórios gerados" ficam os documentos para abrir de novo. Cada emissão é uma versão nova. O relatório da ordem de serviço continua em "Relatórios das ordens de serviço".'] },
+         { titulo: 'Responder um orçamento', itens: ['Em "Orçamentos", confira os itens, o total, a validade e as condições (o PDF baixa pelo link "Baixar o orçamento em PDF").', 'Toque em "Aprovar" (nome completo, cargo, CPF opcional, e-mail, assinatura no quadro e "Li e concordo"), "Pedir ajuste" (o que precisa mudar) ou "Recusar" (o motivo).', 'A resposta é única: depois dela o orçamento mostra "Respondido em ... por ...". A confirmação chega por e-mail; na aprovação, com o comprovante em PDF.', 'Recebeu o orçamento por e-mail? O link "Ver e responder o orçamento" faz o mesmo, sem precisar entrar no portal.'] }
+       ],
+       quemPode: [{ perfil: 'CLIENTE', pode: 'Vê só os chamados e os equipamentos da própria empresa.' }],
+diff --git a/cand17/SGO_Ajuda_PortalCliente.js b/cand18/SGO_Ajuda_PortalCliente.js
+index ede2247..c4f49fb 100644
+--- a/cand17/SGO_Ajuda_PortalCliente.js
++++ b/cand18/SGO_Ajuda_PortalCliente.js
+@@ -262,6 +262,68 @@ function SGO_ajudaTelas_PortalCliente_() {
+       perguntas: [
+         { p: 'Previsto é compromisso de data?', r: 'Não. É o cálculo pela validade e pela periodicidade do contrato. A data só é confirmada quando a Metrolabs agenda, e aí ela aparece em Agendado.' }
+       ]
++    },
++    // 18/11/2026 (etapa 5): Indicadores da conta de cliente (texto do cliente, sem recurso administrativo)
++    'portal_cliente_indicadores': {
++      titulo: 'Indicadores',
++      paraQueServe: 'Acompanhar de relance como estão os chamados e os equipamentos da sua empresa: chamados abertos e concluídos, tempo até a visita e até a conclusão, atendimento dentro do prazo do contrato, equipamentos em dia, vencimentos e reincidência. Daqui também sai o relatório do período em PDF.',
++      antesDeComecar: [
++        'Os indicadores são do Gestor do cliente (todas as unidades) e do Solicitante (só as unidades liberadas para ele). No papel Consulta, eles não aparecem.',
++        'Os chamados abertos aparecem sempre. Os outros números contam os chamados concluídos no período escolhido (90 dias, se você não mudar).',
++        'Os tempos contam só as horas do expediente, em dias úteis, como o prazo do contrato.',
++        'Nenhum valor financeiro aparece aqui.'
++      ],
++      passos: [
++        { titulo: 'Ver os números', itens: ['Escolha o período (30, 90, 180 ou 365 dias) e, se quiser, uma unidade.', 'Toque em "Mostrar".', 'Cada número traz embaixo "Como é contado". Quando não há base para a conta, aparece "—" com o motivo (por exemplo, nenhum chamado concluído no período).'] },
++        { titulo: 'Equipamentos e vencimentos', itens: ['A tabela "Equipamentos em dia" mostra, por categoria, quantos estão com a validade em dia, quantos vencem em até 30 dias e quantos venceram.', 'A tabela "Vencimentos" mostra quantos documentos vencem em até 30 e em até 60 dias. A lista de cada um fica em "Vencimentos e cronograma".'] },
++        { titulo: 'Relatório do período (PDF)', itens: ['Toque em "Relatório do período (PDF)". O documento A4 sai com o mesmo período e a mesma unidade escolhidos e abre numa aba nova (no celular, dentro do SGO+, com Voltar e Imprimir).', 'No papel Solicitante, o relatório traz só as unidades liberadas para você.', 'Os relatórios já gerados ficam na lista "Relatórios do período já gerados".'] },
++        { titulo: 'Kanban e Gantt', itens: ['Toque em "Ver no Kanban e no Gantt": abre a tela Chamados, com os chamados por etapa e no tempo.'] }
++      ],
++      cores: [{ nome: 'Texto âmbar "Sem base para a conta"', significado: 'O número não pode ser calculado no período escolhido; o motivo aparece logo abaixo.' }],
++      problemas: [
++        { situacao: 'Aparece "—" num indicador.', oQueFazer: 'Não há chamados que entram naquela conta no período. Leia o motivo embaixo do número e, se quiser, escolha um período maior.' },
++        { situacao: 'O número não mudou depois de um atendimento novo.', oQueFazer: 'Os números ficam guardados por 2 minutos para a tela abrir rápido. Toque em "Atualizar agora".' },
++        { situacao: 'Aparece que o meu acesso não permite abrir os indicadores.', oQueFazer: 'No papel Consulta, os indicadores não aparecem. Peça ao Gestor do cliente da sua empresa.' },
++        { situacao: 'Aparece "Não encontrado. Atualize a lista." ao escolher a unidade.', oQueFazer: 'A unidade não está mais liberada para o seu acesso. Atualize a tela (F5).' }
++      ],
++      quemPode: [{ perfil: 'CLIENTE', pode: 'Gestor do cliente: todas as unidades. Solicitante: só as unidades liberadas para ele. Consulta: não vê os indicadores nem gera o relatório do período.' }],
++      perguntas: [
++        { p: 'Por que o tempo médio está em "h úteis"?', r: 'Porque conta só as horas do expediente, em dias úteis. Um chamado aberto na sexta à tarde e atendido na segunda de manhã não conta o fim de semana.' },
++        { p: 'O que é reincidência?', r: 'É o chamado concluído no período que teve outro chamado do mesmo equipamento aberto nos 30 dias anteriores. Ajuda a ver equipamentos que voltam a dar problema.' },
++        { p: 'O relatório em PDF traz os mesmos números?', r: 'Traz o resumo dos chamados do período, com gráficos, o Gantt e a lista, filtrado pelas mesmas unidades.' }
++      ]
++    },
++    // 18/11/2026 (etapa 5): Uso do portal (equipe, caixa «Ver o uso do portal e o registro de acessos»)
++    'portal_cliente_uso': {
++      titulo: 'Uso do portal (Portal do cliente)',
++      paraQueServe: 'Ver como cada cliente usa o Portal: contas ativas e por papel, convites pendentes ou vencidos, última entrada, entradas em 30 dias, pedidos pelo portal sobre todos os pedidos, documentos abertos, tempo médio de aceite do pedido, avisos enviados e os que falharam, contas paradas e tentativas fora do acesso; e, por pessoa, a linha do tempo do registro de acessos com IP e navegador.',
++      antesDeComecar: [
++        'A aba é de quem tem a caixa «Ver o uso do portal e o registro de acessos» (padrão: Administrador, Diretoria e gestores). Ela só mostra; nada é alterado aqui.',
++        'O IP e o navegador aparecem só para a equipe. O Gestor do cliente vê o registro da empresa dele, sem IP, em "Minha conta e equipe".',
++        'Os números ficam guardados por 2 minutos para a tela abrir rápido; "Atualizar agora" conta de novo.'
++      ],
++      passos: [
++        { titulo: 'Ver por cliente', itens: ['Abra Portal do cliente > Uso do portal.', 'Escolha o período (30, 90, 180 ou 365 dias) e toque em "Mostrar". Use "Buscar cliente" para achar um cliente.', 'Embaixo da tabela, "Como cada número é contado" explica cada coluna.'] },
++        { titulo: 'Ver as pessoas e os avisos de um cliente', itens: ['Toque em "Pessoas e avisos" no cliente.', 'A lista mostra cada pessoa com papel, unidades, situação, última entrada, entradas em 30 dias e documentos abertos. Contas paradas e e-mails inválidos aparecem em vermelho.', 'Abaixo ficam os avisos enviados ao cliente (os últimos 200) e os que falharam no envio.'] },
++        { titulo: 'Ver a linha do tempo de uma pessoa', itens: ['Na lista de pessoas, toque em "Ver".', 'A linha do tempo mostra entradas, saídas, recusas, documentos abertos, pedidos, mensagens e aceites, com IP e navegador.'] },
++        { titulo: 'Baixar a planilha', itens: ['"Baixar planilha (CSV)" leva a tabela de todos os clientes. No cliente e na pessoa há botões para baixar as pessoas, os avisos e a linha do tempo.', 'A planilha usa ponto e vírgula e abre no Excel em português. Ela fica só no aparelho de quem baixou: guarde com o mesmo cuidado do registro de acessos.'] }
++      ],
++      cores: [{ nome: 'Texto vermelho', significado: 'Conta sem entrada há mais dias que o aviso de inatividade das Regras do portal, ou e-mail em formato inválido (a pessoa não recebe avisos).' }],
++      problemas: [
++        { situacao: 'Um cliente não aparece na lista.', oQueFazer: 'A lista mostra os clientes com pelo menos uma conta de cliente ou com registro no Portal. Convide a primeira pessoa em Acessos de clientes.' },
++        { situacao: 'O cliente diz que não recebeu um aviso, e ele aparece como enviado.', oQueFazer: 'Confira o e-mail da pessoa e a caixa de spam do cliente. A devolução que o provedor do cliente manda depois ("e-mail que voltou") ainda não chega ao SGO+; confira a caixa de saída do e-mail da Metrolabs.' },
++        { situacao: 'Aparece que você não tem a permissão «Ver o uso do portal e o registro de acessos».', oQueFazer: 'Peça a liberação ao responsável pelo sistema em Administração > Acessos.' },
++        { situacao: 'O número parece desatualizado.', oQueFazer: 'Toque em "Atualizar agora".' }
++      ],
++      quemPode: [
++        { perfil: 'ADMIN', pode: 'Vê o uso de todos os clientes e a linha do tempo com IP.' },
++        { perfil: 'DIRETORIA', pode: 'Vê o uso de todos os clientes e a linha do tempo com IP.' },
++        { perfil: 'GESTOR', pode: 'Vê o uso de todos os clientes e a linha do tempo com IP (caixa padrão dos gestores).' }
++      ],
++      perguntas: [
++        { p: 'O que conta como "pedido" na comparação com o portal?', r: 'Os pedidos do Portal, por telefone, por e-mail, pelo QR do equipamento, presenciais e os registrados pela equipe. Preventivas do contrato, pedidos do Comercial, rondas e pedidos de representada não contam.' },
++        { p: 'O tempo de aceite inclui a espera pelo complemento do cliente?', r: 'Não. O tempo em que o pedido esperou a resposta do cliente ao complemento é descontado, e só contam as horas do expediente.' }
++      ]
+     }
+   };
+ }
+diff --git a/cand17/SGO_AssistenteErros.js b/cand18/SGO_AssistenteErros.js
+index 081d669..2e038da 100644
+--- a/cand17/SGO_AssistenteErros.js
++++ b/cand18/SGO_AssistenteErros.js
+@@ -84,7 +84,7 @@ var SGO_ASSIST_ERRO_HTML = {
+   JS_CronExec: 'cronograma_execucao', JS_DeclaracaoExecQIQO: 'declaracao_qiqo', JS_DeclaracaoExec: 'declaracao_exec', JS_CertCal: 'certificado_calibracao',
+   JS_RelCal: 'relatorio_calibracao', JS_SegurancaAcesso: 'seguranca_acesso', JS_Acessos: 'acessos', JS_Chaves: 'chaves', JS_Admin: 'admin',
+   JS_Avisos: 'meus_avisos', JS_AvisosMatriz: 'avisos_matriz', JS_CadastroCorrecoes: 'cadastro_correcoes', JS_Cadastros: 'clientes',
+-  JS_Equipamentos: 'equipamentos', JS_Inventario: 'inventario', JS_Qualidade: 'qualidade', JS_PortalCliente: 'portal_cliente_contratos', JS_PortalCliente_Acessos: 'portal_cliente_acessos', JS_PortalCliente_Chamados: 'portal_cliente_chamados', JS_PortalCliente_Documentos: 'portal_cliente_documentos',
++  JS_Equipamentos: 'equipamentos', JS_Inventario: 'inventario', JS_Qualidade: 'qualidade', JS_PortalCliente: 'portal_cliente_contratos', JS_PortalCliente_Acessos: 'portal_cliente_acessos', JS_PortalCliente_Chamados: 'portal_cliente_chamados', JS_PortalCliente_Documentos: 'portal_cliente_documentos', JS_PortalCliente_Painel: 'portal_cliente_indicadores',
+   JS_ModoPersonalizado: 'modo_personalizado', JS_Licitacoes: 'licitacoes', JS_Omie: 'omie', JS_ConciliacaoCaju: 'conciliacao_caju',
+   JS_GanhosVendedores: 'ganhos_vendedores', JS_Financeiro_Indicadores: 'omie', JS_Contratos_Financeiro: 'omie', JS_Padroes_Documentos: 'padroes'
+ };
+diff --git a/cand17/SGO_AssistenteManuais.js b/cand18/SGO_AssistenteManuais.js
+index e3b95ef..10d5f8e 100644
+--- a/cand17/SGO_AssistenteManuais.js
++++ b/cand18/SGO_AssistenteManuais.js
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "2d82132703c6",
++ "versao": "8944bb70927d",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -4615,7 +4615,7 @@ var SGO_ASSIST_MANUAIS = {
+   },
+   {
+    "arquivo": "MANUAL_MODULO_PORTAL_CLIENTE.md",
+-   "titulo": "Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail)",
++   "titulo": "Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail; etapa 5: indicadores e uso do portal)",
+    "tela": "portal_cliente_contratos",
+    "perfis": null,
+    "secoes": [
+@@ -4673,11 +4673,11 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Quem pode (caixas em Administração > Acessos, grupo \"Portal do cliente\")",
+-     "texto": "Caixa | PadrãoVer contratos de clientes (PORTAL_CLIENTE_CONTRATOS_VER) | Administrador, Diretoria, gestores e gestão comercial\nRegistrar e alterar contrato de cliente (PORTAL_CLIENTE_CONTRATOS_EDITAR) | Administrador, Diretoria e gestão comercial\nSuspender e reativar o acesso de um cliente (PORTAL_CLIENTE_SUSPENDER) | Administrador e Diretoria\nAlterar as regras do portal (PORTAL_CLIENTE_REGRAS) | Administrador e Diretoria\nEnviar acesso ao cliente (USUARIOS_CLIENTES_ENVIAR_ACESSO, a caixa do convite, grupo \"Contas e acessos\"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor\nResponder pedidos e conversas do portal (PORTAL_CLIENTE_CONVERSAR, etapa 2): aba \"Conversas do portal\", parte \"Portal do cliente\" da ficha do chamado, nota interna e retirada de anexo | Equipe interna da área Técnica, gestores, Diretoria e Administrador\nOcultar ou liberar documento no portal (PORTAL_CLIENTE_DOC_LIBERAR, etapa 3): aba \"Documentos no portal\" e a marca de cada documento do Arquivo de documentos | Gestão da área Técnica e da Qualidade, Diretoria e Administrador\nO dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa."
++     "texto": "Caixa | PadrãoVer contratos de clientes (PORTAL_CLIENTE_CONTRATOS_VER) | Administrador, Diretoria, gestores e gestão comercial\nRegistrar e alterar contrato de cliente (PORTAL_CLIENTE_CONTRATOS_EDITAR) | Administrador, Diretoria e gestão comercial\nSuspender e reativar o acesso de um cliente (PORTAL_CLIENTE_SUSPENDER) | Administrador e Diretoria\nAlterar as regras do portal (PORTAL_CLIENTE_REGRAS) | Administrador e Diretoria\nEnviar acesso ao cliente (USUARIOS_CLIENTES_ENVIAR_ACESSO, a caixa do convite, grupo \"Contas e acessos\"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor\nResponder pedidos e conversas do portal (PORTAL_CLIENTE_CONVERSAR, etapa 2): aba \"Conversas do portal\", parte \"Portal do cliente\" da ficha do chamado, nota interna e retirada de anexo | Equipe interna da área Técnica, gestores, Diretoria e Administrador\nOcultar ou liberar documento no portal (PORTAL_CLIENTE_DOC_LIBERAR, etapa 3): aba \"Documentos no portal\" e a marca de cada documento do Arquivo de documentos | Gestão da área Técnica e da Qualidade, Diretoria e Administrador\nVer o uso do portal e o registro de acessos (PORTAL_CLIENTE_USO_VER, etapa 5): aba \"Uso do portal\", com a linha do tempo de cada pessoa do cliente (com IP) e a planilha | Administrador, Diretoria e gestores\nO dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa."
+     },
+     {
+      "titulo": "Tabelas",
+-     "texto": "CLI_CONTRATOS: contratos de clientes privados, um por linha, com a versão atual.\nCLI_CONTRATOS_HIST: só inclusão. Guarda registro, correção, renovação, encerramento, suspensão, reativação e revisão da pré-carga, com antes, depois, motivo, quem e quando.\nPCL_ACESSOS: só inclusão. Guarda a entrada recusada, o arquivo recusado (ESCOPO_RECUSADO) e a função recusada.\nPCL_FUNCOES_OBSERVADAS: uma linha por dia, função e pessoa, com a contagem.\nPCL_REGRAS_HIST: as mudanças das regras e da lista de funções.\nEtapa 1 (18/11/2026): PCL_PEDIDOS_EQUIPE, PCL_TERMOS_ACEITE e PCL_CONTAS_HIST (seção 23.9) e as colunas CLIENTE_* em CAD_USUARIOS.\nEtapa 2 (18/11/2026): PCL_MENSAGENS, PCL_ANEXOS e PCL_AVISOS_FILA e as colunas novas de ATEC_SOLICITACOES e ATEC_CHAMADOS (seção 24.9).\nEtapa 3 (18/11/2026): as colunas PORTAL, PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM em DOC_DOCUMENTOS (seção 25.8). Nenhuma tabela nova.\nEtapa 4 (18/11/2026): PCL_AVISOS_ENVIOS, o registro dos avisos ao cliente já enviados (seção 26.8).\n\nAs datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua."
++     "texto": "CLI_CONTRATOS: contratos de clientes privados, um por linha, com a versão atual.\nCLI_CONTRATOS_HIST: só inclusão. Guarda registro, correção, renovação, encerramento, suspensão, reativação e revisão da pré-carga, com antes, depois, motivo, quem e quando.\nPCL_ACESSOS: só inclusão. Guarda a entrada recusada, o arquivo recusado (ESCOPO_RECUSADO) e a função recusada.\nPCL_FUNCOES_OBSERVADAS: uma linha por dia, função e pessoa, com a contagem.\nPCL_REGRAS_HIST: as mudanças das regras e da lista de funções.\nEtapa 1 (18/11/2026): PCL_PEDIDOS_EQUIPE, PCL_TERMOS_ACEITE e PCL_CONTAS_HIST (seção 23.9) e as colunas CLIENTE_* em CAD_USUARIOS.\nEtapa 2 (18/11/2026): PCL_MENSAGENS, PCL_ANEXOS e PCL_AVISOS_FILA e as colunas novas de ATEC_SOLICITACOES e ATEC_CHAMADOS (seção 24.9).\nEtapa 3 (18/11/2026): as colunas PORTAL, PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM em DOC_DOCUMENTOS (seção 25.8). Nenhuma tabela nova.\nEtapa 4 (18/11/2026): PCL_AVISOS_ENVIOS, o registro dos avisos ao cliente já enviados (seção 26.8).\nEtapa 5 (18/11/2026): a coluna UNIDADES_JSON em REP_DOCUMENTOS (relatório do período filtrado por unidade, seção 27.3). Nenhuma tabela nova.\n\nAs datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua."
+     },
+     {
+      "titulo": "Problemas comuns",
+@@ -4936,7 +4936,43 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Problemas comuns (avisos ao cliente)",
+-     "texto": "Situação | O que fazerO cliente com Portal não recebeu o aviso da visita | Veja se a pessoa está ativa e tem a unidade do chamado (Acessos de clientes). O Gestor do cliente da unidade sempre recebe. Fora do horário comercial, o e-mail espera o próximo horário útil\nO e-mail da unidade parou de receber os avisos da Assistência | Alguém trocou \"Cópia ao e-mail do cadastro\" para \"Não\" em Regras do portal (o histórico das regras diz quem e por quê). Volte para \"Sim\" se a unidade precisa receber\nUm equipamento vencido há muito tempo não aparece no resumo semanal | É a regra: o vencido só entra se venceu a partir de 30 dias antes do início dos avisos (Regras do portal > Vencidos antigos no resumo semanal). Ele continua em Portal do cliente > Vencimentos e cronograma\nO cliente diz que não recebe o resumo das mensagens | Ele pode ter desligado em Minha conta. O resumo sai no máximo a cada 2 horas úteis e nunca leva o texto da mensagem\nUm Solicitante não recebe os vencimentos | O resumo de vencimentos vai só para o Gestor do cliente da unidade\nO cliente em modo consulta não recebe documentos novos nem vencimentos | É a regra do modo consulta (item 3.3 da espec)\nO cliente recebeu um aviso duas vezes | Confira em PCL_AVISOS_ENVIOS se são dois avisos diferentes (por exemplo, visita agendada e depois reagendada). O mesmo aviso não se repete para o mesmo endereço\nNenhum aviso ao cliente sai | Confira em Regras do portal se os avisos pelo Portal estão ligados e se a rotina da Assistência está rodando\n</div>"
++     "texto": "Situação | O que fazerO cliente com Portal não recebeu o aviso da visita | Veja se a pessoa está ativa e tem a unidade do chamado (Acessos de clientes). O Gestor do cliente da unidade sempre recebe. Fora do horário comercial, o e-mail espera o próximo horário útil\nO e-mail da unidade parou de receber os avisos da Assistência | Alguém trocou \"Cópia ao e-mail do cadastro\" para \"Não\" em Regras do portal (o histórico das regras diz quem e por quê). Volte para \"Sim\" se a unidade precisa receber\nUm equipamento vencido há muito tempo não aparece no resumo semanal | É a regra: o vencido só entra se venceu a partir de 30 dias antes do início dos avisos (Regras do portal > Vencidos antigos no resumo semanal). Ele continua em Portal do cliente > Vencimentos e cronograma\nO cliente diz que não recebe o resumo das mensagens | Ele pode ter desligado em Minha conta. O resumo sai no máximo a cada 2 horas úteis e nunca leva o texto da mensagem\nUm Solicitante não recebe os vencimentos | O resumo de vencimentos vai só para o Gestor do cliente da unidade\nO cliente em modo consulta não recebe documentos novos nem vencimentos | É a regra do modo consulta (item 3.3 da espec)\nO cliente recebeu um aviso duas vezes | Confira em PCL_AVISOS_ENVIOS se são dois avisos diferentes (por exemplo, visita agendada e depois reagendada). O mesmo aviso não se repete para o mesmo endereço\nNenhum aviso ao cliente sai | Confira em Regras do portal se os avisos pelo Portal estão ligados e se a rotina da Assistência está rodando"
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026)",
++     "texto": "A conta de cliente ganha a tela Indicadores no menu \"Portal do cliente\". A equipe ganha a aba Uso do portal na tela Portal do cliente (também no menu, com o mesmo nome). Nenhuma das duas mostra valor financeiro."
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Indicadores (o que o cliente vê) (parte 1)",
++     "texto": "Quem vê: o Gestor do cliente (todas as unidades) e o Solicitante (só as unidades marcadas no acesso dele). A Consulta não vê: o botão do menu não aparece, e a chamada direta recebe a recusa com o papel, o porquê e o caminho (registro PAPEL_RECUSADO). Com o acesso suspenso ou sem contrato, nada é lido (ACESSO_RECUSADO). Filtros: período de 30, 90 (padrão), 180 ou 365 dias e a unidade. Os chamados abertos aparecem sempre; os outros índices contam os chamados concluídos no período. Unidade de outra empresa ou fora do acesso recebe \"Não encontrado. Atualize a lista.\" e fica como ESCOPO_RECUSADO. Como é contado: cada índice traz embaixo a explicação em linguagem simples. Quando não há base para a conta, o índice mostra \"—\" e o motivo (por exemplo, \"Nenhum chamado foi concluído no período escolhido.\"), nunca um número inventado. Índice | Como é contadoChamados abertos agora | Pedidos e chamados nas etapas 1 a 7 (de \"Recebido\" a \"Em atendimento\"), hoje. O pedido já convertido em chamado conta uma vez só (como chamado). Há também o gráfico por etapa\nChamados concluídos no período | Etapa 8 com a conclusão (fim do atendimento, ATENDIDO_EM, ou, sem ele, o encerramento, ENCERRADO_EM) dentro do período\nTempo médio até a visita | Entre os concluídos no período com visita: da abertura do pedido (ou do chamado, quando a Metrolabs registrou) até a primeira chegada do técnico (CHEGOU_EM das O.S. do chamado), em h úteis\nTempo médio até a conclusão | Como em AstP_painelCliente_: da abertura do chamado até ATENDIDO_EM ou ENCERRADO_EM, em h úteis\n% dentro do prazo do contrato | Concluídos no período com o atendimento dentro de SLA_MIN_UTEIS (estado \"cumprido\" de Ast_slaEstado_) ÷ concluídos no período com prazo de contrato (SLA_FONTE = CONTRATO)."
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Indicadores (o que o cliente vê) (parte 2)",
++     "texto": "Os outros não entram\nEquipamentos em dia | Por categoria (calibração, qualificação, NR-13 e manutenção): equipamentos ativos com a validade do documento mais recente não vencida ÷ equipamentos ativos que têm aquela categoria. Os que vencem em até 30 dias ainda contam como em dia (a tabela mostra quantos). O mesmo motor de \"Meus equipamentos\" (PCl_vencimentos_)\nVencimentos nos próximos 30 e 60 dias | Contagem por categoria dos documentos com validade de hoje até 30 e até 60 dias (a de 60 inclui a de 30); os vencidos aparecem à parte\nReincidência | Concluídos no período que tiveram outro chamado do mesmo equipamento aberto nos 30 dias anteriores ÷ concluídos no período. Cancelados não contam\nHoras úteis: a conta é a da Assistência (Ast_minUteisEntre_): o expediente da empresa (08:00 às 17:30, dias úteis, com os feriados do expediente), a mesma do prazo do contrato. Os tempos aparecem com uma casa decimal (\"6,3 h úteis\"); os percentuais também (\"66,7%\").\n\nBotões:\n\"Relatório do período (PDF)\": o mesmo documento A4 de \"Meus chamados\" (RepDC_relatorioPeriodo_), com o período e a unidade escolhidos. Para o Solicitante, sai só com as unidades dele (seção 27.3). Os já gerados ficam em \"Relatórios do período já gerados\" (só os que a pessoa pode abrir). A geração fica no registro (RELATORIO_PERIODO).\n\"Ver no Kanban e no Gantt\": abre a tela Chamados no Kanban. O Kanban e o Gantt continuam lá (JS_PainelAtendimento.html).\n\"Atualizar agora\": os números ficam guardados por 2 minutos (cache do script, por cliente, unidades, período e dia); este botão conta de novo."
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Uso do portal (equipe) (parte 1)",
++     "texto": "Caixa nova «Ver o uso do portal e o registro de acessos» (PORTAL_CLIENTE_USO_VER), padrão Administrador, Diretoria e gestores. Só mostra; nada é alterado."
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Uso do portal (equipe) (parte 2)",
++     "texto": "Por cliente (período de 30, 90, 180 ou 365 dias), com \"Como cada número é contado\" embaixo da tabela: Coluna | Como é contadoContas ativas | Pessoas do cliente com a conta ativa e quantas por papel (Gestor, Solicitante, Consulta e \"papel não revisado\")\nConvites | Contas ativas que ainda não criaram a senha: pendentes (convite na validade) e vencidos (convite vencido sem uso), pelo último envio em SYS_ACESSO_CLIENTE_ENVIOS\nÚltima entrada | A entrada mais recente de qualquer pessoa do cliente\nEntradas em 30 dias | Registros ENTRADA em PCL_ACESSOS nos últimos 30 dias (não depende do período)\nPedidos pelo portal | Pedidos do Portal (ATEC_SOLICITACOES.ORIGEM = PORTAL) ÷ todos os pedidos do cliente no período: cada pedido (Portal, e-mail, QR...) e cada chamado aberto sem pedido por telefone, e-mail, QR, presencial, WhatsApp ou pela tela interna. Preventivas do contrato, pedidos do Comercial, rondas e pedidos de representada não contam. O chamado cancelado conta (foi um pedido)\nDocumentos abertos | Registros DOCUMENTO_ABERTO no período\nAceite do pedido | Média, entre os pedidos do Portal aceitos no período, das horas úteis entre o envio e o aceite (TRATADA_EM), menos a pausa do complemento (PAUSA_MIN)\nAvisos | Avisos ao cliente enviados no período (PCL_AVISOS_ENVIOS) e os que falharam no envio (NTF_ENVIOS com origem PORTAL_CLIENTE e situação ERRO, e a fila do horário comercial com erro); à parte, as contas com e-mail em formato inválido\nSem entrada | Contas ativas sem entrar há N dias ou mais (N = aviso de inatividade de Regras do portal, padrão 90), da última entrada ou, sem nenhuma, da criação ou da reativação\nFora do acesso | ESCOPO_RECUSADO e FUNCAO_RECUSADA no período\nPessoas e avisos de um cliente:"
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Uso do portal (equipe) (parte 3)",
++     "texto": "cada pessoa com papel, unidades, situação, última entrada, dias sem entrada (em vermelho acima do limite), entradas em 30 dias, documentos abertos e o e-mail (em vermelho quando inválido); a lista dos avisos enviados ao cliente (os últimos 200, com o código e o nome do aviso, o endereço e se saiu ou espera o horário comercial), pendência deixada pela etapa 4; e as falhas de envio com o motivo.\n\nLinha do tempo da pessoa: os registros de PCL_ACESSOS da pessoa (os 500 mais recentes), com a ação, o detalhe, a referência, o IP e o navegador. Só a equipe com a caixa vê o IP; o Gestor do cliente continua vendo o registro da empresa em \"Minha conta e equipe\", sem IP e sem navegador (T5.5).\n\nPlanilha: \"Baixar planilha (CSV)\" (todos os clientes), \"Baixar as pessoas\", \"Baixar os avisos\" e \"Baixar a linha do tempo\". O arquivo usa ponto e vírgula, abre no Excel em português e é montado na própria tela, a partir do que ela já mostra."
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Relatório do período filtrado por unidade",
++     "texto": "Antes: o Solicitante recebia \"o relatório filtrado pelas suas unidades chega numa próxima etapa\".\nAgora: RepDC_relatorioPeriodo_ lê o escopo da pessoa (eu.pclEscopo): o Solicitante recebe só as unidades dele; a unidade escolhida (unidadeId) limita a uma, desde que seja do cliente e esteja no acesso (senão, \"Não encontrado\"). Vale pelos dois caminhos: Portal do cliente > Indicadores e \"Meus chamados\".\nO documento: o subtítulo diz as unidades (\"· unidade Unidade Centro\"); o registro em REP_DOCUMENTOS ganha a coluna nova UNIDADES_JSON (por acréscimo, garantida antes do primeiro relatório filtrado) e, com uma unidade só, UNIDADE_ID.\nTrava de arquivo: o relatório filtrado abre só para quem tem todas as unidades dele no acesso (PCl_docRepNaUnidade_); o de todas as unidades, só para quem vê todas. \"Relatórios gerados\" de \"Meus chamados\" mostra ao Solicitante o relatório do período dele."
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Tabelas, código e caixas",
++     "texto": "Código: SGO_PortalCliente_Painel.js (cálculo PCl_indicadoresCalc_ e PCl_usoCalc_, ações indicadores, relatorioPeriodo, uso e usoPessoa) e JS_PortalCliente_Painel.html (tela do cliente e aba da equipe). A tela do cliente chama só PortalCliente_api, que já está na lista fechada de funções.\nRegistro (PCL_ACESSOS): RELATORIO_PERIODO (geração do PDF), PAPEL_RECUSADO (Consulta), ACESSO_RECUSADO (suspenso ou sem acesso) e ESCOPO_RECUSADO (unidade fora do acesso).\nColuna nova: UNIDADES_JSON em REP_DOCUMENTOS. Nenhuma tabela nova.\nCaixa nova: PORTAL_CLIENTE_USO_VER.\nDesempenho: cada resposta lê cada tabela uma vez; o resultado fica 2 minutos no cache. Medido no ensaio local com um cliente de 4.000 chamados, 3.000 pedidos, 1.500 equipamentos e 20.000 registros de acesso: cerca de 1 a 1,5 s na primeira vez (quase todo o tempo é a conta das horas úteis de cada chamado), instantâneo do cache; o uso do portal de todos os clientes, menos de 1 s."
++    },
++    {
++     "titulo": "Indicadores e uso do portal (etapa 5, 18/11/2026) > Problemas comuns (indicadores e uso)",
++     "texto": "Situação | O que fazerUm índice aparece com \"—\" | Não há chamado que entre na conta no período (o motivo aparece embaixo). Escolha um período maior\nO número não mudou depois de um atendimento | O cache guarda por 2 minutos. Toque em \"Atualizar agora\"\nO Solicitante diz que o relatório do período não traz uma unidade | Ele recebe só as unidades marcadas no acesso. Confira em Acessos de clientes\nO tempo até a visita parece baixo | Só entram os concluídos com chegada do técnico registrada; os resolvidos a distância ficam fora dessa conta\nO cliente diz que não recebeu um aviso marcado como enviado | A devolução do provedor do cliente (\"e-mail que voltou\") ainda não chega ao SGO+. Confira o endereço na linha da pessoa e a caixa de saída do e-mail da Metrolabs\nA aba \"Uso do portal\" não aparece | Falta a caixa «Ver o uso do portal e o registro de acessos». Peça em Administração > Acessos\n</div>"
+     }
+    ],
+    "acesso": [
+@@ -5384,11 +5420,11 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Documentos A4: relatório do atendimento e relatório do período > Relatório do período (parte 1)",
+-     "texto": "Mesmos índices do Painel, com as fórmulas da seção 4 (RepP_indices_ para representada e Metrolabs; para o cliente, as de \"Meus chamados\" com o período escolhido). Gráficos: por etapa, prazo cumprido (aceite, atendimento e, na interna, primeiro contato), tempos médios em horas úteis, por cliente, por UF, garantia e reincidência por modelo; para o cliente, por etapa, por mês, por equipamento e por unidade. Na capa, o quadro \"Situação em\": abertos agora com quantos têm prazo vencido e em risco, enviados, aceite e atendimento no prazo (\"x de y\"), tempo médio até a conclusão e os pontos de atenção pelo número (para o cliente: em aberto, abertos e concluídos no período, tempo médio e próxima visita). No resumo, os destaques: movimento, situação agora, prazo vencido e em risco por número, próximas visitas e reincidência. Tempos médios em barras com o mesmo texto do painel (h úteis ou dias úteis); prazo cumprido com \"x de y no prazo\". Gráfico por mês do cliente só com dois meses ou mais. Gantt da carteira em folha paisagem, na largura toda da folha (20 linhas por figura; o texto da barra é a etapa e, fora a versão do cliente, a situação do prazo, para ler também em preto e branco; rótulo de mês só aparece se couber antes do mês seguinte; o texto nunca encosta no losango da visita nem no fim do prazo). Lista dos pedidos e chamados do período (nº do pedido, cidade e série em linha menor; na interna, em folha paisagem junto do Gantt). \"Como ler este relatório\": definições dos índices e o que quer dizer cada etapa. Só na interna: prazo de atendimento por prioridade, carga por técnico, fila de pedidos e comparação entre representadas. Escopo: a representada só a carteira dela; o cliente só os chamados dele (inclusive os que não vieram de representada);"
++     "texto": "Mesmos índices do Painel, com as fórmulas da seção 4 (RepP_indices_ para representada e Metrolabs; para o cliente, as de \"Meus chamados\" com o período escolhido). Gráficos: por etapa, prazo cumprido (aceite, atendimento e, na interna, primeiro contato), tempos médios em horas úteis, por cliente, por UF, garantia e reincidência por modelo; para o cliente, por etapa, por mês, por equipamento e por unidade. Na capa, o quadro \"Situação em\": abertos agora com quantos têm prazo vencido e em risco, enviados, aceite e atendimento no prazo (\"x de y\"), tempo médio até a conclusão e os pontos de atenção pelo número (para o cliente: em aberto, abertos e concluídos no período, tempo médio e próxima visita). No resumo, os destaques: movimento, situação agora, prazo vencido e em risco por número, próximas visitas e reincidência. Tempos médios em barras com o mesmo texto do painel (h úteis ou dias úteis); prazo cumprido com \"x de y no prazo\". Gráfico por mês do cliente só com dois meses ou mais. Gantt da carteira em folha paisagem, na largura toda da folha (20 linhas por figura; o texto da barra é a etapa e, fora a versão do cliente, a situação do prazo, para ler também em preto e branco; rótulo de mês só aparece se couber antes do mês seguinte; o texto nunca encosta no losango da visita nem no fim do prazo). Lista dos pedidos e chamados do período (nº do pedido, cidade e série em linha menor; na interna, em folha paisagem junto do Gantt). \"Como ler este relatório\": definições dos índices e o que quer dizer cada etapa. Só na interna: prazo de atendimento por prioridade, carga por técnico, fila de pedidos e comparação entre representadas. Escopo: a representada só a carteira dela; o cliente só os chamados dele (inclusive os que não vieram de representada;"
+     },
+     {
+      "titulo": "Documentos A4: relatório do atendimento e relatório do período > Relatório do período (parte 2)",
+-     "texto": "a Metrolabs, os chamados que a pessoa pode ver, todas as representadas ou a escolhida no filtro."
++     "texto": "desde 18/11/2026, o Solicitante do Portal do cliente recebe só os das unidades dele, e o relatório filtrado guarda as unidades em UNIDADES_JSON para só abrir para quem tem todas elas); a Metrolabs, os chamados que a pessoa pode ver, todas as representadas ou a escolhida no filtro."
+     },
+     {
+      "titulo": "Documentos A4: relatório do atendimento e relatório do período > Onde gerar",
+diff --git a/cand17/SGO_PortalCliente.js b/cand18/SGO_PortalCliente.js
+index e25900d..999396c 100644
+--- a/cand17/SGO_PortalCliente.js
++++ b/cand18/SGO_PortalCliente.js
+@@ -16,9 +16,14 @@
+ // conferidos no servidor em toda chamada.
+ // 18/11/2026 (etapa 3, documentos, equipamentos, histórico, vencimentos e cronograma; SGO_PortalCliente_Documentos.js): documentos, abrirDocumento,
+ // equipamentos, equipamento, vencimentos e cronograma (qualquer papel; só leitura; SUSPENSO e SEM_ACESSO não leem nem abrem).
++// 18/11/2026 (etapa 5, indicadores; SGO_PortalCliente_Painel.js): indicadores e relatorioPeriodo (Gestor do cliente e Solicitante, nas unidades dele);
++// equipe: uso e usoPessoa (caixa PORTAL_CLIENTE_USO_VER).
+ var PCL_ACOES_CLIENTE = { situacao: true, meuContrato: true, minhaConta: true, aceitarTermo: true, salvarMeusDados: true, equipe: true, pedirEquipe: true, desligarPessoa: true,
+   chamados: true, chamado: true, formAbrir: true, abrir: true, responderComplemento: true, cancelar: true, confirmarAtendimento: true, reabrir: true, mensagens: true, enviarMensagem: true, enviarImagens: true,
+-  documentos: true, abrirDocumento: true, equipamentos: true, equipamento: true, vencimentos: true, cronograma: true };
++  documentos: true, abrirDocumento: true, equipamentos: true, equipamento: true, vencimentos: true, cronograma: true,
++  // 18/11/2026 (etapa 5, indicadores; SGO_PortalCliente_Painel.js): indicadores e o relatório do período filtrado pelas unidades da pessoa
++  // (Gestor do cliente e Solicitante; a Consulta recebe a recusa com o caminho)
++  indicadores: true, relatorioPeriodo: true };
+ var PCL_ACOES_INTERNAS = {
+   iniciar: '', lista: 'PORTAL_CLIENTE_CONTRATOS_VER', ficha: 'PORTAL_CLIENTE_CONTRATOS_VER', preCarga: 'PORTAL_CLIENTE_CONTRATOS_VER', buscarClientes: 'PORTAL_CLIENTE_CONTRATOS_VER',
+   salvar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR', encerrar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR', revisar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR',
+@@ -37,7 +42,9 @@ var PCL_ACOES_INTERNAS = {
+   // 18/11/2026 (etapa 2, item 4.2.3): conversas do portal com nota interna, a parte "Portal do cliente" da ficha do chamado e a retirada de anexo
+   conversas: 'PORTAL_CLIENTE_CONVERSAR', conversaInterna: 'PORTAL_CLIENTE_CONVERSAR', enviarMensagemInterna: 'PORTAL_CLIENTE_CONVERSAR', parteChamado: 'PORTAL_CLIENTE_CONVERSAR', retirarAnexo: 'PORTAL_CLIENTE_CONVERSAR',
+   // 18/11/2026 (etapa 3, item 4.6): "Documentos no portal" — o que cada cliente vê e a marca de cada documento (oculto, liberado um a um, regra do tipo)
+-  documentosPortal: 'PORTAL_CLIENTE_DOC_LIBERAR', portalDocumento: 'PORTAL_CLIENTE_DOC_LIBERAR'
++  documentosPortal: 'PORTAL_CLIENTE_DOC_LIBERAR', portalDocumento: 'PORTAL_CLIENTE_DOC_LIBERAR',
++  // 18/11/2026 (etapa 5, item 4.2.4): "Uso do portal" — números por cliente e a linha do tempo de cada pessoa (com IP), caixa PORTAL_CLIENTE_USO_VER
++  uso: 'PORTAL_CLIENTE_USO_VER', usoPessoa: 'PORTAL_CLIENTE_USO_VER'
+ };
+ var PCL_ACAO_NOMES = { lista: 'ver os contratos de clientes', ficha: 'abrir a ficha do cliente', preCarga: 'ver a pré-carga', buscarClientes: 'buscar clientes',
+   salvar: 'registrar ou alterar contrato de cliente', encerrar: 'encerrar contrato de cliente', revisar: 'registrar a revisão da pré-carga', suspender: 'suspender o acesso de um cliente',
+@@ -51,7 +58,8 @@ var PCL_ACAO_NOMES = { lista: 'ver os contratos de clientes', ficha: 'abrir a fi
+   manter: 'marcar "manter" na conta parada', pedidosEquipe: 'ver os pedidos dos gestores dos clientes', tratarPedidoEquipe: 'atender ou recusar o pedido do gestor do cliente',
+   contaHistorico: 'ver o histórico da conta do cliente', rodarAcessos: 'conferir agora a inatividade e o fim de contrato das contas',
+   conversas: 'ver as conversas do portal', conversaInterna: 'abrir a conversa do portal', enviarMensagemInterna: 'responder ao cliente pela conversa do portal', parteChamado: 'ver a parte "Portal do cliente" do chamado', retirarAnexo: 'retirar o anexo enviado pelo cliente',
+-  documentosPortal: 'ver os documentos de um cliente no portal', portalDocumento: 'ocultar ou liberar um documento no portal' };
++  documentosPortal: 'ver os documentos de um cliente no portal', portalDocumento: 'ocultar ou liberar um documento no portal',
++  uso: 'ver o uso do portal pelos clientes', usoPessoa: 'ver a linha do tempo de uma pessoa do cliente' };
+ 
+ /** Quem chama. Conta de fora nunca tem caixa. */
+ function PCl_eu_(sessionId) {
+@@ -86,6 +94,7 @@ function PortalCliente_api(sessionId, acao, dados) {
+       if (acao === 'meuContrato') r = PCl_meuContrato_(eu);
+       else if (typeof PCLCH_ACOES_CLIENTE !== 'undefined' && PCLCH_ACOES_CLIENTE[acao]) r = PClCh_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 2): chamados e conversa
+       else if (typeof PCLD_ACOES_CLIENTE !== 'undefined' && PCLD_ACOES_CLIENTE[acao]) r = PClD_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 3): documentos, equipamentos, vencimentos e cronograma
++      else if (typeof PCLP_ACOES_CLIENTE !== 'undefined' && PCLP_ACOES_CLIENTE[acao]) r = PClP_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 5): indicadores e relatório do período
+       else if (acao === 'situacao') { var s = PCl_situacaoAcesso_(eu.clienteId, '', ''); r = { situacao: s.situacao, nome: s.provisoria ? PCL_SITUACOES.PLENO : s.nome, ate: s.ateBr, texto: s.textoCliente, completo: s.completo }; }
+       else if (typeof PClA_acaoCliente_ === 'function') r = PClA_acaoCliente_(eu, acao, dados);
+       else throw PCl_erro_('ACAO', 'Esta parte do Portal do cliente ainda não está disponível neste servidor. O que fazer: atualize a página (F5); se continuar, avise a Metrolabs.'); // 18/11/2026 (etapa 1): Minha conta, termo de uso e Minha equipe
+@@ -96,7 +105,8 @@ function PortalCliente_api(sessionId, acao, dados) {
+         (cx === 'PORTAL_CLIENTE_SUSPENDER' || cx === 'PORTAL_CLIENTE_REGRAS' ? 'esta ação é do Administrador e da Diretoria.' : cx === 'PORTAL_CLIENTE_CONTRATOS_EDITAR' ? 'o contrato de cliente é registrado pela gestão comercial, pelo Administrador e pela Diretoria.' :
+           cx === 'USUARIOS_CLIENTES_ENVIAR_ACESSO' ? 'os acessos das pessoas dos clientes (convite, papel, unidades e desligamento) são da gestão: dono, Administrador, Diretoria e gestores, a mesma regra do convite.' :
+           cx === 'PORTAL_CLIENTE_CONVERSAR' ? 'a conversa com os clientes do portal é da equipe interna da área Técnica e da gestão.' :
+-          cx === 'PORTAL_CLIENTE_DOC_LIBERAR' ? 'ocultar ou liberar documento no portal é da gestão da área Técnica e da Qualidade, da Diretoria e do Administrador.' : 'os contratos de clientes são vistos pela gestão.') +
++          cx === 'PORTAL_CLIENTE_DOC_LIBERAR' ? 'ocultar ou liberar documento no portal é da gestão da área Técnica e da Qualidade, da Diretoria e do Administrador.' :
++          cx === 'PORTAL_CLIENTE_USO_VER' ? 'o uso do portal e o registro de acessos das pessoas dos clientes (com IP) são vistos pelo Administrador, pela Diretoria e pelos gestores.' : 'os contratos de clientes são vistos pela gestão.') +
+         ' O que fazer: peça a quem tem a caixa, ou peça a liberação ao responsável pelo sistema em Administração > Acessos.');
+       r = PCl_acaoInterna_(eu, acao, dados);
+     }
+@@ -119,11 +129,14 @@ function PCl_acaoInterna_(eu, acao, d) {
+     pd.USUARIOS_CLIENTES_ENVIAR_ACESSO = PCl_pode_(eu, 'USUARIOS_CLIENTES_ENVIAR_ACESSO');
+     // 18/11/2026 (etapa 2): a aba "Conversas do portal" aparece para quem tem a caixa PORTAL_CLIENTE_CONVERSAR
+     // 18/11/2026 (etapa 3): a aba "Documentos no portal" aparece para quem tem a caixa PORTAL_CLIENTE_DOC_LIBERAR
+-    return { poderes: pd, ver: !!pd.PORTAL_CLIENTE_CONTRATOS_VER, acessos: !!pd.USUARIOS_CLIENTES_ENVIAR_ACESSO, conversar: !!pd.PORTAL_CLIENTE_CONVERSAR, docLiberar: !!pd.PORTAL_CLIENTE_DOC_LIBERAR, eu: { id: eu.id, nome: eu.nome } };
++    // 18/11/2026 (etapa 5): a aba "Uso do portal" aparece para quem tem a caixa PORTAL_CLIENTE_USO_VER
++    return { poderes: pd, ver: !!pd.PORTAL_CLIENTE_CONTRATOS_VER, acessos: !!pd.USUARIOS_CLIENTES_ENVIAR_ACESSO, conversar: !!pd.PORTAL_CLIENTE_CONVERSAR, docLiberar: !!pd.PORTAL_CLIENTE_DOC_LIBERAR,
++      usoVer: !!pd.PORTAL_CLIENTE_USO_VER, eu: { id: eu.id, nome: eu.nome } };
+   }
+   if (typeof PCLA_ACOES_INTERNAS !== 'undefined' && PCLA_ACOES_INTERNAS[acao]) return PClA_acaoInterna_(eu, acao, d); // 18/11/2026 (etapa 1): Acessos de clientes
+   if (typeof PCLCH_ACOES_INTERNAS !== 'undefined' && PCLCH_ACOES_INTERNAS[acao]) return PClCh_acaoInterna_(eu, acao, d); // 18/11/2026 (etapa 2): conversas do portal
+   if (typeof PCLD_ACOES_INTERNAS !== 'undefined' && PCLD_ACOES_INTERNAS[acao]) return PClD_acaoInterna_(eu, acao, d); // 18/11/2026 (etapa 3): documentos no portal
++  if (typeof PCLP_ACOES_INTERNAS !== 'undefined' && PCLP_ACOES_INTERNAS[acao]) return PClP_acaoInterna_(eu, acao, d); // 18/11/2026 (etapa 5): uso do portal
+   if (acao === 'lista') return PClC_lista_(eu, d);
+   if (acao === 'ficha') return Object.assign(PClC_ficha_(eu, d), { poderes: PCl_poderes_(eu) });
+   if (acao === 'preCarga') return PClC_preCarga_(eu);
+diff --git a/cand17/SGO_PortalCliente_Acessos.js b/cand18/SGO_PortalCliente_Acessos.js
+index d7cac50..90bd42b 100644
+--- a/cand17/SGO_PortalCliente_Acessos.js
++++ b/cand18/SGO_PortalCliente_Acessos.js
+@@ -283,14 +283,17 @@ function PCl_gateAssistencia_(eu, acao, d) {
+   }
+   if (acao === 'relatorioPeriodoCliente') {
+     if (!esc.pode.indicadores) throw new Error(PClA_msgPapel_(esc, 'gerar o relatório do período'));
+-    if (!esc.todas) throw new Error('Não foi possível gerar o relatório do período: ele junta todas as unidades da empresa, e o seu acesso vale para unidades específicas. O que fazer: peça o relatório ao Gestor do cliente da sua empresa; o relatório filtrado pelas suas unidades chega numa próxima etapa do portal');
++    // 18/11/2026 (etapa 5, T5.3): com unidades marcadas, o relatório sai filtrado por elas (RepDC_relatorioPeriodo_ lê eu.pclEscopo)
+     return null;
+   }
+   if (acao === 'documentosGerados') {
+     if (esc.todas) return null;
+     if (PCl_s_(d.chamadoId)) { var cd = chamado(d.chamadoId); if (cd && !PCl_escopoUnidade_(esc, cd.UNIDADE_ID)) fora('CHAMADO', d.chamadoId, 'chamadoId'); }
+     var unPorNumero = {}; PCl_ler_('ATEC_CHAMADOS').forEach(function (x) { if (PCl_s_(x.CLIENTE_ID) === cid) unPorNumero[PCl_s_(x.NUMERO)] = PCl_s_(x.UNIDADE_ID); });
+-    return { depois: function (r) { if (r && Array.isArray(r.documentos)) r.documentos = r.documentos.filter(function (x) { return !!x.chamadoNumero && PCl_escopoUnidade_(esc, unPorNumero[PCl_s_(x.chamadoNumero)]); }); return r; } };
++    // 18/11/2026 (etapa 5): o relatório do período filtrado só pelas unidades da pessoa também aparece para ela
++    var regPorId = {}; PCl_ler_('REP_DOCUMENTOS').forEach(function (x) { regPorId[PCl_s_(x.ID)] = x; });
++    var periodoOk = function (x) { var rg = regPorId[PCl_s_(x.id)]; return !!rg && PCl_up_(rg.TIPO) === 'PERIODO' && typeof PCl_relatorioNoEscopo_ === 'function' && PCl_relatorioNoEscopo_(esc, rg); };
++    return { depois: function (r) { if (r && Array.isArray(r.documentos)) r.documentos = r.documentos.filter(function (x) { return x.chamadoNumero ? PCl_escopoUnidade_(esc, unPorNumero[PCl_s_(x.chamadoNumero)]) : periodoOk(x); }); return r; } };
+   }
+   return null;
+ }
+@@ -299,7 +302,7 @@ function PCl_acessoPortalPublico_(esc) {
+   if (!esc) return null;
+   var nomesUn = {}; PClA_unidadesCliente_(esc.clienteId).forEach(function (u) { nomesUn[u.id] = u.nome; });
+   return { papel: esc.papel, papelNome: esc.papelNome, todas: esc.todas, unidades: esc.unidades.map(function (u) { return nomesUn[u] || ''; }).filter(Boolean),
+-    podeAbrir: !!esc.pode.abrir, podeAprovar: !!esc.pode.aprovar, podeRelatorioPeriodo: !!(esc.pode.indicadores && esc.todas), gestores: PClA_nomesGestores_(esc.clienteId, esc.usuarioId).slice(0, 3),
++    podeAbrir: !!esc.pode.abrir, podeAprovar: !!esc.pode.aprovar, podeRelatorioPeriodo: !!esc.pode.indicadores, gestores: PClA_nomesGestores_(esc.clienteId, esc.usuarioId).slice(0, 3),
+     termoPendente: PClA_termoPendente_(esc) };
+ }
+ 
+diff --git a/cand17/SGO_PortalCliente_Config.js b/cand18/SGO_PortalCliente_Config.js
+index ecffa84..18bebb9 100644
+--- a/cand17/SGO_PortalCliente_Config.js
++++ b/cand18/SGO_PortalCliente_Config.js
+@@ -104,6 +104,8 @@ var PCL_PODERES_ITENS = [
+   ['PORTAL_CLIENTE_CONVERSAR', 'Portal do cliente', 'Responder pedidos e conversas do portal', 'Abre Portal do cliente > Conversas do portal e a parte "Portal do cliente" da ficha do chamado: lê o relato, as fotos e a conversa do cliente, responde (o cliente lê o primeiro nome seguido de "(Metrolabs)"), grava nota interna (o cliente não vê) e retira anexo com motivo. Aceitar, pedir complemento e recusar o pedido continuam em Assistência técnica > Solicitações dos clientes. Padrão: equipe interna da área Técnica, gestores, Diretoria e Administrador.', 'operar', 15],
+   // 18/11/2026 (etapa 3, item 4.6): ocultar ou liberar um documento no Portal do cliente (coluna PORTAL de DOC_DOCUMENTOS), com motivo
+   ['PORTAL_CLIENTE_DOC_LIBERAR', 'Portal do cliente', 'Ocultar ou liberar documento no portal', 'Abre Portal do cliente > Documentos no portal: mostra, por cliente, os documentos que o cliente vê e os que não vê (tipo fora da lista ou oculto) e marca cada documento do Arquivo de documentos como "oculto no portal" (some da lista e não abre para o cliente), "liberado um a um" (aparece mesmo com o tipo fora da lista) ou "segue a regra do tipo", sempre com motivo. Padrão: gestão da área Técnica e da Qualidade, Diretoria e Administrador.', 'operar', 15],
++  // 18/11/2026 (etapa 5, item 4.6): uso do portal por cliente e a linha do tempo de cada pessoa do cliente (PCL_ACESSOS, com IP e navegador)
++  ['PORTAL_CLIENTE_USO_VER', 'Portal do cliente', 'Ver o uso do portal e o registro de acessos', 'Abre Portal do cliente > Uso do portal: por cliente, as contas ativas e por papel, os convites pendentes ou vencidos, a última entrada, as entradas em 30 dias, os pedidos pelo portal sobre todos os pedidos, os documentos abertos, o tempo médio de aceite do pedido, os avisos enviados e os que falharam e as contas paradas; por pessoa, a linha do tempo do registro de acessos com IP e navegador, e a exportação para planilha. Não altera nada. Padrão: Administrador, Diretoria e gestores.', 'ver', 15],
+   ['PORTAL_CLIENTE_CONTRATOS_VALORES', 'Portal do cliente', 'Ver valores e reajustes dos contratos', 'Mostra o valor mensal e total de cada contrato, o índice e a data-base do reajuste, o reajuste proposto pelo sistema (com a memória de cálculo) e gera a carta de reajuste ao cliente depois da aprovação da Diretoria. Não abre o faturamento nem o movimento do Financeiro. Padrão: Administrador, Diretoria e gestão comercial.', 'ver', 15]
+ ];
+ var PCL_PODERES_PADRAO = {
+@@ -113,6 +115,8 @@ var PCL_PODERES_PADRAO = {
+   PORTAL_CLIENTE_REGRAS: function (eu, c) { return !!(c.admin || c.diretoria); },
+   PORTAL_CLIENTE_CONTRATOS_VALORES: function (eu, c) { return !!(c.admin || c.diretoria || PCl_gestaoComercial_(c)); },
+   // 18/11/2026 (etapa 3): gestão da área Técnica e da Qualidade (gestor dessas áreas), Diretoria e Administrador
++  // 18/11/2026 (etapa 5): Administrador, Diretoria e gestores
++  PORTAL_CLIENTE_USO_VER: function (eu, c) { return !!(c.admin || c.diretoria || c.gd); },
+   PORTAL_CLIENTE_DOC_LIBERAR: function (eu, c) { return !!(c.admin || c.diretoria || (c.p === 'GESTOR' && ['TECNICA', 'QUALIDADE'].indexOf(PCl_up_(eu && eu.area)) >= 0)); },
+   // o mesmo nível interno da Assistência técnica (Ast_nivelDe_): a equipe da área Técnica, os gestores, a Diretoria e o Administrador
+   PORTAL_CLIENTE_CONVERSAR: function (eu, c) {
+diff --git a/cand18/SGO_PortalCliente_Painel.js b/cand18/SGO_PortalCliente_Painel.js
+new file mode 100644
+index 0000000..17645d4
+--- /dev/null
++++ b/cand18/SGO_PortalCliente_Painel.js
+@@ -0,0 +1,429 @@
++/****************************************************
++ * PORTAL DO CLIENTE — ETAPA 5 (e): INDICADORES (18/11/2026). Especificação: output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md,
++ * "Etapa 5 (e)", itens 4.1.8 (Indicadores), 4.2.4 (Uso do portal), 4.6 (caixa PORTAL_CLIENTE_USO_VER) e testes T5.1 a T5.5
++ * (o dono aceitou todas as recomendações).
++ *
++ * CONTA DE CLIENTE (ação "indicadores" e "relatorioPeriodo" de PortalCliente_api)
++ *  - Só o Gestor do cliente e o Solicitante (PCL_PAPEIS[...].indicadores); o Solicitante, só nas unidades dele. A Consulta recebe a recusa
++ *    com o caminho (PAPEL_RECUSADO no registro). SUSPENSO e SEM_ACESSO não leem (ACESSO_RECUSADO).
++ *  - Período padrão de 90 dias (30, 180 e 365). Os chamados abertos aparecem sempre; os índices de tempo, prazo e reincidência contam os
++ *    chamados concluídos no período. Toda contagem respeita o escopo por unidade (PCl_escopo_). Sem valores financeiros.
++ *  - Cada índice leva "como é contado" (texto simples) e, quando não há base para a conta, "—" com o motivo (nunca NaN nem Infinity).
++ *  - Horas úteis: Ast_minUteisEntre_ (o expediente da empresa, o mesmo de AstP_painelCliente_ e do prazo do contrato). Nenhuma conta nova.
++ *  - "Relatório do período (PDF)": RepDC_relatorioPeriodo_ (SGO_Representacao_Documentos.js), agora filtrado pelas unidades da pessoa ou
++ *    pela unidade escolhida. O Kanban e o Gantt continuam na tela Chamados (JS_PainelAtendimento.html).
++ *
++ * EQUIPE (ações "uso" e "usoPessoa", caixa PORTAL_CLIENTE_USO_VER: Administrador, Diretoria e gestores)
++ *  - Por cliente: contas ativas e por papel, convites pendentes ou vencidos, última entrada, entradas em 30 dias, pedidos pelo portal ÷
++ *    todos os pedidos (portal, telefone, e-mail...), documentos abertos, tempo médio de aceite do pedido, avisos enviados e os que
++ *    falharam (e-mail inválido ou recusado no envio), contas sem entrada há 90 dias e tentativas fora do acesso.
++ *  - Por pessoa: a linha do tempo de PCL_ACESSOS (com IP e navegador, só para a equipe). Exportação para planilha na tela (CSV).
++ *  - Lista dos avisos enviados ao cliente (PCL_AVISOS_ENVIOS), que a etapa 4 deixou para esta etapa.
++ *
++ * Desempenho: cada resposta lê cada tabela uma vez (memória da chamada) e guarda o resultado por 2 minutos no cache do script
++ * (chave com cliente, unidades e período; "Atualizar agora" passa por cima). Nenhuma função devolve Date. Fins de linha: LF.
++ ****************************************************/
++
++var PCLP_PERIODOS = [30, 90, 180, 365];
++var PCLP_PERIODO_PADRAO = 90;
++var PCLP_REINCIDENCIA_DIAS = 30;
++var PCLP_VENC_JANELAS = [30, 60];
++var PCLP_CACHE_SEG = 120;
++/** Canais que contam como "pedido do cliente" no uso do portal (portal, telefone, e-mail, QR, presencial e a tela interna, que registra o pedido feito por telefone). */
++var PCLP_CANAIS_PEDIDO = ['PORTAL', 'TELEFONE', 'EMAIL', 'QR', 'PRESENCIAL', 'INTERNO', 'WHATSAPP', ''];
++var PCLP_CANAIS_NOMES = { PORTAL: 'Portal do cliente', TELEFONE: 'Telefone', EMAIL: 'E-mail', QR: 'QR do equipamento', PRESENCIAL: 'Presencial', INTERNO: 'Registrado pela equipe', WHATSAPP: 'WhatsApp', '': 'Não informado' };
++var PCLP_CATEGORIAS_EQ = ['CAL', 'QUAL', 'NR13', 'MAN'];
++var PCLP_CAT_NOMES = { CAL: 'Calibração', QUAL: 'Qualificação', NR13: 'NR-13', MAN: 'Manutenção', DOC: 'Outros documentos' };
++var PCLP_ACOES_ROTULO = { DOCUMENTO_ABERTO: 'Abriu um documento', CHAMADO_ABERTO: 'Abriu a ficha de um chamado', ACESSO_RECUSADO: 'Leitura recusada pela situação de acesso',
++  RELATORIO_PERIODO: 'Gerou o relatório do período' };
++
++// ------------------------------------------------------------
++// BÁSICOS
++// ------------------------------------------------------------
++function PClP_periodo_(v) { var n = Math.round(Number(v)); return PCLP_PERIODOS.indexOf(n) >= 0 ? n : PCLP_PERIODO_PADRAO; }
++function PClP_ms_(v) { return typeof Ast_ms_ === 'function' ? Ast_ms_(v) : null; }
++function PClP_uteis_(aMs, bMs) { return aMs === null || bMs === null || bMs < aMs || typeof Ast_minUteisEntre_ !== 'function' ? null : Ast_minUteisEntre_(aMs, bMs); }
++/** 1 casa decimal com vírgula (pt-BR). */
++function PClP_1_(n) { var x = Math.round(Number(n) * 10) / 10; return isFinite(x) ? x.toFixed(1).replace('.', ',') : ''; }
++function PClP_int_(n) { var x = Math.round(Number(n) || 0); return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
++/** Percentual com 1 casa; null quando não há base (a tela mostra "—" com o motivo). */
++function PClP_pct_(a, b) { return b > 0 ? Math.round(a * 1000 / b) / 10 : null; }
++function PClP_pctTxt_(v) { return v === null || v === undefined ? '—' : PClP_1_(v) + '%'; }
++function PClP_horasTxt_(min) { return min === null || min === undefined ? '—' : PClP_1_(min / 60) + ' h úteis'; }
++function PClP_media_(l) { l = (l || []).filter(function (v) { return v !== null && v !== undefined && isFinite(v); }); return l.length ? l.reduce(function (s, v) { return s + v; }, 0) / l.length : null; }
++function PClP_cache_() { try { return CacheService.getScriptCache(); } catch (e) { return null; } }
++function PClP_cacheLer_(k) { var c = PClP_cache_(); if (!c) return null; try { var v = c.get(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
++function PClP_cacheGravar_(k, v) { var c = PClP_cache_(); if (!c) return; try { var s = JSON.stringify(v); if (s.length < 90000) c.put(k, s, PCLP_CACHE_SEG); } catch (e) {} }
++function PClP_horaAgora_() { return PCl_agoraIso_().slice(11, 16); }
++/** Card de índice: { k, titulo, valor, sub, como, motivo, n, d }. Sem base: valor "—" e o motivo. */
++function PClP_card_(k, titulo, valor, como, extra) { return Object.assign({ k: k, titulo: titulo, valor: valor, como: como, sub: '', motivo: '' }, extra || {}); }
++
++// ------------------------------------------------------------
++// CONTA DE CLIENTE
++// ------------------------------------------------------------
++/** Quem chama, a situação de acesso e o papel. CONSULTA não vê os indicadores (decisão 5; recusa no servidor, mesmo chamando a ação direto). */
++function PClP_ctx_(eu) {
++  var esc = PCl_escopo_(eu.id);
++  if (!esc) throw PCl_erro_('CONTA', 'Não foi possível abrir: a sua conta de cliente não foi encontrada. O que fazer: saia e entre de novo; se continuar, fale com a Metrolabs.');
++  var x = { eu: eu, esc: esc, cid: esc.clienteId, sit: PCl_situacaoAcesso_(esc.clienteId, '', ''), ctx: typeof PClA_ctxSessao_ === 'function' ? PClA_ctxSessao_(eu) : {} };
++  if (!x.sit.podeEntrar) {
++    PCl_registrarAcesso_(PClA_quem_(esc), 'ACESSO_RECUSADO', 'Indicadores com o acesso ' + x.sit.situacao, { tipo: 'CLIENTE', id: esc.clienteId }, x.ctx);
++    throw PCl_erro_('SEM_ACESSO', 'Não foi possível abrir: ' + x.sit.textoCliente);
++  }
++  if (!esc.pode.indicadores) {
++    PCl_registrarAcesso_(PClA_quem_(esc), 'PAPEL_RECUSADO', 'Indicadores com o papel ' + esc.papelNome, { tipo: 'INDICADORES', id: esc.clienteId }, x.ctx);
++    throw PCl_erro_('PAPEL', PClA_msgPapel_(esc, 'abrir os indicadores').replace('Por quê: ', 'Por quê: os indicadores e o relatório do período são do Gestor do cliente e do Solicitante. '));
++  }
++  return x;
++}
++/** Unidade escolhida no filtro: '' (todas as da pessoa) ou uma unidade do cliente dentro do acesso. Fora disso: a resposta de inexistente. */
++function PClP_unidadeFiltro_(x, unidadeId) {
++  var u = PCl_s_(unidadeId);
++  if (!u) return '';
++  var un = PCl_porId_(SGO_CFG.SHEETS.CAD_UNIDADES || 'CAD_UNIDADES', u);
++  if (!un || PCl_s_(un.CLIENTE_ID) !== x.cid || !PCl_escopoUnidade_(x.esc, u)) { PClA_recusaEscopo_(x.esc, 'UNIDADE', u, x.ctx); throw PCl_erro_('NAO_ENCONTRADO', PCL_MSG_NAO_ENCONTRADO); }
++  return u;
++}
++/** Unidades da pessoa para o filtro (nomes). */
++function PClP_unidadesTela_(x) {
++  return PClA_unidadesCliente_(x.cid).filter(function (u) { return PCl_escopoUnidade_(x.esc, u.id); }).map(function (u) { return { id: u.id, nome: u.nome }; });
++}
++
++/**
++ * Cálculo dos índices (puro: sem registro, sem cache). o: { cid, okUn(unidadeId) -> bool, agoraMs, dias, hoje, esc }.
++ * Devolve { cards, abertosPorEtapa, equipamentos, vencimentos, base }.
++ */
++function PCl_indicadoresCalc_(o) {
++  var cid = o.cid, okUn = o.okUn, agoraMs = o.agoraMs, dias = o.dias, de = agoraMs - dias * 864e5;
++  var noPeriodo = function (ms) { return ms !== null && ms >= de && ms <= agoraMs; };
++  var chamados = PCl_ler_('ATEC_CHAMADOS').filter(function (c) { return PCl_s_(c.CLIENTE_ID) === cid && !PCl_s_(c.EXCLUIDO_EM) && okUn(c.UNIDADE_ID); });
++  var sols = PCl_ler_('ATEC_SOLICITACOES').filter(function (s) { return PCl_s_(s.CLIENTE_ID) === cid && okUn(s.UNIDADE_ID); });
++  var solPorId = {}; PCl_ler_('ATEC_SOLICITACOES').forEach(function (s) { solPorId[PCl_s_(s.ID)] = s; });
++  // chegada do técnico por chamado: a primeira CHEGOU_EM entre as O.S. do chamado
++  var chegada = {};
++  PCl_ler_('ATEC_OS').forEach(function (os) {
++    if (PCl_s_(os.CLIENTE_ID) !== cid || PCl_s_(os.EXCLUIDO_EM)) return;
++    var ms = PClP_ms_(os.CHEGOU_EM), ch = PCl_s_(os.CHAMADO_ID); if (ms === null || !ch) return;
++    if (chegada[ch] === undefined || ms < chegada[ch]) chegada[ch] = ms;
++  });
++  // 1) abertos agora (etapas 1 a 7): pedidos em análise e chamados abertos
++  var abertosPorEtapa = {}; PCL_ETAPAS.forEach(function (e) { if (e.n <= 7) abertosPorEtapa[e.n] = 0; });
++  var nAbertos = 0;
++  sols.forEach(function (s) { var et = PCl_etapaCliente_('SOLICITACAO', s); if (et.n >= 1 && et.n <= 7 && PCl_up_(s.SITUACAO) !== 'CONVERTIDA') { abertosPorEtapa[et.n]++; nAbertos++; } });
++  chamados.forEach(function (c) { var et = PCl_etapaCliente_('CHAMADO', c); if (et.n >= 1 && et.n <= 7) { abertosPorEtapa[et.n]++; nAbertos++; } });
++  // 2) concluídos no período (etapa 8; conclusão = ATENDIDO_EM, senão ENCERRADO_EM, como em AstP_painelCliente_)
++  var concl = [];
++  chamados.forEach(function (c) {
++    if (PCl_etapaCliente_('CHAMADO', c).n !== 8) return;
++    var fim = PClP_ms_(c.ATENDIDO_EM) !== null ? PClP_ms_(c.ATENDIDO_EM) : PClP_ms_(c.ENCERRADO_EM);
++    if (noPeriodo(fim)) concl.push({ c: c, fimMs: fim, abMs: PClP_ms_(c.ABERTO_EM) });
++  });
++  // 3) tempo até a visita: da abertura do pedido (ou do chamado, quando não houve pedido) até a primeira chegada do técnico
++  var tVisita = [];
++  concl.forEach(function (k) {
++    var sol = PCl_s_(k.c.SOLICITACAO_ID) ? solPorId[PCl_s_(k.c.SOLICITACAO_ID)] : null;
++    var ini = sol && PClP_ms_(sol.CRIADO_EM) !== null ? PClP_ms_(sol.CRIADO_EM) : k.abMs, ch = chegada[PCl_s_(k.c.ID)];
++    if (ini !== null && ch !== undefined && ch >= ini) tVisita.push(PClP_uteis_(ini, ch));
++  });
++  // 4) tempo até a conclusão (abertura do chamado -> conclusão)
++  var tConcl = concl.map(function (k) { return k.abMs === null ? null : PClP_uteis_(k.abMs, k.fimMs); }).filter(function (v) { return v !== null; });
++  // 5) dentro do prazo do contrato (só os concluídos cujo prazo veio do contrato)
++  var comPrazo = concl.filter(function (k) { return PCl_up_(k.c.SLA_FONTE) === 'CONTRATO' && Number(k.c.SLA_MIN_UTEIS) > 0; });
++  var regrasAst = null; try { regrasAst = typeof Ast_regras_ === 'function' ? Ast_regras_() : null; } catch (e) { regrasAst = null; }
++  var noPrazo = typeof Ast_slaEstado_ === 'function' ? comPrazo.filter(function (k) {
++    var c2 = Object.assign({}, k.c); if (!PCl_s_(c2.ATENDIDO_EM)) c2.ATENDIDO_EM = PCl_s_(k.c.ENCERRADO_EM);
++    try { return Ast_slaEstado_(c2, agoraMs, regrasAst || undefined).estado === 'CUMPRIDO'; } catch (e) { return false; }
++  }).length : 0;
++  // 6) reincidência: concluído no período com outro chamado do mesmo equipamento aberto nos 30 dias anteriores
++  var porEq = {};
++  chamados.forEach(function (c) { if (PCl_up_(c.SITUACAO) === 'CANCELADO' || !PCl_s_(c.EQUIPAMENTO_ID)) return; (porEq[PCl_s_(c.EQUIPAMENTO_ID)] = porEq[PCl_s_(c.EQUIPAMENTO_ID)] || []).push(c); });
++  var janela = PCLP_REINCIDENCIA_DIAS * 864e5;
++  var reinc = concl.filter(function (k) {
++    var l = porEq[PCl_s_(k.c.EQUIPAMENTO_ID)] || [];
++    return k.abMs !== null && l.some(function (o2) { var ms = PClP_ms_(o2.ABERTO_EM); return PCl_s_(o2.ID) !== PCl_s_(k.c.ID) && ms !== null && ms < k.abMs && k.abMs - ms <= janela; });
++  });
++  // 7) equipamentos em dia e vencimentos (o mesmo motor de "Meus equipamentos" e "Vencimentos": PCl_vencimentos_)
++  var venc = (typeof PCl_vencimentos_ === 'function' ? PCl_vencimentos_(cid, o.esc, o.hoje) : []).filter(function (v) { return okUn(v.unidadeId); });
++  var eqAtivos = {};
++  PCl_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS || 'CAD_EQUIPAMENTOS').forEach(function (e) { if (PCl_s_(e.CLIENTE_ID) === cid && PCl_up_(e.STATUS || 'ATIVO') === 'ATIVO' && okUn(e.UNIDADE_ID)) eqAtivos[PCl_s_(e.ID)] = true; });
++  var farois = typeof PClD_farois_ === 'function' ? PClD_farois_(venc) : {};
++  var equipamentos = PCLP_CATEGORIAS_EQ.map(function (cat) {
++    var total = 0, emDia = 0, vencendo = 0;
++    Object.keys(eqAtivos).forEach(function (id) { var v = farois[id] && farois[id][cat]; if (!v) return; total++; if (v.situacao !== 'vencido') emDia++; if (v.situacao === 'vencendo') vencendo++; });
++    return { categoria: cat, nome: PCLP_CAT_NOMES[cat], total: total, emDia: emDia, vencendo: vencendo, vencidos: total - emDia, pct: PClP_pct_(emDia, total), pctTxt: PClP_pctTxt_(PClP_pct_(emDia, total)),
++      motivo: total ? '' : 'Nenhum equipamento ativo tem documento de ' + PCLP_CAT_NOMES[cat].toLowerCase() + ' com validade registrada.' };
++  });
++  var vencimentos = Object.keys(PCLP_CAT_NOMES).map(function (cat) {
++    var l = venc.filter(function (v) { return v.categoria === cat; });
++    var r = { categoria: cat, nome: PCLP_CAT_NOMES[cat], vencidos: l.filter(function (v) { return v.dias !== null && v.dias < 0; }).length };
++    PCLP_VENC_JANELAS.forEach(function (j) { r['ate' + j] = l.filter(function (v) { return v.dias !== null && v.dias >= 0 && v.dias <= j; }).length; });
++    return r;
++  });
++  var totVenc = {}; PCLP_VENC_JANELAS.forEach(function (j) { totVenc[j] = vencimentos.reduce(function (s, v) { return s + v['ate' + j]; }, 0); });
++  var eqTot = equipamentos.reduce(function (s, e) { return s + e.total; }, 0), eqEmDia = equipamentos.reduce(function (s, e) { return s + e.emDia; }, 0);
++
++  var semConcl = 'Nenhum chamado foi concluído no período escolhido.';
++  var mVisita = PClP_media_(tVisita), mConcl = PClP_media_(tConcl), pPrazo = PClP_pct_(noPrazo, comPrazo.length), pReinc = PClP_pct_(reinc.length, concl.length);
++  var cards = [
++    PClP_card_('abertos', 'Chamados abertos agora', PClP_int_(nAbertos), 'Pedidos e chamados nas etapas 1 a 7 (de "Recebido" a "Em atendimento"), hoje, nas unidades do seu acesso. Não depende do período.', { n: nAbertos }),
++    PClP_card_('concluidos', 'Chamados concluídos no período', PClP_int_(concl.length), 'Chamados na etapa 8 ("Concluído") cuja conclusão (o fim do atendimento ou, sem ele, o encerramento) caiu dentro do período escolhido.', { n: concl.length }),
++    PClP_card_('tempoVisita', 'Tempo médio até a visita', PClP_horasTxt_(mVisita),
++      'Média, entre os chamados concluídos no período que tiveram visita, do tempo entre a abertura do pedido (ou do chamado, quando foi registrado pela Metrolabs) e a chegada do técnico ao local. Conta só as horas do expediente (dias úteis, das ' + PClP_expTxt_() + ').',
++      { n: tVisita.length, sub: tVisita.length ? 'Base: ' + tVisita.length + (tVisita.length === 1 ? ' chamado com visita' : ' chamados com visita') : '', motivo: concl.length ? (tVisita.length ? '' : 'Nenhum chamado concluído no período teve chegada do técnico registrada (atendimento a distância ou sem visita).') : semConcl }),
++    PClP_card_('tempoConclusao', 'Tempo médio até a conclusão', PClP_horasTxt_(mConcl),
++      'Média, entre os chamados concluídos no período, do tempo entre a abertura do chamado e a conclusão do atendimento. Conta só as horas do expediente, como no prazo do contrato.',
++      { n: tConcl.length, sub: tConcl.length ? 'Base: ' + tConcl.length + (tConcl.length === 1 ? ' chamado' : ' chamados') : '', motivo: concl.length ? '' : semConcl }),
++    PClP_card_('prazo', '% dentro do prazo do contrato', PClP_pctTxt_(pPrazo),
++      'Chamados concluídos no período com o atendimento dentro do prazo do contrato, divididos por todos os concluídos no período que tinham prazo de contrato. Chamados sem prazo de contrato não entram na conta.',
++      { n: noPrazo, d: comPrazo.length, sub: comPrazo.length ? noPrazo + ' de ' + comPrazo.length : '', motivo: concl.length ? (comPrazo.length ? '' : 'Nenhum chamado concluído no período tinha prazo de atendimento do contrato.') : semConcl }),
++    PClP_card_('equipEmDia', 'Equipamentos em dia', PClP_pctTxt_(PClP_pct_(eqEmDia, eqTot)),
++      'Por categoria (calibração, qualificação, NR-13 e manutenção): equipamentos ativos com a validade do documento mais recente ainda não vencida, divididos pelos equipamentos ativos que têm aquela categoria. Os que vencem em até 30 dias ainda contam como em dia. O total soma as quatro categorias.',
++      { n: eqEmDia, d: eqTot, sub: eqTot ? eqEmDia + ' de ' + eqTot + ' (categoria × equipamento)' : '', motivo: eqTot ? '' : 'Nenhum equipamento ativo tem documento com validade registrada.' }),
++    PClP_card_('vencimentos', 'Vencimentos nos próximos 30 e 60 dias', PClP_int_(totVenc[30]) + ' / ' + PClP_int_(totVenc[60]),
++      'Quantos documentos com validade vencem de hoje até 30 dias e de hoje até 60 dias (a contagem de 60 inclui a de 30), por categoria. Vale o documento mais recente de cada equipamento e categoria, como na tela Vencimentos. Os já vencidos aparecem à parte.',
++      { n: totVenc[30], d: totVenc[60], sub: 'em 30 dias / em 60 dias' }),
++    PClP_card_('reincidencia', 'Reincidência', PClP_pctTxt_(pReinc),
++      'Chamados concluídos no período que tiveram outro chamado do mesmo equipamento aberto nos ' + PCLP_REINCIDENCIA_DIAS + ' dias anteriores, divididos por todos os concluídos no período. Chamados cancelados não contam.',
++      { n: reinc.length, d: concl.length, sub: concl.length ? reinc.length + ' de ' + concl.length : '', motivo: concl.length ? '' : semConcl })
++  ];
++  return { cards: cards, abertosPorEtapa: PCL_ETAPAS.filter(function (e) { return e.n <= 7; }).map(function (e) { return { n: e.n, t: e.nome, qtd: abertosPorEtapa[e.n] }; }),
++    equipamentos: equipamentos, vencimentos: vencimentos,
++    base: { abertos: nAbertos, concluidos: concl.length, tVisita: tVisita, tConcl: tConcl, noPrazo: noPrazo, comPrazo: comPrazo.length, reincidentes: reinc.map(function (k) { return PCl_s_(k.c.NUMERO); }) } };
++}
++function PClP_expTxt_() {
++  var cfg = typeof Ast_expediente_ === 'function' ? Ast_expediente_() : { ini: '08:00', fim: '17:30' };
++  return (cfg.ini || '08:00') + ' às ' + (cfg.fim || '17:30');
++}
++
++/** Tela "Indicadores" (4.1.8). d: { periodo, unidadeId, atualizar } */
++function PClP_indicadores_(x, d) {
++  d = d || {};
++  var dias = PClP_periodo_(d.periodo), filtro = PClP_unidadeFiltro_(x, d.unidadeId), hoje = PCl_hoje_();
++  var chave = 'PCLP_IND_V1:' + x.cid + ':' + (x.esc.todas ? '*' : x.esc.unidades.slice().sort().join(',')) + ':' + filtro + ':' + dias + ':' + hoje;
++  var calc = d.atualizar ? null : PClP_cacheLer_(chave);
++  if (!calc) {
++    var okUn = function (u) { return PCl_escopoUnidade_(x.esc, u) && (!filtro || PCl_s_(u) === filtro); };
++    calc = PCl_indicadoresCalc_({ cid: x.cid, okUn: okUn, agoraMs: Date.now(), dias: dias, hoje: hoje, esc: x.esc });
++    delete calc.base;
++    calc.geradoEm = PClP_horaAgora_();
++    PClP_cacheGravar_(chave, calc);
++  }
++  var unidades = PClP_unidadesTela_(x);
++  return Object.assign({ periodo: dias, periodos: PCLP_PERIODOS, unidadeId: filtro, unidades: unidades, de: PCl_br_(PCl_diaMais_(hoje, -dias)), ate: PCl_br_(hoje),
++    escopo: x.esc.todas ? 'Todas as unidades da empresa' : 'Unidades do seu acesso: ' + unidades.map(function (u) { return u.nome; }).join(', '),
++    acesso: { papel: x.esc.papel, papelNome: x.esc.papelNome, situacao: x.sit.situacao, faixa: x.sit.provisoria ? '' : x.sit.textoCliente, termoPendente: typeof PClA_termoPendente_ === 'function' ? PClA_termoPendente_(x.esc) : false },
++    relatorios: PClP_relatoriosDaPessoa_(x) }, calc);
++}
++/** Unidades gravadas num relatório do período (UNIDADES_JSON; '' = todas as unidades da empresa). */
++function PCl_unidadesDoRelatorio_(r) {
++  var l = PCl_json_(r && r.UNIDADES_JSON, []); if (Array.isArray(l) && l.length) return l.map(PCl_s_).filter(Boolean);
++  return PCl_s_(r && r.UNIDADE_ID) ? [PCl_s_(r.UNIDADE_ID)] : [];
++}
++/** O relatório do período cabe no acesso da pessoa? Todas as unidades: sim. Restrita: só o filtrado por unidades que ela tem. */
++function PCl_relatorioNoEscopo_(esc, r) {
++  if (!esc || esc.todas) return true;
++  var l = PCl_unidadesDoRelatorio_(r);
++  return l.length > 0 && l.every(function (u) { return PCl_escopoUnidade_(esc, u); });
++}
++/** Os últimos relatórios do período da empresa que a pessoa pode abrir (versão do cliente). */
++function PClP_relatoriosDaPessoa_(x) {
++  if (typeof RepD_publicoDoc_ !== 'function') return [];
++  return PCl_ler_('REP_DOCUMENTOS').filter(function (r) {
++    return PCl_up_(r.TIPO) === 'PERIODO' && PCl_up_(r.PUBLICO) === 'CLIENTE' && PCl_s_(r.CLIENTE_ID) === x.cid && !PCl_s_(r.DESLIGADO_EM) && PCl_relatorioNoEscopo_(x.esc, r);
++  }).sort(function (a, b) { return PCl_s_(b.EM).localeCompare(PCl_s_(a.EM)); }).slice(0, 8).map(function (r) {
++    var p = RepD_publicoDoc_(r);
++    return { numero: p.numero, periodo: p.periodo, em: p.em, por: PCl_up_(r.GERADO_POR_LADO) === 'CLIENTE' ? p.por : 'Metrolabs', htmlUrl: p.htmlUrl, pdfUrl: p.pdfUrl, tipoNome: p.tipoNome,
++      unidades: PCl_unidadesDoRelatorio_(r).length ? 'Unidades filtradas' : 'Todas as unidades' };
++  });
++}
++/** "Relatório do período (PDF)": o mesmo documento A4 de "Meus chamados", filtrado pelas unidades da pessoa ou pela unidade escolhida. */
++function PClP_relatorioPeriodo_(x, d) {
++  d = d || {};
++  if (typeof PClA_termoPendente_ === 'function' && PClA_termoPendente_(x.esc)) throw PCl_erro_('TERMO_PENDENTE', PCL_MSG_TERMO);
++  if (typeof RepDC_relatorioPeriodo_ !== 'function') throw PCl_erro_('ACAO', 'O relatório do período ainda não está disponível neste servidor. O que fazer: atualize a página (F5); se continuar, avise a Metrolabs.');
++  var filtro = PClP_unidadeFiltro_(x, d.unidadeId), dias = PClP_periodo_(d.periodo);
++  var eu = { id: x.esc.usuarioId, nome: x.esc.nome, perfil: 'CLIENTE', cliente: true, clienteId: x.cid, pclEscopo: x.esc, externo: false };
++  var r = RepDC_relatorioPeriodo_(eu, { dias: dias, unidadeId: filtro });
++  PCl_registrarAcesso_(PClA_quem_(x.esc), 'RELATORIO_PERIODO', 'Relatório do período de ' + dias + ' dias' + (filtro ? ' (uma unidade)' : x.esc.todas ? '' : ' (unidades do acesso)'), { tipo: 'RELATORIO', id: r && r.documento ? PCl_s_(r.documento.id) : '' }, x.ctx);
++  return r;
++}
++var PCLP_ACOES_CLIENTE = { indicadores: 1, relatorioPeriodo: 1 };
++function PClP_acaoCliente_(eu, acao, d) {
++  var x = PClP_ctx_(eu);
++  if (acao === 'indicadores') return PClP_indicadores_(x, d || {});
++  if (acao === 'relatorioPeriodo') return PClP_relatorioPeriodo_(x, d || {});
++  throw PCl_erro_('ACAO', 'Ação desconhecida do Portal do cliente. Atualize a página (F5).');
++}
++
++// ------------------------------------------------------------
++// EQUIPE: USO DO PORTAL (4.2.4; caixa PORTAL_CLIENTE_USO_VER)
++// ------------------------------------------------------------
++var PCLP_ACOES_INTERNAS = { uso: 1, usoPessoa: 1 };
++function PClP_acaoInterna_(eu, acao, d) {
++  if (acao === 'uso') return PClP_uso_(eu, d || {});
++  if (acao === 'usoPessoa') return PClP_usoPessoa_(eu, d || {});
++  throw PCl_erro_('ACAO', 'Ação desconhecida do Portal do cliente. Atualize a página (F5).');
++}
++/** Situação do convite de cada conta (último envio), lida uma vez. { usuarioId: { situacao, ... } } */
++function PClP_convites_() {
++  var m = {};
++  if (typeof PClA_envios_ !== 'function') return m;
++  PClA_envios_().forEach(function (r) { var id = PCl_s_(r.USUARIO_ID); if (!id) return; if (!m[id] || String(r.QUANDO) > String(m[id].QUANDO)) m[id] = r; });
++  Object.keys(m).forEach(function (id) { m[id] = typeof AcessoCli_envioTela_ === 'function' ? AcessoCli_envioTela_(m[id]) : { situacao: PCl_up_(m[id].SITUACAO) }; });
++  return m;
++}
++/** Dias sem entrada da conta: desde a última entrada; sem nenhuma, desde a criação (ou a reativação). null = sem data. */
++function PClP_diasSemEntrada_(u, ultimos, hoje) {
++  var ult = typeof PClA_ultimaEntrada_ === 'function' ? PClA_ultimaEntrada_(u, ultimos) : PCl_s_(u.CLIENTE_ULTIMA_ENTRADA_EM);
++  var base = [PCl_dia_(ult), PCl_dia_(u.CRIADO_EM), PCl_dia_(u.CLIENTE_REATIVADO_EM)].filter(Boolean).sort().pop() || '';
++  return base ? PCl_diasEntre_(base, hoje) : null;
++}
++/**
++ * Números do uso do portal de todos os clientes com conta de cliente (ou com registro no portal). dias: período.
++ * Devolve { clientes: [linha], totais }.
++ */
++function PCl_usoCalc_(dias, agoraMs, hoje) {
++  var de = agoraMs - dias * 864e5, de30 = agoraMs - 30 * 864e5, noP = function (ms) { return ms !== null && ms >= de && ms <= agoraMs; };
++  var regrasAc = typeof PClA_regras_ === 'function' ? PClA_regras_() : { avisoInatividadeDias: 90 }, limiteParado = Number(regrasAc.avisoInatividadeDias) || 90;
++  var ultimos = typeof PClA_ultimosLogins_ === 'function' ? PClA_ultimosLogins_() : {}, convites = PClP_convites_();
++  var linhas = {}, emailCliente = {};
++  var L = function (cid) { return linhas[cid] || (linhas[cid] = { id: cid, contas: 0, contasAtivas: 0, porPapel: { GESTOR: 0, SOLICITANTE: 0, CONSULTA: 0, NAO_REVISADO: 0 }, convitesPendentes: 0, convitesVencidos: 0,
++    ultimaEntradaIso: '', entradas30: 0, pedidosPortal: 0, pedidosTotal: 0, porCanal: {}, docsAbertos: 0, aceiteMin: [], avisosEnviados: 0, avisosFalharam: 0, emailsInvalidos: 0, semEntrada: 0, recusas: 0 }); };
++  PCl_ler_(PClA_abaUsuarios_()).forEach(function (u) {
++    if (PCl_up_(u.PERFIL) !== 'CLIENTE' || PCl_s_(u.EXCLUIDO_EM) || !PCl_s_(u.CLIENTE_ID)) return;
++    var x = L(PCl_s_(u.CLIENTE_ID)); x.contas++;
++    var em = PClA_email_(u.EMAIL); if (em) emailCliente[em] = PCl_s_(u.CLIENTE_ID);
++    if (!PClA_ativa_(u)) return;
++    x.contasAtivas++;
++    var p = PCl_up_(u.CLIENTE_PAPEL); x.porPapel[PCL_PAPEIS[p] ? p : 'NAO_REVISADO']++;
++    var sit = PClA_situacaoConta_(u, convites[PCl_s_(u.ID)] || null);
++    if (sit.codigo === 'CONVITE_ENVIADO') x.convitesPendentes++;
++    if (sit.codigo === 'CONVITE_VENCIDO') x.convitesVencidos++;
++    var ult = PClA_ultimaEntrada_(u, ultimos); if (ult && ult > x.ultimaEntradaIso) x.ultimaEntradaIso = ult;
++    var ds = PClP_diasSemEntrada_(u, ultimos, hoje); if (ds !== null && ds >= limiteParado) x.semEntrada++;
++    if (!PClA_emailOk_(u.EMAIL)) x.emailsInvalidos++;
++  });
++  PCl_ler_(PCL_ABAS.ACESSOS).forEach(function (r) {
++    var cid = PCl_s_(r.CLIENTE_ID); if (!cid) return;
++    var a = PCl_up_(r.ACAO), ms = PClP_ms_(r.EM), x = L(cid);
++    if (a === 'ENTRADA' && ms !== null && ms >= de30 && ms <= agoraMs) x.entradas30++;
++    if (a === 'DOCUMENTO_ABERTO' && noP(ms)) x.docsAbertos++;
++    if ((a === 'ESCOPO_RECUSADO' || a === 'FUNCAO_RECUSADA') && noP(ms)) x.recusas++;
++    if (a === 'ENTRADA' && PCl_s_(r.EM) > x.ultimaEntradaIso) x.ultimaEntradaIso = PCl_s_(r.EM);
++  });
++  // pedidos: cada pedido (ATEC_SOLICITACOES) conta uma vez; o chamado aberto direto pela equipe (sem pedido) também. Representada fora.
++  PCl_ler_('ATEC_SOLICITACOES').forEach(function (s) {
++    var cid = PCl_s_(s.CLIENTE_ID); if (!cid || PCl_s_(s.REPRESENTADA_ID) || !noP(PClP_ms_(s.CRIADO_EM))) return;
++    var canal = PCl_up_(s.ORIGEM); if (PCLP_CANAIS_PEDIDO.indexOf(canal) < 0) return;
++    var x = L(cid); x.pedidosTotal++; x.porCanal[canal] = (x.porCanal[canal] || 0) + 1;
++    if (canal === 'PORTAL') {
++      x.pedidosPortal++;
++      if (PCl_up_(s.SITUACAO) === 'CONVERTIDA') { var m = PClP_uteis_(PClP_ms_(s.CRIADO_EM), PClP_ms_(s.TRATADA_EM)); if (m !== null) x.aceiteMin.push(Math.max(0, m - (Number(s.PAUSA_MIN) || 0))); }
++    }
++  });
++  PCl_ler_('ATEC_CHAMADOS').forEach(function (c) {
++    var cid = PCl_s_(c.CLIENTE_ID); if (!cid || PCl_s_(c.EXCLUIDO_EM) || PCl_s_(c.SOLICITACAO_ID) || PCl_s_(c.REPRESENTADA_ID) || !noP(PClP_ms_(c.ABERTO_EM))) return;
++    var canal = PCl_up_(c.CANAL); if (PCLP_CANAIS_PEDIDO.indexOf(canal) < 0 || canal === 'PORTAL') return;
++    var x = L(cid); x.pedidosTotal++; x.porCanal[canal] = (x.porCanal[canal] || 0) + 1;
++  });
++  // avisos ao cliente: enviados (PCL_AVISOS_ENVIOS) e os que falharam no envio (NTF_ENVIOS com erro, fila do horário comercial com erro)
++  PCl_ler_(PCL_ABA_AV_ENVIOS).forEach(function (r) {
++    var cid = PCl_s_(r.CLIENTE_ID), em = PCl_s_(r.EMAIL).toLowerCase(); if (em && cid && !emailCliente[em]) emailCliente[em] = cid;
++    if (cid && noP(PClP_ms_(r.EM))) L(cid).avisosEnviados++;
++  });
++  try {
++    PCl_ler_((SGO_CFG.SHEETS && SGO_CFG.SHEETS.NTF_ENVIOS) || 'NTF_ENVIOS').forEach(function (n) {
++      if (PCl_up_(n.ORIGEM) !== 'PORTAL_CLIENTE' || PCl_up_(n.SITUACAO) !== 'ERRO' || !noP(PClP_ms_(n.QUANDO))) return;
++      var cid = emailCliente[PCl_s_(n.DESTINO).toLowerCase()]; if (cid) L(cid).avisosFalharam++;
++    });
++  } catch (e) {}
++  PCl_ler_(PCL_ABA_FILA_CLIENTE).forEach(function (f) { if (PCl_up_(f.SITUACAO) === 'ERRO' && PCl_s_(f.CLIENTE_ID) && noP(PClP_ms_(f.EM))) L(PCl_s_(f.CLIENTE_ID)).avisosFalharam++; });
++
++  var clientes = Object.keys(linhas).map(function (cid) {
++    var x = linhas[cid], c = PCl_cliente_(cid); if (!c) return null;
++    var s = PCl_situacaoAcesso_(cid, '', hoje), pPortal = PClP_pct_(x.pedidosPortal, x.pedidosTotal), mAc = PClP_media_(x.aceiteMin);
++    return { id: cid, nome: PCl_nomeCliente_(c), cnpj: PCl_s_(c.CNPJ), situacao: s.situacao, situacaoNome: s.provisoria ? 'Acesso completo (provisório)' : s.nome,
++      contas: x.contas, contasAtivas: x.contasAtivas, porPapel: x.porPapel, convitesPendentes: x.convitesPendentes, convitesVencidos: x.convitesVencidos,
++      ultimaEntrada: x.ultimaEntradaIso ? PCl_brHora_(x.ultimaEntradaIso.replace(' ', 'T')) || PCl_br_(x.ultimaEntradaIso) : '', ultimaEntradaIso: x.ultimaEntradaIso, entradas30: x.entradas30,
++      pedidosPortal: x.pedidosPortal, pedidosTotal: x.pedidosTotal, pctPortal: pPortal, pctPortalTxt: x.pedidosTotal ? PClP_pctTxt_(pPortal) : '—',
++      pctPortalMotivo: x.pedidosTotal ? '' : 'Nenhum pedido no período.', porCanal: Object.keys(x.porCanal).map(function (k) { return { t: PCLP_CANAIS_NOMES[k] || k, n: x.porCanal[k] }; }),
++      docsAbertos: x.docsAbertos, aceiteMedioMin: mAc === null ? null : Math.round(mAc), aceiteTxt: PClP_horasTxt_(mAc), aceiteBase: x.aceiteMin.length,
++      aceiteMotivo: x.aceiteMin.length ? '' : 'Nenhum pedido do portal foi aceito no período.',
++      avisosEnviados: x.avisosEnviados, avisosFalharam: x.avisosFalharam, emailsInvalidos: x.emailsInvalidos, semEntrada: x.semEntrada, recusas: x.recusas };
++  }).filter(Boolean).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
++  var soma = function (k) { return clientes.reduce(function (s, c) { return s + (Number(c[k]) || 0); }, 0); };
++  var tPortal = soma('pedidosPortal'), tTotal = soma('pedidosTotal');
++  return { clientes: clientes, limiteParado: limiteParado,
++    totais: { clientes: clientes.length, contasAtivas: soma('contasAtivas'), convitesPendentes: soma('convitesPendentes'), convitesVencidos: soma('convitesVencidos'), entradas30: soma('entradas30'),
++      pedidosPortal: tPortal, pedidosTotal: tTotal, pctPortalTxt: tTotal ? PClP_pctTxt_(PClP_pct_(tPortal, tTotal)) : '—', docsAbertos: soma('docsAbertos'), avisosEnviados: soma('avisosEnviados'),
++      avisosFalharam: soma('avisosFalharam'), emailsInvalidos: soma('emailsInvalidos'), semEntrada: soma('semEntrada'), recusas: soma('recusas') } };
++}
++/** Explicação de cada coluna do uso do portal ("como é contado"). */
++var PCLP_COMO_USO = [
++  ['Contas ativas', 'Pessoas do cliente com a conta ativa. Ao lado, quantas por papel (Gestor, Solicitante, Consulta e "papel não revisado", que é a conta antiga sem papel e vale como Gestor).'],
++  ['Convites', 'Contas ativas que ainda não criaram a senha: "pendentes" com o convite dentro da validade e "vencidos" com o convite vencido sem uso.'],
++  ['Última entrada', 'A entrada mais recente de qualquer pessoa do cliente no Portal.'],
++  ['Entradas em 30 dias', 'Quantas vezes as pessoas do cliente entraram no Portal nos últimos 30 dias (cada login conta uma vez). Não depende do período escolhido.'],
++  ['Pedidos pelo portal', 'Pedidos abertos pelo Portal no período, divididos por todos os pedidos do cliente no período: Portal, telefone, e-mail, QR do equipamento, presencial e os registrados pela equipe. Preventivas do contrato, pedidos do Comercial, rondas e pedidos de representada não contam.'],
++  ['Documentos abertos', 'Quantas vezes as pessoas do cliente abriram um documento pelo Portal no período.'],
++  ['Aceite do pedido', 'Média, entre os pedidos do Portal aceitos no período, do tempo entre o envio do pedido e o aceite pela Metrolabs, em horas do expediente, sem o tempo em que o pedido esperou o complemento do cliente.'],
++  ['Avisos', 'E-mails de aviso ao cliente enviados no período e, deles, os que falharam no envio (endereço recusado pelo serviço de e-mail). Contas com e-mail em formato inválido aparecem à parte: elas não recebem nenhum aviso. A devolução que o provedor do cliente manda depois (e-mail que "voltou") ainda não chega ao SGO+.'],
++  ['Sem entrada', 'Contas ativas sem entrar há N dias ou mais (N é o aviso de inatividade de Regras do portal, padrão 90), contados da última entrada ou, sem nenhuma, da criação da conta.'],
++  ['Fora do acesso', 'Tentativas, no período, de abrir registro de outra unidade ou de outro cliente, ou de usar função fora do Portal. Nada foi mostrado; o número serve para conferir.']
++];
++/** Tela "Uso do portal" (4.2.4). d: { periodo, clienteId, atualizar } */
++function PClP_uso_(eu, d) {
++  var dias = PClP_periodo_(d.periodo), hoje = PCl_hoje_(), chave = 'PCLP_USO_V1:' + dias + ':' + hoje;
++  var calc = d.atualizar ? null : PClP_cacheLer_(chave);
++  if (!calc) { calc = PCl_usoCalc_(dias, Date.now(), hoje); calc.geradoEm = PClP_horaAgora_(); PClP_cacheGravar_(chave, calc); }
++  var r = Object.assign({ periodo: dias, periodos: PCLP_PERIODOS, de: PCl_br_(PCl_diaMais_(hoje, -dias)), ate: PCl_br_(hoje), como: PCLP_COMO_USO }, calc);
++  var cid = PCl_s_(d.clienteId);
++  if (cid) r.detalhe = PClP_usoCliente_(cid, dias, hoje);
++  return r;
++}
++/** Detalhe de um cliente: as contas (com entradas e documentos abertos de cada pessoa) e os avisos enviados. */
++function PClP_usoCliente_(cid, dias, hoje) {
++  var cli = PCl_cliente_(cid);
++  if (!cli) throw PCl_erro_('NAO_ENCONTRADO', 'Não foi possível abrir: cliente não encontrado no cadastro. Atualize a lista.');
++  var agoraMs = Date.now(), de = agoraMs - dias * 864e5, de30 = agoraMs - 30 * 864e5, ultimos = typeof PClA_ultimosLogins_ === 'function' ? PClA_ultimosLogins_() : {}, convites = PClP_convites_();
++  var nomesUn = {}; PClA_unidadesCliente_(cid).forEach(function (u) { nomesUn[u.id] = u.nome; });
++  var porPessoa = {};
++  PCl_ler_(PCL_ABAS.ACESSOS).forEach(function (r) {
++    if (PCl_s_(r.CLIENTE_ID) !== cid) return;
++    var uid = PCl_s_(r.USUARIO_ID), ms = PClP_ms_(r.EM), p = porPessoa[uid] || (porPessoa[uid] = { entradas30: 0, docs: 0, registros: 0 });
++    p.registros++;
++    if (PCl_up_(r.ACAO) === 'ENTRADA' && ms !== null && ms >= de30) p.entradas30++;
++    if (PCl_up_(r.ACAO) === 'DOCUMENTO_ABERTO' && ms !== null && ms >= de) p.docs++;
++  });
++  var regrasAc = typeof PClA_regras_ === 'function' ? PClA_regras_() : { avisoInatividadeDias: 90 }, limite = Number(regrasAc.avisoInatividadeDias) || 90;
++  var contas = PClA_contasCliente_(cid).map(function (u) {
++    var e = PCl_escopo_(u.ID), sit = PClA_situacaoConta_(u, convites[PCl_s_(u.ID)] || null), ult = PClA_ultimaEntrada_(u, ultimos), p = porPessoa[PCl_s_(u.ID)] || { entradas30: 0, docs: 0, registros: 0 };
++    var ds = PClA_ativa_(u) ? PClP_diasSemEntrada_(u, ultimos, hoje) : null;
++    return { id: PCl_s_(u.ID), nome: PCl_s_(u.NOME), email: PClA_email_(u.EMAIL), emailOk: PClA_emailOk_(u.EMAIL), papelNome: e.papelNome + (e.revisado ? '' : ' (papel não revisado)'),
++      unidades: e.todas ? 'Todas as unidades' : e.unidades.map(function (x) { return nomesUn[x] || ''; }).filter(Boolean).join(', '), ativo: PClA_ativa_(u), situacaoNome: sit.nome,
++      ultimaEntrada: ult ? PCl_brHora_(ult) || PCl_br_(ult) : 'Nunca entrou', diasSemEntrada: ds, parada: ds !== null && ds >= limite, entradas30: p.entradas30, docsAbertos: p.docs, registros: p.registros };
++  }).sort(function (a, b) { return (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'); });
++  var nomesEv = typeof PCLAV_NOMES !== 'undefined' ? PCLAV_NOMES : {};
++  var avisos = PCl_ler_(PCL_ABA_AV_ENVIOS).filter(function (r) { return PCl_s_(r.CLIENTE_ID) === cid; }).sort(function (a, b) { return PCl_s_(b.EM).localeCompare(PCl_s_(a.EM)); }).slice(0, 200).map(function (r) {
++    var ev = PCl_up_(r.EVENTO);
++    return { em: PCl_brHora_(r.EM), evento: ev, eventoNome: nomesEv[ev] || ev, email: PCl_s_(r.EMAIL), situacao: PCl_up_(r.SITUACAO) === 'NA_FILA' ? 'Na fila do horário comercial' : 'Enviado', ref: PCl_s_(r.REF_ID).slice(0, 40) };
++  });
++  var emails = {}; contas.forEach(function (c) { if (c.email) emails[c.email] = true; }); PCl_ler_(PCL_ABA_AV_ENVIOS).forEach(function (r) { if (PCl_s_(r.CLIENTE_ID) === cid) emails[PCl_s_(r.EMAIL).toLowerCase()] = true; });
++  var falhas = [];
++  try {
++    PCl_ler_((SGO_CFG.SHEETS && SGO_CFG.SHEETS.NTF_ENVIOS) || 'NTF_ENVIOS').forEach(function (n) {
++      if (PCl_up_(n.ORIGEM) !== 'PORTAL_CLIENTE' || PCl_up_(n.SITUACAO) !== 'ERRO' || !emails[PCl_s_(n.DESTINO).toLowerCase()]) return;
++      falhas.push({ em: PCl_brHora_(PCl_s_(n.QUANDO).slice(0, 19)) || PCl_s_(n.QUANDO), email: PCl_s_(n.DESTINO), assunto: PCl_s_(n.ASSUNTO).slice(0, 120), motivo: PCl_s_(n.MOTIVO).slice(0, 200) });
++    });
++  } catch (e) {}
++  return { cliente: { id: cid, nome: PCl_nomeCliente_(cli), cnpj: PCl_s_(cli.CNPJ) }, contas: contas, avisos: avisos, falhas: falhas.slice(-100).reverse(), limiteParado: limite };
++}
++/** Linha do tempo de uma pessoa do cliente (PCL_ACESSOS), com IP e navegador (só a equipe). d: { usuarioId } */
++function PClP_usoPessoa_(eu, d) {
++  var u = PClA_conta_(PCl_s_(d.usuarioId));
++  if (!u || PCl_up_(u.PERFIL) !== 'CLIENTE') throw PCl_erro_('NAO_ENCONTRADO', 'Não foi possível abrir: a conta não é de cliente ou não existe. Atualize a lista.');
++  var rot = Object.assign({}, typeof PCLA_ACOES_ROTULO !== 'undefined' ? PCLA_ACOES_ROTULO : {}, PCLP_ACOES_ROTULO);
++  var linhas = PCl_ler_(PCL_ABAS.ACESSOS).filter(function (r) { return PCl_s_(r.USUARIO_ID) === PCl_s_(u.ID); }).sort(function (a, b) { return PCl_s_(b.EM).localeCompare(PCl_s_(a.EM)); });
++  return { pessoa: { id: PCl_s_(u.ID), nome: PCl_s_(u.NOME), email: PClA_email_(u.EMAIL), cliente: PCl_nomeCliente_(PCl_cliente_(u.CLIENTE_ID)) }, total: linhas.length,
++    linhas: linhas.slice(0, 500).map(function (r) { var a = PCl_up_(r.ACAO); return { em: PCl_brHora_(r.EM), acao: a, acaoNome: rot[a] || a, detalhe: PCl_s_(r.DETALHE), ref: [PCl_s_(r.REF_TIPO), PCl_s_(r.REF_ID)].filter(Boolean).join(' '), ip: PCl_s_(r.IP), navegador: PCl_s_(r.NAVEGADOR) }; }) };
++}
+diff --git a/cand17/SGO_PortalCliente_Seguranca.js b/cand18/SGO_PortalCliente_Seguranca.js
+index 30ca9e0..9a9673c 100644
+--- a/cand17/SGO_PortalCliente_Seguranca.js
++++ b/cand18/SGO_PortalCliente_Seguranca.js
+@@ -244,7 +244,8 @@ function PortalCliente_arquivoPermitido_(sessionId, arquivoId) {
+     // documentos A4 da Representação: só a versão do cliente, do próprio cliente
+     var regs = PCl_ler_('REP_DOCUMENTOS').filter(function (r) { return PCl_s_(r.HTML_ID) === id || PCl_s_(r.PDF_ID) === id; });
+     var x = PCl_ctxArquivo_(cid);
+-    if (regs.length) return regs.some(function (r) { return PCl_up_(r.PUBLICO) === 'CLIENTE' && PCl_s_(r.CLIENTE_ID) === cid && !PCl_s_(r.DESLIGADO_EM) && naUnidade(PCl_s_(r.UNIDADE_ID) || x.chUn(r.CHAMADO_ID)); }) ? true : PCl_arquivoRecusado_(s, id, 'documento de outro público, de outro cliente ou de outra unidade');
++    // 18/11/2026 (etapa 5, T5.3): o relatório do período filtrado por unidades (UNIDADES_JSON) abre só para quem tem todas elas no acesso
++    if (regs.length) return regs.some(function (r) { return PCl_up_(r.PUBLICO) === 'CLIENTE' && PCl_s_(r.CLIENTE_ID) === cid && !PCl_s_(r.DESLIGADO_EM) && PCl_docRepNaUnidade_(r, x, naUnidade); }) ? true : PCl_arquivoRecusado_(s, id, 'documento de outro público, de outro cliente ou de outra unidade');
+     for (var i = 0; i < PCL_REGRAS_ARQUIVO.length; i++) {
+       var rg = PCL_REGRAS_ARQUIVO[i];
+       var ok = PCl_ler_(rg.aba).some(function (r) { return PCl_linhaTemArquivo_(r, rg.colunas, id) && rg.doCliente(r, x) && ((rg.livreUnidade && rg.livreUnidade(r)) || naUnidade(rg.unidade ? rg.unidade(r, x) : '')); });
+@@ -259,6 +260,12 @@ function PortalCliente_arquivoPermitido_(sessionId, arquivoId) {
+     return false;
+   }
+ }
++/** 18/11/2026 (etapa 5): documento A4 da Representação (versão do cliente) nas unidades da pessoa: com UNIDADES_JSON, todas precisam estar no acesso; senão, a unidade do registro ou a do chamado. */
++function PCl_docRepNaUnidade_(r, x, naUnidade) {
++  var l = PCl_json_(r && r.UNIDADES_JSON, []);
++  if (Array.isArray(l) && l.length) return l.every(function (u) { return naUnidade(PCl_s_(u)); });
++  return naUnidade(PCl_s_(r.UNIDADE_ID) || x.chUn(r.CHAMADO_ID));
++}
+ /** 18/11/2026 (etapa 1): unidade do arquivo de um módulo com trava própria (relatório de ciclo, ronda, prontuário). '' = não se sabe. */
+ function PCl_unidadeArquivoModulo_(modulo, id) {
+   try {
+diff --git a/cand17/SGO_Representacao_Documentos.js b/cand18/SGO_Representacao_Documentos.js
+index 9715c02..ade2aa8 100644
+--- a/cand17/SGO_Representacao_Documentos.js
++++ b/cand18/SGO_Representacao_Documentos.js
+@@ -724,9 +724,12 @@ function RepD_visaoPeriodo_(publico, o) {
+   var no = function (ms) { return ms !== null && ms !== undefined && ms >= de && ms <= agoraMs; };
+   var P = { publico: publico, publicoNome: REPD_PUBLICOS[publico], dias: dias, deMs: de, agoraMs: agoraMs, de: RepD_dia_(de), ate: RepD_dia_(agoraMs), minDia: RepP_minDia_() };
+   if (publico === 'CLIENTE') {
+-    var pn = AstP_painelCliente_(o.clienteId, agoraMs), cli = Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[o.clienteId] || {};
+-    var todos = Ast_ler_(AST_ABAS.CHAMADOS).filter(function (c) { return RepD_s_(c.CLIENTE_ID) === o.clienteId; });
+-    P.clienteId = o.clienteId; P.escopoNome = Ast_clienteNome_(cli);
++    // 18/11/2026 (Portal do cliente, etapa 5): o.unidades = só estas unidades (pessoa com unidades marcadas ou unidade escolhida); null = todas
++    var unF = Array.isArray(o.unidades) && o.unidades.length ? o.unidades.map(RepD_s_) : null, okUn = unF ? function (u) { return unF.indexOf(RepD_s_(u)) >= 0; } : null;
++    var pn = AstP_painelCliente_(o.clienteId, agoraMs, okUn), cli = Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[o.clienteId] || {};
++    var todos = Ast_ler_(AST_ABAS.CHAMADOS).filter(function (c) { return RepD_s_(c.CLIENTE_ID) === o.clienteId && (!okUn || okUn(c.UNIDADE_ID)); });
++    P.clienteId = o.clienteId; P.escopoNome = Ast_clienteNome_(cli); P.unidades = unF;
++    if (unF) { var mUn = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES); P.escopoNome += ' · ' + (unF.length === 1 ? 'unidade ' : 'unidades ') + unF.map(function (u) { return RepD_s_((mUn[u] || {}).NOME_UNIDADE) || 'não identificada'; }).join(', '); }
+     var itens = pn.gantt.filter(function (x) { return x.aberto || no(x.fimMs) || no(x.enviadoMs); });
+     var concl = itens.filter(function (x) { return x.etapa === 5 && no(x.conclusaoMs); }), tempos = concl.map(function (x) { return x.conclusaoMin; }).filter(function (v) { return v !== null; });
+     var porEtapa = {}, porEq = {}, porUn = {}, porMes = {};
+@@ -975,8 +978,12 @@ function RepD_gerarPeriodo_(eu, publico, o) {
+   var P = RepD_visaoPeriodo_(publico, Object.assign({ agoraMs: Date.now(), eu: publico === 'INTERNO' ? eu : null }, o));
+   var numero = RelA4_numero_(publico === 'CLIENTE' ? 'RPC' : publico === 'INTERNO' ? 'RPM' : 'RPR');
+   var html = RepD_htmlPeriodo_(P, { numero: numero, por: eu ? (eu.externo ? Rep_quem_(eu) : eu.nome) : 'Rotina' });
+-  var doc = RepD_salvar_(eu, html, { TIPO: 'PERIODO', PUBLICO: publico, REPRESENTADA_ID: publico === 'CLIENTE' ? '' : RepD_s_(P.representadaId), CLIENTE_ID: publico === 'CLIENTE' ? RepD_s_(P.clienteId) : '', NUMERO: numero, VERSAO: 1,
+-    TITULO: 'Relatório do período ' + P.de + ' a ' + P.ate, PERIODO_DIAS: P.dias, PERIODO_DE: P.de, PERIODO_ATE: P.ate },
++  // 18/11/2026 (Portal do cliente, etapa 5): o relatório filtrado guarda as unidades (UNIDADES_JSON; com uma só, também UNIDADE_ID), para a trava
++  // de arquivo deixar abrir só quem tem todas elas no acesso. Sem filtro, fica como antes (vale para quem vê todas as unidades).
++  var filtroUn = publico === 'CLIENTE' && P.unidades ? P.unidades : null;
++  if (filtroUn) RepD_garantirColunaUnidades_();
++  var doc = RepD_salvar_(eu, html, Object.assign({ TIPO: 'PERIODO', PUBLICO: publico, REPRESENTADA_ID: publico === 'CLIENTE' ? '' : RepD_s_(P.representadaId), CLIENTE_ID: publico === 'CLIENTE' ? RepD_s_(P.clienteId) : '', NUMERO: numero, VERSAO: 1,
++    TITULO: 'Relatório do período ' + P.de + ' a ' + P.ate, PERIODO_DIAS: P.dias, PERIODO_DE: P.de, PERIODO_ATE: P.ate }, filtroUn ? { UNIDADE_ID: filtroUn.length === 1 ? filtroUn[0] : '', UNIDADES_JSON: JSON.stringify(filtroUn) } : {}),
+     { repId: P.representadaId, repNome: P.escopoNome, clienteId: P.clienteId, identificador: P.escopoNome });
+   return { documento: doc, message: 'Relatório do período de ' + P.de + ' a ' + P.ate + ' (' + REPD_VERSAO_TXT[publico] + ') gerado e salvo em HTML e PDF. Ele fica em "Relatórios gerados".' };
+ }
+@@ -1035,7 +1042,22 @@ function RepDC_relatorioAtendimento_(eu, d) {
+ }
+ function RepDC_relatorioPeriodo_(eu, d) {
+   if (!eu.clienteId) throw new Error('Não foi possível gerar: o seu login não está ligado a um cliente. Fale com a Metrolabs para corrigir o acesso');
+-  return RepD_gerarPeriodo_(eu, 'CLIENTE', { dias: d && d.dias, clienteId: eu.clienteId });
++  // 18/11/2026 (Portal do cliente, etapa 5): a pessoa com unidades marcadas (Solicitante) recebe o relatório só dessas unidades; d.unidadeId
++  // limita a uma unidade do cliente que esteja no acesso dela. Unidade de outro cliente ou fora do acesso = a resposta de inexistente.
++  var esc = eu.pclEscopo || null, un = esc && !esc.todas ? esc.unidades.map(RepD_s_) : null, f = RepD_s_(d && d.unidadeId);
++  if (f) {
++    var uf = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[f];
++    if (!uf || RepD_s_(uf.CLIENTE_ID) !== RepD_s_(eu.clienteId) || (un && un.indexOf(f) < 0)) throw new Error('Não encontrado. Atualize a lista.');
++    un = [f];
++  }
++  if (un && !un.length) throw new Error('Não foi possível gerar: nenhuma unidade está liberada para o seu acesso. O que fazer: peça ao Gestor do cliente da sua empresa para conferir as suas unidades com a Metrolabs');
++  return RepD_gerarPeriodo_(eu, 'CLIENTE', { dias: d && d.dias, clienteId: eu.clienteId, unidades: un });
++}
++/** 18/11/2026: coluna UNIDADES_JSON em REP_DOCUMENTOS (por acréscimo), garantida antes do primeiro relatório filtrado. Nunca lança. */
++function RepD_garantirColunaUnidades_() {
++  var cache = null;
++  try { cache = CacheService.getScriptCache(); if (cache.get('REPD_COL_UNIDADES_V1')) return; } catch (e) { cache = null; }
++  try { if (typeof CertCal_garantirColuna_ === 'function') CertCal_garantirColuna_(REPD_ABA, 'UNIDADES_JSON'); if (cache) cache.put('REPD_COL_UNIDADES_V1', '1', 21600); } catch (e) {}
+ }
+ function RepDC_documentos_(eu, d) {
+   // 16/11/2026 (correção, vazamento): para o hospital, documento que não foi gerado por ele aparece como da Metrolabs (nunca com o nome de

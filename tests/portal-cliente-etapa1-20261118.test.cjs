@@ -405,8 +405,9 @@ test('T1.2 e T1.3 em "Meus chamados": Solicitante só vê e pede nas unidades de
   assert.match(a.api('s_celia.alfa', 'relatorioPeriodoCliente', { dias: 90 }).message, /«Consulta»/);
   const pcons = a.api('s_celia.alfa', 'portal', {});
   assert.equal(pcons.acessoPortal.podeAbrir, false); assert.deepEqual(pcons.chamados.map((c) => c.id), [c1.id]);
-  // Solicitante não gera o relatório do período de todas as unidades
-  assert.match(a.api('s_sonia.alfa', 'relatorioPeriodoCliente', { dias: 90 }).message, /unidades específicas/);
+  // 18/11/2026 (etapa 5, T5.3): o Solicitante deixou de ser recusado; o relatório do período sai filtrado pelas unidades dele
+  // (provado em tests/portal-cliente-etapa5-20261118.test.cjs, com os documentos A4 carregados)
+  assert.doesNotMatch(String(a.api('s_sonia.alfa', 'relatorioPeriodoCliente', { dias: 90 }).message || ''), /unidades específicas/);
   // termo pendente trava os envios (versão nova do termo)
   a.props.PCL_REGRAS = JSON.stringify(Object.assign(JSON.parse(a.props.PCL_REGRAS || '{}'), { termoVersao: '2099-01-01' }));
   const semTermo = a.api('s_sonia.alfa', 'solicitar', Object.assign({ equipamentoId: 'eq1' }, PEDIDO));

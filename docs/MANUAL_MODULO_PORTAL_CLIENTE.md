@@ -1,4 +1,4 @@
-# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail)
+# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail; etapa 5: indicadores e uso do portal)
 
 **Versão:** 18/11/2026. **Especificação:** `output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md` (o dono aceitou todas as recomendações).
 **Tela:** menu **Portal do cliente > Contratos de clientes** (`JS_PortalCliente.html`) e **Portal do cliente > Acessos de clientes** (`JS_PortalCliente_Acessos.html`). **Servidor:** `SGO_PortalCliente.js`, `SGO_PortalCliente_Config.js`, `SGO_PortalCliente_Contratos.js`, `SGO_PortalCliente_Seguranca.js`, `SGO_PortalCliente_Acessos.js`.
@@ -151,6 +151,7 @@ A representada passa a ser tratada como ativa só quando a SITUACAO é ATIVA **e
 | Enviar acesso ao cliente (`USUARIOS_CLIENTES_ENVIAR_ACESSO`, a caixa do convite, grupo "Contas e acessos"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor |
 | Responder pedidos e conversas do portal (`PORTAL_CLIENTE_CONVERSAR`, etapa 2): aba "Conversas do portal", parte "Portal do cliente" da ficha do chamado, nota interna e retirada de anexo | Equipe interna da área Técnica, gestores, Diretoria e Administrador |
 | Ocultar ou liberar documento no portal (`PORTAL_CLIENTE_DOC_LIBERAR`, etapa 3): aba "Documentos no portal" e a marca de cada documento do Arquivo de documentos | Gestão da área Técnica e da Qualidade, Diretoria e Administrador |
+| Ver o uso do portal e o registro de acessos (`PORTAL_CLIENTE_USO_VER`, etapa 5): aba "Uso do portal", com a linha do tempo de cada pessoa do cliente (com IP) e a planilha | Administrador, Diretoria e gestores |
 
 O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa.
 
@@ -165,6 +166,7 @@ O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca 
 - Etapa 2 (18/11/2026): `PCL_MENSAGENS`, `PCL_ANEXOS` e `PCL_AVISOS_FILA` e as colunas novas de `ATEC_SOLICITACOES` e `ATEC_CHAMADOS` (seção 24.9).
 - Etapa 3 (18/11/2026): as colunas `PORTAL`, `PORTAL_MOTIVO`, `PORTAL_POR_NOME` e `PORTAL_EM` em `DOC_DOCUMENTOS` (seção 25.8). Nenhuma tabela nova.
 - Etapa 4 (18/11/2026): `PCL_AVISOS_ENVIOS`, o registro dos avisos ao cliente já enviados (seção 26.8).
+- Etapa 5 (18/11/2026): a coluna `UNIDADES_JSON` em `REP_DOCUMENTOS` (relatório do período filtrado por unidade, seção 27.3). Nenhuma tabela nova.
 
 As datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua.
 
@@ -726,5 +728,84 @@ Nenhum passo derruba os outros: um erro fica registrado no log e a rodada contin
 | O cliente em modo consulta não recebe documentos novos nem vencimentos | É a regra do modo consulta (item 3.3 da espec) |
 | O cliente recebeu um aviso duas vezes | Confira em `PCL_AVISOS_ENVIOS` se são dois avisos diferentes (por exemplo, visita agendada e depois reagendada). O mesmo aviso não se repete para o mesmo endereço |
 | Nenhum aviso ao cliente sai | Confira em Regras do portal se os avisos pelo Portal estão ligados e se a rotina da Assistência está rodando |
+
+## 27. Indicadores e uso do portal (etapa 5, 18/11/2026)
+
+A conta de cliente ganha a tela **Indicadores** no menu "Portal do cliente". A equipe ganha a aba **Uso do portal** na tela Portal do cliente (também no menu, com o mesmo nome). Nenhuma das duas mostra valor financeiro.
+
+### 27.1 Indicadores (o que o cliente vê)
+
+- **Quem vê:** o Gestor do cliente (todas as unidades) e o Solicitante (só as unidades marcadas no acesso dele). A Consulta não vê: o botão do menu não aparece, e a chamada direta recebe a recusa com o papel, o porquê e o caminho (registro `PAPEL_RECUSADO`). Com o acesso suspenso ou sem contrato, nada é lido (`ACESSO_RECUSADO`).
+- **Filtros:** período de 30, 90 (padrão), 180 ou 365 dias e a unidade. Os chamados abertos aparecem sempre; os outros índices contam os chamados concluídos no período. Unidade de outra empresa ou fora do acesso recebe "Não encontrado. Atualize a lista." e fica como `ESCOPO_RECUSADO`.
+- **Como é contado:** cada índice traz embaixo a explicação em linguagem simples. Quando não há base para a conta, o índice mostra "—" e o motivo (por exemplo, "Nenhum chamado foi concluído no período escolhido."), nunca um número inventado.
+
+| Índice | Como é contado |
+|---|---|
+| Chamados abertos agora | Pedidos e chamados nas etapas 1 a 7 (de "Recebido" a "Em atendimento"), hoje. O pedido já convertido em chamado conta uma vez só (como chamado). Há também o gráfico por etapa |
+| Chamados concluídos no período | Etapa 8 com a conclusão (fim do atendimento, `ATENDIDO_EM`, ou, sem ele, o encerramento, `ENCERRADO_EM`) dentro do período |
+| Tempo médio até a visita | Entre os concluídos no período com visita: da abertura do pedido (ou do chamado, quando a Metrolabs registrou) até a primeira chegada do técnico (`CHEGOU_EM` das O.S. do chamado), em h úteis |
+| Tempo médio até a conclusão | Como em `AstP_painelCliente_`: da abertura do chamado até `ATENDIDO_EM` ou `ENCERRADO_EM`, em h úteis |
+| % dentro do prazo do contrato | Concluídos no período com o atendimento dentro de `SLA_MIN_UTEIS` (estado "cumprido" de `Ast_slaEstado_`) ÷ concluídos no período com prazo de contrato (`SLA_FONTE = CONTRATO`). Os outros não entram |
+| Equipamentos em dia | Por categoria (calibração, qualificação, NR-13 e manutenção): equipamentos ativos com a validade do documento mais recente não vencida ÷ equipamentos ativos que têm aquela categoria. Os que vencem em até 30 dias ainda contam como em dia (a tabela mostra quantos). O mesmo motor de "Meus equipamentos" (`PCl_vencimentos_`) |
+| Vencimentos nos próximos 30 e 60 dias | Contagem por categoria dos documentos com validade de hoje até 30 e até 60 dias (a de 60 inclui a de 30); os vencidos aparecem à parte |
+| Reincidência | Concluídos no período que tiveram outro chamado do mesmo equipamento aberto nos 30 dias anteriores ÷ concluídos no período. Cancelados não contam |
+
+**Horas úteis:** a conta é a da Assistência (`Ast_minUteisEntre_`): o expediente da empresa (08:00 às 17:30, dias úteis, com os feriados do expediente), a mesma do prazo do contrato. Os tempos aparecem com uma casa decimal ("6,3 h úteis"); os percentuais também ("66,7%").
+
+**Botões:**
+- "Relatório do período (PDF)": o mesmo documento A4 de "Meus chamados" (`RepDC_relatorioPeriodo_`), com o período e a unidade escolhidos. Para o Solicitante, sai só com as unidades dele (seção 27.3). Os já gerados ficam em "Relatórios do período já gerados" (só os que a pessoa pode abrir). A geração fica no registro (`RELATORIO_PERIODO`).
+- "Ver no Kanban e no Gantt": abre a tela Chamados no Kanban. O Kanban e o Gantt continuam lá (`JS_PainelAtendimento.html`).
+- "Atualizar agora": os números ficam guardados por 2 minutos (cache do script, por cliente, unidades, período e dia); este botão conta de novo.
+
+### 27.2 Uso do portal (equipe)
+
+Caixa nova **«Ver o uso do portal e o registro de acessos»** (`PORTAL_CLIENTE_USO_VER`), padrão Administrador, Diretoria e gestores. Só mostra; nada é alterado.
+
+Por cliente (período de 30, 90, 180 ou 365 dias), com "Como cada número é contado" embaixo da tabela:
+
+| Coluna | Como é contado |
+|---|---|
+| Contas ativas | Pessoas do cliente com a conta ativa e quantas por papel (Gestor, Solicitante, Consulta e "papel não revisado") |
+| Convites | Contas ativas que ainda não criaram a senha: pendentes (convite na validade) e vencidos (convite vencido sem uso), pelo último envio em `SYS_ACESSO_CLIENTE_ENVIOS` |
+| Última entrada | A entrada mais recente de qualquer pessoa do cliente |
+| Entradas em 30 dias | Registros `ENTRADA` em `PCL_ACESSOS` nos últimos 30 dias (não depende do período) |
+| Pedidos pelo portal | Pedidos do Portal (`ATEC_SOLICITACOES.ORIGEM = PORTAL`) ÷ todos os pedidos do cliente no período: cada pedido (Portal, e-mail, QR...) e cada chamado aberto sem pedido por telefone, e-mail, QR, presencial, WhatsApp ou pela tela interna. Preventivas do contrato, pedidos do Comercial, rondas e pedidos de representada não contam. O chamado cancelado conta (foi um pedido) |
+| Documentos abertos | Registros `DOCUMENTO_ABERTO` no período |
+| Aceite do pedido | Média, entre os pedidos do Portal aceitos no período, das horas úteis entre o envio e o aceite (`TRATADA_EM`), menos a pausa do complemento (`PAUSA_MIN`) |
+| Avisos | Avisos ao cliente enviados no período (`PCL_AVISOS_ENVIOS`) e os que falharam no envio (`NTF_ENVIOS` com origem `PORTAL_CLIENTE` e situação `ERRO`, e a fila do horário comercial com erro); à parte, as contas com e-mail em formato inválido |
+| Sem entrada | Contas ativas sem entrar há N dias ou mais (N = aviso de inatividade de Regras do portal, padrão 90), da última entrada ou, sem nenhuma, da criação ou da reativação |
+| Fora do acesso | `ESCOPO_RECUSADO` e `FUNCAO_RECUSADA` no período |
+
+**Pessoas e avisos de um cliente:** cada pessoa com papel, unidades, situação, última entrada, dias sem entrada (em vermelho acima do limite), entradas em 30 dias, documentos abertos e o e-mail (em vermelho quando inválido); a **lista dos avisos enviados** ao cliente (os últimos 200, com o código e o nome do aviso, o endereço e se saiu ou espera o horário comercial), pendência deixada pela etapa 4; e as falhas de envio com o motivo.
+
+**Linha do tempo da pessoa:** os registros de `PCL_ACESSOS` da pessoa (os 500 mais recentes), com a ação, o detalhe, a referência, o **IP e o navegador**. Só a equipe com a caixa vê o IP; o Gestor do cliente continua vendo o registro da empresa em "Minha conta e equipe", sem IP e sem navegador (T5.5).
+
+**Planilha:** "Baixar planilha (CSV)" (todos os clientes), "Baixar as pessoas", "Baixar os avisos" e "Baixar a linha do tempo". O arquivo usa ponto e vírgula, abre no Excel em português e é montado na própria tela, a partir do que ela já mostra.
+
+### 27.3 Relatório do período filtrado por unidade
+
+- **Antes:** o Solicitante recebia "o relatório filtrado pelas suas unidades chega numa próxima etapa".
+- **Agora:** `RepDC_relatorioPeriodo_` lê o escopo da pessoa (`eu.pclEscopo`): o Solicitante recebe só as unidades dele; a unidade escolhida (`unidadeId`) limita a uma, desde que seja do cliente e esteja no acesso (senão, "Não encontrado"). Vale pelos dois caminhos: Portal do cliente > Indicadores e "Meus chamados".
+- **O documento:** o subtítulo diz as unidades ("· unidade Unidade Centro"); o registro em `REP_DOCUMENTOS` ganha a coluna nova `UNIDADES_JSON` (por acréscimo, garantida antes do primeiro relatório filtrado) e, com uma unidade só, `UNIDADE_ID`.
+- **Trava de arquivo:** o relatório filtrado abre só para quem tem todas as unidades dele no acesso (`PCl_docRepNaUnidade_`); o de todas as unidades, só para quem vê todas. "Relatórios gerados" de "Meus chamados" mostra ao Solicitante o relatório do período dele.
+
+### 27.4 Tabelas, código e caixas
+
+- **Código:** `SGO_PortalCliente_Painel.js` (cálculo `PCl_indicadoresCalc_` e `PCl_usoCalc_`, ações `indicadores`, `relatorioPeriodo`, `uso` e `usoPessoa`) e `JS_PortalCliente_Painel.html` (tela do cliente e aba da equipe). A tela do cliente chama só `PortalCliente_api`, que já está na lista fechada de funções.
+- **Registro (`PCL_ACESSOS`):** `RELATORIO_PERIODO` (geração do PDF), `PAPEL_RECUSADO` (Consulta), `ACESSO_RECUSADO` (suspenso ou sem acesso) e `ESCOPO_RECUSADO` (unidade fora do acesso).
+- **Coluna nova:** `UNIDADES_JSON` em `REP_DOCUMENTOS`. Nenhuma tabela nova.
+- **Caixa nova:** `PORTAL_CLIENTE_USO_VER`.
+- **Desempenho:** cada resposta lê cada tabela uma vez; o resultado fica 2 minutos no cache. Medido no ensaio local com um cliente de 4.000 chamados, 3.000 pedidos, 1.500 equipamentos e 20.000 registros de acesso: cerca de 1 a 1,5 s na primeira vez (quase todo o tempo é a conta das horas úteis de cada chamado), instantâneo do cache; o uso do portal de todos os clientes, menos de 1 s.
+
+### 27.5 Problemas comuns (indicadores e uso)
+
+| Situação | O que fazer |
+|---|---|
+| Um índice aparece com "—" | Não há chamado que entre na conta no período (o motivo aparece embaixo). Escolha um período maior |
+| O número não mudou depois de um atendimento | O cache guarda por 2 minutos. Toque em "Atualizar agora" |
+| O Solicitante diz que o relatório do período não traz uma unidade | Ele recebe só as unidades marcadas no acesso. Confira em Acessos de clientes |
+| O tempo até a visita parece baixo | Só entram os concluídos com chegada do técnico registrada; os resolvidos a distância ficam fora dessa conta |
+| O cliente diz que não recebeu um aviso marcado como enviado | A devolução do provedor do cliente ("e-mail que voltou") ainda não chega ao SGO+. Confira o endereço na linha da pessoa e a caixa de saída do e-mail da Metrolabs |
+| A aba "Uso do portal" não aparece | Falta a caixa «Ver o uso do portal e o registro de acessos». Peça em Administração > Acessos |
 
 </div>
