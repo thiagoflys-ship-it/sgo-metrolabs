@@ -390,7 +390,7 @@ test('15/11/2026: todas as abas do Painel financeiro abrem na página completa s
       await page.waitForFunction(() => { const b = document.getElementById('menu-btn-omie'); return b && b.style.display === ''; }, null, { timeout: 15000 });
       await page.evaluate(() => abrir('omie'));
       const abas = await page.evaluate(() => OMIE_ABAS.map((x) => x[0]));
-      assert.equal(abas.length, 22); // 18/11/2026 (Bloco C): + Recarga Caju; 16/11/2026: + Sigilo e acessos, + Ficha do cliente, + Regras do Financeiro, + Indicadores (Onda 2); 17/11/2026: + Reajustes de contratos; 18/11/2026 (Bloco B): + Régua de cobrança, + Agenda financeira, + Relatórios semanais
+      assert.equal(abas.length, 23); // 18/11/2026 (E10/E11): + Especialista financeiro; 18/11/2026 (Bloco C): + Recarga Caju; 16/11/2026: + Sigilo e acessos, + Ficha do cliente, + Regras do Financeiro, + Indicadores (Onda 2); 17/11/2026: + Reajustes de contratos; 18/11/2026 (Bloco B): + Régua de cobrança, + Agenda financeira, + Relatórios semanais
       for (const aba of abas) {
         await page.evaluate((x) => OmieTela_abrir_(x), aba);
         await page.waitForTimeout(700);

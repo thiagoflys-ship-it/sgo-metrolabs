@@ -47,6 +47,7 @@ Regras que valem sempre:
 | Agenda financeira | O que vence a receber e a pagar nos próximos 30, 60 ou 90 dias (Gantt) e a previsão de caixa de 90 dias, otimista e realista (seção 8g). |
 | Relatórios semanais | Relatório A4 de saúde financeira de cada semana, aberto só no SGO+, com a lista de quem foi avisado (seção 8h). |
 | Recarga Caju | Recarga Caju da rotina dos técnicos: pedidos e cargas, prestações gasto a gasto, portadores, divergências, política, painel e relatórios A4 (seção 8i). |
+| Especialista financeiro | Dúvidas de uso do Painel, regras financeiras e leitura da situação de hoje pela fotografia, com propostas de ação e de atividade que só viram atividade com a sua confirmação (seção 8j). Não grava no Omie, não aprova e não envia mensagem. |
 | Sigilo e acessos | Quem pode ver o Financeiro; para a Diretoria, o registro de consultas, planilhas baixadas e recusas. Só o responsável pelo sistema altera a lista. |
 
 ## 4. Visão geral
@@ -241,7 +242,7 @@ G1 recebido × pago em 12 meses, com a linha do resultado; G2 saldo previsto de 
 
 ### Atividades do Financeiro e o assistente geral
 
-Atividade de um módulo do Financeiro (Financeiro, Omie, Caju, Conciliação Caju, Compras do Financeiro) é sempre restrita e só é vista pelo responsável, por quem lançou e por quem está na lista de sigilo. O RH e a gestão fora da lista não a veem (nem na lista, nem no detalhe, nem na central de pendências, na Caixa de decisões ou na cobrança da SEDNA). O responsável precisa estar na lista: "A atividade do Financeiro só pode ser de alguém da lista de sigilo. Para pedir algo a outra pessoa, crie a atividade sem valores e sem nome de cliente, fora do Financeiro." As atividades restritas do Programa de conduta continuam como antes (RH e gestão de decisões veem). O assistente geral "Tire sua dúvida" não tem mais a ajuda nem os manuais do Financeiro (Painel financeiro, Conciliação Caju, conferência de Compras): essas dúvidas ficam no "Como usar esta tela" do próprio Painel e, depois, no especialista financeiro.
+Atividade de um módulo do Financeiro (Financeiro, Omie, Caju, Conciliação Caju, Compras do Financeiro) é sempre restrita e só é vista pelo responsável, por quem lançou e por quem está na lista de sigilo. O RH e a gestão fora da lista não a veem (nem na lista, nem no detalhe, nem na central de pendências, na Caixa de decisões ou na cobrança da SEDNA). O responsável precisa estar na lista: "A atividade do Financeiro só pode ser de alguém da lista de sigilo. Para pedir algo a outra pessoa, crie a atividade sem valores e sem nome de cliente, fora do Financeiro." As atividades restritas do Programa de conduta continuam como antes (RH e gestão de decisões veem). O assistente geral "Tire sua dúvida" não tem mais a ajuda nem os manuais do Financeiro (Painel financeiro, Conciliação Caju, conferência de Compras): essas dúvidas ficam no "Como usar esta tela" do próprio Painel e no especialista financeiro (seção 8j), só para a lista de sigilo.
 
 ## 8e. Reajustes de contratos (17/11/2026, pedido do dono)
 
@@ -342,6 +343,32 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **Sigilo.** Valores e dados só para a lista de sigilo do Financeiro e para o próprio portador (que vê só os dele). Pendências e avisos para quem está fora da lista saem sem valor. Toda abertura e toda recusa ficam no registro de Sigilo e acessos.
 
+## 8j. Especialista financeiro (18/11/2026, onda 3, etapas E10 e E11)
+
+**Para que serve.** A aba "Especialista financeiro" (e o botão "Perguntar ao especialista", no canto superior do Painel) responde a três tipos de pergunta, só para a lista de sigilo do Financeiro. Em "Automático", o sistema escolhe o tipo pela pergunta; a pessoa pode escolher.
+
+| Tipo de ajuda | Exemplo | De onde vem a resposta | Vai dado da empresa ao serviço de IA? |
+|---|---|---|---|
+| Como fazer no sistema | "Como lanço uma nota de serviço recebida?" | Ajuda das telas e manuais do Financeiro | Não |
+| Regra financeira | "Qual a diferença entre regime de caixa e de competência?" | Base de regras financeiras da empresa, mais conhecimento geral, com a regra citada | Não |
+| Analisar a situação | "Quem devo cobrar primeiro?" | Fotografia do Financeiro do dia (Indicadores), com clientes em código | Sim, o mínimo, pseudonimizado |
+
+**O que vai ao serviço de IA na análise.** Os indicadores, o envelhecimento do a receber, os maiores vencidos por cliente, os 15 maiores títulos vencidos (código T01 a T15, cliente em código, saldo em reais inteiros, dias de atraso e etapa da régua), o a pagar de 30 dias por categoria, as contas a pagar vencidas (fornecedor em código), o recebido e o pago por mês, os responsáveis possíveis (em código, "Responsável 1 (Financeiro)") e as abas do Painel. Nunca vão nome de cliente ou fornecedor, CNPJ, CPF, número de documento, e-mail, telefone, conta bancária nem nome de colaborador; nomes de clientes e de colegas escritos na pergunta são trocados por códigos antes do envio. O que vem do Omie (nome de categoria) vai marcado como dado, com a instrução de ignorar qualquer ordem escrita lá dentro. A tabela de troca dos códigos fica só no servidor; a resposta volta com os nomes reais na sua tela.
+
+**Números conferidos.** Toda resposta com número passa pela conferência de números do sistema contra o que foi enviado (os dados, a regra ou o manual). A frase com número que não está nos dados, ou, na análise, com nome que não veio dos dados, é retirada, e a resposta avisa "Foram retirados ... trecho(s)". Se nada sobrar, aparece o texto padrão do sistema, com os números da fotografia. Abaixo de cada resposta aparecem as fontes ("Fotografia do Financeiro de dd/mm/aaaa hh:mm", a regra usada ou a seção do manual) e o aviso "Texto de apoio; confira os números nos quadros do Painel".
+
+**Sem a chave da IA ou sem autorização.** O especialista funciona sem a chave: "Como fazer" mostra os trechos do manual mais próximos, "Regra financeira" mostra a regra da empresa mais próxima e a análise mostra o texto padrão do sistema. Com "Análise do Financeiro pela IA" = Não (Chaves e senhas > Regras do Financeiro), nenhum dado da empresa sai; os outros dois tipos continuam. A faixa no topo da aba diz o que está ligado.
+
+**Regra financeira e o contador.** A base de regras é um texto padrão profissional, marcado "revisar com a contabilidade" até a Diretoria gravar uma versão revisada. A resposta cita a regra usada (ex.: "R02 Juros, multa e desconto na baixa") ou avisa que veio de conhecimento geral. Quando a pergunta envolve imposto, retenção, contabilidade, folha, protesto, negativação ou lei, ou a regra usada é marcada "confirmar com o contador" ou "com o jurídico", a resposta traz o aviso de confirmar antes de decidir. A base fica em "Base de regras financeiras", no fim da aba: a lista de sigilo lê; só o dono do sistema e a Diretoria alteram, com o motivo, e cada gravação vira uma versão nova (a anterior fica guardada).
+
+**Propostas.** Na análise, o especialista pode propor até 3 ações: abrir uma aba do Painel (a Régua de cobrança já filtrada no cliente, a Ficha do cliente, a Agenda financeira), sem executar nada, ou uma atividade. O sistema descarta a proposta com responsável fora da lista de sigilo, prazo fora de 1 a 30 dias úteis, aba que não existe ou número que não está nos dados, e diz quantas descartou. O cartão da atividade vem preenchido e editável (título, descrição, responsável, prazo e prioridade). **Nada é criado sem o toque "Criar atividade".** A atividade vai para o módulo de Atividades como do Financeiro: restrita, vista só pelo responsável, por quem criou e pela lista de sigilo, com o responsável sempre da lista de sigilo (decisão do dono: atividade sugerida para quem está fora da lista, não). A proposta vale 30 minutos.
+
+**O que o especialista não faz, por construção.** Não grava, não altera, não baixa nem exclui nada no Omie, no Caju ou em cadastro; não aprova nada (só o dono do sistema e o Charles aprovam o que é financeiro); não envia e-mail, WhatsApp ou mensagem a cliente, fornecedor ou colaborador; não muda a lista de sigilo, as caixas ou as chaves; não responde a quem está fora da lista de sigilo. Pedido de CNPJ, dados bancários, senhas ou para contornar regras é recusado antes de chamar a IA.
+
+**Limites e registro.** 30 perguntas por hora por pessoa e 15 análises com dados da empresa por dia. Cada pergunta fica registrada (quem, quando, o tipo de ajuda, se foram enviados dados, quantos caracteres, a resposta com os clientes em código, as propostas, as atividades criadas e a avaliação "Resolveu" ou "Não resolveu") e entra no registro de acessos como "Perguntou ao especialista", sem valores. A Diretoria lê o registro em Sigilo e acessos. A pergunta e a resposta são apagadas depois de **12 meses** (decisão do dono; "Especialista financeiro: meses de guarda" em Chaves e senhas > Regras do Financeiro) e ficam as demais colunas. A conversa na tela não fica guardada no navegador: some ao sair do Painel, ao trocar de conta e depois de 10 minutos sem uso.
+
+**O assistente geral "Tire sua dúvida".** Para quem está fora da lista de sigilo, a base do assistente geral não tem a ajuda nem os manuais do Financeiro (Painel financeiro, Conciliação Caju, conferência de Compras, gestão da Recarga Caju). Para quem está na lista, o manual do Painel financeiro continua lá; as perguntas de regra e de análise ficam no especialista.
+
 ## 9. Problemas comuns
 
 | Situação | O que fazer |
@@ -366,6 +393,10 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 | Régua: "Você não registra esta decisão" | Protesto, negativação, cobrança jurídica e perda são só da Diretoria. Encaminhe o título à Diretoria com o motivo. |
 | Relatório com "análise parcialmente substituída pelo texto padrão" | É a conferência de números: o parágrafo da IA citou número ou nome fora dos dados e foi trocado pelo texto do sistema. Nada a fazer. |
 | O relatório semanal não saiu na segunda-feira | Ele espera a fotografia do dia (até 10:00); feriado passa para o primeiro dia útil. A aba Relatórios semanais mostra o próximo horário. |
+| Especialista: "Foram retirados ... trecho(s) da resposta" | É a conferência de números: a parte com número que o sistema não calculou foi retirada. O restante vale como apoio; confira os números nos quadros. |
+| Especialista responde a análise com o texto padrão do sistema | A IA está desligada para dados da empresa, a chave não está cadastrada, o limite de 15 análises do dia foi atingido ou a IA não respondeu. A faixa no topo da aba e o aviso da resposta dizem qual foi. |
+| "A proposta expirou (ela vale 30 minutos) ou já foi usada" | Nada foi criado. Faça a pergunta de novo e confirme a nova proposta em até 30 minutos. |
+| "proposta(s) da IA foram descartadas pelo sistema" | O responsável estava fora da lista de sigilo, o prazo fora de 1 a 30 dias úteis, a aba não existe ou havia número fora dos dados. Se a atividade for necessária, crie pelo módulo de Atividades. |
 
 ## 10. Como fazer em cada aba
 
@@ -501,6 +532,14 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 3. Em "Prestações", aceite ou glose cada gasto (a glosa pede o motivo). Fechado o período pelo portador, ou vencido o prazo dele, toque em "Concluir o período" e registre a devolução ou o reembolso com o comprovante.
 4. Divergências do extrato (gasto sem comprovante, valor diferente, fora da política) aparecem em "Divergências" e na Conciliação Caju. Portador travado: a Diretoria decide a liberação em "Portadores".
 5. "Política" guarda as regras com versão e motivo; "Painel" mostra os índices, os gráficos e o quadro; "Relatórios A4" gera o individual (com o extrato), o geral e o de pendências.
+
+**Especialista financeiro.** Tirar dúvidas de uso do Painel e de regras financeiras e pedir uma leitura da situação do Financeiro de hoje, com sugestões de ação.
+
+1. Escreva a pergunta ou toque numa sugestão. Em "Tipo de ajuda", deixe "Automático" ou escolha: "Como fazer" (manual do SGO+), "Regra financeira" (base de regras da empresa) ou "Analisar a situação" (fotografia do dia).
+2. Na análise, os clientes vão ao serviço de IA como códigos e cada número da resposta é conferido com os do sistema; o que não bater é retirado e a resposta avisa. Confira os números nos quadros antes de decidir.
+3. Abaixo de cada resposta aparecem as fontes, o aviso quando o assunto é do contador ou do jurídico e os botões "Resolveu" e "Não resolveu".
+4. Proposta de atividade: confira o título, a descrição, o responsável (só da lista de sigilo), o prazo e a prioridade e toque em "Criar atividade". Sem esse toque nada é criado; a proposta vale 30 minutos.
+5. O especialista não grava nada no Omie, não aprova nada e não envia mensagem a ninguém. A conversa some ao sair do Painel. A "Base de regras financeiras", no fim da aba, mostra as regras usadas; só o dono e a Diretoria as alteram.
 
 **Sigilo e acessos.** Ver quem pode acessar o Financeiro e quem consultou o quê.
 
@@ -644,6 +683,24 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 ### Agenda financeira
 
 - **Período do quadro:** quantos dias à frente o quadro mostra (30, 60 ou 90). A semana anterior aparece sempre, para os vencidos recentes. A previsão de caixa abaixo é sempre de 90 dias.
+
+### Especialista financeiro
+
+- **Sua pergunta:** escreva como falaria com um colega do Financeiro (ex.: "quais clientes estão atrasando mais que o normal?"). Não cole senhas, dados de cartão nem dados de conta bancária. Até 600 letras.
+- **Tipo de ajuda:** "Como fazer" responde pelo manual do SGO+, sem usar dados da empresa; "Regra financeira" explica conceitos a partir da base de regras da empresa; "Analisar a situação" usa a fotografia do Financeiro de hoje (sem nomes de clientes) para apontar riscos e sugerir ações. Em "Automático", o sistema escolhe.
+- **Usar os dados de hoje:** marcado, a análise envia ao serviço de IA os indicadores e as listas da fotografia, com clientes trocados por códigos (Cliente 01, Cliente 02). Desmarcado, a resposta usa só o manual e a base de regras.
+- **Título:** o que precisa ser feito, em uma frase (ex.: "Ligar para o Cliente 03 sobre a NF 1234 vencida há 45 dias"). Os códigos de cliente já aparecem trocados pelo nome real aqui na sua tela.
+- **Descrição:** o porquê e o como. Veio da análise; ajuste o que não fizer sentido antes de criar.
+- **Responsável:** quem vai fazer. Só aparecem pessoas da lista de sigilo do Financeiro, porque a atividade fala de valores e clientes.
+- **Prazo:** data e hora em que deve estar feita. A sugestão considera dia útil e o expediente.
+- **Prioridade:** Baixa, Normal, Alta ou Urgente. A sugestão sobe para Alta quando o valor está entre os 3 maiores vencidos ou o atraso passa de 60 dias.
+- **Criar atividade:** só cria depois deste toque. A atividade fica no módulo de Atividades, marcada como sigilosa do Financeiro.
+- **Base de regras financeiras** (só o dono do sistema e a Diretoria alteram):
+  - **Título da regra:** o assunto, em poucas palavras (ex.: "Juros, multa e desconto na baixa"). Aparece como fonte nas respostas.
+  - **Texto da regra:** como a empresa trata o assunto, em texto corrido (20 a 3.000 letras). O especialista responde a partir deste texto; não escreva valores que não sejam regra da empresa.
+  - **Confirmar com:** escolha o contador (impostos, contabilidade, folha) ou o jurídico (protesto, negativação, cobrança judicial) quando a decisão depender deles. A resposta que usar esta regra leva o aviso.
+  - **Motivo da mudança:** o que mudou e por quê (pelo menos 15 letras). A versão anterior fica guardada.
+  - **Texto revisado com a contabilidade:** marque só quando o contador tiver lido e aprovado esta versão. Sem a marca, as respostas avisam que a base é o texto padrão.
 
 ### Sigilo e acessos
 

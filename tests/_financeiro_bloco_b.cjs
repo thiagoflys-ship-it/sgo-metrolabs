@@ -114,7 +114,7 @@ async function abrirPagina(browser, a, largura, login) {
   await page.route(/^https?:\/\//, (r) => (r.request().url() === 'http://sgo.ensaio.test/' ? r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: HTML }) : r.abort()));
   await page.exposeFunction('qaRun', (fn, args) => {
     if (fn === 'getSessaoAtual') { const s = a.sessoes['s_' + login]; return { ok: true, valor: { success: true, session: Object.assign({ sessionId: 's_' + login }, s) } }; }
-    if (/^(Omie|OmieOps|OmieRegras|Fin_api|FinCob_api|FinAg_api|FinRel_api)/.test(fn) && typeof a.ctx[fn] === 'function') {
+    if (/^(Omie|OmieOps|OmieRegras|Fin_api|FinCob_api|FinAg_api|FinRel_api|FinIa_api)/.test(fn) && typeof a.ctx[fn] === 'function') {
       vm.runInContext('if (typeof Poderes_memoLimpar_ === "function") Poderes_memoLimpar_();', a.ctx);
       return { ok: true, valor: JSON.parse(JSON.stringify(a.ctx[fn](...args) || null)) };
     }
