@@ -1,4 +1,4 @@
-# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes)
+# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail)
 
 **Versão:** 18/11/2026. **Especificação:** `output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md` (o dono aceitou todas as recomendações).
 **Tela:** menu **Portal do cliente > Contratos de clientes** (`JS_PortalCliente.html`) e **Portal do cliente > Acessos de clientes** (`JS_PortalCliente_Acessos.html`). **Servidor:** `SGO_PortalCliente.js`, `SGO_PortalCliente_Config.js`, `SGO_PortalCliente_Contratos.js`, `SGO_PortalCliente_Seguranca.js`, `SGO_PortalCliente_Acessos.js`.
@@ -164,6 +164,7 @@ O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca 
 - Etapa 1 (18/11/2026): `PCL_PEDIDOS_EQUIPE`, `PCL_TERMOS_ACEITE` e `PCL_CONTAS_HIST` (seção 23.9) e as colunas `CLIENTE_*` em `CAD_USUARIOS`.
 - Etapa 2 (18/11/2026): `PCL_MENSAGENS`, `PCL_ANEXOS` e `PCL_AVISOS_FILA` e as colunas novas de `ATEC_SOLICITACOES` e `ATEC_CHAMADOS` (seção 24.9).
 - Etapa 3 (18/11/2026): as colunas `PORTAL`, `PORTAL_MOTIVO`, `PORTAL_POR_NOME` e `PORTAL_EM` em `DOC_DOCUMENTOS` (seção 25.8). Nenhuma tabela nova.
+- Etapa 4 (18/11/2026): `PCL_AVISOS_ENVIOS`, o registro dos avisos ao cliente já enviados (seção 26.8).
 
 As datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua.
 
@@ -415,7 +416,7 @@ Enquanto o termo não é aceito, o servidor recusa as ações do portal que grav
 
 **Tabelas novas:** `PCL_PEDIDOS_EQUIPE` (pedidos dos gestores), `PCL_TERMOS_ACEITE` (aceites, só inclusão) e `PCL_CONTAS_HIST` (histórico de cada conta, só inclusão). **Colunas novas em `CAD_USUARIOS`, por acréscimo:** `CLIENTE_PAPEL`, `CLIENTE_UNIDADES_JSON`, `CLIENTE_CARGO`, `CLIENTE_TELEFONE`, `CLIENTE_AVISOS_JSON`, `CLIENTE_CONVIDADO_POR_ID/NOME`, `CLIENTE_DESLIGADO_EM/POR_NOME/MOTIVO`, `CLIENTE_ULTIMA_ENTRADA_EM`, `CLIENTE_REATIVADO_EM/POR_NOME`, `CLIENTE_MANTER`, `CLIENTE_MANTER_POR_NOME/EM` e `CLIENTE_INATIVIDADE_AVISO_EM`.
 
-**Avisos (matriz):** PC09 (acesso do cliente: convite, papel alterado, desligado e reativado; só e-mail, na hora), PI02 (pedido de inclusão e desligamento pelo cliente, para quem gere acessos) e PI04 (contas paradas). Nenhum aviso ao cliente sai por WhatsApp. O assunto chega como "SGO+ | Metrolabs — ...", porque o serviço de avisos do SGO+ acrescenta o prefixo.
+**Avisos (matriz):** PC09 (acesso do cliente: convite, papel alterado, desligado e reativado; só e-mail, na hora), PI02 (pedido de inclusão e desligamento pelo cliente, para quem gere acessos) e PI04 (contas paradas). Nenhum aviso ao cliente sai por WhatsApp. Desde a etapa 4, o assunto chega como "Metrolabs — ...", sem o prefixo "SGO+ | " (seção 26.1).
 
 **Registro de acessos (`PCL_ACESSOS`):** entrada, saída, recusa, aceite do termo, dados alterados, convite, papel alterado, e-mail trocado, desligamento, reativação, pedido de inclusão e toda tentativa fora do escopo.
 
@@ -507,7 +508,7 @@ O chamado de representada continua com o fluxo próprio (confirmação no mesmo 
 ### 24.8 Avisos
 
 - **Ao cliente, só por e-mail** (nunca WhatsApp): PC01 "Pedido recebido", na hora, para quem abriu e para o contato no local; PC02 "Pedido aceito", "falta uma informação" e "não pôde ser atendido", no horário comercial (fora dele, o e-mail espera na fila `PCL_AVISOS_FILA` e sai na rotina seguinte dentro do expediente).
-- Visita (PC03), orçamento (PC04) e conclusão (PC05) continuam pelos avisos de sempre da Assistência até a etapa 4. A mensagem da Metrolabs na conversa (PC06) aparece no Portal; o resumo por e-mail chega na etapa 4.
+- Visita (PC03), orçamento (PC04), conclusão (PC05) e o resumo das mensagens da Metrolabs (PC06) chegam pela etapa 4 (seção 26). O PC02 também vai aos gestores do cliente da unidade desde a etapa 4.
 - **Internos:** AT09 (pedido novo, para quem faz a triagem), PI03 (o problema continua), PI06 (mensagem do cliente) e PI07 (cancelamento pelo cliente). Pendências na Caixa de decisões: `pcl_pedido`, `pcl_pedido_vencido` e `pcl_reaberto`.
 
 ### 24.9 Regras, tabelas e caixas
@@ -603,7 +604,7 @@ A etapa 1 deixou três listas sem o filtro por unidade. Elas agora seguem a mesm
 - **Registro de acessos (`PCL_ACESSOS`):** `DOCUMENTO_ABERTO` a cada abertura, `ESCOPO_RECUSADO` nas tentativas fora do escopo e `ACESSO_RECUSADO` quando a situação de acesso não permite ler.
 - **Caixa nova:** «Ocultar ou liberar documento no portal» (`PORTAL_CLIENTE_DOC_LIBERAR`), padrão para a gestão da área Técnica e da Qualidade, a Diretoria e o Administrador.
 - **Regras do portal:** a lista `docTiposVisiveis` (mesma propriedade das outras regras, com merge e histórico).
-- **Sem avisos novos nesta etapa.** O aviso de documento novo (PC07) e o de vencimento (PC08) chegam na etapa 4.
+- **Sem avisos novos nesta etapa.** O aviso de documento novo (PC07) e o de vencimento (PC08) chegaram na etapa 4 (seção 26).
 
 ### 25.9 Problemas comuns (documentos e equipamentos)
 
@@ -616,5 +617,114 @@ A etapa 1 deixou três listas sem o filtro por unidade. Elas agora seguem a mesm
 | O previsto do contrato não aparece | Confira em Contratos a periodicidade dos serviços (não pode ser "sob demanda") e a vigência |
 | Um Solicitante não vê um equipamento ou um relatório de ciclo | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes |
 | A marca "Oculto no portal" não aparece para um certificado | A marca existe só para o documento registrado no Arquivo de documentos. Registre o certificado lá e marque |
+
+## 26. Avisos ao cliente por e-mail (etapa 4, 18/11/2026)
+
+O cliente com Portal passa a receber por e-mail os avisos do atendimento, da conversa, dos documentos, dos vencimentos e do contrato, sempre nas pessoas certas da empresa. O canal é só o e-mail (decisão 11). WhatsApp para cliente continua desligado. Para a equipe, vale a regra de sempre: avisos no expediente, em dia útil, e cobrança pelo sistema e pelo e-mail.
+
+### 26.1 Como o e-mail chega
+
+- **Assunto:** começa sempre com "Metrolabs — " seguido do número, por exemplo "Metrolabs — Chamado CH-2026-0031: visita agendada para 21/10/2026". Os avisos ao cliente não levam mais o prefixo "SGO+ | ". Os avisos à equipe continuam com ele.
+- **Remetente e marca:** "Metrolabs". O botão "Abrir no Portal do cliente" abre o sistema, e a pessoa precisa entrar com o próprio login.
+- **Corpo:** saudação pelo primeiro nome, o texto do aviso e um rodapé que diz por que a pessoa recebe o e-mail. Nos avisos que podem ser desligados, o rodapé também ensina a desligar.
+- **Nunca vão no e-mail:** anexos, valores (nem do orçamento), nome de outro cliente, texto das mensagens da conversa, motivo interno de cancelamento ou reagendamento, prioridade, triagem e qualquer termo interno.
+- **Uma vez só:** endereços repetidos são juntados, e a mesma pessoa recebe o aviso uma vez, mesmo quando ela é ao mesmo tempo quem abriu e gestora da unidade. O que já saiu fica em `PCL_AVISOS_ENVIOS` e não se repete.
+
+### 26.2 Os avisos
+
+| Código | Aviso | Quem recebe | Quando sai | Pode desligar? |
+|---|---|---|---|---|
+| PC01 | Pedido recebido (etapa 2). Chamado registrado pela equipe por telefone, e-mail ou QR Code para cliente com Portal | Quem abriu e o contato no local. No chamado registrado pela equipe: os gestores do cliente da unidade | Na hora | Não |
+| PC02 | Pedido aceito (virou chamado), complemento pedido ou recusa com o motivo | Quem abriu e os gestores do cliente da unidade | Horário comercial | Não |
+| PC03 | Visita agendada, reagendada, retorno agendado, peça recebida e visita cancelada pela Metrolabs | Quem abriu e os gestores do cliente da unidade | Horário comercial. Visita no mesmo dia: na hora | Não |
+| PC04 | Orçamento aguardando aprovação (ao emitir o orçamento) | Gestores do cliente da unidade (e da empresa que paga, se tiver Portal) | Horário comercial | Não |
+| PC05 | Atendimento concluído, com o relatório disponível no Portal | Quem abriu e os gestores do cliente da unidade | Horário comercial | Não |
+| PC06 | Mensagem da Metrolabs na conversa (resumo, sem o texto) | Quem abriu e quem participa da conversa. Sem nenhum dos dois: os gestores da unidade | No máximo um resumo a cada 2 horas úteis por pessoa | Sim |
+| PC07 | Documentos novos (certificado, relatório, laudo) | Todas as pessoas com a unidade do documento | Resumo diário, a partir das 08:30 | Sim |
+| PC08 | Vencimentos em 60, 30 e 7 dias e vencidos | Gestores do cliente da unidade | Resumo semanal, no primeiro dia útil da semana, a partir das 08:30. Cada faixa sai uma vez; o vencido, uma vez. O vencido só entra se venceu a partir de 30 dias antes do início dos avisos (configurável); os mais antigos ficam só no Portal | Sim (vem ligado) |
+| PC09 | Acesso: convite, papel alterado, desligamento, reativação (etapa 1) | A própria pessoa e os gestores do cliente | Na hora | Não |
+| PC10 | Contrato termina em 30 dias, período de carência, modo consulta | Gestores do cliente | Horário comercial, uma vez por situação | Não |
+
+**Texto do fim de contrato (decisão 12):** neutro, sem tom de cobrança. Diz a data e o caminho (falar com o contato comercial das Regras do portal). PC10 não sai na vigência provisória ("contrato a cadastrar") nem na transição das contas antigas: nesses casos o Comercial cuida pela régua dos contratos (CT04). Contrato de licitação não recebe o aviso de 30 dias, porque Licitações avisa pela agenda própria. O contato do contrato que já recebe o aviso de renovação da régua (CT03) não recebe o PC10 dos 30 dias, para não repetir.
+
+**Avisos internos:**
+
+- **PI01** (contrato vence em 60, 30 e 15 dias) é o CT01 da régua dos contratos (seção 16), que já sai em 120, 90, 60, 30, 15, 7 e 0 dias, uma vez cada marco, ao responsável e à gestão comercial. Nada foi duplicado.
+- **PI02, PI03 e PI04** continuam como nas etapas 1 e 2.
+- **PI05** (novo): pedido do Portal a 75% do prazo de resposta (padrão 4 horas úteis) vai a quem faz a triagem. Com o prazo vencido, vai também à gestão da área Técnica. Sai uma vez cada marco, por e-mail, no expediente da equipe, sem WhatsApp. É a mesma regra do RP07 da Representação.
+
+### 26.3 Horário comercial
+
+Os e-mails ao cliente saem de **08:00 às 18:00, em dias úteis**. Os feriados são os do expediente da empresa (Atividades da equipe > Avisos e horários). O que acontece fora desse horário espera na fila `PCL_AVISOS_FILA` e sai na primeira rodada do próximo horário útil. Saem na hora, mesmo à noite: o pedido recebido (PC01), a visita marcada para o mesmo dia (PC03) e o acesso (PC09).
+
+O horário dos avisos ao cliente é separado do expediente da equipe (padrão 17:30), porque a espec fixou 18:00 para o cliente. Os dois ficam configuráveis.
+
+### 26.4 Substituição dos e-mails antigos da Assistência
+
+Até esta etapa, a Assistência mandava os avisos de visita, peça e conclusão (AT08 e AT15) para o e-mail do cadastro da unidade ou do cliente. Agora:
+
+- **Cliente com Portal na unidade** (pelo menos uma pessoa ativa com o papel e a unidade certos, e o acesso não está suspenso nem sem acesso): o aviso vai para as pessoas do Portal no modelo novo. Enquanto "Cópia ao e-mail do cadastro" estiver em **Sim** (padrão na transição), o e-mail do cadastro da unidade também recebe, no mesmo modelo. O endereço repetido sai uma vez só.
+- **Cliente sem Portal, unidade sem nenhuma pessoa do Portal, acesso suspenso ou sem acesso:** continua tudo como antes, no e-mail do cadastro.
+- **Pedido do Portal aceito:** o cliente recebe só o "pedido aceito" (PC02). O e-mail antigo "Recebemos o seu chamado" deixa de sair para esse caso.
+- **Chamado de representada:** segue o fluxo próprio da Representação, como antes.
+- **Rondas:** os avisos de ronda agendada e concluída continuam no e-mail do cadastro (não fazem parte dos eventos do Portal).
+- **Cópia ao e-mail do cadastro** (Regras do portal, **padrão "Sim"** na transição): as contas de cliente atuais são antigas (sem papel, valem como Gestor do cliente) e ainda não se sabe se os e-mails delas são de pessoas reais. Por isso o e-mail da unidade continua recebendo os avisos de visita, peça e conclusão que recebe hoje, juntado com os das pessoas (o mesmo endereço recebe uma vez). Depois de revisar as contas em Acessos de clientes, a Diretoria pode trocar para "Não", com motivo.
+- O envio do relatório e do orçamento por "Enviar documento" (com o PDF) continua igual: é um envio feito por uma pessoa da equipe, e não um aviso automático.
+
+### 26.5 Preferências da pessoa (Minha conta)
+
+Em Portal do cliente > Minha conta > Meus dados, a parte **Avisos por e-mail** mostra:
+
+- o e-mail que recebe, o horário e o aviso de que o e-mail nunca leva anexos nem valores;
+- a lista do que é **sempre enviado**: pedido, visita, orçamento, conclusão, acesso e contrato;
+- os três avisos que a pessoa **pode desligar**: mensagens da Metrolabs (PC06), documentos novos (PC07) e vencimentos (PC08). O de vencimentos aparece só para o Gestor do cliente. Em modo consulta, a tela explica que os resumos de documentos e vencimentos não saem.
+
+A escolha fica em `CAD_USUARIOS.CLIENTE_AVISOS_JSON` e vale a partir do próximo aviso. Os avisos obrigatórios não podem ser desligados, nem mesmo chamando o servidor direto.
+
+### 26.6 Regras do portal > Avisos ao cliente por e-mail (Administrador e Diretoria, com motivo e histórico)
+
+| Campo | O que faz | Padrão |
+|---|---|---|
+| Avisos pelo Portal | Ligados: os avisos da Assistência e os resumos vão para as pessoas do Portal. Desligados: a Assistência volta a avisar só o e-mail do cadastro e os resumos não saem. Pedido recebido, aceite e acesso continuam saindo sempre | Ligados |
+| Horário comercial: início e fim | Janela dos e-mails ao cliente nos dias úteis | 08:00 e 18:00 |
+| Hora dos resumos | A partir desta hora sai o resumo diário dos documentos novos e, no primeiro dia útil da semana, o dos vencimentos | 08:30 |
+| Resumo das mensagens | No máximo um resumo por pessoa a cada tantos minutos úteis | 120 |
+| Cópia ao e-mail do cadastro | O e-mail da unidade também recebe os avisos da Assistência de quem tem Portal (sem repetir endereço) | Sim (transição) |
+| Vencidos antigos no resumo semanal | O vencido só entra no PC08 se venceu a partir de tantos dias antes do início dos avisos; os mais antigos nunca vão no e-mail e continuam no Portal (Vencimentos e cronograma) | 30 (de 0 a 365) |
+
+**Início dos avisos:** a primeira rodada da rotina depois da publicação grava o dia e a hora (`avisosDesde`). Mensagens, documentos e pedidos anteriores a esse momento **não** geram aviso. A tela de Regras mostra a data. Na primeira semana, se a publicação não cair no primeiro dia útil, o resumo de vencimentos só começa no primeiro dia útil da semana seguinte.
+
+### 26.7 Rotina
+
+A rotina da Assistência (a cada 15 minutos) chama `PortalCliente_rotinaChamados_`, que agora também chama `PortalCliente_rotinaAvisos_`:
+
+1. PI05 (prazo do pedido do Portal), em toda rodada;
+2. PC06 (resumo das mensagens), dentro do horário comercial do cliente;
+3. PC10 (contrato), uma vez por dia útil;
+4. PC07 (documentos novos), uma vez por dia útil, a partir da hora dos resumos;
+5. PC08 (vencimentos), uma vez por semana, no primeiro dia útil, a partir da hora dos resumos;
+6. a fila do horário comercial (`PCL_AVISOS_FILA`).
+
+Nenhum passo derruba os outros: um erro fica registrado no log e a rodada continua.
+
+### 26.8 Tabelas e código
+
+- **Tabela nova `PCL_AVISOS_ENVIOS`** (só inclusão): CHAVE do aviso, evento, cliente, pessoa, e-mail, referência, situação (`ENVIADO` ou `NA_FILA`) e data. É o que impede a repetição.
+- **`PCL_AVISOS_FILA`** (etapa 2) passa a guardar todos os avisos ao cliente que esperam o horário comercial, um por pessoa.
+- **Matriz de avisos:** códigos novos PC03, PC04, PC05, PC06, PC07, PC08, PC10 e PI05.
+- **Código:** `SGO_PortalCliente_Avisos.js` (novo), o envio central `PCl_enviarCliente_` em `SGO_PortalCliente_Config.js`, `paraCliente` em `SGO_notificar_` (assunto sem prefixo e marca Metrolabs) e o último argumento de `Ast_avisarCliente_` na Assistência (Agenda, Chamados e Relatório da O.S.).
+
+### 26.9 Problemas comuns (avisos ao cliente)
+
+| Situação | O que fazer |
+|---|---|
+| O cliente com Portal não recebeu o aviso da visita | Veja se a pessoa está ativa e tem a unidade do chamado (Acessos de clientes). O Gestor do cliente da unidade sempre recebe. Fora do horário comercial, o e-mail espera o próximo horário útil |
+| O e-mail da unidade parou de receber os avisos da Assistência | Alguém trocou "Cópia ao e-mail do cadastro" para "Não" em Regras do portal (o histórico das regras diz quem e por quê). Volte para "Sim" se a unidade precisa receber |
+| Um equipamento vencido há muito tempo não aparece no resumo semanal | É a regra: o vencido só entra se venceu a partir de 30 dias antes do início dos avisos (Regras do portal > Vencidos antigos no resumo semanal). Ele continua em Portal do cliente > Vencimentos e cronograma |
+| O cliente diz que não recebe o resumo das mensagens | Ele pode ter desligado em Minha conta. O resumo sai no máximo a cada 2 horas úteis e nunca leva o texto da mensagem |
+| Um Solicitante não recebe os vencimentos | O resumo de vencimentos vai só para o Gestor do cliente da unidade |
+| O cliente em modo consulta não recebe documentos novos nem vencimentos | É a regra do modo consulta (item 3.3 da espec) |
+| O cliente recebeu um aviso duas vezes | Confira em `PCL_AVISOS_ENVIOS` se são dois avisos diferentes (por exemplo, visita agendada e depois reagendada). O mesmo aviso não se repete para o mesmo endereço |
+| Nenhum aviso ao cliente sai | Confira em Regras do portal se os avisos pelo Portal estão ligados e se a rotina da Assistência está rodando |
 
 </div>

@@ -1,0 +1,1327 @@
+diff --git a/cand16/JS_PortalCliente.html b/cand17/JS_PortalCliente.html
+index 8f5d292..a49f13b 100644
+--- a/cand16/JS_PortalCliente.html
++++ b/cand17/JS_PortalCliente.html
+@@ -365,7 +365,7 @@
+       '<label class="inteiro">Contato comercial mostrado ao cliente<input id="pclRgContato" type="text" maxlength="200" value="' + PclT_esc_(g.contatoComercial) + '"' + dis + "></label>" +
+       // 17/11/2026 (pedido do dono): vigência provisória dos clientes sem contrato cadastrado
+       '<label>Vigência provisória dos clientes sem contrato até<input id="pclRgProvisoria" type="date" value="' + PclT_esc_(g.provisoriaAte || "") + '"' + dis + "></label>" +
+-      PclT_regrasAcessosHtml_(r.acessos, dis) + PclT_regrasChamadosHtml_(r.chamados, dis) + (typeof PclDI_regrasHtml_ === "function" ? PclDI_regrasHtml_(r.documentos, dis) : "") +
++      PclT_regrasAcessosHtml_(r.acessos, dis) + PclT_regrasChamadosHtml_(r.chamados, dis) + (typeof PclDI_regrasHtml_ === "function" ? PclDI_regrasHtml_(r.documentos, dis) : "") + PclT_regrasAvisosHtml_(r.avisos, dis) +
+       (pode ? '<label class="inteiro">Motivo *<textarea id="pclRgMotivo" maxlength="500"></textarea></label>' : "") + "</div>" +
+       (pode ? '<div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-pcl="gravarRegras">Gravar as regras</button></div>' : "<p>Só o Administrador e a Diretoria alteram as regras.</p>") + (g.alteradoPor ? "<p><small>Última alteração: " + PclT_esc_(g.alteradoPor) + "</small></p>" : "") + "</div>" +
+       PclT_reguaRegrasHtml_(r.regua, pode) + PclT_historicoRegrasHtml_(r.historico);
+@@ -391,6 +391,19 @@
+       '<label>Pedidos por pessoa por dia<input id="pclRgLimitePedidos" type="number" min="1" max="100" value="' + PclT_esc_(c.limitePedidosDia) + '"' + dis + "></label>" +
+       '<label>Mensagens por pessoa por hora<input id="pclRgLimiteMensagens" type="number" min="5" max="300" value="' + PclT_esc_(c.limiteMensagensHora) + '"' + dis + "></label>";
+   }
++  // 18/11/2026 (etapa 4): avisos ao cliente por e-mail — ligados, horário comercial, hora dos resumos, intervalo do resumo das mensagens e cópia ao cadastro
++  function PclT_regrasAvisosHtml_(a, dis) {
++    if (!a) return "";
++    return '<p class="pcl-sub"><b>Avisos ao cliente por e-mail</b></p>' +
++      '<label>Avisos pelo Portal<select id="pclRgAvLigado"' + dis + '><option value="SIM"' + (a.avisosLigados !== false ? " selected" : "") + '>Ligados: as pessoas do portal recebem (recomendado)</option><option value="NAO"' + (a.avisosLigados === false ? " selected" : "") + ">Desligados: a Assistência avisa só o e-mail do cadastro</option></select></label>" +
++      '<label>Horário comercial: início<input id="pclRgAvIni" type="time" value="' + PclT_esc_(a.avisosIni) + '"' + dis + "></label>" +
++      '<label>Horário comercial: fim<input id="pclRgAvFim" type="time" value="' + PclT_esc_(a.avisosFim) + '"' + dis + "></label>" +
++      '<label>Hora dos resumos de documentos e vencimentos<input id="pclRgAvResumoHora" type="time" value="' + PclT_esc_(a.resumoHora) + '"' + dis + "></label>" +
++      '<label>Resumo das mensagens: no máximo um a cada (minutos úteis)<input id="pclRgAvIntervalo" type="number" min="30" max="600" value="' + PclT_esc_(a.conversaIntervaloMin) + '"' + dis + "></label>" +
++      '<label>Cópia ao e-mail do cadastro<select id="pclRgAvCopia"' + dis + '><option value="NAO"' + (!a.copiaCadastro ? " selected" : "") + '>Não: só as pessoas do portal</option><option value="SIM"' + (a.copiaCadastro ? " selected" : "") + ">Sim: o e-mail da unidade também recebe (padrão na transição)</option></select></label>" +
++      '<label>Vencidos antigos no resumo semanal (dias antes do início dos avisos)<input id="pclRgAvVencidoDias" type="number" min="0" max="365" value="' + PclT_esc_(a.pc08VencidoDias) + '"' + dis + "></label>" +
++      (a.desdeBr ? '<p class="pcl-just inteiro"><small>Os avisos ao cliente contam a partir de ' + PclT_esc_(a.desdeBr) + ": nada anterior a essa data é enviado.</small></p>" : "");
++  }
+   // 17/11/2026: régua de vencimento e regras do reajuste (propriedade CTR_REGUA, com motivo e histórico)
+   function PclT_reguaRegrasHtml_(c, pode) {
+     if (!c) return "";
+@@ -618,7 +631,8 @@
+     if (a === "gravarRegras") return PclT_chamar_("salvarRegras", Object.assign({ carenciaDias: PclT_v_("pclRgCarencia"), consultaMeses: PclT_v_("pclRgConsulta"), transicao: PclT_v_("pclRgTransicao"), contatoComercial: PclT_v_("pclRgContato"), provisoriaAte: PclT_v_("pclRgProvisoria"), motivo: PclT_v_("pclRgMotivo") },
+       PclT_$("pclRgConvite") ? { conviteExigeContrato: PclT_v_("pclRgConvite") !== "NAO", inativarFimContrato: PclT_v_("pclRgFimContrato") !== "NAO", avisoInatividadeDias: PclT_v_("pclRgAvisoInatividade"), inativarDias: PclT_v_("pclRgInativar"), encarregado: PclT_v_("pclRgEncarregado"), termoTexto: (PclT_$("pclRgTermo") || {}).value || "" } : {},
+       PclT_$("pclRgAceiteDias") ? { plantaoTelefone: PclT_v_("pclRgPlantao"), aceitePedidoMin: PclT_v_("pclRgAceitePedido"), aceiteDiasUteis: PclT_v_("pclRgAceiteDias"), limitePedidosDia: PclT_v_("pclRgLimitePedidos"), limiteMensagensHora: PclT_v_("pclRgLimiteMensagens") } : {},
+-      PclT_$("pclRgDocTipos") && typeof PclDI_tiposMarcados_ === "function" ? { docTiposVisiveis: PclDI_tiposMarcados_() } : {}), function (r) { PclT_chamar_("regras", {}, function (x) { PclT_desenharRegras_(x); PclT_msg_(r.message, "ok"); }); });
++      PclT_$("pclRgDocTipos") && typeof PclDI_tiposMarcados_ === "function" ? { docTiposVisiveis: PclDI_tiposMarcados_() } : {},
++      PclT_$("pclRgAvLigado") ? { avisosLigados: PclT_v_("pclRgAvLigado") !== "NAO", avisosIni: PclT_v_("pclRgAvIni"), avisosFim: PclT_v_("pclRgAvFim"), resumoHora: PclT_v_("pclRgAvResumoHora"), conversaIntervaloMin: PclT_v_("pclRgAvIntervalo"), copiaCadastro: PclT_v_("pclRgAvCopia") === "SIM", pc08VencidoDias: PclT_v_("pclRgAvVencidoDias") } : {}), function (r) { PclT_chamar_("regras", {}, function (x) { PclT_desenharRegras_(x); PclT_msg_(r.message, "ok"); }); });
+     // 17/11/2026: contrato (IA, condições), representadas, régua, índices, reajustes e renovação
+     if (a === "gravarRegua") { var ck = function (id) { return !!(PclT_$(id) || {}).checked; };
+       return PclT_chamar_("salvarRegua", { marcos: PclT_v_("pclRgMarcos"), marcosAvisoPrevio: PclT_v_("pclRgMarcosAp"), clienteDesdeDias: PclT_v_("pclRgClienteDesde"), avisarCliente: ck("pclRgAvisarCliente"), licitacoesAvisos: ck("pclRgLicAvisos"), tarefaComercial: ck("pclRgTarefa"),
+diff --git a/cand16/JS_PortalCliente_Acessos.html b/cand17/JS_PortalCliente_Acessos.html
+index b733664..e560423 100644
+--- a/cand16/JS_PortalCliente_Acessos.html
++++ b/cand17/JS_PortalCliente_Acessos.html
+@@ -222,12 +222,21 @@
+       '<label>Cargo<input id="pclMdCargo" type="text" maxlength="80" value="' + PclAc_esc_(c.cargo) + '"></label>' +
+       '<label>Telefone<input id="pclMdTelefone" type="tel" maxlength="20" value="' + PclAc_esc_(c.telefone) + '" placeholder="(11) 98765-4321"></label>' +
+       '<label>E-mail (login)<input id="pclMdEmail" type="email" value="' + PclAc_esc_(c.email) + '" disabled></label></div>' +
+-      "<h3>Avisos que você pode desligar</h3><p class=\"pcl-just\">Os avisos de pedido, visita, orçamento, conclusão e acesso são sempre enviados, porque fazem parte do atendimento.</p>" +
+-      '<div class="pcl-form">' + Object.keys(nomes).map(function (k) { return '<label style="flex-direction:row;align-items:center;gap:8px;font-weight:400"><input id="pclMdAviso' + k + '" type="checkbox"' + (av[k] !== false ? " checked" : "") + "> " + PclAc_esc_(nomes[k]) + "</label>"; }).join("") + "</div>" +
++      // 18/11/2026 (etapa 4): avisos por e-mail — o que sempre chega, o que pode ser desligado, o horário e o que nunca vai no e-mail
++      PclCli_avisosHtml_(av, nomes, r.avisosInfo || {}) +
+       '<div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-cli="gravarDados">Gravar meus dados</button></div></div>' +
+       '<div class="pcl-caixa"><h3>Termo de uso</h3><p class="pcl-just">' + (t.pendente ? "O termo de uso (versão " + PclAc_esc_(t.versao) + ") ainda não foi aceito." : "Você aceitou o termo de uso, versão " + PclAc_esc_(t.versao) + ", em " + PclAc_esc_(t.aceitoEm) + ".") + ' Para trocar o e-mail, pedir a exclusão da conta ou exercer outro direito sobre os seus dados, fale com a Metrolabs.</p><div class="pcl-acoes"><button type="button" class="cadx-btn" data-cli="verTermo">Ver termo</button></div></div>';
+     document.getElementById("pclCorpo").innerHTML = h;
+   }
++  function PclCli_avisosHtml_(av, nomes, info) {
++    var opc = Object.keys(nomes).filter(function (k) { return k !== "PC08" || info.gestor !== false; });
++    return '<h3 id="pclMdAvisos">Avisos por e-mail</h3><p class="pcl-just">A Metrolabs envia os avisos para ' + (info.email ? "<b>" + PclAc_esc_(info.email) + "</b>" : "o seu e-mail de acesso") + ", em dias úteis, das " + PclAc_esc_(info.horario || "08:00 às 18:00") +
++      ", exceto em feriados. O pedido recebido, a visita marcada para o mesmo dia e as mudanças no seu acesso chegam na hora. O e-mail nunca leva anexos nem valores: o documento, o orçamento e o relatório abrem aqui no Portal, com o seu login.</p>" +
++      '<p class="pcl-just"><b>Sempre enviados</b> (fazem parte do atendimento): pedido recebido, aceito ou recusado; visita agendada, reagendada ou cancelada; orçamento para aprovação; atendimento concluído; mudanças no seu acesso; fim do contrato.</p>' +
++      '<p class="pcl-just"><b>Avisos que você pode desligar</b>:</p><div class="pcl-form">' + opc.map(function (k) { return '<div style="grid-column:1 / -1"><label style="flex-direction:row;align-items:center;gap:8px;font-weight:400"><input id="pclMdAviso' + k + '" type="checkbox"' + (av[k] !== false ? " checked" : "") + "> " + PclAc_esc_(nomes[k]) + "</label></div>"; }).join("") + "</div>" +
++      (info.gestor === false ? '<p class="pcl-just"><small>O resumo semanal dos vencimentos vai para o Gestor do cliente.</small></p>' : "") +
++      (info.consulta ? '<p class="pcl-just"><small>Com o acesso em modo consulta, os resumos de documentos novos e de vencimentos não são enviados.</small></p>' : "");
++  }
+   function PclCli_equipe_(r) {
+     PCLCLI.equipe = r;
+     var h = '<div class="pcl-caixa"><h3>Pessoas da empresa no Portal</h3><div class="pcl-tabela-caixa"><table class="cadx-tabela pclac-tab"><thead><tr><th>Pessoa</th><th>Papel e unidades</th><th>Situação</th><th>Última entrada</th><th></th></tr></thead><tbody>' + r.pessoas.map(function (p) {
+diff --git a/cand16/JS_PortalCliente_Ajuda.html b/cand17/JS_PortalCliente_Ajuda.html
+index 104e0cb..ed24fde 100644
+--- a/cand16/JS_PortalCliente_Ajuda.html
++++ b/cand17/JS_PortalCliente_Ajuda.html
+@@ -94,6 +94,10 @@ var PCL_DICAS = {
+   pclMdCargo: 'Cargo: a sua função na empresa (ex.: coordenadora da CME).',
+   pclMdTelefone: 'Telefone: com DDD (opcional). A Metrolabs usa só para falar sobre os atendimentos.',
+   pclMdEmail: 'E-mail: é o seu login. Para trocá-lo, fale com a Metrolabs.',
++  // 18/11/2026 (etapa 4): preferências dos avisos por e-mail (conta de cliente)
++  pclMdAvisoPC06: 'Mensagens da Metrolabs: quando a Metrolabs escreve na conversa de um chamado seu (ou na conversa geral), você recebe um resumo por e-mail, no máximo um a cada 2 horas úteis. O texto da mensagem fica só no Portal. Desmarcado, você vê as mensagens só ao entrar no Portal.',
++  pclMdAvisoPC07: 'Documentos novos: um resumo por dia, a partir das 08:30, com os certificados, relatórios e laudos novos das suas unidades. Os arquivos não vão anexados: abrem em Documentos técnicos.',
++  pclMdAvisoPC08: 'Vencimentos: um resumo por semana, no primeiro dia útil, com os equipamentos que vencem em 60, 30 e 7 dias e os vencidos. Cada faixa aparece uma vez; o vencido, uma vez só. Vem marcado, porque ajuda a programar a calibração e a manutenção antes do vencimento.',
+   pclEqpNome: 'Nome completo da pessoa que vai usar o Portal.',
+   pclEqpEmail: 'E-mail de trabalho: o convite vai para este endereço; ele também é o login. Use um e-mail individual, nunca o de um setor.',
+   pclEqpCargo: 'Cargo: ajuda a Metrolabs a saber com quem fala (ex.: enfermeira da CME, engenharia clínica).',
+@@ -170,6 +174,14 @@ var PCL_DICAS = {
+   pclDpCliente: 'Cliente: o cadastro único do cliente. Escreva pelo menos 3 letras do nome ou do CNPJ e toque no cliente da lista.',
+   pclDpFiltro: 'Mostrar: todos os documentos que podem chegar ao cliente, só os que aparecem, só os que não aparecem (tipo fora da lista ou oculto) ou só os ocultos.',
+   pclDpBusca: 'Buscar: nome do documento, número, TAG ou série do equipamento, ou nome da unidade.',
++  // 18/11/2026 (etapa 4): avisos ao cliente por e-mail (Regras do portal)
++  pclRgAvLigado: 'Avisos pelo Portal: ligados, os avisos da Assistência (visita, orçamento, conclusão) e os resumos (mensagens, documentos novos, vencimentos, contrato) vão para as pessoas do portal com o papel e a unidade certos. Desligados, a Assistência volta a avisar só o e-mail do cadastro e os resumos não saem. Pedido recebido, aceite e acesso continuam saindo sempre.',
++  pclRgAvIni: 'Início do horário comercial dos avisos ao cliente (padrão 08:00). Fora do horário e em dias sem expediente, o e-mail espera e sai no próximo horário útil, exceto pedido recebido, visita no mesmo dia e acesso.',
++  pclRgAvFim: 'Fim do horário comercial dos avisos ao cliente (padrão 18:00). Os feriados são os do expediente da empresa (Atividades da equipe > Avisos e horários).',
++  pclRgAvResumoHora: 'Hora dos resumos: a partir desta hora sai o resumo diário dos documentos novos e, no primeiro dia útil da semana, o resumo dos vencimentos (padrão 08:30).',
++  pclRgAvIntervalo: 'Resumo das mensagens: cada pessoa recebe no máximo um e-mail sobre as mensagens da Metrolabs a cada tantos minutos úteis (padrão 120, 2 horas). As mensagens chegam juntas no próximo resumo.',
++  pclRgAvCopia: 'Cópia ao e-mail do cadastro: com "Sim" (padrão na transição), o e-mail da unidade (ou do cliente) continua recebendo os avisos da Assistência (visita, peça, conclusão) também quando o cliente tem portal, sem repetir quando é o mesmo endereço de uma pessoa. Fica em "Sim" enquanto as contas antigas não forem revisadas, para ninguém deixar de receber o aviso que recebe hoje. Com "Não", só as pessoas do portal recebem.',
++  pclRgAvVencidoDias: 'Vencidos antigos no resumo semanal: o resumo de vencimentos só lista o equipamento vencido se ele venceu a partir de tantos dias antes do início dos avisos (padrão 30, de 0 a 365). Os vencidos mais antigos nunca vão no e-mail, para o primeiro resumo não virar uma lista enorme; eles continuam visíveis no Portal, em Vencimentos e cronograma.',
+   pclRgDocTipos: 'Tipos de documento visíveis: os tipos que aparecem sozinhos no Portal do cliente. A lista recomendada (decisão do dono) tem sete: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros só aparecem quando liberados um a um em "Documentos no portal".'
+ };
+ var PCL_GUIAS = {
+@@ -207,7 +219,7 @@ var PCL_GUIAS = {
+     '"Desligar" encerra as sessões na hora; "Marcar manter" impede a inativação por falta de entrada (padrão 120 dias). Tudo fica no histórico da conta.']],
+   conta: ['Ver e corrigir os seus dados, escolher os avisos opcionais e consultar o termo de uso.', [
+     'Corrija nome, cargo e telefone e toque em "Gravar meus dados". O e-mail é o login: para trocá-lo, fale com a Metrolabs.',
+-    'Desmarque os avisos que não quer receber (mensagens, documentos novos e vencimentos). Os de pedido, visita, orçamento, conclusão e acesso são sempre enviados.',
++    'Desmarque os avisos por e-mail que não quer receber (mensagens, documentos novos e vencimentos) e toque em "Gravar meus dados". Os de pedido, visita, orçamento, conclusão, acesso e contrato são sempre enviados. Os e-mails saem no horário comercial e nunca levam anexos nem valores.',
+     'Em "Ver termo", leia o termo de uso que você aceitou.']],
+   equipe: ['Ver quem da sua empresa usa o Portal, pedir o acesso de uma pessoa nova e desligar quem saiu.', [
+     'A lista mostra cada pessoa, o papel, as unidades, a situação e a última entrada.',
+@@ -241,6 +253,7 @@ var PCL_GUIAS = {
+   regras: ['Ajustar a carência, o modo consulta, a regra das contas antigas, a vigência provisória, o contato comercial, a régua de vencimento e as regras do reajuste.', [
+     'Altere os campos, escreva o motivo e toque em "Gravar as regras". Só Administrador e Diretoria.',
+     'Em "Chamados do portal": o telefone de plantão, o prazo para responder ao pedido, a confirmação automática do atendimento e os limites de envio.',
++    'Em "Avisos ao cliente por e-mail": se os avisos vão para as pessoas do portal, o horário comercial, a hora dos resumos, o intervalo do resumo das mensagens e a cópia ao e-mail do cadastro.',
+     'A régua de vencimento e o reajuste têm o próprio botão e o próprio motivo. Cada mudança fica no histórico das regras, no fim da aba.']],
+   // 18/11/2026 (etapa 3)
+   documentos: ['Guardar e baixar os documentos técnicos dos seus equipamentos para auditorias e para a Vigilância Sanitária.', [
+diff --git a/cand16/SGO_Ajuda_PortalCliente.js b/cand17/SGO_Ajuda_PortalCliente.js
+index 9cc952b..ede2247 100644
+--- a/cand16/SGO_Ajuda_PortalCliente.js
++++ b/cand17/SGO_Ajuda_PortalCliente.js
+@@ -27,6 +27,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { titulo: 'Revisar a pré-carga', itens: ['Abra a aba "Pré-carga": aparecem os clientes com conta de cliente e as pistas de contrato (prazo em Regras da assistência, ronda, proposta aprovada).', 'Para cada um, registre o contrato ou escreva o motivo e toque em "Revisado: sem contrato" (as contas dele deixam de entrar).', 'Nada é criado sozinho: a revisão é sempre de alguém, com motivo.'] },
+         { titulo: 'Suspender ou reativar o acesso (Administrador e Diretoria)', itens: ['Na ficha do cliente, escreva o motivo interno e toque em "Suspender o acesso".', 'As contas do cliente não entram mais; quem estiver dentro sai em até 5 minutos. O cliente vê só "acesso suspenso, fale com a Metrolabs".', 'Para voltar, escreva o motivo e toque em "Reativar o acesso".'] },
+         { titulo: 'Documentos no portal (o que o cliente vê)', itens: ['Abra a aba "Documentos no portal" (caixa «Ocultar ou liberar documento no portal»), busque o cliente e veja cada documento com "Aparece" ou "Não aparece" e o porquê.', 'Para esconder um documento do cliente, escolha "Oculto no portal", escreva o motivo e grave: ele some da lista e não abre em nenhuma tela do cliente. Para mostrar um documento de tipo fora da lista, escolha "Liberado um a um".', 'A lista de tipos que aparecem sozinhos fica em Regras do portal > Documentos no portal (decisão do dono: calibração, qualificação, NR-13, atendimento, cronograma, ciclo da lavadora e ronda).'] },
++        { titulo: 'Avisos ao cliente por e-mail (Regras do portal)', itens: ['Com os avisos ligados, as pessoas do portal recebem por e-mail, no horário comercial (padrão 08:00 às 18:00, dias úteis): visita agendada, reagendada ou cancelada, orçamento para aprovação (só o Gestor do cliente), atendimento concluído e o aviso de fim de contrato, carência ou modo consulta (texto neutro).', 'Os resumos saem pela rotina: mensagens da Metrolabs (no máximo um a cada 2 horas úteis por pessoa), documentos novos (diário, a partir das 08:30) e vencimentos em 60, 30 e 7 dias e vencidos (semanal, no primeiro dia útil; o vencido só entra se venceu a partir de 30 dias antes do início dos avisos, configurável; os mais antigos ficam só no Portal). Cada pessoa desliga esses três em Minha conta.', 'Cliente sem pessoa do portal na unidade continua recebendo os avisos da Assistência no e-mail do cadastro, como antes. Com portal, o e-mail do cadastro continua recebendo esses avisos enquanto "Cópia ao e-mail do cadastro" estiver em Sim (padrão na transição, porque as contas atuais ainda não foram revisadas); o mesmo endereço nunca recebe duas vezes. Com "Não", só as pessoas do portal recebem.', 'O e-mail nunca leva anexo, valor nem nome de outro cliente. O que já saiu fica registrado e não se repete.'] },
+         { titulo: 'Acompanhar a segurança das contas de cliente', itens: ['A aba "Segurança" mostra cada função que as contas de cliente chamaram, se está na lista do portal e quantas vezes.', 'A recusa nasce desligada (observação de 7 dias). Terminado o período, acrescente à lista o que o cliente precisa, escolha "Ligada", escreva o motivo e grave.', 'Com a recusa ligada, função fora da lista é recusada para os clientes com a mensagem do quê, por quê e o que fazer.'] }
+       ],
+       cores: [
+@@ -42,6 +43,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { situacao: 'O botão "Ler o contrato com a IA" diz que a leitura está indisponível.', oQueFazer: 'Falta a chave da IA (GEMINI_API_KEY em Administração > Chaves e senhas; o Administrador cadastra). Preencha olhando o PDF: o cadastro funciona igual.' },
+         { situacao: 'O reajuste aparece como "aguardando o índice".', oQueFazer: 'O Banco Central ainda não publicou o índice de algum mês do período. O sistema recalcula sozinho quando ele sair; nada é estimado.' },
+         { situacao: 'O cliente não recebeu o aviso de renovação.', oQueFazer: 'Na aba Vencimentos e reajustes, a coluna "Avisos já enviados" diz o motivo (por exemplo, sem e-mail do contato). Cadastre o contato no contrato.' },
++        { situacao: 'O cliente com portal diz que não recebe os avisos da visita ou da conclusão.', oQueFazer: 'Confira em Regras do portal se os avisos pelo Portal estão ligados e, em Acessos de clientes, se a pessoa está ativa e tem a unidade do chamado (o Gestor do cliente da unidade sempre recebe). Fora do horário comercial, o e-mail espera o próximo horário útil.' },
+         { situacao: 'O contrato de licitação não aparece.', oQueFazer: 'Ele entra sozinho quando, em Licitações > Contratos, o cliente do cadastro está vinculado ao contrato. Vincule lá.' },
+         { situacao: 'Aparece "Você não tem a permissão".', oQueFazer: 'A mensagem diz qual caixa falta. Registrar contrato é da gestão comercial, Administrador e Diretoria; suspender e alterar regras, do Administrador e da Diretoria.' },
+         { situacao: 'Um cliente reclamou que uma tela parou de funcionar depois que a recusa foi ligada.', oQueFazer: 'Abra a aba Segurança: a função recusada aparece com "Recusadas". Se o cliente precisa dela, acrescente à lista com motivo.' }
+@@ -111,7 +113,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+       ],
+       passos: [
+         { titulo: 'Corrigir os seus dados', itens: ['Abra "Meus dados", corrija nome, cargo e telefone.', 'Toque em "Gravar meus dados".'] },
+-        { titulo: 'Escolher os avisos', itens: ['Em "Avisos que você pode desligar", desmarque o que não quer receber.', 'Os avisos de pedido, visita, orçamento, conclusão e acesso são sempre enviados, porque fazem parte do atendimento.', 'Toque em "Gravar meus dados".'] },
++        { titulo: 'Escolher os avisos por e-mail', itens: ['Em "Avisos por e-mail", veja o que sempre chega: pedido recebido, aceito ou recusado; visita agendada, reagendada ou cancelada; orçamento para aprovação; atendimento concluído; mudanças no seu acesso; fim do contrato.', 'Em "Avisos que você pode desligar", desmarque o que não quer receber: o resumo das mensagens da Metrolabs (no máximo um a cada 2 horas úteis), o resumo diário dos documentos novos e o resumo semanal dos vencimentos (este só para o Gestor do cliente).', 'Toque em "Gravar meus dados". A escolha vale a partir do próximo aviso.'] },
+         { titulo: 'Pedir o acesso de uma pessoa (Gestor do cliente)', itens: ['Abra "Minha equipe" e preencha "Pedir acesso para uma pessoa": nome, e-mail de trabalho, cargo, papel, unidades e motivo.', 'Toque em "Pedir acesso". A Metrolabs confere e envia o convite; a resposta aparece em "Pedidos".'] },
+         { titulo: 'Desligar quem saiu (Gestor do cliente)', itens: ['Em "Minha equipe", toque em "Desligar acesso" na pessoa.', 'Escreva o motivo e confirme. O acesso cai na hora e a Metrolabs é avisada.'] }
+       ],
+@@ -119,6 +121,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+       problemas: [
+         { situacao: 'Aparece "leia e aceite o Termo de uso".', oQueFazer: 'Abra "Minha conta e equipe" (ou entre de novo), leia o termo e toque em "Li e estou ciente".' },
+         { situacao: 'Não aparece a aba "Minha equipe".', oQueFazer: 'Ela é do Gestor do cliente. Se você precisa cuidar da equipe, peça ao gestor da sua empresa que fale com a Metrolabs.' },
++        { situacao: 'Não chegou o e-mail de um aviso.', oQueFazer: 'Os e-mails saem em dias úteis, das 08:00 às 18:00 (o que acontece fora desse horário chega no início do próximo horário útil). Confira a pasta de spam (lixo eletrônico) e se o aviso está marcado em "Avisos que você pode desligar". O mesmo aviso não é enviado duas vezes. Tudo o que o e-mail avisa também aparece no Portal.' },
+         { situacao: 'O pedido de acesso diz que o e-mail já está em uso.', oQueFazer: 'Use o e-mail individual de trabalho da pessoa. Se ela já teve acesso e foi desligada, peça a reativação à Metrolabs.' }
+       ],
+       quemPode: [
+@@ -126,6 +129,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+       ],
+       perguntas: [
+         { p: 'Por que não consigo trocar o meu e-mail aqui?', r: 'O e-mail é o login e recebe os avisos do atendimento. A troca é feita pela Metrolabs, com um convite novo para o e-mail novo.' },
++        { p: 'Por que o e-mail não traz o documento, o valor do orçamento ou o texto da mensagem?', r: 'Por segurança: o e-mail pode ser lido por outras pessoas e encaminhado. O documento, o orçamento e a conversa abrem no Portal, com o seu login.' },
+         { p: 'O que a Metrolabs registra das minhas ações?', r: 'Entrada, saída, pedidos, documentos abertos e mudanças de acesso, com data, hora, endereço IP e navegador, como explica o termo de uso.' }
+       ]
+     },
+@@ -175,7 +179,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+       cores: [{ nome: 'Fundo amarelo tracejado', significado: 'Nota interna: o cliente não vê.' }, { nome: 'Fundo azul', significado: 'Mensagem da Metrolabs que o cliente vê.' }],
+       problemas: [
+         { situacao: 'A aba "Conversas do portal" não aparece.', oQueFazer: 'Ela é de quem tem a caixa «Responder pedidos e conversas do portal» (equipe da área Técnica, gestores, Diretoria e Administrador). Peça a liberação em Administração > Acessos.' },
+-        { situacao: 'O cliente diz que não recebeu a resposta por e-mail.', oQueFazer: 'Nesta etapa, a mensagem da Metrolabs aparece no Portal; o resumo por e-mail das mensagens chega com os avisos ao cliente (etapa 4). Se for urgente, ligue para o cliente.' },
++        { situacao: 'O cliente diz que não recebeu a resposta por e-mail.', oQueFazer: 'O cliente recebe um resumo por e-mail das mensagens da Metrolabs, no máximo um a cada 2 horas úteis (08:00 às 18:00, dias úteis), sem o texto da mensagem. Ele pode ter desligado esse aviso em Minha conta. A nota interna nunca vai ao cliente. Se for urgente, ligue para o cliente.' },
+         { situacao: 'Uma foto enviada pelo cliente mostra um paciente.', oQueFazer: 'Retire o anexo com o motivo. O registro fica; o arquivo deixa de abrir para o cliente.' }
+       ],
+       quemPode: [{ perfil: 'Equipe', pode: 'Caixa «Responder pedidos e conversas do portal» (PORTAL_CLIENTE_CONVERSAR): equipe interna da área Técnica, gestores, Diretoria e Administrador.' }],
+diff --git a/cand16/SGO_Assistencia_Agenda.js b/cand17/SGO_Assistencia_Agenda.js
+index b0d3b26..de0889c 100644
+--- a/cand16/SGO_Assistencia_Agenda.js
++++ b/cand17/SGO_Assistencia_Agenda.js
+@@ -172,14 +172,16 @@ function AstA_agendar_(eu, d) {
+   Ast_depois_(function () {
+     if (reag) {
+       Ast_avisarCliente_(res.c, 'Visita técnica reagendada: chamado ' + c.NUMERO, 'Prezados,\n\nA visita técnica do chamado ' + c.NUMERO + ' (' + Ast_s_(c.EQUIPAMENTO_TEXTO) + ') foi reagendada para ' + Ast_br_(quando) +
+-        '.\nMotivo: ' + motivo + rodape, 'AT08');
++        '.\nMotivo: ' + motivo + rodape, 'AT08', { cod: 'PC03', tipo: 'REAGENDADA', quando: quando, tecnico: tec.nome, duracao: Ast_duracaoTxt_(dur) });
+     } else if (retorno) {
+       Ast_avisarCliente_(res.c, 'Retorno técnico agendado: chamado ' + c.NUMERO + ' em ' + Ast_brDia_(quando), 'Prezados,\n\nO retorno do técnico para o chamado ' + c.NUMERO + ' (' + Ast_s_(c.EQUIPAMENTO_TEXTO) + ') foi agendado para ' + Ast_br_(quando) +
+-        (Ast_s_(c.PECA_DISPONIVEL_EM) ? ', com a peça ' + Ast_s_(c.PECA_DESCRICAO).slice(0, 150) + ' já recebida e conferida' : '') + '.\nTécnico: ' + tec.nome + '.' + rodape, 'AT15');
++        (Ast_s_(c.PECA_DISPONIVEL_EM) ? ', com a peça ' + Ast_s_(c.PECA_DESCRICAO).slice(0, 150) + ' já recebida e conferida' : '') + '.\nTécnico: ' + tec.nome + '.' + rodape, 'AT15',
++        { cod: 'PC03', tipo: 'RETORNO', quando: quando, tecnico: tec.nome, peca: !!Ast_s_(c.PECA_DISPONIVEL_EM) });
+     } else {
+       Ast_avisarCliente_(res.c, 'Visita técnica agendada: chamado ' + c.NUMERO + ' em ' + Ast_brDia_(quando), 'Prezados,\n\nA visita técnica do chamado ' + c.NUMERO + ' (' + Ast_s_(c.EQUIPAMENTO_TEXTO) + ') foi agendada para ' + Ast_br_(quando) +
+-        '.\nTécnico: ' + tec.nome + '. Previsão de duração: ' + Ast_duracaoTxt_(dur) + '.' + rodape, 'AT08');
++        '.\nTécnico: ' + tec.nome + '. Previsão de duração: ' + Ast_duracaoTxt_(dur) + '.' + rodape, 'AT08', { cod: 'PC03', tipo: 'AGENDADA', quando: quando, tecnico: tec.nome, duracao: Ast_duracaoTxt_(dur) });
+     }
++    // 18/11/2026 (Portal do cliente, etapa 4): o último argumento (PC03) leva o aviso às pessoas do portal do cliente; sem portal, segue o cadastro
+   });
+   var sug = AstA_sugerirVeiculo_(tec.id, iniMs, fimMs, res.os);
+   return { chamado: AstC_publico_(res.c, eu, Date.now()), os: typeof AstO_publico_ === 'function' ? AstO_publico_(Ast_porId_(AST_ABAS.OS, res.os.ID) || res.os, eu) : null,
+diff --git a/cand16/SGO_Assistencia_Chamados.js b/cand17/SGO_Assistencia_Chamados.js
+index 69c20d2..b3426a9 100644
+--- a/cand16/SGO_Assistencia_Chamados.js
++++ b/cand17/SGO_Assistencia_Chamados.js
+@@ -366,7 +366,8 @@ function AstC_abrir_(eu, d, opcoes) {
+   }
+   if (canal === 'PORTAL' || canal === 'QR' || canal === 'EMAIL' || canal === 'TELEFONE') {
+     Ast_avisarCliente_(c, 'Recebemos o seu chamado ' + c.NUMERO, 'Olá. Registramos o seu pedido de atendimento técnico ' + c.NUMERO + ' (' + (v.eq ? Ast_equipTexto_(v.eq) : descEq) + ').\nProblema informado: ' +
+-      sintoma.slice(0, 300) + '\nNossa equipe técnica vai analisar e retornar com o agendamento. Acompanhe pelo portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT08');
++      sintoma.slice(0, 300) + '\nNossa equipe técnica vai analisar e retornar com o agendamento. Acompanhe pelo portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT08',
++      { cod: 'PC01', tipo: 'CHAMADO_ABERTO', solicitacaoId: Ast_s_(d.solicitacaoId) }); // 18/11/2026: cliente com portal recebe pelo portal (pedido do portal: só o PC02)
+   }
+   return { chamado: AstC_publico_(c, eu, Date.now(), regras), message: 'Chamado ' + c.NUMERO + ' aberto. ' + (triagem.nome ? 'A triagem é de ' + triagem.nome + ' (prazo ' + Ast_br_(c.PRAZO_TRIAGEM_EM) + ').' : 'Defina quem faz a triagem em Regras da assistência > Triagem e fila livre (ou o responsável da área Técnica em Caixa de decisões > Regras e responsáveis).') +
+     (reinc ? ' Atenção: reincidência do chamado ' + reinc.NUMERO + '.' : '') };
+@@ -654,7 +655,8 @@ function Assistencia_pecaDisponivel_(r, quem) {
+     if (res.mudou) {
+       Ast_avisarCliente_(res.c, 'Peça recebida: retorno técnico do chamado ' + res.c.NUMERO + ' será agendado',
+         'Prezados,\n\nA peça necessária para o atendimento do chamado ' + res.c.NUMERO + ' (' + Ast_s_(res.c.EQUIPAMENTO_TEXTO) + ') chegou e foi conferida pela Metrolabs.\n' +
+-        'O retorno do técnico será agendado em seguida e a data será informada por e-mail.\n\nAcompanhe pelo portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT15');
++        'O retorno do técnico será agendado em seguida e a data será informada por e-mail.\n\nAcompanhe pelo portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT15',
++        { cod: 'PC03', tipo: 'PECA' }); // 18/11/2026: cliente com portal recebe pelo portal
+     }
+     return { ok: true, numero: res.c.NUMERO, mudou: res.mudou };
+   } catch (e) { console.error('Compras -> Assistência (peça disponível): ' + ((e && e.message) || e)); return { ok: false, motivo: String((e && e.message) || e) }; }
+@@ -714,6 +716,9 @@ function AstC_cancelar_(eu, d) {
+       Ast_evento_('OS', os.ID, 'CANCELAMENTO', eu, 'Chamado cancelado: ' + motivo, { numero: os.NUMERO });
+       Ast_mudarAtividade_(os.ATIVIDADE_ID, 'Cancelada', 'Chamado ' + c.NUMERO + ' cancelado: ' + motivo);
+       if (Ast_s_(os.TECNICO_ID)) Ast_avisar_(os.TECNICO_ID, 'OS_CANCELADA', 'O.S. ' + os.NUMERO + ' cancelada', 'O chamado ' + c.NUMERO + ' (' + Ast_s_(c.CLIENTE_NOME) + ') foi cancelado: ' + motivo, os.ID, { autorId: eu.id, evento: 'AT05' });
++      // 18/11/2026 (Portal do cliente, etapa 4): cliente com portal e visita marcada recebe "visita cancelada" (PC03), sem o motivo interno no e-mail
++      var cCanc = c, agCanc = Ast_s_(os.AGENDADO_PARA);
++      if (agCanc && !(d && d.peloCliente) && typeof PCl_avisoDaAssistencia_ === 'function') Ast_depois_(function () { PCl_avisoDaAssistencia_(cCanc, { cod: 'PC03', tipo: 'CANCELADA', quando: agCanc }); });
+     }
+     // 01/11/2026: ato irreversível avisa na hora o gestor da área e a Diretoria (SGO_Avisos_Gestao.js), depois de soltar a trava do módulo
+     Ast_depois_(function () { if (typeof SGO_avisoGestaoIrreversivel_ === 'function') SGO_avisoGestaoIrreversivel_({ evento: 'GI04', modulo: 'assistencia', quem: eu, oque: 'Chamado cancelado', item: Ast_s_(c.NUMERO) + ' (' + Ast_s_(c.CLIENTE_NOME) + ')', motivo: motivo, tela: { tipo: 'assistencia', mod: 'assistencia', id: c.ID }, refId: 'AST-CANC-' + c.ID }); });
+diff --git a/cand16/SGO_Assistencia_Config.js b/cand17/SGO_Assistencia_Config.js
+index 1bdb670..8e9c17a 100644
+--- a/cand16/SGO_Assistencia_Config.js
++++ b/cand17/SGO_Assistencia_Config.js
+@@ -1199,10 +1199,16 @@ function Ast_avisar_(destIds, tipo, titulo, texto, refId, opcoes) {
+   return ids.length;
+ }
+ /** Aviso ao contato do cliente (e-mail; WhatsApp só se a matriz e a regra deixarem). Nunca lança. */
+-function Ast_avisarCliente_(c, titulo, texto, evento) {
++/**
++ * 18/11/2026 (Portal do cliente, etapa 4): pc = { cod: 'PC01'|'PC03'|'PC05', tipo, ... } diz qual aviso do portal corresponde a este. Cliente com
++ * pessoa do portal na unidade: o aviso vai para elas (papel, unidade, horário comercial, sem duplicar; SGO_PortalCliente_Avisos.js) e o
++ * e-mail do cadastro NÃO recebe este. Sem pessoa do portal (ou acesso suspenso/sem acesso), segue o e-mail do cadastro, como antes.
++ */
++function Ast_avisarCliente_(c, titulo, texto, evento, pc) {
+   try {
+     var regras = Ast_regras_();
+     if (!regras.avisos.emailCliente || typeof SGO_notificar_ !== 'function') return { ok: 0, pulado: 1, motivo: 'avisos ao cliente desligados nas Regras da assistência' };
++    if (pc && typeof PCl_avisoDaAssistencia_ === 'function') { var rp = PCl_avisoDaAssistencia_(c, pc); if (rp && rp.tratado) return rp.resultado || { ok: 0 }; }
+     var cli = Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[Ast_s_(c.CLIENTE_ID)] || {}, un = Ast_mapa_(SGO_CFG.SHEETS.CAD_UNIDADES)[Ast_s_(c.UNIDADE_ID)] || {};
+     var email = Ast_s_(un.EMAIL) || Ast_s_(cli.EMAIL);
+     if (!email) return { ok: 0, pulado: 1, motivo: 'cliente sem e-mail no cadastro (unidade ou cliente)' };
+diff --git a/cand16/SGO_Assistencia_Relatorio.js b/cand17/SGO_Assistencia_Relatorio.js
+index 8e2b6d3..d9eac00 100644
+--- a/cand16/SGO_Assistencia_Relatorio.js
++++ b/cand17/SGO_Assistencia_Relatorio.js
+@@ -546,7 +546,8 @@ function AstR_emitirRelatorioOS_(eu, osId, opcoes) {
+       if (o.aoEncerrar) {
+         var c = Ast_porId_(AST_ABAS.CHAMADOS, os.CHAMADO_ID) || { ID: os.CHAMADO_ID, CLIENTE_ID: os.CLIENTE_ID, UNIDADE_ID: os.UNIDADE_ID };
+         if (tipoDoc && tipoDoc.logistica) Ast_avisarCliente_(c, tituloDoc + ': O.S. ' + os.NUMERO, 'Prezados,\n\nA O.S. ' + os.NUMERO + ' (' + (tipoDoc.nome || 'logística') + (Ast_s_(os.EQUIPAMENTO_TEXTO) ? ', ' + Ast_s_(os.EQUIPAMENTO_TEXTO) : '') + ') foi concluída em ' + Ast_br_(os.ENCERRADA_EM) +
+-          '.\nO ' + tituloDoc.charAt(0).toLowerCase() + tituloDoc.slice(1) + ', com os itens e as assinaturas, segue por e-mail em seguida e fica disponível no portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT08');
++          '.\nO ' + tituloDoc.charAt(0).toLowerCase() + tituloDoc.slice(1) + ', com os itens e as assinaturas, segue por e-mail em seguida e fica disponível no portal do cliente do SGO+.\n\nMetrolabs — Assistência técnica', 'AT08',
++          { cod: 'PC05', tipo: 'LOGISTICA', osId: os.ID, osNumero: os.NUMERO, encerradaEm: os.ENCERRADA_EM, docNome: tipoDoc.nome || '' }); // 18/11/2026: cliente com portal recebe pelo portal (PC05)
+         // 16/11/2026 (fluxo da representada, furo F8): no chamado de representada a visita não encerra o caso; o texto diz que o caso segue
+         else if (Ast_s_(c.REPRESENTADA_ID)) Ast_avisarCliente_(c, 'Visita técnica concluída: O.S. ' + os.NUMERO, 'Prezados,\n\nVisita técnica concluída (' + os.NUMERO + ', ' + Ast_s_(os.EQUIPAMENTO_TEXTO) + ') em ' + Ast_br_(os.ENCERRADA_EM) +
+           '. O caso segue em análise; avisaremos o próximo passo.\nO relatório da visita fica disponível no portal do cliente do SGO+ e no prontuário do equipamento.\n\nMetrolabs — Assistência técnica', 'AT08');
+@@ -555,7 +556,8 @@ function AstR_emitirRelatorioOS_(eu, osId, opcoes) {
+           var rsC = AstO_resultado_(os);
+           var txtRes = rsC.final && rsC.final !== 'LIBERADO' ? '\n\nAtenção: ao final do atendimento o equipamento ficou ' + rsC.finalNome.toLowerCase() + (rsC.detalhe ? ' (' + rsC.detalhe.replace(/[.\s]+$/, '') + ')' : '') + '. Os detalhes estão no relatório.' : '';
+           Ast_avisarCliente_(c, 'Atendimento concluído: O.S. ' + os.NUMERO, 'Prezados,\n\nO atendimento técnico ' + os.NUMERO + ' (' + Ast_s_(os.EQUIPAMENTO_TEXTO) + ') foi concluído em ' + Ast_br_(os.ENCERRADA_EM) +
+-            '.' + txtRes + '\nO relatório do atendimento segue por e-mail em seguida e fica disponível no portal do cliente do SGO+ e no prontuário do equipamento.\n\nMetrolabs — Assistência técnica', 'AT08');
++            '.' + txtRes + '\nO relatório do atendimento segue por e-mail em seguida e fica disponível no portal do cliente do SGO+ e no prontuário do equipamento.\n\nMetrolabs — Assistência técnica', 'AT08',
++            { cod: 'PC05', tipo: 'CONCLUIDO', osId: os.ID, osNumero: os.NUMERO, encerradaEm: os.ENCERRADA_EM, alerta: txtRes }); // 18/11/2026: cliente com portal recebe pelo portal (PC05)
+         }
+       }
+     } else Ast_atualizar_(AST_ABAS.OS, os.ID, { RELATORIO_VERSAO: versao, ATUALIZADO_EM: agora });
+@@ -888,6 +890,8 @@ function AstR_emitirOrcamento_(eu, d) {
+   var campos = { SITUACAO: 'EMITIDO', PDF_ID: g.pdfId, PDF_URL: g.pdfUrl, HTML_ID: g.htmlId, EMITIDO_EM: Ast_agora_(), EMITIDO_POR_NOME: eu.nome, ATUALIZADO_EM: Ast_agora_() };
+   if (congTxt) campos.CONGELADO_JSON = congTxt;
+   Ast_atualizar_(AST_ABAS.ORCAMENTOS, o.ID, campos);
++  // 18/11/2026 (Portal do cliente, etapa 4): o Gestor do cliente da unidade, com portal, recebe "orçamento para aprovação" (PC04, sem valores)
++  if (typeof PCl_avisoOrcamento_ === 'function') { var oAv = Object.assign({}, o, campos), cAv = c; Ast_depois_(function () { PCl_avisoOrcamento_(oAv, cAv); }); }
+   if (c.ID) Ast_evento_('CHAMADO', c.ID, 'ORCAMENTO', eu, 'Orçamento ' + o.NUMERO + ' emitido' + (pg.outro ? ' (faturar para ' + pg.nome + ')' : '') + '; aguarda a resposta do cliente', { numero: c.NUMERO, publico: true });
+   return { orcamento: AstR_orcPublico_(Object.assign({}, o, campos), eu), html: g.html || fin.html,
+     message: 'Orçamento ' + o.NUMERO + ' emitido. Envie ao cliente pelo botão "Enviar com link de aceite": o cliente aprova, recusa ou pede ajuste pelo link. Quem responder por telefone ou e-mail tem a resposta registrada em "Registrar a resposta do cliente", com o aceite anexado.' };
+diff --git a/cand16/SGO_AssistenteManuais.js b/cand17/SGO_AssistenteManuais.js
+index eb06138..e3b95ef 100644
+--- a/cand16/SGO_AssistenteManuais.js
++++ b/cand17/SGO_AssistenteManuais.js
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "2db7c8830049",
++ "versao": "2d82132703c6",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -4615,7 +4615,7 @@ var SGO_ASSIST_MANUAIS = {
+   },
+   {
+    "arquivo": "MANUAL_MODULO_PORTAL_CLIENTE.md",
+-   "titulo": "Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes)",
++   "titulo": "Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes; etapas 2 a 4: chamados, documentos e avisos ao cliente por e-mail)",
+    "tela": "portal_cliente_contratos",
+    "perfis": null,
+    "secoes": [
+@@ -4677,7 +4677,7 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Tabelas",
+-     "texto": "CLI_CONTRATOS: contratos de clientes privados, um por linha, com a versão atual.\nCLI_CONTRATOS_HIST: só inclusão. Guarda registro, correção, renovação, encerramento, suspensão, reativação e revisão da pré-carga, com antes, depois, motivo, quem e quando.\nPCL_ACESSOS: só inclusão. Guarda a entrada recusada, o arquivo recusado (ESCOPO_RECUSADO) e a função recusada.\nPCL_FUNCOES_OBSERVADAS: uma linha por dia, função e pessoa, com a contagem.\nPCL_REGRAS_HIST: as mudanças das regras e da lista de funções.\nEtapa 1 (18/11/2026): PCL_PEDIDOS_EQUIPE, PCL_TERMOS_ACEITE e PCL_CONTAS_HIST (seção 23.9) e as colunas CLIENTE_* em CAD_USUARIOS.\nEtapa 2 (18/11/2026): PCL_MENSAGENS, PCL_ANEXOS e PCL_AVISOS_FILA e as colunas novas de ATEC_SOLICITACOES e ATEC_CHAMADOS (seção 24.9).\nEtapa 3 (18/11/2026): as colunas PORTAL, PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM em DOC_DOCUMENTOS (seção 25.8). Nenhuma tabela nova.\n\nAs datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua."
++     "texto": "CLI_CONTRATOS: contratos de clientes privados, um por linha, com a versão atual.\nCLI_CONTRATOS_HIST: só inclusão. Guarda registro, correção, renovação, encerramento, suspensão, reativação e revisão da pré-carga, com antes, depois, motivo, quem e quando.\nPCL_ACESSOS: só inclusão. Guarda a entrada recusada, o arquivo recusado (ESCOPO_RECUSADO) e a função recusada.\nPCL_FUNCOES_OBSERVADAS: uma linha por dia, função e pessoa, com a contagem.\nPCL_REGRAS_HIST: as mudanças das regras e da lista de funções.\nEtapa 1 (18/11/2026): PCL_PEDIDOS_EQUIPE, PCL_TERMOS_ACEITE e PCL_CONTAS_HIST (seção 23.9) e as colunas CLIENTE_* em CAD_USUARIOS.\nEtapa 2 (18/11/2026): PCL_MENSAGENS, PCL_ANEXOS e PCL_AVISOS_FILA e as colunas novas de ATEC_SOLICITACOES e ATEC_CHAMADOS (seção 24.9).\nEtapa 3 (18/11/2026): as colunas PORTAL, PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM em DOC_DOCUMENTOS (seção 25.8). Nenhuma tabela nova.\nEtapa 4 (18/11/2026): PCL_AVISOS_ENVIOS, o registro dos avisos ao cliente já enviados (seção 26.8).\n\nAs datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua."
+     },
+     {
+      "titulo": "Problemas comuns",
+@@ -4796,7 +4796,7 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Acessos de clientes (etapa 1, 18/11/2026) > Regras, tabelas e avisos",
+-     "texto": "Regras do portal (Administrador e Diretoria, com motivo e histórico): convite só com contrato (padrão sim), aviso de conta parada (padrão 90 dias), inativar a conta parada (padrão 120 dias), inativar no fim do contrato (padrão sim), contato do encarregado de dados e o texto do termo de uso.\n\nTabelas novas: PCL_PEDIDOS_EQUIPE (pedidos dos gestores), PCL_TERMOS_ACEITE (aceites, só inclusão) e PCL_CONTAS_HIST (histórico de cada conta, só inclusão). Colunas novas em CAD_USUARIOS, por acréscimo: CLIENTE_PAPEL, CLIENTE_UNIDADES_JSON, CLIENTE_CARGO, CLIENTE_TELEFONE, CLIENTE_AVISOS_JSON, CLIENTE_CONVIDADO_POR_ID/NOME, CLIENTE_DESLIGADO_EM/POR_NOME/MOTIVO, CLIENTE_ULTIMA_ENTRADA_EM, CLIENTE_REATIVADO_EM/POR_NOME, CLIENTE_MANTER, CLIENTE_MANTER_POR_NOME/EM e CLIENTE_INATIVIDADE_AVISO_EM.\n\nAvisos (matriz): PC09 (acesso do cliente: convite, papel alterado, desligado e reativado; só e-mail, na hora), PI02 (pedido de inclusão e desligamento pelo cliente, para quem gere acessos) e PI04 (contas paradas). Nenhum aviso ao cliente sai por WhatsApp. O assunto chega como \"SGO+ | Metrolabs — ...\", porque o serviço de avisos do SGO+ acrescenta o prefixo.\n\nRegistro de acessos (PCL_ACESSOS): entrada, saída, recusa, aceite do termo, dados alterados, convite, papel alterado, e-mail trocado, desligamento, reativação, pedido de inclusão e toda tentativa fora do escopo."
++     "texto": "Regras do portal (Administrador e Diretoria, com motivo e histórico): convite só com contrato (padrão sim), aviso de conta parada (padrão 90 dias), inativar a conta parada (padrão 120 dias), inativar no fim do contrato (padrão sim), contato do encarregado de dados e o texto do termo de uso.\n\nTabelas novas: PCL_PEDIDOS_EQUIPE (pedidos dos gestores), PCL_TERMOS_ACEITE (aceites, só inclusão) e PCL_CONTAS_HIST (histórico de cada conta, só inclusão). Colunas novas em CAD_USUARIOS, por acréscimo: CLIENTE_PAPEL, CLIENTE_UNIDADES_JSON, CLIENTE_CARGO, CLIENTE_TELEFONE, CLIENTE_AVISOS_JSON, CLIENTE_CONVIDADO_POR_ID/NOME, CLIENTE_DESLIGADO_EM/POR_NOME/MOTIVO, CLIENTE_ULTIMA_ENTRADA_EM, CLIENTE_REATIVADO_EM/POR_NOME, CLIENTE_MANTER, CLIENTE_MANTER_POR_NOME/EM e CLIENTE_INATIVIDADE_AVISO_EM.\n\nAvisos (matriz): PC09 (acesso do cliente: convite, papel alterado, desligado e reativado; só e-mail, na hora), PI02 (pedido de inclusão e desligamento pelo cliente, para quem gere acessos) e PI04 (contas paradas). Nenhum aviso ao cliente sai por WhatsApp. Desde a etapa 4, o assunto chega como \"Metrolabs — ...\", sem o prefixo \"SGO+ | \" (seção 26.1).\n\nRegistro de acessos (PCL_ACESSOS): entrada, saída, recusa, aceite do termo, dados alterados, convite, papel alterado, e-mail trocado, desligamento, reativação, pedido de inclusão e toda tentativa fora do escopo."
+     },
+     {
+      "titulo": "Acessos de clientes (etapa 1, 18/11/2026) > Problemas comuns (acessos)",
+@@ -4840,7 +4840,7 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Chamados pelo Portal (etapa 2, 18/11/2026) > Avisos",
+-     "texto": "Ao cliente, só por e-mail (nunca WhatsApp): PC01 \"Pedido recebido\", na hora, para quem abriu e para o contato no local; PC02 \"Pedido aceito\", \"falta uma informação\" e \"não pôde ser atendido\", no horário comercial (fora dele, o e-mail espera na fila PCL_AVISOS_FILA e sai na rotina seguinte dentro do expediente).\nVisita (PC03), orçamento (PC04) e conclusão (PC05) continuam pelos avisos de sempre da Assistência até a etapa 4. A mensagem da Metrolabs na conversa (PC06) aparece no Portal; o resumo por e-mail chega na etapa 4.\nInternos: AT09 (pedido novo, para quem faz a triagem), PI03 (o problema continua), PI06 (mensagem do cliente) e PI07 (cancelamento pelo cliente). Pendências na Caixa de decisões: pcl_pedido, pcl_pedido_vencido e pcl_reaberto."
++     "texto": "Ao cliente, só por e-mail (nunca WhatsApp): PC01 \"Pedido recebido\", na hora, para quem abriu e para o contato no local; PC02 \"Pedido aceito\", \"falta uma informação\" e \"não pôde ser atendido\", no horário comercial (fora dele, o e-mail espera na fila PCL_AVISOS_FILA e sai na rotina seguinte dentro do expediente).\nVisita (PC03), orçamento (PC04), conclusão (PC05) e o resumo das mensagens da Metrolabs (PC06) chegam pela etapa 4 (seção 26). O PC02 também vai aos gestores do cliente da unidade desde a etapa 4.\nInternos: AT09 (pedido novo, para quem faz a triagem), PI03 (o problema continua), PI06 (mensagem do cliente) e PI07 (cancelamento pelo cliente). Pendências na Caixa de decisões: pcl_pedido, pcl_pedido_vencido e pcl_reaberto."
+     },
+     {
+      "titulo": "Chamados pelo Portal (etapa 2, 18/11/2026) > Regras, tabelas e caixas",
+@@ -4888,11 +4888,55 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Tabelas, colunas e caixas",
+-     "texto": "Colunas novas em DOC_DOCUMENTOS, por acréscimo e garantidas antes da primeira gravação: PORTAL ('' segue o tipo, OCULTO, VISIVEL), PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM (texto). Editar o documento no Arquivo de documentos não apaga a marca.\nRegistro de acessos (PCL_ACESSOS): DOCUMENTO_ABERTO a cada abertura, ESCOPO_RECUSADO nas tentativas fora do escopo e ACESSO_RECUSADO quando a situação de acesso não permite ler.\nCaixa nova: «Ocultar ou liberar documento no portal» (PORTAL_CLIENTE_DOC_LIBERAR), padrão para a gestão da área Técnica e da Qualidade, a Diretoria e o Administrador.\nRegras do portal: a lista docTiposVisiveis (mesma propriedade das outras regras, com merge e histórico).\nSem avisos novos nesta etapa. O aviso de documento novo (PC07) e o de vencimento (PC08) chegam na etapa 4."
++     "texto": "Colunas novas em DOC_DOCUMENTOS, por acréscimo e garantidas antes da primeira gravação: PORTAL ('' segue o tipo, OCULTO, VISIVEL), PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM (texto). Editar o documento no Arquivo de documentos não apaga a marca.\nRegistro de acessos (PCL_ACESSOS): DOCUMENTO_ABERTO a cada abertura, ESCOPO_RECUSADO nas tentativas fora do escopo e ACESSO_RECUSADO quando a situação de acesso não permite ler.\nCaixa nova: «Ocultar ou liberar documento no portal» (PORTAL_CLIENTE_DOC_LIBERAR), padrão para a gestão da área Técnica e da Qualidade, a Diretoria e o Administrador.\nRegras do portal: a lista docTiposVisiveis (mesma propriedade das outras regras, com merge e histórico).\nSem avisos novos nesta etapa. O aviso de documento novo (PC07) e o de vencimento (PC08) chegaram na etapa 4 (seção 26)."
+     },
+     {
+      "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Problemas comuns (documentos e equipamentos)",
+-     "texto": "Situação | O que fazerO cliente diz que um documento sumiu do Portal | Abra \"Documentos no portal\", busque o cliente e veja o porquê: tipo fora da lista ou oculto. Libere um a um, com motivo, se for o caso\nO cliente vê um documento que não deveria | Marque \"Oculto no portal\" com o motivo: ele some da lista e não abre em nenhuma tela do cliente\nO botão \"Abrir\" não aparece para o cliente | O arquivo do documento não está ligado a um registro que a trava reconhece. Registre o documento no Arquivo de documentos com o arquivo\nO farol mostra \"vencido\", mas o serviço foi feito | Emita ou registre o documento novo com a validade; o farol usa o documento mais recente\nO previsto do contrato não aparece | Confira em Contratos a periodicidade dos serviços (não pode ser \"sob demanda\") e a vigência\nUm Solicitante não vê um equipamento ou um relatório de ciclo | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes\nA marca \"Oculto no portal\" não aparece para um certificado | A marca existe só para o documento registrado no Arquivo de documentos. Registre o certificado lá e marque\n</div>"
++     "texto": "Situação | O que fazerO cliente diz que um documento sumiu do Portal | Abra \"Documentos no portal\", busque o cliente e veja o porquê: tipo fora da lista ou oculto. Libere um a um, com motivo, se for o caso\nO cliente vê um documento que não deveria | Marque \"Oculto no portal\" com o motivo: ele some da lista e não abre em nenhuma tela do cliente\nO botão \"Abrir\" não aparece para o cliente | O arquivo do documento não está ligado a um registro que a trava reconhece. Registre o documento no Arquivo de documentos com o arquivo\nO farol mostra \"vencido\", mas o serviço foi feito | Emita ou registre o documento novo com a validade; o farol usa o documento mais recente\nO previsto do contrato não aparece | Confira em Contratos a periodicidade dos serviços (não pode ser \"sob demanda\") e a vigência\nUm Solicitante não vê um equipamento ou um relatório de ciclo | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes\nA marca \"Oculto no portal\" não aparece para um certificado | A marca existe só para o documento registrado no Arquivo de documentos. Registre o certificado lá e marque"
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026)",
++     "texto": "O cliente com Portal passa a receber por e-mail os avisos do atendimento, da conversa, dos documentos, dos vencimentos e do contrato, sempre nas pessoas certas da empresa. O canal é só o e-mail (decisão 11). WhatsApp para cliente continua desligado. Para a equipe, vale a regra de sempre: avisos no expediente, em dia útil, e cobrança pelo sistema e pelo e-mail."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Como o e-mail chega",
++     "texto": "Assunto: começa sempre com \"Metrolabs — \" seguido do número, por exemplo \"Metrolabs — Chamado CH-2026-0031: visita agendada para 21/10/2026\". Os avisos ao cliente não levam mais o prefixo \"SGO+ | \". Os avisos à equipe continuam com ele.\nRemetente e marca: \"Metrolabs\". O botão \"Abrir no Portal do cliente\" abre o sistema, e a pessoa precisa entrar com o próprio login.\nCorpo: saudação pelo primeiro nome, o texto do aviso e um rodapé que diz por que a pessoa recebe o e-mail. Nos avisos que podem ser desligados, o rodapé também ensina a desligar.\nNunca vão no e-mail: anexos, valores (nem do orçamento), nome de outro cliente, texto das mensagens da conversa, motivo interno de cancelamento ou reagendamento, prioridade, triagem e qualquer termo interno.\nUma vez só: endereços repetidos são juntados, e a mesma pessoa recebe o aviso uma vez, mesmo quando ela é ao mesmo tempo quem abriu e gestora da unidade. O que já saiu fica em PCL_AVISOS_ENVIOS e não se repete."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Os avisos (parte 1)",
++     "texto": "Código | Aviso | Quem recebe | Quando sai | Pode desligar?PC01 | Pedido recebido (etapa 2). Chamado registrado pela equipe por telefone, e-mail ou QR Code para cliente com Portal | Quem abriu e o contato no local. No chamado registrado pela equipe: os gestores do cliente da unidade | Na hora | Não\nPC02 | Pedido aceito (virou chamado), complemento pedido ou recusa com o motivo | Quem abriu e os gestores do cliente da unidade | Horário comercial | Não\nPC03 | Visita agendada, reagendada, retorno agendado, peça recebida e visita cancelada pela Metrolabs | Quem abriu e os gestores do cliente da unidade | Horário comercial. Visita no mesmo dia: na hora | Não\nPC04 | Orçamento aguardando aprovação (ao emitir o orçamento) | Gestores do cliente da unidade (e da empresa que paga, se tiver Portal) | Horário comercial | Não\nPC05 | Atendimento concluído, com o relatório disponível no Portal | Quem abriu e os gestores do cliente da unidade | Horário comercial | Não\nPC06 | Mensagem da Metrolabs na conversa (resumo, sem o texto) | Quem abriu e quem participa da conversa. Sem nenhum dos dois: os gestores da unidade | No máximo um resumo a cada 2 horas úteis por pessoa | Sim\nPC07 | Documentos novos (certificado, relatório, laudo) | Todas as pessoas com a unidade do documento | Resumo diário, a partir das 08:30 | Sim\nPC08 | Vencimentos em 60, 30 e 7 dias e vencidos | Gestores do cliente da unidade | Resumo semanal, no primeiro dia útil da semana, a partir das 08:30. Cada faixa sai uma vez; o vencido, uma vez. O vencido só entra se venceu a partir de 30 dias antes do início dos avisos (configurável); os mais antigos ficam só no Portal | Sim (vem ligado)\nPC09 | Acesso:"
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Os avisos (parte 2)",
++     "texto": "convite, papel alterado, desligamento, reativação (etapa 1) | A própria pessoa e os gestores do cliente | Na hora | Não\nPC10 | Contrato termina em 30 dias, período de carência, modo consulta | Gestores do cliente | Horário comercial, uma vez por situação | Não\nTexto do fim de contrato (decisão 12): neutro, sem tom de cobrança. Diz a data e o caminho (falar com o contato comercial das Regras do portal). PC10 não sai na vigência provisória (\"contrato a cadastrar\") nem na transição das contas antigas: nesses casos o Comercial cuida pela régua dos contratos (CT04). Contrato de licitação não recebe o aviso de 30 dias, porque Licitações avisa pela agenda própria. O contato do contrato que já recebe o aviso de renovação da régua (CT03) não recebe o PC10 dos 30 dias, para não repetir.\n\nAvisos internos:\nPI01 (contrato vence em 60, 30 e 15 dias) é o CT01 da régua dos contratos (seção 16), que já sai em 120, 90, 60, 30, 15, 7 e 0 dias, uma vez cada marco, ao responsável e à gestão comercial. Nada foi duplicado.\nPI02, PI03 e PI04 continuam como nas etapas 1 e 2.\nPI05 (novo): pedido do Portal a 75% do prazo de resposta (padrão 4 horas úteis) vai a quem faz a triagem. Com o prazo vencido, vai também à gestão da área Técnica. Sai uma vez cada marco, por e-mail, no expediente da equipe, sem WhatsApp. É a mesma regra do RP07 da Representação."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Horário comercial",
++     "texto": "Os e-mails ao cliente saem de 08:00 às 18:00, em dias úteis. Os feriados são os do expediente da empresa (Atividades da equipe > Avisos e horários). O que acontece fora desse horário espera na fila PCL_AVISOS_FILA e sai na primeira rodada do próximo horário útil. Saem na hora, mesmo à noite: o pedido recebido (PC01), a visita marcada para o mesmo dia (PC03) e o acesso (PC09).\n\nO horário dos avisos ao cliente é separado do expediente da equipe (padrão 17:30), porque a espec fixou 18:00 para o cliente. Os dois ficam configuráveis."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Substituição dos e-mails antigos da Assistência",
++     "texto": "Até esta etapa, a Assistência mandava os avisos de visita, peça e conclusão (AT08 e AT15) para o e-mail do cadastro da unidade ou do cliente. Agora:\nCliente com Portal na unidade (pelo menos uma pessoa ativa com o papel e a unidade certos, e o acesso não está suspenso nem sem acesso): o aviso vai para as pessoas do Portal no modelo novo. Enquanto \"Cópia ao e-mail do cadastro\" estiver em Sim (padrão na transição), o e-mail do cadastro da unidade também recebe, no mesmo modelo. O endereço repetido sai uma vez só.\nCliente sem Portal, unidade sem nenhuma pessoa do Portal, acesso suspenso ou sem acesso: continua tudo como antes, no e-mail do cadastro.\nPedido do Portal aceito: o cliente recebe só o \"pedido aceito\" (PC02). O e-mail antigo \"Recebemos o seu chamado\" deixa de sair para esse caso.\nChamado de representada: segue o fluxo próprio da Representação, como antes.\nRondas: os avisos de ronda agendada e concluída continuam no e-mail do cadastro (não fazem parte dos eventos do Portal).\nCópia ao e-mail do cadastro (Regras do portal, padrão \"Sim\" na transição): as contas de cliente atuais são antigas (sem papel, valem como Gestor do cliente) e ainda não se sabe se os e-mails delas são de pessoas reais. Por isso o e-mail da unidade continua recebendo os avisos de visita, peça e conclusão que recebe hoje, juntado com os das pessoas (o mesmo endereço recebe uma vez). Depois de revisar as contas em Acessos de clientes, a Diretoria pode trocar para \"Não\", com motivo.\nO envio do relatório e do orçamento por \"Enviar documento\" (com o PDF) continua igual: é um envio feito por uma pessoa da equipe, e não um aviso automático."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Preferências da pessoa (Minha conta)",
++     "texto": "Em Portal do cliente > Minha conta > Meus dados, a parte Avisos por e-mail mostra:\no e-mail que recebe, o horário e o aviso de que o e-mail nunca leva anexos nem valores;\na lista do que é sempre enviado: pedido, visita, orçamento, conclusão, acesso e contrato;\nos três avisos que a pessoa pode desligar: mensagens da Metrolabs (PC06), documentos novos (PC07) e vencimentos (PC08). O de vencimentos aparece só para o Gestor do cliente. Em modo consulta, a tela explica que os resumos de documentos e vencimentos não saem.\n\nA escolha fica em CAD_USUARIOS.CLIENTE_AVISOS_JSON e vale a partir do próximo aviso. Os avisos obrigatórios não podem ser desligados, nem mesmo chamando o servidor direto."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Regras do portal > Avisos ao cliente por e-mail (Administrador e Diretoria, com motivo e histórico)",
++     "texto": "Campo | O que faz | PadrãoAvisos pelo Portal | Ligados: os avisos da Assistência e os resumos vão para as pessoas do Portal. Desligados: a Assistência volta a avisar só o e-mail do cadastro e os resumos não saem. Pedido recebido, aceite e acesso continuam saindo sempre | Ligados\nHorário comercial: início e fim | Janela dos e-mails ao cliente nos dias úteis | 08:00 e 18:00\nHora dos resumos | A partir desta hora sai o resumo diário dos documentos novos e, no primeiro dia útil da semana, o dos vencimentos | 08:30\nResumo das mensagens | No máximo um resumo por pessoa a cada tantos minutos úteis | 120\nCópia ao e-mail do cadastro | O e-mail da unidade também recebe os avisos da Assistência de quem tem Portal (sem repetir endereço) | Sim (transição)\nVencidos antigos no resumo semanal | O vencido só entra no PC08 se venceu a partir de tantos dias antes do início dos avisos; os mais antigos nunca vão no e-mail e continuam no Portal (Vencimentos e cronograma) | 30 (de 0 a 365)\nInício dos avisos: a primeira rodada da rotina depois da publicação grava o dia e a hora (avisosDesde). Mensagens, documentos e pedidos anteriores a esse momento não geram aviso. A tela de Regras mostra a data. Na primeira semana, se a publicação não cair no primeiro dia útil, o resumo de vencimentos só começa no primeiro dia útil da semana seguinte."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Rotina",
++     "texto": "A rotina da Assistência (a cada 15 minutos) chama PortalCliente_rotinaChamados_, que agora também chama PortalCliente_rotinaAvisos_:\n1. PI05 (prazo do pedido do Portal), em toda rodada;\n2. PC06 (resumo das mensagens), dentro do horário comercial do cliente;\n3. PC10 (contrato), uma vez por dia útil;\n4. PC07 (documentos novos), uma vez por dia útil, a partir da hora dos resumos;\n5. PC08 (vencimentos), uma vez por semana, no primeiro dia útil, a partir da hora dos resumos;\n6. a fila do horário comercial (PCL_AVISOS_FILA).\n\nNenhum passo derruba os outros: um erro fica registrado no log e a rodada continua."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Tabelas e código",
++     "texto": "Tabela nova PCL_AVISOS_ENVIOS (só inclusão): CHAVE do aviso, evento, cliente, pessoa, e-mail, referência, situação (ENVIADO ou NA_FILA) e data. É o que impede a repetição.\nPCL_AVISOS_FILA (etapa 2) passa a guardar todos os avisos ao cliente que esperam o horário comercial, um por pessoa.\nMatriz de avisos: códigos novos PC03, PC04, PC05, PC06, PC07, PC08, PC10 e PI05.\nCódigo: SGO_PortalCliente_Avisos.js (novo), o envio central PCl_enviarCliente_ em SGO_PortalCliente_Config.js, paraCliente em SGO_notificar_ (assunto sem prefixo e marca Metrolabs) e o último argumento de Ast_avisarCliente_ na Assistência (Agenda, Chamados e Relatório da O.S.)."
++    },
++    {
++     "titulo": "Avisos ao cliente por e-mail (etapa 4, 18/11/2026) > Problemas comuns (avisos ao cliente)",
++     "texto": "Situação | O que fazerO cliente com Portal não recebeu o aviso da visita | Veja se a pessoa está ativa e tem a unidade do chamado (Acessos de clientes). O Gestor do cliente da unidade sempre recebe. Fora do horário comercial, o e-mail espera o próximo horário útil\nO e-mail da unidade parou de receber os avisos da Assistência | Alguém trocou \"Cópia ao e-mail do cadastro\" para \"Não\" em Regras do portal (o histórico das regras diz quem e por quê). Volte para \"Sim\" se a unidade precisa receber\nUm equipamento vencido há muito tempo não aparece no resumo semanal | É a regra: o vencido só entra se venceu a partir de 30 dias antes do início dos avisos (Regras do portal > Vencidos antigos no resumo semanal). Ele continua em Portal do cliente > Vencimentos e cronograma\nO cliente diz que não recebe o resumo das mensagens | Ele pode ter desligado em Minha conta. O resumo sai no máximo a cada 2 horas úteis e nunca leva o texto da mensagem\nUm Solicitante não recebe os vencimentos | O resumo de vencimentos vai só para o Gestor do cliente da unidade\nO cliente em modo consulta não recebe documentos novos nem vencimentos | É a regra do modo consulta (item 3.3 da espec)\nO cliente recebeu um aviso duas vezes | Confira em PCL_AVISOS_ENVIOS se são dois avisos diferentes (por exemplo, visita agendada e depois reagendada). O mesmo aviso não se repete para o mesmo endereço\nNenhum aviso ao cliente sai | Confira em Regras do portal se os avisos pelo Portal estão ligados e se a rotina da Assistência está rodando\n</div>"
+     }
+    ],
+    "acesso": [
+diff --git a/cand16/SGO_Notificar.js b/cand17/SGO_Notificar.js
+index 8da387d..cf94895 100644
+--- a/cand16/SGO_Notificar.js
++++ b/cand17/SGO_Notificar.js
+@@ -18,6 +18,9 @@
+  *             do PULADO ("Sem e-mail no cadastro do <cadastro>"); 'motivo' preenchido = pula
+  *             e registra esse motivo.
+  *     semLink: true — não põe o endereço do SGO+ no e-mail/WhatsApp (destinatário externo).
++ *     paraCliente: true — (18/11/2026, Portal do cliente, etapa 4) aviso ao CLIENTE: o assunto sai exatamente como o título
++ *             ("Metrolabs — ..."), sem o prefixo "SGO+ | ", o remetente e a marca do e-mail são "Metrolabs" e o rodapé manda falar
++ *             pela conversa do Portal do cliente. Sem anexo, como todo envio daqui. Os avisos à equipe continuam iguais.
+  *     Retorno (20/10/2026): além das contagens, resumo.ids = { usuárioId: id da mensagem no WhatsApp (Meta: wamid;
+  *             Z-API: messageId) } para quem recebeu — o bate-papo (SGO_ComunicacaoWhatsapp.js, origem BATE_PAPO)
+  *             guarda esse id para a resposta da pessoa ("responder a") voltar para a conversa certa.
+@@ -178,19 +181,23 @@ function Notificar_contatos_(ids) {
+   return mapa;
+ }
+ 
+-function Notificar_htmlEmail_(titulo, texto, link, rotuloLink) {
++// 18/11/2026 (Portal do cliente, etapa 4): e-mail ao CLIENTE (paraCliente) leva a marca "Metrolabs", o rodapé do cliente e o texto
++// justificado; o assunto sai sem o prefixo "SGO+ | " (SGO_notificar_). Os avisos à equipe não mudam.
++var NTF_RODAPE_CLIENTE = 'Mensagem automática da Metrolabs. Não responda a este e-mail: para falar com a Metrolabs, use a conversa do Portal do cliente.';
++function Notificar_htmlEmail_(titulo, texto, link, rotuloLink, paraCliente) {
+   var corpo = Notificar_esc_(texto).replace(/\r\n|\r|\n/g, '<br>');
+   return '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#1f2a24;max-width:640px">' +
+-    '<div style="border-bottom:2px solid #2f5d50;padding:0 0 8px;margin:0 0 16px;font-weight:bold;color:#2f5d50">SGO+ Metrolabs</div>' +
++    '<div style="border-bottom:2px solid #2f5d50;padding:0 0 8px;margin:0 0 16px;font-weight:bold;color:#2f5d50">' + (paraCliente ? 'Metrolabs' : 'SGO+ Metrolabs') + '</div>' +
+     '<h2 style="font-size:18px;margin:0 0 12px;color:#1f2a24">' + Notificar_esc_(titulo) + '</h2>' +
+-    '<div style="margin:0 0 18px">' + corpo + '</div>' +
++    '<div style="margin:0 0 18px' + (paraCliente ? ';text-align:justify' : '') + '">' + corpo + '</div>' +
+     (link ? '<p style="margin:0 0 18px"><a href="' + Notificar_esc_(link) + '" style="display:inline-block;background:#2f5d50;color:#ffffff;text-decoration:none;padding:9px 16px;border-radius:4px">' + Notificar_esc_(rotuloLink || 'Abrir o SGO+') + '</a></p>' +
+       '<p style="font-size:12px;color:#5b6b63;margin:0 0 18px">Se o botão não abrir, copie este endereço no navegador: ' + Notificar_esc_(link) + '</p>' : '') +
+-    '<div style="border-top:1px solid #d5ddd8;padding-top:8px;font-size:12px;color:#5b6b63">Mensagem automática do SGO+. Não responda este e-mail; em caso de dúvida, fale com a gestão.</div>' +
++    '<div style="border-top:1px solid #d5ddd8;padding-top:8px;font-size:12px;color:#5b6b63">' + (paraCliente ? NTF_RODAPE_CLIENTE : 'Mensagem automática do SGO+. Não responda este e-mail; em caso de dúvida, fale com a gestão.') + '</div>' +
+     '</div>';
+ }
+ 
+-function Notificar_textoEmail_(titulo, texto, link) {
++function Notificar_textoEmail_(titulo, texto, link, paraCliente, rotuloLink) {
++  if (paraCliente) return 'Metrolabs\n\n' + titulo + '\n\n' + texto + (link ? '\n\n' + (rotuloLink || 'Abrir no Portal do cliente') + ': ' + link : '') + '\n\n' + NTF_RODAPE_CLIENTE;
+   return 'SGO+ Metrolabs\n\n' + titulo + '\n\n' + texto + (link ? '\n\nAbrir o SGO+: ' + link : '') +
+     '\n\nMensagem automática do SGO+. Não responda este e-mail.';
+ }
+@@ -764,8 +771,10 @@ function SGO_notificar_(opcoes) {
+         return v;
+       });
+     };
+-    var htmlEmail = Notificar_htmlEmail_(titulo, texto, link, o.rotuloLink);
+-    var txtEmail = Notificar_textoEmail_(titulo, texto, link);
++    // 18/11/2026 (Portal do cliente, etapa 4): paraCliente = aviso ao cliente: assunto sem "SGO+ | ", remetente e marca "Metrolabs"
++    var paraCliente = !!o.paraCliente;
++    var htmlEmail = Notificar_htmlEmail_(titulo, texto, link, o.rotuloLink, paraCliente);
++    var txtEmail = Notificar_textoEmail_(titulo, texto, link, paraCliente, o.rotuloLink);
+     // 20/10/2026: Z-API sem modelo — texto pronto por destinatário (SGO_Zapi.js, Notificar_textoZapi_): o texto próprio do
+     // módulo; senão o texto do modelo que o módulo pediu, preenchido; senão o aviso geral com saudação, assunto e link.
+     var baseZapi = { textoWhatsapp: String(o.textoWhatsapp || '').trim(), modelo: o.modelo && o.modelo.nome ? modelo : null, params: paramsPara, titulo: titulo, texto: texto, link: link };
+@@ -852,7 +861,7 @@ function SGO_notificar_(opcoes) {
+             if (cotaEmail === null) { try { cotaEmail = MailApp.getRemainingDailyQuota(); } catch (e) { cotaEmail = 1; } }
+             if (cotaEmail < 1) { registrar(uid, c.nome, canal, c.email, 'PULADO', 'Cota diária de e-mails esgotada; tente de novo amanhã.'); return; }
+             reservar(); reservaFeita = true;
+-            MailApp.sendEmail({ to: c.email, subject: 'SGO+ | ' + titulo, body: txtEmail, htmlBody: htmlEmail, name: 'SGO+ Metrolabs' });
++            MailApp.sendEmail({ to: c.email, subject: paraCliente ? titulo : 'SGO+ | ' + titulo, body: txtEmail, htmlBody: htmlEmail, name: paraCliente ? 'Metrolabs' : 'SGO+ Metrolabs' });
+             cotaEmail--;
+             registrar(uid, c.nome, canal, c.email, 'OK', 'Entregue ao serviço de e-mail.');
+           } else {
+diff --git a/cand16/SGO_PortalCliente.js b/cand17/SGO_PortalCliente.js
+index 0bd2a5d..e25900d 100644
+--- a/cand16/SGO_PortalCliente.js
++++ b/cand17/SGO_PortalCliente.js
+@@ -147,8 +147,9 @@ function PCl_acaoInterna_(eu, acao, d) {
+     var ac = typeof PClA_regras_ === 'function' ? Object.assign(PClA_regras_(), { termoModelo: PClA_termo_().modelo, termoPadrao: PClA_termo_().padrao }) : null;
+     // 18/11/2026 (etapa 2): plantão, confirmação automática do atendimento, prazo de resposta ao pedido e limites de envio
+     // 18/11/2026 (etapa 3): tipos de documento visíveis no portal (decisão 17)
++    // 18/11/2026 (etapa 4): avisos ao cliente por e-mail (ligados, horário comercial, hora dos resumos, intervalo do resumo das mensagens, cópia ao cadastro)
+     return { regras: PCl_regras_(), regua: CtRg_cfg_(), podeAlterar: PCl_pode_(eu, 'PORTAL_CLIENTE_REGRAS'), historico: PCl_historicoRegras_(), acessos: ac, chamados: typeof PClCh_regras_ === 'function' ? PClCh_regras_() : null,
+-      documentos: typeof PClD_regrasTela_ === 'function' ? PClD_regrasTela_() : null };
++      documentos: typeof PClD_regrasTela_ === 'function' ? PClD_regrasTela_() : null, avisos: typeof PClAv_regrasTela_ === 'function' ? PClAv_regrasTela_() : null };
+   }
+   if (acao === 'salvarRegras') return PCl_salvarRegras_(eu, d);
+   if (acao === 'lerContratoIA') return CtIA_lerContrato_(eu, d);
+@@ -191,13 +192,16 @@ function PCl_salvarRegras_(eu, d) {
+   // 18/11/2026 (etapa 3): tipos de documento visíveis no portal (mesma lógica de merge)
+   var dc = typeof PClD_lerRegras_ === 'function' ? PClD_lerRegras_(d, faltam) : {};
+   var tiposAntes = typeof PClD_regras_ === 'function' ? PClD_regras_().docTiposVisiveis.slice().sort().join(',') : '';
++  // 18/11/2026 (etapa 4): avisos ao cliente por e-mail (mesma lógica de merge)
++  var av = typeof PClAv_lerRegras_ === 'function' ? PClAv_lerRegras_(d, faltam) : {};
+   if (faltam.length) { var e = PCl_erro_('INCOMPLETO', 'Não foi possível gravar: ' + faltam.map(function (f) { return f.texto; }).join(' ')); e.faltam = faltam; throw e; }
+-  var novo = Object.assign(typeof PClA_regrasGuardadas_ === 'function' ? PClA_regrasGuardadas_() : {}, typeof PClCh_regrasGuardadas_ === 'function' ? PClCh_regrasGuardadas_() : {}, typeof PClD_regrasGuardadas_ === 'function' ? PClD_regrasGuardadas_() : {}, { carenciaDias: car, consultaMeses: con, transicao: tr, transicaoPlenoAte: tr === 'PLENO' ? (atual.transicao === 'PLENO' && atual.transicaoPlenoAte ? atual.transicaoPlenoAte : PCl_diaMais_(PCl_hoje_(), 60)) : '',
+-    contatoComercial: contato, provisoriaAte: prov || '', alteradoPor: eu.nome, alteradoEm: PCl_agoraIso_() }, ac, ch, dc);
++  var novo = Object.assign(typeof PClA_regrasGuardadas_ === 'function' ? PClA_regrasGuardadas_() : {}, typeof PClCh_regrasGuardadas_ === 'function' ? PClCh_regrasGuardadas_() : {}, typeof PClD_regrasGuardadas_ === 'function' ? PClD_regrasGuardadas_() : {}, typeof PClAv_regrasGuardadas_ === 'function' ? PClAv_regrasGuardadas_() : {}, { carenciaDias: car, consultaMeses: con, transicao: tr, transicaoPlenoAte: tr === 'PLENO' ? (atual.transicao === 'PLENO' && atual.transicaoPlenoAte ? atual.transicaoPlenoAte : PCl_diaMais_(PCl_hoje_(), 60)) : '',
++    contatoComercial: contato, provisoriaAte: prov || '', alteradoPor: eu.nome, alteradoEm: PCl_agoraIso_() }, ac, ch, dc, av);
+   PCl_gravarConfig_(PCL_REGRAS_PROP, 'REGRAS', atual, novo, motivo, eu);
+   return { regras: PCl_regras_(), message: 'Regras do portal gravadas.' + (tr === 'PLENO' ? ' As contas antigas sem contrato ficam com acesso completo até ' + PCl_br_(novo.transicaoPlenoAte) + '; depois, em consulta.' : '') +
+     (ac.termoVersao ? ' O termo de uso mudou para a versão ' + ac.termoVersao + ': cada pessoa do portal aceita de novo na próxima entrada.' : '') +
+-    (dc.docTiposVisiveis && dc.docTiposVisiveis.slice().sort().join(',') !== tiposAntes ? ' Os tipos de documento visíveis no portal mudaram: a lista dos clientes já segue a nova regra.' : '') };
++    (dc.docTiposVisiveis && dc.docTiposVisiveis.slice().sort().join(',') !== tiposAntes ? ' Os tipos de documento visíveis no portal mudaram: a lista dos clientes já segue a nova regra.' : '') +
++    (av.avisosLigados === false ? ' Os avisos ao cliente pelo Portal estão desligados: os avisos da Assistência voltam a ir só para o e-mail do cadastro, e os resumos não saem.' : '') };
+ }
+ 
+ /** 17/11/2026: últimas mudanças das regras (régua, provisória, regras do portal), para a aba Regras mostrar quem mudou, quando e por quê. */
+diff --git a/cand16/SGO_PortalCliente_Acessos.js b/cand17/SGO_PortalCliente_Acessos.js
+index eff5576..d7cac50 100644
+--- a/cand16/SGO_PortalCliente_Acessos.js
++++ b/cand17/SGO_PortalCliente_Acessos.js
+@@ -346,6 +346,10 @@ function PClA_minhaConta_(esc) {
+     termo: { versao: termo.versao, titulo: termo.titulo, texto: termo.texto, pendente: !aceite, aceitoEm: aceite ? PCl_brHora_(aceite.EM) : '',
+       ultimoAceite: ultimo ? { versao: PCl_s_(ultimo.VERSAO_TERMO), em: PCl_brHora_(ultimo.EM) } : null },
+     avisos: PClA_avisosDe_(u), avisosNomes: PCL_AVISOS_OPCIONAIS, podeEquipe: !!esc.pode.equipe,
++    // 18/11/2026 (etapa 4): o que a tela explica sobre os avisos por e-mail (horário comercial; vencimentos só para o Gestor; em consulta,
++    // documentos novos e vencimentos não saem)
++    avisosInfo: (function () { var h = typeof PCl_regrasAvisos_ === 'function' ? PCl_regrasAvisos_() : { avisosIni: '08:00', avisosFim: '18:00' };
++      return { horario: h.avisosIni + ' às ' + h.avisosFim, gestor: esc.papel === 'GESTOR', consulta: s.situacao === 'CONSULTA', email: PClA_email_(u.EMAIL) }; })(),
+     situacao: { nome: s.provisoria ? PCL_SITUACOES.PLENO : s.nome, texto: s.textoCliente }
+   };
+ }
+@@ -509,34 +513,33 @@ function PClA_avisarAcesso_(u, tipo, extra) {
+   try {
+     if (typeof SGO_notificar_ !== 'function') return null;
+     PClA_registrarTipos_();
+-    var quando = PCl_brHora_(PCl_agoraIso_()), nome = PCl_s_(u.NOME), email = PClA_email_(u.EMAIL), primeiro = (nome.split(' ')[0] || '').charAt(0) + (nome.split(' ')[0] || '').slice(1).toLowerCase();
+-    var rodape = '\n\nVocê recebe este aviso porque tem acesso ao Portal do cliente da Metrolabs. Os avisos de acesso são sempre enviados, porque protegem a conta.';
++    var quando = PCl_brHora_(PCl_agoraIso_()), nome = PCl_s_(u.NOME), email = PClA_email_(u.EMAIL);
++    // 18/11/2026 (etapa 4): saudação e rodapé vêm do envio central (PCl_enviarCliente_); PC09 sai na hora, mesmo fora do horário comercial
+     var paraPessoa = '', paraGestor = '', titulo = '';
+     if (tipo === 'DESLIGADO') {
+       titulo = 'Metrolabs — Acesso ao Portal do cliente desligado';
+-      paraPessoa = 'Olá' + (primeiro ? ', ' + primeiro : '') + '.\n\nO seu acesso ao Portal do cliente da Metrolabs foi desligado em ' + quando + '. Se você ainda precisa do acesso, fale com o gestor da sua empresa.';
++      paraPessoa = 'O seu acesso ao Portal do cliente da Metrolabs foi desligado em ' + quando + '. Se você ainda precisa do acesso, fale com o gestor da sua empresa.';
+       paraGestor = 'O acesso de ' + nome + ' (' + email + ') ao Portal do cliente foi desligado em ' + quando + '. Você acompanha a equipe em "Minha conta" > Minha equipe.';
+     } else if (tipo === 'PAPEL') {
+       titulo = 'Metrolabs — Acesso ao Portal do cliente alterado';
+-      paraPessoa = 'Olá' + (primeiro ? ', ' + primeiro : '') + '.\n\nO seu acesso ao Portal do cliente da Metrolabs foi alterado em ' + quando + '.\nPapel: ' + extra.papelNome + '.\nUnidades: ' + extra.unidades + '.\nSe você não reconhece esta mudança, fale com o gestor da sua empresa.';
++      paraPessoa = 'O seu acesso ao Portal do cliente da Metrolabs foi alterado em ' + quando + '.\nPapel: ' + extra.papelNome + '.\nUnidades: ' + extra.unidades + '.\nSe você não reconhece esta mudança, fale com o gestor da sua empresa.';
+       paraGestor = 'O acesso de ' + nome + ' (' + email + ') ao Portal do cliente foi alterado em ' + quando + ': papel ' + extra.papelNome + '; unidades: ' + extra.unidades + '.';
+     } else if (tipo === 'CONVITE') {
+       titulo = 'Metrolabs — Convite de acesso ao Portal do cliente';
+       paraGestor = nome + ' (' + email + ') recebeu em ' + quando + ' o convite de acesso ao Portal do cliente como ' + extra.papelNome + ' (unidades: ' + extra.unidades + ').';
+     } else if (tipo === 'REATIVADO') {
+       titulo = 'Metrolabs — Acesso ao Portal do cliente reativado';
+-      paraPessoa = 'Olá' + (primeiro ? ', ' + primeiro : '') + '.\n\nO seu acesso ao Portal do cliente da Metrolabs foi reativado em ' + quando + '. Entre com o seu e-mail e a sua senha; se não lembrar a senha, use "Esqueci minha senha" na tela de entrada.';
++      paraPessoa = 'O seu acesso ao Portal do cliente da Metrolabs foi reativado em ' + quando + '. Entre com o seu e-mail e a sua senha; se não lembrar a senha, use "Esqueci minha senha" na tela de entrada.';
+       paraGestor = 'O acesso de ' + nome + ' (' + email + ') ao Portal do cliente foi reativado em ' + quando + '.';
+     }
+-    var enviar = function (pessoas, texto) {
+-      var vistos = {}, contatos = [];
+-      pessoas.forEach(function (p) { var e = PClA_email_(p.EMAIL); if (!PClA_emailOk_(e) || vistos[e]) return; vistos[e] = true; contatos.push({ id: 'PCL_' + PCl_s_(p.ID), nome: PCl_s_(p.NOME), email: e, cadastro: 'cliente' }); });
+-      if (!contatos.length || !texto) return null;
+-      return SGO_notificar_({ contatos: contatos, canais: ['email'], titulo: titulo, texto: texto + rodape, origem: 'PORTAL_CLIENTE', categoria: 'PORTAL_CLIENTE', evento: 'PC09', refId: PCl_s_(u.ID) + ':' + tipo, rotuloLink: 'Abrir no Portal do cliente' });
++    var enviar = function (pessoas, texto, porque) {
++      if (!texto) return null;
++      var l = pessoas.map(function (p) { return { id: PCl_s_(p.ID), nome: PCl_s_(p.NOME), email: PClA_email_(p.EMAIL), porque: porque }; });
++      return PCl_enviarCliente_({ evento: 'PC09', clienteId: PCl_s_(u.CLIENTE_ID), refId: PCl_s_(u.ID) + ':' + tipo, titulo: titulo, texto: texto, pessoas: l, imediato: true });
+     };
+-    var r1 = paraPessoa ? enviar([u], paraPessoa) : null;
++    var r1 = paraPessoa ? enviar([u], paraPessoa, 'tem acesso ao Portal do cliente da Metrolabs') : null;
+     var gestores = PClA_contasCliente_(u.CLIENTE_ID).filter(function (g) { return PClA_ativa_(g) && PCl_s_(g.ID) !== PCl_s_(u.ID) && PClA_email_(g.EMAIL) !== email && (PCl_up_(g.CLIENTE_PAPEL) === 'GESTOR' || !PCL_PAPEIS[PCl_up_(g.CLIENTE_PAPEL)]); });
+-    var r2 = enviar(gestores, paraGestor);
++    var r2 = enviar(gestores, paraGestor, 'é Gestor do cliente no Portal da Metrolabs e acompanha os acessos da equipe da sua empresa');
+     return { pessoa: r1, gestores: r2 };
+   } catch (e) { try { console.error('Portal do cliente, aviso de acesso: ' + ((e && e.message) || e)); } catch (x) {} return null; }
+ }
+@@ -809,8 +812,9 @@ function PClA_avisarPedido_(gestor, p, titulo, texto) {
+   try {
+     if (typeof SGO_notificar_ !== 'function' || !PClA_emailOk_(gestor.EMAIL)) return null;
+     PClA_registrarTipos_();
+-    return SGO_notificar_({ contatos: [{ id: 'PCL_' + PCl_s_(gestor.ID), nome: PCl_s_(gestor.NOME), email: PClA_email_(gestor.EMAIL), cadastro: 'cliente' }], canais: ['email'], titulo: titulo,
+-      texto: texto + '\n\nVocê recebe este aviso porque é Gestor do cliente no Portal do cliente da Metrolabs.', origem: 'PORTAL_CLIENTE', categoria: 'PORTAL_CLIENTE', evento: 'PC09', refId: 'PEDIDO:' + PCl_s_(p.ID), rotuloLink: 'Abrir no Portal do cliente' });
++    // 18/11/2026 (etapa 4): pelo envio central (saudação, rodapé, assunto sem "SGO+ | "), na hora
++    return PCl_enviarCliente_({ evento: 'PC09', clienteId: PCl_s_(gestor.CLIENTE_ID), refId: 'PEDIDO:' + PCl_s_(p.ID), titulo: titulo, texto: texto, imediato: true,
++      pessoas: [{ id: PCl_s_(gestor.ID), nome: PCl_s_(gestor.NOME), email: PClA_email_(gestor.EMAIL), porque: 'é Gestor do cliente no Portal da Metrolabs e pediu este acesso' }] });
+   } catch (e) { return null; }
+ }
+ function PClA_contaHistorico_(eu, d) {
+diff --git a/cand17/SGO_PortalCliente_Avisos.js b/cand17/SGO_PortalCliente_Avisos.js
+new file mode 100644
+index 0000000..d6f2f9a
+--- /dev/null
++++ b/cand17/SGO_PortalCliente_Avisos.js
+@@ -0,0 +1,497 @@
++/****************************************************
++ * PORTAL DO CLIENTE — ETAPA 4 (d), AVISOS AO CLIENTE POR E-MAIL (18/11/2026).
++ * Especificação: output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md, "Etapa 4 (d)", itens 4.1.10, 4.7 e T4.1 a T4.8. O dono aceitou
++ * todas as recomendações (decisão 11: só e-mail para o cliente; decisão 12: texto neutro no fim do contrato).
++ *
++ * CANAL: só e-mail, pelo envio central PCl_enviarCliente_ (SGO_PortalCliente_Config.js -> SGO_notificar_ com contatos e paraCliente). Nunca
++ * WhatsApp para o cliente. Assunto "Metrolabs — <número>: ...", corpo sem valores, sem nome de outro cliente e sem anexo, botão "Abrir no
++ * Portal do cliente" (exige login) e rodapé com o porquê e, nos avisos opcionais, como desligar.
++ *
++ * QUEM RECEBE: as pessoas do portal com o papel e a unidade certos e, nos avisos opcionais (PC06, PC07, PC08), a preferência ligada
++ * (CAD_USUARIOS.CLIENTE_AVISOS_JSON, "Minha conta"). Endereço repetido sai uma vez; com chave, o mesmo aviso nunca sai duas vezes para o mesmo
++ * endereço (PCL_AVISOS_ENVIOS). Cliente sem pessoa do portal para a unidade (ou com o acesso suspenso ou sem acesso) continua recebendo os
++ * avisos da Assistência no e-mail do cadastro, como antes (Ast_avisarCliente_).
++ *
++ * EVENTOS
++ *  PC01 pedido recebido (etapa 2) e chamado registrado pela equipe para cliente com portal (aqui): na hora.
++ *  PC02 pedido aceito, complemento, recusa (etapa 2): horário comercial.
++ *  PC03 visita agendada, reagendada, retorno, peça recebida, visita cancelada: horário comercial; visita no mesmo dia, na hora.
++ *  PC04 orçamento aguardando aprovação (gestores da unidade): horário comercial.
++ *  PC05 atendimento concluído com relatório: horário comercial.
++ *  PC06 mensagem da Metrolabs na conversa: resumo, no máximo um a cada 2 horas úteis por pessoa (opcional).
++ *  PC07 documento novo: resumo diário a partir das 08:30 (opcional).
++ *  PC08 vencimentos em 60, 30 e 7 dias e vencido (cada faixa uma vez; o vencido uma vez): resumo semanal, primeiro dia útil da semana, 08:30
++ *       (opcional, ligado por padrão).
++ *  PC09 acesso (etapa 1): na hora.
++ *  PC10 contrato termina em 30 dias / carência / modo consulta (gestores do cliente): horário comercial, texto neutro. A vigência provisória
++ *       (contrato a cadastrar) e a transição das contas antigas não geram PC10: o Comercial cuida pela régua (CT04).
++ *  Internos: PI01 = CT01 da régua de contratos (120, 90, 60, 30, 15, 7 e 0 dias; uma vez cada; não duplicado aqui). PI02, PI03 e PI04 já
++ *  existem (etapas 1 e 2). PI05: pedido do portal a 75% do prazo de resposta e vencido (mesma regra do RP07), por e-mail à triagem e, no
++ *  vencido, à gestão Técnica; no expediente da equipe, pela matriz (regra "WhatsApp sutil": sem WhatsApp).
++ *
++ * ROTINA: PortalCliente_rotinaAvisos_, chamada por PortalCliente_rotinaChamados_ (rotina da Assistência, a cada 15 minutos). Os avisos ao
++ * cliente só contam do dia da primeira rodada em diante (avisosDesde, gravado em Regras do portal): nada do passado é enviado. Nunca lança.
++ * Fins de linha: LF. Nenhuma função devolve Date.
++ ****************************************************/
++
++var PCLAV_PROP_ROTINA = 'PCL_AVISOS_ROTINA';
++var PCLAV_NOMES = {
++  PC01: 'Pedido recebido', PC02: 'Pedido aceito, complemento ou recusa', PC03: 'Visita agendada, reagendada ou cancelada', PC04: 'Orçamento aguardando aprovação',
++  PC05: 'Atendimento concluído', PC06: 'Mensagem da Metrolabs na conversa', PC07: 'Documento novo disponível', PC08: 'Vencimentos dos equipamentos', PC09: 'Acesso ao Portal',
++  PC10: 'Contrato: fim, carência e modo consulta'
++};
++var PCLAV_FAIXAS = [{ k: 'VENCIDO', nome: 'Vencidos' }, { k: '7', nome: 'Vencem em até 7 dias' }, { k: '30', nome: 'Vencem em até 30 dias' }, { k: '60', nome: 'Vencem em até 60 dias' }];
++var PCLAV_MAX_LINHAS = 40;
++
++// ------------------------------------------------------------
++// MATRIZ DE AVISOS (códigos novos; os da etapa 1 e 2 já estão em SGO_PortalCliente_Acessos.js)
++// ------------------------------------------------------------
++var PCLAV_MTZ_EVENTOS = [
++  { cod: 'PC03', modulo: 'portal_cliente', evento: 'Visita agendada, reagendada, retorno agendado, peça recebida ou visita cancelada (ao cliente com portal)', origem: 'SGO_PortalCliente_Avisos.js (Agenda e Chamados da Assistência)', publico: 'Quem abriu o pedido e os gestores do cliente da unidade', email: 'HORA', whatsapp: 'NAO', limite: '1 por mudança', obs: 'Só e-mail, no horário comercial do cliente; visita no mesmo dia sai na hora. Substitui o AT08/AT15 para o cliente com portal.', obrigatorio: true },
++  { cod: 'PC04', modulo: 'portal_cliente', evento: 'Orçamento aguardando a aprovação do Gestor do cliente', origem: 'SGO_PortalCliente_Avisos.js (emissão do orçamento)', publico: 'Gestores do cliente da unidade', email: 'HORA', whatsapp: 'NAO', limite: '1 por revisão do orçamento', obs: 'Só e-mail, no horário comercial do cliente. Sem valores: o orçamento abre no Portal.', obrigatorio: true },
++  { cod: 'PC05', modulo: 'portal_cliente', evento: 'Atendimento concluído, com o relatório disponível no Portal', origem: 'SGO_PortalCliente_Avisos.js (relatório da O.S.)', publico: 'Quem abriu o pedido e os gestores do cliente da unidade', email: 'HORA', whatsapp: 'NAO', limite: '1 por O.S.', obs: 'Só e-mail, no horário comercial do cliente. Substitui o AT08 de conclusão para o cliente com portal.', obrigatorio: true },
++  { cod: 'PC06', modulo: 'portal_cliente', evento: 'Mensagem da Metrolabs na conversa do Portal (resumo)', origem: 'SGO_PortalCliente_Avisos.js (rotina)', publico: 'Quem abriu e quem participa da conversa', email: 'HORA', whatsapp: 'NAO', limite: 'No máximo 1 resumo a cada 2 horas úteis por pessoa', obs: 'Desligável em Minha conta. Sem o texto da mensagem no e-mail.' },
++  { cod: 'PC07', modulo: 'portal_cliente', evento: 'Documento novo disponível no Portal (resumo diário)', origem: 'SGO_PortalCliente_Avisos.js (rotina)', publico: 'Pessoas do cliente com a unidade do documento', email: 'HORA', whatsapp: 'NAO', limite: '1 resumo por dia, a partir das 08:30', obs: 'Desligável em Minha conta. Não sai em modo consulta.' },
++  { cod: 'PC08', modulo: 'portal_cliente', evento: 'Vencimentos dos equipamentos em 60, 30 e 7 dias e vencidos (resumo semanal)', origem: 'SGO_PortalCliente_Avisos.js (rotina)', publico: 'Gestores do cliente da unidade', email: 'HORA', whatsapp: 'NAO', limite: '1 resumo por semana; cada faixa e o vencido uma vez', obs: 'Ligado por padrão; desligável em Minha conta. Não sai em modo consulta.' },
++  { cod: 'PC10', modulo: 'portal_cliente', evento: 'Contrato termina em 30 dias, período de carência ou modo consulta (texto neutro)', origem: 'SGO_PortalCliente_Avisos.js (rotina)', publico: 'Gestores do cliente', email: 'HORA', whatsapp: 'NAO', limite: '1 por contrato e situação', obs: 'Decisão 12: texto neutro, sem cobrança. Não sai na vigência provisória nem na transição das contas antigas.', obrigatorio: true },
++  { cod: 'PI05', modulo: 'portal_cliente', evento: 'Pedido do portal a 75% do prazo de resposta ou com o prazo vencido', origem: 'SGO_PortalCliente_Avisos.js (rotina)', publico: 'Quem faz a triagem; no vencido, também a gestão da área Técnica', email: 'HORA', whatsapp: 'NAO', limite: '1 por marco', area: 'TECNICA', obs: 'Mesma regra do RP07. Fora do expediente, sai na primeira rodada do próximo expediente.' }
++];
++function PClAv_registrarTipos_() {
++  try {
++    if (typeof PClA_registrarTipos_ === 'function') PClA_registrarTipos_();
++    if (typeof MTZ_PADRAO !== 'undefined' && Array.isArray(MTZ_PADRAO)) PCLAV_MTZ_EVENTOS.forEach(function (ev) { if (!MTZ_PADRAO.some(function (x) { return x && x.cod === ev.cod; })) MTZ_PADRAO.push(ev); });
++  } catch (e) { try { console.error('Portal do cliente, avisos na matriz: ' + ((e && e.message) || e)); } catch (x) {} }
++}
++PClAv_registrarTipos_();
++
++// ------------------------------------------------------------
++// REGRAS (Regras do portal > Avisos ao cliente; mesma propriedade PCL_REGRAS, com merge e histórico)
++// ------------------------------------------------------------
++function PClAv_regrasBrutas_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(PCL_REGRAS_PROP) || '{}') || {}; } catch (e) { return {}; } }
++function PClAv_regrasGuardadas_() { var g = PClAv_regrasBrutas_(), o = {}; PCLAV_CHAVES_REGRAS.forEach(function (k) { if (Object.prototype.hasOwnProperty.call(g, k)) o[k] = g[k]; }); return o; }
++/** Leitura do formulário de Regras do portal: só o que veio no pedido muda. */
++function PClAv_lerRegras_(d, faltam) {
++  d = d || {};
++  var o = {}, sim = function (v) { return !(v === false || v === 'false' || PCl_up_(v) === 'NAO'); };
++  if (d.avisosLigados !== undefined) o.avisosLigados = sim(d.avisosLigados);
++  if (d.copiaCadastro !== undefined) o.copiaCadastro = sim(d.copiaCadastro) && PCl_up_(d.copiaCadastro) !== '';
++  if (d.pc08VencidoDias !== undefined && PCl_s_(d.pc08VencidoDias) !== '') {
++    var vd = Math.round(Number(String(d.pc08VencidoDias).replace(',', '.')));
++    if (!(vd >= 0 && vd <= 365) || !/^\s*\d+\s*$/.test(String(d.pc08VencidoDias))) faltam.push({ campo: 'pclRgAvVencidoDias', texto: 'Vencidos antigos no resumo semanal: de 0 a 365 dias antes do início dos avisos (padrão 30).' }); else o.pc08VencidoDias = vd;
++  }
++  if (d.avisosIni !== undefined || d.avisosFim !== undefined) {
++    var ini = PCl_s_(d.avisosIni), fim = PCl_s_(d.avisosFim);
++    if (!PCl_horaOk_(ini) || !PCl_horaOk_(fim) || ini >= fim) faltam.push({ campo: 'pclRgAvIni', texto: 'Horário comercial dos avisos: use HH:MM no início e no fim, com o início antes do fim (padrão 08:00 e 18:00).' });
++    else { o.avisosIni = ini; o.avisosFim = fim; }
++  }
++  if (d.resumoHora !== undefined) {
++    var h = PCl_s_(d.resumoHora);
++    if (!PCl_horaOk_(h)) faltam.push({ campo: 'pclRgAvResumoHora', texto: 'Hora dos resumos de documentos e vencimentos: use HH:MM (padrão 08:30).' }); else o.resumoHora = h;
++  }
++  if (d.conversaIntervaloMin !== undefined && PCl_s_(d.conversaIntervaloMin) !== '') {
++    var iv = Math.round(Number(String(d.conversaIntervaloMin).replace(',', '.')));
++    if (!(iv >= 30 && iv <= 600)) faltam.push({ campo: 'pclRgAvIntervalo', texto: 'Intervalo do resumo das mensagens: de 30 a 600 minutos úteis (padrão 120, 2 horas).' }); else o.conversaIntervaloMin = iv;
++  }
++  return o;
++}
++function PClAv_regrasTela_() { var r = PCl_regrasAvisos_(); r.desdeBr = PCl_brHora_(r.avisosDesde); return r; }
++/** Dia e hora a partir dos quais os avisos ao cliente valem (a primeira rodada da rotina grava; nada anterior é enviado). */
++function PClAv_desde_(gravar) {
++  var r = PCl_regrasAvisos_();
++  if (r.avisosDesde) return r.avisosDesde;
++  var agora = PCl_agoraIso_();
++  if (gravar) { try { var g = PClAv_regrasBrutas_(); g.avisosDesde = agora; PropertiesService.getScriptProperties().setProperty(PCL_REGRAS_PROP, JSON.stringify(g)); } catch (e) {} }
++  return agora;
++}
++
++// ------------------------------------------------------------
++// QUEM RECEBE (papel, unidade e preferência)
++// ------------------------------------------------------------
++function PClAv_contas_(cid) {
++  return PCl_ler_(SGO_CFG.SHEETS.CAD_USUARIOS || 'CAD_USUARIOS').filter(function (u) {
++    return PCl_up_(u.PERFIL) === 'CLIENTE' && PCl_s_(u.CLIENTE_ID) === PCl_s_(cid) && (typeof PClA_ativa_ === 'function' ? PClA_ativa_(u) : PCl_up_(u.STATUS || 'ATIVO') === 'ATIVO');
++  });
++}
++/** O cliente tem portal para esta unidade? Pelo menos uma conta ativa e o acesso não está suspenso nem sem acesso. */
++function PClAv_portalAtivo_(cid, un) {
++  if (!PCl_s_(cid) || !PClAv_contas_(cid).length) return false;
++  var s = PCl_situacaoAcesso_(cid, PCl_s_(un), '');
++  return !!s.podeEntrar;
++}
++function PClAv_nomeUnidade_(un) { var u = PCl_porId_(SGO_CFG.SHEETS.CAD_UNIDADES || 'CAD_UNIDADES', un); return u ? PCl_s_(u.NOME_UNIDADE) : ''; }
++/** Preferência da pessoa (só PC06, PC07 e PC08 podem ser desligados; o resto sempre sai). */
++function PClAv_prefLigada_(u, evento) {
++  if (typeof PCL_AVISOS_OPCIONAIS === 'undefined' || !PCL_AVISOS_OPCIONAIS[evento]) return true;
++  var g = PCl_json_(u && u.CLIENTE_AVISOS_JSON, {}) || {};
++  return g[evento] !== false;
++}
++function PClAv_pessoa_(u, porque) { return { id: PCl_s_(u.ID), nome: PCl_s_(u.NOME), email: PCl_s_(u.EMAIL).toLowerCase(), porque: porque }; }
++/** Gestores do cliente com a unidade no acesso (un vazio: todos os gestores do cliente). evento opcional: confere a preferência. */
++function PClAv_gestores_(cid, un, evento) {
++  var nomeUn = un ? PClAv_nomeUnidade_(un) : '';
++  return PClAv_contas_(cid).filter(function (u) {
++    var esc = PCl_escopo_(u.ID);
++    return esc && esc.papel === 'GESTOR' && (!un || PCl_escopoUnidade_(esc, un)) && (!evento || PClAv_prefLigada_(u, evento));
++  }).map(function (u) { return PClAv_pessoa_(u, 'é Gestor do cliente no Portal da Metrolabs' + (nomeUn ? ', com acesso à unidade ' + nomeUn : '')); });
++}
++/** Quem abriu o pedido do portal que originou o chamado (conta ativa, mesmo cliente, unidade no acesso). */
++function PClAv_quemAbriu_(sol, cid, un, evento) {
++  if (!sol || PCl_up_(sol.ORIGEM) !== 'PORTAL' || !PCl_s_(sol.POR_ID)) return [];
++  var u = PClAv_contas_(cid).filter(function (x) { return PCl_s_(x.ID) === PCl_s_(sol.POR_ID); })[0];
++  if (!u) return [];
++  var esc = PCl_escopo_(u.ID);
++  if (!esc || (un && !PCl_escopoUnidade_(esc, un)) || (evento && !PClAv_prefLigada_(u, evento))) return [];
++  return [PClAv_pessoa_(u, 'abriu o pedido ' + PCl_s_(sol.NUMERO) + ' no Portal do cliente da Metrolabs')];
++}
++/** E-mail do cadastro (unidade ou cliente), só com "copiar o e-mail do cadastro" ligado em Regras do portal. */
++function PClAv_cadastro_(cid, un) {
++  var u = PCl_porId_(SGO_CFG.SHEETS.CAD_UNIDADES || 'CAD_UNIDADES', un), c = PCl_cliente_(cid);
++  var e = PCl_s_(u && u.EMAIL) || PCl_s_(c && c.EMAIL);
++  return e ? [{ id: '', nome: PCl_s_(u && u.RESPONSAVEL), email: e, porque: 'este é o e-mail de contato da sua empresa cadastrado na Metrolabs' }] : [];
++}
++function PClAv_solDoChamado_(ch) { return PCl_s_(ch && ch.SOLICITACAO_ID) ? PCl_porId_('ATEC_SOLICITACOES', ch.SOLICITACAO_ID) : null; }
++
++// ------------------------------------------------------------
++// AVISOS DA ASSISTÊNCIA (Ast_avisarCliente_ chama aqui com pc = { cod, tipo, ... }). Cliente com portal para a unidade: o aviso vai para as
++// pessoas certas do portal e o e-mail do cadastro deixa de receber (não duplica). Sem ninguém do portal: devolve null e segue o caminho antigo.
++// ------------------------------------------------------------
++function PCl_avisoDaAssistencia_(c, pc) {
++  try {
++    if (!c || !pc) return null;
++    PCl_memoLimpar_(); // chamado de dentro da Assistência: lê o cadastro das contas e o registro dos avisos de novo
++    var rg = PCl_regrasAvisos_();
++    if (!rg.avisosLigados) return null;
++    var ch = PCl_s_(c.ID) ? (PCl_porId_('ATEC_CHAMADOS', c.ID) || c) : c;
++    if (PCl_s_(ch.REPRESENTADA_ID) || PCl_s_(c.REPRESENTADA_ID)) return null; // chamado de representada: fluxo próprio, como antes
++    var cid = PCl_s_(ch.CLIENTE_ID || c.CLIENTE_ID), un = PCl_s_(ch.UNIDADE_ID || c.UNIDADE_ID);
++    if (!PClAv_portalAtivo_(cid, un)) return null;
++    var m = PClAv_montarAssistencia_(ch, pc, cid, un);
++    if (!m) return null;
++    if (m.semEnvio) return { tratado: true, resultado: { ok: 0, pulado: 0, portal: true, motivo: m.semEnvio } };
++    if (!m.pessoas.length) return null; // ninguém do portal nesta unidade: o e-mail do cadastro recebe, como antes
++    if (rg.copiaCadastro) m.pessoas = m.pessoas.concat(PClAv_cadastro_(cid, un));
++    var r = PCl_enviarCliente_({ evento: m.evento, clienteId: cid, refId: PCl_s_(ch.ID), chave: m.chave, titulo: m.titulo, texto: m.texto, pessoas: m.pessoas, imediato: !!m.imediato });
++    return { tratado: true, resultado: { ok: r.enviados, fila: r.fila, repetidos: r.repetidos, portal: true } };
++  } catch (e) { try { console.error('Portal do cliente, aviso da Assistência: ' + ((e && e.message) || e)); } catch (x) {} return null; }
++}
++function PClAv_tecnico_(nome) { return typeof PClCh_nomeTecnico_ === 'function' ? PClCh_nomeTecnico_(nome) : PCl_s_(nome).split(/\s+/).slice(0, 2).join(' '); }
++function PClAv_quandoBr_(v) { var s = PCl_s_(v), m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(s); return m ? m[3] + '/' + m[2] + '/' + m[1] + ' às ' + m[4] + ':' + m[5] : PCl_br_(s); }
++/** Monta o aviso do portal para o evento da Assistência. { evento, chave, titulo, texto, pessoas, imediato } ou { semEnvio }. */
++function PClAv_montarAssistencia_(ch, pc, cid, un) {
++  var num = PCl_s_(ch.NUMERO), eq = PCl_s_(ch.EQUIPAMENTO_TEXTO), ref = 'chamado ' + num + (eq ? ' (' + eq + ')' : ''), sol = PClAv_solDoChamado_(ch), hoje = PCl_hoje_();
++  var cod = PCl_up_(pc.cod), tipo = PCl_up_(pc.tipo), quando = PCl_s_(pc.quando);
++  var abriuMaisGestores = function () { return PClAv_quemAbriu_(sol, cid, un).concat(PClAv_gestores_(cid, un)); };
++  var acompanhe = '\n\nVocê acompanha as etapas, as mensagens e o relatório em Portal do cliente > Chamados.';
++  if (cod === 'PC01') {
++    var solO = PCl_s_(pc.solicitacaoId) ? PCl_porId_('ATEC_SOLICITACOES', pc.solicitacaoId) : sol;
++    if (solO && PCl_up_(solO.ORIGEM) === 'PORTAL') return { semEnvio: 'pedido do Portal: o cliente já recebe o aviso do aceite (PC02)' };
++    return { evento: 'PC01', chave: 'PC01:' + PCl_s_(ch.ID), imediato: true, pessoas: PClAv_gestores_(cid, un), titulo: 'Metrolabs — Chamado ' + num + ' registrado',
++      texto: 'A Metrolabs registrou o ' + ref + ', a partir do contato da sua empresa.' + (PCl_s_(ch.SINTOMA) ? '\nProblema informado: ' + PCl_s_(ch.SINTOMA).slice(0, 300) : '') +
++        '\n\nA equipe técnica analisa o chamado e informa o agendamento pelo Portal.' + acompanhe };
++  }
++  if (cod === 'PC03') {
++    var tec = PCl_s_(pc.tecnico) ? '\nTécnico: ' + PClAv_tecnico_(pc.tecnico) + '.' : '', mesmoDia = !!quando && quando.slice(0, 10) === hoje;
++    var base = { evento: 'PC03', chave: 'PC03:' + PCl_s_(ch.ID) + ':' + tipo + ':' + quando, imediato: mesmoDia && tipo !== 'PECA', pessoas: abriuMaisGestores() };
++    if (tipo === 'PECA') return Object.assign(base, { titulo: 'Metrolabs — Chamado ' + num + ': peça recebida', texto: 'A peça necessária para o atendimento do ' + ref + ' chegou e foi conferida pela Metrolabs. O retorno do técnico será agendado em seguida, e a data aparece no Portal e por e-mail.' + acompanhe });
++    if (tipo === 'CANCELADA') return Object.assign(base, { titulo: 'Metrolabs — Chamado ' + num + ': visita cancelada', texto: 'O ' + ref + ' foi cancelado pela Metrolabs, e a visita técnica prevista para ' + PClAv_quandoBr_(quando) + ' não vai acontecer. O motivo está registrado na ficha do chamado, no Portal do cliente.\n\nSe ainda precisar de atendimento, abra um chamado no Portal ou escreva na conversa geral.' });
++    var dia = PCl_br_(quando), quandoTxt = PClAv_quandoBr_(quando), dur = PCl_s_(pc.duracao) ? '\nPrevisão de duração: ' + PCl_s_(pc.duracao) + '.' : '';
++    if (tipo === 'REAGENDADA') return Object.assign(base, { titulo: 'Metrolabs — Chamado ' + num + ': visita reagendada para ' + dia, texto: 'A visita técnica do ' + ref + ' foi reagendada para ' + quandoTxt + '.' + tec + dur + '\n\nSe a nova data não for possível para o setor, responda pela conversa do chamado no Portal.' + acompanhe });
++    if (tipo === 'RETORNO') return Object.assign(base, { titulo: 'Metrolabs — Chamado ' + num + ': retorno técnico agendado para ' + dia, texto: 'O retorno do técnico para o ' + ref + ' foi agendado para ' + quandoTxt + (pc.peca ? ', com a peça já recebida e conferida' : '') + '.' + tec + '\n\nSe a data não for possível para o setor, responda pela conversa do chamado no Portal.' + acompanhe });
++    return Object.assign(base, { titulo: 'Metrolabs — Chamado ' + num + ': visita agendada para ' + dia, texto: 'A visita técnica do ' + ref + ' foi agendada para ' + quandoTxt + '.' + tec + dur + '\n\nSe a data não for possível para o setor, responda pela conversa do chamado no Portal.' + acompanhe });
++  }
++  if (cod === 'PC05') {
++    var osN = PCl_s_(pc.osNumero), em = PClAv_quandoBr_(pc.encerradaEm);
++    var base5 = { evento: 'PC05', chave: 'PC05:' + (PCl_s_(pc.osId) || PCl_s_(ch.ID) + ':' + osN), imediato: false, pessoas: abriuMaisGestores() };
++    if (tipo === 'LOGISTICA') return Object.assign(base5, { titulo: 'Metrolabs — Chamado ' + num + ': O.S. ' + osN + ' concluída', texto: 'A O.S. ' + osN + (PCl_s_(pc.docNome) ? ' (' + PCl_s_(pc.docNome) + ')' : '') + ' do ' + ref + ' foi concluída em ' + em + '. O documento, com os itens e as assinaturas, fica disponível no Portal do cliente, na ficha do chamado.' + acompanhe });
++    var alerta = PCl_s_(pc.alerta) ? '\n\n' + PCl_s_(pc.alerta).replace(/^\s+/, '') : '';
++    return Object.assign(base5, { titulo: 'Metrolabs — Chamado ' + num + ': atendimento concluído', texto: 'O atendimento do ' + ref + ' foi concluído em ' + em + (osN ? ' (O.S. ' + osN + ')' : '') + '.' + alerta +
++      '\n\nO relatório do atendimento está disponível no Portal do cliente, na ficha do chamado e em Documentos técnicos. Se estiver tudo certo, confirme o atendimento na ficha do chamado; se o problema continuar, toque em "O problema continua", e um pedido novo é aberto, ligado a este chamado.' });
++  }
++  return null;
++}
++
++/** PC04: orçamento emitido, aguardando a aprovação do Gestor do cliente da unidade (e do cliente que paga, se tiver portal). Nunca lança. */
++function PCl_avisoOrcamento_(o, ch) {
++  try {
++    if (!o || !PCl_regrasAvisos_().avisosLigados) return null;
++    PCl_memoLimpar_();
++    ch = ch || {};
++    if (PCl_s_(ch.REPRESENTADA_ID)) return null;
++    var cid = PCl_s_(o.CLIENTE_ID || ch.CLIENTE_ID), un = PCl_s_(ch.UNIDADE_ID || o.UNIDADE_ID), pessoas = [];
++    if (PClAv_portalAtivo_(cid, un)) pessoas = PClAv_gestores_(cid, un);
++    var pg = PCl_s_(o.PAGADOR_ID);
++    if (pg && pg !== cid && PClAv_portalAtivo_(pg, '')) pessoas = pessoas.concat(PClAv_gestores_(pg, '').map(function (p) { return Object.assign(p, { porque: 'é Gestor do cliente no Portal da Metrolabs e a sua empresa aprova este orçamento' }); }));
++    if (!pessoas.length) return null;
++    var rev = Number(o.REVISAO) || 0, num = PCl_s_(ch.NUMERO || o.CHAMADO_NUMERO);
++    var titulo = num ? 'Metrolabs — Chamado ' + num + ': orçamento para aprovação' : 'Metrolabs — Orçamento ' + PCl_s_(o.NUMERO) + ' para aprovação';
++    var texto = 'O orçamento ' + PCl_s_(o.NUMERO) + (rev > 0 ? ' (revisão ' + rev + ')' : '') + (num ? ' do chamado ' + num + (PCl_s_(ch.EQUIPAMENTO_TEXTO) ? ' (' + PCl_s_(ch.EQUIPAMENTO_TEXTO) + ')' : '') : '') +
++      ' está disponível no Portal do cliente para a sua análise.\n\nPara aprovar, pedir ajuste ou recusar, abra a ficha do chamado em Portal do cliente > Chamados. A resposta é dada pelo Gestor do cliente.';
++    return PCl_enviarCliente_({ evento: 'PC04', clienteId: cid, refId: PCl_s_(o.ID), chave: 'PC04:' + PCl_s_(o.ID) + ':' + rev, titulo: titulo, texto: texto, pessoas: pessoas });
++  } catch (e) { try { console.error('Portal do cliente, aviso do orçamento: ' + ((e && e.message) || e)); } catch (x) {} return null; }
++}
++
++// ------------------------------------------------------------
++// RÉGUA DE TOM (T4.8): termos internos, cobrança, valores e "cara de IA" que nunca podem ir ao cliente. Devolve a lista do que achou.
++// ------------------------------------------------------------
++var PCLAV_TOM_PROIBIDO = [
++  [/SGO\+/, 'nome do sistema interno (SGO+)'], [/triagem/i, 'termo interno (triagem)'], [/\bSLA\b/, 'sigla interna (SLA)'], [/fila livre/i, 'termo interno (fila livre)'],
++  [/nota interna/i, 'termo interno (nota interna)'], [/prioridade|\bP[1-4]\b/, 'prioridade interna'], [/cobran[cç]|inadimpl|d[ée]bito|em atraso|pend[êe]ncia financeira|boleto|fatura/i, 'tom de cobrança ou dado financeiro'],
++  [/R\$\s?\d|\bvalor(es)?\b/i, 'valor'], [/\bOmie\b/i, 'sistema interno (Omie)'], [/\b(PC|PI|AT|CT)\d{2}\b/, 'código interno de aviso'], [/\b[A-Z]{3,}_[A-Z_]{2,}\b/, 'código interno'],
++  [/!/, 'ponto de exclamação'], [/urgente/i, 'tom de urgência'], [/espero que|fique à vontade|não hesite|estamos aqui para/i, 'frase de cara de IA'], [/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u, 'emoji']
++];
++function PCl_reguaTom_(texto) {
++  var t = PCl_s_(texto), achou = [];
++  PCLAV_TOM_PROIBIDO.forEach(function (p) { if (p[0].test(t)) achou.push(p[1]); });
++  return achou;
++}
++
++// ------------------------------------------------------------
++// HORAS ÚTEIS DO CLIENTE (para o resumo das mensagens a cada 2 horas úteis)
++// ------------------------------------------------------------
++function PClAv_minUteis_(deIso, ateIso) {
++  var rg = PCl_regrasAvisos_(), cfg = typeof SGO_expediente_ === 'function' ? Object.assign({}, SGO_expediente_(), { ini: rg.avisosIni, fim: rg.avisosFim }) : null;
++  var min = function (iso) { var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(PCl_s_(iso)); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000 : null; };
++  var hm = function (s) { return Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5)); };
++  var a = min(deIso), b = min(ateIso); if (a === null || b === null || b <= a) return 0;
++  var ini = hm(rg.avisosIni), fim = hm(rg.avisosFim), total = 0, dia = PCl_s_(deIso).slice(0, 10), ultimo = PCl_s_(ateIso).slice(0, 10);
++  for (var i = 0; i < 90 && dia && dia <= ultimo; i++) {
++    var semana = new Date(PCl_diaMs_(dia)).getUTCDay();
++    var util = cfg && typeof SGO_expedienteMotivoDia_ === 'function' ? !SGO_expedienteMotivoDia_(dia, semana, cfg) : (semana !== 0 && semana !== 6);
++    if (util) { var b0 = PCl_diaMs_(dia) / 60000, s = Math.max(a, b0 + ini), e = Math.min(b, b0 + fim); if (e > s) total += e - s; }
++    dia = PCl_diaMais_(dia, 1);
++  }
++  return total;
++}
++
++// ------------------------------------------------------------
++// PC06: RESUMO DAS MENSAGENS DA METROLABS (quem abriu e quem participa da conversa; sem o texto da mensagem no e-mail)
++// ------------------------------------------------------------
++function PClAv_destinosConversa_(m, msgs) {
++  var cid = PCl_s_(m.CLIENTE_ID), tipo = PCl_up_(m.REF_TIPO), refs = [tipo + '|' + PCl_s_(m.REF_ID)], sol = null, un = '', numero = PCl_s_(m.REF_NUMERO);
++  if (tipo === 'CHAMADO') {
++    var ch = PCl_porId_('ATEC_CHAMADOS', m.REF_ID); if (!ch) return { pessoas: [] };
++    un = PCl_s_(ch.UNIDADE_ID); numero = PCl_s_(ch.NUMERO); sol = PClAv_solDoChamado_(ch);
++    if (sol) refs.push('SOLICITACAO|' + PCl_s_(sol.ID));
++  } else if (tipo === 'SOLICITACAO') {
++    sol = PCl_porId_('ATEC_SOLICITACOES', m.REF_ID); if (!sol) return { pessoas: [] };
++    un = PCl_s_(sol.UNIDADE_ID); numero = PCl_s_(sol.NUMERO);
++    if (PCl_s_(sol.CHAMADO_ID)) refs.push('CHAMADO|' + PCl_s_(sol.CHAMADO_ID));
++  }
++  var ids = [];
++  if (sol && PCl_up_(sol.ORIGEM) === 'PORTAL' && PCl_s_(sol.POR_ID)) ids.push(PCl_s_(sol.POR_ID));
++  msgs.forEach(function (x) { if (PCl_up_(x.AUTOR_LADO) === 'CLIENTE' && PCl_s_(x.CLIENTE_ID) === cid && refs.indexOf(PCl_up_(x.REF_TIPO) + '|' + PCl_s_(x.REF_ID)) >= 0 && ids.indexOf(PCl_s_(x.AUTOR_ID)) < 0) ids.push(PCl_s_(x.AUTOR_ID)); });
++  var contas = PClAv_contas_(cid), pessoas = [];
++  if (ids.length) {
++    ids.forEach(function (id) {
++      var u = contas.filter(function (x) { return PCl_s_(x.ID) === id; })[0]; if (!u) return;
++      var esc = PCl_escopo_(u.ID); if (!esc || (un && !PCl_escopoUnidade_(esc, un)) || !PClAv_prefLigada_(u, 'PC06')) return;
++      pessoas.push(PClAv_pessoa_(u, sol && PCl_s_(sol.POR_ID) === id ? 'abriu o pedido ' + PCl_s_(sol.NUMERO) + ' no Portal do cliente da Metrolabs' : 'participa desta conversa no Portal do cliente da Metrolabs'));
++    });
++  } else pessoas = PClAv_gestores_(cid, un, 'PC06');
++  return { pessoas: pessoas, rotulo: tipo === 'GERAL' ? 'Conversa geral' : (tipo === 'CHAMADO' ? 'Chamado ' : 'Pedido ') + numero, chaveRef: tipo + '|' + PCl_s_(m.REF_ID) };
++}
++function PClAv_rotinaConversa_(rg) {
++  if (!PCl_horarioCliente_().dentro) return { fora: 'fora do horário comercial do cliente' };
++  var desde = PClAv_desde_(false), agora = PCl_agoraIso_(), todas = PCl_ler_(typeof PCL_ABA_MENSAGENS !== 'undefined' ? PCL_ABA_MENSAGENS : 'PCL_MENSAGENS');
++  var novas = todas.filter(function (m) { return PCl_up_(m.AUTOR_LADO) === 'METROLABS' && PCl_up_(m.INTERNA) !== 'SIM' && !PCl_s_(m.DESLIGADO_EM) && PCl_s_(m.EM) >= desde; });
++  if (!novas.length) return { pendentes: 0 };
++  var envios = PCl_ler_(PCL_ABA_AV_ENVIOS).filter(function (r) { return PCl_up_(r.EVENTO) === 'PC06'; }), feito = {}, ultimo = {};
++  envios.forEach(function (r) { var e = PCl_s_(r.EMAIL).toLowerCase(); feito[PCl_s_(r.CHAVE) + '|' + e] = true; if (!ultimo[e] || PCl_s_(r.EM) > ultimo[e]) ultimo[e] = PCl_s_(r.EM); });
++  var por = {};
++  novas.forEach(function (m) {
++    var d = PClAv_destinosConversa_(m, todas);
++    d.pessoas.forEach(function (p) {
++      if (feito['PC06:' + PCl_s_(m.ID) + '|' + p.email]) return;
++      var x = por[p.email] || (por[p.email] = { p: p, cid: PCl_s_(m.CLIENTE_ID), refs: {}, msgs: [] });
++      var rf = x.refs[d.chaveRef] || (x.refs[d.chaveRef] = { rotulo: d.rotulo, n: 0, ultima: '' });
++      rf.n++; if (PCl_s_(m.EM) > rf.ultima) rf.ultima = PCl_s_(m.EM);
++      x.msgs.push(m);
++    });
++  });
++  var enviados = 0, esperando = 0;
++  Object.keys(por).forEach(function (email) {
++    var x = por[email];
++    if (ultimo[email] && PClAv_minUteis_(ultimo[email], agora) < rg.conversaIntervaloMin) { esperando++; return; }
++    var refs = Object.keys(x.refs).map(function (k) { return x.refs[k]; });
++    var titulo = refs.length === 1 ? 'Metrolabs — ' + refs[0].rotulo + ': nova mensagem da Metrolabs' : 'Metrolabs — Novas mensagens da Metrolabs no Portal';
++    var texto = 'A Metrolabs escreveu para a sua empresa no Portal do cliente:\n' + refs.map(function (r) { return '- ' + r.rotulo + ': ' + r.n + (r.n === 1 ? ' mensagem, em ' : ' mensagens, a última em ') + PCl_brHora_(r.ultima) + '.'; }).join('\n') +
++      '\n\nPara ler e responder, abra a conversa no Portal do cliente. Por segurança, o texto das mensagens fica só no Portal.';
++    var r = PCl_enviarCliente_({ evento: 'PC06', clienteId: x.cid, refId: 'PC06:' + PCl_s_(x.p.id || email), titulo: titulo, texto: texto, pessoas: [x.p], obrigatorio: false, nomeOpcional: PCL_AVISOS_OPCIONAIS.PC06 });
++    if (!r.destinos.length) return;
++    x.msgs.forEach(function (m) { PCl_inserir_(PCL_ABA_AV_ENVIOS, { CHAVE: 'PC06:' + PCl_s_(m.ID), EVENTO: 'PC06', CLIENTE_ID: x.cid, USUARIO_ID: PCl_s_(x.p.id), EMAIL: email, REF_ID: PCl_s_(m.REF_ID).slice(0, 80), SITUACAO: r.fila ? 'NA_FILA' : 'ENVIADO', EM: agora }); });
++    enviados++;
++  });
++  return { resumos: enviados, esperando: esperando };
++}
++
++// ------------------------------------------------------------
++// PC07 (documentos novos, diário) e PC08 (vencimentos, semanal)
++// ------------------------------------------------------------
++function PClAv_clientesComPortal_() {
++  var m = {}; PCl_ler_(SGO_CFG.SHEETS.CAD_USUARIOS || 'CAD_USUARIOS').forEach(function (u) { if (PCl_up_(u.PERFIL) === 'CLIENTE' && PCl_s_(u.CLIENTE_ID) && (typeof PClA_ativa_ !== 'function' || PClA_ativa_(u))) m[PCl_s_(u.CLIENTE_ID)] = true; });
++  return Object.keys(m);
++}
++/** PC07 e PC08 só para quem está com o acesso completo (PLENO ou CARENCIA) na unidade: em consulta não sai (item 3.3). */
++function PClAv_completoFn_(cid) {
++  var memo = {};
++  return function (un) { var k = PCl_s_(un); if (!(k in memo)) memo[k] = !!PCl_situacaoAcesso_(cid, k, '').completo; return memo[k]; };
++}
++function PClAv_feitosDe_(evento) { var f = {}; PCl_ler_(PCL_ABA_AV_ENVIOS).forEach(function (r) { if (PCl_up_(r.EVENTO) === evento) f[PCl_s_(r.CHAVE) + '|' + PCl_s_(r.EMAIL).toLowerCase()] = true; }); return f; }
++function PClAv_limitarLinhas_(l, resto) { return l.length > PCLAV_MAX_LINHAS ? l.slice(0, PCLAV_MAX_LINHAS).concat(['- e mais ' + (l.length - PCLAV_MAX_LINHAS) + ': ' + resto]) : l; }
++function PClAv_rotinaDocumentos_(hoje) {
++  if (typeof PClD_base_ !== 'function') return { fora: 'documentos do portal indisponíveis' };
++  var desdeDia = PCl_dia_(PClAv_desde_(false)) || hoje, ini = desdeDia > PCl_diaMais_(hoje, -7) ? desdeDia : PCl_diaMais_(hoje, -7), feitos = PClAv_feitosDe_('PC07'), res = { resumos: 0, documentos: 0 };
++  PClAv_clientesComPortal_().forEach(function (cid) {
++    var completo = PClAv_completoFn_(cid);
++    if (!PCl_situacaoAcesso_(cid, '', '').podeEntrar) return;
++    PClAv_contas_(cid).forEach(function (u) {
++      if (!PClAv_prefLigada_(u, 'PC07')) return;
++      var esc = PCl_escopo_(u.ID); if (!esc || !esc.pode.documentos) return;
++      var email = PCl_s_(u.EMAIL).toLowerCase(); if (!PCl_emailOk_(email)) return;
++      var x = { eu: { id: PCl_s_(u.ID), sessao: { perfil: 'CLIENTE', userId: PCl_s_(u.ID), clienteId: cid, nome: PCl_s_(u.NOME) } }, esc: esc, cid: cid, hoje: hoje };
++      var docs = [];
++      try { docs = PClD_base_(x).docs; } catch (e) { docs = []; }
++      var novos = docs.filter(function (t) { var em = PCl_s_(t.emitidoIso).slice(0, 10); return em >= ini && em <= hoje && completo(t.unidadeId) && !feitos['PC07:' + t.k + '|' + email]; });
++      if (!novos.length) return;
++      var linhas = novos.map(function (t) { return '- ' + [(typeof PCLD_TIPOS !== 'undefined' && PCLD_TIPOS[t.tipoPortal]) || 'Documento', PCl_s_(t.numero) ? 'nº ' + PCl_s_(t.numero) : '', PCl_s_(t.equipamentoNome), PCl_s_(t.unidadeNome), 'emitido em ' + PCl_s_(t.emitido)].filter(Boolean).join(' · '); });
++      var r = PCl_enviarCliente_({ evento: 'PC07', clienteId: cid, refId: 'PC07:' + hoje, titulo: 'Metrolabs — Documentos novos no Portal (' + PCl_br_(hoje) + ')',
++        texto: (novos.length === 1 ? 'Um documento novo está disponível' : novos.length + ' documentos novos estão disponíveis') + ' no Portal do cliente:\n' + PClAv_limitarLinhas_(linhas, 'veja todos em Portal do cliente > Documentos técnicos.').join('\n') +
++          '\n\nPara abrir, entre no Portal do cliente, em Documentos técnicos. Os arquivos não vão anexados ao e-mail.', pessoas: [PClAv_pessoa_(u, 'tem acesso aos documentos técnicos da sua empresa no Portal do cliente da Metrolabs')], obrigatorio: false, nomeOpcional: PCL_AVISOS_OPCIONAIS.PC07 });
++      if (!r.destinos.length) return;
++      novos.forEach(function (t) { PCl_inserir_(PCL_ABA_AV_ENVIOS, { CHAVE: ('PC07:' + t.k).slice(0, 200), EVENTO: 'PC07', CLIENTE_ID: cid, USUARIO_ID: PCl_s_(u.ID), EMAIL: email, REF_ID: PCl_s_(t.k).slice(0, 80), SITUACAO: r.fila ? 'NA_FILA' : 'ENVIADO', EM: PCl_agoraIso_() }); feitos['PC07:' + t.k + '|' + email] = true; });
++      res.resumos++; res.documentos += novos.length;
++    });
++  });
++  return res;
++}
++function PClAv_faixa_(dias) { if (dias === null || dias === undefined) return ''; if (dias < 0) return 'VENCIDO'; if (dias <= 7) return '7'; if (dias <= 30) return '30'; if (dias <= 60) return '60'; return ''; }
++function PClAv_rotinaVencimentos_(hoje) {
++  if (typeof PCl_vencimentos_ !== 'function') return { fora: 'vencimentos indisponíveis' };
++  var feitos = PClAv_feitosDe_('PC08'), res = { resumos: 0, itens: 0 }, eqs = {}, uns = {};
++  // vencido mais antigo que N dias antes do início dos avisos nunca vai no e-mail (continua no Portal, em Vencimentos e cronograma)
++  var rgV = PCl_regrasAvisos_(), corteVencido = PCl_diaMais_(PCl_dia_(PClAv_desde_(false)) || hoje, -rgV.pc08VencidoDias);
++  PCl_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS || 'CAD_EQUIPAMENTOS').forEach(function (e) { eqs[PCl_s_(e.ID)] = typeof PClD_rotuloEq_ === 'function' ? PClD_rotuloEq_(e) : [PCl_s_(e.TAG), PCl_s_(e.TIPO)].filter(Boolean).join(' · '); });
++  PCl_ler_(SGO_CFG.SHEETS.CAD_UNIDADES || 'CAD_UNIDADES').forEach(function (u) { uns[PCl_s_(u.ID)] = PCl_s_(u.NOME_UNIDADE); });
++  PClAv_clientesComPortal_().forEach(function (cid) {
++    var completo = PClAv_completoFn_(cid);
++    if (!PCl_situacaoAcesso_(cid, '', '').podeEntrar) return;
++    PClAv_contas_(cid).forEach(function (u) {
++      var esc = PCl_escopo_(u.ID); if (!esc || esc.papel !== 'GESTOR' || !PClAv_prefLigada_(u, 'PC08')) return;
++      var email = PCl_s_(u.EMAIL).toLowerCase(); if (!PCl_emailOk_(email)) return;
++      var pend = PCl_vencimentos_(cid, esc, hoje).map(function (v) { v.faixa = PClAv_faixa_(v.dias); v.chaveAviso = 'PC08:' + v.chave + ':' + v.vencIso + ':' + v.faixa; return v; })
++        .filter(function (v) { return v.faixa && !(v.faixa === 'VENCIDO' && PCl_s_(v.vencIso) < corteVencido) && completo(v.unidadeId) && !feitos[v.chaveAviso + '|' + email]; });
++      if (!pend.length) return;
++      var blocos = PCLAV_FAIXAS.map(function (f) {
++        var l = pend.filter(function (v) { return v.faixa === f.k; }).sort(function (a, b) { return PCl_s_(a.vencIso).localeCompare(PCl_s_(b.vencIso)); });
++        if (!l.length) return '';
++        return f.nome + ':\n' + l.map(function (v) { return '- ' + (eqs[v.equipamentoId] || 'Documento da unidade') + (uns[v.unidadeId] ? ' (' + uns[v.unidadeId] + ')' : '') + ': ' + (/^NR/.test(PCl_s_(v.categoriaNome)) ? PCl_s_(v.categoriaNome) : PCl_s_(v.categoriaNome).toLowerCase()) + ', ' + (v.dias < 0 ? 'vencido desde ' : 'vence em ') + PCl_s_(v.venc); }).join('\n');
++      }).filter(Boolean);
++      var linhas = blocos.join('\n\n').split('\n');
++      var r = PCl_enviarCliente_({ evento: 'PC08', clienteId: cid, refId: 'PC08:' + hoje, titulo: 'Metrolabs — Vencimentos dos equipamentos (semana de ' + PCl_br_(hoje) + ')',
++        texto: 'Estes são os vencimentos dos equipamentos da sua empresa que entraram numa nova faixa desde o último resumo:\n\n' + PClAv_limitarLinhas_(linhas, 'veja todos em Portal do cliente > Vencimentos e cronograma.').join('\n') +
++          '\n\nPara programar a calibração, a qualificação, a inspeção ou a manutenção, fale com a Metrolabs pela conversa geral do Portal ou abra um chamado para o equipamento. A lista completa está em Portal do cliente > Vencimentos e cronograma.',
++        pessoas: [PClAv_pessoa_(u, 'é Gestor do cliente no Portal da Metrolabs e acompanha os vencimentos dos equipamentos')], obrigatorio: false, nomeOpcional: PCL_AVISOS_OPCIONAIS.PC08 });
++      if (!r.destinos.length) return;
++      pend.forEach(function (v) { PCl_inserir_(PCL_ABA_AV_ENVIOS, { CHAVE: v.chaveAviso.slice(0, 200), EVENTO: 'PC08', CLIENTE_ID: cid, USUARIO_ID: PCl_s_(u.ID), EMAIL: email, REF_ID: PCl_s_(v.equipamentoId).slice(0, 80), SITUACAO: r.fila ? 'NA_FILA' : 'ENVIADO', EM: PCl_agoraIso_() }); feitos[v.chaveAviso + '|' + email] = true; });
++      res.resumos++; res.itens += pend.length;
++    });
++  });
++  return res;
++}
++
++// ------------------------------------------------------------
++// PC10: contrato termina em 30 dias, carência ou modo consulta (gestores do cliente, texto neutro, decisão 12)
++// ------------------------------------------------------------
++function PClAv_rotinaContrato_(hoje) {
++  var res = { avisos: 0 }, contato = PCl_regras_().contatoComercial, naRegua = null;
++  PClAv_clientesComPortal_().forEach(function (cid) {
++    var s = PCl_situacaoAcesso_(cid, '', hoje);
++    if (s.provisoria || s.transicao || !s.contrato) return; // contrato a cadastrar e contas antigas: o Comercial cuida (CT04)
++    var k = s.contrato, tipo = '', titulo = '', texto = '', excluir = '';
++    var ref = 'O contrato' + (k.numero ? ' nº ' + k.numero : '') + ' da sua empresa com a Metrolabs';
++    if (s.situacao === 'PLENO') {
++      var dias = PCl_diasEntre_(hoje, k.fim);
++      if (k.fonte === 'LIC' || dias === null || dias < 0 || dias > 30) return; // contrato de licitação: Licitações avisa pela agenda própria
++      if (naRegua === null) { naRegua = {}; try { if (typeof CtRg_itens_ === 'function') CtRg_itens_(hoje).forEach(function (it) { naRegua[it.fonte + ':' + it.id] = true; }); } catch (e) { naRegua = {}; } }
++      if (typeof CtRg_itens_ === 'function' && !naRegua['CLI:' + k.id]) return; // já renovado: sem aviso
++      tipo = 'FIM30';
++      titulo = 'Metrolabs — Contrato' + (k.numero ? ' nº ' + k.numero : '') + ': vigência até ' + PCl_br_(k.fim);
++      texto = ref + ' tem vigência até ' + PCl_br_(k.fim) + '. Para que os serviços e o acesso completo ao Portal continuem sem interrupção, a renovação pode ser tratada com ' + contato + '.\n\nSe a renovação já estiver em andamento, desconsidere este aviso.';
++      try { if (typeof CtRg_cfg_ === 'function' && CtRg_cfg_().avisarCliente && typeof CtRg_contatoCliente_ === 'function') excluir = PCl_s_(CtRg_contatoCliente_(cid, PCl_porId_(PCL_ABAS.CONTRATOS, k.id)).email).toLowerCase(); } catch (e) { excluir = ''; }
++    } else if (s.situacao === 'CARENCIA') {
++      tipo = 'CARENCIA';
++      titulo = 'Metrolabs — Contrato' + (k.numero ? ' nº ' + k.numero : '') + ': período de carência até ' + PCl_br_(s.ate);
++      texto = ref + ' terminou em ' + PCl_br_(s.fimContrato) + '. O acesso completo ao Portal continua até ' + PCl_br_(s.ate) + ', no período de carência.\n\nPara renovar, fale com ' + contato + '.';
++    } else if (s.situacao === 'CONSULTA') {
++      tipo = 'CONSULTA';
++      titulo = 'Metrolabs — Portal do cliente em modo consulta';
++      texto = 'O acesso da sua empresa ao Portal do cliente passou para o modo consulta: documentos, equipamentos, histórico e chamados continuam disponíveis' + (s.ate ? ' até ' + PCl_br_(s.ate) : '') + '. Pedidos de atendimento passam a ser avulsos, com orçamento antes do atendimento.\n\nPara voltar ao acesso completo, fale com ' + contato + '.';
++    } else return;
++    var pessoas = PClAv_gestores_(cid, '').filter(function (p) { return !excluir || p.email !== excluir; });
++    if (!pessoas.length) return;
++    var r = PCl_enviarCliente_({ evento: 'PC10', clienteId: cid, refId: k.fonte + ':' + k.id, chave: 'PC10:' + cid + ':' + k.fonte + ':' + k.id + ':' + (tipo === 'FIM30' ? k.fim : PCl_s_(s.fimContrato)) + ':' + tipo, titulo: titulo, texto: texto, pessoas: pessoas });
++    if (r.destinos.length) res.avisos++;
++  });
++  return res;
++}
++
++// ------------------------------------------------------------
++// PI05: pedido do portal a 75% do prazo de resposta e vencido (equipe; mesma regra do RP07)
++// ------------------------------------------------------------
++function PClAv_rotinaPrazoPedido_() {
++  if (typeof Ast_somarMinUteis_ !== 'function' || typeof Ast_avisar_ !== 'function') return { fora: 'Assistência indisponível' };
++  var agora = Date.now(), res = { risco: 0, vencido: 0 }, regras = typeof PClCh_regras_ === 'function' ? PClCh_regras_() : { aceitePedidoMin: 240 };
++  var feitos = {}; PCl_ler_(PCL_ABA_AV_ENVIOS).forEach(function (r) { if (PCl_up_(r.EVENTO) === 'PI05') feitos[PCl_s_(r.CHAVE)] = true; });
++  var desde = PClAv_desde_(false);
++  PCl_ler_('ATEC_SOLICITACOES').filter(function (s) { return PCl_up_(s.ORIGEM) === 'PORTAL' && PCl_up_(s.SITUACAO) === 'NOVA' && PCl_s_(s.CRIADO_EM) >= desde.slice(0, 10); }).forEach(function (s) {
++    var ab = typeof Ast_ms_ === 'function' ? Ast_ms_(s.CRIADO_EM) : null; if (ab === null) return;
++    var min = Number(s.ACEITE_MIN_UTEIS) || regras.aceitePedidoMin, pausa = Number(s.PAUSA_MIN) || 0;
++    var ate = Ast_somarMinUteis_(ab, min + pausa), risco = Ast_somarMinUteis_(ab, Math.round(min * 0.75) + pausa);
++    var marco = agora >= ate ? 'VENCIDO' : agora >= risco ? 'RISCO' : '';
++    if (!marco || feitos['PI05:' + PCl_s_(s.ID) + ':' + marco]) return;
++    var t = typeof Ast_triagemPara_ === 'function' ? Ast_triagemPara_().ids.slice() : [];
++    if (marco === 'VENCIDO' && typeof Ast_gestoresTecnica_ === 'function') Ast_gestoresTecnica_().forEach(function (id) { if (t.indexOf(id) < 0) t.push(id); });
++    var cli = PCl_nomeCliente_(PCl_cliente_(s.CLIENTE_ID)) || PCl_s_(s.CLIENTE_NOME), ateBr = typeof Ast_br_ === 'function' ? Ast_br_(ate) : '';
++    var titulo = marco === 'VENCIDO' ? 'Pedido do portal com o prazo de resposta vencido: ' + PCl_s_(s.NUMERO) + ' (' + cli + ')' : 'Pedido do portal perto do fim do prazo de resposta: ' + PCl_s_(s.NUMERO) + ' (' + cli + ')';
++    var texto = PCl_s_(s.EQUIPAMENTO_TEXTO) + '\nPrazo para responder ao cliente: ' + ateBr + (marco === 'VENCIDO' ? ' (vencido).' : ' (75% do prazo já passou).') + '\nO que fazer: em Assistência técnica > Solicitações dos clientes, aceite (vira chamado), peça complemento ou recuse com o motivo.';
++    if (t.length) Ast_avisar_(t, marco === 'VENCIDO' ? 'PCL_PEDIDO_VENCIDO' : 'PCL_PEDIDO_RISCO', titulo, texto, s.ID, { evento: 'PI05' });
++    PCl_inserir_(PCL_ABA_AV_ENVIOS, { CHAVE: 'PI05:' + PCl_s_(s.ID) + ':' + marco, EVENTO: 'PI05', CLIENTE_ID: PCl_s_(s.CLIENTE_ID), USUARIO_ID: '', EMAIL: '(equipe)', REF_ID: PCl_s_(s.ID), SITUACAO: t.length ? 'ENVIADO' : 'SEM_DESTINO', EM: PCl_agoraIso_() });
++    feitos['PI05:' + PCl_s_(s.ID) + ':' + marco] = true;
++    res[marco === 'VENCIDO' ? 'vencido' : 'risco']++;
++  });
++  return res;
++}
++
++// ------------------------------------------------------------
++// ROTINA (pela rotina da Assistência, a cada 15 minutos). Nunca lança.
++// ------------------------------------------------------------
++function PClAv_marcas_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(PCLAV_PROP_ROTINA) || '{}') || {}; } catch (e) { return {}; } }
++function PClAv_marcar_(k, v) { try { var m = PClAv_marcas_(); m[k] = v; PropertiesService.getScriptProperties().setProperty(PCLAV_PROP_ROTINA, JSON.stringify(m)); } catch (e) {} }
++/** Primeiro dia útil da semana que começa na segunda informada (feriados e dias sem expediente da empresa). */
++function PClAv_primeiroDiaUtil_(segunda) {
++  var cfg = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : null, d = segunda;
++  for (var i = 0; i < 7; i++) { var sem = new Date(PCl_diaMs_(d)).getUTCDay(); if (cfg && typeof SGO_expedienteMotivoDia_ === 'function' ? !SGO_expedienteMotivoDia_(d, sem, cfg) : (sem !== 0 && sem !== 6)) return d; d = PCl_diaMais_(d, 1); }
++  return segunda;
++}
++function PortalCliente_rotinaAvisos_(opcoes) {
++  opcoes = opcoes || {};
++  var r = {};
++  var passo = function (nome, fn) { try { PCl_memoLimpar_(); r[nome] = fn(); } catch (e) { r[nome] = { erro: PCl_s_(e && e.message).slice(0, 300) }; try { console.error('Portal do cliente, avisos (' + nome + '): ' + r[nome].erro); } catch (x) {} } };
++  try {
++    var rg = PCl_regrasAvisos_();
++    PClAv_desde_(true);
++    PClAv_registrarTipos_();
++    passo('prazoPedido', PClAv_rotinaPrazoPedido_);
++    if (!rg.avisosLigados) { r.cliente = { fora: 'avisos ao cliente desligados em Regras do portal' }; return r; }
++    var h = PCl_horarioCliente_(), hoje = PCl_hoje_(), hora = PCl_agoraIso_().slice(11, 16), marcas = PClAv_marcas_();
++    passo('conversa', function () { return PClAv_rotinaConversa_(rg); });
++    if (!h.dentro) { r.cliente = { fora: 'fora do horário comercial do cliente (' + (h.motivo || '') + ')' }; return r; }
++    if (marcas.pc10 !== hoje) { passo('contrato', function () { return PClAv_rotinaContrato_(hoje); }); PClAv_marcar_('pc10', hoje); }
++    if (hora >= rg.resumoHora && marcas.pc07 !== hoje) { passo('documentos', function () { return PClAv_rotinaDocumentos_(hoje); }); PClAv_marcar_('pc07', hoje); }
++    var semana = new Date(PCl_diaMs_(hoje)).getUTCDay(), segunda = PCl_diaMais_(hoje, -((semana + 6) % 7));
++    // primeira rodada depois da publicação fora do primeiro dia útil da semana: só marca a semana (o primeiro resumo sai no primeiro dia útil da semana seguinte)
++    if (!marcas.pc08 && hoje !== PClAv_primeiroDiaUtil_(segunda)) { PClAv_marcar_('pc08', segunda); r.vencimentos = { fora: 'primeira semana: o resumo começa no primeiro dia útil da semana seguinte' }; }
++    else if (hora >= rg.resumoHora && marcas.pc08 !== segunda) { passo('vencimentos', function () { return PClAv_rotinaVencimentos_(hoje); }); PClAv_marcar_('pc08', segunda); }
++  } catch (e) { r.erro = PCl_s_(e && e.message).slice(0, 300); try { console.error('Portal do cliente, rotina dos avisos: ' + r.erro); } catch (x) {} }
++  return r;
++}
+diff --git a/cand16/SGO_PortalCliente_Chamados.js b/cand17/SGO_PortalCliente_Chamados.js
+index 781a5e8..ae20218 100644
+--- a/cand16/SGO_PortalCliente_Chamados.js
++++ b/cand17/SGO_PortalCliente_Chamados.js
+@@ -149,9 +149,8 @@ function PClCh_nomeTecnico_(nome) {
+ function PClCh_telOk_(v) { if (typeof CadQ_telefoneOk_ === 'function') return CadQ_telefoneOk_(v); var d = PCl_s_(v).replace(/\D/g, ''); return d.length === 10 || d.length === 11; }
+ function PClCh_emailOk_(v) { return typeof PClA_emailOk_ === 'function' ? PClA_emailOk_(v) : /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(PCl_s_(v)); }
+ function PClCh_ms_(v) { return typeof Ast_ms_ === 'function' ? Ast_ms_(v) : null; }
+-function PClCh_dentroExpediente_(quando) {
+-  try { return typeof SGO_dentroDoExpediente_ === 'function' ? SGO_dentroDoExpediente_(quando || new Date()) : { dentro: true, motivo: '' }; } catch (e) { return { dentro: true, motivo: '' }; }
+-}
++// 18/11/2026 (etapa 4): o horário que o cliente lê (08:00 às 18:00, dias úteis) é o horário comercial dos avisos ao cliente (Regras do portal)
++function PClCh_dentroExpediente_(quando) { return PCl_horarioCliente_(quando); }
+ function PClCh_somarDiasUteis_(dia, n) {
+   if (typeof Ges_somarDiasUteis_ === 'function') return Ges_somarDiasUteis_(dia, n);
+   var d = dia, falta = n;
+@@ -564,7 +563,7 @@ function PClCh_cancelar_(x, d) {
+   } else {
+     var sit = PCl_up_(reg.SITUACAO);
+     if (PCL_CANCELA_CHAMADO.indexOf(sit) < 0) throw PCl_erro_('ESTADO', 'Não foi possível cancelar: o chamado ' + reg.NUMERO + ' já está em atendimento ou concluído (' + PCl_etapaCliente_('CHAMADO', reg).nome + '). Por quê: depois que o técnico sai para a visita, o cancelamento é combinado com a equipe. O que fazer: escreva na conversa do chamado.');
+-    AstC_cancelar_(Ast_sistema_(quem.nome), { id: reg.ID, motivo: 'Cancelado pelo cliente (' + x.esc.nome + ') no Portal: ' + motivo });
++    AstC_cancelar_(Ast_sistema_(quem.nome), { id: reg.ID, motivo: 'Cancelado pelo cliente (' + x.esc.nome + ') no Portal: ' + motivo, peloCliente: true }); // 18/11/2026: sem o aviso PC03 de volta ao cliente
+     var dest = t.ids.concat(Ast_gestoresTecnica_()); if (PCl_s_(reg.TECNICO_ID)) dest.push(PCl_s_(reg.TECNICO_ID));
+     Ast_avisar_(dest, 'PCL_CANCELADO', 'Chamado cancelado pelo cliente: ' + reg.NUMERO, motivo, reg.ID, { evento: 'PI07' });
+   }
+@@ -799,7 +798,8 @@ function PClCh_enviarMensagemInterna_(eu, d) {
+   var arq = d.anexo && PCl_s_(d.anexo.base64) ? PClCh_conferirArquivo_(d.anexo, /^image\//i.test(PCl_s_(d.anexo.tipo)) ? 'IMAGEM' : 'DOCUMENTO', 'o anexo', 'pclMsgAnexoInterno') : null;
+   PClCh_gravarMensagem_({ id: eu.id, nome: eu.nome, lado: 'METROLABS' }, ref.cid, ref, t, interna, arq);
+   if (ref.tipo !== 'GERAL') Ast_evento_(ref.tipo, ref.id, interna ? 'NOTA_INTERNA_PORTAL' : 'MENSAGEM_METROLABS', { id: eu.id, nome: eu.nome }, (interna ? 'Nota interna na conversa do portal: ' : 'Mensagem da Metrolabs ao cliente: ') + t.slice(0, 200), { numero: ref.numero });
+-  // 18/11/2026: o aviso por e-mail ao cliente da mensagem da Metrolabs (PC06, resumo a cada 2 horas úteis, desligável) é da etapa 4.
++  // 18/11/2026 (etapa 4): o cliente recebe a mensagem da Metrolabs por e-mail no resumo a cada 2 horas úteis (PC06, desligável), pela rotina
++  // (PortalCliente_rotinaAvisos_, SGO_PortalCliente_Avisos.js). A nota interna nunca entra no resumo.
+   return { message: interna ? 'Nota interna gravada. O cliente não vê.' : 'Mensagem enviada ao cliente. Ela aparece na conversa do Portal.', mensagens: PClCh_mensagensDe_(ref.cid, PClCh_refsConversa_(ref), true, '') };
+ }
+ /** Parte "Portal do cliente" da ficha do chamado e da solicitação: relato, contato, contrato, fotos e conversa (com notas internas). */
+@@ -856,11 +856,11 @@ function PClCh_aoTratarPedido_(s, acao, extra) {
+       if (PCl_s_(s.CONTRATO_ID) && extra.chamadoId) Ast_atualizar_(AST_ABAS.CHAMADOS, extra.chamadoId, { CONTRATO_ID: PCl_s_(s.CONTRATO_ID) });
+       Ast_evento_('SOLICITACAO', s.ID, 'ACEITE', extra.eu || { id: '', nome: 'Metrolabs' }, 'Pedido aceito pela Metrolabs: virou o chamado ' + extra.chamadoNumero + '.' + (PCl_up_(s.SEM_CONTRATO) === 'SIM' ? ' Atendimento avulso: a Metrolabs envia o orçamento antes de atender.' : ''), { numero: s.NUMERO, publico: true, de: 'Recebido', para: 'Aceito' });
+       if (PCl_up_(s.SEM_CONTRATO) === 'SIM' && extra.chamadoId) Ast_evento_('CHAMADO', extra.chamadoId, 'AVULSO', { id: '', nome: 'Portal do cliente' }, 'Atendimento avulso pedido pelo Portal (cliente em modo consulta, sem contrato vigente): emitir o orçamento antes de atender.', { numero: extra.chamadoNumero });
+-      PClCh_avisarCliente_('PC02', s, 'Metrolabs — Pedido ' + s.NUMERO + ' aceito: chamado ' + extra.chamadoNumero, 'O seu pedido ' + s.NUMERO + ' (' + PCl_s_(s.EQUIPAMENTO_TEXTO) + ') foi aceito e virou o chamado ' + extra.chamadoNumero + '.\n\nA Metrolabs agenda o atendimento e informa a data pelo Portal. Você acompanha as etapas, as mensagens e o relatório em Portal do cliente > Chamados.', {});
++      PClCh_avisarCliente_('PC02', s, 'Metrolabs — Pedido ' + s.NUMERO + ' aceito: chamado ' + extra.chamadoNumero, 'O seu pedido ' + s.NUMERO + ' (' + PCl_s_(s.EQUIPAMENTO_TEXTO) + ') foi aceito e virou o chamado ' + extra.chamadoNumero + '.\n\nA Metrolabs agenda o atendimento e informa a data pelo Portal. Você acompanha as etapas, as mensagens e o relatório em Portal do cliente > Chamados.', { gestores: true });
+     } else if (acao === 'COMPLEMENTO') {
+-      PClCh_avisarCliente_('PC02', s, 'Metrolabs — Pedido ' + s.NUMERO + ': falta uma informação', 'Para seguir com o pedido ' + s.NUMERO + ' (' + PCl_s_(s.EQUIPAMENTO_TEXTO) + '), a Metrolabs precisa de:\n\n' + PCl_s_(extra.pergunta) + '\n\nResponda em Portal do cliente > Chamados, na ficha do pedido.', {});
++      PClCh_avisarCliente_('PC02', s, 'Metrolabs — Pedido ' + s.NUMERO + ': falta uma informação', 'Para seguir com o pedido ' + s.NUMERO + ' (' + PCl_s_(s.EQUIPAMENTO_TEXTO) + '), a Metrolabs precisa de:\n\n' + PCl_s_(extra.pergunta) + '\n\nResponda em Portal do cliente > Chamados, na ficha do pedido.', { gestores: true });
+     } else if (acao === 'RECUSADO') {
+-      PClCh_avisarCliente_('PC02', s, 'Metrolabs — Pedido ' + s.NUMERO + ' não pôde ser atendido', 'O pedido ' + s.NUMERO + ' (' + PCl_s_(s.EQUIPAMENTO_TEXTO) + ') não pôde ser atendido pela Metrolabs.\n\nMotivo: ' + PCl_s_(extra.motivo) + '\n\nSe houver engano, escreva na conversa do pedido ou na conversa geral do Portal.', {});
++      PClCh_avisarCliente_('PC02', s, 'Metrolabs — Pedido ' + s.NUMERO + ' não pôde ser atendido', 'O pedido ' + s.NUMERO + ' (' + PCl_s_(s.EQUIPAMENTO_TEXTO) + ') não pôde ser atendido pela Metrolabs.\n\nMotivo: ' + PCl_s_(extra.motivo) + '\n\nSe houver engano, escreva na conversa do pedido ou na conversa geral do Portal.', { gestores: true });
+     }
+     if (typeof SGO_Pendencias_invalidar_ === 'function') { try { SGO_Pendencias_invalidar_(); } catch (e) {} }
+   } catch (e) { try { console.error('Portal do cliente, pedido tratado: ' + ((e && e.message) || e)); } catch (x) {} }
+@@ -870,37 +870,26 @@ function PClCh_aoTratarPedido_(s, acao, extra) {
+ // AVISOS AO CLIENTE (só e-mail). PC01 na hora; PC02 no horário comercial (fora dele, fila PCL_AVISOS_FILA).
+ // Destinatário: quem abriu o pedido (conta ativa) e, no PC01, também o contato no local se for outro e-mail. Sem valores, sem anexo.
+ // ------------------------------------------------------------
++// 18/11/2026 (etapa 4): o envio passa pelo envio central (PCl_enviarCliente_, SGO_PortalCliente_Config.js): um e-mail por pessoa, com saudação
++// e rodapé do porquê, endereços repetidos juntados, assunto sem o prefixo "SGO+ | " e o horário comercial do cliente (08:00 às 18:00).
+ function PClCh_destinosPedido_(s, opc) {
+-  var vistos = {}, l = [], add = function (id, nome, email) { var e = PCl_s_(email).toLowerCase(); if (!PClCh_emailOk_(e) || vistos[e]) return; vistos[e] = true; l.push({ id: 'PCL_' + PCl_s_(id || e), nome: PCl_s_(nome), email: e, cadastro: 'cliente' }); };
+-  var u = PCl_s_(s.POR_ID) ? PClA_conta_(s.POR_ID) : null;
+-  if (u && PClA_ativa_(u) && PCl_up_(u.PERFIL) === 'CLIENTE' && PCl_s_(u.CLIENTE_ID) === PCl_s_(s.CLIENTE_ID)) add(u.ID, u.NOME, u.EMAIL);
+-  if (opc && opc.contato) add('', s.CONTATO_NOME, opc.contato);
++  var l = [], u = PCl_s_(s.POR_ID) ? PClA_conta_(s.POR_ID) : null;
++  if (u && PClA_ativa_(u) && PCl_up_(u.PERFIL) === 'CLIENTE' && PCl_s_(u.CLIENTE_ID) === PCl_s_(s.CLIENTE_ID)) l.push({ id: PCl_s_(u.ID), nome: PCl_s_(u.NOME), email: PCl_s_(u.EMAIL), porque: 'abriu o pedido ' + PCl_s_(s.NUMERO) + ' no Portal do cliente da Metrolabs' });
++  if (opc && opc.contato) l.push({ id: '', nome: PCl_s_(s.CONTATO_NOME), email: opc.contato, porque: 'foi indicado como contato no local do pedido ' + PCl_s_(s.NUMERO) });
++  // 18/11/2026 (etapa 4, tabela de eventos): PC02 vai também aos gestores do cliente da unidade (o endereço repetido sai uma vez)
++  if (opc && opc.gestores && typeof PClAv_gestores_ === 'function') l = l.concat(PClAv_gestores_(PCl_s_(s.CLIENTE_ID), PCl_s_(s.UNIDADE_ID)));
+   return l;
+ }
+ function PClCh_avisarCliente_(evento, s, titulo, texto, opc) {
+   try {
+     opc = opc || {};
+-    var contatos = PClCh_destinosPedido_(s, opc);
+-    if (!contatos.length || typeof SGO_notificar_ !== 'function') return null;
+-    if (typeof PClA_registrarTipos_ === 'function') PClA_registrarTipos_();
+-    var corpo = texto + '\n\nVocê recebe este aviso porque abriu o pedido no Portal do cliente da Metrolabs. Os avisos de pedido, visita, orçamento e conclusão são sempre enviados, porque fazem parte do atendimento.';
+-    if (!opc.na && !PClCh_dentroExpediente_().dentro) {
+-      PCl_inserir_(PCL_ABA_FILA, { EVENTO: evento, CLIENTE_ID: PCl_s_(s.CLIENTE_ID), REF_ID: PCl_s_(s.ID), CONTATOS_JSON: JSON.stringify(contatos), TITULO: titulo, TEXTO: corpo, SITUACAO: 'PENDENTE', EM: PCl_agoraIso_() });
+-      return { fila: true };
+-    }
+-    return SGO_notificar_({ contatos: contatos, canais: ['email'], titulo: titulo, texto: corpo, origem: 'PORTAL_CLIENTE', categoria: 'PORTAL_CLIENTE', evento: evento, refId: PCl_s_(s.ID) + ':' + evento, rotuloLink: 'Abrir no Portal do cliente' });
++    var pessoas = PClCh_destinosPedido_(s, opc);
++    if (!pessoas.length) return null;
++    return PCl_enviarCliente_({ evento: evento, clienteId: PCl_s_(s.CLIENTE_ID), refId: PCl_s_(s.ID), titulo: titulo, texto: texto, pessoas: pessoas, imediato: !!opc.na });
+   } catch (e) { try { console.error('Portal do cliente, aviso ao cliente: ' + ((e && e.message) || e)); } catch (x) {} return null; }
+ }
+ /** Envia o que esperava o horário comercial (uma vez cada). */
+-function PClCh_enviarFila_() {
+-  if (!PClCh_dentroExpediente_().dentro || typeof SGO_notificar_ !== 'function') return { fora: 'fora do expediente' };
+-  var n = 0;
+-  PCl_ler_(PCL_ABA_FILA).filter(function (f) { return PCl_up_(f.SITUACAO) === 'PENDENTE'; }).slice(0, 50).forEach(function (f) {
+-    var r = null; try { r = SGO_notificar_({ contatos: PCl_json_(f.CONTATOS_JSON, []), canais: ['email'], titulo: PCl_s_(f.TITULO), texto: PCl_s_(f.TEXTO), origem: 'PORTAL_CLIENTE', categoria: 'PORTAL_CLIENTE', evento: PCl_s_(f.EVENTO), refId: PCl_s_(f.REF_ID) + ':' + PCl_s_(f.EVENTO), rotuloLink: 'Abrir no Portal do cliente' }); } catch (e) { r = null; }
+-    PCl_atualizar_(PCL_ABA_FILA, f.ID, { SITUACAO: r ? 'ENVIADO' : 'ERRO', ENVIADO_EM: PCl_agoraIso_(), MOTIVO: r ? '' : 'serviço de avisos não respondeu' }); n++;
+-  });
+-  return { enviados: n };
+-}
++function PClCh_enviarFila_() { return PCl_enviarFilaCliente_(); }
+ 
+ // ------------------------------------------------------------
+ // ROTINA (pela rotina da Assistência): aceite automático em 5 dias úteis e a fila de avisos do horário comercial. Nunca lança.
+@@ -927,6 +916,8 @@ function PortalCliente_rotinaChamados_(opcoes) {
+     });
+     r.aceitesPorPrazo = n;
+     r.fila = PClCh_enviarFila_();
++    // 18/11/2026 (etapa 4): resumo das mensagens (PC06), documentos novos (PC07), vencimentos (PC08), contrato (PC10) e prazo do pedido (PI05)
++    if (typeof PortalCliente_rotinaAvisos_ === 'function') r.avisos = PortalCliente_rotinaAvisos_(opcoes);
+   } catch (e) { r.erro = String((e && e.message) || e).slice(0, 300); try { console.error('Portal do cliente, rotina dos chamados: ' + r.erro); } catch (x) {} }
+   return r;
+ }
+diff --git a/cand16/SGO_PortalCliente_Config.js b/cand17/SGO_PortalCliente_Config.js
+index 6eb5034..ecffa84 100644
+--- a/cand16/SGO_PortalCliente_Config.js
++++ b/cand17/SGO_PortalCliente_Config.js
+@@ -53,7 +53,10 @@ var PCL_COLUNAS = {
+   PCL_MENSAGENS: ['ID', 'CLIENTE_ID', 'UNIDADE_ID', 'REF_TIPO', 'REF_ID', 'REF_NUMERO', 'AUTOR_LADO', 'AUTOR_ID', 'AUTOR_NOME', 'TEXTO', 'INTERNA', 'RESPONDE_A', 'ANEXO_ID', 'EM', 'CRIADO_EM', 'DESLIGADO_EM'],
+   PCL_ANEXOS: ['ID', 'CLIENTE_ID', 'REF_TIPO', 'REF_ID', 'TIPO', 'NOME', 'MIME', 'TAMANHO', 'SHA256', 'ARQUIVO_ID', 'PUBLICO', 'POR_LADO', 'POR_ID', 'POR_NOME', 'EM', 'CRIADO_EM', 'DESLIGADO_EM',
+     'LEGENDA', 'REDUZIDA_ARQUIVO_ID', 'REMOVIDO_EM', 'REMOVIDO_POR_NOME', 'REMOVIDO_MOTIVO'],
+-  PCL_AVISOS_FILA: ['ID', 'EVENTO', 'CLIENTE_ID', 'REF_ID', 'CONTATOS_JSON', 'TITULO', 'TEXTO', 'SITUACAO', 'EM', 'ENVIADO_EM', 'MOTIVO', 'CRIADO_EM']
++  PCL_AVISOS_FILA: ['ID', 'EVENTO', 'CLIENTE_ID', 'REF_ID', 'CONTATOS_JSON', 'TITULO', 'TEXTO', 'SITUACAO', 'EM', 'ENVIADO_EM', 'MOTIVO', 'CRIADO_EM'],
++  // 18/11/2026 (etapa 4, avisos ao cliente por e-mail; SGO_PortalCliente_Avisos.js): o que já saiu (ou entrou na fila) para cada endereço, por
++  // CHAVE do aviso (ex.: PC03:<chamado>:AGENDADA:<data>, PC07:<documento>). A mesma chave nunca sai duas vezes para o mesmo endereço. Só inclusão.
++  PCL_AVISOS_ENVIOS: ['ID', 'CHAVE', 'EVENTO', 'CLIENTE_ID', 'USUARIO_ID', 'EMAIL', 'REF_ID', 'SITUACAO', 'EM', 'CRIADO_EM']
+ };
+ var PCL_COLUNAS_TEXTO = {
+   CLI_CONTRATOS: ['NUMERO', 'VIGENCIA_INICIO', 'VIGENCIA_FIM', 'CRIADO_EM', 'ATUALIZADO_EM', 'ENCERRADO_EM', 'DATA_BASE_REAJUSTE', 'IA_LIDO_EM'],
+@@ -63,7 +66,8 @@ var PCL_COLUNAS_TEXTO = {
+   CLI_CONTRATOS_REAJUSTES: ['NUMERO', 'ANIVERSARIO', 'MES_DE', 'MES_ATE', 'PROPOSTO_EM', 'CALCULADO_EM', 'APROVADO_EM', 'RECUSADO_EM', 'FATURAR_A_PARTIR', 'FATURADO_EM', 'CARTA_EM', 'CRIADO_EM'],
+   FIN_INDICES_ECONOMICOS: ['MES', 'COLETADO_EM', 'CRIADO_EM'],
+   PCL_PEDIDOS_EQUIPE: ['EM', 'TRATADO_EM', 'CRIADO_EM'], PCL_TERMOS_ACEITE: ['VERSAO_TERMO', 'EM', 'CRIADO_EM'], PCL_CONTAS_HIST: ['EM', 'CRIADO_EM'],
+-  PCL_MENSAGENS: ['EM', 'CRIADO_EM', 'REF_NUMERO', 'DESLIGADO_EM'], PCL_ANEXOS: ['EM', 'CRIADO_EM', 'SHA256', 'REMOVIDO_EM', 'DESLIGADO_EM'], PCL_AVISOS_FILA: ['EM', 'ENVIADO_EM', 'CRIADO_EM']
++  PCL_MENSAGENS: ['EM', 'CRIADO_EM', 'REF_NUMERO', 'DESLIGADO_EM'], PCL_ANEXOS: ['EM', 'CRIADO_EM', 'SHA256', 'REMOVIDO_EM', 'DESLIGADO_EM'], PCL_AVISOS_FILA: ['EM', 'ENVIADO_EM', 'CRIADO_EM'],
++  PCL_AVISOS_ENVIOS: ['CHAVE', 'EM', 'CRIADO_EM']
+ };
+ 
+ /** Situações de acesso (item 3.3 da especificação). */
+@@ -180,14 +184,15 @@ function PCl_garantirAbas_() {
+   // V2 (17/11/2026): colunas novas do contrato e as tabelas da régua, dos reajustes e dos índices
+   // V3 (18/11/2026, etapa 1): pedidos de inclusão, aceite do termo de uso e histórico das contas de cliente
+   // V4 (18/11/2026, etapa 2): mensagens, anexos e a fila dos avisos do horário comercial
+-  try { cache = CacheService.getScriptCache(); if (cache.get('PCL_ABAS_OK_V4')) return; } catch (e) { cache = null; }
++  // V5 (18/11/2026, etapa 4): o registro dos avisos ao cliente já enviados (PCL_AVISOS_ENVIOS)
++  try { cache = CacheService.getScriptCache(); if (cache.get('PCL_ABAS_OK_V5')) return; } catch (e) { cache = null; }
+   if (typeof CertCal_garantirTabela_ !== 'function') return;
+   Object.keys(PCL_COLUNAS).forEach(function (aba) {
+     CertCal_garantirTabela_(aba, PCL_COLUNAS[aba]);
+     PCL_COLUNAS[aba].forEach(function (c) { if (typeof CertCal_garantirColuna_ === 'function') CertCal_garantirColuna_(aba, c); });
+     (PCL_COLUNAS_TEXTO[aba] || []).forEach(function (c) { if (typeof CertCal_forcarColunaTexto_ === 'function') CertCal_forcarColunaTexto_(aba, c); });
+   });
+-  try { if (cache) cache.put('PCL_ABAS_OK_V4', '1', 21600); } catch (e) {}
++  try { if (cache) cache.put('PCL_ABAS_OK_V5', '1', 21600); } catch (e) {}
+ }
+ /** Linhas de uma aba (memória por chamada). Aba que ainda não existe = lista vazia (nunca lança por isso). */
+ function PCl_ler_(aba) {
+@@ -332,3 +337,106 @@ function PCl_publicoSeCliente_(sessionId, tabela, resposta) {
+   if (Array.isArray(r.items)) r.items = r.items.map(function (x) { return PCl_projetar_(tabela, x); });
+   return r;
+ }
++
++// ------------------------------------------------------------
++// 18/11/2026 (etapa 4, avisos ao cliente por e-mail): horário comercial do cliente e o envio central. Fica aqui (arquivo carregado por todo o
++// módulo) para que os avisos das etapas 1 e 2 (PC01, PC02, PC09) e os da etapa 4 (SGO_PortalCliente_Avisos.js) sigam a mesma regra:
++//  - só e-mail, nunca WhatsApp; assunto "Metrolabs — ..." sem o prefixo "SGO+ | " (SGO_notificar_ com paraCliente);
++//  - endereços repetidos juntados (a mesma pessoa recebe uma vez); com CHAVE, o mesmo aviso nunca sai duas vezes para o mesmo endereço;
++//  - fora do horário comercial (08:00 às 18:00 em dia útil, configurável em Regras do portal) o e-mail espera em PCL_AVISOS_FILA, salvo
++//    quando o evento sai na hora (PC01, PC03 no mesmo dia, PC09);
++//  - corpo com saudação, o texto do evento e o rodapé "por que você recebe" e, nos avisos que podem ser desligados, como desligar.
++// ------------------------------------------------------------
++// copiaCadastro (ajuste de transição do coordenador, 18/11/2026): LIGADA por padrão. As contas de cliente atuais são antigas (sem papel, contam como
++// Gestor) e não se sabe se os e-mails delas são de pessoas reais: o e-mail da unidade continua recebendo os avisos de visita e conclusão (sem repetir
++// endereço). pc08VencidoDias: no resumo semanal, o vencido só entra se venceu até N dias antes do início dos avisos (padrão 30; os mais antigos ficam só no Portal).
++var PCLAV_REGRAS_PADRAO = { avisosLigados: true, avisosIni: '08:00', avisosFim: '18:00', resumoHora: '08:30', conversaIntervaloMin: 120, copiaCadastro: true, pc08VencidoDias: 30, avisosDesde: '' };
++var PCLAV_CHAVES_REGRAS = ['avisosLigados', 'avisosIni', 'avisosFim', 'resumoHora', 'conversaIntervaloMin', 'copiaCadastro', 'pc08VencidoDias', 'avisosDesde'];
++var PCL_ABA_AV_ENVIOS = 'PCL_AVISOS_ENVIOS';
++var PCL_ABA_FILA_CLIENTE = 'PCL_AVISOS_FILA';
++var PCL_AV_OBRIGATORIO_TXT = 'Os avisos de pedido, visita, orçamento, conclusão, acesso e contrato fazem parte do atendimento e são sempre enviados.';
++function PCl_horaOk_(s) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(PCl_s_(s)); }
++/** Regras dos avisos ao cliente (mesma propriedade PCL_REGRAS; padrão + o que foi gravado). */
++function PCl_regrasAvisos_() {
++  var g = {}; try { g = JSON.parse(PropertiesService.getScriptProperties().getProperty(PCL_REGRAS_PROP) || '{}') || {}; } catch (e) { g = {}; }
++  var r = JSON.parse(JSON.stringify(PCLAV_REGRAS_PADRAO));
++  if (g.avisosLigados === false) r.avisosLigados = false;
++  if (PCl_horaOk_(g.avisosIni) && PCl_horaOk_(g.avisosFim) && g.avisosIni < g.avisosFim) { r.avisosIni = g.avisosIni; r.avisosFim = g.avisosFim; }
++  if (PCl_horaOk_(g.resumoHora)) r.resumoHora = g.resumoHora;
++  var iv = Math.round(Number(g.conversaIntervaloMin)); if (iv >= 30 && iv <= 600) r.conversaIntervaloMin = iv;
++  if (g.copiaCadastro === false) r.copiaCadastro = false;
++  var vd = Math.round(Number(g.pc08VencidoDias)); if (g.pc08VencidoDias !== undefined && g.pc08VencidoDias !== '' && vd >= 0 && vd <= 365) r.pc08VencidoDias = vd;
++  r.avisosDesde = PCl_s_(g.avisosDesde).slice(0, 19);
++  return r;
++}
++/** Horário comercial do cliente: dia útil e feriados da empresa (SGO_Expediente.js) com o horário dos avisos ao cliente. { dentro, motivo, dia, hora } */
++function PCl_horarioCliente_(quando) {
++  try {
++    if (typeof SGO_dentroDoExpediente_ !== 'function') return { dentro: true, motivo: '' };
++    var rg = PCl_regrasAvisos_(), base = typeof SGO_expediente_ === 'function' ? SGO_expediente_() : null;
++    var cfg = base ? Object.assign({}, base, { ini: rg.avisosIni, fim: rg.avisosFim }) : undefined;
++    return SGO_dentroDoExpediente_(quando || new Date(), cfg);
++  } catch (e) { return { dentro: true, motivo: '' }; }
++}
++function PCl_emailOk_(v) { return /^[^\s@<>(),;:"\[\]]+@[^\s@<>(),;:"\[\]]+\.[a-z]{2,}$/i.test(PCl_s_(v)); }
++function PCl_primeiroNome_(nome) { var p = PCl_s_(nome).split(/\s+/)[0] || ''; return p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : ''; }
++/** Endereços que já receberam (ou têm na fila) o aviso desta chave: { email: true }. */
++function PCl_avisoJaEnviado_(chave) {
++  var m = {}; if (!PCl_s_(chave)) return m;
++  PCl_ler_(PCL_ABA_AV_ENVIOS).forEach(function (r) { if (PCl_s_(r.CHAVE) === chave) m[PCl_s_(r.EMAIL).toLowerCase()] = true; });
++  return m;
++}
++/** Corpo do e-mail ao cliente: saudação, texto do evento e o rodapé do porquê (e de como desligar, se o aviso é opcional). */
++function PCl_corpoCliente_(p, o) {
++  var nome = PCl_primeiroNome_(p.nome);
++  var rod = '\n\nVocê recebe este e-mail porque ' + (PCl_s_(p.porque) || 'tem acesso ao Portal do cliente da Metrolabs') + '. ' +
++    (o.obrigatorio === false ? 'Para deixar de receber este aviso, entre no Portal do cliente, abra "Minha conta" e desmarque «' + PCl_s_(o.nomeOpcional) + '» em "Avisos que você pode desligar". ' + PCL_AV_OBRIGATORIO_TXT : PCL_AV_OBRIGATORIO_TXT);
++  return (nome ? 'Olá, ' + nome + '.' : 'Olá.') + '\n\n' + PCl_s_(o.texto) + rod + '\n\nAtenciosamente,\nMetrolabs';
++}
++/**
++ * Envio central de um aviso ao cliente. Nunca lança.
++ * o: { evento, clienteId, refId, chave, titulo, texto, pessoas: [{ id, nome, email, porque }], obrigatorio (padrão true), nomeOpcional, imediato }
++ * Devolve { enviados, fila, repetidos, destinos: [e-mails] }.
++ */
++function PCl_enviarCliente_(o) {
++  var r = { enviados: 0, fila: 0, repetidos: 0, destinos: [] };
++  try {
++    o = o || {};
++    if (typeof SGO_notificar_ !== 'function') return r;
++    var vistos = {}, ja = PCl_avisoJaEnviado_(o.chave), lista = [];
++    (o.pessoas || []).forEach(function (p) {
++      var e = PCl_s_(p && p.email).toLowerCase();
++      if (!PCl_emailOk_(e)) return;
++      if (vistos[e] || ja[e]) { r.repetidos++; return; }
++      vistos[e] = true; lista.push({ id: PCl_s_(p.id), nome: PCl_s_(p.nome), email: e, porque: PCl_s_(p.porque) });
++    });
++    if (!lista.length) return r;
++    if (typeof PClAv_registrarTipos_ === 'function') PClAv_registrarTipos_(); else if (typeof PClA_registrarTipos_ === 'function') PClA_registrarTipos_();
++    var fora = !o.imediato && !PCl_horarioCliente_().dentro, titulo = PCl_s_(o.titulo).slice(0, 180), evento = PCl_up_(o.evento), refId = PCl_s_(o.refId);
++    lista.forEach(function (p) {
++      var contato = { id: 'PCL_' + (p.id || p.email).slice(0, 60), nome: p.nome, email: p.email, cadastro: 'cliente' }, corpo = PCl_corpoCliente_(p, o);
++      if (fora) {
++        PCl_inserir_(PCL_ABA_FILA_CLIENTE, { EVENTO: evento, CLIENTE_ID: PCl_s_(o.clienteId), REF_ID: refId, CONTATOS_JSON: JSON.stringify([contato]), TITULO: titulo, TEXTO: corpo, SITUACAO: 'PENDENTE', EM: PCl_agoraIso_() });
++        r.fila++;
++      } else {
++        var n = SGO_notificar_({ contatos: [contato], canais: ['email'], titulo: titulo, texto: corpo, origem: 'PORTAL_CLIENTE', categoria: 'PORTAL_CLIENTE', evento: evento,
++          refId: (refId + ':' + evento).slice(0, 80), rotuloLink: 'Abrir no Portal do cliente', paraCliente: true }) || {};
++        r.enviados += Number(n.ok) || 0;
++      }
++      if (PCl_s_(o.chave)) PCl_inserir_(PCL_ABA_AV_ENVIOS, { CHAVE: PCl_s_(o.chave).slice(0, 200), EVENTO: evento, CLIENTE_ID: PCl_s_(o.clienteId), USUARIO_ID: p.id, EMAIL: p.email, REF_ID: refId.slice(0, 80), SITUACAO: fora ? 'NA_FILA' : 'ENVIADO', EM: PCl_agoraIso_() });
++      r.destinos.push(p.email);
++    });
++  } catch (e) { try { console.error('Portal do cliente, aviso ao cliente (' + PCl_s_(o && o.evento) + '): ' + ((e && e.message) || e)); } catch (x) {} }
++  return r;
++}
++/** Envia o que esperava o horário comercial (uma vez cada; até 50 por rodada). */
++function PCl_enviarFilaCliente_() {
++  if (!PCl_horarioCliente_().dentro || typeof SGO_notificar_ !== 'function') return { fora: 'fora do horário comercial' };
++  var n = 0;
++  PCl_ler_(PCL_ABA_FILA_CLIENTE).filter(function (f) { return PCl_up_(f.SITUACAO) === 'PENDENTE'; }).slice(0, 50).forEach(function (f) {
++    var r = null;
++    try { r = SGO_notificar_({ contatos: PCl_json_(f.CONTATOS_JSON, []), canais: ['email'], titulo: PCl_s_(f.TITULO), texto: PCl_s_(f.TEXTO), origem: 'PORTAL_CLIENTE', categoria: 'PORTAL_CLIENTE', evento: PCl_s_(f.EVENTO), refId: PCl_s_(f.REF_ID) + ':' + PCl_s_(f.EVENTO), rotuloLink: 'Abrir no Portal do cliente', paraCliente: true }); } catch (e) { r = null; }
++    PCl_atualizar_(PCL_ABA_FILA_CLIENTE, f.ID, { SITUACAO: r ? 'ENVIADO' : 'ERRO', ENVIADO_EM: PCl_agoraIso_(), MOTIVO: r ? '' : 'serviço de avisos não respondeu' }); n++;
++  });
++  return { enviados: n };
++}
