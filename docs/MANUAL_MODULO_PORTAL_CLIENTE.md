@@ -1,7 +1,7 @@
-# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste)
+# Portal do cliente — manual interno (etapa 0: segurança da conta de cliente e contratos; 17/11/2026: vigência provisória, IA, régua de vencimento e reajuste; 18/11/2026: etapa 1, acessos das pessoas dos clientes)
 
-**Versão:** 17/11/2026. **Especificação:** `output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md` (o dono aceitou todas as recomendações).
-**Tela:** menu **Portal do cliente > Contratos de clientes** (`JS_PortalCliente.html`). **Servidor:** `SGO_PortalCliente.js`, `SGO_PortalCliente_Config.js`, `SGO_PortalCliente_Contratos.js`, `SGO_PortalCliente_Seguranca.js`.
+**Versão:** 18/11/2026. **Especificação:** `output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md` (o dono aceitou todas as recomendações).
+**Tela:** menu **Portal do cliente > Contratos de clientes** (`JS_PortalCliente.html`) e **Portal do cliente > Acessos de clientes** (`JS_PortalCliente_Acessos.html`). **Servidor:** `SGO_PortalCliente.js`, `SGO_PortalCliente_Config.js`, `SGO_PortalCliente_Contratos.js`, `SGO_PortalCliente_Seguranca.js`, `SGO_PortalCliente_Acessos.js`.
 
 ## 1. Para que serve
 
@@ -148,6 +148,7 @@ A representada passa a ser tratada como ativa só quando a SITUACAO é ATIVA **e
 | Registrar e alterar contrato de cliente (`PORTAL_CLIENTE_CONTRATOS_EDITAR`) | Administrador, Diretoria e gestão comercial |
 | Suspender e reativar o acesso de um cliente (`PORTAL_CLIENTE_SUSPENDER`) | Administrador e Diretoria |
 | Alterar as regras do portal (`PORTAL_CLIENTE_REGRAS`) | Administrador e Diretoria |
+| Enviar acesso ao cliente (`USUARIOS_CLIENTES_ENVIAR_ACESSO`, a caixa do convite, grupo "Contas e acessos"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor |
 
 O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa.
 
@@ -158,6 +159,7 @@ O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca 
 - `PCL_ACESSOS`: só inclusão. Guarda a entrada recusada, o arquivo recusado (`ESCOPO_RECUSADO`) e a função recusada.
 - `PCL_FUNCOES_OBSERVADAS`: uma linha por dia, função e pessoa, com a contagem.
 - `PCL_REGRAS_HIST`: as mudanças das regras e da lista de funções.
+- Etapa 1 (18/11/2026): `PCL_PEDIDOS_EQUIPE`, `PCL_TERMOS_ACEITE` e `PCL_CONTAS_HIST` (seção 23.9) e as colunas `CLIENTE_*` em `CAD_USUARIOS`.
 
 As datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua.
 
@@ -329,5 +331,98 @@ Painel financeiro, aba "Reajustes de contratos": índices do mês, acumulados de
 
 <!-- assistente: acesso=sigilo -->
 - **Propor o reajuste com antecedência de, Defasagem do índice e Acumulado negativo:** padrões 45 dias, 1 mês e "manter o valor".
+
+## 23. Acessos de clientes (etapa 1, 18/11/2026)
+
+A etapa 1 deixa várias pessoas de um mesmo cliente usarem o Portal, cada uma com um papel e com as unidades em que atua. O convite continua sendo o de sempre ("Enviar acesso ao cliente"): link de uso único, com validade, e a senha é criada pela própria pessoa. O portal não cria outro mecanismo de senha; ele acrescenta o papel e as unidades e confere o contrato antes de deixar enviar.
+
+### 23.1 Papéis
+
+| Papel | Abre chamado | Responde orçamento | Confirma atendimento | Documentos e equipamentos | Minha equipe |
+|---|---|---|---|---|---|
+| Gestor do cliente | sim | sim | sim | todas as unidades marcadas (ou todas) | vê, pede inclusão e desliga |
+| Solicitante | sim, nas unidades dele | não | só os que ele abriu | das unidades dele | não |
+| Consulta | não | não | não | das unidades dele | não |
+
+**Unidades.** Nenhuma unidade marcada quer dizer todas, e isso só vale para o Gestor do cliente. Solicitante e Consulta precisam de pelo menos uma unidade. Um registro de outra unidade, ou de outra empresa, recebe a mesma resposta de um registro que não existe, e a tentativa fica no registro de acessos como `ESCOPO_RECUSADO`. A regra vale em Equipamentos, Unidades, Arquivo de documentos, no painel de cadastros, nos arquivos (rota `/arquivos`) e em "Meus chamados" (chamados, pedidos, orçamentos, relatórios, rondas, Kanban e Gantt).
+
+**Conta antiga sem papel.** Ela vale como Gestor do cliente com todas as unidades, para que nada mude no dia da publicação, e aparece na tela com o selo **"papel não revisado"**. A Metrolabs revisa com "Mudar papel".
+
+### 23.2 Convidar uma pessoa
+
+1. Abra **Portal do cliente > Acessos de clientes** e escolha o cliente (ou busque pelo nome ou CNPJ).
+2. Preencha nome, e-mail de trabalho, cargo, papel e unidades e toque em **Enviar convite**.
+3. A pessoa recebe o e-mail do convite; o gestor do cliente recebe um aviso de que ela foi convidada.
+
+O convite só sai quando a situação de acesso do cliente é **Acesso completo** ou **Período de carência**, e quando o contrato cobre as unidades marcadas. Nas outras situações, a faixa amarela diz o motivo e o caminho: cadastrar ou renovar o contrato em Portal do cliente > Contratos. A mesma trava vale para o "Enviar acesso ao cliente" de Administração > Usuários e de Cadastros > Clientes. A regra pode ser desligada em Regras do portal ("Convite só com contrato"), com motivo; o padrão recomendado é ligada.
+
+Se o e-mail do convite falhar depois de a conta ser criada, o papel e as unidades já ficam gravados. Use **Reenviar convite** quando o e-mail voltar a funcionar.
+
+### 23.3 Pedido do Gestor do cliente
+
+O Gestor do cliente não inclui pessoas sozinho. Em "Minha conta e equipe" > **Minha equipe**, ele preenche nome, e-mail, cargo, papel, unidades e motivo e toca em **Pedir acesso**. O pedido aparece:
+
+- na ficha do cliente, em "Pedidos do gestor deste cliente";
+- na Caixa de decisões e na central de pendências de quem gere acessos (`pcl_pedido_equipe`, aviso PI02 por e-mail).
+
+**Enviar o convite** atende com um toque, pelo mesmo convite. **Recusar** pede a resposta ao gestor, que ele lê em "Minha equipe" e por e-mail. O gestor pode ter no máximo 10 pedidos aguardando.
+
+### 23.4 Mudar papel, unidades e e-mail
+
+Só a Metrolabs faz, sempre com motivo. Cada mudança fica no histórico da conta (`PCL_CONTAS_HIST`, com antes e depois) e no registro de acessos. A pessoa e o gestor do cliente recebem um e-mail (PC09) com o papel e as unidades novos. O papel vale a partir da próxima tela que a pessoa abrir.
+
+**Trocar e-mail** muda o login, encerra as sessões abertas e manda um convite novo para o e-mail novo. O link anterior deixa de valer, porque cada pessoa tem um só link vivo. O e-mail antigo recebe o aviso de troca.
+
+### 23.5 Desligar e reativar
+
+- **Pelo Gestor do cliente:** "Desligar acesso" em Minha equipe, com motivo. A conta é inativada na hora, as sessões abertas caem na próxima chamada e a Metrolabs é avisada (PI02). O gestor não desliga o próprio acesso.
+- **Pela Metrolabs:** "Desligar", com motivo. Mesmo efeito.
+- **Fim do contrato:** quando a situação do cliente vira **Sem acesso** (consulta encerrada ou revisado sem contrato), a rotina diária inativa as contas com o motivo "Fim do contrato". Depois da renovação, a Metrolabs reativa cada conta.
+- **Reativar:** só com o cliente numa situação que entra (completo, carência ou consulta). A pessoa entra com a senha que já tinha; se não lembrar, use "Reenviar convite".
+
+A pessoa desligada e o gestor recebem um e-mail neutro, sem o motivo. O motivo fica só no histórico da conta.
+
+### 23.6 Contas paradas: 90 e 120 dias
+
+A rotina diária (junto com a régua dos contratos, no expediente) confere a última entrada de cada conta:
+
+- **90 dias sem entrada:** quem gere acessos recebe o aviso PI04, uma vez por período, e a conta aparece na Caixa de decisões (`pcl_conta_inativa`).
+- **120 dias sem entrada:** a conta é inativada, **a menos que alguém tenha marcado "manter"**.
+
+A contagem começa no dia da publicação desta etapa (ninguém cai no primeiro dia por causa de um acesso antigo). Convite novo, reativação e a própria entrada reiniciam a contagem. Os prazos ficam em Regras do portal.
+
+### 23.7 Termo de uso
+
+No primeiro acesso, a pessoa vê o **Termo de uso do Portal do cliente** e só continua depois de marcar "Li o termo de uso e estou ciente". O aceite fica em `PCL_TERMOS_ACEITE` com a versão, a data, o endereço IP e o navegador do login (vindos do servidor, não da tela). Quando o texto muda em Regras do portal, a versão muda e todos aceitam de novo na próxima entrada.
+
+O texto padrão cobre a finalidade, os dados tratados e a base legal (Lei 13.709/2018, art. 7º, incisos V e II), a guarda do registro (2 anos), os cuidados com dados de pacientes e os direitos do titular. **O contato do encarregado de dados é informado pelo dono** em Regras do portal ("Contato do encarregado de dados"); em branco, o termo orienta a responder ao e-mail do convite.
+
+Enquanto o termo não é aceito, o servidor recusa as ações do portal que gravam algo (pedido de atendimento, resposta de orçamento, confirmação, Minha equipe e Meus dados), com a mensagem do caminho.
+
+### 23.8 Minha conta e equipe (o que o cliente vê)
+
+- **Meus dados:** nome, cargo e telefone (editáveis), e-mail (só leitura), o papel e as unidades, as preferências dos avisos PC06, PC07 e PC08 e o termo aceito, com "Ver termo".
+- **Minha equipe (só Gestor do cliente):** as pessoas da empresa com papel, unidades, situação e última entrada; o pedido de inclusão; os pedidos e as respostas; o registro de ações da empresa, **sem IP e sem navegador**, com as ações da equipe da Metrolabs mostradas como "Metrolabs".
+- Em "Meus chamados", o Solicitante e a Consulta veem só as unidades deles. A Consulta não vê o botão "Pedir atendimento". Quem não é Gestor vê o orçamento só para consulta, com o nome do gestor que aprova.
+
+### 23.9 Regras, tabelas e avisos
+
+**Regras do portal (Administrador e Diretoria, com motivo e histórico):** convite só com contrato (padrão sim), aviso de conta parada (padrão 90 dias), inativar a conta parada (padrão 120 dias), inativar no fim do contrato (padrão sim), contato do encarregado de dados e o texto do termo de uso.
+
+**Tabelas novas:** `PCL_PEDIDOS_EQUIPE` (pedidos dos gestores), `PCL_TERMOS_ACEITE` (aceites, só inclusão) e `PCL_CONTAS_HIST` (histórico de cada conta, só inclusão). **Colunas novas em `CAD_USUARIOS`, por acréscimo:** `CLIENTE_PAPEL`, `CLIENTE_UNIDADES_JSON`, `CLIENTE_CARGO`, `CLIENTE_TELEFONE`, `CLIENTE_AVISOS_JSON`, `CLIENTE_CONVIDADO_POR_ID/NOME`, `CLIENTE_DESLIGADO_EM/POR_NOME/MOTIVO`, `CLIENTE_ULTIMA_ENTRADA_EM`, `CLIENTE_REATIVADO_EM/POR_NOME`, `CLIENTE_MANTER`, `CLIENTE_MANTER_POR_NOME/EM` e `CLIENTE_INATIVIDADE_AVISO_EM`.
+
+**Avisos (matriz):** PC09 (acesso do cliente: convite, papel alterado, desligado e reativado; só e-mail, na hora), PI02 (pedido de inclusão e desligamento pelo cliente, para quem gere acessos) e PI04 (contas paradas). Nenhum aviso ao cliente sai por WhatsApp. O assunto chega como "SGO+ | Metrolabs — ...", porque o serviço de avisos do SGO+ acrescenta o prefixo.
+
+**Registro de acessos (`PCL_ACESSOS`):** entrada, saída, recusa, aceite do termo, dados alterados, convite, papel alterado, e-mail trocado, desligamento, reativação, pedido de inclusão e toda tentativa fora do escopo.
+
+### 23.10 Problemas comuns (acessos)
+
+| Situação | O que fazer |
+|---|---|
+| "Enviar convite" está travado | O cliente está sem contrato vigente ou em consulta. Cadastre ou renove o contrato em Portal do cliente > Contratos |
+| A pessoa diz que não vê uma unidade | Confira as unidades marcadas na conta, em "Mudar papel". Solicitante e Consulta veem só as unidades marcadas |
+| A pessoa diz que a tela pede o termo de uso | É o primeiro acesso ou o texto mudou. Ela lê e toca em "Li e estou ciente" |
+| Uma conta foi inativada por falta de entrada e ainda é usada | Reative com o motivo e marque "manter" |
+| O gestor do cliente desligou alguém por engano | Reative a conta com o motivo; a pessoa entra com a senha que já tinha |
 
 </div>
