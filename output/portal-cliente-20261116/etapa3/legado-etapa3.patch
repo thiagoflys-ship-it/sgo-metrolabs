@@ -1,0 +1,1653 @@
+diff --git a/cand15/Index.html b/cand16/Index.html
+index 70c54f4..2a6896c 100644
+--- a/cand15/Index.html
++++ b/cand16/Index.html
+@@ -311,6 +311,10 @@
+           <button type="button" class="menu-btn" data-mod="portal_cliente_conta" data-busca="minha conta equipe meus dados termo de uso preferencias avisos pedir acesso desligar" id="menu-btn-portal_cliente_conta" style="display:none;" onclick="abrir('portal_cliente_conta')"><span class="menu-btn-icon"><i class="fas fa-id-card" aria-hidden="true"></i></span>Minha conta e equipe</button>
+           <!-- 18/11/2026: Portal do cliente, etapa 2 (JS_PortalCliente_Chamados.html / SGO_PortalCliente_Chamados.js). "Chamados": só a conta de cliente (PclCli_iniciar_ mostra). "Conversas do portal": quem tem a caixa «Responder pedidos e conversas do portal» (PortalCli_iniciar_ mostra). -->
+           <button type="button" class="menu-btn" data-mod="portal_cliente_chamados" data-busca="chamados abrir chamado pedir atendimento acompanhar visita orcamento conversa fotos cancelar confirmar atendimento problema continua" id="menu-btn-portal_cliente_chamados" style="display:none;" onclick="abrir('portal_cliente_chamados')"><span class="menu-btn-icon"><i class="fas fa-headset" aria-hidden="true"></i></span>Chamados</button>
++          <!-- 18/11/2026: Portal do cliente, etapa 3 (JS_PortalCliente_Documentos.html / SGO_PortalCliente_Documentos.js). "Documentos técnicos", "Meus equipamentos" e "Vencimentos e cronograma": só a conta de cliente (PclCli_iniciar_ mostra). A aba "Documentos no portal" da equipe fica na tela Portal do cliente. -->
++          <button type="button" class="menu-btn" data-mod="portal_cliente_documentos" data-busca="documentos tecnicos certificado calibracao qualificacao laudo nr13 relatorio atendimento ronda ciclo lavadora cronograma abrir pdf" id="menu-btn-portal_cliente_documentos" style="display:none;" onclick="abrir('portal_cliente_documentos')"><span class="menu-btn-icon"><i class="fas fa-file-shield" aria-hidden="true"></i></span>Documentos técnicos</button>
++          <button type="button" class="menu-btn" data-mod="portal_cliente_equipamentos" data-busca="meus equipamentos farol calibracao qualificacao nr13 manutencao historico atendimentos ficha correcao cadastro" id="menu-btn-portal_cliente_equipamentos" style="display:none;" onclick="abrir('portal_cliente_equipamentos')"><span class="menu-btn-icon"><i class="fas fa-stethoscope" aria-hidden="true"></i></span>Meus equipamentos</button>
++          <button type="button" class="menu-btn" data-mod="portal_cliente_vencimentos" data-busca="vencimentos cronograma agendado previsto validade proxima calibracao inspecao ronda visita" id="menu-btn-portal_cliente_vencimentos" style="display:none;" onclick="abrir('portal_cliente_vencimentos')"><span class="menu-btn-icon"><i class="fas fa-calendar-check" aria-hidden="true"></i></span>Vencimentos e cronograma</button>
+           <button type="button" class="menu-btn" data-mod="portal_cliente_conversas" data-busca="conversas do portal cliente mensagem nota interna resposta pedido" id="menu-btn-portal_cliente_conversas" style="display:none;" onclick="abrir('portal_cliente_conversas')"><span class="menu-btn-icon"><i class="fas fa-comments" aria-hidden="true"></i></span>Conversas do portal</button>
+           </div>
+         </div>
+@@ -462,6 +466,7 @@
+ <?!= include('JS_PortalCliente_Ajuda'); ?>
+ <?!= include('JS_PortalCliente_Acessos'); ?>
+ <?!= include('JS_PortalCliente_Chamados'); ?>
++<?!= include('JS_PortalCliente_Documentos'); ?>
+ <?!= include('JS_Contratos_Financeiro'); ?>
+ <?!= include('JS_PainelAtendimento'); ?>
+ <?!= include('JS_Assistencia'); ?>
+diff --git a/cand15/JS_Core.html b/cand16/JS_Core.html
+index 3efae8b..9e5f122 100644
+--- a/cand15/JS_Core.html
++++ b/cand16/JS_Core.html
+@@ -1179,6 +1179,12 @@
+       PclCh_render_();
+       return;
+     }
++    // PORTAL DO CLIENTE, ETAPA 3 (18/11/2026) — "Documentos técnicos", "Meus equipamentos" e "Vencimentos e cronograma" (conta de cliente).
++    // Ver JS_PortalCliente_Documentos.html / SGO_PortalCliente_Documentos.js. O servidor confere cliente, unidades, papel e situação de acesso.
++    if ((mod === "portal_cliente_documentos" || mod === "portal_cliente_equipamentos" || mod === "portal_cliente_vencimentos") && typeof PclD_render_ === "function") {
++      PclD_render_(mod.replace("portal_cliente_", ""));
++      return;
++    }
+     if (mod === "portal_cliente_conversas" && typeof PortalCli_render_ === "function") {
+       PortalCli_render_("conversas");
+       return;
+@@ -5146,6 +5152,12 @@
+     if (isCliente && typeof PclCli_render_ === "function") itens.push({ icone: '<i class="fas fa-id-card" aria-hidden="true"></i>', legenda: "Minha conta", mod: "portal_cliente_conta" });
+     // 18/11/2026 (Portal do cliente, etapa 2): "Chamados" (abrir chamado, acompanhar e conversar com a Metrolabs)
+     if (isCliente && typeof PclCh_render_ === "function") itens.push({ icone: '<i class="fas fa-headset" aria-hidden="true"></i>', legenda: "Chamados", mod: "portal_cliente_chamados" });
++    // 18/11/2026 (Portal do cliente, etapa 3): documentos técnicos, equipamentos com farol e histórico, vencimentos e cronograma
++    if (isCliente && typeof PclD_render_ === "function") {
++      itens.push({ icone: '<i class="fas fa-file-shield" aria-hidden="true"></i>', legenda: "Documentos técnicos", mod: "portal_cliente_documentos" });
++      itens.push({ icone: '<i class="fas fa-stethoscope" aria-hidden="true"></i>', legenda: "Meus equipamentos", mod: "portal_cliente_equipamentos" });
++      itens.push({ icone: '<i class="fas fa-calendar-check" aria-hidden="true"></i>', legenda: "Vencimentos", mod: "portal_cliente_vencimentos" });
++    }
+     itens.push({ icone: '<i class="fas fa-location-dot" aria-hidden="true"></i>', legenda: "Unidades", mod: "unidades" });
+     itens.push({ icone: '<i class="fas fa-industry" aria-hidden="true"></i>', legenda: "Equipamentos", mod: "equipamentos" });
+     // 31/10/2026: relatório do ciclo da lavadora (equipe e cliente; o servidor mostra só os equipamentos do cliente)
+@@ -7030,6 +7042,9 @@
+       portal_cliente_conta: "Minha conta e equipe",
+       portal_cliente_chamados: "Chamados",
+       portal_cliente_conversas: "Conversas do portal",
++      portal_cliente_documentos: "Documentos técnicos",
++      portal_cliente_equipamentos: "Meus equipamentos",
++      portal_cliente_vencimentos: "Vencimentos e cronograma",
+       omie: "Painel financeiro",
+       modo_personalizado: "Modo personalizado"
+     };
+diff --git a/cand15/JS_PortalCliente.html b/cand16/JS_PortalCliente.html
+index 490caa1..8f5d292 100644
+--- a/cand15/JS_PortalCliente.html
++++ b/cand16/JS_PortalCliente.html
+@@ -111,9 +111,10 @@
+     PCL.ocupado = false;
+     google.script.run.withSuccessHandler(function (r) {
+       PCL.ini = r && r.ok ? r : null; PortalCli_mostrarMenu_();
+-      if (!PCL.ini || !(PCL.ini.ver || PCL.ini.acessos || PCL.ini.conversar)) { PclT_$("pclCorpo").innerHTML = '<div class="vg-faixa is-erro">Contratos, acessos e conversas de clientes são da equipe interna com a caixa certa (Administrador, Diretoria, gestores, gestão comercial e a área Técnica). Esta conta não tem a caixa «Ver contratos de clientes», «Enviar acesso ao cliente» nem «Responder pedidos e conversas do portal». Se precisar, peça a liberação ao responsável pelo sistema em Administração &gt; Acessos.</div>'; return; }
++      if (!PCL.ini || !(PCL.ini.ver || PCL.ini.acessos || PCL.ini.conversar || PCL.ini.docLiberar)) { PclT_$("pclCorpo").innerHTML = '<div class="vg-faixa is-erro">Contratos, acessos e conversas de clientes são da equipe interna com a caixa certa (Administrador, Diretoria, gestores, gestão comercial e a área Técnica). Esta conta não tem a caixa «Ver contratos de clientes», «Enviar acesso ao cliente» nem «Responder pedidos e conversas do portal». Se precisar, peça a liberação ao responsável pelo sistema em Administração &gt; Acessos.</div>'; return; }
+       // 18/11/2026 (etapa 2): quem só conversa com os clientes abre direto na aba "Conversas do portal"
+-      if (!PCL.ini.ver && PCL.aba !== "acessos" && PCL.aba !== "conversas") PCL.aba = PCL.ini.acessos ? "acessos" : "conversas";
++      if (!PCL.ini.ver && PCL.aba !== "acessos" && PCL.aba !== "conversas" && PCL.aba !== "docsportal") PCL.aba = PCL.ini.acessos ? "acessos" : PCL.ini.conversar ? "conversas" : "docsportal";
++      if (!PCL.ini.docLiberar && PCL.aba === "docsportal") PCL.aba = PCL.ini.ver ? "contratos" : PCL.ini.acessos ? "acessos" : "conversas";
+       if (!PCL.ini.acessos && PCL.aba === "acessos") PCL.aba = PCL.ini.ver ? "contratos" : "conversas";
+       if (!PCL.ini.conversar && PCL.aba === "conversas") PCL.aba = PCL.ini.ver ? "contratos" : "acessos";
+       PclT_abas_(); PclT_irAba_(PCL.aba || "contratos");
+@@ -122,7 +123,7 @@
+   }
+   function PclT_abas_() {
+     var abas = (PCL.ini && PCL.ini.ver ? [["contratos", "Contratos"], ["vencimentos", "Vencimentos e reajustes"], ["representadas", "Representadas"], ["precarga", "Pré-carga"]] : [])
+-      .concat(PCL.ini && PCL.ini.acessos ? [["acessos", "Acessos de clientes"]] : []).concat(PCL.ini && PCL.ini.conversar ? [["conversas", "Conversas do portal"]] : []).concat(PCL.ini && PCL.ini.ver ? [["seguranca", "Segurança"], ["regras", "Regras do portal"]] : []);
++      .concat(PCL.ini && PCL.ini.acessos ? [["acessos", "Acessos de clientes"]] : []).concat(PCL.ini && PCL.ini.conversar ? [["conversas", "Conversas do portal"]] : []).concat(PCL.ini && PCL.ini.docLiberar ? [["docsportal", "Documentos no portal"]] : []).concat(PCL.ini && PCL.ini.ver ? [["seguranca", "Segurança"], ["regras", "Regras do portal"]] : []);
+     PclT_$("pclAbas").innerHTML = abas.map(function (a) { return '<button type="button" class="vg-aba' + (PCL.aba === a[0] ? " is-atual" : "") + '" role="tab" aria-selected="' + (PCL.aba === a[0]) + '" data-aba="' + a[0] + '">' + a[1] + "</button>"; }).join("");
+   }
+   function PclT_irAba_(aba) {
+@@ -137,6 +138,7 @@
+     if (aba === "regras") return PclT_chamar_("regras", {}, PclT_desenharRegras_);
+     if (aba === "acessos" && typeof PclAc_render_ === "function") return PclAc_render_(); // 18/11/2026: etapa 1 (JS_PortalCliente_Acessos.html)
+     if (aba === "conversas" && typeof PclChI_render_ === "function") return PclChI_render_(); // 18/11/2026: etapa 2 (JS_PortalCliente_Chamados.html)
++    if (aba === "docsportal" && typeof PclDI_render_ === "function") return PclDI_render_(); // 18/11/2026: etapa 3 (JS_PortalCliente_Documentos.html)
+   }
+ 
+   // ---------- Contratos: lista ----------
+@@ -363,7 +365,7 @@
+       '<label class="inteiro">Contato comercial mostrado ao cliente<input id="pclRgContato" type="text" maxlength="200" value="' + PclT_esc_(g.contatoComercial) + '"' + dis + "></label>" +
+       // 17/11/2026 (pedido do dono): vigência provisória dos clientes sem contrato cadastrado
+       '<label>Vigência provisória dos clientes sem contrato até<input id="pclRgProvisoria" type="date" value="' + PclT_esc_(g.provisoriaAte || "") + '"' + dis + "></label>" +
+-      PclT_regrasAcessosHtml_(r.acessos, dis) + PclT_regrasChamadosHtml_(r.chamados, dis) +
++      PclT_regrasAcessosHtml_(r.acessos, dis) + PclT_regrasChamadosHtml_(r.chamados, dis) + (typeof PclDI_regrasHtml_ === "function" ? PclDI_regrasHtml_(r.documentos, dis) : "") +
+       (pode ? '<label class="inteiro">Motivo *<textarea id="pclRgMotivo" maxlength="500"></textarea></label>' : "") + "</div>" +
+       (pode ? '<div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-pcl="gravarRegras">Gravar as regras</button></div>' : "<p>Só o Administrador e a Diretoria alteram as regras.</p>") + (g.alteradoPor ? "<p><small>Última alteração: " + PclT_esc_(g.alteradoPor) + "</small></p>" : "") + "</div>" +
+       PclT_reguaRegrasHtml_(r.regua, pode) + PclT_historicoRegrasHtml_(r.historico);
+@@ -596,6 +598,7 @@
+     if (!a) return;
+     PclT_msg_("");
+     if (/^ac[A-Z]/.test(a) && typeof PclAc_clique_ === "function") return PclAc_clique_(a, b); // 18/11/2026: Acessos de clientes
++    if (/^pclDp[A-Z]/.test(a) && typeof PclDI_clique_ === "function" && PclDI_clique_(a, b)) return; // 18/11/2026 (etapa 3): Documentos no portal
+     if (a === "filtrar") { PCL.busca = PclT_v_("pclFiltroBusca"); PCL.situacao = PclT_v_("pclFiltroSituacao"); return PclT_lista_(); }
+     if (a === "ficha") { PCL.aba = "contratos"; PclT_abas_(); return PclT_ficha_(cid); }
+     if (a === "voltarLista") return PclT_lista_();
+@@ -614,7 +617,8 @@
+     if (a === "gravarSeg") return PclT_gravarSeg_();
+     if (a === "gravarRegras") return PclT_chamar_("salvarRegras", Object.assign({ carenciaDias: PclT_v_("pclRgCarencia"), consultaMeses: PclT_v_("pclRgConsulta"), transicao: PclT_v_("pclRgTransicao"), contatoComercial: PclT_v_("pclRgContato"), provisoriaAte: PclT_v_("pclRgProvisoria"), motivo: PclT_v_("pclRgMotivo") },
+       PclT_$("pclRgConvite") ? { conviteExigeContrato: PclT_v_("pclRgConvite") !== "NAO", inativarFimContrato: PclT_v_("pclRgFimContrato") !== "NAO", avisoInatividadeDias: PclT_v_("pclRgAvisoInatividade"), inativarDias: PclT_v_("pclRgInativar"), encarregado: PclT_v_("pclRgEncarregado"), termoTexto: (PclT_$("pclRgTermo") || {}).value || "" } : {},
+-      PclT_$("pclRgAceiteDias") ? { plantaoTelefone: PclT_v_("pclRgPlantao"), aceitePedidoMin: PclT_v_("pclRgAceitePedido"), aceiteDiasUteis: PclT_v_("pclRgAceiteDias"), limitePedidosDia: PclT_v_("pclRgLimitePedidos"), limiteMensagensHora: PclT_v_("pclRgLimiteMensagens") } : {}), function (r) { PclT_chamar_("regras", {}, function (x) { PclT_desenharRegras_(x); PclT_msg_(r.message, "ok"); }); });
++      PclT_$("pclRgAceiteDias") ? { plantaoTelefone: PclT_v_("pclRgPlantao"), aceitePedidoMin: PclT_v_("pclRgAceitePedido"), aceiteDiasUteis: PclT_v_("pclRgAceiteDias"), limitePedidosDia: PclT_v_("pclRgLimitePedidos"), limiteMensagensHora: PclT_v_("pclRgLimiteMensagens") } : {},
++      PclT_$("pclRgDocTipos") && typeof PclDI_tiposMarcados_ === "function" ? { docTiposVisiveis: PclDI_tiposMarcados_() } : {}), function (r) { PclT_chamar_("regras", {}, function (x) { PclT_desenharRegras_(x); PclT_msg_(r.message, "ok"); }); });
+     // 17/11/2026: contrato (IA, condições), representadas, régua, índices, reajustes e renovação
+     if (a === "gravarRegua") { var ck = function (id) { return !!(PclT_$(id) || {}).checked; };
+       return PclT_chamar_("salvarRegua", { marcos: PclT_v_("pclRgMarcos"), marcosAvisoPrevio: PclT_v_("pclRgMarcosAp"), clienteDesdeDias: PclT_v_("pclRgClienteDesde"), avisarCliente: ck("pclRgAvisarCliente"), licitacoesAvisos: ck("pclRgLicAvisos"), tarefaComercial: ck("pclRgTarefa"),
+diff --git a/cand15/JS_PortalCliente_Acessos.html b/cand16/JS_PortalCliente_Acessos.html
+index f24471e..b733664 100644
+--- a/cand15/JS_PortalCliente_Acessos.html
++++ b/cand16/JS_PortalCliente_Acessos.html
+@@ -164,6 +164,7 @@
+   function PclCli_iniciar_() {
+     var b = document.getElementById("menu-btn-portal_cliente_conta"); if (b) b.style.display = "";
+     var bch = document.getElementById("menu-btn-portal_cliente_chamados"); if (bch) bch.style.display = ""; // 18/11/2026 (etapa 2): Chamados
++    ["portal_cliente_documentos", "portal_cliente_equipamentos", "portal_cliente_vencimentos"].forEach(function (m) { var bd = document.getElementById("menu-btn-" + m); if (bd) bd.style.display = ""; }); // 18/11/2026 (etapa 3)
+     var g = document.getElementById("menu-secao-portal_cliente"); if (g) g.style.display = "";
+     if (typeof Menu_atualizarGrupos_ === "function") Menu_atualizarGrupos_();
+     PclCli_chamar_("minhaConta", {}, function (r) { PCLCLI.conta = r; if (r.termo && r.termo.pendente) PclCli_termo_(r.termo, true); }, function () {});
+diff --git a/cand15/JS_PortalCliente_Ajuda.html b/cand16/JS_PortalCliente_Ajuda.html
+index 10ad2db..104e0cb 100644
+--- a/cand15/JS_PortalCliente_Ajuda.html
++++ b/cand16/JS_PortalCliente_Ajuda.html
+@@ -150,7 +150,27 @@ var PCL_DICAS = {
+   pclRgAceitePedido: 'Prazo para responder ao pedido: em minutos úteis do expediente (padrão 240, 4 horas). Passou do prazo, o pedido aparece como vencido na Caixa de decisões.',
+   pclRgAceiteDias: 'Confirmação automática do atendimento: depois de quantos dias úteis sem resposta do cliente o atendimento concluído fica "confirmado por prazo" (padrão 5).',
+   pclRgLimitePedidos: 'Pedidos por pessoa por dia: o limite de pedidos que cada pessoa do cliente envia por dia (padrão 20). Protege contra envios repetidos por engano.',
+-  pclRgLimiteMensagens: 'Mensagens por pessoa por hora: o limite da conversa (padrão 60).'
++  pclRgLimiteMensagens: 'Mensagens por pessoa por hora: o limite da conversa (padrão 60).',
++  // 18/11/2026 (etapa 3): Documentos técnicos, Meus equipamentos, Vencimentos e cronograma (conta de cliente)
++  pclDocUnidade: 'Unidade: mostra os documentos dos equipamentos desta unidade. Você vê apenas as unidades liberadas para o seu acesso.',
++  pclDocEquipamento: 'Equipamento: escolha para ver só os documentos dele.',
++  pclDocTipo: 'Tipo: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, relatório de ronda, relatório do ciclo da lavadora, cronograma de execução e outros liberados pela Metrolabs.',
++  pclDocPeriodo: 'Emitido: data de emissão do documento. Escolha um período para ver só os emitidos nele.',
++  pclDocVence: 'Vence até: mostra os documentos com validade até a data escolhida (os que precisam ser renovados até lá).',
++  pclDocBusca: 'Buscar: número do certificado ou do relatório, TAG, série ou nome do documento.',
++  pclEqUnidade: 'Unidade: equipamentos cadastrados nesta unidade.',
++  pclEqFarol: 'Situação: em dia, vence em até 30 dias, vencido ou sem registro, para calibração, qualificação, NR-13 e manutenção.',
++  pclEqBusca: 'Buscar: TAG, série, modelo ou setor.',
++  pclEqCorrecao: 'O que precisa mudar: escreva o dado certo (por exemplo, a série que está na etiqueta ou o setor onde o equipamento fica). A mensagem vai para a Metrolabs pela Conversa geral; o cadastro é corrigido pela equipe.',
++  pclVcUnidade: 'Unidade: mostra só os vencimentos dos equipamentos desta unidade.',
++  pclVcCategoria: 'Categoria: calibração, qualificação, NR-13, manutenção ou outros documentos com validade.',
++  pclVcJanela: 'Janela: vencidos e os que vencem nos próximos 30, 60 ou 90 dias. Os vencidos aparecem sempre.',
++  pclCrUnidade: 'Unidade: mostra só o que está agendado e previsto para esta unidade.',
++  // 18/11/2026 (etapa 3): equipe — Documentos no portal e tipos visíveis (Regras do portal)
++  pclDpCliente: 'Cliente: o cadastro único do cliente. Escreva pelo menos 3 letras do nome ou do CNPJ e toque no cliente da lista.',
++  pclDpFiltro: 'Mostrar: todos os documentos que podem chegar ao cliente, só os que aparecem, só os que não aparecem (tipo fora da lista ou oculto) ou só os ocultos.',
++  pclDpBusca: 'Buscar: nome do documento, número, TAG ou série do equipamento, ou nome da unidade.',
++  pclRgDocTipos: 'Tipos de documento visíveis: os tipos que aparecem sozinhos no Portal do cliente. A lista recomendada (decisão do dono) tem sete: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros só aparecem quando liberados um a um em "Documentos no portal".'
+ };
+ var PCL_GUIAS = {
+   contratos: ['Ver a situação de acesso de cada cliente ao Portal e os contratos que a definem.', [
+@@ -221,7 +241,32 @@ var PCL_GUIAS = {
+   regras: ['Ajustar a carência, o modo consulta, a regra das contas antigas, a vigência provisória, o contato comercial, a régua de vencimento e as regras do reajuste.', [
+     'Altere os campos, escreva o motivo e toque em "Gravar as regras". Só Administrador e Diretoria.',
+     'Em "Chamados do portal": o telefone de plantão, o prazo para responder ao pedido, a confirmação automática do atendimento e os limites de envio.',
+-    'A régua de vencimento e o reajuste têm o próprio botão e o próprio motivo. Cada mudança fica no histórico das regras, no fim da aba.']]
++    'A régua de vencimento e o reajuste têm o próprio botão e o próprio motivo. Cada mudança fica no histórico das regras, no fim da aba.']],
++  // 18/11/2026 (etapa 3)
++  documentos: ['Guardar e baixar os documentos técnicos dos seus equipamentos para auditorias e para a Vigilância Sanitária.', [
++    'Filtre por unidade, equipamento, tipo, data de emissão ou validade.',
++    'Toque em "Abrir" para ver o PDF numa aba nova. As versões anteriores de um documento ficam guardadas logo abaixo dele.',
++    'Se faltar algum documento, avise a Metrolabs pela Conversa geral (Chamados > Conversa geral).']],
++  equipamentos: ['Ver de relance a situação de cada equipamento: calibração, qualificação, NR-13 e manutenção.', [
++    'O farol de cada categoria mostra: em dia, vence em até 30 dias, vencido ou sem registro.',
++    'Use os filtros para achar um equipamento ou só os que estão vencidos.',
++    'Toque no equipamento para abrir a ficha com os documentos, o histórico de atendimentos e os chamados.']],
++  fichaEquipamento: ['Ver tudo de um equipamento num lugar só e pedir atendimento para ele.', [
++    'Confira os dados do cadastro e os vencimentos. Se algum dado estiver errado, use "Informar correção de cadastro".',
++    'Abra os documentos do equipamento e veja o histórico dos atendimentos concluídos.',
++    'Para um problema novo, toque em "Abrir chamado para este equipamento": o formulário já vem com ele escolhido.']],
++  vencimentos: ['Saber o que vence e quando, para programar com a Metrolabs antes do vencimento.', [
++    'Escolha a unidade, a categoria e a janela (30, 60 ou 90 dias). Os vencidos aparecem sempre.',
++    'Vale o documento mais recente de cada equipamento e categoria: o certificado renovado substitui o anterior.',
++    'Para agendar, fale com a Metrolabs pela Conversa geral ou abra um chamado para o equipamento.']],
++  cronograma: ['Ver o que já está agendado e o que está previsto para os seus equipamentos.', [
++    'Agendado: visitas, rondas e ordens de serviço com data combinada.',
++    'Previsto: calculado pela validade dos documentos e pela periodicidade do contrato. Não é data confirmada; ela só fica confirmada quando aparece em Agendado.',
++    'Documento do cronograma: o PDF do Cronograma de execução emitido pela Metrolabs.']],
++  documentosPortal: ['Conferir o que cada cliente vê no Portal e ocultar ou liberar um documento, sempre com motivo.', [
++    'Busque o cliente pelo nome ou pelo CNPJ e toque nele. A lista mostra cada documento que pode chegar ao cliente e se ele aparece ou não, com o porquê.',
++    'Em "Mudar no portal", escolha "Oculto no portal" (some da lista e não abre para o cliente), "Liberado um a um" (aparece mesmo com o tipo fora da lista) ou "Segue a regra do tipo", escreva o motivo e toque em Gravar.',
++    'Só os documentos registrados no Arquivo de documentos recebem a marca. Rascunhos, minutas, versões internas e contratos nunca aparecem para o cliente. A lista de tipos fica em Regras do portal.']]
+ };
+ function PclAj_esc_(t) { return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+ function PclAj_guardado_(aba) { try { return localStorage.getItem('pclGuia:' + aba); } catch (e) { return null; } }
+@@ -236,7 +281,7 @@ function PclAj_aplicar_() {
+   PCL_AJ.agendado = false;
+   var corpo = document.getElementById('pclCorpo'); if (!corpo || !corpo.firstElementChild) return;
+   if (PCL_AJ.aba && !corpo.querySelector('[data-pcl-guia]') && PCL_GUIAS[PCL_AJ.aba]) corpo.insertAdjacentHTML('afterbegin', PclAj_guiaHtml_(PCL_AJ.aba));
+-  corpo.querySelectorAll('input[id], select[id], textarea[id], div[id="pclCtUnidades"], div[id="pclCtServicos"], div[id="pclAcUnidades"], div[id="pclAcEdUnidades"], div[id="pclEqpUnidades"]').forEach(function (el) {
++  corpo.querySelectorAll('input[id], select[id], textarea[id], div[id="pclCtUnidades"], div[id="pclCtServicos"], div[id="pclAcUnidades"], div[id="pclAcEdUnidades"], div[id="pclEqpUnidades"], div[id="pclRgDocTipos"]').forEach(function (el) {
+     if (el.getAttribute('data-pcl-dica') || el.type === 'hidden') return;
+     var t = PCL_DICAS[el.id]; el.setAttribute('data-pcl-dica', '1'); if (!t) return;
+     var dica = document.createElement('span'); dica.className = 'pcl-dica'; dica.textContent = t;
+diff --git a/cand16/JS_PortalCliente_Documentos.html b/cand16/JS_PortalCliente_Documentos.html
+new file mode 100644
+index 0000000..0c1f50c
+--- /dev/null
++++ b/cand16/JS_PortalCliente_Documentos.html
+@@ -0,0 +1,291 @@
++<style>
++  /* PORTAL DO CLIENTE — ETAPA 3 (c), DOCUMENTOS, EQUIPAMENTOS, VENCIMENTOS E CRONOGRAMA (18/11/2026). Servidor: SGO_PortalCliente_Documentos.js.
++     1) Conta de cliente: "Documentos técnicos", "Meus equipamentos" (lista com farol e ficha) e "Vencimentos e cronograma" (abas Vencimentos e
++        Cronograma: Agendado, Previsto e Documento do cronograma, sempre separados).
++     2) Equipe: aba "Documentos no portal" da tela Portal do cliente (caixa PORTAL_CLIENTE_DOC_LIBERAR).
++     Visual do SGO+ (tokens --bc-*, cadx-*, vg-*, pcl-*, pclch-*). Texto corrido justificado. Sem window.alert/confirm/prompt. */
++  #pclTela .pcld-farois { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; }
++  #pclTela .pcld-farol { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; border: 1px solid currentColor; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
++  #pclTela .pcld-farol::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
++  #pclTela .pcld-f-em_dia { color: #2f7a4f; } #pclTela .pcld-f-vencendo { color: #a36a00; } #pclTela .pcld-f-vencido { color: #9B1C1C; } #pclTela .pcld-f-sem_registro { color: #6b7280; }
++  #pclTela .pcld-resumo { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 0 0 12px; }
++  #pclTela .pcld-resumo div { border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; padding: 8px 10px; background: var(--bc-surface, #fff); min-width: 0; }
++  #pclTela .pcld-resumo b { display: block; font-size: 20px; } #pclTela .pcld-resumo small { color: var(--bc-text-2, #4A4F4B); }
++  #pclTela .pcld-doc { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: flex-start; justify-content: space-between; cursor: default; }
++  #pclTela .pcld-doc > div { min-width: 0; flex: 1 1 220px; }
++  #pclTela .pcld-doc .pcl-acoes { margin: 0; flex: 0 0 auto; }
++  #pclTela .pcld-ant { margin: 6px 0 0; font-size: 12.5px; } #pclTela .pcld-ant summary { cursor: pointer; }
++  #pclTela .pcld-ant ul { margin: 6px 0 0 18px; padding: 0; } #pclTela .pcld-ant li { margin: 0 0 4px; overflow-wrap: anywhere; }
++  #pclTela .pcld-bloco > h3 { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
++  #pclTela .pcld-bloco > h3 small { font-weight: 400; color: var(--bc-text-2, #4A4F4B); font-size: 12.5px; }
++  #pclTela .pcld-just { text-align: justify; } #pclTela .pcld-hist p { text-align: justify; margin: 3px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
++  #pclTela .pcld-correcao textarea { width: 100%; box-sizing: border-box; min-height: 80px; font: inherit; }
++  #pclTela .pcld-marca { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); margin-top: 8px; }
++  #pclTela .pcld-marca label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; min-width: 0; }
++  #pclTela .pcld-marca select, #pclTela .pcld-marca input { min-height: 40px; font: inherit; font-size: 13.5px; width: 100%; box-sizing: border-box; }
++  #pclTela .pcld-tipos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 12px; }
++  #pclTela .pcld-tipos label { flex-direction: row !important; align-items: center; gap: 6px !important; font-weight: 400 !important; font-size: 13.5px !important; }
++  @media (max-width: 760px) { #pclTela .pcld-doc .pcl-acoes { width: 100%; } #pclTela .pcld-doc .pcl-acoes .cadx-btn { flex: 1 1 auto; } }
++</style>
++<script>
++  // ==========================================================
++  // PORTAL DO CLIENTE — DOCUMENTOS, EQUIPAMENTOS, VENCIMENTOS E CRONOGRAMA (etapa 3 c, 18/11/2026). Casca: abrir('portal_cliente_documentos'),
++  // abrir('portal_cliente_equipamentos') e abrir('portal_cliente_vencimentos') -> PclD_render_(tela); a conta de cliente vê os itens pelo
++  // PclCli_iniciar_ (JS_PortalCliente_Acessos.html). Equipe: PclDI_render_ (aba "Documentos no portal" de PortalCli_render_) e
++  // PclDI_regrasHtml_ (tipos visíveis em Regras do portal). Explicação de cada campo: JS_PortalCliente_Ajuda.html (PCL_DICAS / PCL_GUIAS).
++  // O servidor confere sessão, cliente, unidades, papel e situação de acesso em toda chamada; a tela só mostra.
++  // ==========================================================
++  var PCLD = { tela: "documentos", aba: "vencimentos", ocupado: false, fd: { unidadeId: "", equipamentoId: "", tipo: "", periodo: "", venceAte: "", busca: "" },
++    fe: { unidadeId: "", farol: "", busca: "" }, fv: { unidadeId: "", categoria: "", janela: "90" }, fc: { unidadeId: "" }, docs: null, eqs: null, ficha: null };
++  var PCLD_TITULOS = {
++    documentos: ["Documentos técnicos", "Certificados, relatórios, laudos e o cronograma dos equipamentos da sua empresa, para auditorias e para a Vigilância Sanitária."],
++    equipamentos: ["Meus equipamentos", "Os equipamentos da sua empresa com a situação de calibração, qualificação, NR-13 e manutenção, os documentos, o histórico de atendimentos e os chamados."],
++    vencimentos: ["Vencimentos e cronograma", "O que vence e quando, o que já está agendado e o que está previsto para os equipamentos da sua empresa."]
++  };
++  function PclD_esc_(v) { return typeof PclT_esc_ === "function" ? PclT_esc_(v) : String(v === null || v === undefined ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
++  function PclD_$(id) { return document.getElementById(id); }
++  function PclD_v_(id) { var e = PclD_$(id); return e ? String(e.value || "").trim() : ""; }
++  function PclD_msg_(m, tipo) { var e = PclD_$("pclMsg"); if (e) { e.innerHTML = m ? '<div class="vg-faixa ' + (tipo === "erro" ? "is-erro" : "is-ok") + '" role="' + (tipo === "erro" ? "alert" : "status") + '">' + PclD_esc_(m) + "</div>" : ""; if (m && e.scrollIntoView) e.scrollIntoView({ block: "nearest" }); } }
++  function PclD_chamar_(acao, dados, ok, erro) {
++    if (PCLD.ocupado) return;
++    PCLD.ocupado = true;
++    var t = PclD_$("pclTela"); if (t) t.querySelectorAll("button[data-dc]").forEach(function (b) { b.disabled = true; });
++    var fim = function () { PCLD.ocupado = false; var t2 = PclD_$("pclTela"); if (t2) t2.querySelectorAll("button[data-dc]").forEach(function (b) { b.disabled = false; }); };
++    google.script.run.withSuccessHandler(function (r) {
++      fim();
++      if (!r || !r.ok) { if (typeof PclT_marcarFaltas_ === "function") PclT_marcarFaltas_(r && r.faltam); (erro || function (m) { PclD_msg_(m, "erro"); })((r && r.message) || "O servidor não confirmou. Atualize a página (F5) e tente de novo.", r); return; }
++      try { ok(r); } catch (e) { console.error("Portal do cliente, documentos:", e); PclD_msg_("A resposta chegou, mas a tela não conseguiu mostrar. Atualize a página (F5).", "erro"); }
++    }).withFailureHandler(function (e) { fim(); PclD_msg_("Sem resposta do servidor: " + ((e && e.message) || e) + ". Confira a conexão e tente de novo.", "erro"); })
++      .PortalCliente_api(SGO_getSessionId(), acao, dados || {});
++  }
++  function PclD_erroCorpo_(m) { var c = PclD_$("pclCorpo"); if (c) c.innerHTML = '<div class="pclch-faixa erro" role="alert">' + PclD_esc_(m) + "</div>"; }
++  function PclD_faixa_(a) { return a && a.faixa ? '<div class="pclch-faixa aviso">' + PclD_esc_(a.faixa) + "</div>" : ""; }
++  function PclD_opcoes_(lista, atual, vazio) { return (vazio !== null ? '<option value="">' + PclD_esc_(vazio) + "</option>" : "") + (lista || []).map(function (o) { return '<option value="' + PclD_esc_(o[0]) + '"' + (String(atual) === String(o[0]) ? " selected" : "") + ">" + PclD_esc_(o[1]) + "</option>"; }).join(""); }
++  function PclD_farolHtml_(f) { return '<div class="pcld-farois">' + (f || []).map(function (c) { return '<span class="pcld-farol pcld-f-' + PclD_esc_(c.s) + '" title="' + PclD_esc_(c.nome + ": " + c.texto + (c.origem ? " — " + c.origem : "")) + '">' + PclD_esc_(c.nome + ": " + (c.s === "sem_registro" ? "sem registro" : c.texto)) + "</span>"; }).join("") + "</div>"; }
++
++  // ---------- casca ----------
++  function PclD_render_(tela, extra) {
++    var div = PclD_$("conteudo"); if (!div) return;
++    PCLD.tela = PCLD_TITULOS[tela] ? tela : "documentos";
++    var tt = PCLD_TITULOS[PCLD.tela];
++    try { if (typeof atualizarTituloMobile_ === "function" && typeof ehMobileModo_ === "function" && ehMobileModo_()) atualizarTituloMobile_(tt[0]); } catch (e) {}
++    div.innerHTML = '<div class="module-shell cadx" id="pclTela"><span id="pclDocTela" hidden></span><div class="module-header"><div class="module-header-left"><h2 class="content-title">' + PclD_esc_(tt[0]) + '</h2>' +
++      '<p class="content-subtitle">' + PclD_esc_(tt[1]) + '</p></div></div>' +
++      '<div class="vg-abas" id="pclAbas" role="tablist" aria-label="Partes da tela"></div><div id="pclMsg" aria-live="polite"></div><div id="pclCorpo"><p class="vg-sub">Carregando…</p></div></div>';
++    var t = PclD_$("pclTela");
++    t.addEventListener("click", PclD_clique_);
++    t.addEventListener("keydown", function (ev) { if (ev.key === "Enter" && ev.target && /^(pclDocBusca|pclEqBusca)$/.test(ev.target.id)) { ev.preventDefault(); PclD_buscar_(); } if (ev.key === "Enter" && ev.target.closest && ev.target.closest(".pclch-card[data-dc]")) { ev.preventDefault(); ev.target.closest(".pclch-card[data-dc]").click(); } });
++    PCLD.ocupado = false;
++    if (PCLD.tela === "documentos") { PclD_$("pclAbas").style.display = "none"; return PclD_documentos_(); }
++    if (PCLD.tela === "equipamentos") { PclD_$("pclAbas").style.display = "none"; var alvo = (extra && extra.id) || PCLD.irEq || ""; PCLD.irEq = ""; return alvo ? PclD_ficha_(alvo) : PclD_equipamentos_(); }
++    PclD_irAba_(extra && extra.aba === "cronograma" ? "cronograma" : PCLD.aba || "vencimentos");
++  }
++  function PclD_irAba_(aba) {
++    PCLD.aba = aba;
++    PclD_$("pclAbas").innerHTML = [["vencimentos", "Vencimentos"], ["cronograma", "Cronograma"]].map(function (a) { return '<button type="button" class="vg-aba' + (aba === a[0] ? " is-atual" : "") + '" role="tab" aria-selected="' + (aba === a[0]) + '" data-dc-aba="' + a[0] + '">' + a[1] + "</button>"; }).join("");
++    PclD_msg_(""); PclD_$("pclCorpo").innerHTML = '<p class="vg-sub">Carregando…</p>';
++    if (typeof PclAj_aba_ === "function") PclAj_aba_(aba);
++    if (aba === "cronograma") return PclD_chamar_("cronograma", PCLD.fc, PclD_desenharCronograma_, PclD_erroCorpo_);
++    PclD_chamar_("vencimentos", PCLD.fv, PclD_desenharVencimentos_, PclD_erroCorpo_);
++  }
++  function PclD_buscar_() {
++    if (PCLD.tela === "documentos") { PCLD.fd = { unidadeId: PclD_v_("pclDocUnidade"), equipamentoId: PclD_v_("pclDocEquipamento"), tipo: PclD_v_("pclDocTipo"), periodo: PclD_v_("pclDocPeriodo"), venceAte: PclD_v_("pclDocVence"), busca: PclD_v_("pclDocBusca") }; return PclD_documentos_(); }
++    if (PCLD.tela === "equipamentos") { PCLD.fe = { unidadeId: PclD_v_("pclEqUnidade"), farol: PclD_v_("pclEqFarol"), busca: PclD_v_("pclEqBusca") }; return PclD_equipamentos_(); }
++    if (PCLD.aba === "cronograma") { PCLD.fc = { unidadeId: PclD_v_("pclCrUnidade") }; return PclD_irAba_("cronograma"); }
++    PCLD.fv = { unidadeId: PclD_v_("pclVcUnidade"), categoria: PclD_v_("pclVcCategoria"), janela: PclD_v_("pclVcJanela") || "90" }; PclD_irAba_("vencimentos");
++  }
++
++  // ---------- documentos ----------
++  function PclD_documentos_() {
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("documentos");
++    PclD_chamar_("documentos", PCLD.fd, function (r) { PCLD.docs = r; PclD_desenharDocumentos_(r); }, PclD_erroCorpo_);
++  }
++  function PclD_docHtml_(d) {
++    var ant = (d.anteriores || []).length ? '<details class="pcld-ant"><summary>Versões anteriores (' + d.anteriores.length + ")</summary><ul>" + d.anteriores.map(function (x) {
++      return "<li>" + PclD_esc_(x.titulo + (x.emitido ? " · emitido em " + x.emitido : "")) + (x.podeAbrir ? ' <button type="button" class="cadx-btn" data-dc="abrirDoc" data-k="' + PclD_esc_(x.k) + '">Abrir</button>' : "") + "</li>"; }).join("") + "</ul></details>" : "";
++    var v = d.venc ? '<span class="pcld-farol pcld-f-' + PclD_esc_(d.venc.s === "sem_vencimento" ? "sem_registro" : d.venc.s) + '">' + PclD_esc_(d.venc.texto) + "</span>" : "";
++    return '<div class="pclch-card pcld-doc" style="--pclch-cor:#1A4F8C"><div><span class="pclch-selo" style="color:#1A4F8C">' + PclD_esc_(d.tipoNome) + "</span>" + (d.substituido ? '<span class="pclch-selo">Versão anterior</span>' : "") +
++      "<br><b>" + PclD_esc_(d.titulo) + "</b>" + (d.numero && d.titulo.indexOf(d.numero) < 0 ? " · nº " + PclD_esc_(d.numero) : "") +
++      '<p class="pclch-meta">' + PclD_esc_([d.equipamento, d.unidade].filter(Boolean).join(" · ") || "Documento da empresa") + "</p>" +
++      '<p class="pclch-meta">' + PclD_esc_([d.emitido ? "Emitido em " + d.emitido : "", d.validade ? "validade " + d.validade : ""].filter(Boolean).join(" · ")) + (v ? " " + v : "") + "</p>" + ant + "</div>" +
++      '<div class="pcl-acoes">' + (d.podeAbrir ? '<button type="button" class="cadx-btn cadx-btn-primario" data-dc="abrirDoc" data-k="' + PclD_esc_(d.k) + '">Abrir</button>' : '<small class="pcld-just">' + PclD_esc_(d.semAbrirTexto) + "</small>") + "</div></div>";
++  }
++  function PclD_desenharDocumentos_(r) {
++    var f = PCLD.fd;
++    var eqs = (r.equipamentos || []).filter(function (e) { return !f.unidadeId || e.unidadeId === f.unidadeId; });
++    var h = PclD_faixa_(r.acesso) + '<div class="pcl-caixa"><div class="pcl-filtros">' +
++      '<label>Unidade<select id="pclDocUnidade">' + PclD_opcoes_((r.unidades || []).map(function (u) { return [u.id, u.nome]; }), f.unidadeId, "Todas as suas unidades") + "</select></label>" +
++      '<label>Equipamento<select id="pclDocEquipamento">' + PclD_opcoes_(eqs.map(function (e) { return [e.id, e.nome]; }), f.equipamentoId, "Todos") + "</select></label>" +
++      '<label>Tipo<select id="pclDocTipo">' + PclD_opcoes_((r.tipos || []).map(function (t) { return [t.codigo, t.nome]; }), f.tipo, "Todos os tipos") + "</select></label>" +
++      '<label>Emitido<select id="pclDocPeriodo">' + PclD_opcoes_([["30", "Nos últimos 30 dias"], ["90", "Nos últimos 90 dias"], ["365", "Nos últimos 12 meses"], ["730", "Nos últimos 24 meses"]], f.periodo, "Em qualquer data") + "</select></label>" +
++      '<label>Vence até<input id="pclDocVence" type="date" value="' + PclD_esc_(f.venceAte) + '"></label>' +
++      '<label>Buscar<input id="pclDocBusca" type="search" maxlength="60" value="' + PclD_esc_(f.busca) + '" placeholder="Número, TAG, série ou nome"></label>' +
++      '<div class="pcl-acoes" style="align-items:flex-end"><button type="button" class="cadx-btn" data-dc="buscar">Filtrar</button><button type="button" class="cadx-btn" data-dc="limpar">Limpar</button></div></div>' +
++      '<p class="pclch-meta">' + PclD_esc_(r.total === r.todos ? r.total + (r.total === 1 ? " documento." : " documentos.") : r.total + " de " + r.todos + " documentos, pelos filtros.") + "</p>" +
++      (r.documentos.length ? '<div class="pclch-cards">' + r.documentos.map(PclD_docHtml_).join("") + "</div>"
++        : '<div class="pclch-vazio">Nenhum documento ' + (r.todos ? "com estes filtros. Toque em Limpar para ver todos." : "liberado no Portal ainda. Se faltar algum documento, avise a Metrolabs pela Conversa geral (Chamados > Conversa geral).") + "</div>") + "</div>";
++    PclD_$("pclCorpo").innerHTML = h;
++  }
++  /** Abrir: a janela nasce no toque (o navegador não bloqueia) e recebe o endereço quando o servidor confirma; recusa fecha a janela. */
++  function PclD_abrirDoc_(k) {
++    var w = null; try { w = window.open("", "_blank"); } catch (e) { w = null; }
++    PclD_chamar_("abrirDocumento", { k: k }, function (r) {
++      if (w && !w.closed) { try { w.location.href = r.url; } catch (e) { window.location.href = r.url; } } else window.location.href = r.url;
++      PclD_msg_(r.message || "Documento aberto.", "ok");
++    }, function (m) { try { if (w && !w.closed) w.close(); } catch (e) {} PclD_msg_(m, "erro"); });
++  }
++
++  // ---------- equipamentos ----------
++  function PclD_equipamentos_() {
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("equipamentos");
++    PclD_chamar_("equipamentos", PCLD.fe, function (r) { PCLD.eqs = r; PclD_desenharEquipamentos_(r); }, PclD_erroCorpo_);
++  }
++  function PclD_desenharEquipamentos_(r) {
++    var f = PCLD.fe, rs = r.resumo || {};
++    var h = PclD_faixa_(r.acesso) + '<div class="pcld-resumo">' + [["vencido", "vencimentos vencidos"], ["vencendo", "vencem em até 30 dias"], ["em_dia", "em dia"]].map(function (x) { return '<div><b class="pcld-f-' + x[0] + '">' + (rs[x[0]] || 0) + "</b><small>" + x[1] + "</small></div>"; }).join("") + "</div>" +
++      '<div class="pcl-caixa"><div class="pcl-filtros">' +
++      '<label>Unidade<select id="pclEqUnidade">' + PclD_opcoes_((r.unidades || []).map(function (u) { return [u.id, u.nome]; }), f.unidadeId, "Todas as suas unidades") + "</select></label>" +
++      '<label>Situação<select id="pclEqFarol">' + PclD_opcoes_(Object.keys(r.farois || {}).map(function (k) { return [k, r.farois[k]]; }), f.farol, "Todas") + "</select></label>" +
++      '<label>Buscar<input id="pclEqBusca" type="search" maxlength="60" value="' + PclD_esc_(f.busca) + '" placeholder="TAG, série, modelo ou setor"></label>' +
++      '<div class="pcl-acoes" style="align-items:flex-end"><button type="button" class="cadx-btn" data-dc="buscar">Filtrar</button></div></div>' +
++      (r.equipamentos.length ? '<div class="pclch-cards">' + r.equipamentos.map(function (e) {
++        return '<div class="pclch-card" role="button" tabindex="0" data-dc="fichaEq" data-id="' + PclD_esc_(e.id) + '" style="--pclch-cor:' + (e.farol.some(function (c) { return c.s === "vencido"; }) ? "#9B1C1C" : e.farol.some(function (c) { return c.s === "vencendo"; }) ? "#a36a00" : "#2f7a4f") + '">' +
++          "<b>" + PclD_esc_(e.rotulo) + "</b>" + (e.ativo ? "" : ' <span class="pclch-selo">Inativo</span>') + '<p class="pclch-meta">' + PclD_esc_([e.unidade, e.setor ? "setor " + e.setor : ""].filter(Boolean).join(" · ")) + "</p>" + PclD_farolHtml_(e.farol) + "</div>";
++      }).join("") + "</div>" : '<div class="pclch-vazio">Nenhum equipamento com estes filtros.</div>') + "</div>";
++    PclD_$("pclCorpo").innerHTML = h;
++  }
++  function PclD_ficha_(id) {
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("fichaEquipamento");
++    PclD_$("pclCorpo").innerHTML = '<p class="vg-sub">Carregando…</p>';
++    PclD_chamar_("equipamento", { id: id }, function (r) { PCLD.ficha = r; PclD_desenharFicha_(r); }, PclD_erroCorpo_);
++  }
++  function PclD_desenharFicha_(r) {
++    var e = r.equipamento, p = r.pode || {};
++    var dado = function (rot, v) { return v ? "<div><small>" + PclD_esc_(rot) + "</small>" + PclD_esc_(v) + "</div>" : ""; };
++    var h = '<div class="pcl-acoes" style="margin:0 0 10px"><button type="button" class="cadx-btn" data-dc="voltarEqs">Voltar aos equipamentos</button>' +
++      (p.abrirChamado ? '<button type="button" class="cadx-btn cadx-btn-primario" data-dc="abrirChamado" data-id="' + PclD_esc_(e.id) + '">' + (p.avulso ? "Pedir atendimento avulso para este equipamento" : "Abrir chamado para este equipamento") + "</button>" : "") + "</div>" +
++      (!p.abrirChamado && p.motivoAbrir ? '<div class="pclch-faixa">' + PclD_esc_(p.motivoAbrir) + "</div>" : "") +
++      '<div class="pcl-caixa"><h3>' + PclD_esc_(e.rotulo) + (e.ativo ? "" : ' <span class="pclch-selo">Inativo</span>') + '</h3><div class="pclch-dados">' +
++      dado("Tipo", e.tipo) + dado("Fabricante", e.fabricante) + dado("Modelo", e.modelo) + dado("Número de série", e.serie) + dado("TAG", e.tag) + dado("Patrimônio", e.patrimonio) +
++      dado("Unidade", e.unidade) + dado("Setor", e.setor) + dado("Instalação", e.instalacao) + dado("Ano de fabricação", e.anoFabricacao) + dado("Capacidade", e.capacidade) + dado("Situação", e.situacao) + "</div>" + PclD_farolHtml_(e.farol) + "</div>";
++    h += '<div class="pcl-caixa pcld-bloco"><h3>Vencimentos <small>calibração, qualificação, NR-13, manutenção e outros documentos</small></h3>' + (r.vencimentos.length ? '<div class="pclch-cards">' + r.vencimentos.map(function (v) {
++      return '<div class="pclch-card" style="--pclch-cor:' + ({ vencido: "#9B1C1C", vencendo: "#a36a00" }[v.situacao] || "#2f7a4f") + '"><b>' + PclD_esc_(v.categoriaNome) + '</b> <span class="pcld-farol pcld-f-' + PclD_esc_(v.situacao) + '">' + PclD_esc_(v.situacaoTexto) + '</span><p class="pclch-meta">' + PclD_esc_(v.origem) + "</p></div>"; }).join("") + "</div>" : '<p class="pcld-just">Nenhum documento com validade registrado para este equipamento.</p>') + "</div>";
++    h += '<div class="pcl-caixa pcld-bloco"><h3>Documentos <small>' + r.documentos.length + "</small></h3>" + (r.documentos.length ? '<div class="pclch-cards">' + r.documentos.map(PclD_docHtml_).join("") + "</div>" : '<p class="pcld-just">Nenhum documento deste equipamento liberado no Portal. Se faltar algum, avise a Metrolabs pela Conversa geral.</p>') + "</div>";
++    h += '<div class="pcl-caixa pcld-bloco pcld-hist"><h3>Histórico de atendimentos <small>só os atendimentos concluídos</small></h3>' + (r.historico.length ? '<ul class="pclch-tempo">' + r.historico.map(function (a) {
++      return "<li><b>" + PclD_esc_(a.data) + "</b> · " + PclD_esc_(a.tipo) + (a.numero ? " · nº " + PclD_esc_(a.numero) : "") + (a.relato ? "<p>" + PclD_esc_(a.relato) + "</p>" : "") + "</li>"; }).join("") + "</ul>" : '<p class="pcld-just">Nenhum atendimento concluído registrado para este equipamento.</p>') + "</div>";
++    h += '<div class="pcl-caixa pcld-bloco"><h3>Chamados <small>' + r.chamados.length + "</small></h3>" + (r.chamados.length ? '<div class="pclch-cards">' + r.chamados.map(function (c) {
++      return '<div class="pclch-card" role="button" tabindex="0" data-dc="abrirChamadoFicha" data-tipo="' + PclD_esc_(c.tipo) + '" data-id="' + PclD_esc_(c.id) + '"><b>' + PclD_esc_(c.numero) + '</b> <span class="pclch-selo">' + PclD_esc_(c.etapaNome) + '</span><p class="pclch-meta">Aberto em ' + PclD_esc_(c.abertoEm) + "</p></div>"; }).join("") + "</div>" : '<p class="pcld-just">Nenhum chamado deste equipamento.</p>') + "</div>";
++    h += '<div class="pcl-caixa pcld-correcao"><h3>Informar correção de cadastro</h3>' + (p.conversar ? '<p class="pcld-just">Algum dado acima está errado (série, TAG, setor, unidade)? Escreva o que precisa mudar. A mensagem vai para a Metrolabs pela Conversa geral; o cadastro é corrigido pela equipe.</p>' +
++      '<div class="pcl-form"><label class="inteiro">O que precisa mudar<textarea id="pclEqCorrecao" maxlength="2000">' + PclD_esc_(r.correcaoTexto) + '</textarea></label></div><div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-dc="enviarCorrecao">Enviar à Metrolabs</button></div>'
++      : '<p class="pcld-just">O seu papel no Portal é de consulta e não envia mensagens. Peça ao Gestor do cliente da sua empresa para informar a correção.</p>') + "</div>";
++    PclD_$("pclCorpo").innerHTML = h;
++  }
++
++  // ---------- vencimentos e cronograma ----------
++  function PclD_desenharVencimentos_(r) {
++    var f = PCLD.fv;
++    var h = PclD_faixa_(r.acesso) + '<div class="pcl-caixa"><div class="pcl-filtros">' +
++      '<label>Unidade<select id="pclVcUnidade">' + PclD_opcoes_((r.unidades || []).map(function (u) { return [u.id, u.nome]; }), f.unidadeId, "Todas as suas unidades") + "</select></label>" +
++      '<label>Categoria<select id="pclVcCategoria">' + PclD_opcoes_(Object.keys(r.categorias || {}).map(function (k) { return [k, r.categorias[k]]; }), f.categoria, "Todas") + "</select></label>" +
++      '<label>Janela<select id="pclVcJanela">' + PclD_opcoes_([["30", "Vencidos e próximos 30 dias"], ["60", "Vencidos e próximos 60 dias"], ["90", "Vencidos e próximos 90 dias"], ["todos", "Todos os vencimentos"]], f.janela, null) + "</select></label>" +
++      '<div class="pcl-acoes" style="align-items:flex-end"><button type="button" class="cadx-btn" data-dc="buscar">Filtrar</button></div></div>' +
++      '<p class="pclch-meta">Situação em ' + PclD_esc_(r.hojeBr) + ". Vale o documento mais recente de cada equipamento e categoria.</p>" +
++      (r.vencimentos.length ? '<div class="pclch-cards">' + r.vencimentos.map(function (v) {
++        return '<div class="pclch-card" style="--pclch-cor:' + ({ vencido: "#9B1C1C", vencendo: "#a36a00" }[v.situacao] || "#2f7a4f") + '"><b>' + PclD_esc_(v.equipamento) + '</b><p class="pclch-meta">' + PclD_esc_([v.categoriaNome, v.unidade].filter(Boolean).join(" · ")) + "</p>" +
++          '<p class="pclch-meta"><span class="pcld-farol pcld-f-' + PclD_esc_(v.situacao) + '">' + PclD_esc_(v.situacaoTexto) + "</span></p>" + '<p class="pclch-meta">Documento de origem: ' + PclD_esc_(v.origem) + "</p>" +
++          (v.equipamentoId ? '<div class="pcl-acoes"><button type="button" class="cadx-btn" data-dc="irEquipamento" data-id="' + PclD_esc_(v.equipamentoId) + '">Ver o equipamento</button></div>' : "") + "</div>"; }).join("") + "</div>"
++        : '<div class="pclch-vazio">Nada vence nesta janela. Escolha "Todos os vencimentos" para ver as datas mais distantes.</div>') + "</div>";
++    PclD_$("pclCorpo").innerHTML = h;
++  }
++  function PclD_desenharCronograma_(r) {
++    var f = PCLD.fc;
++    var lista = function (l, vazio, fn) { return l.length ? '<div class="pclch-cards">' + l.map(fn).join("") + "</div>" : '<p class="pcld-just">' + PclD_esc_(vazio) + "</p>"; };
++    var h = PclD_faixa_(r.acesso) + '<div class="pclch-faixa">' + PclD_esc_(r.explicacao) + "</div>" +
++      '<div class="pcl-caixa"><div class="pcl-filtros"><label>Unidade<select id="pclCrUnidade">' + PclD_opcoes_((r.unidades || []).map(function (u) { return [u.id, u.nome]; }), f.unidadeId, "Todas as suas unidades") + "</select></label>" +
++      '<div class="pcl-acoes" style="align-items:flex-end"><button type="button" class="cadx-btn" data-dc="buscar">Filtrar</button></div></div></div>' +
++      '<div class="pcl-caixa pcld-bloco"><h3>Agendado <small>data combinada com a Metrolabs</small></h3>' + lista(r.agendado, "Nenhuma visita, ronda ou ordem de serviço agendada a partir de hoje.", function (a) {
++        return '<div class="pclch-card" style="--pclch-cor:#2f6fd6"><b>' + PclD_esc_(a.quando) + "</b> · " + PclD_esc_(a.tipo) + '<p class="pclch-meta">' + PclD_esc_([a.servico, a.os ? "O.S. " + a.os : "", a.situacao].filter(Boolean).join(" · ")) + '</p><p class="pclch-meta">' + PclD_esc_([a.equipamento, a.unidade].filter(Boolean).join(" · ")) + "</p></div>"; }) + "</div>" +
++      '<div class="pcl-caixa pcld-bloco"><h3>Previsto <small>não é data confirmada</small></h3>' + lista(r.previsto, "Nada previsto para os próximos 12 meses pelos documentos e pelo contrato.", function (p) {
++        return '<div class="pclch-card" style="--pclch-cor:' + (p.atrasado ? "#9B1C1C" : "#8a96a8") + '"><b>' + PclD_esc_(p.quando) + "</b> · " + PclD_esc_(p.servico) + (p.atrasado ? ' <span class="pcld-farol pcld-f-vencido">vencido: a programar</span>' : "") +
++          '<p class="pclch-meta">' + PclD_esc_([p.equipamento, p.unidade].filter(Boolean).join(" · ")) + '</p><p class="pclch-meta">' + PclD_esc_(p.base) + (p.contrato && p.fonte !== "CONTRATO" ? " · " + PclD_esc_(p.contrato) : "") + "</p></div>"; }) + "</div>" +
++      '<div class="pcl-caixa pcld-bloco"><h3>Documento do cronograma</h3>' + lista(r.documento, "O Cronograma de execução ainda não foi emitido ou não está liberado no Portal.", PclD_docHtml_) + "</div>";
++    PclD_$("pclCorpo").innerHTML = h;
++  }
++
++  // ---------- cliques ----------
++  function PclD_clique_(ev) {
++    var ab = ev.target.closest && ev.target.closest("[data-dc-aba]");
++    if (ab) return PclD_irAba_(ab.getAttribute("data-dc-aba"));
++    var b = ev.target.closest && ev.target.closest("[data-dc]"); if (!b) return;
++    var a = b.getAttribute("data-dc");
++    if (a === "buscar") return PclD_buscar_();
++    if (a === "limpar") { PCLD.fd = { unidadeId: "", equipamentoId: "", tipo: "", periodo: "", venceAte: "", busca: "" }; return PclD_documentos_(); }
++    if (a === "abrirDoc") return PclD_abrirDoc_(b.getAttribute("data-k"));
++    if (a === "fichaEq") return PclD_ficha_(b.getAttribute("data-id"));
++    if (a === "voltarEqs") return PclD_equipamentos_();
++    if (a === "irEquipamento") { PCLD.irEq = b.getAttribute("data-id"); if (typeof abrir === "function") abrir("portal_cliente_equipamentos"); else PclD_render_("equipamentos"); return; }
++    if (a === "abrirChamado") { if (typeof PclCh_abrirNovo_ === "function") PclCh_abrirNovo_(b.getAttribute("data-id")); return; }
++    if (a === "abrirChamadoFicha") { if (typeof PclCh_render_ === "function") PclCh_render_("ficha", { tipo: b.getAttribute("data-tipo"), id: b.getAttribute("data-id") }); return; }
++    if (a === "enviarCorrecao") {
++      var t = PclD_v_("pclEqCorrecao"), base = PCLD.ficha ? PCLD.ficha.correcaoTexto.trim() : "";
++      if (t.replace(/\s/g, "").length <= base.replace(/\s/g, "").length) return PclD_msg_("Escreva o que precisa mudar depois do texto pronto (por exemplo, a série certa que está na etiqueta). Nada foi enviado.", "erro");
++      return PclD_chamar_("enviarMensagem", { refTipo: "GERAL", texto: t }, function (r) { PclD_msg_((r.message || "Mensagem enviada.") + " A resposta aparece em Chamados > Conversa geral.", "ok"); });
++    }
++  }
++
++  // ==========================================================
++  // EQUIPE: aba "Documentos no portal" (PortalCli_render_) e tipos visíveis em Regras do portal
++  // ==========================================================
++  var PCLDI = { cliente: null, filtro: "todos", busca: "", lista: null };
++  function PclDI_render_() {
++    if (typeof PclAj_aba_ === "function") PclAj_aba_("documentosPortal");
++    var c = PCLDI.cliente;
++    PclD_$("pclCorpo").innerHTML = '<div class="pcl-caixa"><h3>Documentos no portal</h3><p class="pcld-just">Escolha o cliente para ver, documento por documento, o que aparece para ele no Portal e por quê. Marque um documento do Arquivo de documentos como "oculto no portal" (some da lista e não abre para o cliente) ou "liberado um a um" (aparece mesmo com o tipo fora da lista). Rascunhos, minutas, versões internas e contratos nunca aparecem e não entram nesta lista.</p>' +
++      '<div class="pcl-filtros"><label>Cliente<input id="pclDpCliente" type="search" maxlength="80" autocomplete="off" value="' + PclD_esc_(c ? c.nome : "") + '" placeholder="Nome ou CNPJ"></label>' +
++      '<label>Mostrar<select id="pclDpFiltro">' + PclD_opcoes_([["todos", "Todos"], ["aparece", "Só os que aparecem"], ["nao", "Só os que não aparecem"], ["oculto", "Só os ocultos"]], PCLDI.filtro, null) + "</select></label>" +
++      '<label>Buscar<input id="pclDpBusca" type="search" maxlength="60" value="' + PclD_esc_(PCLDI.busca) + '" placeholder="Nome, número, TAG ou série"></label>' +
++      '<div class="pcl-acoes" style="align-items:flex-end"><button type="button" class="cadx-btn" data-pcl="pclDpFiltrar">Filtrar</button></div></div><div id="pclDpClientes"></div></div><div id="pclDpLista"></div>';
++    if (c) PclDI_listar_();
++  }
++  function PclDI_listar_() {
++    if (!PCLDI.cliente) return;
++    PclT_chamar_("documentosPortal", { clienteId: PCLDI.cliente.id, filtro: PCLDI.filtro, busca: PCLDI.busca }, function (r) { PCLDI.lista = r; PclDI_desenhar_(r); });
++  }
++  function PclDI_desenhar_(r) {
++    var el = PclD_$("pclDpLista"); if (!el) return;
++    el.innerHTML = '<div class="pcl-caixa"><h3>' + PclD_esc_(r.cliente.nome) + " · " + r.total + (r.total === 1 ? " documento" : " documentos") + "</h3>" + (r.documentos.length ? '<div class="pclch-cards">' + r.documentos.map(function (d) {
++      return '<div class="pclch-card" style="--pclch-cor:' + (d.aparece ? "#2f7a4f" : "#9aa3ad") + '"><span class="pclch-selo">' + PclD_esc_(d.tipoNome) + "</span>" + (d.marca ? '<span class="pclch-selo" style="color:#a36a00">' + PclD_esc_(d.marcaNome) + "</span>" : "") +
++        "<br><b>" + PclD_esc_(d.titulo) + "</b>" + (d.numero ? " · nº " + PclD_esc_(d.numero) : "") + '<p class="pclch-meta">' + PclD_esc_([d.equipamento, d.unidade, d.emitido ? "emitido em " + d.emitido : "", d.situacao].filter(Boolean).join(" · ")) + "</p>" +
++        '<p class="pclch-meta"><b>' + PclD_esc_(d.explicacao) + "</b>" + (d.marcaMotivo ? " · " + PclD_esc_(d.marcaMotivo) + " (" + PclD_esc_([d.marcaPor, d.marcaEm].filter(Boolean).join(", ")) + ")" : "") + "</p>" +
++        (r.podeMarcar && d.podeMarcar ? '<details><summary>Mudar no portal</summary><div class="pcld-marca"><label>No portal<select data-dp-marca="' + PclD_esc_(d.docId) + '">' + PclD_opcoes_([["", "Segue a regra do tipo"], ["OCULTO", "Oculto no portal"], ["VISIVEL", "Liberado um a um"]], d.marca, null) + "</select></label>" +
++          '<label>Motivo *<input data-dp-motivo="' + PclD_esc_(d.docId) + '" type="text" maxlength="500" placeholder="Por que muda (pelo menos 10 letras)"></label></div><div class="pcl-acoes"><button type="button" class="cadx-btn cadx-btn-primario" data-pcl="pclDpGravar" data-id="' + PclD_esc_(d.docId) + '">Gravar</button></div></details>'
++          : (!d.podeMarcar ? '<p class="pclch-meta">Sem registro no Arquivo de documentos: segue a regra do tipo.</p>' : "")) + "</div>"; }).join("") + "</div>" : '<div class="pclch-vazio">Nenhum documento com este filtro.</div>') + "</div>";
++  }
++  function PclDI_buscarCliente_() {
++    var q = PclD_v_("pclDpCliente"), res = PclD_$("pclDpClientes"); if (!res) return;
++    if (q.length < 3) { res.innerHTML = ""; return; }
++    google.script.run.withSuccessHandler(function (r) {
++      if (!r || !r.ok) { res.innerHTML = '<div class="vg-faixa is-erro">' + PclD_esc_((r && r.message) || "A busca não respondeu.") + "</div>"; return; }
++      res.innerHTML = r.clientes.length ? '<div class="pcl-acoes">' + r.clientes.map(function (c) { return '<button type="button" class="cadx-btn" data-pcl="pclDpEscolher" data-cli="' + PclD_esc_(c.id) + '" data-nome="' + PclD_esc_(c.nome) + '">' + PclD_esc_(c.nome) + (c.cnpj ? " · " + PclD_esc_(c.cnpj) : "") + "</button>"; }).join("") + "</div>" : '<p class="pcld-just">Nenhum cliente com esse nome ou CNPJ.</p>';
++    }).withFailureHandler(function () { res.innerHTML = ""; }).PortalCliente_api(SGO_getSessionId(), "buscarClientes", { busca: q });
++  }
++  /** Chamado por PclT_clique_ (JS_PortalCliente.html) para os botões data-pcl desta aba. Devolve true quando tratou. */
++  function PclDI_clique_(a, b) {
++    if (a === "pclDpEscolher") { PCLDI.cliente = { id: b.getAttribute("data-cli"), nome: b.getAttribute("data-nome") }; var r = PclD_$("pclDpClientes"); if (r) r.innerHTML = ""; var i = PclD_$("pclDpCliente"); if (i) i.value = PCLDI.cliente.nome; PclDI_listar_(); return true; }
++    if (a === "pclDpFiltrar") { PCLDI.filtro = PclD_v_("pclDpFiltro") || "todos"; PCLDI.busca = PclD_v_("pclDpBusca"); if (!PCLDI.cliente) { PclT_msg_("Escolha o cliente: escreva pelo menos 3 letras do nome ou do CNPJ e toque no cliente da lista.", "erro"); return true; } PclDI_listar_(); return true; }
++    if (a === "pclDpGravar") {
++      var id = b.getAttribute("data-id"), sel = document.querySelector('[data-dp-marca="' + id + '"]'), mot = document.querySelector('[data-dp-motivo="' + id + '"]');
++      PclT_chamar_("portalDocumento", { docId: id, portal: sel ? sel.value : "", motivo: mot ? mot.value : "" }, function (r) { PclT_msg_(r.message, "ok"); PclDI_listar_(); });
++      return true;
++    }
++    return false;
++  }
++  document.addEventListener("input", function (ev) { if (ev.target && ev.target.id === "pclDpCliente") { clearTimeout(PCLDI._busca); PCLDI._busca = setTimeout(PclDI_buscarCliente_, 350); } });
++  /** Regras do portal: tipos de documento visíveis (decisão 17). d: resposta "regras".documentos */
++  function PclDI_regrasHtml_(d, dis) {
++    if (!d) return "";
++    return '<p class="pcl-sub"><b>Documentos no portal</b></p><div class="inteiro" style="grid-column:1/-1"><b style="font-size:12px">Tipos de documento visíveis' + (d.padrao ? " (lista recomendada)" : "") + '</b><div id="pclRgDocTipos" class="pcld-tipos">' +
++      d.tipos.map(function (t) { return '<label><input type="checkbox" data-dt="' + PclD_esc_(t.codigo) + '"' + (t.visivel ? " checked" : "") + dis + "> " + PclD_esc_(t.nome) + (t.recomendado ? "" : " <small>(fora da lista recomendada)</small>") + "</label>"; }).join("") + "</div></div>";
++  }
++  function PclDI_tiposMarcados_() { var l = []; document.querySelectorAll("#pclRgDocTipos input[data-dt]").forEach(function (c) { if (c.checked) l.push(c.getAttribute("data-dt")); }); return l; }
++</script>
+diff --git a/cand15/SGO_Ajuda.js b/cand16/SGO_Ajuda.js
+index bbd70aa..d73fe44 100644
+--- a/cand15/SGO_Ajuda.js
++++ b/cand16/SGO_Ajuda.js
+@@ -81,7 +81,11 @@ var SGO_AJUDA_NOMES = {
+   portal_cliente_conta: 'Minha conta e equipe',
+   // 18/11/2026: Portal do cliente, etapa 2 (chamados da conta de cliente e conversas do portal da equipe)
+   portal_cliente_chamados: 'Chamados',
+-  portal_cliente_conversas: 'Conversas do portal'
++  portal_cliente_conversas: 'Conversas do portal',
++  // 18/11/2026: Portal do cliente, etapa 3 (documentos técnicos, equipamentos, vencimentos e cronograma da conta de cliente)
++  portal_cliente_documentos: 'Documentos técnicos',
++  portal_cliente_equipamentos: 'Meus equipamentos',
++  portal_cliente_vencimentos: 'Vencimentos e cronograma'
+ };
+ 
+ /**
+diff --git a/cand15/SGO_Ajuda_PortalCliente.js b/cand16/SGO_Ajuda_PortalCliente.js
+index 78d9ac0..9cc952b 100644
+--- a/cand15/SGO_Ajuda_PortalCliente.js
++++ b/cand16/SGO_Ajuda_PortalCliente.js
+@@ -26,6 +26,7 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { titulo: 'Corrigir, renovar ou encerrar', itens: ['Abra a ficha do cliente e toque em "Corrigir" no contrato: cada gravação vira uma versão no histórico, com antes e depois.', 'Para renovar, registre um contrato novo com a origem "Renovação" e escolha o contrato anterior.', 'Para terminar antes do fim (distrato ou rescisão), toque em "Encerrar", informe a data e o motivo. A carência começa no dia seguinte.'] },
+         { titulo: 'Revisar a pré-carga', itens: ['Abra a aba "Pré-carga": aparecem os clientes com conta de cliente e as pistas de contrato (prazo em Regras da assistência, ronda, proposta aprovada).', 'Para cada um, registre o contrato ou escreva o motivo e toque em "Revisado: sem contrato" (as contas dele deixam de entrar).', 'Nada é criado sozinho: a revisão é sempre de alguém, com motivo.'] },
+         { titulo: 'Suspender ou reativar o acesso (Administrador e Diretoria)', itens: ['Na ficha do cliente, escreva o motivo interno e toque em "Suspender o acesso".', 'As contas do cliente não entram mais; quem estiver dentro sai em até 5 minutos. O cliente vê só "acesso suspenso, fale com a Metrolabs".', 'Para voltar, escreva o motivo e toque em "Reativar o acesso".'] },
++        { titulo: 'Documentos no portal (o que o cliente vê)', itens: ['Abra a aba "Documentos no portal" (caixa «Ocultar ou liberar documento no portal»), busque o cliente e veja cada documento com "Aparece" ou "Não aparece" e o porquê.', 'Para esconder um documento do cliente, escolha "Oculto no portal", escreva o motivo e grave: ele some da lista e não abre em nenhuma tela do cliente. Para mostrar um documento de tipo fora da lista, escolha "Liberado um a um".', 'A lista de tipos que aparecem sozinhos fica em Regras do portal > Documentos no portal (decisão do dono: calibração, qualificação, NR-13, atendimento, cronograma, ciclo da lavadora e ronda).'] },
+         { titulo: 'Acompanhar a segurança das contas de cliente', itens: ['A aba "Segurança" mostra cada função que as contas de cliente chamaram, se está na lista do portal e quantas vezes.', 'A recusa nasce desligada (observação de 7 dias). Terminado o período, acrescente à lista o que o cliente precisa, escolha "Ligada", escreva o motivo e grave.', 'Com a recusa ligada, função fora da lista é recusada para os clientes com a mensagem do quê, por quê e o que fazer.'] }
+       ],
+       cores: [
+@@ -182,6 +183,81 @@ function SGO_ajudaTelas_PortalCliente_() {
+         { p: 'Onde aceito ou recuso o pedido?', r: 'Em Assistência técnica > Solicitações dos clientes. Lá o pedido do portal mostra setor, contato, situação informada, contrato, fotos e o prazo para responder.' },
+         { p: 'O cliente vê quem respondeu?', r: 'Vê o primeiro nome seguido de "(Metrolabs)". A linha do tempo do cliente mostra "Metrolabs" como autor das ações internas.' }
+       ]
++    },
++    // 18/11/2026: Portal do cliente, etapa 3 (c) — Documentos técnicos, Meus equipamentos, Vencimentos e cronograma (conta de cliente).
++    // Servidor: SGO_PortalCliente_Documentos.js. Tela: JS_PortalCliente_Documentos.html. Texto para o cliente, sem recurso administrativo.
++    'portal_cliente_documentos': {
++      titulo: 'Documentos técnicos',
++      paraQueServe: 'Guardar e baixar os documentos técnicos dos equipamentos da sua empresa (certificados de calibração, relatórios de qualificação, laudos NR-13, relatórios de atendimento e de ronda, relatórios do ciclo da lavadora e o cronograma de execução), para auditorias e para a Vigilância Sanitária.',
++      antesDeComecar: [
++        'Você vê os documentos das unidades liberadas para o seu acesso. O Gestor do cliente vê todas as unidades da empresa.',
++        'Aparecem só os documentos emitidos e aprovados pela Metrolabs. Rascunhos e versões em revisão não aparecem.',
++        'Cada documento abre numa aba nova, só com o seu login. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir. Para enviar a alguém de fora (um auditor, por exemplo), baixe o PDF e envie você mesmo.'
++      ],
++      passos: [
++        { titulo: 'Encontrar um documento', itens: ['Filtre por unidade, equipamento, tipo, data de emissão ou validade ("Vence até").', 'Use "Buscar" para o número do certificado, a TAG, a série ou o nome do documento.', 'Toque em "Limpar" para ver todos de novo.'] },
++        { titulo: 'Abrir', itens: ['Toque em "Abrir": o PDF abre numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.', 'Quando um documento tem revisões, a mais nova fica na frente e as anteriores ficam em "Versões anteriores".'] },
++        { titulo: 'Se faltar um documento', itens: ['Avise a Metrolabs pela Conversa geral (Chamados > Conversa geral), dizendo o equipamento e o documento que falta.'] }
++      ],
++      cores: [{ nome: 'Selo verde', significado: 'Documento em dia.' }, { nome: 'Selo âmbar', significado: 'Vence em até 30 dias.' }, { nome: 'Selo vermelho', significado: 'Validade vencida: fale com a Metrolabs para renovar.' }],
++      problemas: [
++        { situacao: 'Aparece "Não encontrado. Atualize a lista."', oQueFazer: 'O documento não está mais na sua lista (foi substituído ou não é das suas unidades). Atualize a tela e procure de novo.' },
++        { situacao: 'O botão "Abrir" não aparece e há um aviso no lugar.', oQueFazer: 'O arquivo desse documento ainda não está liberado para abrir pelo Portal. Peça a cópia à Metrolabs pela Conversa geral.' },
++        { situacao: 'A aba nova não abriu (no computador).', oQueFazer: 'O navegador pode ter bloqueado a janela. Libere as janelas do SGO+ no navegador e toque em "Abrir" de novo.' },
++        { situacao: 'Aparece que o acesso está suspenso ou sem contrato.', oQueFazer: 'Fale com o Comercial da Metrolabs pelo contato que aparece na mensagem.' }
++      ],
++      quemPode: [{ perfil: 'CLIENTE', pode: 'Todas as pessoas do Portal veem os documentos das unidades liberadas para elas: o Gestor do cliente, todas; o Solicitante e a Consulta, as unidades marcadas no acesso.' }],
++      perguntas: [
++        { p: 'Por que um documento que eu tinha não aparece aqui?', r: 'O Portal mostra os tipos de documento técnico combinados com a sua empresa. Se precisar de um documento de outro tipo, peça à Metrolabs pela Conversa geral; ela pode liberar aquele documento para você.' },
++        { p: 'Fica registrado que eu abri um documento?', r: 'Sim. A abertura fica no histórico de uso do Portal da sua empresa, como em qualquer sistema com login.' }
++      ]
++    },
++    'portal_cliente_equipamentos': {
++      titulo: 'Meus equipamentos',
++      paraQueServe: 'Ver os equipamentos da sua empresa com a situação de calibração, qualificação, NR-13 e manutenção, e abrir a ficha de cada um com os documentos, o histórico de atendimentos e os chamados.',
++      antesDeComecar: [
++        'Você vê os equipamentos das unidades liberadas para o seu acesso.',
++        'O farol de cada categoria vem da validade do documento mais recente: em dia, vence em até 30 dias, vencido ou sem registro.',
++        '"Sem registro" quer dizer que não há documento com validade daquela categoria para o equipamento; nem todo equipamento precisa de todas (por exemplo, NR-13 vale para vasos de pressão).'
++      ],
++      passos: [
++        { titulo: 'Ver a situação', itens: ['No alto, os totais de vencidos, que vencem em até 30 dias e em dia.', 'Filtre por unidade ou situação, ou busque pela TAG, série, modelo ou setor.'] },
++        { titulo: 'Abrir a ficha', itens: ['Toque no equipamento.', 'A ficha mostra os dados do cadastro, os vencimentos, os documentos, o histórico dos atendimentos concluídos e os chamados.'] },
++        { titulo: 'Pedir atendimento', itens: ['Na ficha, toque em "Abrir chamado para este equipamento": o formulário já vem com ele escolhido.'] },
++        { titulo: 'Corrigir o cadastro', itens: ['Em "Informar correção de cadastro", escreva o dado certo e toque em "Enviar à Metrolabs".', 'A mensagem vai pela Conversa geral; a equipe corrige o cadastro.'] }
++      ],
++      cores: [{ nome: 'Verde', significado: 'Em dia.' }, { nome: 'Âmbar', significado: 'Vence em até 30 dias.' }, { nome: 'Vermelho', significado: 'Vencido.' }, { nome: 'Cinza', significado: 'Sem registro.' }],
++      problemas: [
++        { situacao: 'Um equipamento da empresa não aparece.', oQueFazer: 'Ele pode estar numa unidade que não está liberada para o seu acesso, ou ainda não foi cadastrado. Fale com o Gestor do cliente ou avise a Metrolabs pela Conversa geral.' },
++        { situacao: 'O farol diz "vencido", mas o serviço já foi feito.', oQueFazer: 'O documento novo ainda não foi emitido ou registrado. Avise a Metrolabs pela Conversa geral.' },
++        { situacao: 'Não consigo enviar a correção de cadastro.', oQueFazer: 'No papel Consulta, o Portal não envia mensagens. Peça ao Gestor do cliente da sua empresa.' }
++      ],
++      quemPode: [{ perfil: 'CLIENTE', pode: 'Todas as pessoas do Portal veem os equipamentos das unidades delas. Abrir chamado e enviar correção: Gestor do cliente e Solicitante.' }],
++      perguntas: [
++        { p: 'Por que o histórico não mostra o técnico?', r: 'O histórico mostra o que foi feito, quando e o relato do serviço. O nome do técnico aparece no chamado quando a visita está agendada ou em andamento.' },
++        { p: 'Posso editar o cadastro do equipamento?', r: 'Não. O cadastro é da Metrolabs; use "Informar correção de cadastro".' }
++      ]
++    },
++    'portal_cliente_vencimentos': {
++      titulo: 'Vencimentos e cronograma',
++      paraQueServe: 'Saber o que vence e quando (calibração, qualificação, NR-13, manutenção e outros documentos com validade) e ver o que está agendado e o que está previsto para os equipamentos da sua empresa.',
++      antesDeComecar: [
++        'Vale o documento mais recente de cada equipamento e categoria: o certificado renovado substitui o anterior.',
++        'Previsto é calculado pela validade dos documentos e pela periodicidade do contrato. A data só fica confirmada quando aparece em Agendado.'
++      ],
++      passos: [
++        { titulo: 'Vencimentos', itens: ['Escolha a unidade, a categoria e a janela (vencidos e os próximos 30, 60 ou 90 dias, ou todos).', 'Cada linha mostra o equipamento, a data, os dias que faltam e o documento de origem.', 'Toque em "Ver o equipamento" para abrir a ficha.'] },
++        { titulo: 'Cronograma', itens: ['Agendado: visitas, rondas e ordens de serviço com data combinada.', 'Previsto: próxima calibração, qualificação, inspeção ou manutenção pela validade dos documentos, e as janelas pela periodicidade dos serviços do contrato.', 'Documento do cronograma: o PDF do Cronograma de execução emitido pela Metrolabs.'] }
++      ],
++      cores: [{ nome: 'Vermelho', significado: 'Vencido: programe com a Metrolabs.' }, { nome: 'Âmbar', significado: 'Vence em até 30 dias.' }, { nome: 'Azul', significado: 'Agendado.' }, { nome: 'Cinza', significado: 'Previsto (não é data confirmada).' }],
++      problemas: [
++        { situacao: 'Um vencimento não aparece.', oQueFazer: 'Escolha a janela "Todos os vencimentos". Se ainda faltar, o documento pode não ter validade registrada; avise a Metrolabs pela Conversa geral.' },
++        { situacao: 'O previsto não bate com a data combinada.', oQueFazer: 'O previsto é só uma referência. Vale a data que aparece em Agendado.' }
++      ],
++      quemPode: [{ perfil: 'CLIENTE', pode: 'Todas as pessoas do Portal, para as unidades liberadas a elas.' }],
++      perguntas: [
++        { p: 'Previsto é compromisso de data?', r: 'Não. É o cálculo pela validade e pela periodicidade do contrato. A data só é confirmada quando a Metrolabs agenda, e aí ela aparece em Agendado.' }
++      ]
+     }
+   };
+ }
+diff --git a/cand15/SGO_Alertas_Central.js b/cand16/SGO_Alertas_Central.js
+index 294fd57..d735a1d 100644
+--- a/cand15/SGO_Alertas_Central.js
++++ b/cand16/SGO_Alertas_Central.js
+@@ -300,6 +300,8 @@ function Pend_contextoDaSessao_(sessao) {
+   return {
+     userId: SGO_UTILS.safe(sessao.userId), perfil: perfil, nome: SGO_UTILS.safe(sessao.nome) || SGO_UTILS.safe(sessao.usuario),
+     clienteId: SGO_UTILS.safe(sessao.clienteId), cliente: perfil === 'CLIENTE',
++    // 18/11/2026 (Portal do cliente, etapa 3): conta de cliente com unidades marcadas (Solicitante e Consulta) vê só os vencimentos delas
++    pclEsc: perfil === 'CLIENTE' ? Pend_escopoCliente_(sessao) : null,
+     gestao: typeof isAdminPerfilAuth_ === 'function' ? isAdminPerfilAuth_(perfil) : (perfil === 'ADMIN' || perfil === 'GESTOR' || perfil === 'DIRETORIA'),
+     // 21/10/2026 (pedido do dono): RH e Financeiro fazem a rotina da Frota; veem as pendências da Frota da gestão (CNH, documentos, multas).
+     rotina: typeof SGO_ehGestaoRotina_ === 'function' && SGO_ehGestaoRotina_(perfil),
+@@ -309,6 +311,22 @@ function Pend_contextoDaSessao_(sessao) {
+   };
+ }
+ 
++/** 18/11/2026 (Portal do cliente, etapa 3): escopo da conta de cliente com unidades marcadas (PCl_escopo_); null = todas as unidades. */
++function Pend_escopoCliente_(sessao) {
++  try {
++    if (typeof PCl_escopo_ !== 'function') return null;
++    if (typeof PCl_memoLimpar_ === 'function') PCl_memoLimpar_();
++    var e = PCl_escopo_(SGO_UTILS.safe(sessao && sessao.userId));
++    return e && !e.todas ? e : null;
++  } catch (e) { return null; }
++}
++/** O item está nas unidades da conta de cliente? Sem unidade conhecida, não (regra padrão de negar). */
++function Pend_naUnidadeCliente_(it, ctx) {
++  if (!ctx || !ctx.pclEsc) return true;
++  var u = Pend_s_(it.unidadeId);
++  return !!u && (typeof PCl_escopoUnidade_ === 'function' ? PCl_escopoUnidade_(ctx.pclEsc, u) : (ctx.pclEsc.unidades || []).indexOf(u) >= 0);
++}
++
+ /** Visão interna da equipe (ponte com o COMMAND): tudo o que a gestão vê, sem nada pessoal. */
+ function Pend_contextoInterno_() {
+   return { userId: '', perfil: 'ADMIN', nome: 'COMMAND', clienteId: '', cliente: false, gestao: true, interno: true };
+@@ -320,7 +338,8 @@ function Pend_contextoInterno_() {
+  * paraUsuarios: ids de CAD_USUARIOS que veem o item mesmo sem o perfil acima (o responsável).
+  */
+ function Pend_podeVer_(it, ctx) {
+-  if (ctx.cliente) return it.publico === 'CLIENTE' && !!ctx.clienteId && Pend_s_(it.clienteId) === ctx.clienteId;
++  // 18/11/2026 (Portal do cliente, etapa 3): documento oculto no portal nunca vai ao cliente; Solicitante e Consulta, só as unidades deles
++  if (ctx.cliente) return it.publico === 'CLIENTE' && !!ctx.clienteId && Pend_s_(it.clienteId) === ctx.clienteId && !it.ocultoCliente && Pend_naUnidadeCliente_(it, ctx);
+   if (ctx.userId && (it.paraUsuarios || []).indexOf(ctx.userId) >= 0) return true;
+   // 16/11/2026 (Financeiro, E1): item de atividade do Financeiro só para a lista de sigilo (e a visão interna da Caixa, que filtra de novo)
+   if (it.extra && it.extra.sigiloFin && !ctx.interno && !(typeof Atividades_noSigiloFin_ === 'function' && Atividades_noSigiloFin_(ctx.userId))) return false;
+@@ -352,6 +371,8 @@ function Pend_item_(tipo, o) {
+     responsavel: o.responsavel || '', responsavelId: o.responsavelId || '',
+     publico: o.publico || 'GESTAO', paraUsuarios: (o.paraUsuarios || []).filter(Boolean).map(String),
+     clienteId: o.clienteId || '', textoEstavel: o.textoEstavel || '',
++    // 18/11/2026 (Portal do cliente, etapa 3): unidade do item e documento oculto no portal (só para a regra de quem vê; não vai à tela)
++    unidadeId: o.unidadeId || '', ocultoCliente: !!o.ocultoCliente,
+     // 20/10/2026: dados para a Caixa de decisões (área, prazo próprio, quem não pode decidir, dono do caso); não vai para a tela.
+     extra: o.extra || null
+   };
+@@ -437,14 +458,17 @@ function Pend_proximaCalibracao_(r) {
+  * Vencimentos de documentos dos clientes: DOC_DOCUMENTOS, CERT_CALIBRACAO e NR13_LAUDOS.
+  * Por equipamento e categoria vale o vencimento mais recente (renovado substitui o anterior);
+  * o laudo NR-13 e a cópia dele em Documentos viram um item só.
++ *
++ * 18/11/2026 (Portal do cliente, etapa 3): a leitura virou uma função própria (Pend_vencimentosBase_), para o Portal do cliente
++ * (PCl_vencimentos_, farol dos equipamentos e cronograma "Previsto") usar o MESMO motor sem depender da central. Cada candidato traz
++ * também a unidade (do documento ou do equipamento), para a conta de cliente com unidades marcadas ver só as dela, e a marca
++ * ocultoCliente (documento com PORTAL = OCULTO no Arquivo de documentos), que a conta de cliente nunca recebe. Nada muda para a equipe.
++ * Devolve [{ chave, cat (CAL|NR13|QUAL|DOC), venc, clienteId, equipId, unidadeId, tipoDoc, nomeArquivo, numero, docId, ocultoCliente }].
+  */
+-function Pend_fonteDocumentos_(add) {
+-  var hoje = Pend_hoje_();
+-  var clientes = {}, equips = {};
+-  Pend_ler_(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) { clientes[Pend_s_(c.ID)] = c; });
++function Pend_vencimentosBase_() {
++  var equips = {};
+   Pend_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { equips[Pend_s_(e.ID)] = e; });
+-  var nomeCliente = function (id) { var c = clientes[Pend_s_(id)]; return c ? (Pend_s_(c.NOME_FANTASIA) || Pend_s_(c.RAZAO_SOCIAL)) : ''; };
+-  var rotuloEquip = function (id) { var e = equips[Pend_s_(id)]; return e ? (Pend_s_(e.TAG) || Pend_s_(e.SERIE) || Pend_s_(e.TIPO)) : ''; };
++  var unEquip = function (id) { var e = equips[Pend_s_(id)]; return e ? Pend_s_(e.UNIDADE_ID) : ''; };
+ 
+   var porChave = {};
+   var considerar = function (chave, cand) {
+@@ -459,7 +483,8 @@ function Pend_fonteDocumentos_(add) {
+     var cat = Pend_categoriaDocumento_(d.TIPO_DOCUMENTO);
+     var eq = Pend_s_(d.EQUIPAMENTO_ID);
+     var chave = eq ? cat + ':' + eq + (cat === 'DOC' ? '|' + Pend_semAcento_(d.TIPO_DOCUMENTO).replace(/\s+/g, ' ') : '') : 'DOC:' + Pend_s_(d.ID);
+-    considerar(chave, { cat: cat, venc: venc, clienteId: Pend_s_(d.CLIENTE_ID), equipId: eq, tipoDoc: Pend_s_(d.TIPO_DOCUMENTO).replace(/^\d+\.\s*/, ''), nomeArquivo: Pend_s_(d.NOME_ARQUIVO), numero: '' });
++    considerar(chave, { cat: cat, venc: venc, clienteId: Pend_s_(d.CLIENTE_ID), equipId: eq, unidadeId: Pend_s_(d.UNIDADE_ID) || unEquip(eq), tipoDoc: Pend_s_(d.TIPO_DOCUMENTO).replace(/^\d+\.\s*/, ''),
++      nomeArquivo: Pend_s_(d.NOME_ARQUIVO), numero: '', docId: Pend_s_(d.ID), ocultoCliente: SGO_UTILS.safeUpper(d.PORTAL) === 'OCULTO' });
+   });
+ 
+   if (SGO_CFG.SHEETS.CERT_CALIBRACAO) {
+@@ -474,7 +499,7 @@ function Pend_fonteDocumentos_(add) {
+     Object.keys(ultimoCert).forEach(function (eq) {
+       var r = ultimoCert[eq].r, venc = Pend_proximaCalibracao_(r);
+       if (!venc) return;
+-      considerar('CAL:' + eq, { cat: 'CAL', venc: venc, clienteId: Pend_s_(r.CLIENTE_ID), equipId: eq, tipoDoc: 'Certificado de calibração', nomeArquivo: '', numero: Pend_s_(r.NUMERO_CERTIFICADO) });
++      considerar('CAL:' + eq, { cat: 'CAL', venc: venc, clienteId: Pend_s_(r.CLIENTE_ID), equipId: eq, unidadeId: unEquip(eq), tipoDoc: 'Certificado de calibração', nomeArquivo: '', numero: Pend_s_(r.NUMERO_CERTIFICADO), docId: '', ocultoCliente: false });
+     });
+   }
+ 
+@@ -489,11 +514,22 @@ function Pend_fonteDocumentos_(add) {
+   Object.keys(ultimoLaudo).forEach(function (eq) {
+     var r = ultimoLaudo[eq].r, venc = Pend_iso_(r.DATA_PROXIMA_INSPECAO);
+     if (!venc) return;
+-    considerar('NR13:' + eq, { cat: 'NR13', venc: venc, clienteId: Pend_s_(r.CLIENTE_ID), equipId: eq, tipoDoc: 'Laudo NR-13', nomeArquivo: '', numero: Pend_s_(r.NUMERO_LAUDO) });
++    considerar('NR13:' + eq, { cat: 'NR13', venc: venc, clienteId: Pend_s_(r.CLIENTE_ID), equipId: eq, unidadeId: Pend_s_(r.UNIDADE_ID) || unEquip(eq), tipoDoc: 'Laudo NR-13', nomeArquivo: '', numero: Pend_s_(r.NUMERO_LAUDO), docId: '', ocultoCliente: false });
+   });
+ 
+-  Object.keys(porChave).forEach(function (chave) {
+-    var c = porChave[chave];
++  return Object.keys(porChave).map(function (chave) { return Object.assign({ chave: chave }, porChave[chave]); });
++}
++
++function Pend_fonteDocumentos_(add) {
++  var hoje = Pend_hoje_();
++  var clientes = {}, equips = {};
++  Pend_ler_(SGO_CFG.SHEETS.CAD_CLIENTES).forEach(function (c) { clientes[Pend_s_(c.ID)] = c; });
++  Pend_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).forEach(function (e) { equips[Pend_s_(e.ID)] = e; });
++  var nomeCliente = function (id) { var c = clientes[Pend_s_(id)]; return c ? (Pend_s_(c.NOME_FANTASIA) || Pend_s_(c.RAZAO_SOCIAL)) : ''; };
++  var rotuloEquip = function (id) { var e = equips[Pend_s_(id)]; return e ? (Pend_s_(e.TAG) || Pend_s_(e.SERIE) || Pend_s_(e.TIPO)) : ''; };
++
++  Pend_vencimentosBase_().forEach(function (c) {
++    var chave = c.chave;
+     var dias = Pend_diasAte_(c.venc, hoje);
+     var grav = Pend_gravidadePrazo_(dias, PEND_DIAS_ATENCAO);
+     if (!grav) return;
+@@ -502,7 +538,7 @@ function Pend_fonteDocumentos_(add) {
+     var cnpj = clientes[c.clienteId] ? String(clientes[c.clienteId].CNPJ || '').replace(/\D/g, '') : '';
+     var onde = [cli, eq ? 'equipamento ' + eq : ''].filter(Boolean).join(' · ');
+     var prazo = Pend_textoPrazo_(dias, c.cat !== 'DOC');
+-    var base = { id: chave, publico: 'CLIENTE', clienteId: c.clienteId, gravidade: grav, dias: dias, vencimento: Pend_br_(c.venc), responsavel: cli ? 'Cliente ' + cli : '' };
++    var base = { id: chave, publico: 'CLIENTE', clienteId: c.clienteId, unidadeId: c.unidadeId, ocultoCliente: c.ocultoCliente, gravidade: grav, dias: dias, vencimento: Pend_br_(c.venc), responsavel: cli ? 'Cliente ' + cli : '' };
+     if (c.cat === 'CAL') {
+       add(Pend_item_(vencido ? 'calibracao_vencida' : 'calibracao_vencendo', Object.assign(base, {
+         nome: eq || cli || 'equipamento',
+diff --git a/cand15/SGO_AssistenteErros.js b/cand16/SGO_AssistenteErros.js
+index f85fe0e..081d669 100644
+--- a/cand15/SGO_AssistenteErros.js
++++ b/cand16/SGO_AssistenteErros.js
+@@ -84,7 +84,7 @@ var SGO_ASSIST_ERRO_HTML = {
+   JS_CronExec: 'cronograma_execucao', JS_DeclaracaoExecQIQO: 'declaracao_qiqo', JS_DeclaracaoExec: 'declaracao_exec', JS_CertCal: 'certificado_calibracao',
+   JS_RelCal: 'relatorio_calibracao', JS_SegurancaAcesso: 'seguranca_acesso', JS_Acessos: 'acessos', JS_Chaves: 'chaves', JS_Admin: 'admin',
+   JS_Avisos: 'meus_avisos', JS_AvisosMatriz: 'avisos_matriz', JS_CadastroCorrecoes: 'cadastro_correcoes', JS_Cadastros: 'clientes',
+-  JS_Equipamentos: 'equipamentos', JS_Inventario: 'inventario', JS_Qualidade: 'qualidade', JS_PortalCliente: 'portal_cliente_contratos', JS_PortalCliente_Acessos: 'portal_cliente_acessos', JS_PortalCliente_Chamados: 'portal_cliente_chamados',
++  JS_Equipamentos: 'equipamentos', JS_Inventario: 'inventario', JS_Qualidade: 'qualidade', JS_PortalCliente: 'portal_cliente_contratos', JS_PortalCliente_Acessos: 'portal_cliente_acessos', JS_PortalCliente_Chamados: 'portal_cliente_chamados', JS_PortalCliente_Documentos: 'portal_cliente_documentos',
+   JS_ModoPersonalizado: 'modo_personalizado', JS_Licitacoes: 'licitacoes', JS_Omie: 'omie', JS_ConciliacaoCaju: 'conciliacao_caju',
+   JS_GanhosVendedores: 'ganhos_vendedores', JS_Financeiro_Indicadores: 'omie', JS_Contratos_Financeiro: 'omie', JS_Padroes_Documentos: 'padroes'
+ };
+diff --git a/cand15/SGO_AssistenteManuais.js b/cand16/SGO_AssistenteManuais.js
+index 0f99102..eb06138 100644
+--- a/cand15/SGO_AssistenteManuais.js
++++ b/cand16/SGO_AssistenteManuais.js
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "e9e0b65c49a4",
++ "versao": "2db7c8830049",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -4673,11 +4673,11 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Quem pode (caixas em Administração > Acessos, grupo \"Portal do cliente\")",
+-     "texto": "Caixa | PadrãoVer contratos de clientes (PORTAL_CLIENTE_CONTRATOS_VER) | Administrador, Diretoria, gestores e gestão comercial\nRegistrar e alterar contrato de cliente (PORTAL_CLIENTE_CONTRATOS_EDITAR) | Administrador, Diretoria e gestão comercial\nSuspender e reativar o acesso de um cliente (PORTAL_CLIENTE_SUSPENDER) | Administrador e Diretoria\nAlterar as regras do portal (PORTAL_CLIENTE_REGRAS) | Administrador e Diretoria\nEnviar acesso ao cliente (USUARIOS_CLIENTES_ENVIAR_ACESSO, a caixa do convite, grupo \"Contas e acessos\"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor\nResponder pedidos e conversas do portal (PORTAL_CLIENTE_CONVERSAR, etapa 2): aba \"Conversas do portal\", parte \"Portal do cliente\" da ficha do chamado, nota interna e retirada de anexo | Equipe interna da área Técnica, gestores, Diretoria e Administrador\nO dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa."
++     "texto": "Caixa | PadrãoVer contratos de clientes (PORTAL_CLIENTE_CONTRATOS_VER) | Administrador, Diretoria, gestores e gestão comercial\nRegistrar e alterar contrato de cliente (PORTAL_CLIENTE_CONTRATOS_EDITAR) | Administrador, Diretoria e gestão comercial\nSuspender e reativar o acesso de um cliente (PORTAL_CLIENTE_SUSPENDER) | Administrador e Diretoria\nAlterar as regras do portal (PORTAL_CLIENTE_REGRAS) | Administrador e Diretoria\nEnviar acesso ao cliente (USUARIOS_CLIENTES_ENVIAR_ACESSO, a caixa do convite, grupo \"Contas e acessos\"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor\nResponder pedidos e conversas do portal (PORTAL_CLIENTE_CONVERSAR, etapa 2): aba \"Conversas do portal\", parte \"Portal do cliente\" da ficha do chamado, nota interna e retirada de anexo | Equipe interna da área Técnica, gestores, Diretoria e Administrador\nOcultar ou liberar documento no portal (PORTAL_CLIENTE_DOC_LIBERAR, etapa 3): aba \"Documentos no portal\" e a marca de cada documento do Arquivo de documentos | Gestão da área Técnica e da Qualidade, Diretoria e Administrador\nO dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa."
+     },
+     {
+      "titulo": "Tabelas",
+-     "texto": "CLI_CONTRATOS: contratos de clientes privados, um por linha, com a versão atual.\nCLI_CONTRATOS_HIST: só inclusão. Guarda registro, correção, renovação, encerramento, suspensão, reativação e revisão da pré-carga, com antes, depois, motivo, quem e quando.\nPCL_ACESSOS: só inclusão. Guarda a entrada recusada, o arquivo recusado (ESCOPO_RECUSADO) e a função recusada.\nPCL_FUNCOES_OBSERVADAS: uma linha por dia, função e pessoa, com a contagem.\nPCL_REGRAS_HIST: as mudanças das regras e da lista de funções.\nEtapa 1 (18/11/2026): PCL_PEDIDOS_EQUIPE, PCL_TERMOS_ACEITE e PCL_CONTAS_HIST (seção 23.9) e as colunas CLIENTE_* em CAD_USUARIOS.\nEtapa 2 (18/11/2026): PCL_MENSAGENS, PCL_ANEXOS e PCL_AVISOS_FILA e as colunas novas de ATEC_SOLICITACOES e ATEC_CHAMADOS (seção 24.9).\n\nAs datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua."
++     "texto": "CLI_CONTRATOS: contratos de clientes privados, um por linha, com a versão atual.\nCLI_CONTRATOS_HIST: só inclusão. Guarda registro, correção, renovação, encerramento, suspensão, reativação e revisão da pré-carga, com antes, depois, motivo, quem e quando.\nPCL_ACESSOS: só inclusão. Guarda a entrada recusada, o arquivo recusado (ESCOPO_RECUSADO) e a função recusada.\nPCL_FUNCOES_OBSERVADAS: uma linha por dia, função e pessoa, com a contagem.\nPCL_REGRAS_HIST: as mudanças das regras e da lista de funções.\nEtapa 1 (18/11/2026): PCL_PEDIDOS_EQUIPE, PCL_TERMOS_ACEITE e PCL_CONTAS_HIST (seção 23.9) e as colunas CLIENTE_* em CAD_USUARIOS.\nEtapa 2 (18/11/2026): PCL_MENSAGENS, PCL_ANEXOS e PCL_AVISOS_FILA e as colunas novas de ATEC_SOLICITACOES e ATEC_CHAMADOS (seção 24.9).\nEtapa 3 (18/11/2026): as colunas PORTAL, PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM em DOC_DOCUMENTOS (seção 25.8). Nenhuma tabela nova.\n\nAs datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua."
+     },
+     {
+      "titulo": "Problemas comuns",
+@@ -4848,7 +4848,51 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Chamados pelo Portal (etapa 2, 18/11/2026) > Problemas comuns (chamados)",
+-     "texto": "Situação | O que fazerO cliente diz que o botão virou \"Pedir atendimento avulso\" | O contrato terminou e o acesso está em consulta. Para o atendimento pelo contrato, registre ou renove o contrato em Portal do cliente > Contratos\nO pedido não aparece para um Solicitante | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes\nO cliente não recebeu o e-mail de complemento | Fora do horário comercial, o e-mail espera a fila e sai na rotina seguinte dentro do expediente\nO prazo do contrato não aparece na ficha do cliente | O prazo só aparece quando o contrato está em Regras da assistência > Contratos; sem ele, vale o prazo da prioridade, que o cliente não vê\nUma foto do cliente mostra um paciente | Na parte \"Portal do cliente\" do chamado (ou em \"Conversa com o cliente\"), toque em \"Retirar\" e escreva o motivo\nO cliente marcou \"O problema continua\" | Trate o pedido novo na fila; ele vem com a faixa \"o problema continua no chamado ...\" e vira reincidência ao aceitar\n</div>"
++     "texto": "Situação | O que fazerO cliente diz que o botão virou \"Pedir atendimento avulso\" | O contrato terminou e o acesso está em consulta. Para o atendimento pelo contrato, registre ou renove o contrato em Portal do cliente > Contratos\nO pedido não aparece para um Solicitante | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes\nO cliente não recebeu o e-mail de complemento | Fora do horário comercial, o e-mail espera a fila e sai na rotina seguinte dentro do expediente\nO prazo do contrato não aparece na ficha do cliente | O prazo só aparece quando o contrato está em Regras da assistência > Contratos; sem ele, vale o prazo da prioridade, que o cliente não vê\nUma foto do cliente mostra um paciente | Na parte \"Portal do cliente\" do chamado (ou em \"Conversa com o cliente\"), toque em \"Retirar\" e escreva o motivo\nO cliente marcou \"O problema continua\" | Trate o pedido novo na fila; ele vem com a faixa \"o problema continua no chamado ...\" e vira reincidência ao aceitar"
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026)",
++     "texto": "A conta de cliente ganha três telas no menu \"Portal do cliente\": Documentos técnicos, Meus equipamentos e Vencimentos e cronograma. Tudo fica limitado ao cliente da conta e às unidades liberadas para a pessoa. O Gestor do cliente vê todas as unidades; o Solicitante e a Consulta veem as unidades marcadas no acesso. As três telas leem também nas situações de carência e de consulta. Com o acesso suspenso ou sem contrato, nada é lido nem aberto, e a mensagem diz o caminho (falar com o Comercial)."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Documentos técnicos (o que o cliente vê) (parte 1)",
++     "texto": "A lista usa o mesmo índice de \"Documentos em pastas\" (Cadastros, ficha do equipamento e QR Code). Ele junta o Arquivo de documentos, os certificados de calibração, as qualificações, os laudos NR-13, os relatórios das O.S. encerradas (versão do cliente), os relatórios A4 com público \"cliente\", as rondas, os relatórios do ciclo da lavadora e as revisões emitidas. Não existe um segundo agregador. Rascunho, minuta, versão interna, documento suspenso, inativo e a pasta de contratos e propostas nunca chegam ao cliente.\n\nSobre essa base valem duas regras do portal:\n1. Tipos visíveis (decisão 17 do dono). Aparecem sozinhos: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros tipos (PGT e POP, registros operacionais, relatórios técnicos e de ensaio, relatórios de manutenção, laudos e declarações, outros) só aparecem quando liberados um a um. A lista fica em Regras do portal.\n2. Marca do documento (coluna PORTAL do Arquivo de documentos): em branco segue a regra do tipo; \"Oculto no portal\" esconde o documento da lista e da abertura em todas as telas do cliente (inclusive o Arquivo de documentos antigo, o QR Code e a central de vencimentos); \"Liberado um a um\" mostra o documento mesmo com o tipo fora da lista.\n\nFiltros: unidade, equipamento, tipo, data de emissão (\"Emitido\"), validade (\"Vence até\") e busca por número, TAG, série ou nome. Cada linha traz o tipo, o título, o número, o equipamento, a unidade, a emissão, a validade com o selo (em dia, vence em até 30 dias, vencido) e o botão \"Abrir\". As versões anteriores de um documento ficam guardadas logo abaixo dele."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Documentos técnicos (o que o cliente vê) (parte 2)",
++     "texto": "Abrir: o documento abre numa aba nova no computador; no celular, abre dentro do SGO+, com Voltar e Imprimir. A tela pede ao servidor, que confere se o documento está na lista da pessoa e passa pela trava de arquivo (PortalCliente_arquivoPermitido_, a mesma da rota /arquivos). A abertura fica em PCL_ACESSOS como DOCUMENTO_ABERTO. Documento de outro cliente, de outra unidade, oculto ou inexistente recebe a mesma resposta: \"Não encontrado. Atualize a lista.\" Quando o documento existe na lista de outro cliente ou unidade, a tentativa fica como ESCOPO_RECUSADO."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Meus equipamentos",
++     "texto": "Lista dos equipamentos das unidades da pessoa, com o farol por categoria: calibração, qualificação, NR-13 e manutenção. Cada categoria fica \"em dia\", \"vence em até 30 dias\", \"vencido\" ou \"sem registro\". O farol vem do mesmo motor da central de pendências (Pend_vencimentosBase_): por equipamento e categoria vale o documento mais recente, e o renovado substitui o anterior. A manutenção é o documento com validade cujo tipo fala de manutenção (preventiva ou corretiva).\n\nA ficha mostra:\nos dados públicos do cadastro (tipo, fabricante, modelo, série, TAG, patrimônio, setor, unidade, instalação, situação), nunca nota fiscal, origem, QR, observações internas ou quem cadastrou;\nos vencimentos do equipamento e os documentos dele;\no histórico dos atendimentos concluídos (O.S. do SGO+ e tarefas do Auvo encerradas), sem o nome do técnico e sem link de outro sistema;\nos chamados do equipamento, que abrem a ficha do chamado;\n\"Abrir chamado para este equipamento\" (o formulário já vem com ele) e \"Informar correção de cadastro\", que envia uma mensagem à Metrolabs pela Conversa geral. O cliente não edita o cadastro."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Vencimentos",
++     "texto": "Tabela por equipamento e categoria, com a data, os dias que faltam e o documento de origem. Filtros: unidade, categoria (calibração, qualificação, NR-13, manutenção e outros documentos) e janela (vencidos e os próximos 30, 60 ou 90 dias, ou todos). Os vencidos aparecem sempre. A leitura é própria (PCl_vencimentos_) e usa o motor da central, sem depender dela."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Cronograma",
++     "texto": "Três blocos, sempre separados, com a explicação fixa: \"Previsto é calculado pela validade dos documentos e pela periodicidade do contrato. A data só fica confirmada quando aparece em Agendado.\"\nAgendado: O.S. agendadas de hoje em diante ou em andamento, rondas de engenharia clínica e visitas de chamado, com data, hora, tipo de serviço e número da O.S.\nPrevisto: (a) a próxima calibração, qualificação, inspeção NR-13 ou manutenção pela validade do documento mais recente de cada equipamento, nos próximos 12 meses, e os vencidos marcados \"a programar\"; (b) as janelas dos serviços do contrato pela periodicidade gravada em CLI_CONTRATOS.SERVICOS_JSON (mensal, bimestral, trimestral, semestral ou anual), contadas a partir do início do contrato e só dentro da vigência. \"Sob demanda\" não gera previsto. O previsto nunca vira compromisso.\nDocumento do cronograma: o PDF do Cronograma de execução emitido, quando ele está na lista de documentos do cliente."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Documentos no portal (equipe)",
++     "texto": "Aba nova na tela Portal do cliente, para quem tem a caixa «Ocultar ou liberar documento no portal» (PORTAL_CLIENTE_DOC_LIBERAR).\n1. Busque o cliente pelo nome ou CNPJ e toque nele.\n2. A lista mostra cada documento que pode chegar ao cliente, com \"Aparece: o tipo está na lista\", \"Aparece: liberado um a um\", \"Não aparece: o tipo está fora da lista\" ou \"Não aparece: oculto no portal\". Filtre por \"só os que aparecem\", \"só os que não aparecem\" ou \"só os ocultos\".\n3. Em \"Mudar no portal\", escolha \"Segue a regra do tipo\", \"Oculto no portal\" ou \"Liberado um a um\", escreva o motivo (pelo menos 10 letras) e toque em Gravar.\n\nA marca vale para o documento registrado no Arquivo de documentos. Quando o mesmo arquivo também vem de outro módulo (certificado, qualificação, O.S.), a marca vale para ele. Documento sem registro no Arquivo segue a regra do tipo. Cada mudança grava quem, quando e o motivo na própria linha (PORTAL_MOTIVO, PORTAL_POR_NOME, PORTAL_EM) e no histórico das regras (\"Documento no portal\")."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Tipos visíveis (Regras do portal)",
++     "texto": "Em Regras do portal > \"Documentos no portal\", o Administrador e a Diretoria marcam os tipos que aparecem sozinhos e gravam com motivo. A lista recomendada, aceita pelo dono, tem os sete tipos da seção 25.1. Pelo menos um tipo precisa ficar marcado."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Filtro por unidade em três telas antigas",
++     "texto": "A etapa 1 deixou três listas sem o filtro por unidade. Elas agora seguem a mesma regra (registro de outra unidade recebe a resposta de inexistente e a tentativa fica como ESCOPO_RECUSADO):\nprontuário pelo QR Code (qrcodeAcessar, a lista de qualificações e a abertura de documento da qualificação); a conta de cliente passa a receber só os campos públicos do equipamento;\nrelatórios de ciclo da lavadora (busca, lista, equipamento e relatório);\nvencimentos da central de pendências para a conta de cliente (o documento oculto no portal também sai da central do cliente; a equipe continua vendo)."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Tabelas, colunas e caixas",
++     "texto": "Colunas novas em DOC_DOCUMENTOS, por acréscimo e garantidas antes da primeira gravação: PORTAL ('' segue o tipo, OCULTO, VISIVEL), PORTAL_MOTIVO, PORTAL_POR_NOME e PORTAL_EM (texto). Editar o documento no Arquivo de documentos não apaga a marca.\nRegistro de acessos (PCL_ACESSOS): DOCUMENTO_ABERTO a cada abertura, ESCOPO_RECUSADO nas tentativas fora do escopo e ACESSO_RECUSADO quando a situação de acesso não permite ler.\nCaixa nova: «Ocultar ou liberar documento no portal» (PORTAL_CLIENTE_DOC_LIBERAR), padrão para a gestão da área Técnica e da Qualidade, a Diretoria e o Administrador.\nRegras do portal: a lista docTiposVisiveis (mesma propriedade das outras regras, com merge e histórico).\nSem avisos novos nesta etapa. O aviso de documento novo (PC07) e o de vencimento (PC08) chegam na etapa 4."
++    },
++    {
++     "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Problemas comuns (documentos e equipamentos)",
++     "texto": "Situação | O que fazerO cliente diz que um documento sumiu do Portal | Abra \"Documentos no portal\", busque o cliente e veja o porquê: tipo fora da lista ou oculto. Libere um a um, com motivo, se for o caso\nO cliente vê um documento que não deveria | Marque \"Oculto no portal\" com o motivo: ele some da lista e não abre em nenhuma tela do cliente\nO botão \"Abrir\" não aparece para o cliente | O arquivo do documento não está ligado a um registro que a trava reconhece. Registre o documento no Arquivo de documentos com o arquivo\nO farol mostra \"vencido\", mas o serviço foi feito | Emita ou registre o documento novo com a validade; o farol usa o documento mais recente\nO previsto do contrato não aparece | Confira em Contratos a periodicidade dos serviços (não pode ser \"sob demanda\") e a vigência\nUm Solicitante não vê um equipamento ou um relatório de ciclo | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes\nA marca \"Oculto no portal\" não aparece para um certificado | A marca existe só para o documento registrado no Arquivo de documentos. Registre o certificado lá e marque\n</div>"
+     }
+    ],
+    "acesso": [
+diff --git a/cand15/SGO_DocumentosPastas.js b/cand16/SGO_DocumentosPastas.js
+index ee5f5b0..918171b 100644
+--- a/cand15/SGO_DocumentosPastas.js
++++ b/cand16/SGO_DocumentosPastas.js
+@@ -261,6 +261,8 @@ function Docs_coletar_(opcoes) {
+       nome: Docs_s_(d.NOME_ARQUIVO), numero: '', revisao: '', clienteId: Docs_s_(d.CLIENTE_ID), unidadeId: Docs_s_(d.UNIDADE_ID), equipamentoId: Docs_s_(d.EQUIPAMENTO_ID),
+       emitidoIso: Docs_iso_(d.DATA_EMISSAO) || Docs_iso_(d.CRIADO_EM), validadeIso: Docs_dia_(d.DATA_VENCIMENTO), situacao: st === 'INATIVO' ? 'INATIVO' : 'VIGENTE',
+       arquivoId: Docs_idDoLink_(d.LINK_ARQUIVO), link: Docs_s_(d.LINK_ARQUIVO), docDocumentoId: Docs_s_(d.ID), publico: true,
++      // 18/11/2026 (Portal do cliente, etapa 3): '' segue a regra do tipo; OCULTO esconde do cliente (lista e arquivo); VISIVEL libera um a um
++      portal: Docs_up_(d.PORTAL),
+       chave: 'N:' + Docs_s_(d.EQUIPAMENTO_ID || d.UNIDADE_ID) + ':' + Docs_chaveNome_(d.NOME_ARQUIVO) });
+   });
+ 
+@@ -451,6 +453,8 @@ function Docs_indice_(opcoes) {
+       if (!ja.equipamentoId && x.equipamentoId) { ja.equipamentoId = x.equipamentoId; ja.unidadeId = ja.unidadeId || x.unidadeId; }
+       if (!ja.unidadeId && x.unidadeId) ja.unidadeId = x.unidadeId;
+       if (!ja.docDocumentoId && x.docDocumentoId) ja.docDocumentoId = x.docDocumentoId;
++      // 18/11/2026 (Portal do cliente, etapa 3): a marca do Arquivo de documentos vale para o mesmo arquivo vindo de outro módulo; OCULTO prevalece
++      if (x.portal === 'OCULTO' || (!ja.portal && x.portal)) ja.portal = x.portal;
+       if (!ja.link && x.link) ja.link = x.link;
+       if (ja.situacao === 'INATIVO' && x.situacao !== 'INATIVO') ja.situacao = x.situacao;
+       return;
+@@ -495,6 +499,8 @@ function Docs_visivel_(it, v, cfg) {
+   if (v.cliente && !Docs_naUnidadeDoLeitor_(it, v)) return false;
+   if (publica) {
+     if (p.interna || !p.clienteVe || !it.publico) return false;
++    // 18/11/2026 (Portal do cliente, etapa 3): documento marcado OCULTO no portal não vai ao cliente nem ao QR Code (a ficha da equipe continua mostrando)
++    if (it.portal === 'OCULTO') return false;
+     if (it.situacao === 'MINUTA' || it.situacao === 'INATIVO') return false;
+     if (v.cliente && (it.situacao === 'SUSPENSO' || !it.arquivoId)) return false;
+     return true;
+@@ -577,7 +583,7 @@ function Docs_itemTela_(it, v, cad, hoje, cfg) {
+       : 'Documento sem arquivo: abra o registro no Arquivo de documentos, toque em Editar e anexe o arquivo.'),
+     origemNome: DOCP_ORIGEM_NOMES[it.origem] || '', daUnidade: !!it.daUnidade, relacionado: !!it.relacionado
+   };
+-  if (!v.cliente) { out.arquivoId = it.arquivoId; out.docDocumentoId = it.docDocumentoId || ''; out.repeticoes = it.repeticoes || 0; }
++  if (!v.cliente) { out.arquivoId = it.arquivoId; out.docDocumentoId = it.docDocumentoId || ''; out.repeticoes = it.repeticoes || 0; out.portal = it.portal || ''; }
+   return out;
+ }
+ 
+diff --git a/cand15/SGO_LavCiclo_Main.js b/cand16/SGO_LavCiclo_Main.js
+index 37aeb21..c227379 100644
+--- a/cand15/SGO_LavCiclo_Main.js
++++ b/cand16/SGO_LavCiclo_Main.js
+@@ -99,8 +99,27 @@ function LavCic_eu_(sessionId) {
+   eu.gestao = ['ADMIN', 'DIRETORIA', 'GESTOR'].indexOf(perfil) >= 0;
+   eu.referencias = LAVCIC_PERFIS_REFERENCIA.indexOf(perfil) >= 0;
+   eu.cadastro = eu.interno; // o cadastro de equipamento é da equipe interna (SGO_Equipamentos recusa o perfil CLIENTE)
++  // 18/11/2026 (Portal do cliente, etapa 3): conta de cliente com unidades marcadas (Solicitante e Consulta) vê só as lavadoras e os relatórios
++  // de ciclo dessas unidades. Fora delas, a resposta é a de um registro inexistente. Conta antiga sem papel e Gestor com todas: nada muda.
++  eu.pclEsc = null;
++  if (eu.cliente && typeof PCl_escopo_ === 'function') {
++    try { if (typeof PCl_memoLimpar_ === 'function') PCl_memoLimpar_(); var esc = PCl_escopo_(eu.id); if (esc && !esc.todas) eu.pclEsc = esc; } catch (e) { eu.pclEsc = null; }
++  }
+   return eu;
+ }
++/** 18/11/2026: a unidade está no acesso da conta de cliente? (sem unidade marcada na conta, todas) */
++function LavCic_naUnidade_(eu, unidadeId) {
++  if (!eu || !eu.pclEsc) return true;
++  var u = LavCic_s_(unidadeId);
++  return !!u && (typeof PCl_escopoUnidade_ === 'function' ? PCl_escopoUnidade_(eu.pclEsc, u) : (eu.pclEsc.unidades || []).indexOf(u) >= 0);
++}
++/** 18/11/2026: unidade do relatório de ciclo (a gravada nele ou, sem ela, a do equipamento). */
++function LavCic_unidadeDoRel_(r) {
++  var u = LavCic_s_(r && r.UNIDADE_ID);
++  if (u) return u;
++  var eq = null; try { eq = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, LavCic_s_(r && r.EQUIPAMENTO_ID)); } catch (e) { eq = null; }
++  return eq ? LavCic_s_(eq.UNIDADE_ID) : '';
++}
+ function LavCic_exigirAcesso_(eu) {
+   if (eu.interno) return;
+   if (eu.cliente && eu.clienteId) return;
+@@ -113,9 +132,14 @@ function LavCic_exigirAcesso_(eu) {
+ // ------------------------------------------------------------
+ function LavCic_mapa_(aba) { var m = {}; LavCic_ler_(aba).forEach(function (r) { m[LavCic_s_(r.ID)] = r; }); return m; }
+ function LavCic_ativo_(r) { var s = LavCic_up_(r && r.STATUS); return !s || s === 'ATIVO'; }
+-function LavCic_podeEquip_(eu, eq) { return !!eq && (eu.interno || (eu.cliente && !!eu.clienteId && LavCic_s_(eq.CLIENTE_ID) === eu.clienteId)); }
++function LavCic_podeEquip_(eu, eq) { return !!eq && (eu.interno || (eu.cliente && !!eu.clienteId && LavCic_s_(eq.CLIENTE_ID) === eu.clienteId && LavCic_naUnidade_(eu, eq.UNIDADE_ID))); }
+ function LavCic_equip_(eu, id) {
+   var eq = SGO_DATA.getById(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS, LavCic_s_(id));
++  // 18/11/2026 (Portal do cliente, etapa 3): equipamento da empresa, mas de outra unidade = a mesma resposta de inexistente (com o registro)
++  if (eq && eu.cliente && eu.pclEsc && LavCic_s_(eq.CLIENTE_ID) === eu.clienteId && !LavCic_naUnidade_(eu, eq.UNIDADE_ID)) {
++    if (typeof PClA_recusaEscopo_ === 'function') PClA_recusaEscopo_(eu.pclEsc, 'EQUIPAMENTO', LavCic_s_(id));
++    eq = null;
++  }
+   if (!eq) throw new Error('Não foi possível abrir o equipamento: ele não está no cadastro. Por quê: o QR code ou o link aponta para um equipamento que foi excluído ou que nunca foi cadastrado. O que fazer: volte à lista de equipamentos e escolha de novo; se não encontrar, peça à Metrolabs para cadastrar');
+   if (!LavCic_podeEquip_(eu, eq)) throw new Error('Acesso negado: este equipamento não pertence à sua empresa. Por quê: o seu usuário só vê e gera relatórios dos equipamentos do seu cliente. O que fazer: confira se leu o QR code da máquina certa; se for da sua empresa e o cadastro estiver errado, peça à Metrolabs para corrigir');
+   return eq;
+@@ -224,7 +248,7 @@ function LavCic_relParaTela_(eu, r) {
+     conclusaoOrigem: LavCic_s_(r.CONCLUSAO_ORIGEM), faltam: LavCic_json_(r.CADASTRO_FALTANDO, []), por: LavCic_s_(r.GERADO_POR_NOME), em: LavCic_br_(r.EMITIDO_EM),
+     podeAssinar: !assinado && !subst, podeNovaVersao: !subst && eu.interno, motivoVersao: LavCic_s_(r.MOTIVO_VERSAO) };
+ }
+-function LavCic_relVisivel_(eu, r) { return eu.interno || (eu.cliente && !!eu.clienteId && LavCic_s_(r.CLIENTE_ID) === eu.clienteId); }
++function LavCic_relVisivel_(eu, r) { return eu.interno || (eu.cliente && !!eu.clienteId && LavCic_s_(r.CLIENTE_ID) === eu.clienteId && (!eu.pclEsc || LavCic_naUnidade_(eu, LavCic_unidadeDoRel_(r)))); }
+ function LavCic_relatoriosVisiveis_(eu) { return LavCic_ler_(LAVCIC_ABAS.RELATORIOS).filter(function (r) { return LavCic_relVisivel_(eu, r); }); }
+ function LavCic_relatorio_(eu, id) {
+   var r = SGO_DATA.getById(LAVCIC_ABAS.RELATORIOS, LavCic_s_(id));
+diff --git a/cand15/SGO_PortalCliente.js b/cand16/SGO_PortalCliente.js
+index 60a938f..0bd2a5d 100644
+--- a/cand15/SGO_PortalCliente.js
++++ b/cand16/SGO_PortalCliente.js
+@@ -14,8 +14,11 @@
+ // 18/11/2026 (etapa 2, abertura de chamado e acompanhamento; SGO_PortalCliente_Chamados.js): chamados, chamado, formAbrir, abrir,
+ // responderComplemento, cancelar, confirmarAtendimento, reabrir, mensagens, enviarMensagem e enviarImagens. Papel, unidades, contrato e termo
+ // conferidos no servidor em toda chamada.
++// 18/11/2026 (etapa 3, documentos, equipamentos, histórico, vencimentos e cronograma; SGO_PortalCliente_Documentos.js): documentos, abrirDocumento,
++// equipamentos, equipamento, vencimentos e cronograma (qualquer papel; só leitura; SUSPENSO e SEM_ACESSO não leem nem abrem).
+ var PCL_ACOES_CLIENTE = { situacao: true, meuContrato: true, minhaConta: true, aceitarTermo: true, salvarMeusDados: true, equipe: true, pedirEquipe: true, desligarPessoa: true,
+-  chamados: true, chamado: true, formAbrir: true, abrir: true, responderComplemento: true, cancelar: true, confirmarAtendimento: true, reabrir: true, mensagens: true, enviarMensagem: true, enviarImagens: true };
++  chamados: true, chamado: true, formAbrir: true, abrir: true, responderComplemento: true, cancelar: true, confirmarAtendimento: true, reabrir: true, mensagens: true, enviarMensagem: true, enviarImagens: true,
++  documentos: true, abrirDocumento: true, equipamentos: true, equipamento: true, vencimentos: true, cronograma: true };
+ var PCL_ACOES_INTERNAS = {
+   iniciar: '', lista: 'PORTAL_CLIENTE_CONTRATOS_VER', ficha: 'PORTAL_CLIENTE_CONTRATOS_VER', preCarga: 'PORTAL_CLIENTE_CONTRATOS_VER', buscarClientes: 'PORTAL_CLIENTE_CONTRATOS_VER',
+   salvar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR', encerrar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR', revisar: 'PORTAL_CLIENTE_CONTRATOS_EDITAR',
+@@ -32,7 +35,9 @@ var PCL_ACOES_INTERNAS = {
+   desligar: 'USUARIOS_CLIENTES_ENVIAR_ACESSO', reativarConta: 'USUARIOS_CLIENTES_ENVIAR_ACESSO', trocarEmail: 'USUARIOS_CLIENTES_ENVIAR_ACESSO', manter: 'USUARIOS_CLIENTES_ENVIAR_ACESSO',
+   pedidosEquipe: 'USUARIOS_CLIENTES_ENVIAR_ACESSO', tratarPedidoEquipe: 'USUARIOS_CLIENTES_ENVIAR_ACESSO', contaHistorico: 'USUARIOS_CLIENTES_ENVIAR_ACESSO', rodarAcessos: 'PORTAL_CLIENTE_REGRAS',
+   // 18/11/2026 (etapa 2, item 4.2.3): conversas do portal com nota interna, a parte "Portal do cliente" da ficha do chamado e a retirada de anexo
+-  conversas: 'PORTAL_CLIENTE_CONVERSAR', conversaInterna: 'PORTAL_CLIENTE_CONVERSAR', enviarMensagemInterna: 'PORTAL_CLIENTE_CONVERSAR', parteChamado: 'PORTAL_CLIENTE_CONVERSAR', retirarAnexo: 'PORTAL_CLIENTE_CONVERSAR'
++  conversas: 'PORTAL_CLIENTE_CONVERSAR', conversaInterna: 'PORTAL_CLIENTE_CONVERSAR', enviarMensagemInterna: 'PORTAL_CLIENTE_CONVERSAR', parteChamado: 'PORTAL_CLIENTE_CONVERSAR', retirarAnexo: 'PORTAL_CLIENTE_CONVERSAR',
++  // 18/11/2026 (etapa 3, item 4.6): "Documentos no portal" — o que cada cliente vê e a marca de cada documento (oculto, liberado um a um, regra do tipo)
++  documentosPortal: 'PORTAL_CLIENTE_DOC_LIBERAR', portalDocumento: 'PORTAL_CLIENTE_DOC_LIBERAR'
+ };
+ var PCL_ACAO_NOMES = { lista: 'ver os contratos de clientes', ficha: 'abrir a ficha do cliente', preCarga: 'ver a pré-carga', buscarClientes: 'buscar clientes',
+   salvar: 'registrar ou alterar contrato de cliente', encerrar: 'encerrar contrato de cliente', revisar: 'registrar a revisão da pré-carga', suspender: 'suspender o acesso de um cliente',
+@@ -45,7 +50,8 @@ var PCL_ACAO_NOMES = { lista: 'ver os contratos de clientes', ficha: 'abrir a fi
+   desligar: 'desligar o acesso de uma pessoa do cliente', reativarConta: 'reativar o acesso de uma pessoa do cliente', trocarEmail: 'trocar o e-mail de uma pessoa do cliente',
+   manter: 'marcar "manter" na conta parada', pedidosEquipe: 'ver os pedidos dos gestores dos clientes', tratarPedidoEquipe: 'atender ou recusar o pedido do gestor do cliente',
+   contaHistorico: 'ver o histórico da conta do cliente', rodarAcessos: 'conferir agora a inatividade e o fim de contrato das contas',
+-  conversas: 'ver as conversas do portal', conversaInterna: 'abrir a conversa do portal', enviarMensagemInterna: 'responder ao cliente pela conversa do portal', parteChamado: 'ver a parte "Portal do cliente" do chamado', retirarAnexo: 'retirar o anexo enviado pelo cliente' };
++  conversas: 'ver as conversas do portal', conversaInterna: 'abrir a conversa do portal', enviarMensagemInterna: 'responder ao cliente pela conversa do portal', parteChamado: 'ver a parte "Portal do cliente" do chamado', retirarAnexo: 'retirar o anexo enviado pelo cliente',
++  documentosPortal: 'ver os documentos de um cliente no portal', portalDocumento: 'ocultar ou liberar um documento no portal' };
+ 
+ /** Quem chama. Conta de fora nunca tem caixa. */
+ function PCl_eu_(sessionId) {
+@@ -79,6 +85,7 @@ function PortalCliente_api(sessionId, acao, dados) {
+       if (!PCL_ACOES_CLIENTE[acao]) throw PCl_erro_('NAO_PERMITIDO', 'Esta ação é da equipe Metrolabs. Por quê: o seu acesso de cliente usa só as telas do Portal do cliente. O que fazer: abra o que precisa pelo menu; se algo parou de funcionar, avise a Metrolabs.');
+       if (acao === 'meuContrato') r = PCl_meuContrato_(eu);
+       else if (typeof PCLCH_ACOES_CLIENTE !== 'undefined' && PCLCH_ACOES_CLIENTE[acao]) r = PClCh_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 2): chamados e conversa
++      else if (typeof PCLD_ACOES_CLIENTE !== 'undefined' && PCLD_ACOES_CLIENTE[acao]) r = PClD_acaoCliente_(eu, acao, dados); // 18/11/2026 (etapa 3): documentos, equipamentos, vencimentos e cronograma
+       else if (acao === 'situacao') { var s = PCl_situacaoAcesso_(eu.clienteId, '', ''); r = { situacao: s.situacao, nome: s.provisoria ? PCL_SITUACOES.PLENO : s.nome, ate: s.ateBr, texto: s.textoCliente, completo: s.completo }; }
+       else if (typeof PClA_acaoCliente_ === 'function') r = PClA_acaoCliente_(eu, acao, dados);
+       else throw PCl_erro_('ACAO', 'Esta parte do Portal do cliente ainda não está disponível neste servidor. O que fazer: atualize a página (F5); se continuar, avise a Metrolabs.'); // 18/11/2026 (etapa 1): Minha conta, termo de uso e Minha equipe
+@@ -88,7 +95,8 @@ function PortalCliente_api(sessionId, acao, dados) {
+       if (cx && !PCl_pode_(eu, cx)) throw PCl_erro_('SEM_PERMISSAO', 'Você não tem a permissão «' + PCl_nomeCaixa_(cx) + '» para ' + PCL_ACAO_NOMES[acao] + '. Por quê: ' +
+         (cx === 'PORTAL_CLIENTE_SUSPENDER' || cx === 'PORTAL_CLIENTE_REGRAS' ? 'esta ação é do Administrador e da Diretoria.' : cx === 'PORTAL_CLIENTE_CONTRATOS_EDITAR' ? 'o contrato de cliente é registrado pela gestão comercial, pelo Administrador e pela Diretoria.' :
+           cx === 'USUARIOS_CLIENTES_ENVIAR_ACESSO' ? 'os acessos das pessoas dos clientes (convite, papel, unidades e desligamento) são da gestão: dono, Administrador, Diretoria e gestores, a mesma regra do convite.' :
+-          cx === 'PORTAL_CLIENTE_CONVERSAR' ? 'a conversa com os clientes do portal é da equipe interna da área Técnica e da gestão.' : 'os contratos de clientes são vistos pela gestão.') +
++          cx === 'PORTAL_CLIENTE_CONVERSAR' ? 'a conversa com os clientes do portal é da equipe interna da área Técnica e da gestão.' :
++          cx === 'PORTAL_CLIENTE_DOC_LIBERAR' ? 'ocultar ou liberar documento no portal é da gestão da área Técnica e da Qualidade, da Diretoria e do Administrador.' : 'os contratos de clientes são vistos pela gestão.') +
+         ' O que fazer: peça a quem tem a caixa, ou peça a liberação ao responsável pelo sistema em Administração > Acessos.');
+       r = PCl_acaoInterna_(eu, acao, dados);
+     }
+@@ -110,10 +118,12 @@ function PCl_acaoInterna_(eu, acao, d) {
+     // 18/11/2026 (etapa 1): a aba Acessos aparece para quem tem a caixa do convite, mesmo sem ver os contratos
+     pd.USUARIOS_CLIENTES_ENVIAR_ACESSO = PCl_pode_(eu, 'USUARIOS_CLIENTES_ENVIAR_ACESSO');
+     // 18/11/2026 (etapa 2): a aba "Conversas do portal" aparece para quem tem a caixa PORTAL_CLIENTE_CONVERSAR
+-    return { poderes: pd, ver: !!pd.PORTAL_CLIENTE_CONTRATOS_VER, acessos: !!pd.USUARIOS_CLIENTES_ENVIAR_ACESSO, conversar: !!pd.PORTAL_CLIENTE_CONVERSAR, eu: { id: eu.id, nome: eu.nome } };
++    // 18/11/2026 (etapa 3): a aba "Documentos no portal" aparece para quem tem a caixa PORTAL_CLIENTE_DOC_LIBERAR
++    return { poderes: pd, ver: !!pd.PORTAL_CLIENTE_CONTRATOS_VER, acessos: !!pd.USUARIOS_CLIENTES_ENVIAR_ACESSO, conversar: !!pd.PORTAL_CLIENTE_CONVERSAR, docLiberar: !!pd.PORTAL_CLIENTE_DOC_LIBERAR, eu: { id: eu.id, nome: eu.nome } };
+   }
+   if (typeof PCLA_ACOES_INTERNAS !== 'undefined' && PCLA_ACOES_INTERNAS[acao]) return PClA_acaoInterna_(eu, acao, d); // 18/11/2026 (etapa 1): Acessos de clientes
+   if (typeof PCLCH_ACOES_INTERNAS !== 'undefined' && PCLCH_ACOES_INTERNAS[acao]) return PClCh_acaoInterna_(eu, acao, d); // 18/11/2026 (etapa 2): conversas do portal
++  if (typeof PCLD_ACOES_INTERNAS !== 'undefined' && PCLD_ACOES_INTERNAS[acao]) return PClD_acaoInterna_(eu, acao, d); // 18/11/2026 (etapa 3): documentos no portal
+   if (acao === 'lista') return PClC_lista_(eu, d);
+   if (acao === 'ficha') return Object.assign(PClC_ficha_(eu, d), { poderes: PCl_poderes_(eu) });
+   if (acao === 'preCarga') return PClC_preCarga_(eu);
+@@ -136,7 +146,9 @@ function PCl_acaoInterna_(eu, acao, d) {
+     // 18/11/2026 (etapa 1): regras dos acessos (termo de uso com versão, encarregado, convite só com contrato, inatividade)
+     var ac = typeof PClA_regras_ === 'function' ? Object.assign(PClA_regras_(), { termoModelo: PClA_termo_().modelo, termoPadrao: PClA_termo_().padrao }) : null;
+     // 18/11/2026 (etapa 2): plantão, confirmação automática do atendimento, prazo de resposta ao pedido e limites de envio
+-    return { regras: PCl_regras_(), regua: CtRg_cfg_(), podeAlterar: PCl_pode_(eu, 'PORTAL_CLIENTE_REGRAS'), historico: PCl_historicoRegras_(), acessos: ac, chamados: typeof PClCh_regras_ === 'function' ? PClCh_regras_() : null };
++    // 18/11/2026 (etapa 3): tipos de documento visíveis no portal (decisão 17)
++    return { regras: PCl_regras_(), regua: CtRg_cfg_(), podeAlterar: PCl_pode_(eu, 'PORTAL_CLIENTE_REGRAS'), historico: PCl_historicoRegras_(), acessos: ac, chamados: typeof PClCh_regras_ === 'function' ? PClCh_regras_() : null,
++      documentos: typeof PClD_regrasTela_ === 'function' ? PClD_regrasTela_() : null };
+   }
+   if (acao === 'salvarRegras') return PCl_salvarRegras_(eu, d);
+   if (acao === 'lerContratoIA') return CtIA_lerContrato_(eu, d);
+@@ -176,17 +188,21 @@ function PCl_salvarRegras_(eu, d) {
+   var ac = typeof PClA_lerRegrasAcessos_ === 'function' ? PClA_lerRegrasAcessos_(d, faltam) : {};
+   // 18/11/2026 (etapa 2): regras dos chamados do portal (mesma lógica: só o que veio no pedido muda; as gravadas antes ficam)
+   var ch = typeof PClCh_lerRegras_ === 'function' ? PClCh_lerRegras_(d, faltam) : {};
++  // 18/11/2026 (etapa 3): tipos de documento visíveis no portal (mesma lógica de merge)
++  var dc = typeof PClD_lerRegras_ === 'function' ? PClD_lerRegras_(d, faltam) : {};
++  var tiposAntes = typeof PClD_regras_ === 'function' ? PClD_regras_().docTiposVisiveis.slice().sort().join(',') : '';
+   if (faltam.length) { var e = PCl_erro_('INCOMPLETO', 'Não foi possível gravar: ' + faltam.map(function (f) { return f.texto; }).join(' ')); e.faltam = faltam; throw e; }
+-  var novo = Object.assign(typeof PClA_regrasGuardadas_ === 'function' ? PClA_regrasGuardadas_() : {}, typeof PClCh_regrasGuardadas_ === 'function' ? PClCh_regrasGuardadas_() : {}, { carenciaDias: car, consultaMeses: con, transicao: tr, transicaoPlenoAte: tr === 'PLENO' ? (atual.transicao === 'PLENO' && atual.transicaoPlenoAte ? atual.transicaoPlenoAte : PCl_diaMais_(PCl_hoje_(), 60)) : '',
+-    contatoComercial: contato, provisoriaAte: prov || '', alteradoPor: eu.nome, alteradoEm: PCl_agoraIso_() }, ac, ch);
++  var novo = Object.assign(typeof PClA_regrasGuardadas_ === 'function' ? PClA_regrasGuardadas_() : {}, typeof PClCh_regrasGuardadas_ === 'function' ? PClCh_regrasGuardadas_() : {}, typeof PClD_regrasGuardadas_ === 'function' ? PClD_regrasGuardadas_() : {}, { carenciaDias: car, consultaMeses: con, transicao: tr, transicaoPlenoAte: tr === 'PLENO' ? (atual.transicao === 'PLENO' && atual.transicaoPlenoAte ? atual.transicaoPlenoAte : PCl_diaMais_(PCl_hoje_(), 60)) : '',
++    contatoComercial: contato, provisoriaAte: prov || '', alteradoPor: eu.nome, alteradoEm: PCl_agoraIso_() }, ac, ch, dc);
+   PCl_gravarConfig_(PCL_REGRAS_PROP, 'REGRAS', atual, novo, motivo, eu);
+   return { regras: PCl_regras_(), message: 'Regras do portal gravadas.' + (tr === 'PLENO' ? ' As contas antigas sem contrato ficam com acesso completo até ' + PCl_br_(novo.transicaoPlenoAte) + '; depois, em consulta.' : '') +
+-    (ac.termoVersao ? ' O termo de uso mudou para a versão ' + ac.termoVersao + ': cada pessoa do portal aceita de novo na próxima entrada.' : '') };
++    (ac.termoVersao ? ' O termo de uso mudou para a versão ' + ac.termoVersao + ': cada pessoa do portal aceita de novo na próxima entrada.' : '') +
++    (dc.docTiposVisiveis && dc.docTiposVisiveis.slice().sort().join(',') !== tiposAntes ? ' Os tipos de documento visíveis no portal mudaram: a lista dos clientes já segue a nova regra.' : '') };
+ }
+ 
+ /** 17/11/2026: últimas mudanças das regras (régua, provisória, regras do portal), para a aba Regras mostrar quem mudou, quando e por quê. */
+ function PCl_historicoRegras_() {
+-  var nomes = { REGRAS: 'Regras do portal', PROVISORIA: 'Vigência provisória', REGUA_CONTRATOS: 'Régua de vencimento e reajuste', FUNCOES_CLIENTE: 'Funções da conta de cliente' };
++  var nomes = { REGRAS: 'Regras do portal', PROVISORIA: 'Vigência provisória', REGUA_CONTRATOS: 'Régua de vencimento e reajuste', FUNCOES_CLIENTE: 'Funções da conta de cliente', DOCUMENTO_PORTAL: 'Documento no portal' };
+   return PCl_ler_(PCL_ABAS.REGRAS_HIST).slice().sort(function (a, b) { return PCl_s_(b.EM).localeCompare(PCl_s_(a.EM)); }).slice(0, 20)
+     .map(function (h) { return { chave: nomes[PCl_up_(h.CHAVE)] || PCl_s_(h.CHAVE), motivo: PCl_s_(h.MOTIVO), por: PCl_s_(h.POR_NOME), em: PCl_brHora_(h.EM) }; });
+ }
+diff --git a/cand15/SGO_PortalCliente_Config.js b/cand16/SGO_PortalCliente_Config.js
+index cd8f0e4..6eb5034 100644
+--- a/cand15/SGO_PortalCliente_Config.js
++++ b/cand16/SGO_PortalCliente_Config.js
+@@ -98,6 +98,8 @@ var PCL_PODERES_ITENS = [
+   // faturamento nem ao movimento do Financeiro (sigilo, lista OMIE_SIGILO_CONTAS); aprovar o reajuste é só do dono e da Diretoria.
+   // 18/11/2026 (etapa 2, item 4.6): responder aos clientes pela conversa do portal (com nota interna) e retirar anexo com motivo
+   ['PORTAL_CLIENTE_CONVERSAR', 'Portal do cliente', 'Responder pedidos e conversas do portal', 'Abre Portal do cliente > Conversas do portal e a parte "Portal do cliente" da ficha do chamado: lê o relato, as fotos e a conversa do cliente, responde (o cliente lê o primeiro nome seguido de "(Metrolabs)"), grava nota interna (o cliente não vê) e retira anexo com motivo. Aceitar, pedir complemento e recusar o pedido continuam em Assistência técnica > Solicitações dos clientes. Padrão: equipe interna da área Técnica, gestores, Diretoria e Administrador.', 'operar', 15],
++  // 18/11/2026 (etapa 3, item 4.6): ocultar ou liberar um documento no Portal do cliente (coluna PORTAL de DOC_DOCUMENTOS), com motivo
++  ['PORTAL_CLIENTE_DOC_LIBERAR', 'Portal do cliente', 'Ocultar ou liberar documento no portal', 'Abre Portal do cliente > Documentos no portal: mostra, por cliente, os documentos que o cliente vê e os que não vê (tipo fora da lista ou oculto) e marca cada documento do Arquivo de documentos como "oculto no portal" (some da lista e não abre para o cliente), "liberado um a um" (aparece mesmo com o tipo fora da lista) ou "segue a regra do tipo", sempre com motivo. Padrão: gestão da área Técnica e da Qualidade, Diretoria e Administrador.', 'operar', 15],
+   ['PORTAL_CLIENTE_CONTRATOS_VALORES', 'Portal do cliente', 'Ver valores e reajustes dos contratos', 'Mostra o valor mensal e total de cada contrato, o índice e a data-base do reajuste, o reajuste proposto pelo sistema (com a memória de cálculo) e gera a carta de reajuste ao cliente depois da aprovação da Diretoria. Não abre o faturamento nem o movimento do Financeiro. Padrão: Administrador, Diretoria e gestão comercial.', 'ver', 15]
+ ];
+ var PCL_PODERES_PADRAO = {
+@@ -106,6 +108,8 @@ var PCL_PODERES_PADRAO = {
+   PORTAL_CLIENTE_SUSPENDER: function (eu, c) { return !!(c.admin || c.diretoria); },
+   PORTAL_CLIENTE_REGRAS: function (eu, c) { return !!(c.admin || c.diretoria); },
+   PORTAL_CLIENTE_CONTRATOS_VALORES: function (eu, c) { return !!(c.admin || c.diretoria || PCl_gestaoComercial_(c)); },
++  // 18/11/2026 (etapa 3): gestão da área Técnica e da Qualidade (gestor dessas áreas), Diretoria e Administrador
++  PORTAL_CLIENTE_DOC_LIBERAR: function (eu, c) { return !!(c.admin || c.diretoria || (c.p === 'GESTOR' && ['TECNICA', 'QUALIDADE'].indexOf(PCl_up_(eu && eu.area)) >= 0)); },
+   // o mesmo nível interno da Assistência técnica (Ast_nivelDe_): a equipe da área Técnica, os gestores, a Diretoria e o Administrador
+   PORTAL_CLIENTE_CONVERSAR: function (eu, c) {
+     try { if (c && typeof c.ast === 'function') { var a = c.ast(); return !!(a && a.interno && (a.gestao || a.tecnico || a.gestor)); } } catch (e) {}
+@@ -309,6 +313,12 @@ function PCl_publicoSeCliente_(sessionId, tabela, resposta) {
+   var r = Object.assign({}, resposta);
+   // 18/11/2026 (etapa 1, item 3.1.3): a pessoa com unidades marcadas (Solicitante e Consulta) só recebe o que é dessas unidades. Registro de
+   // outra unidade recebe a mesma resposta de inexistente e a tentativa fica em PCL_ACESSOS (ESCOPO_RECUSADO). Conta sem papel = todas.
++  // 18/11/2026 (etapa 3, T3.1): documento marcado OCULTO no portal não aparece nem abre para o cliente (mesma resposta de inexistente)
++  if (tabela === 'DOC_DOCUMENTOS') {
++    var oculto = function (x) { return PCl_up_(x && x.PORTAL) === 'OCULTO'; };
++    if (r.item && oculto(r.item)) return { success: false, message: PCL_MSG_INEXISTENTE[tabela] || PCL_MSG_NAO_ENCONTRADO };
++    if (Array.isArray(r.items)) r.items = r.items.filter(function (x) { return !oculto(x); });
++  }
+   var esc = typeof PCl_escopoSessao_ === 'function' ? PCl_escopoSessao_(sessionId) : null;
+   if (esc && !esc.todas) {
+     var dentro = function (x) { return PCl_registroNoEscopo_(esc, tabela, x); };
+diff --git a/cand16/SGO_PortalCliente_Documentos.js b/cand16/SGO_PortalCliente_Documentos.js
+new file mode 100644
+index 0000000..d27dc30
+--- /dev/null
++++ b/cand16/SGO_PortalCliente_Documentos.js
+@@ -0,0 +1,488 @@
++/****************************************************
++ * PORTAL DO CLIENTE — ETAPA 3 (c): DOCUMENTOS, EQUIPAMENTOS, HISTÓRICO, VENCIMENTOS E CRONOGRAMA (18/11/2026). Especificação:
++ * output/portal-cliente-20261116/ESPEC_PORTAL_CLIENTE.md, "Etapa 3 (c)", itens 4.1.5, 4.1.6, 4.1.7, 4.3, 4.4, 4.5, 4.6, 4.7, seção 3 e
++ * testes T3.1 a T3.9 (o dono aceitou todas as recomendações, inclusive a decisão 17: lista fechada de tipos visíveis).
++ *
++ * O QUE FAZ (conta de cliente, por PortalCliente_api; o servidor confere cliente, unidades, papel e situação de acesso em toda chamada)
++ *  - Documentos: lista única que REAPROVEITA o índice de "Documentos em pastas" (SGO_DocumentosPastas.js: Docs_indice_, Docs_visivel_,
++ *    Docs_itemTela_ e Docs_agruparLista_), sem um segundo agregador. Ela já junta o Arquivo de documentos, certificados, qualificações,
++ *    NR-13, relatórios das O.S. encerradas (versão do cliente), relatórios A4 com PUBLICO = CLIENTE, ronda, ciclo da lavadora e revisões
++ *    emitidas, e já tira rascunho, minuta, versão interna, suspenso, inativo e as pastas internas. Aqui entram por cima:
++ *      a) a lista de TIPOS VISÍVEIS (decisão 17; Regras do portal > "Tipos de documento visíveis"): certificado de calibração, relatório de
++ *         qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda;
++ *      b) a coluna nova PORTAL de DOC_DOCUMENTOS: '' segue o tipo; OCULTO esconde (não aparece nem abre, em nenhuma tela do cliente);
++ *         VISIVEL libera um documento de tipo fora da lista ("os outros, só liberados um a um").
++ *    Abrir passa por PortalCliente_arquivoPermitido_ (a mesma trava da rota /arquivos) e grava DOCUMENTO_ABERTO em PCL_ACESSOS.
++ *  - Equipamentos: lista com farol por categoria (calibração, qualificação, NR-13, manutenção: em dia, vence em até 30 dias, vencido ou
++ *    sem registro), calculado pelo MESMO motor da central de pendências (Pend_vencimentosBase_, SGO_Alertas_Central.js). Ficha com os
++ *    dados públicos (PCl_eqPublico_), documentos, histórico (SGO_Atendimentos_doEquipamento_ em modo cliente, só atendimentos encerrados,
++ *    sem técnico e sem link de outro sistema) e chamados.
++ *  - Vencimentos (PCl_vencimentos_): leitura própria do motor, por equipamento e categoria, com data, dias e documento de origem.
++ *  - Cronograma (PCl_cronograma_): três blocos separados — Agendado (O.S., rondas e visitas de chamado com data marcada), Previsto
++ *    (validade dos documentos e periodicidade dos serviços do contrato, CLI_CONTRATOS.SERVICOS_JSON; previsto nunca é compromisso) e
++ *    Documento (o PDF do Cronograma de execução emitido).
++ *  - Situação de acesso: PLENO, CARENCIA e CONSULTA leem e abrem (T3.8); SUSPENSO e SEM_ACESSO não leem nem abrem (T3.9).
++ *
++ * LADO DA METROLABS: aba "Documentos no portal" (caixa PORTAL_CLIENTE_DOC_LIBERAR): por cliente, o que aparece e o que não aparece, e a
++ * marca OCULTO / VISIVEL / regra do tipo de cada documento do Arquivo de documentos, com motivo (histórico em PCL_REGRAS_HIST).
++ *
++ * Sem avisos novos nesta etapa (PC07 e PC08 são da etapa 4). Nenhuma função devolve Date. Fins de linha: LF.
++ ****************************************************/
++
++var PCLD_TIPOS = {
++  CALIBRACAO: 'Certificado de calibração', QUALIFICACAO: 'Relatório de qualificação', NR13: 'Laudo NR-13', ATENDIMENTO: 'Relatório de atendimento',
++  RONDA: 'Relatório de ronda', CRONOGRAMA: 'Cronograma de execução', CICLO_LAVADORA: 'Relatório de ciclo da lavadora',
++  PGT_POP: 'PGT e POP', REGISTROS: 'Registro operacional', RELATORIO_TECNICO: 'Relatório técnico ou de ensaio', MANUTENCAO: 'Relatório de manutenção',
++  LAUDOS: 'Laudo ou declaração', OUTROS: 'Outro documento'
++};
++/** Decisão 17 (aceita pelo dono): os tipos que aparecem sozinhos. Os outros, só liberados um a um (PORTAL = VISIVEL). */
++var PCLD_TIPOS_PADRAO = ['CALIBRACAO', 'QUALIFICACAO', 'NR13', 'ATENDIMENTO', 'CRONOGRAMA', 'CICLO_LAVADORA', 'RONDA'];
++var PCLD_PASTA_TIPO = { CALIBRACAO: 'CALIBRACAO', QUALIFICACAO: 'QUALIFICACAO', NR13: 'NR13', OS: 'ATENDIMENTO', MANUTENCAO: 'MANUTENCAO', PGT_POP: 'PGT_POP',
++  REGISTROS: 'REGISTROS', RELATORIOS_TECNICOS: 'RELATORIO_TECNICO', LAUDOS: 'LAUDOS', OUTROS: 'OUTROS' };
++var PCLD_CATEGORIAS = { CAL: 'Calibração', QUAL: 'Qualificação', NR13: 'NR-13', MAN: 'Manutenção' };
++var PCLD_CAT_VENC = { CAL: 'Calibração', QUAL: 'Qualificação', NR13: 'NR-13', MAN: 'Manutenção', DOC: 'Outros documentos' };
++var PCLD_FAROL = { em_dia: 'Em dia', vencendo: 'Vence em até 30 dias', vencido: 'Vencido', sem_registro: 'Sem registro' };
++var PCLD_DIAS_FAROL = 30;
++var PCLD_MESES = { MENSAL: 1, BIMESTRAL: 2, TRIMESTRAL: 3, SEMESTRAL: 6, ANUAL: 12 };
++var PCLD_PORTAL = { '': 'Segue a regra do tipo', OCULTO: 'Oculto no portal', VISIVEL: 'Liberado um a um' };
++var PCLD_COLUNAS_DOC = ['PORTAL', 'PORTAL_MOTIVO', 'PORTAL_POR_NOME', 'PORTAL_EM'];
++var PCLD_EXPLICACAO_PREVISTO = 'Previsto é calculado pela validade dos documentos e pela periodicidade do contrato. A data só fica confirmada quando aparece em Agendado.';
++var PCLD_OS_AGENDADAS = ['AGENDADA', 'EM_DESLOCAMENTO', 'NO_LOCAL', 'EM_EXECUCAO', 'PAUSADA'];
++
++// ------------------------------------------------------------
++// REGRAS (Regras do portal; mesma propriedade PCL_REGRAS, com merge e histórico em PCL_REGRAS_HIST)
++// ------------------------------------------------------------
++function PClD_regrasBrutas_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(PCL_REGRAS_PROP) || '{}') || {}; } catch (e) { return {}; } }
++function PClD_regras_() {
++  var g = PClD_regrasBrutas_();
++  var l = Array.isArray(g.docTiposVisiveis) ? g.docTiposVisiveis.map(PCl_up_).filter(function (t, i, a) { return PCLD_TIPOS[t] && a.indexOf(t) === i; }) : null;
++  return { docTiposVisiveis: l && l.length ? l : PCLD_TIPOS_PADRAO.slice(), padrao: !(l && l.length) };
++}
++function PClD_regrasGuardadas_() { var g = PClD_regrasBrutas_(); return Object.prototype.hasOwnProperty.call(g, 'docTiposVisiveis') ? { docTiposVisiveis: g.docTiposVisiveis } : {}; }
++/** Lê do pedido de "Gravar as regras" (só o que veio muda). d.docTiposVisiveis: lista de códigos de PCLD_TIPOS. */
++function PClD_lerRegras_(d, faltam) {
++  if (!d || d.docTiposVisiveis === undefined) return {};
++  var bruto = Array.isArray(d.docTiposVisiveis) ? d.docTiposVisiveis : PCl_s_(d.docTiposVisiveis).split(',');
++  var l = bruto.map(PCl_up_).filter(function (t, i, a) { return PCLD_TIPOS[t] && a.indexOf(t) === i; });
++  if (!l.length) { faltam.push({ campo: 'pclRgDocTipos', texto: 'Tipos de documento visíveis: marque pelo menos um tipo (a lista recomendada tem sete). Um documento de tipo desmarcado só aparece se for liberado um a um.' }); return {}; }
++  return { docTiposVisiveis: l };
++}
++function PClD_regrasTela_() {
++  var r = PClD_regras_();
++  return { padrao: r.padrao, tipos: Object.keys(PCLD_TIPOS).map(function (k) { return { codigo: k, nome: PCLD_TIPOS[k], visivel: r.docTiposVisiveis.indexOf(k) >= 0, recomendado: PCLD_TIPOS_PADRAO.indexOf(k) >= 0 }; }) };
++}
++
++// ------------------------------------------------------------
++// BÁSICOS
++// ------------------------------------------------------------
++function PClD_abaDoc_() { return (SGO_CFG && SGO_CFG.SHEETS && SGO_CFG.SHEETS.DOC_DOCUMENTOS) || 'DOC_DOCUMENTOS'; }
++function PClD_abaEq_() { return (SGO_CFG && SGO_CFG.SHEETS && SGO_CFG.SHEETS.CAD_EQUIPAMENTOS) || 'CAD_EQUIPAMENTOS'; }
++/** Colunas da marca do portal em DOC_DOCUMENTOS: garantidas antes da primeira gravação (por acréscimo; nada é apagado). */
++function PClD_garantirColunas_() {
++  var cache = null;
++  try { cache = CacheService.getScriptCache(); if (cache.get('PCLD_DOC_COLS_V1')) return; } catch (e) { cache = null; }
++  if (typeof CertCal_garantirColuna_ !== 'function') return;
++  PCLD_COLUNAS_DOC.forEach(function (c) { CertCal_garantirColuna_(PClD_abaDoc_(), c); });
++  if (typeof CertCal_forcarColunaTexto_ === 'function') CertCal_forcarColunaTexto_(PClD_abaDoc_(), 'PORTAL_EM');
++  try { if (cache) cache.put('PCLD_DOC_COLS_V1', '1', 21600); } catch (e) {}
++}
++function PClD_unidadesNomes_(cid) { var m = {}; PCl_ler_(SGO_CFG.SHEETS.CAD_UNIDADES || 'CAD_UNIDADES').forEach(function (u) { if (PCl_s_(u.CLIENTE_ID) === cid) m[PCl_s_(u.ID)] = PCl_s_(u.NOME_UNIDADE) || 'Unidade'; }); return m; }
++function PClD_rotuloEq_(e) {
++  if (!e) return '';
++  return [PCl_s_(e.TAG), PCl_s_(e.TIPO), PCl_s_(e.MODELO), PCl_s_(e.SERIE) ? 'série ' + PCl_s_(e.SERIE) : ''].filter(Boolean).join(' · ') || 'Equipamento sem identificação';
++}
++function PClD_semAcento_(v) { return PCl_s_(v).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase(); }
++
++/** Quem chama e a situação de acesso. SUSPENSO e SEM_ACESSO: nada é lido nem aberto (T3.9). */
++function PClD_ctx_(eu) {
++  var esc = PCl_escopo_(eu.id);
++  if (!esc) throw PCl_erro_('CONTA', 'Não foi possível abrir: a sua conta de cliente não foi encontrada. O que fazer: saia e entre de novo; se continuar, fale com a Metrolabs.');
++  var x = { eu: eu, esc: esc, cid: esc.clienteId, sit: PCl_situacaoAcesso_(esc.clienteId, '', ''), ctx: typeof PClA_ctxSessao_ === 'function' ? PClA_ctxSessao_(eu) : {}, hoje: PCl_hoje_() };
++  if (!x.sit.podeEntrar) {
++    PCl_registrarAcesso_(PClA_quem_(esc), 'ACESSO_RECUSADO', 'Documentos, equipamentos e vencimentos com o acesso ' + x.sit.situacao, { tipo: 'CLIENTE', id: esc.clienteId }, x.ctx);
++    throw PCl_erro_('SEM_ACESSO', 'Não foi possível abrir: ' + x.sit.textoCliente);
++  }
++  if (!esc.pode.documentos) throw PCl_erro_('PAPEL', PClA_msgPapel_(esc, 'ver os documentos'));
++  return x;
++}
++
++// ------------------------------------------------------------
++// DOCUMENTOS (reaproveita o índice de "Documentos em pastas")
++// ------------------------------------------------------------
++function PClD_mapaOs_() { var m = {}; PCl_ler_('ATEC_OS').forEach(function (o) { m[PCl_s_(o.NUMERO)] = o; }); return m; }
++/** Tipo do documento no portal (PCLD_TIPOS), pelo módulo que gerou, pela pasta e, para a O.S., pelo tipo da O.S. (ronda ou atendimento). */
++function PClD_tipo_(it, osPorNumero) {
++  var mod = PCl_up_(it.modulo), o = it.origens || {}, txt = PClD_semAcento_([it.tipo, it.tipoBruto, it.titulo, it.nome].join(' '));
++  if (o.LAVCIC || mod === 'CICLO_LAVADORA') return 'CICLO_LAVADORA';
++  if (mod === 'CRONOGRAMA_EXECUCAO') return 'CRONOGRAMA';
++  if (o.ATEC_OS || o.ATEC_RELATORIOS || mod === 'ORDEM_SERVICO') {
++    var os = osPorNumero[PCl_s_(it.numero)];
++    return os && (/RONDA/.test(PCl_up_(os.TIPO_CODIGO)) || PCl_s_(os.RONDA_PLANO_ID)) ? 'RONDA' : 'ATENDIMENTO';
++  }
++  if (it.pasta === 'OS') return /RONDA/.test(txt) ? 'RONDA' : 'ATENDIMENTO';
++  if (it.pasta === 'MANUTENCAO' && /CRONOGRAMA/.test(txt)) return 'CRONOGRAMA';
++  return PCLD_PASTA_TIPO[it.pasta] || 'OUTROS';
++}
++/** O documento aparece no portal? OCULTO nunca; VISIVEL sempre (liberado um a um); senão, a lista de tipos. */
++function PClD_noPortal_(it, tipo, regras) {
++  if (it.portal === 'OCULTO') return false;
++  if (it.portal === 'VISIVEL') return true;
++  return regras.docTiposVisiveis.indexOf(tipo) >= 0;
++}
++/**
++ * Documentos que a pessoa vê, já agrupados por versão (a mais nova na frente, as anteriores guardadas). Usa o leitor de "Documentos
++ * em pastas" da conta (cliente da conta, unidades da pessoa, só emitido, sem pasta interna e sem versão interna) + tipos visíveis + PORTAL.
++ */
++function PClD_base_(x) {
++  var idx = Docs_indice_({}), cfg = idx.cfg, cad = idx.cad, hoje = PCl_hoje_();
++  var v = Docs_leitor_(x.eu.sessao, 'portal'); v.via = 'portal';
++  var regras = PClD_regras_(), osN = PClD_mapaOs_(), lista = [];
++  idx.itens.forEach(function (it) {
++    if (it.clienteId !== x.cid || !Docs_visivel_(it, v, cfg)) return;
++    var tipo = PClD_tipo_(it, osN);
++    if (!PClD_noPortal_(it, tipo, regras)) return;
++    var t = Docs_itemTela_(it, v, cad, hoje, cfg);
++    t.tipoPortal = tipo; t.arquivoInterno = it.arquivoId;
++    lista.push(t);
++  });
++  var docs = [];
++  Docs_agruparLista_(lista, cfg).forEach(function (p) { p.itens.forEach(function (i) { docs.push(i); }); });
++  docs.sort(function (a, b) { return PCl_s_(b.emitidoIso).localeCompare(PCl_s_(a.emitidoIso)); });
++  return { docs: docs, cad: cad, idx: idx, regras: regras };
++}
++/** Projeção pública do documento (item 4.4): sem pasta, sem link direto do Drive, sem quem registrou, sem código de arquivo solto. */
++function PCl_docPortalPublico_(t, comAnteriores) {
++  var o = { k: PCl_s_(t.k), tipo: t.tipoPortal, tipoNome: PCLD_TIPOS[t.tipoPortal] || 'Documento', titulo: PCl_s_(t.titulo), numero: PCl_s_(t.numero), revisao: PCl_s_(t.revisao),
++    unidadeId: PCl_s_(t.unidadeId), unidade: PCl_s_(t.unidadeNome), equipamentoId: PCl_s_(t.equipamentoId), equipamento: PCl_s_(t.equipamentoNome),
++    emitidoIso: PCl_s_(t.emitidoIso), emitido: PCl_s_(t.emitido), validadeIso: PCl_s_(t.validadeIso), validade: PCl_s_(t.validade),
++    venc: t.venc ? { s: t.venc.s, dias: t.venc.dias, texto: t.venc.texto } : null, substituido: t.situacao === 'SUBSTITUIDO',
++    situacao: t.situacao === 'SUBSTITUIDO' ? 'Versão anterior (substituída por uma revisão mais nova)' : '', podeAbrir: !!t.podeAbrir, semAbrirTexto: PCl_s_(t.semAbrirTexto) };
++  if (comAnteriores) o.anteriores = (t.anteriores || []).map(function (a) { return PCl_docPortalPublico_(a, false); });
++  return o;
++}
++/** Tela Documentos (4.1.5). d: { unidadeId, equipamentoId, tipo, periodo (dias), venceAte (aaaa-mm-dd), busca } */
++function PCl_documentos_(x, d) {
++  d = d || {};
++  var b = PClD_base_(x), un = PCl_s_(d.unidadeId), eqId = PCl_s_(d.equipamentoId), tipo = PCl_up_(d.tipo), q = PClD_semAcento_(d.busca);
++  if (un && !PCl_escopoUnidade_(x.esc, un)) un = '__fora__';
++  var dias = Math.round(Number(d.periodo)) || 0, de = dias > 0 ? PCl_diaMais_(x.hoje, -dias) : '', vence = PCl_dia_(d.venceAte);
++  var eqs = b.cad.mE || {};
++  var l = b.docs.filter(function (t) {
++    if (un && t.unidadeId !== un) return false;
++    if (eqId && t.equipamentoId !== eqId) return false;
++    if (tipo && t.tipoPortal !== tipo) return false;
++    if (de && PCl_s_(t.emitidoIso) < de) return false;
++    if (vence && !(t.validadeIso && t.validadeIso <= vence)) return false;
++    if (q) {
++      var e = eqs[t.equipamentoId] || {};
++      if (PClD_semAcento_([t.titulo, t.numero, t.equipamentoNome, t.unidadeNome, e.TAG, e.SERIE, e.PATRIMONIO, e.MODELO].join(' ')).indexOf(q) < 0) return false;
++    }
++    return true;
++  });
++  var nomesUn = PClD_unidadesNomes_(x.cid);
++  var equipamentos = PCl_ler_(PClD_abaEq_()).filter(function (e) { return PCl_s_(e.CLIENTE_ID) === x.cid && PCl_escopoUnidade_(x.esc, e.UNIDADE_ID); })
++    .map(function (e) { return { id: PCl_s_(e.ID), unidadeId: PCl_s_(e.UNIDADE_ID), nome: PClD_rotuloEq_(e) }; }).sort(function (a, c) { return a.nome.localeCompare(c.nome, 'pt-BR'); });
++  var presentes = {}; b.docs.forEach(function (t) { presentes[t.tipoPortal] = true; });
++  return { documentos: l.slice(0, 400).map(function (t) { return PCl_docPortalPublico_(t, true); }), total: l.length, todos: b.docs.length,
++    unidades: Object.keys(nomesUn).filter(function (u) { return PCl_escopoUnidade_(x.esc, u); }).map(function (u) { return { id: u, nome: nomesUn[u] }; }).sort(function (a, c) { return a.nome.localeCompare(c.nome, 'pt-BR'); }),
++    equipamentos: equipamentos, tipos: Object.keys(PCLD_TIPOS).filter(function (k) { return presentes[k] || b.regras.docTiposVisiveis.indexOf(k) >= 0; }).map(function (k) { return { codigo: k, nome: PCLD_TIPOS[k] }; }),
++    acesso: PClD_acessoTela_(x) };
++}
++function PClD_acessoTela_(x) {
++  return { situacao: x.sit.situacao, faixa: x.sit.provisoria ? '' : x.sit.textoCliente, papel: x.esc.papel, papelNome: x.esc.papelNome, podeConversar: !!x.esc.pode.conversar,
++    unidades: x.esc.todas ? ['Todas as unidades'] : x.esc.unidades.map(function (u) { return PClD_unidadesNomes_(x.cid)[u] || ''; }).filter(Boolean) };
++}
++/**
++ * Abrir um documento (T3.7): confere que ele está na lista da pessoa, passa pela trava da rota /arquivos (PortalCliente_arquivoPermitido_)
++ * e grava DOCUMENTO_ABERTO em PCL_ACESSOS. Documento de outro cliente, de outra unidade, oculto ou inexistente: a mesma resposta.
++ */
++function PClD_abrir_(x, d) {
++  var k = PCl_s_(d && d.k), b = PClD_base_(x), alvo = null;
++  b.docs.forEach(function (t) { if (t.k === k) alvo = t; (t.anteriores || []).forEach(function (a) { if (a.k === k) alvo = a; }); });
++  if (!alvo) {
++    var existe = !!k && b.idx.itens.some(function (it) { return it.origem + ':' + (it.arquivoId || it.chave) === k; });
++    if (existe) PClA_recusaEscopo_(x.esc, 'DOCUMENTO', k, x.ctx);
++    throw PCl_erro_('NAO_ENCONTRADO', PCL_MSG_NAO_ENCONTRADO);
++  }
++  var semArquivo = 'O arquivo deste documento ainda não está liberado para abrir pelo Portal. Por quê: o documento está registrado, mas o arquivo dele não está ligado a um registro que o Portal reconhece. O que fazer: peça a cópia à Metrolabs pela conversa geral.';
++  if (!alvo.podeAbrir || !alvo.arquivoInterno) throw PCl_erro_('SEM_ARQUIVO', alvo.semAbrirTexto || semArquivo);
++  if (!PortalCliente_arquivoPermitido_(x.eu.sid, alvo.arquivoInterno)) throw PCl_erro_('SEM_ARQUIVO', semArquivo);
++  PCl_registrarAcesso_(PClA_quem_(x.esc), 'DOCUMENTO_ABERTO', [PCLD_TIPOS[alvo.tipoPortal] || 'Documento', alvo.titulo, alvo.numero ? 'nº ' + alvo.numero : ''].filter(Boolean).join(' · '),
++    { tipo: 'DOCUMENTO', id: alvo.arquivoInterno }, x.ctx);
++  return { url: '/arquivos/' + alvo.arquivoInterno, titulo: PCl_s_(alvo.titulo), message: 'Documento aberto em outra aba.' };
++}
++
++// ------------------------------------------------------------
++// VENCIMENTOS E FAROL (o mesmo motor da central de pendências)
++// ------------------------------------------------------------
++function PClD_categoria_(c) {
++  if (c.cat === 'CAL' || c.cat === 'QUAL' || c.cat === 'NR13') return c.cat;
++  return /MANUTEN|PREVENTIV|CORRETIV/.test(PClD_semAcento_(c.tipoDoc)) ? 'MAN' : 'DOC';
++}
++function PClD_situacaoVenc_(dias, vencBr) {
++  if (dias < 0) return { s: 'vencido', texto: 'Vencido desde ' + vencBr + ' (há ' + (-dias) + (dias === -1 ? ' dia)' : ' dias)') };
++  if (dias === 0) return { s: 'vencendo', texto: 'Vence hoje (' + vencBr + ')' };
++  if (dias <= PCLD_DIAS_FAROL) return { s: 'vencendo', texto: 'Vence em ' + dias + (dias === 1 ? ' dia' : ' dias') + ' (' + vencBr + ')' };
++  return { s: 'em_dia', texto: 'Em dia até ' + vencBr };
++}
++/**
++ * Vencimentos do cliente pelo motor da central (Pend_vencimentosBase_): por equipamento e categoria vale o vencimento mais recente.
++ * Só o cliente da conta e as unidades da pessoa; documento oculto no portal fica de fora. Sem unidade conhecida, só para quem vê todas.
++ * Devolve [{ chave, categoria, categoriaNome, equipamentoId, unidadeId, vencIso, venc, dias, situacao, situacaoTexto, origem }].
++ */
++function PCl_vencimentos_(cid, esc, hojeIso) {
++  if (typeof Pend_vencimentosBase_ !== 'function') return [];
++  var hoje = PCl_dia_(hojeIso) || PCl_hoje_();
++  var base = typeof Pend_comMemoria_ === 'function' ? Pend_comMemoria_(function () { return Pend_vencimentosBase_(); }) : Pend_vencimentosBase_();
++  return base.filter(function (c) { return PCl_s_(c.clienteId) === cid && !c.ocultoCliente && (!esc || esc.todas || PCl_escopoUnidade_(esc, c.unidadeId)); }).map(function (c) {
++    var cat = PClD_categoria_(c), dias = PCl_diasEntre_(hoje, c.venc), vb = PCl_br_(c.venc), s = PClD_situacaoVenc_(dias, vb);
++    return { chave: c.chave, categoria: cat, categoriaNome: PCLD_CAT_VENC[cat], equipamentoId: PCl_s_(c.equipId), unidadeId: PCl_s_(c.unidadeId), vencIso: c.venc, venc: vb, dias: dias,
++      situacao: s.s, situacaoTexto: s.texto, origem: [c.tipoDoc || 'Documento', c.numero ? 'nº ' + c.numero : '', c.nomeArquivo].filter(Boolean).join(' · ') };
++  });
++}
++/** Farol por equipamento e categoria: { eqId: { CAL: vencimento, QUAL, NR13, MAN } }. Na manutenção, com vários tipos, vale o mais urgente. */
++function PClD_farois_(venc) {
++  var por = {};
++  venc.forEach(function (v) {
++    if (!v.equipamentoId || !PCLD_CATEGORIAS[v.categoria]) return;
++    var m = por[v.equipamentoId] || (por[v.equipamentoId] = {}), a = m[v.categoria];
++    if (!a || v.vencIso < a.vencIso) m[v.categoria] = v;
++  });
++  return por;
++}
++function PClD_farolEq_(m) {
++  return Object.keys(PCLD_CATEGORIAS).map(function (cat) {
++    var v = m && m[cat];
++    return v ? { categoria: cat, nome: PCLD_CATEGORIAS[cat], s: v.situacao, texto: v.situacaoTexto, venc: v.venc, dias: v.dias, origem: v.origem }
++      : { categoria: cat, nome: PCLD_CATEGORIAS[cat], s: 'sem_registro', texto: 'Sem registro', venc: '', dias: null, origem: '' };
++  });
++}
++
++// ------------------------------------------------------------
++// EQUIPAMENTOS (4.1.6)
++// ------------------------------------------------------------
++function PClD_eqDoEscopo_(x) { return PCl_ler_(PClD_abaEq_()).filter(function (e) { return PCl_s_(e.CLIENTE_ID) === x.cid && PCl_escopoUnidade_(x.esc, e.UNIDADE_ID); }); }
++/** Equipamento na projeção pública (item 4.4), com nomes de campo da tela. */
++function PClD_eqTela_(e, nomesUn, farol) {
++  var p = PCl_eqPublico_(e);
++  return { id: PCl_s_(p.ID), tipo: PCl_s_(p.TIPO), fabricante: PCl_s_(p.FABRICANTE), modelo: PCl_s_(p.MODELO), serie: PCl_s_(p.SERIE), tag: PCl_s_(p.TAG), patrimonio: PCl_s_(p.PATRIMONIO),
++    setor: PCl_s_(p.SETOR), unidadeId: PCl_s_(p.UNIDADE_ID), unidade: nomesUn[PCl_s_(p.UNIDADE_ID)] || '', ativo: PCl_up_(p.STATUS || 'ATIVO') === 'ATIVO',
++    situacao: PCl_up_(p.STATUS || 'ATIVO') === 'ATIVO' ? 'Ativo' : 'Inativo', instalacao: PCl_br_(PCl_dia_(p.DATA_INSTALACAO)), anoFabricacao: PCl_s_(p.ANO_FABRICACAO),
++    capacidade: PCl_s_(p.CAPACIDADE), rotulo: PClD_rotuloEq_(e), farol: farol || PClD_farolEq_(null) };
++}
++/** Lista (4.1.6). d: { unidadeId, farol (vencido|vencendo|em_dia|sem_registro), busca } */
++function PClD_equipamentos_(x, d) {
++  d = d || {};
++  var nomesUn = PClD_unidadesNomes_(x.cid), farois = PClD_farois_(PCl_vencimentos_(x.cid, x.esc, x.hoje));
++  var un = PCl_s_(d.unidadeId), f = PCl_s_(d.farol), q = PClD_semAcento_(d.busca);
++  if (un && !PCl_escopoUnidade_(x.esc, un)) un = '__fora__';
++  var todos = PClD_eqDoEscopo_(x).map(function (e) { return PClD_eqTela_(e, nomesUn, PClD_farolEq_(farois[PCl_s_(e.ID)])); });
++  var l = todos.filter(function (e) {
++    if (un && e.unidadeId !== un) return false;
++    if (f && !e.farol.some(function (c) { return c.s === f; })) return false;
++    if (q && PClD_semAcento_([e.tag, e.serie, e.modelo, e.setor, e.tipo, e.patrimonio, e.fabricante].join(' ')).indexOf(q) < 0) return false;
++    return true;
++  }).sort(function (a, b) { return (b.ativo - a.ativo) || a.rotulo.localeCompare(b.rotulo, 'pt-BR'); });
++  var resumo = {}; Object.keys(PCLD_FAROL).forEach(function (s) { resumo[s] = 0; });
++  todos.forEach(function (e) { e.farol.forEach(function (c) { if (c.s !== 'sem_registro') resumo[c.s]++; }); });
++  return { equipamentos: l.slice(0, 400), total: l.length, resumo: resumo, farois: PCLD_FAROL, categorias: PCLD_CATEGORIAS,
++    unidades: Object.keys(nomesUn).filter(function (u) { return PCl_escopoUnidade_(x.esc, u); }).map(function (u) { return { id: u, nome: nomesUn[u] }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }),
++    acesso: PClD_acessoTela_(x) };
++}
++/** Histórico do equipamento em modo cliente (T3.5): só atendimentos encerrados; sem técnico, sem link de outro sistema e sem o acervo interno. */
++function PClD_historico_(x, eqId) {
++  if (typeof SGO_Atendimentos_doEquipamento_ !== 'function') return [];
++  var l = [];
++  try { l = SGO_Atendimentos_doEquipamento_(eqId, { limite: 80, sessao: x.eu.sessao }) || []; } catch (e) { l = []; }
++  return l.filter(function (a) { return a && a.finalizada === true; }).map(function (a) {
++    return { data: PCl_s_(a.dataBr) || PCl_br_(a.data), dataIso: PCl_dia_(a.data), tipo: PCl_s_(a.tipo) || 'Atendimento técnico', numero: PCl_s_(a.numero), relato: PCl_txt_(a.relato, 1200) };
++  }).slice(0, 60);
++}
++/** Ficha (4.1.6): dados públicos, farol, documentos, histórico e chamados. Fora do escopo = a mesma resposta de inexistente. */
++function PClD_equipamento_(x, d) {
++  var id = PCl_s_(d && d.id), e = id ? PCl_porId_(PClD_abaEq_(), id) : null;
++  if (!e || PCl_s_(e.CLIENTE_ID) !== x.cid || !PCl_escopoUnidade_(x.esc, e.UNIDADE_ID)) {
++    if (e) PClA_recusaEscopo_(x.esc, 'EQUIPAMENTO', id, x.ctx);
++    throw PCl_erro_('NAO_ENCONTRADO', PCL_MSG_NAO_ENCONTRADO);
++  }
++  var nomesUn = PClD_unidadesNomes_(x.cid), venc = PCl_vencimentos_(x.cid, x.esc, x.hoje), farois = PClD_farois_(venc);
++  var eq = PClD_eqTela_(e, nomesUn, PClD_farolEq_(farois[id]));
++  var docs = PClD_base_(x).docs.filter(function (t) { return t.equipamentoId === id; }).map(function (t) { return PCl_docPortalPublico_(t, true); });
++  var chamados = [];
++  if (typeof PClCh_itensDoCliente_ === 'function') {
++    try { chamados = PClCh_itensDoCliente_(x).filter(function (it) { return it.equipamentoId === id; }).sort(function (a, b) { return PCl_s_(b.abertoIso).localeCompare(PCl_s_(a.abertoIso)); })
++      .slice(0, 40).map(function (it) { return { tipo: it.tipo, id: it.id, numero: it.numero, etapa: it.etapa, etapaNome: it.etapaNome, abertoEm: it.abertoEm, aberto: !!it.aberto }; }); } catch (eC) { chamados = []; }
++  }
++  var pa = typeof PClCh_podeAbrir_ === 'function' ? PClCh_podeAbrir_(x, eq.unidadeId) : { pode: false, avulso: false, motivo: '' };
++  return { equipamento: eq, vencimentos: venc.filter(function (v) { return v.equipamentoId === id; }).sort(function (a, b) { return a.dias - b.dias; }),
++    documentos: docs, historico: PClD_historico_(x, id), chamados: chamados,
++    pode: { abrirChamado: !!pa.pode && eq.ativo, avulso: !!pa.avulso, motivoAbrir: pa.motivo || '', conversar: !!x.esc.pode.conversar },
++    correcaoTexto: 'Correção de cadastro do equipamento ' + eq.rotulo + (eq.unidade ? ' (' + eq.unidade + ')' : '') + ': ', acesso: PClD_acessoTela_(x) };
++}
++
++// ------------------------------------------------------------
++// VENCIMENTOS (4.1.7, aba Vencimentos)
++// ------------------------------------------------------------
++/** d: { unidadeId, categoria, janela: 30 | 60 | 90 | 'todos' } — vencidos sempre aparecem; a janela limita os que ainda vão vencer. */
++function PClD_vencimentosTela_(x, d) {
++  d = d || {};
++  var nomesUn = PClD_unidadesNomes_(x.cid), eqs = {}; PClD_eqDoEscopo_(x).forEach(function (e) { eqs[PCl_s_(e.ID)] = e; });
++  var un = PCl_s_(d.unidadeId), cat = PCl_up_(d.categoria), j = PCl_s_(d.janela) === 'todos' ? null : (Math.round(Number(d.janela)) || 90);
++  if (un && !PCl_escopoUnidade_(x.esc, un)) un = '__fora__';
++  var l = PCl_vencimentos_(x.cid, x.esc, x.hoje).filter(function (v) {
++    if (un && v.unidadeId !== un) return false;
++    if (cat && v.categoria !== cat) return false;
++    if (j !== null && v.dias > j) return false;
++    return true;
++  }).sort(function (a, b) { return a.dias - b.dias; }).map(function (v) {
++    return Object.assign({}, v, { equipamento: v.equipamentoId ? PClD_rotuloEq_(eqs[v.equipamentoId]) : 'Documento da unidade', unidade: nomesUn[v.unidadeId] || '' });
++  });
++  return { vencimentos: l.slice(0, 500), total: l.length, categorias: PCLD_CAT_VENC, hojeBr: PCl_br_(x.hoje),
++    unidades: Object.keys(nomesUn).filter(function (u) { return PCl_escopoUnidade_(x.esc, u); }).map(function (u) { return { id: u, nome: nomesUn[u] }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }),
++    acesso: PClD_acessoTela_(x) };
++}
++
++// ------------------------------------------------------------
++// CRONOGRAMA (4.1.7, aba Cronograma): Agendado × Previsto × Documento, sempre separados
++// ------------------------------------------------------------
++function PClD_brHora_(v) { var iso = typeof Docs_iso_ === 'function' ? Docs_iso_(v) : PCl_s_(v); return PCl_brHora_(iso); }
++/** Próxima data da periodicidade a partir do início do contrato (primeira em hoje ou depois). '' quando passa do fim do contrato. */
++function PClD_proximaJanela_(inicio, meses, hoje, fim) {
++  if (!inicio || !meses) return '';
++  var d = inicio, n = 0;
++  while (d < hoje && n < 600) { n++; d = PCl_mesesMais_(inicio, meses * n); }
++  return !d || (fim && d > fim) ? '' : d;
++}
++/** d: { unidadeId } */
++function PCl_cronograma_(x, d) {
++  d = d || {};
++  var nomesUn = PClD_unidadesNomes_(x.cid), un = PCl_s_(d.unidadeId), hoje = x.hoje;
++  if (un && !PCl_escopoUnidade_(x.esc, un)) un = '__fora__';
++  var naUn = function (u) { return PCl_escopoUnidade_(x.esc, u) && (!un || PCl_s_(u) === un); };
++  var eqs = {}; PClD_eqDoEscopo_(x).forEach(function (e) { eqs[PCl_s_(e.ID)] = e; });
++  // 1) Agendado: O.S. (inclusive ronda e visita de chamado) com data marcada, de hoje em diante ou em andamento
++  var agendado = PCl_ler_('ATEC_OS').filter(function (o) {
++    if (PCl_s_(o.CLIENTE_ID) !== x.cid || PCl_s_(o.EXCLUIDO_EM) || !naUn(o.UNIDADE_ID)) return false;
++    var s = PCl_up_(o.SITUACAO), dia = typeof Docs_dia_ === 'function' ? Docs_dia_(o.AGENDADO_PARA) : PCl_dia_(o.AGENDADO_PARA);
++    if (PCLD_OS_AGENDADAS.indexOf(s) < 0 || !dia) return false;
++    return s !== 'AGENDADA' || dia >= hoje;
++  }).map(function (o) {
++    var ronda = /RONDA/.test(PCl_up_(o.TIPO_CODIGO)) || !!PCl_s_(o.RONDA_PLANO_ID);
++    var iso = typeof Docs_iso_ === 'function' ? Docs_iso_(o.AGENDADO_PARA) : PCl_s_(o.AGENDADO_PARA);
++    return { quandoIso: iso, quando: PClD_brHora_(o.AGENDADO_PARA), tipo: ronda ? 'Ronda de engenharia clínica' : PCl_s_(o.CHAMADO_NUMERO) ? 'Visita do chamado ' + PCl_s_(o.CHAMADO_NUMERO) : 'Ordem de serviço',
++      servico: PCl_s_(o.TIPO_NOME), os: PCl_s_(o.NUMERO), situacao: (typeof AST_OS_SITUACOES !== 'undefined' && AST_OS_SITUACOES[PCl_up_(o.SITUACAO)]) || PCl_s_(o.SITUACAO),
++      equipamento: eqs[PCl_s_(o.EQUIPAMENTO_ID)] ? PClD_rotuloEq_(eqs[PCl_s_(o.EQUIPAMENTO_ID)]) : (ronda ? 'Setores da unidade' : PCl_s_(o.EQUIPAMENTO_TEXTO)), unidade: nomesUn[PCl_s_(o.UNIDADE_ID)] || '' };
++  }).sort(function (a, b) { return a.quandoIso.localeCompare(b.quandoIso); });
++  // 2) Previsto: (a) validade dos documentos (o mesmo motor dos vencimentos); (b) periodicidade dos serviços do contrato
++  var contratos = (typeof PCl_contratosDoCliente_ === 'function' ? PCl_contratosDoCliente_(x.cid) : []).filter(function (k) { return k.fonte === 'CLI' && k.situacao === 'VIGENTE' && k.fim && k.fim >= hoje && k.inicio; });
++  var servCat = { CALIBRACAO: 'CAL', QUALIFICACAO: 'QUAL', NR13: 'NR13', MANUTENCAO_PREVENTIVA: 'MAN' };
++  var contratoDe = function (cat, u) {
++    var k = contratos.filter(function (c) { return PCl_cobreUnidade_(c, u) && (c.servicos || []).some(function (s) { return servCat[s.servico] === cat && PCLD_MESES[s.periodicidade]; }); })[0];
++    if (!k) return '';
++    var s = k.servicos.filter(function (z) { return servCat[z.servico] === cat; })[0];
++    return 'Contrato nº ' + k.numero + ': ' + (PCL_PERIODICIDADES[s.periodicidade] || '').toLowerCase();
++  };
++  var limite = PCl_diaMais_(hoje, 365), previsto = [];
++  PCl_vencimentos_(x.cid, x.esc, hoje).forEach(function (v) {
++    if (!PCLD_CATEGORIAS[v.categoria] || !v.equipamentoId || v.vencIso > limite || (un && v.unidadeId !== un)) return;
++    previsto.push({ fonte: 'VALIDADE', quandoIso: v.vencIso, quando: v.venc, servico: 'Próxima ' + ({ CAL: 'calibração', QUAL: 'qualificação', NR13: 'inspeção NR-13', MAN: 'manutenção' })[v.categoria],
++      equipamento: PClD_rotuloEq_(eqs[v.equipamentoId]), unidade: nomesUn[v.unidadeId] || '', base: 'Validade do documento: ' + v.origem, contrato: contratoDe(v.categoria, v.unidadeId),
++      atrasado: v.dias < 0, situacaoTexto: v.situacaoTexto });
++  });
++  contratos.forEach(function (k) {
++    var unidades = (k.unidades && k.unidades.length ? k.unidades.map(PCl_s_) : Object.keys(nomesUn)).filter(naUn);
++    if (!unidades.length) return;
++    (k.servicos || []).forEach(function (s) {
++      var meses = PCLD_MESES[s.periodicidade]; if (!meses) return;
++      var prox = PClD_proximaJanela_(k.inicio, meses, hoje, k.fim); if (!prox || prox > limite) return;
++      previsto.push({ fonte: 'CONTRATO', quandoIso: prox, quando: PCl_br_(prox), servico: (PCL_SERVICOS[s.servico] || s.servico) + (s.servico === 'OUTRO' && s.descricao ? ' (' + s.descricao + ')' : ''),
++        equipamento: 'Equipamentos cobertos pelo contrato', unidade: unidades.length === Object.keys(nomesUn).length && !(k.unidades || []).length ? 'Todas as unidades' : unidades.map(function (u) { return nomesUn[u] || ''; }).filter(Boolean).join(', '),
++        base: 'Periodicidade ' + (PCL_PERIODICIDADES[s.periodicidade] || '').toLowerCase() + ' do contrato nº ' + k.numero + ', contada a partir do início (' + PCl_br_(k.inicio) + ')', contrato: 'Contrato nº ' + k.numero, atrasado: false, situacaoTexto: '' });
++    });
++  });
++  previsto.sort(function (a, b) { return a.quandoIso.localeCompare(b.quandoIso); });
++  // 3) Documento: o PDF do Cronograma de execução emitido (se o tipo estiver visível ou o documento liberado)
++  var documento = PClD_base_(x).docs.filter(function (t) { return t.tipoPortal === 'CRONOGRAMA' && (!un || !t.unidadeId || t.unidadeId === un); }).map(function (t) { return PCl_docPortalPublico_(t, true); });
++  return { agendado: agendado.slice(0, 200), previsto: previsto.slice(0, 400), documento: documento, explicacao: PCLD_EXPLICACAO_PREVISTO, hojeBr: PCl_br_(hoje),
++    unidades: Object.keys(nomesUn).filter(function (u) { return PCl_escopoUnidade_(x.esc, u); }).map(function (u) { return { id: u, nome: nomesUn[u] }; }).sort(function (a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); }),
++    acesso: PClD_acessoTela_(x) };
++}
++
++// ------------------------------------------------------------
++// ENTRADA DA CONTA DE CLIENTE (PortalCliente_api)
++// ------------------------------------------------------------
++var PCLD_ACOES_CLIENTE = { documentos: 1, abrirDocumento: 1, equipamentos: 1, equipamento: 1, vencimentos: 1, cronograma: 1 };
++function PClD_acaoCliente_(eu, acao, d) {
++  d = d || {};
++  var x = PClD_ctx_(eu);
++  if (acao === 'documentos') return PCl_documentos_(x, d);
++  if (acao === 'abrirDocumento') return PClD_abrir_(x, d);
++  if (acao === 'equipamentos') return PClD_equipamentos_(x, d);
++  if (acao === 'equipamento') return PClD_equipamento_(x, d);
++  if (acao === 'vencimentos') return PClD_vencimentosTela_(x, d);
++  if (acao === 'cronograma') return PCl_cronograma_(x, d);
++  throw PCl_erro_('ACAO', 'Ação desconhecida do Portal do cliente. Atualize a página (F5).');
++}
++
++// ------------------------------------------------------------
++// LADO DA METROLABS: "Documentos no portal" (caixa PORTAL_CLIENTE_DOC_LIBERAR)
++// ------------------------------------------------------------
++var PCLD_ACOES_INTERNAS = { documentosPortal: 1, portalDocumento: 1 };
++function PClD_acaoInterna_(eu, acao, d) {
++  if (acao === 'documentosPortal') return PClD_documentosPortal_(eu, d || {});
++  if (acao === 'portalDocumento') return PClD_portalDocumento_(eu, d || {});
++  throw PCl_erro_('ACAO', 'Ação desconhecida do Portal do cliente. Atualize a página (F5).');
++}
++/** Por que o documento não chega ao cliente, antes da marca do portal (minuta, inativo, sem arquivo, interno, suspenso). '' = chegaria. */
++function PClD_porqueNao_(it, cfg) {
++  var p = cfg.pastas[it.pasta] || cfg.pastas.OUTROS;
++  if (p.interna || !p.clienteVe) return 'pasta interna (contratos e propostas)';
++  if (!it.publico) return 'versão interna';
++  if (it.situacao === 'MINUTA') return 'minuta aguardando aprovação';
++  if (it.situacao === 'INATIVO') return 'inativo no Arquivo de documentos';
++  if (it.situacao === 'SUSPENSO') return 'suspenso (PGT/POP a refazer)';
++  if (!it.arquivoId) return 'sem arquivo';
++  return '';
++}
++/** d: { clienteId, filtro: 'todos'|'aparece'|'nao'|'oculto', busca } */
++function PClD_documentosPortal_(eu, d) {
++  var cid = PCl_s_(d.clienteId), cli = cid ? PCl_cliente_(cid) : null;
++  if (!cli) throw PCl_erro_('CLIENTE', 'Escolha o cliente: busque pelo nome ou pelo CNPJ e toque no cliente da lista.');
++  var idx = Docs_indice_({}), cfg = idx.cfg, cad = idx.cad, regras = PClD_regras_(), osN = PClD_mapaOs_(), q = PClD_semAcento_(d.busca), f = PCl_s_(d.filtro) || 'todos';
++  var docRows = {}; PCl_ler_(PClD_abaDoc_()).forEach(function (r) { docRows[PCl_s_(r.ID)] = r; });
++  var l = [];
++  idx.itens.forEach(function (it) {
++    if (it.clienteId !== cid || PClD_porqueNao_(it, cfg)) return;
++    var tipo = PClD_tipo_(it, osN), aparece = PClD_noPortal_(it, tipo, regras), dr = it.docDocumentoId ? docRows[it.docDocumentoId] : null;
++    var marca = it.portal || '', explic = marca === 'OCULTO' ? 'Não aparece: oculto no portal' : marca === 'VISIVEL' ? 'Aparece: liberado um a um' : aparece ? 'Aparece: o tipo está na lista' : 'Não aparece: o tipo está fora da lista';
++    if (f === 'aparece' && !aparece) return; if (f === 'nao' && aparece) return; if (f === 'oculto' && marca !== 'OCULTO') return;
++    var eq = it.equipamentoId ? cad.mE[it.equipamentoId] : null, un = it.unidadeId ? cad.mU[it.unidadeId] : null;
++    if (q && PClD_semAcento_([it.titulo, it.numero, eq && eq.TAG, eq && eq.SERIE, un && un.NOME_UNIDADE].join(' ')).indexOf(q) < 0) return;
++    l.push({ docId: PCl_s_(it.docDocumentoId), titulo: PCl_s_(it.titulo), numero: PCl_s_(it.numero), tipo: tipo, tipoNome: PCLD_TIPOS[tipo], situacao: it.situacao === 'SUBSTITUIDO' ? 'Versão anterior' : 'Vigente',
++      equipamento: eq ? PClD_rotuloEq_(eq) : '', unidade: un ? PCl_s_(un.NOME_UNIDADE) : '', emitido: PCl_br_(PCl_dia_(it.emitidoIso)), emitidoIso: PCl_dia_(it.emitidoIso),
++      aparece: aparece, marca: marca, marcaNome: PCLD_PORTAL[marca] || '', explicacao: explic, podeMarcar: !!it.docDocumentoId,
++      marcaMotivo: dr ? PCl_s_(dr.PORTAL_MOTIVO) : '', marcaPor: dr ? PCl_s_(dr.PORTAL_POR_NOME) : '', marcaEm: dr ? PCl_brHora_(PCl_s_(dr.PORTAL_EM)) : '' });
++  });
++  l.sort(function (a, b) { return b.emitidoIso.localeCompare(a.emitidoIso); });
++  return { cliente: { id: cid, nome: PCl_nomeCliente_(cli) }, documentos: l.slice(0, 400), total: l.length, tipos: PClD_regrasTela_().tipos,
++    podeMarcar: PCl_pode_(eu, 'PORTAL_CLIENTE_DOC_LIBERAR') };
++}
++/** Marca um documento do Arquivo de documentos: '' (segue a regra do tipo), OCULTO ou VISIVEL. Com motivo; nada é apagado. d: { docId, portal, motivo } */
++function PClD_portalDocumento_(eu, d) {
++  var faltam = [], id = PCl_s_(d.docId), novo = PCl_up_(d.portal), motivo = PCl_txt_(d.motivo, 500);
++  if (!Object.prototype.hasOwnProperty.call(PCLD_PORTAL, novo)) faltam.push({ campo: 'pclDpMarca', texto: 'Escolha: segue a regra do tipo, oculto no portal ou liberado um a um.' });
++  if (motivo.length < PCL_MOTIVO_MIN) faltam.push({ campo: 'pclDpMotivo', texto: 'Motivo: por que o documento muda no portal (pelo menos ' + PCL_MOTIVO_MIN + ' letras). Fica no histórico.' });
++  if (faltam.length) { var e = PCl_erro_('INCOMPLETO', 'Não foi possível gravar: ' + faltam.map(function (f) { return f.texto; }).join(' ')); e.faltam = faltam; throw e; }
++  var r = id ? SGO_DATA.getById(PClD_abaDoc_(), id) : null;
++  if (!r) throw PCl_erro_('NAO_ENCONTRADO', 'Documento não encontrado no Arquivo de documentos. Por quê: só os documentos registrados lá recebem a marca do portal. O que fazer: atualize a lista; se o documento veio de outro módulo sem registro no Arquivo, ele segue a regra do tipo.');
++  var antes = PCl_up_(r.PORTAL);
++  if (antes === novo) throw PCl_erro_('NADA', 'Nada mudou: o documento já está como «' + PCLD_PORTAL[novo] + '».');
++  PClD_garantirColunas_();
++  SGO_DATA.update(PClD_abaDoc_(), id, { PORTAL: novo, PORTAL_MOTIVO: motivo, PORTAL_POR_NOME: eu.nome, PORTAL_EM: PCl_agoraIso_() });
++  delete PCL_MEMO[PClD_abaDoc_()];
++  PCl_inserir_(PCL_ABAS.REGRAS_HIST, { CHAVE: 'DOCUMENTO_PORTAL', ANTES_JSON: JSON.stringify({ docId: id, cliente: PCl_s_(r.CLIENTE_ID), nome: PCl_s_(r.NOME_ARQUIVO), portal: antes }),
++    DEPOIS_JSON: JSON.stringify({ docId: id, portal: novo }), MOTIVO: motivo, POR_ID: eu.id, POR_NOME: eu.nome, EM: PCl_agoraIso_() });
++  try { SGO_DATA.log('PORTAL_DOCUMENTO', eu.login || eu.nome, 'Documento ' + id + ' (' + PCl_s_(r.NOME_ARQUIVO) + '): ' + (PCLD_PORTAL[antes] || antes) + ' -> ' + PCLD_PORTAL[novo] + '. Motivo: ' + motivo, 'PORTAL_CLIENTE'); } catch (eL) {}
++  try { if (typeof SGO_Pendencias_invalidar_ === 'function') SGO_Pendencias_invalidar_(); } catch (eP) {}
++  return { message: 'Gravado: «' + PCl_s_(r.NOME_ARQUIVO) + '» agora está como «' + PCLD_PORTAL[novo] + '». ' + (novo === 'OCULTO' ? 'O cliente deixa de ver e de abrir este documento em todas as telas.' : novo === 'VISIVEL' ? 'O cliente passa a ver este documento, mesmo com o tipo fora da lista.' : 'O documento segue a lista de tipos visíveis das Regras do portal.') };
++}
+diff --git a/cand15/SGO_PortalCliente_Seguranca.js b/cand16/SGO_PortalCliente_Seguranca.js
+index a1df6f0..30ca9e0 100644
+--- a/cand15/SGO_PortalCliente_Seguranca.js
++++ b/cand16/SGO_PortalCliente_Seguranca.js
+@@ -176,7 +176,8 @@ function PCl_linhaTemArquivo_(linha, colunas, id) { return colunas.some(function
+  */
+ var PCL_REGRAS_ARQUIVO = [
+   { nome: 'Arquivo de documentos', aba: 'DOC_DOCUMENTOS', colunas: ['LINK_ARQUIVO', 'ARQUIVO_ID', 'PDF_ID', 'HTML_ID', 'PDF_URL', 'LINK_PDF', 'URL'],
+-    doCliente: function (r, x) { return PCl_s_(r.CLIENTE_ID) === x.cid; }, unidade: function (r) { return PCl_s_(r.UNIDADE_ID) || (typeof PClA_unidadeDoEquip_ === 'function' ? PClA_unidadeDoEquip_(r.EQUIPAMENTO_ID) : ''); } },
++    // 18/11/2026 (etapa 3, T3.1): documento marcado OCULTO no portal não abre para o cliente
++    doCliente: function (r, x) { return PCl_s_(r.CLIENTE_ID) === x.cid && PCl_up_(r.PORTAL) !== 'OCULTO'; }, unidade: function (r) { return PCl_s_(r.UNIDADE_ID) || (typeof PClA_unidadeDoEquip_ === 'function' ? PClA_unidadeDoEquip_(r.EQUIPAMENTO_ID) : ''); } },
+   { nome: 'Relatório da O.S. encerrada', aba: 'ATEC_OS', colunas: ['RELATORIO_PDF_ID', 'RELATORIO_PDF_URL', 'RELATORIO_HTML_ID'],
+     doCliente: function (r, x) { return PCl_s_(r.CLIENTE_ID) === x.cid && PCl_up_(r.SITUACAO) === 'ENCERRADA' && !PCl_s_(r.EXCLUIDO_EM); }, unidade: function (r) { return PCl_s_(r.UNIDADE_ID); } },
+   { nome: 'Versão emitida do relatório da O.S.', aba: 'ATEC_RELATORIOS', colunas: ['PDF_ID', 'PDF_URL', 'HTML_ID'],
+@@ -235,6 +236,8 @@ function PortalCliente_arquivoPermitido_(sessionId, arquivoId) {
+     // não se descobre fica negado para ela (regra padrão de negar); para o Gestor com todas as unidades, nada muda.
+     var esc = typeof PCl_escopo_ === 'function' ? PCl_escopo_(s.userId) : null, restrito = !!(esc && !esc.todas);
+     var naUnidade = function (u) { return !restrito || PCl_escopoUnidade_(esc, u); };
++    // 18/11/2026 (etapa 3, T3.1): arquivo registrado no Arquivo de documentos com PORTAL = OCULTO não abre para o cliente, venha de que módulo vier
++    if (PCl_ler_('DOC_DOCUMENTOS').some(function (r) { return PCl_s_(r.CLIENTE_ID) === cid && PCl_up_(r.PORTAL) === 'OCULTO' && PCl_linhaTemArquivo_(r, PCL_REGRAS_ARQUIVO[0].colunas, id); })) return PCl_arquivoRecusado_(s, id, 'documento oculto no portal');
+     // módulos com regra própria (null = o arquivo não é deles)
+     if (typeof LavCic_arquivoClientePermitido_ === 'function') { var lc = LavCic_arquivoClientePermitido_(sessionId, id); if (lc !== null && lc !== undefined) return lc && naUnidade(PCl_unidadeArquivoModulo_('LAV', id)) ? true : PCl_arquivoRecusado_(s, id, lc ? 'relatório de ciclo de outra unidade' : 'relatório de ciclo de outro cliente'); }
+     if (typeof AstRd_arquivoClientePermitido_ === 'function') { var rd = AstRd_arquivoClientePermitido_(sessionId, id); if (rd !== null && rd !== undefined) return rd && naUnidade(PCl_unidadeArquivoModulo_('RONDA', id)) ? true : PCl_arquivoRecusado_(s, id, rd ? 'relatório de ronda de outra unidade' : 'relatório de ronda interno ou de outro cliente'); }
+diff --git a/cand15/SGO_QRCode.js b/cand16/SGO_QRCode.js
+index 74ac2d7..3d120a7 100644
+--- a/cand15/SGO_QRCode.js
++++ b/cand16/SGO_QRCode.js
+@@ -166,6 +166,15 @@ const SGO_QRCODE = (() => {
+         SGO_DATA.log("QRCODE_NEGADO", sessao.usuario, "Tentativa de acesso não autorizada via QR na TAG: " + SGO_UTILS.safe(eqp.TAG), "QRCODE");
+         return { success: false, message: "Acesso negado: este equipamento não pertence à sua conta." };
+       }
++      // 18/11/2026 (Portal do cliente, etapa 3): Solicitante e Consulta abrem pelo QR Code só os equipamentos das unidades liberadas para eles.
++      // Fora delas, a resposta é a mesma de um equipamento inexistente, e a tentativa fica em PCL_ACESSOS (ESCOPO_RECUSADO).
++      if (typeof PCl_escopoSessao_ === "function" && typeof PCl_escopoUnidade_ === "function") {
++        const escQr = PCl_escopoSessao_(sessionId);
++        if (escQr && !escQr.todas && !PCl_escopoUnidade_(escQr, eqp.UNIDADE_ID)) {
++          if (typeof PClA_recusaEscopo_ === "function") PClA_recusaEscopo_(escQr, "EQUIPAMENTO", equipId);
++          return { success: false, message: "Equipamento não encontrado ou sem permissão de acesso." };
++        }
++      }
+     }
+ 
+     // Se ele não é Staff Autorizado e não é CLIENTE, ele não tem como ver (ex: Perfil Comercial/Financeiro tentando ler QR Code).
+@@ -186,7 +195,8 @@ const SGO_QRCODE = (() => {
+       success: true,
+       redirectUrl: linkPasta,
+       avisoPasta: avisoPasta,
+-      equipamento: eqp
++      // 18/11/2026 (Portal do cliente, etapa 3): a conta de cliente recebe só os campos públicos do equipamento (item 4.4)
++      equipamento: perfil === "CLIENTE" && typeof PCl_eqPublico_ === "function" ? PCl_eqPublico_(eqp) : eqp
+     };
+   }
+ 
+diff --git a/cand15/SGO_QualifEquipamento.js b/cand16/SGO_QualifEquipamento.js
+index 639f49e..d16bcda 100644
+--- a/cand15/SGO_QualifEquipamento.js
++++ b/cand16/SGO_QualifEquipamento.js
+@@ -528,6 +528,16 @@ function SGO_QEQ_equipamentoVisivel_(sessao, equipamentoId) {
+   if (SGO_QEQ_ehCliente_(sessao) && SGO_QEQ_s_(e.CLIENTE_ID) !== SGO_QEQ_s_(sessao.clienteId)) {
+     throw new Error('Acesso negado: este equipamento não pertence ao seu cadastro de cliente.');
+   }
++  // 18/11/2026 (Portal do cliente, etapa 3): prontuário pelo QR Code e ficha do equipamento. Solicitante e Consulta veem só as unidades
++  // liberadas para eles; fora delas, a mesma resposta de um equipamento inexistente, com a tentativa em PCL_ACESSOS (ESCOPO_RECUSADO).
++  if (SGO_QEQ_ehCliente_(sessao) && typeof PCl_escopo_ === 'function' && typeof PCl_escopoUnidade_ === 'function') {
++    try { if (typeof PCl_memoLimpar_ === 'function') PCl_memoLimpar_(); } catch (eM) {}
++    var esc = PCl_escopo_(sessao.userId);
++    if (esc && !esc.todas && !PCl_escopoUnidade_(esc, e.UNIDADE_ID)) {
++      if (typeof PClA_recusaEscopo_ === 'function') PClA_recusaEscopo_(esc, 'EQUIPAMENTO', SGO_QEQ_s_(e.ID));
++      throw new Error('Equipamento não encontrado no cadastro. Atualize a lista e tente de novo.');
++    }
++  }
+   return e;
+ }
+ 

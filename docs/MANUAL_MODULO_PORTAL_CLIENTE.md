@@ -150,6 +150,7 @@ A representada passa a ser tratada como ativa só quando a SITUACAO é ATIVA **e
 | Alterar as regras do portal (`PORTAL_CLIENTE_REGRAS`) | Administrador e Diretoria |
 | Enviar acesso ao cliente (`USUARIOS_CLIENTES_ENVIAR_ACESSO`, a caixa do convite, grupo "Contas e acessos"). Desde 18/11/2026 vale também para toda a aba Acessos de clientes | Dono, Administrador, Diretoria e Gestor |
 | Responder pedidos e conversas do portal (`PORTAL_CLIENTE_CONVERSAR`, etapa 2): aba "Conversas do portal", parte "Portal do cliente" da ficha do chamado, nota interna e retirada de anexo | Equipe interna da área Técnica, gestores, Diretoria e Administrador |
+| Ocultar ou liberar documento no portal (`PORTAL_CLIENTE_DOC_LIBERAR`, etapa 3): aba "Documentos no portal" e a marca de cada documento do Arquivo de documentos | Gestão da área Técnica e da Qualidade, Diretoria e Administrador |
 
 O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca têm caixa.
 
@@ -162,6 +163,7 @@ O dono sempre tem todas. As contas de fora, de cliente e de representada, nunca 
 - `PCL_REGRAS_HIST`: as mudanças das regras e da lista de funções.
 - Etapa 1 (18/11/2026): `PCL_PEDIDOS_EQUIPE`, `PCL_TERMOS_ACEITE` e `PCL_CONTAS_HIST` (seção 23.9) e as colunas `CLIENTE_*` em `CAD_USUARIOS`.
 - Etapa 2 (18/11/2026): `PCL_MENSAGENS`, `PCL_ANEXOS` e `PCL_AVISOS_FILA` e as colunas novas de `ATEC_SOLICITACOES` e `ATEC_CHAMADOS` (seção 24.9).
+- Etapa 3 (18/11/2026): as colunas `PORTAL`, `PORTAL_MOTIVO`, `PORTAL_POR_NOME` e `PORTAL_EM` em `DOC_DOCUMENTOS` (seção 25.8). Nenhuma tabela nova.
 
 As datas são gravadas como texto (aaaa-mm-dd), e nenhuma resposta da tela leva data crua.
 
@@ -532,5 +534,87 @@ O chamado de representada continua com o fluxo próprio (confirmação no mesmo 
 | O prazo do contrato não aparece na ficha do cliente | O prazo só aparece quando o contrato está em Regras da assistência > Contratos; sem ele, vale o prazo da prioridade, que o cliente não vê |
 | Uma foto do cliente mostra um paciente | Na parte "Portal do cliente" do chamado (ou em "Conversa com o cliente"), toque em "Retirar" e escreva o motivo |
 | O cliente marcou "O problema continua" | Trate o pedido novo na fila; ele vem com a faixa "o problema continua no chamado ..." e vira reincidência ao aceitar |
+
+
+## 25. Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026)
+
+A conta de cliente ganha três telas no menu "Portal do cliente": **Documentos técnicos**, **Meus equipamentos** e **Vencimentos e cronograma**. Tudo fica limitado ao cliente da conta e às unidades liberadas para a pessoa. O Gestor do cliente vê todas as unidades; o Solicitante e a Consulta veem as unidades marcadas no acesso. As três telas leem também nas situações de carência e de consulta. Com o acesso suspenso ou sem contrato, nada é lido nem aberto, e a mensagem diz o caminho (falar com o Comercial).
+
+### 25.1 Documentos técnicos (o que o cliente vê)
+
+A lista usa o mesmo índice de "Documentos em pastas" (Cadastros, ficha do equipamento e QR Code). Ele junta o Arquivo de documentos, os certificados de calibração, as qualificações, os laudos NR-13, os relatórios das O.S. encerradas (versão do cliente), os relatórios A4 com público "cliente", as rondas, os relatórios do ciclo da lavadora e as revisões emitidas. Não existe um segundo agregador. Rascunho, minuta, versão interna, documento suspenso, inativo e a pasta de contratos e propostas nunca chegam ao cliente.
+
+Sobre essa base valem duas regras do portal:
+
+1. **Tipos visíveis** (decisão 17 do dono). Aparecem sozinhos: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros tipos (PGT e POP, registros operacionais, relatórios técnicos e de ensaio, relatórios de manutenção, laudos e declarações, outros) só aparecem quando liberados um a um. A lista fica em Regras do portal.
+2. **Marca do documento** (coluna `PORTAL` do Arquivo de documentos): em branco segue a regra do tipo; "Oculto no portal" esconde o documento da lista e da abertura em todas as telas do cliente (inclusive o Arquivo de documentos antigo, o QR Code e a central de vencimentos); "Liberado um a um" mostra o documento mesmo com o tipo fora da lista.
+
+Filtros: unidade, equipamento, tipo, data de emissão ("Emitido"), validade ("Vence até") e busca por número, TAG, série ou nome. Cada linha traz o tipo, o título, o número, o equipamento, a unidade, a emissão, a validade com o selo (em dia, vence em até 30 dias, vencido) e o botão "Abrir". As versões anteriores de um documento ficam guardadas logo abaixo dele.
+
+**Abrir:** o documento abre numa aba nova no computador; no celular, abre dentro do SGO+, com Voltar e Imprimir. A tela pede ao servidor, que confere se o documento está na lista da pessoa e passa pela trava de arquivo (`PortalCliente_arquivoPermitido_`, a mesma da rota `/arquivos`). A abertura fica em `PCL_ACESSOS` como `DOCUMENTO_ABERTO`. Documento de outro cliente, de outra unidade, oculto ou inexistente recebe a mesma resposta: "Não encontrado. Atualize a lista." Quando o documento existe na lista de outro cliente ou unidade, a tentativa fica como `ESCOPO_RECUSADO`.
+
+### 25.2 Meus equipamentos
+
+Lista dos equipamentos das unidades da pessoa, com o **farol por categoria**: calibração, qualificação, NR-13 e manutenção. Cada categoria fica "em dia", "vence em até 30 dias", "vencido" ou "sem registro". O farol vem do **mesmo motor da central de pendências** (`Pend_vencimentosBase_`): por equipamento e categoria vale o documento mais recente, e o renovado substitui o anterior. A manutenção é o documento com validade cujo tipo fala de manutenção (preventiva ou corretiva).
+
+A ficha mostra:
+- os dados públicos do cadastro (tipo, fabricante, modelo, série, TAG, patrimônio, setor, unidade, instalação, situação), nunca nota fiscal, origem, QR, observações internas ou quem cadastrou;
+- os vencimentos do equipamento e os documentos dele;
+- o **histórico dos atendimentos concluídos** (O.S. do SGO+ e tarefas do Auvo encerradas), sem o nome do técnico e sem link de outro sistema;
+- os chamados do equipamento, que abrem a ficha do chamado;
+- "Abrir chamado para este equipamento" (o formulário já vem com ele) e "Informar correção de cadastro", que envia uma mensagem à Metrolabs pela Conversa geral. O cliente não edita o cadastro.
+
+### 25.3 Vencimentos
+
+Tabela por equipamento e categoria, com a data, os dias que faltam e o documento de origem. Filtros: unidade, categoria (calibração, qualificação, NR-13, manutenção e outros documentos) e janela (vencidos e os próximos 30, 60 ou 90 dias, ou todos). Os vencidos aparecem sempre. A leitura é própria (`PCl_vencimentos_`) e usa o motor da central, sem depender dela.
+
+### 25.4 Cronograma
+
+Três blocos, sempre separados, com a explicação fixa: "Previsto é calculado pela validade dos documentos e pela periodicidade do contrato. A data só fica confirmada quando aparece em Agendado."
+
+- **Agendado:** O.S. agendadas de hoje em diante ou em andamento, rondas de engenharia clínica e visitas de chamado, com data, hora, tipo de serviço e número da O.S.
+- **Previsto:** (a) a próxima calibração, qualificação, inspeção NR-13 ou manutenção pela validade do documento mais recente de cada equipamento, nos próximos 12 meses, e os vencidos marcados "a programar"; (b) as janelas dos serviços do contrato pela periodicidade gravada em `CLI_CONTRATOS.SERVICOS_JSON` (mensal, bimestral, trimestral, semestral ou anual), contadas a partir do início do contrato e só dentro da vigência. "Sob demanda" não gera previsto. O previsto nunca vira compromisso.
+- **Documento do cronograma:** o PDF do Cronograma de execução emitido, quando ele está na lista de documentos do cliente.
+
+### 25.5 Documentos no portal (equipe)
+
+Aba nova na tela Portal do cliente, para quem tem a caixa «Ocultar ou liberar documento no portal» (`PORTAL_CLIENTE_DOC_LIBERAR`).
+
+1. Busque o cliente pelo nome ou CNPJ e toque nele.
+2. A lista mostra cada documento que pode chegar ao cliente, com "Aparece: o tipo está na lista", "Aparece: liberado um a um", "Não aparece: o tipo está fora da lista" ou "Não aparece: oculto no portal". Filtre por "só os que aparecem", "só os que não aparecem" ou "só os ocultos".
+3. Em "Mudar no portal", escolha "Segue a regra do tipo", "Oculto no portal" ou "Liberado um a um", escreva o motivo (pelo menos 10 letras) e toque em Gravar.
+
+A marca vale para o documento registrado no Arquivo de documentos. Quando o mesmo arquivo também vem de outro módulo (certificado, qualificação, O.S.), a marca vale para ele. Documento sem registro no Arquivo segue a regra do tipo. Cada mudança grava quem, quando e o motivo na própria linha (`PORTAL_MOTIVO`, `PORTAL_POR_NOME`, `PORTAL_EM`) e no histórico das regras ("Documento no portal").
+
+### 25.6 Tipos visíveis (Regras do portal)
+
+Em Regras do portal > "Documentos no portal", o Administrador e a Diretoria marcam os tipos que aparecem sozinhos e gravam com motivo. A lista recomendada, aceita pelo dono, tem os sete tipos da seção 25.1. Pelo menos um tipo precisa ficar marcado.
+
+### 25.7 Filtro por unidade em três telas antigas
+
+A etapa 1 deixou três listas sem o filtro por unidade. Elas agora seguem a mesma regra (registro de outra unidade recebe a resposta de inexistente e a tentativa fica como `ESCOPO_RECUSADO`):
+- **prontuário pelo QR Code** (`qrcodeAcessar`, a lista de qualificações e a abertura de documento da qualificação); a conta de cliente passa a receber só os campos públicos do equipamento;
+- **relatórios de ciclo da lavadora** (busca, lista, equipamento e relatório);
+- **vencimentos da central de pendências** para a conta de cliente (o documento oculto no portal também sai da central do cliente; a equipe continua vendo).
+
+### 25.8 Tabelas, colunas e caixas
+
+- **Colunas novas em `DOC_DOCUMENTOS`**, por acréscimo e garantidas antes da primeira gravação: `PORTAL` ('' segue o tipo, `OCULTO`, `VISIVEL`), `PORTAL_MOTIVO`, `PORTAL_POR_NOME` e `PORTAL_EM` (texto). Editar o documento no Arquivo de documentos não apaga a marca.
+- **Registro de acessos (`PCL_ACESSOS`):** `DOCUMENTO_ABERTO` a cada abertura, `ESCOPO_RECUSADO` nas tentativas fora do escopo e `ACESSO_RECUSADO` quando a situação de acesso não permite ler.
+- **Caixa nova:** «Ocultar ou liberar documento no portal» (`PORTAL_CLIENTE_DOC_LIBERAR`), padrão para a gestão da área Técnica e da Qualidade, a Diretoria e o Administrador.
+- **Regras do portal:** a lista `docTiposVisiveis` (mesma propriedade das outras regras, com merge e histórico).
+- **Sem avisos novos nesta etapa.** O aviso de documento novo (PC07) e o de vencimento (PC08) chegam na etapa 4.
+
+### 25.9 Problemas comuns (documentos e equipamentos)
+
+| Situação | O que fazer |
+|---|---|
+| O cliente diz que um documento sumiu do Portal | Abra "Documentos no portal", busque o cliente e veja o porquê: tipo fora da lista ou oculto. Libere um a um, com motivo, se for o caso |
+| O cliente vê um documento que não deveria | Marque "Oculto no portal" com o motivo: ele some da lista e não abre em nenhuma tela do cliente |
+| O botão "Abrir" não aparece para o cliente | O arquivo do documento não está ligado a um registro que a trava reconhece. Registre o documento no Arquivo de documentos com o arquivo |
+| O farol mostra "vencido", mas o serviço foi feito | Emita ou registre o documento novo com a validade; o farol usa o documento mais recente |
+| O previsto do contrato não aparece | Confira em Contratos a periodicidade dos serviços (não pode ser "sob demanda") e a vigência |
+| Um Solicitante não vê um equipamento ou um relatório de ciclo | Ele vê só as unidades marcadas na conta. Confira em Acessos de clientes |
+| A marca "Oculto no portal" não aparece para um certificado | A marca existe só para o documento registrado no Arquivo de documentos. Registre o certificado lá e marque |
 
 </div>
