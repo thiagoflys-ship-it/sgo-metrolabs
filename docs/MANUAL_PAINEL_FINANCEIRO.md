@@ -43,6 +43,9 @@ Regras que valem sempre:
 | Comissões | Leva a Ganhos dos vendedores. |
 | Regras do Financeiro | Configurações em vigor, aprovações pendentes (só o dono do sistema e a Diretoria decidem) e o de-para de categorias. |
 | Indicadores | Nota de saúde financeira e os indicadores I01 a I19 com gráficos, lidos da fotografia diária (seção 8d). |
+| Régua de cobrança | Quadro (Kanban) dos títulos a receber por etapa da cobrança, com as ações registradas, a decisão da Diretoria e as pendências (seção 8f). Não grava no Omie nem manda nada ao cliente. |
+| Agenda financeira | O que vence a receber e a pagar nos próximos 30, 60 ou 90 dias (Gantt) e a previsão de caixa de 90 dias, otimista e realista (seção 8g). |
+| Relatórios semanais | Relatório A4 de saúde financeira de cada semana, aberto só no SGO+, com a lista de quem foi avisado (seção 8h). |
 | Sigilo e acessos | Quem pode ver o Financeiro; para a Diretoria, o registro de consultas, planilhas baixadas e recusas. Só o responsável pelo sistema altera a lista. |
 
 ## 4. Visão geral
@@ -99,6 +102,8 @@ As caixas de acesso ficam em Administração > Acessos, no módulo Financeiro:
 | Faturar pedidos e O.S. e importar notas no Omie | Faturamento e notas. |
 | Conferir o extrato do banco com o Omie | Conciliação bancária. |
 | Registrar e cancelar provisões do Financeiro | Provisões internas. |
+| Registrar ações da régua de cobrança | Contato, lembrete, promessa, acordo e encaminhamento à Diretoria na Régua de cobrança (18/11/2026). |
+| Gerar o relatório semanal de saúde financeira agora (parcial) | "Gerar agora" em Relatórios semanais (18/11/2026). |
 
 **Sigilo (16/11/2026, decisão do dono).** Acima das caixas existe a lista de sigilo do Financeiro. Quem não está nela não abre o painel, não vê o botão, não recebe as sugestões de recebimentos do Omie em Ganhos dos vendedores e não consegue nada pelo endereço do sistema, qualquer que seja o perfil. Em Administração > Acessos, as caixas do Financeiro dessa pessoa aparecem como "Sigiloso: fora da lista do módulo" e não podem ser marcadas; modelo e "copiar de outra pessoa" pulam essas caixas.
 
@@ -199,7 +204,7 @@ Cada cartão mostra o valor de hoje, o da fotografia de 7 dias atrás (ou 30, em
 | I13 | Cobertura dos compromissos de 30 dias | (Saldo em contas + a receber que vence nos próximos 30 dias × taxa de realização) dividido pelo a pagar até 30 dias (incluindo o vencido). Taxa de realização: quanto do que venceu nos últimos 90 dias foi recebido até o vencimento. | Acima de 1, o caixa fecha os próximos 30 dias; abaixo de 1, vai faltar dinheiro se nada mudar. É o critério C2 da nota de saúde. |
 | I14 | Concentração de recebíveis | Soma dos 5 maiores clientes no a receber em aberto, dividida pelo total a receber, vezes 100. | Dependência de poucos clientes: quanto maior, maior o risco se um deles atrasar. É o critério C5 da nota de saúde. |
 | I15 | Orçado × realizado do mês | Realizado dividido pelo previsto, vezes 100, somando as categorias do orçamento do mês no Omie. | Só aparece com orçamento cadastrado no Omie. Perto de 100 %: o mês está seguindo o planejado. |
-| I16 | Execução da cobrança | Vencidos com ação de cobrança registrada nos últimos 7 dias, divididos pelos vencidos, vezes 100. | Mede o trabalho de cobrança, não o cliente. Passa a ser calculado com a régua de cobrança. |
+| I16 | Execução da cobrança | Vencidos com ação de cobrança registrada nos últimos 7 dias, divididos pelos vencidos, vezes 100. | Mede o trabalho de cobrança, não o cliente: quanto dos títulos vencidos teve ação registrada na Régua de cobrança na última semana (seção 8f). |
 | I17 | Conciliação bancária em dia | Dias desde a última data de extrato conferida na aba Conciliação bancária, na conta mais atrasada. | Até 7 dias é o combinado. Mais do que isso, o saldo do Omie pode não bater com o banco. |
 | I18 | Envios incertos ao Omie | Quantidade de envios ao Omie sem resposta clara, aguardando conferência em Lançamentos e baixas > Envios a conferir. | Deve ser zero. Cada um precisa ser conferido no Omie para não lançar em dobro. |
 | I19 | Caju: prestações vencidas e divergências | Prestações de contas de viagem com prazo vencido mais as divergências abertas da Conciliação Caju. | Pendências do cartão Caju que dependem de alguém agir. Deve ser zero. |
@@ -231,7 +236,7 @@ Valor estranho gravado por outro caminho vale o padrão. A aba Regras do Finance
 
 ### Gráficos
 
-G1 recebido × pago em 12 meses, com a linha do resultado; G2 saldo previsto de 90 dias (entra com a Agenda financeira, próxima etapa); G3 envelhecimento do a receber (a vencer, 1 a 30, 31 a 90, acima de 90 dias); G4 inadimplência semana a semana (fotografia do fim de cada semana); G5 despesas por categoria no mês, com as que somam 80 % em destaque; G6 os 10 maiores devedores; G7 orçado × realizado (com orçamento no Omie); G8 viagens no Caju (carregado, gasto conciliado e gasto sem comprovante ligado, 6 meses). Cada gráfico tem uma frase dizendo o que mostra; no celular ocupam a largura da tela.
+G1 recebido × pago em 12 meses, com a linha do resultado; G2 saldo previsto de 90 dias (da Agenda financeira, seção 8g); G3 envelhecimento do a receber (a vencer, 1 a 30, 31 a 90, acima de 90 dias); G4 inadimplência semana a semana (fotografia do fim de cada semana); G5 despesas por categoria no mês, com as que somam 80 % em destaque; G6 os 10 maiores devedores; G7 orçado × realizado (com orçamento no Omie); G8 viagens no Caju (carregado, gasto conciliado e gasto sem comprovante ligado, 6 meses). Cada gráfico tem uma frase dizendo o que mostra; no celular ocupam a largura da tela.
 
 ### Atividades do Financeiro e o assistente geral
 
@@ -249,6 +254,63 @@ Pedido do dono: "reajuste automático para o financeiro faturar com os índices 
 - **Contratos que o sistema não calcula:** índice "outro" (cálculo manual), sem data-base ou sem valor. Complete o contrato em Portal do cliente > Contratos de clientes.
 
 Sigilo: as quatro consultas da aba passam pela trava do Financeiro (lista de sigilo e caixa de consulta) e ficam no registro de acessos ("Reajustes de contratos", "Decisão de reajuste de contrato", "Reajuste marcado como faturado", "Índices do Banco Central atualizados"). O Comercial vê o índice e gera a carta de reajuste ao cliente na tela de contratos; ele não vê faturamento nem movimento. As pendências e o relatório diário levam só a contagem.
+
+## 8f. Régua de cobrança (18/11/2026, Bloco B da onda 3)
+
+A aba **Régua de cobrança** organiza a cobrança dos títulos a receber num quadro de oito colunas. A etapa de cada título é **calculada pelo sistema** a partir da fotografia diária do Omie e das ações registradas na própria aba: ninguém arrasta cartão. A régua é **só interna** (decisão do dono): não manda e-mail nem mensagem ao cliente e não grava nada no Omie.
+
+| Etapa | Entra quando | Sai quando |
+|---|---|---|
+| A vencer em 5 dias | Faltam até 5 dias para o vencimento (configurável). | Vence, é pago ou recebe uma ação. |
+| Vencido sem contato | Venceu e não há ação desde o vencimento, ou passaram 7 dias sem nova ação depois do último contato (em destaque). | Uma ação é registrada. |
+| Em contato | Contato feito, lembrete enviado ou decisão da Diretoria nos últimos 7 dias. | Promessa, acordo ou 7 dias sem nova ação. |
+| Promessa de pagamento | O cliente disse data e valor. | É pago (sai sozinho) ou a data passa: vai para "Promessa quebrada". |
+| Promessa quebrada | Data prometida mais 2 dias úteis (configurável) sem o pagamento no Omie. Feriados e fins de semana não contam. | Nova ação. |
+| Acordo ou renegociação | Nova condição combinada (as parcelas são lançadas depois no Omie, em Lançamentos e baixas, com a prévia). | O título é pago ou baixado. |
+| Com a Diretoria | O Financeiro encaminhou para protesto, negativação, cobrança jurídica ou perda, com o motivo. | A Diretoria registra a decisão, com o motivo. |
+| Recebido (7 dias) | O Omie mostra o título pago (só o que estava na régua ou foi pago com atraso). | Some depois de 7 dias. |
+
+**Cartão:** cliente (nome do Omie), documento e parcela, saldo em aberto, dias de atraso, atraso médio do cliente nos últimos 12 meses (ponderado pelo valor), próxima ação, promessa, decisão da Diretoria e a última ação com quem registrou. Toque no cartão para abrir o painel do título: histórico, atalhos (Ficha do cliente; segunda via ou prorrogação do boleto) e o formulário.
+
+**Quem decide o quê.** Registrar ações: caixa "Registrar ações da régua de cobrança" (padrão: Financeiro e Diretoria da lista de sigilo). **Protesto, negativação, cobrança jurídica e baixa como perda: só o dono do sistema e a Diretoria decidem** (regra "Aprovação só do dono e da Diretoria"), sempre com motivo de pelo menos 15 letras, que fica no histórico. A Wanessa encaminha e executa; a baixa como perda, se decidida, é feita em Lançamentos e baixas, com a prévia.
+
+**Pendências.** Os lembretes do dia (próxima ação vencida) vão para quem registrou a última ação; as promessas quebradas, para o Financeiro e a Diretoria; os títulos com a Diretoria, para o dono e a Diretoria. A pendência diz só a quantidade: **nenhum nome de cliente nem valor** sai do Painel (o relatório diário da empresa mostra só a contagem).
+
+**O que fica gravado.** FIN_COBRANCA (um registro por título acompanhado: documento, vencimento, etapa, próxima ação e a promessa) e FIN_COBRANCA_ACOES (histórico que não se altera). Não há CNPJ, e-mail do cliente nem o valor do título (o saldo vem sempre do Omie). E-mails e números longos digitados nos textos são retirados automaticamente.
+
+**Execução da cobrança (I16).** O indicador I16 passa a ser calculado: títulos vencidos com ação registrada nos últimos 7 dias divididos pelos títulos vencidos.
+
+**Régua externa (e-mail ao cliente).** Desligada por padrão. A chave existe em Chaves e senhas, mas ligá-la ainda não envia nada: o texto, o dia de início e se vai o boleto dependem de decisão do dono, e a tela avisa isso.
+
+**Configuração** (Chaves e senhas > Regras do Financeiro; sem valor = padrão): dias do "a vencer" (5), dias sem nova ação até voltar a "vencido sem contato" (7), dias úteis de tolerância da promessa (2) e a régua externa (desligada).
+
+## 8g. Agenda financeira e previsão de caixa (18/11/2026, Bloco B da onda 3)
+
+A aba **Agenda financeira** mostra, num quadro de linha do tempo (Gantt), o que vence nos próximos 30, 60 ou 90 dias (padrão 60), com a semana anterior à vista: a receber por cliente (os 10 maiores e "Outros clientes"), a pagar por categoria do Omie (as 10 maiores e "Outras categorias"), as provisões internas e os prazos de prestação de contas de viagem. Losango cheio é vencido; vazado, a vencer. Barra amarela é promessa de pagamento e roxa é acordo, da data da ação até a data combinada. Para 60 e 90 dias a régua mostra uma marca por semana; para 30 dias, uma por dia. Toque num item para ver documento, valor e situação. Os dados vêm da fotografia diária: a aba não chama o Omie.
+
+**Previsão de caixa de 90 dias.** Parte do saldo em contas da fotografia e soma, dia a dia, o que entra, menos o que sai, mais ou menos as provisões internas. Há duas curvas:
+
+- **Otimista (pelo vencimento):** todo título a receber entra na data da previsão do Omie (ou no vencimento); o que venceu há até 90 dias entra hoje.
+- **Realista (pela realização):** o que vai vencer entra deslocado pelo atraso médio dos clientes e multiplicado pela taxa observada de recebimento até 15 dias depois do vencimento; o que venceu há até 90 dias entra pela taxa de recuperação observada (do que venceu de 91 a 365 dias atrás sem ser pago, quanto acabou entrando).
+- Nas duas, o vencido há mais de 90 dias fica fora; a pagar entra no vencimento, e o já vencido entra hoje.
+
+As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segurança:** por decisão do dono, não há valor fixo e o campo começa vazio. Sem ele, a previsão não compara com mínimo nenhum e avisa só se o saldo previsto ficar negativo. Com o valor definido em Chaves e senhas, a linha vermelha tracejada aparece e a faixa diz o dia em que a curva realista cruza o mínimo. A mesma previsão vira o gráfico G2 da aba Indicadores e entra no relatório semanal.
+
+**Memória do servidor.** A lista de títulos da fotografia fica até 6 horas na memória do servidor (renovada a cada 15 minutos enquanto a fotografia for a de hoje) e nunca é gravada em tabela. Se o servidor reiniciar, a Régua e a Agenda pedem uma nova fotografia ("Pedir nova fotografia"), sem gravar nada no Omie.
+
+## 8h. Relatório semanal de saúde financeira (18/11/2026, Bloco B da onda 3)
+
+**Quando sai e para quem.** Toda **segunda-feira, a partir das 07:00**, depois da fotografia do dia, a rotina gera o relatório A4 da semana fechada anterior (segunda a domingo). Se a segunda não for dia útil, sai no primeiro dia útil seguinte; se a fotografia do dia não ficar pronta até as 10:00, usa a última e avisa na capa. Um relatório por semana. Por padrão recebem o aviso **o dono do sistema e a Diretoria** da lista de sigilo; **a Wanessa não recebe** (decisão do dono). O sistema só envia a quem está na lista de sigilo, mesmo que outra pessoa seja configurada; quem não é da Diretoria recebe só dentro do expediente.
+
+**Só o link, nunca anexo.** O e-mail diz que o relatório da semana está pronto e leva o endereço do SGO+; não traz nenhum valor nem a nota (opção "Link e faixa da nota" acrescenta só a faixa). O documento abre só no Painel financeiro > Relatórios semanais, com login e lista de sigilo; cada abertura fica registrada e cada página impressa leva "gerado para <nome> · código". O arquivo fica numa pasta própria, não compartilhada, e o endereço dela nunca aparece na tela.
+
+**Conteúdo.** Índice clicável; resumo executivo (nota de saúde com a seta da semana anterior, seis indicadores e três parágrafos: o que aconteceu, o que preocupa, o que fazer); saúde financeira (critérios com a explicação e o gráfico da nota por semana); caixa (saldo no início e no fim, entradas e saídas da semana, previsão de 90 dias com o alerta do mínimo); recebimentos e cobrança (envelhecimento, 10 maiores vencidos com o nome do cliente, promessas quebradas, execução da cobrança, prazos médios); pagamentos (próximos 30 dias por categoria e as contas vencidas); resultado (12 meses, despesas do mês, orçado e realizado); Caju; disciplina operacional; comparação com as 4 semanas anteriores; conclusão; e o anexo com a fórmula de cada número.
+
+**A IA só escreve; os números são do sistema.** Com "Análise do Financeiro pela IA" = Sim (padrão, decisão do dono, chave paga do Gemini), o relatório envia à IA os indicadores e as listas da semana com os clientes e fornecedores trocados por códigos (Cliente 01, Fornecedor 02), sem documento, CNPJ, CPF, e-mail nem nome de colaborador; o que vem do Omie (nome de categoria) vai marcado como dado. Cada número que a IA escreve é conferido com os do sistema: se não bater, ou se aparecer nome que não veio dos dados, aquele parágrafo é trocado pelo texto padrão e o relatório avisa "análise parcialmente substituída pelo texto padrão". Sem a chave ou com a IA não autorizada, o relatório sai inteiro com o texto padrão.
+
+**Gerar agora.** Monta o relatório da semana em curso, marcado como **parcial**, sem avisar ninguém (caixa "Gerar o relatório semanal de saúde financeira agora").
+
+**Configuração** (Chaves e senhas > Regras do Financeiro; sem valor = padrão): relatório ligado; dia (segunda); hora (07:00); quem recebe (o dono e a Diretoria da lista de sigilo); forma do aviso (só o link); análise pela IA (sim). A aba Relatórios semanais mostra a configuração em vigor e quem recebe de fato.
 
 ## 9. Problemas comuns
 
@@ -269,6 +331,11 @@ Sigilo: as quatro consultas da aba passam pela trava do Financeiro (lista de sig
 | "O valor digitado não confere com o da prévia" | Digite de novo exatamente o valor da prévia no campo "Digite o valor de novo". |
 | "Quem preparou a operação não aprova a própria operação" | Peça ao dono do sistema ou à Diretoria (a outra pessoa, não você). |
 | "Você não aprova nem recusa operações do Financeiro" | Por decisão do dono (16/11/2026), só o dono do sistema e a Diretoria decidem as operações acima da alçada. O Financeiro prepara e acompanha em Aprovações pendentes. |
+| Régua ou Agenda: "a lista de títulos da fotografia não está mais na memória do servidor" | Toque em "Pedir nova fotografia" e volte em até 15 minutos; nada é gravado no Omie. |
+| Régua: "Este título não está na fotografia" | O título pode ter sido pago, cancelado ou criado depois da fotografia. Atualize o quadro; se faltar, peça nova fotografia em Indicadores. |
+| Régua: "Você não registra esta decisão" | Protesto, negativação, cobrança jurídica e perda são só da Diretoria. Encaminhe o título à Diretoria com o motivo. |
+| Relatório com "análise parcialmente substituída pelo texto padrão" | É a conferência de números: o parágrafo da IA citou número ou nome fora dos dados e foi trocado pelo texto do sistema. Nada a fazer. |
+| O relatório semanal não saiu na segunda-feira | Ele espera a fotografia do dia (até 10:00); feriado passa para o primeiro dia útil. A aba Relatórios semanais mostra o próximo horário. |
 
 ## 10. Como fazer em cada aba
 
@@ -374,6 +441,28 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 3. Cada cartão traz o número de hoje, o da fotografia anterior com a seta (verde melhorou, vermelha piorou), "O que é e como ler" e "Como é calculado". "Não calculado" sempre diz o motivo.
 4. Em "Comparar com", escolha 7 ou 30 dias. Os gráficos ficam abaixo dos cartões, cada um com uma frase dizendo o que mostra.
 5. Para números mais novos, toque em "Atualizar agora": a fotografia sai na próxima rodada automática (até 15 minutos). Saldo mínimo e pesos da nota mudam em Chaves e senhas > Regras do Financeiro.
+
+**Régua de cobrança.** Acompanhar a cobrança de cada título a receber vencido ou a vencer, registrar o que foi feito e ver o que precisa de ação hoje.
+
+1. Cada coluna é uma etapa: a vencer, vencido sem contato, em contato, promessa, promessa quebrada, acordo, com a Diretoria e recebido nos últimos 7 dias. O sistema põe o cartão na coluna certa: ninguém arrasta.
+2. Comece pelas colunas "Promessa quebrada" e "Vencido sem contato" (borda vermelha). Cartão com contorno amarelo tem retorno marcado para hoje.
+3. Toque no cartão: abre o painel do título com o histórico, os atalhos (Ficha do cliente, segunda via ou prorrogação do boleto) e o formulário.
+4. Escolha a ação, preencha os campos que aparecem e toque em "Registrar a ação". O cartão muda de etapa na hora. Para protesto, negativação, cobrança jurídica ou perda, use "Encaminhar à Diretoria" com o motivo: só a Diretoria decide.
+5. A régua não manda nada ao cliente e não grava no Omie: segunda via, prorrogação e baixa continuam nas abas Cobranças e Lançamentos e baixas, com a prévia.
+
+**Agenda financeira.** Ver o que vence a receber e a pagar nos próximos dias e onde o caixa aperta nos próximos 90 dias.
+
+1. Escolha o período do quadro (30, 60 ou 90 dias). Cada linha é um cliente, uma categoria de despesa, as provisões ou os prazos de viagem.
+2. Losango cheio é vencido; vazado, a vencer. Barra amarela é promessa de pagamento; roxa, acordo. Toque num item para ver documento, valor e situação logo abaixo do quadro.
+3. Na previsão de caixa, a linha azul conta tudo o que vence (otimista) e a laranja o que costuma entrar de fato (realista). A faixa do topo diz se e quando o saldo cai abaixo do mínimo ou fica negativo.
+4. Abra "Como a previsão é feita" para ver as taxas usadas. O saldo mínimo de segurança muda em Chaves e senhas > Regras do Financeiro (sem ele, a previsão não compara com mínimo).
+
+**Relatórios semanais.** Ler o relatório semanal de saúde financeira em A4 e ver quem foi avisado.
+
+1. A lista mostra cada semana com a nota, a variação, se a análise teve apoio de IA e quem recebeu o aviso. O relatório da semana fechada sai sozinho, no dia e na hora configurados.
+2. Toque em "Abrir": o relatório aparece abaixo, com a sua identificação e um código em cada página. A abertura fica registrada em Sigilo e acessos.
+3. "Imprimir ou salvar em PDF" imprime essa cópia identificada. Não repasse o arquivo: o código mostra de quem é a cópia.
+4. "Gerar agora" monta o relatório da semana em curso, marcado como parcial, sem avisar ninguém. A configuração (dia, hora, quem recebe, IA) muda em Chaves e senhas > Regras do Financeiro.
 
 **Sigilo e acessos.** Ver quem pode acessar o Financeiro e quem consultou o quê.
 
@@ -499,6 +588,24 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 ### Indicadores
 
 - **Comparar com:** a fotografia usada para a seta de cada cartão e da nota de saúde. 7 dias mostra a tendência da semana; 30 dias, a do mês. Sem fotografia tão antiga, o cartão mostra só o valor de hoje.
+
+### Régua de cobrança
+
+- **Buscar no quadro:** digite parte do nome do cliente ou do número do documento para ver só esses cartões. Não consulta o Omie; filtra o que já está na tela.
+- **Ação:** o que foi feito agora. "Contato feito" é uma conversa com o cliente; "Lembrete enviado" é e-mail ou mensagem sem resposta; "Promessa" é quando o cliente disse data e valor; "Acordo" é nova condição combinada; "Encaminhar à Diretoria" é para protesto, negativação, cobrança jurídica ou perda.
+- **Canal:** por onde o contato foi feito (telefone, e-mail, WhatsApp da empresa, presencial). Serve para saber o que funciona com cada cliente.
+- **Com quem falou:** nome e cargo de quem atendeu no cliente (ex.: Ana, contas a pagar). Ajuda o próximo contato a ir direto à pessoa certa.
+- **Data prometida:** o dia em que o cliente disse que vai pagar. Se passar 2 dias úteis sem o pagamento aparecer no Omie, o cartão vai sozinho para "Promessa quebrada". No acordo, é a data da primeira parcela combinada.
+- **Valor prometido:** quanto o cliente disse que vai pagar nessa data. Em branco, vale o saldo em aberto. Valor menor indica pagamento parcial.
+- **Próxima ação em:** quando você quer ser lembrada de voltar a este título. O lembrete aparece em Minhas pendências nesse dia, no expediente.
+- **Observação:** o que ajuda quem pegar a cobrança depois (ex.: "aguardando empenho", "pediu segunda via do boleto"). No acordo, descreva as parcelas combinadas. Não escreva dados bancários nem senhas.
+- **Motivo para a Diretoria:** por que este título precisa de decisão da Diretoria (ex.: 120 dias de atraso, três promessas quebradas). Obrigatório, pelo menos 15 letras.
+- **Decisão:** só o dono do sistema e a Diretoria decidem. Protestar, negativar, cobrança jurídica ou baixar como perda são executados depois pelo Financeiro (a baixa como perda, em Lançamentos e baixas, com a prévia). "Voltar para a cobrança normal" devolve o título à régua.
+- **Motivo da decisão:** por que a Diretoria decidiu assim. Obrigatório, pelo menos 15 letras; fica no histórico do título.
+
+### Agenda financeira
+
+- **Período do quadro:** quantos dias à frente o quadro mostra (30, 60 ou 90). A semana anterior aparece sempre, para os vencidos recentes. A previsão de caixa abaixo é sempre de 90 dias.
 
 ### Sigilo e acessos
 
