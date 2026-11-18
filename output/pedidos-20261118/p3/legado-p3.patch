@@ -1,0 +1,785 @@
+diff --git a/cand27/ComunicacaoWidget.html b/cand28/ComunicacaoWidget.html
+index 1f4bd63..3a90055 100644
+--- a/cand27/ComunicacaoWidget.html
++++ b/cand28/ComunicacaoWidget.html
+@@ -311,6 +311,7 @@
+       toast({ titulo: (novosToast.length - crit.length) + " novidades na Comunicação", texto: "Mensagens, avisos e comunicados novos.", prioridade: "INFO" });
+     } else novosToast.forEach(toast);
+     if (novosToast.length) bip(novosToast.some(function (t) { return t.prioridade === "CRITICA"; }));
++    notificar(novosToast.filter(function (t) { return t.ir && t.ir.conversa; }));
+     if (ST.aberto && FORMULARIOS[ST.tela]) desenharLeve();   // formulário aberto: só os contadores mudam
+     else desenhar();
+   }
+@@ -354,7 +355,31 @@
+     anunciar("Som: " + rotSom());
+     desenhar();
+   }
+-  function rotSom() { return { critica: "só críticos", tudo: "ligado", nada: "desligado" }[modoSom()]; }
++  function rotSom() { return { critica: "só avisos críticos (mensagens sem som)", tudo: "mensagens e avisos", nada: "desligado" }[modoSom()]; }
++  /* 18/11/2026 (Matheus, pacote 3, item 10): notificação do navegador para mensagem nova, opcional e desligada por padrão. A pessoa liga
++     em Preferências; vale só neste aparelho (guardada no navegador) e só aparece com a página em segundo plano ou com o painel fechado. */
++  function notifSuportada() { return typeof window.Notification === "function"; }
++  function notifLigada() { return lsGet("comw_notif") === "1" && notifSuportada() && window.Notification.permission === "granted"; }
++  function notificar(lista) {
++    if (!notifLigada() || !lista.length) return;
++    if (!document.hidden && ST.aberto) return;
++    lista.slice(0, 3).forEach(function (t) {
++      try {
++        var n = new window.Notification(t.titulo, { body: String(t.texto || "").slice(0, 160), tag: "comw-" + ((t.ir && t.ir.conversa) || "msg"), silent: true });
++        n.onclick = function () { try { window.focus(); } catch (e) { } abrir(); if (t.ir && t.ir.conversa) abrirConversa(t.ir.conversa); try { n.close(); } catch (e) { } };
++      } catch (e) { }
++    });
++  }
++  function trocarNotif(caixa) {
++    if (!caixa.checked) { lsDel("comw_notif"); ST.notifMsg = "Notificação do navegador desligada neste aparelho."; return desenhar(); }
++    if (!notifSuportada()) { caixa.checked = false; ST.notifMsg = "Este navegador não mostra notificações. As mensagens novas continuam no número do botão do bate-papo e no título da aba."; return desenhar(); }
++    var depois = function (perm) {
++      if (perm === "granted") { lsSet("comw_notif", "1"); ST.notifMsg = "Notificação ligada neste aparelho. Ela aparece quando chega mensagem e o SGO+ está em outra aba ou com o bate-papo fechado."; }
++      else { lsDel("comw_notif"); ST.notifMsg = "O navegador não autorizou as notificações" + (perm === "denied" ? " (está bloqueado para este site). Para liberar, toque no cadeado ao lado do endereço, em Notificações, e escolha Permitir; depois ligue aqui de novo." : ". Ligue de novo e escolha Permitir quando o navegador perguntar."); }
++      desenhar();
++    };
++    try { var pr = window.Notification.requestPermission(depois); if (pr && pr.then) pr.then(depois); } catch (e) { depois("default"); }
++  }
+ 
+   /* ---------------- balões (toasts) ---------------- */
+   function toast(t) {
+@@ -1138,7 +1163,11 @@
+   function telaPreferencias() {
+     var p = ST.prefs, a = ST.cfgWa, eu = ST.d.eu;
+     var html = "<div class='comw-linha' style='margin-bottom:8px'><button type='button' class='comw-ico' data-acao='voltarPref' aria-label='Voltar'>←</button><b>Preferências</b></div>" +
+-      "<div class='comw-form'><label>Som dos avisos neste aparelho</label><div class='comw-linha'><span class='comw-cresce'>" + h(rotSom()) + "</span><button type='button' class='comw-btn comw-sec' data-acao='som'>Trocar</button></div>";
++      "<div class='comw-form'><label>Som neste aparelho</label><div class='comw-linha'><span class='comw-cresce'>" + h(rotSom()) + "</span><button type='button' class='comw-btn comw-sec' data-acao='som'>Trocar</button></div>" +
++      "<p class='comw-mut' style='margin:4px 0 0'>«Trocar» passa por: só avisos críticos (padrão), mensagens e avisos, desligado. A escolha vale só neste aparelho.</p>" +
++      "<label class='comw-chk' style='margin-top:12px'><input type='checkbox' id='comw-notif' data-acao='notif'" + (notifLigada() ? " checked" : "") + (notifSuportada() ? "" : " disabled") + "> Mostrar notificação do navegador quando chegar mensagem (neste aparelho)</label>" +
++      "<p class='comw-mut' style='margin:4px 0 0'>Desligada por padrão. Aparece só quando o SGO+ está em outra aba ou com o bate-papo fechado; tocar nela abre a conversa. O navegador pede a sua autorização na primeira vez." + (notifSuportada() ? "" : " Este navegador não mostra notificações.") + "</p>" +
++      (ST.notifMsg ? "<p class='comw-resumo' role='status' style='margin-top:6px'>" + h(ST.notifMsg) + "</p>" : "");
+     if (!p) html += "<div class='comw-vazio'>Carregando…</div>";
+     else {
+       html += "<label class='comw-chk' style='margin-top:12px'><input type='checkbox' id='comw-wa'" + (p.wa_aviso ? " checked" : "") + "> Avisar no meu WhatsApp (ou e-mail) quando eu estiver fora do sistema</label>" +
+@@ -1205,6 +1234,8 @@
+         "<h3>Enviar documento (PDF, Word ou Excel)</h3><ol><li>Na conversa, toque no botão de anexar (clipe) ao lado da caixa de mensagem e escolha o arquivo, ou arraste o arquivo para a conversa.</li>" +
+         "<li>Confira o nome e o tamanho que aparecem acima da caixa.</li><li>Escreva na caixa a explicação: o que é o documento e o que a pessoa deve fazer com ele (obrigatória, pelo menos 10 caracteres).</li><li>Toque em Enviar. «Tirar» desiste do documento.</li></ol>" +
+         "<p>Formatos: PDF, Word (.docx) e Excel (.xlsx), até 5 MB, um por mensagem, até 20 por hora. Arquivo com macro (.docm, .xlsm) não é aceito. Quem recebe vê o nome do arquivo e toca nele para baixar ou abrir. Só quem participa da conversa baixa; quem sai do grupo deixa de baixar. O documento não abre por link e não aparece no COMMAND (lá aparece só «Documento: nome — explicação»).</p>" : "") +
++      "<h3>Mensagem nova</h3><p>Com mensagem, aviso ou comunicado não lido, o botão «Bate-papo» do topo fica em vermelho com o número (no computador, também o texto «N novas»), pisca três vezes quando chega algo novo e a aba do navegador mostra o número entre parênteses, por exemplo «(2) SGO+». " +
++        "Em «Preferências» (engrenagem) você escolhe o som neste aparelho e pode ligar a notificação do navegador, que vem desligada.</p>" +
+       "<h3>Cores e selos</h3><ul><li>Faixa verde à esquerda: conversa com mensagem que você não leu.</li><li>Selo SGO+, COMMAND ou WhatsApp: de onde a mensagem veio.</li><li>Linha tracejada no meio da conversa: mudança de participantes ou de nome.</li></ul>" +
+       "<h3>Erros comuns</h3><ul><li>«Só quem criou o grupo e a gestão mudam os participantes»: peça a quem criou (aparece com o selo «criou o grupo» em Participantes).</li>" +
+       "<li>«Sua área ainda não está no cadastro»: a gestão preenche em SGO+ › Administração › Usuários › Área.</li><li>Mensagem não enviou: o texto fica guardado na caixa; confira a internet e toque em Enviar de novo.</li></ul>" +
+@@ -1362,6 +1393,7 @@
+       else if (a === "ajuda") abrirAjuda();
+       else if (a === "voltarPref") voltarDeTela();
+       else if (a === "som") { trocarSom(); if (ST.tela === "preferencias") desenhar(); }
++      else if (a === "notif") trocarNotif(t);
+       else if (a === "salvarPref") salvarPref();
+       else if (a === "salvarCfgWa") salvarCfgWa();
+       else if (a === "trilha") api("trilhaWhatsapp", { limite: 60 }, function (r) { ST.trilha = r.trilha; desenhar(); }, toastErro);
+diff --git a/cand27/Index.html b/cand28/Index.html
+index 04fe626..f37482c 100644
+--- a/cand27/Index.html
++++ b/cand28/Index.html
+@@ -107,7 +107,7 @@
+             <div id="userInfo" class="user-info"></div>
+             <!-- 11/11/2026 (pedido do dono): bate-papo e "Tire sua dúvida" na barra do topo (não flutuam mais sobre a tela) -->
+             <button id="topoBtnDuvida" type="button" class="btn-logout topo-ico" onclick="Topo_abrirDuvida_()" title="Tire sua dúvida" hidden><i class="fas fa-circle-question" aria-hidden="true"></i> Dúvida</button>
+-            <button id="topoBtnChat" type="button" class="btn-logout topo-ico" onclick="Topo_abrirChat_()" title="Bate-papo" hidden><i class="fas fa-comments" aria-hidden="true"></i> Bate-papo <span class="topo-qt" hidden></span></button>
++            <button id="topoBtnChat" type="button" class="btn-logout topo-ico" onclick="Topo_abrirChat_()" title="Bate-papo" hidden><i class="fas fa-comments" aria-hidden="true"></i> Bate-papo<span class="topo-novas"></span> <span class="topo-qt" hidden></span></button>
+             <!-- 31/10/2026: a própria pessoa troca a senha (senha atual + nova), JS_SegurancaAcesso.html -->
+             <button id="btnTrocarSenha" type="button" class="btn-logout btn-trocar-senha" onclick="abrir('trocar_senha')" title="Trocar minha senha">
+               <i class="fas fa-key" aria-hidden="true"></i> Trocar senha
+diff --git a/cand27/JS_Assistencia.html b/cand28/JS_Assistencia.html
+index 72ac029..3dcca8d 100644
+--- a/cand27/JS_Assistencia.html
++++ b/cand28/JS_Assistencia.html
+@@ -514,6 +514,8 @@
+       (c.situacao === "EM_TRIAGEM" && c.assumidoPor ? '<div class="at-faixa">Triagem assumida por <b>' + At_esc_(c.assumidoPor) + '</b>' + (c.assumidoEm ? ' em ' + At_esc_(c.assumidoEm) : '') + '.</div>' : '') +
+       // 22/10/2026 (etapa 3): a peça chegou em Compras e o chamado voltou sozinho: a gestão agenda o retorno (o cliente já sabe que a peça chegou)
+       (c.retornoAAgendar ? '<div class="at-faixa ok"><b>Peça disponível desde ' + At_esc_(c.pecaDisponivelEm) + ' (conferida por Compras).</b> Agende o retorno do técnico no quadro "Agendar o retorno" abaixo: a mesma O.S. volta para a agenda e o cliente recebe a data por e-mail. O técnico retira a peça com Compras antes de sair.</div>' : '') +
++      // 18/11/2026 (pacote 3, item 9): visita marcada para o futuro: o prazo estourado fica registrado, mas o chamado sai da lista de pendências até a data
++      (c.visitaMarcada && !c.terminal ? '<div class="at-faixa aviso" style="text-align:justify"><b>Visita ' + (c.visitaMarcada.reagendado ? 'reagendada' : 'marcada') + ' para ' + At_esc_(c.visitaMarcada.quando) + '.</b> ' + At_esc_(c.sla.texto) + '. O prazo do contrato continua registrado no histórico e nos indicadores, mas o chamado não aparece nas pendências do Início até a data da visita. Se a chegada não for registrada até lá, ele volta para a lista.</div>' : '') +
+       (c.slaChegada && !c.terminal ? '<div class="at-faixa' + (c.slaChegada.estado === "ESTOURADO" || c.slaChegada.estado === "FORA_DO_PRAZO" ? " erro" : c.slaChegada.estado === "EM_RISCO" ? " aviso" : "") + '">' + At_esc_(c.slaChegada.texto) + '</div>' : '') +
+       dl([["Cliente", c.clienteNome + (c.unidadeNome ? " · " + c.unidadeNome : "")], ["Equipamento", c.equipamentoTexto + (c.equipNaoIdentificado ? " (não identificado no cadastro)" : "")], ["Problema relatado", c.sintoma],
+         ["Solicitante", c.solicitante + (c.contato ? " · " + c.contato : "")], ["Aberto em", c.abertoEm + " por " + c.abertoPor + " (" + c.canalNome + ")"], ["Parada", c.paradaNome], ["Prazo", c.sla && c.sla.texto ? c.sla.texto + " · " + c.slaFonte : ""],
+diff --git a/cand27/JS_Core.html b/cand28/JS_Core.html
+index 3daeb4a..3a86e09 100644
+--- a/cand27/JS_Core.html
++++ b/cand28/JS_Core.html
+@@ -7275,15 +7275,30 @@
+   window.Topo_abrirChat_ = function () { const b = document.querySelector(".comw-botao"); if (b) b.click(); };
+   // 18/11/2026 (Portal do cliente, etapa 6): o assistente é da equipe; na conta de cliente, "Dúvida" abre a ajuda da tela do Portal ("Como usar esta tela")
+   window.Topo_abrirDuvida_ = function () { if (typeof SGO_ehClientePortal_ === "function" && SGO_ehClientePortal_() && typeof Ajuda_abrir_ === "function") { Ajuda_abrir_(); return; } const b = document.querySelector(".asw-botao"); if (b) b.click(); };
++  // 18/11/2026 (Matheus, pacote 3, item 10): com novidade não lida o botão fica destacado (Topo_estadoChat_) e, quando o número
++  // sobe, pulsa por alguns segundos (UI_Estilos: .topo-chat-novo e .topo-chat-chegou). O número vem do próprio widget.
++  let TOPO_CHAT_ANTES = 0;
++  window.Topo_estadoChat_ = function (n, antes) {
++    const v = n === "99+" ? 100 : (parseInt(n, 10) || 0), a = Number(antes) || 0;
++    return { qtd: v, destacar: v > 0, chegou: v > a,
++      texto: v ? " · " + (v > 99 ? "99+" : v) + (v === 1 ? " nova" : " novas") : "",
++      titulo: v ? "Bate-papo: " + (v > 99 ? "99+" : v) + (v === 1 ? " novidade não lida" : " novidades não lidas") + " (mensagens, avisos e comunicados)" : "Bate-papo" };
++  };
+   setInterval(function () {
+     try {
+       const chat = document.querySelector(".comw-botao"), duv = document.querySelector(".asw-botao");
+       const q = chat && chat.querySelector(".comw-qt"), n = q && !q.hidden ? String(q.textContent || "").trim() : "";
++      const est = Topo_estadoChat_(n, TOPO_CHAT_ANTES);
++      TOPO_CHAT_ANTES = est.qtd;
+       ["topoBtnChat", "mobileBtnChat"].forEach(function (id) {
+         const b = document.getElementById(id); if (!b) return;
+         b.hidden = !chat;
+         const s = b.querySelector(".topo-qt"); if (s) { s.textContent = n; s.hidden = !n; }
+-        b.title = n ? "Bate-papo: " + n + " não lida(s)" : "Bate-papo";
++        const t = b.querySelector(".topo-novas"); if (t) t.textContent = est.texto;
++        b.classList.toggle("topo-chat-novo", est.destacar);
++        if (est.chegou) { b.classList.remove("topo-chat-chegou"); void b.offsetWidth; b.classList.add("topo-chat-chegou"); setTimeout(function () { b.classList.remove("topo-chat-chegou"); }, 3600); }
++        b.title = est.titulo;
++        b.setAttribute("aria-label", est.titulo);
+       });
+       ["topoBtnDuvida", "mobileBtnDuvida"].forEach(function (id) { const b = document.getElementById(id); if (b) b.hidden = !duv; });
+     } catch (e) { /* segue */ }
+diff --git a/cand27/JS_Email.html b/cand28/JS_Email.html
+index e31fcef..68c48b2 100644
+--- a/cand27/JS_Email.html
++++ b/cand28/JS_Email.html
+@@ -164,6 +164,54 @@
+   .em-estrela.on { color: var(--warning, #c98a00); }
+   .em-auto { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-top: 6px; }
+   @media (max-width: 900px) { .em-desfazer { bottom: 76px; } .em-pilula .t { max-width: 180px; } }
++  /* 18/11/2026 (Matheus, pacote 3, item 11): leitura na área principal, janela de escrever maior (com Maximizar), barra de formatação
++     completa e anexos logo abaixo do assunto. */
++  .em-leitor h3 { font-size: 19px; line-height: 1.35; margin-bottom: 8px; }
++  .em-cab { font-size: 13.5px; }
++  .em-leitor-topo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
++  .em-leitor-topo:empty { display: none; }
++  .em-btn-leitura { display: none; }
++  @media (min-width: 901px) {
++    .em-grade.lendo { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); }
++    .em-grade.lendo .em-col-pastas { display: none; }
++    .em-grade.lendo .em-voltar, .em-grade.lendo .em-btn-leitura { display: inline-flex; }
++    .em-grade.lendo.cheia { grid-template-columns: minmax(0, 1fr); }
++    .em-grade.lendo.cheia .em-col-lista { display: none; }
++    .em-grade.lendo .em-leitor { padding: 14px 18px; }
++  }
++  .em-janela.em-comp { max-width: 1120px; }
++  .em-janela.em-comp .em-editor { min-height: 320px; font-size: 14.5px; }
++  .em-comp-cab { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-right: 56px; margin-bottom: 10px; }
++  .em-comp-cab h3 { margin: 0; padding-right: 0; flex: 1 1 auto; }
++  .em-comp-cab .em-max-btn { min-height: 38px; width: auto !important; }
++  .em-overlay.em-max { padding: 0; }
++  .em-overlay.em-max .em-janela.em-comp { max-width: none; min-height: 100vh; border-radius: 0; }
++  .em-overlay.em-max .em-janela.em-comp .em-editor { min-height: calc(100vh - 430px); }
++  .em-assunto-linha { display: flex; gap: 6px; align-items: center; min-width: 0; }
++  .em-assunto-linha input { flex: 1 1 auto; min-width: 0; }
++  .em-assunto-linha .em-botao-arquivo { flex: 0 0 auto; white-space: nowrap; }
++  .em-anexos-topo { min-width: 0; }
++  .em-anexos-topo .em-anexos-comp { margin: 0 0 4px; }
++  .em-anexo-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--info, #1f5fa8); border-radius: 8px; background: var(--info-bg, rgba(31,95,168,.08)); padding: 6px 6px 6px 10px; min-height: 40px; font-size: 13.5px; min-width: 0; }
++  .em-anexo-chip > i { color: var(--info, #1f5fa8); font-size: 16px; flex: 0 0 auto; }
++  .em-anexo-chip .nome { font-weight: 700; overflow-wrap: anywhere; min-width: 0; flex: 1 1 auto; }
++  .em-anexo-chip .tam { color: var(--muted); font-size: 12.5px; white-space: nowrap; flex: 0 0 auto; }
++  .em-anexo-chip button { min-height: 32px; width: auto !important; padding: 0 10px; flex: 0 0 auto; }
++  .em-anexo-chip.orig { border-style: dashed; }
++  .em-anexo-chip input[type=checkbox] { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; }
++  .em-barra { align-items: center; padding: 4px; border: 1px solid var(--border); border-radius: 6px 6px 0 0; border-bottom: 0; background: var(--bc-surface-2, var(--card)); margin-bottom: 0; }
++  .em-barra + .em-editor { border-radius: 0 0 6px 6px; }
++  .em-barra .em-grupo { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
++  .em-barra select.em-fmt { min-height: 34px; max-width: 150px; font-size: 13px; }
++  .em-cor { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-height: 34px; min-width: 38px; padding: 0 8px; cursor: pointer; font-weight: 800; line-height: 1; }
++  .em-barra .em-cor { width: auto !important; flex: 0 0 auto; }
++  .em-cor .faixa { display: block; width: 18px; height: 4px; margin-top: 2px; border-radius: 1px; }
++  .em-cor input[type=color] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
++  @media (max-width: 900px) {
++    .em-assunto-linha .em-botao-arquivo .t { display: none; }
++    .em-barra select.em-fmt { max-width: 120px; }
++    .em-janela.em-comp .em-editor { min-height: 240px; }
++  }
+ </style>
+ 
+ <script>
+@@ -427,6 +475,9 @@
+     if (pasta === EM.pasta) { EM.focoUid = uid; Email_marcarFocoDom_(); }
+     var seq = EM.lerSeq = (EM.lerSeq || 0) + 1; // 17/11/2026: setas rápidas: só a última mensagem pedida aparece
+     var g = document.getElementById("emGrade"); if (g) g.classList.add("lendo");
++    Email_aplicarLeitura_();
++    // 18/11/2026: no computador, se a leitura começa abaixo do meio da tela (quadro "Como fazer" aberto), a página rola até ela
++    try { var col = document.querySelector(".em-col-leitor"); if (g && col && window.innerWidth > 900 && col.getBoundingClientRect().top > window.innerHeight * 0.55) g.scrollIntoView({ block: "start", behavior: "smooth" }); } catch (eRol) {}
+     var el = document.getElementById("emLeitor");
+     if (el) el.innerHTML = '<div class="em-vazio">Abrindo a mensagem...</div>';
+     var rasc = Email_especial_(pasta) === "rascunhos";
+@@ -446,7 +497,11 @@
+     if (!txt && m.html) { var d = document.createElement("div"); d.innerHTML = String(m.html); txt = (d.textContent || "").replace(/[ \t]+\n/g, "\n").trim(); }
+     Assistencia_abrirDeEmail_({ assunto: m.assunto || "", de: m.de || "", texto: txt, id: String(m.messageId || m.uid || ""), clienteId: m.cliente ? m.cliente.id : "", clienteNome: m.cliente ? m.cliente.nome : "" });
+   }
+-  function Email_fecharLeitor_() { var g = document.getElementById("emGrade"); if (g) g.classList.remove("lendo"); }
++  function Email_fecharLeitor_() { var g = document.getElementById("emGrade"); if (g) { g.classList.remove("lendo"); g.classList.remove("cheia"); } }
++  /** 18/11/2026 (pacote 3, item 11): no computador, a mensagem aberta ocupa a área principal: as pastas saem e a lista fica estreita ao lado
++   *  ("ampla", o padrão) ou some também ("cheia"). A escolha fica guardada neste navegador. No celular a leitura já é a tela toda. */
++  function Email_aplicarLeitura_() { var g = document.getElementById("emGrade"); if (g) g.classList.toggle("cheia", g.classList.contains("lendo") && Email_lerPref_("leitura", "ampla") === "cheia"); }
++  function Email_trocarLeitura_() { Email_gravarPref_("leitura", Email_lerPref_("leitura", "ampla") === "cheia" ? "ampla" : "cheia"); Email_aplicarLeitura_(); if (EM.aberta) Email_desenharLeitor_(); }
+ 
+   function Email_desenharLeitor_() {
+     var m = EM.aberta, el = document.getElementById("emLeitor");
+@@ -462,7 +517,10 @@
+       : '<div class="em-dica" style="margin-bottom:6px">Remetente fora do cadastro de clientes. <button type="button" class="btn-secondary" onclick="Email_registrar_()">Registrar no cliente</button></div>';
+     var trat = m.tratamento && !m.tratamento.eu ? '<div class="em-faixa aviso">' + (m.tratamento.situacao === "respondida" ? Email_esc_(m.tratamento.nome) + " já respondeu esta mensagem em " + Email_esc_(m.tratamento.em) + ". Confira em Enviados antes de responder de novo." : Email_esc_(m.tratamento.nome) + " está respondendo esta mensagem desde " + Email_esc_(m.tratamento.em) + ". Combine antes de responder, para o cliente não receber duas respostas.") + '</div>' : "";
+     var imgs = m.imagensBloqueadas && !EM.imagens[m.messageId || m.uid] ? '<div class="em-faixa"><i class="fas fa-image" aria-hidden="true"></i> ' + m.imagensBloqueadas + ' imagem(ns) de fora foram bloqueadas para proteger você (elas avisam o remetente que a mensagem foi aberta). <button type="button" class="btn-secondary" onclick="Email_mostrarImagens_()">Mostrar imagens</button></div>' : "";
+-    el.innerHTML = '<button type="button" class="btn-secondary em-voltar" onclick="Email_fecharLeitor_()"><i class="fas fa-arrow-left" aria-hidden="true"></i>&nbsp;Voltar à lista</button>' +
++    var cheia = Email_lerPref_("leitura", "ampla") === "cheia";
++    el.innerHTML = '<div class="em-leitor-topo"><button type="button" class="btn-secondary em-voltar" onclick="Email_fecharLeitor_()"><i class="fas fa-arrow-left" aria-hidden="true"></i>&nbsp;Voltar à lista</button>' +
++      '<button type="button" class="btn-secondary em-btn-leitura" id="emBtnLeitura" aria-pressed="' + (cheia ? "true" : "false") + '" onclick="Email_trocarLeitura_()" title="' + (cheia ? "Mostrar a lista de mensagens ao lado da leitura" : "Ler a mensagem na tela toda (a lista fica escondida até você voltar)") + '">' +
++        '<i class="fas ' + (cheia ? "fa-table-columns" : "fa-expand") + '" aria-hidden="true"></i>&nbsp;' + (cheia ? "Mostrar a lista" : "Tela cheia") + '</button></div>' +
+       '<h3>' + Email_esc_(m.assunto || "(sem assunto)") + '</h3>' +
+       '<div class="em-cab"><b>De:</b> ' + Email_esc_(m.de) + '<br><b>Para:</b> ' + Email_esc_(m.para) + (m.cc ? '<br><b>Cc:</b> ' + Email_esc_(m.cc) : "") + '<br><b>Data:</b> ' + Email_dataLonga_(m.data) + (m.tipoConta === "compartilhada" ? '<br><b>Caixa:</b> ' + Email_esc_(m.enderecoConta) + ' (compartilhada)' : "") + '</div>' +
+       cli + trat +
+@@ -491,7 +549,7 @@
+     if (liberar) html = html.replace(/data-sgo-src=/g, "src=");
+     var csp = "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:" + (liberar ? " https: http:" : "");
+     f.srcdoc = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="' + csp + '"><meta name="referrer" content="no-referrer">' +
+-      '<style>html,body{margin:0;padding:8px;font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1f2a24;background:#fff;overflow-wrap:anywhere;word-break:break-word}img{max-width:100%;height:auto}table{max-width:100%}pre{white-space:pre-wrap}a{color:#1f5fa8}blockquote{margin:0 0 0 8px;padding-left:8px;border-left:3px solid #ccd}</style></head><body>' + html + '</body></html>';
++      '<style>html,body{margin:0;padding:10px 12px;font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:#1f2a24;background:#fff;overflow-wrap:anywhere;word-break:break-word}img{max-width:100%;height:auto}table{max-width:100%}pre{white-space:pre-wrap}a{color:#1f5fa8}blockquote{margin:0 0 0 8px;padding-left:8px;border-left:3px solid #ccd}</style></head><body>' + html + '</body></html>';
+     f.onload = function () {
+       try {
+         var d = f.contentDocument;
+@@ -581,11 +639,11 @@
+   // (a casca clica no "×", marcado com data-sgo-fechar), pelo toque no fundo escuro (computador) e pela tecla Esc.
+   // Antes só fechava pelo Cancelar/Descartar do rodapé; na janela de escrever, o voltar não achava botão e a janela ficava.
+   // Fechar com algo digitado pergunta antes (a de escrever usa o Descartar de sempre, que também pergunta).
+-  function Email_janela_(html) {
++  function Email_janela_(html, classe) {
+     Email_fecharJanela_();
+     var o = document.createElement("div");
+     o.className = "em-overlay"; o.id = "emOverlay";
+-    o.innerHTML = '<div class="em-janela" role="dialog" aria-modal="true"><div class="em-janela-topo"><button type="button" class="em-fechar" data-sgo-fechar aria-label="Fechar a janela" title="Fechar" onclick="Email_fecharPeloUsuario_()">&times;</button></div>' + html + '</div>';
++    o.innerHTML = '<div class="em-janela' + (classe ? " " + classe : "") + '" role="dialog" aria-modal="true"><div class="em-janela-topo"><button type="button" class="em-fechar" data-sgo-fechar aria-label="Fechar a janela" title="Fechar" onclick="Email_fecharPeloUsuario_()">&times;</button></div>' + html + '</div>';
+     var tocouFundo = false;
+     o.addEventListener("mousedown", function (e) { tocouFundo = e.target === o; });
+     o.addEventListener("click", function (e) { if (e.target === o && tocouFundo) Email_fecharPeloUsuario_(); tocouFundo = false; });
+@@ -663,33 +721,48 @@
+       originais: originais, doRascunho: r ? (r.anexos || []).map(function (a) { return { parte: String(a.parte), nome: a.nome || "anexo", tamanho: Number(a.tamanho) || 0 }; }) : [], resposta: resposta, assinatura: assId };
+     var assHtml = r ? "" : Email_assinaturaHtml_(assId, c);
+     var corpoInicial = r ? r.html : (o.html || "<p><br></p>") + (assHtml ? "<div><br></div>" + assHtml : "") + (o.citacao || "");
+-    Email_janela_('<h3>' + (o.respondendo ? "Responder" : o.encaminhando ? "Encaminhar" : r ? "Continuar rascunho" : "Escrever e-mail") + '</h3>' +
++    var maxim = Email_lerPref_("escreverMax", "0") === "1";
++    Email_janela_('<div class="em-comp-cab"><h3>' + (o.respondendo ? "Responder" : o.encaminhando ? "Encaminhar" : r ? "Continuar rascunho" : "Escrever e-mail") + '</h3>' +
++      '<button type="button" class="btn-secondary em-max-btn" id="emBtnMax" aria-pressed="' + (maxim ? "true" : "false") + '" onclick="Email_maximizar_()" title="' + (maxim ? "Voltar a janela ao tamanho normal" : "Usar a tela toda para escrever") + '"><i class="fas ' + (maxim ? "fa-compress" : "fa-expand") + '" aria-hidden="true"></i>&nbsp;' + (maxim ? "Restaurar" : "Maximizar") + '</button></div>' +
+       (contas.length > 1 ? '<div class="em-linha"><label for="emDe">De</label><select id="emDe" onchange="Email_trocarRemetente_(this.value)" style="min-height:38px">' + contas.map(function (x) { return '<option value="' + Email_esc_(x.id) + '"' + (x.id === c.id ? " selected" : "") + '>' + Email_esc_(x.endereco) + (x.tipo === "compartilhada" ? " (compartilhada)" : "") + '</option>'; }).join("") + '</select></div>'
+         : '<div class="em-linha"><label>De</label><div style="font-size:13px;overflow-wrap:anywhere">' + Email_esc_(c.endereco) + '</div></div>') +
+       // 17/11/2026: destinatários em pílulas com busca ao digitar (meus contatos e catálogo da empresa), como no Outlook
+       Email_campoDest_("emPara", r ? r.para : o.para || "") + Email_campoDest_("emCc", r ? r.cc : o.cc || "") + Email_campoDest_("emCco", r ? r.cco || "" : o.cco || "") +
+       '<div class="em-linha"><span></span><div class="em-dica">Digite parte do nome, do e-mail ou da empresa: aparecem os seus contatos e os da empresa, os usados por último primeiro. Escolha com as setas e Enter (ou Tab) ou com o mouse. Ponto e vírgula ou vírgula separa os endereços; colar uma lista também funciona. O × da pílula tira o destinatário; pílula vermelha é endereço errado: dê dois cliques para corrigir.</div></div>' +
+-      '<div class="em-linha"><label for="emAssunto">Assunto</label><input id="emAssunto" type="text" value="' + Email_esc_(r ? r.assunto : o.assunto || "") + '"></div>' +
+-      '<div class="em-barra" role="toolbar" aria-label="Formatação">' +
+-        '<button type="button" class="btn-secondary" title="Negrito" onclick="Email_formatar_(\'bold\')"><b>N</b></button>' +
+-        '<button type="button" class="btn-secondary" title="Itálico" onclick="Email_formatar_(\'italic\')"><i>I</i></button>' +
+-        '<button type="button" class="btn-secondary" title="Sublinhado" onclick="Email_formatar_(\'underline\')"><u>S</u></button>' +
+-        '<button type="button" class="btn-secondary" title="Lista" onclick="Email_formatar_(\'insertUnorderedList\')"><i class="fas fa-list-ul" aria-hidden="true"></i></button>' +
+-        '<button type="button" class="btn-secondary" title="Link" onclick="Email_link_()"><i class="fas fa-link" aria-hidden="true"></i></button>' +
++      // 18/11/2026 (pacote 3, item 11): "Anexar" ao lado do assunto e a lista dos anexos logo abaixo, à vista antes do texto
++      '<div class="em-linha"><label for="emAssunto">Assunto</label><div class="em-assunto-linha"><input id="emAssunto" type="text" value="' + Email_esc_(r ? r.assunto : o.assunto || "") + '">' +
++        '<label class="btn-secondary em-botao-arquivo" title="Anexar arquivos à mensagem"><i class="fas fa-paperclip" aria-hidden="true"></i><span class="t">&nbsp;Anexar</span><input type="file" id="emArquivo" multiple style="display:none" onchange="Email_anexar_(this)" aria-label="Anexar arquivos"></label></div></div>' +
++      '<div class="em-linha"><span></span><div class="em-anexos-topo"><div id="emAnexosComp" class="em-anexos-comp" aria-live="polite"></div>' +
++        '<div class="em-dica">Toque em «Anexar» ou arraste os arquivos para esta janela. Até ' + Email_limiteArquivoMb_() + ' MB por arquivo, ' + (lim.anexosMb || 18) + ' MB somados e ' + (lim.anexosMax || 20) + ' arquivos por mensagem.</div>' +
++        '<div class="em-dica em-soltar-aviso"><b>Solte os arquivos para anexar.</b></div></div></div>' +
++      '<div class="em-barra" role="toolbar" aria-label="Formatação do texto">' +
++        '<span class="em-grupo">' +
++        '<button type="button" class="btn-secondary" title="Negrito (Ctrl+B)" aria-label="Negrito" onmousedown="event.preventDefault()" onclick="Email_formatar_(\'bold\')"><b>N</b></button>' +
++        '<button type="button" class="btn-secondary" title="Itálico (Ctrl+I)" aria-label="Itálico" onmousedown="event.preventDefault()" onclick="Email_formatar_(\'italic\')"><i>I</i></button>' +
++        '<button type="button" class="btn-secondary" title="Sublinhado (Ctrl+U)" aria-label="Sublinhado" onmousedown="event.preventDefault()" onclick="Email_formatar_(\'underline\')"><u>S</u></button></span>' +
++        '<span class="em-grupo">' +
++        '<select id="emFonte" class="em-fmt" aria-label="Fonte" title="Fonte do texto selecionado" onchange="Email_fonte_(this.value); this.value=\'\'">' + Email_opcoesFonte_() + '</select>' +
++        '<select id="emTamanho" class="em-fmt" aria-label="Tamanho da fonte" title="Tamanho da fonte do texto selecionado" onchange="Email_tamanhoFonte_(this.value); this.value=\'\'">' + Email_opcoesTamanho_() + '</select></span>' +
++        '<span class="em-grupo">' +
++        '<label class="btn-secondary em-cor" title="Cor da fonte do texto selecionado">A<span class="faixa" id="emFaixaFonte" style="background:#C00000"></span><input type="color" id="emCorFonte" value="#c00000" aria-label="Cor da fonte" onchange="Email_corFonte_(this.value)"></label>' +
++        '<label class="btn-secondary em-cor" title="Cor de destaque (fundo do texto selecionado)"><i class="fas fa-highlighter" aria-hidden="true"></i><span class="faixa" id="emFaixaDestaque" style="background:#FFFF00"></span><input type="color" id="emCorDestaque" value="#ffff00" aria-label="Cor de destaque" onchange="Email_corDestaque_(this.value)"></label>' +
++        '<button type="button" class="btn-secondary" title="Tirar a formatação do texto selecionado" aria-label="Limpar formatação" onmousedown="event.preventDefault()" onclick="Email_formatar_(\'removeFormat\')"><i class="fas fa-text-slash" aria-hidden="true"></i></button></span>' +
++        '<span class="em-grupo">' +
++        '<button type="button" class="btn-secondary" title="Lista" aria-label="Lista com marcadores" onmousedown="event.preventDefault()" onclick="Email_formatar_(\'insertUnorderedList\')"><i class="fas fa-list-ul" aria-hidden="true"></i></button>' +
++        '<button type="button" class="btn-secondary" title="Link" aria-label="Inserir link" onmousedown="event.preventDefault()" onclick="Email_link_()"><i class="fas fa-link" aria-hidden="true"></i></button></span>' +
+         '<span class="em-sep"></span>' +
+         '<select id="emAssSel" aria-label="Assinatura" title="Assinatura: troca a assinatura que está no fim do texto" onchange="Email_trocarAssinatura_(this.value)">' + Email_opcoesAssinatura_(c, assId, !!r) + '</select></div>' +
+       '<div class="em-editor" id="emEditor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Texto da mensagem">' + corpoInicial + '</div>' +
+-      '<div class="em-anexar"><label class="btn-secondary em-botao-arquivo"><i class="fas fa-paperclip" aria-hidden="true"></i> Anexar arquivo<input type="file" multiple style="display:none" onchange="Email_anexar_(this)"></label>' +
+-        '<span class="em-dica">ou arraste os arquivos para esta janela. Até ' + Email_limiteArquivoMb_() + ' MB por arquivo, ' + (lim.anexosMb || 18) + ' MB somados e ' + (lim.anexosMax || 20) + ' arquivos por mensagem.</span>' +
+-        '<span class="em-dica em-soltar-aviso"><b>Solte os arquivos para anexar.</b></span></div>' +
+-      '<div id="emAnexosComp" class="em-anexos-comp"></div>' +
+       '<div id="emCompMsg"></div>' +
+       '<div class="em-auto"><label class="em-check-linha" style="font-weight:600"><input type="checkbox" id="emAutoRasc"' + (Email_autoRascunhoLigado_() ? " checked" : "") + ' onchange="Email_trocarAutoRascunho_(this.checked)"> Salvar rascunho sozinho a cada minuto</label><span class="em-dica" id="emAutoInfo" role="status"></span></div>' +
+       '<div class="em-dica">Com a opção ligada, o que você escreve vai para a pasta Rascunhos a cada minuto com mudança, para não perder o texto se a internet cair. Ao enviar, o rascunho sai de lá; ao descartar, o rascunho salvo sozinho vai para a Lixeira.</div>' +
+       '<div class="em-rodape"><span class="em-dica">Limite: ' + (lim.mensagensHora || 30) + ' mensagens ou ' + (lim.destinatariosHora || 100) + ' destinatários por hora; até ' + (lim.destinatariosMensagem || 50) + ' por mensagem.</span>' +
+-      '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn-secondary" onclick="Email_descartar_()">Descartar</button><button type="button" class="btn-secondary" onclick="Email_salvarRascunho_()">Salvar rascunho</button><button type="button" class="btn-primary" id="emBtnEnviar" onclick="Email_enviar_()"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Enviar</button></span></div>');
++      '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn-secondary" onclick="Email_descartar_()">Descartar</button><button type="button" class="btn-secondary" onclick="Email_salvarRascunho_()">Salvar rascunho</button><button type="button" class="btn-primary" id="emBtnEnviar" onclick="Email_enviar_()"><i class="fas fa-paper-plane" aria-hidden="true"></i>&nbsp;Enviar</button></span></div>', "em-comp");
++    if (maxim) { var ovM = document.getElementById("emOverlay"); if (ovM) ovM.classList.add("em-max"); }
+     var ed = document.getElementById("emEditor");
+     ed.addEventListener("input", Email_sujou_);
++    ed.addEventListener("input", function () { Email_normalizarTamanhos_(ed); });
++    Email_vigiarSelecao_();
+     ["emAssunto"].forEach(function (id) { var i = document.getElementById(id); if (i) i.addEventListener("input", Email_sujou_); });
+     EM_DEST.forEach(Email_destIniciar_);
+     // contatos para as sugestões (uma vez a cada 5 minutos); quando chegam, as pílulas ganham o nome
+@@ -710,7 +783,118 @@
+     if (sel) sel.innerHTML = Email_opcoesAssinatura_(c, novo, false);
+     Email_trocarAssinatura_(novo);
+   }
+-  function Email_formatar_(cmd, alvo) { var ed = document.getElementById(alvo || "emEditor"); if (ed) ed.focus(); try { document.execCommand(cmd, false, null); } catch (e) {} }
++  function Email_formatar_(cmd, alvo) { var ed = document.getElementById(alvo || "emEditor"); if (ed) { ed.focus(); if (!alvo) Email_restaurarSelecao_(ed); } try { document.execCommand(cmd, false, null); } catch (e) {} if (ed && !alvo) Email_sujou_(); }
++  // ---------------- 18/11/2026 (pacote 3, item 11): fonte, tamanho, cor da fonte, cor de destaque, maximizar e HTML seguro ----------------
++  var EM_FONTES = [["Arial", "Arial, Helvetica, sans-serif"], ["Calibri", "Calibri, Carlito, Arial, sans-serif"], ["Cambria", "Cambria, Georgia, serif"], ["Georgia", "Georgia, serif"],
++    ["Tahoma", "Tahoma, Verdana, sans-serif"], ["Times New Roman", "'Times New Roman', Times, serif"], ["Trebuchet MS", "'Trebuchet MS', Arial, sans-serif"], ["Verdana", "Verdana, Geneva, sans-serif"], ["Courier New", "'Courier New', Courier, monospace"]];
++  var EM_TAMANHOS = [10, 11, 12, 14, 16, 18, 20, 24, 28, 36];
++  function Email_opcoesFonte_() { return '<option value="">Fonte</option>' + EM_FONTES.map(function (f, i) { return '<option value="' + i + '" style="font-family:' + Email_esc_(f[1]) + '">' + Email_esc_(f[0]) + '</option>'; }).join(""); }
++  function Email_opcoesTamanho_() { return '<option value="">Tamanho</option>' + EM_TAMANHOS.map(function (t) { return '<option value="' + t + '">' + t + '</option>'; }).join(""); }
++  /** A seleção do texto é guardada enquanto a pessoa escolhe a fonte, o tamanho ou a cor (o foco sai do texto nessas horas). */
++  function Email_vigiarSelecao_() {
++    if (EM.selVigia) return;
++    EM.selVigia = true;
++    document.addEventListener("selectionchange", function () {
++      var ed = document.getElementById("emEditor"), sel = window.getSelection ? window.getSelection() : null;
++      if (!ed || !sel || !sel.rangeCount) return;
++      // só a seleção feita com o foco no texto conta: ao tocar na fonte, no tamanho ou na cor, o foco sai e a seleção guardada fica
++      if (!document.activeElement || (document.activeElement !== ed && !ed.contains(document.activeElement))) return;
++      var r = sel.getRangeAt(0);
++      if (ed.contains(r.commonAncestorContainer)) EM.selTexto = r.cloneRange();
++    });
++  }
++  function Email_restaurarSelecao_(ed) {
++    var r = EM.selTexto, sel = window.getSelection ? window.getSelection() : null;
++    if (!r || !sel || !ed || !ed.contains(r.commonAncestorContainer)) return;
++    try { sel.removeAllRanges(); sel.addRange(r); } catch (e) {}
++  }
++  function Email_comCss_(cmd, valor) {
++    var ed = document.getElementById("emEditor"); if (!ed) return;
++    ed.focus(); Email_restaurarSelecao_(ed);
++    try { document.execCommand("styleWithCSS", false, true); } catch (e) {}
++    var ok = false;
++    try { ok = document.execCommand(cmd, false, valor); } catch (e) { ok = false; }
++    if (!ok && cmd === "hiliteColor") { try { document.execCommand("backColor", false, valor); } catch (e) {} }
++    try { document.execCommand("styleWithCSS", false, false); } catch (e) {}
++    Email_sujou_();
++  }
++  function Email_fonte_(i) { var f = EM_FONTES[Number(i)]; if (f && i !== "") Email_comCss_("fontName", f[1]); }
++  function Email_corFonte_(cor) { var fx = document.getElementById("emFaixaFonte"); if (fx) fx.style.background = cor; Email_comCss_("foreColor", cor); }
++  function Email_corDestaque_(cor) { var fx = document.getElementById("emFaixaDestaque"); if (fx) fx.style.background = cor; Email_comCss_("hiliteColor", cor); }
++  /** Tamanho em pixels (Gmail e Outlook respeitam font-size em px). O navegador só aplica tamanhos de 1 a 7: aplica o 7 e troca por px. */
++  function Email_tamanhoFonte_(px) {
++    px = Number(px); if (!px) return;
++    var ed = document.getElementById("emEditor"); if (!ed) return;
++    ed.focus(); Email_restaurarSelecao_(ed);
++    EM.tamPendente = px;
++    EM.tamReselecionar = true;   // o execCommand dispara o "input" na hora: a troca feita lá também mantém o trecho selecionado
++    try { document.execCommand("styleWithCSS", false, false); document.execCommand("fontSize", false, "7"); } catch (e) {}
++    Email_normalizarTamanhos_(ed, true);
++    EM.tamReselecionar = false;
++    Email_sujou_();
++  }
++  /** Troca o <font size="7"> pelo span com o tamanho em px; com "reselecionar", o trecho trocado continua selecionado (para a cor em seguida). */
++  function Email_normalizarTamanhos_(ed, reselecionar) {
++    if (!ed || !EM.tamPendente) return;
++    var novos = [];
++    Array.prototype.slice.call(ed.querySelectorAll('font[size="7"]')).forEach(function (f) {
++      var s = document.createElement("span"); s.style.fontSize = EM.tamPendente + "px";
++      while (f.firstChild) s.appendChild(f.firstChild);
++      f.parentNode.replaceChild(s, f);
++      Array.prototype.forEach.call(s.querySelectorAll("span"), function (x) { if (x.style && x.style.fontSize) x.style.fontSize = ""; });
++      novos.push(s);
++    });
++    if ((reselecionar || EM.tamReselecionar) && novos.length && window.getSelection) {
++      try {
++        var r = document.createRange(); r.setStart(novos[0], 0); r.setEnd(novos[novos.length - 1], novos[novos.length - 1].childNodes.length);
++        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); EM.selTexto = r.cloneRange();
++      } catch (e) {}
++    }
++  }
++  function Email_maximizar_() {
++    var o = document.getElementById("emOverlay"); if (!o) return;
++    var max = !o.classList.contains("em-max");
++    o.classList.toggle("em-max", max);
++    Email_gravarPref_("escreverMax", max ? "1" : "0");
++    var b = document.getElementById("emBtnMax");
++    if (b) { b.setAttribute("aria-pressed", max ? "true" : "false"); b.title = max ? "Voltar a janela ao tamanho normal" : "Usar a tela toda para escrever"; b.innerHTML = '<i class="fas ' + (max ? "fa-compress" : "fa-expand") + '" aria-hidden="true"></i>&nbsp;' + (max ? "Restaurar" : "Maximizar"); }
++  }
++  var EM_CSS_OK = /^(color|background-color|background|font-family|font-size|font-weight|font-style|text-decoration|text-decoration-line|text-align|line-height|margin(-(top|right|bottom|left))?|padding(-(top|right|bottom|left))?|border(-(top|right|bottom|left))?(-(width|style|color))?|border-collapse|width|max-width|height|vertical-align|list-style(-type)?|white-space)$/i;
++  var EM_TAGS_FORA = /^(script|style|iframe|frame|frameset|object|embed|applet|form|input|button|select|textarea|svg|math|link|meta|base|template|audio|video|canvas|noscript|title)$/i;
++  /** CSS do atributo style: só propriedades de aparência; sem url() externo, expression, javascript:, position. */
++  function Email_cssSeguro_(css) {
++    return String(css || "").split(";").map(function (d) {
++      var i = d.indexOf(":"); if (i < 0) return "";
++      var k = d.slice(0, i).trim().toLowerCase(), v = d.slice(i + 1).trim();
++      if (!EM_CSS_OK.test(k) || !v || /expression\s*\(|javascript:|vbscript:|behavior|-moz-binding|@import/i.test(v)) return "";
++      if (/url\s*\(/i.test(v) && !/url\s*\(\s*['"]?data:image\/(png|jpe?g|gif|webp);/i.test(v)) return "";
++      return k + ": " + v;
++    }).filter(Boolean).join("; ");
++  }
++  /**
++   * HTML que vai ao servidor (envio e rascunho): tira o que não é texto formatado (script, formulário, estilo de página...), os atributos
++   * on*, links que não são http(s)/mailto/tel e CSS fora da lista. O servidor higieniza de novo (htmlSeguro.ts); isto evita mandar lixo
++   * colado de outros sites e mantém a formatação que Gmail e Outlook mostram (span com style, b, i, u, font).
++   */
++  function Email_htmlSeguro_(html) {
++    var txt = String(html || "");
++    if (typeof DOMParser === "undefined") return txt.replace(/<(script|style|iframe|object|embed)[\s\S]*?<\/\1>/gi, "").replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
++    var doc = new DOMParser().parseFromString("<!DOCTYPE html><html><body><div id=\"emRaizSegura\">" + txt + "</div></body></html>", "text/html");
++    var raiz = doc.getElementById("emRaizSegura");
++    if (!raiz) return "";
++    Array.prototype.slice.call(raiz.querySelectorAll("*")).forEach(function (el) {
++      if (!el.parentNode) return;
++      if (EM_TAGS_FORA.test(el.tagName)) { el.parentNode.removeChild(el); return; }
++      Array.prototype.slice.call(el.attributes).forEach(function (a) {
++        var n = a.name.toLowerCase(), v = a.value;
++        if (/^on/.test(n) || n === "contenteditable" || n === "srcdoc" || n === "formaction") { el.removeAttribute(a.name); return; }
++        if (n === "style") { var c = Email_cssSeguro_(v); if (c) el.setAttribute("style", c); else el.removeAttribute("style"); return; }
++        if (n === "href" && !/^(https?:|mailto:|tel:|#)/i.test(String(v).trim())) { el.removeAttribute("href"); return; }
++        if (n === "src" && !/^(https?:|data:image\/(png|jpe?g|gif|webp);|cid:)/i.test(String(v).trim())) { el.removeAttribute("src"); return; }
++      });
++    });
++    return raiz.innerHTML;
++  }
+   function Email_link_(alvo) { var u = prompt("Endereço do link (começando com https://):", "https://"); if (!u || !/^https?:\/\//i.test(u)) return; var ed = document.getElementById(alvo || "emEditor"); if (ed) ed.focus(); try { document.execCommand("createLink", false, u); } catch (e) {} }
+ 
+   // ---------------- assinatura na janela de escrever (27/10/2026) ----------------
+@@ -795,18 +979,22 @@
+       h += '<div class="em-anexo-linha"><label><input type="checkbox"' + (todos ? " checked" : "") + (escolhe ? "" : " disabled") + ' onchange="Email_originaisTodos_(this.checked)"> ' +
+         (c.encaminhando ? "Manter os anexos da mensagem original" : "Incluir os anexos da mensagem original") + '</label></div>' +
+         c.originais.map(function (a, i) {
+-          return '<div class="em-anexo-linha"><label class="nome"><input type="checkbox"' + (a.incluir ? " checked" : "") + (a.parte ? "" : " disabled") + ' onchange="Email_originalIncluir_(' + i + ',this.checked)"> <i class="fas fa-paperclip" aria-hidden="true"></i> ' + Email_esc_(a.nome) + (a.tamanho ? " (" + Email_tamanho_(a.tamanho) + ")" : "") + ' <span class="em-dica">da mensagem original</span></label></div>';
++          return '<div class="em-anexo-chip orig"><input type="checkbox"' + (a.incluir ? " checked" : "") + (a.parte ? "" : " disabled") + ' aria-label="Incluir ' + Email_esc_(a.nome) + '" onchange="Email_originalIncluir_(' + i + ',this.checked)"><i class="fas ' + Email_iconeArquivo_(a.nome) + '" aria-hidden="true"></i><span class="nome">' + Email_esc_(a.nome) + ' <span class="em-dica">da mensagem original</span></span>' + (a.tamanho ? '<span class="tam">' + Email_tamanho_(a.tamanho) + '</span>' : "") + '</div>';
+         }).join("");
+     }
+     h += c.doRascunho.map(function (a, i) {
+-      return '<div class="em-anexo-linha"><span class="nome"><i class="fas fa-paperclip" aria-hidden="true"></i> ' + Email_esc_(a.nome) + ' (' + Email_tamanho_(a.tamanho) + ') <span class="em-dica">guardado no rascunho</span></span><button type="button" class="btn-secondary" title="Tirar anexo" onclick="Email_tirarAnexoRascunho_(' + i + ')">Tirar</button></div>';
++      return '<div class="em-anexo-chip"><i class="fas ' + Email_iconeArquivo_(a.nome) + '" aria-hidden="true"></i><span class="nome">' + Email_esc_(a.nome) + ' <span class="em-dica">guardado no rascunho</span></span><span class="tam">' + Email_tamanho_(a.tamanho) + '</span><button type="button" class="btn-secondary" title="Remover este anexo da mensagem" aria-label="Remover ' + Email_esc_(a.nome) + '" onclick="Email_tirarAnexoRascunho_(' + i + ')">&times;&nbsp;Remover</button></div>';
+     }).join("") + c.anexos.map(function (a, i) {
+-      return '<div class="em-anexo-linha"><span class="nome"><i class="fas fa-paperclip" aria-hidden="true"></i> ' + Email_esc_(a.nome) + ' (' + Email_tamanho_(a.tamanho) + ')</span><button type="button" class="btn-secondary" title="Tirar anexo" onclick="Email_tirarAnexo_(' + i + ')">Tirar</button></div>';
++      return '<div class="em-anexo-chip"><i class="fas ' + Email_iconeArquivo_(a.nome) + '" aria-hidden="true"></i><span class="nome">' + Email_esc_(a.nome) + '</span><span class="tam">' + Email_tamanho_(a.tamanho) + '</span><button type="button" class="btn-secondary" title="Remover este anexo da mensagem" aria-label="Remover ' + Email_esc_(a.nome) + '" onclick="Email_tirarAnexo_(' + i + ')">&times;&nbsp;Remover</button></div>';
+     }).join("");
+     var total = Email_totalComp_();
+     if (total || c.anexos.length || c.doRascunho.length) h += '<div class="em-dica">Total dos anexos: ' + Email_tamanho_(total) + ' de ' + (lim.anexosMb || 18) + ' MB por mensagem.</div>';
+     el.innerHTML = h;
+   }
++  function Email_iconeArquivo_(nome) {
++    var e = String(nome || "").toLowerCase().split(".").pop();
++    return e === "pdf" ? "fa-file-pdf" : /^(docx?|odt|rtf)$/.test(e) ? "fa-file-word" : /^(xlsx?|ods|csv)$/.test(e) ? "fa-file-excel" : /^(png|jpe?g|gif|webp|bmp|heic)$/.test(e) ? "fa-file-image" : /^(zip|rar|7z)$/.test(e) ? "fa-file-zipper" : "fa-paperclip";
++  }
+   function Email_originaisTodos_(v) { if (!EM.comp) return; EM.comp.originais.forEach(function (a) { if (a.parte) a.incluir = !!v; }); Email_conferirTotalOriginais_(); }
+   function Email_originalIncluir_(i, v) { if (!EM.comp || !EM.comp.originais[i]) return; EM.comp.originais[i].incluir = !!v; Email_conferirTotalOriginais_(); }
+   function Email_conferirTotalOriginais_() {
+@@ -821,7 +1009,7 @@
+   function Email_dadosComp_() {
+     var c = EM.comp, escolhe = c.originais.length && c.originais.every(function (a) { return a.parte; });
+     return { conta: c.conta, para: Email_destTexto_("emPara"), cc: Email_destTexto_("emCc"), cco: Email_destTexto_("emCco"),
+-      assunto: document.getElementById("emAssunto").value, html: document.getElementById("emEditor").innerHTML,
++      assunto: document.getElementById("emAssunto").value, html: Email_htmlSeguro_(document.getElementById("emEditor").innerHTML),
+       anexos: c.anexos.map(function (a) { return { nome: a.nome, tipo: a.tipo, base64: a.base64 }; }),
+       anexosOriginais: escolhe ? c.originais.filter(function (a) { return a.incluir; }).map(function (a) { return a.parte; }) : undefined,
+       anexosDoRascunho: c.rascunhoUid ? c.doRascunho.map(function (a) { return a.parte; }) : undefined,
+diff --git a/cand27/SGO_Ajuda_Assistencia.js b/cand28/SGO_Ajuda_Assistencia.js
+index cf639b0..e0d2081 100644
+--- a/cand27/SGO_Ajuda_Assistencia.js
++++ b/cand28/SGO_Ajuda_Assistencia.js
+@@ -37,7 +37,8 @@ function SGO_ajudaTelas_Assistencia_() {
+         { nome: 'Selo verde "Aberta em campo"', significado: 'O técnico abriu o atendimento pelo aplicativo, fora da agenda: a triagem foi feita no local e a O.S. nasceu em andamento. A gestão foi avisada.' },
+         { nome: 'Selo verde "Em dia"', significado: 'O prazo de atendimento está dentro do combinado.' },
+         { nome: 'Selo laranja "Em risco"', significado: 'Resta um quarto do prazo ou menos (horas úteis).' },
+-        { nome: 'Selo vermelho "Prazo estourado"', significado: 'Passou do prazo. Aparece na Caixa de decisões da área Técnica até resolver.' },
++        { nome: 'Selo vermelho "Prazo estourado"', significado: 'Passou do prazo. Aparece no Início e na Caixa de decisões da área Técnica até resolver. Com a visita já marcada (agendada ou reagendada) para uma data futura, o chamado sai dessas listas até a data; o selo continua, porque o prazo do contrato estourou e isso fica registrado.' },
++        { nome: 'Faixa amarela "Visita reagendada para ..." na ficha', significado: 'O prazo estourou, mas a visita já está marcada: o chamado não aparece nas pendências até a data da visita. Se a chegada não for registrada até lá, ele volta para a lista.' },
+         { nome: 'Selo "Reincidência de CH-..."', significado: 'O mesmo equipamento teve outro chamado nos últimos 30 dias.' },
+         { nome: 'Selo laranja "Pendente de triagem · fila livre às ..."', significado: 'Ninguém assumiu ainda; reservado para quem faz a triagem até o horário mostrado.' },
+         { nome: 'Selo vermelho "Fila livre"', significado: 'Ninguém assumiu a tempo: qualquer colaborador pode tocar em "Assumir chamado".' },
+@@ -55,7 +56,7 @@ function SGO_ajudaTelas_Assistencia_() {
+         { situacao: 'O equipamento já tem chamado em aberto.', oQueFazer: 'Se é o mesmo problema, registre o contato no chamado aberto. Se é outro problema, toque em "Abrir mesmo assim".' }
+       ],
+       quemPode: quem,
+-      perguntas: [prazos, whats, { p: 'O chamado fecha sozinho?', r: 'Fecha quando a O.S. tem a documentação completa do tipo de serviço. Até lá fica "Execução concluída, documentação pendente" e vira cobrança.' },
++      perguntas: [prazos, whats, { p: 'Reagendei o atendimento: ele sai do alerta de prazo estourado?', r: 'Sim. Com a visita marcada para uma data futura, o chamado sai das pendências do Início e da Caixa de decisões até a data. O prazo do contrato que estourou continua registrado no selo, no histórico e nos indicadores. Se a data passar sem a chegada registrada, ele volta à lista com o texto "a visita marcada não foi registrada": registre a chegada pelo aplicativo ou reagende com o motivo.' }, { p: 'O chamado fecha sozinho?', r: 'Fecha quando a O.S. tem a documentação completa do tipo de serviço. Até lá fica "Execução concluída, documentação pendente" e vira cobrança.' },
+         // 12/11/2026: aviso de versão nova, conferência dentro da trava e falha de conexão
+         { p: 'Apareceu "Há uma versão nova do SGO+". O que faço?', r: 'Termine e salve o que está fazendo e toque em "Atualizar" na faixa do rodapé: a página carrega as telas novas (por exemplo, um campo que acabou de ser publicado). O SGO+ nunca recarrega sozinho e não apaga o que você está digitando; "Depois" esconde o aviso por 30 minutos.' },
+         { p: 'Apareceu "o chamado acabou de ser alterado" (ou "o orçamento acabou de mudar"). Por quê?', r: 'Outra pessoa, outra aba ou um segundo toque já fez a mesma ação (agendar, concluir a triagem, liberar, abrir a revisão). Para não criar O.S., pedido de compra ou revisão em dobro, a segunda é recusada. Toque em "Atualizar", abra a ficha e confira o que ficou registrado antes de repetir.' },
+diff --git a/cand27/SGO_Ajuda_Email.js b/cand28/SGO_Ajuda_Email.js
+index ec7c354..5ed7e86 100644
+--- a/cand27/SGO_Ajuda_Email.js
++++ b/cand28/SGO_Ajuda_Email.js
+@@ -21,10 +21,14 @@ function SGO_ajudaTelas_Email_() {
+         { titulo: 'Contatos', itens: ['Aba "Contatos": "Novo contato" (nome, e-mail, empresa, telefone, observação e favorito), "Editar", "Excluir" e a estrela de favorito.', 'Na leitura de um e-mail, "Salvar remetente nos contatos" já traz o nome e o endereço de quem escreveu.', 'Com "Guardar sozinho os endereços para quem eu escrevo" ligado, quem recebe e-mail seu pela caixa pessoal vira contato "Guardado ao enviar". Desligue na aba Contatos se preferir cadastrar só à mão.', 'O catálogo da empresa (colegas, clientes e contatos dos clientes; fornecedores e representadas para quem já vê essas telas) aparece junto, com "Escrever" e "Salvar nos meus contatos".'] },
+         { titulo: 'Rascunho automático', itens: ['Com "Salvar rascunho sozinho a cada minuto" marcado (vem ligado), o que você escreve vai para a pasta Rascunhos a cada minuto em que houve mudança.', 'Ao enviar, o rascunho sai da pasta. Ao descartar, o rascunho salvo sozinho vai para a Lixeira.', 'Desmarque a opção na própria janela de escrever se preferir salvar só pelo botão "Salvar rascunho".'] },
+         { titulo: 'Responder o cliente', itens: ['Abra a mensagem e toque em "Responder" (ou "Responder a todos").', 'Escreva a resposta. A assinatura padrão de respostas entra sozinha antes da mensagem original, que fica citada abaixo.', 'Para anexar, toque em "Anexar arquivo" ou arraste os arquivos para a janela. Se a mensagem original tinha anexos, marque "Incluir os anexos da mensagem original" para devolvê-los.', 'Toque em "Enviar". A cópia fica em Enviados e a mensagem original ganha o selo "Respondida".'] },
+-        { titulo: 'Escrever um e-mail novo', itens: ['Toque em "Escrever" no topo da tela.', 'Preencha Para (vários separados por vírgula), Cc e Cco se precisar, e o Assunto.', 'Escreva o texto; use os botões N, I, S, lista e link para formatar.', 'A assinatura padrão de mensagens novas já vem no fim. Para trocar ou tirar, use o seletor "Assinatura" na barra do editor.', 'Toque em "Salvar rascunho" para continuar depois ou em "Enviar".'] },
++        { titulo: 'Escrever um e-mail novo', itens: ['Toque em "Escrever" no topo da tela.', 'Preencha Para (vários separados por vírgula), Cc e Cco se precisar, e o Assunto.', 'Escreva o texto; use a barra acima do texto para formatar: negrito, itálico, sublinhado, fonte, tamanho, cor da fonte, cor de destaque, lista e link.', 'A assinatura padrão de mensagens novas já vem no fim. Para trocar ou tirar, use o seletor "Assinatura" na barra do editor.', 'Toque em "Salvar rascunho" para continuar depois ou em "Enviar".'] },
+         { titulo: 'Assinaturas com imagem', itens: ['Aba "Minha caixa e assinatura" > "Assinaturas" > "Nova assinatura".', 'Dê um nome (por exemplo "Completa" ou "Respostas"), escreva o texto e, se quiser, toque em "Escolher imagem" (PNG ou JPG, como logotipo ou cartão de visita). O sistema reduz a imagem sozinho.', 'Ajuste a "Largura exibida da imagem" e a posição (abaixo ou acima do texto) olhando a pré-visualização. Toque em "Salvar assinatura".', 'Escolha qual assinatura entra em "Mensagens novas" e qual entra em "Respostas e encaminhamentos" (ou nenhuma).', 'A imagem vai embutida na mensagem: o cliente vê sem baixar nada e sem entrar em site.'] },
+         { titulo: 'Encaminhar', itens: ['Abra a mensagem e toque em "Encaminhar".', 'Os anexos da mensagem original já vêm marcados em "Manter os anexos da mensagem original". Desmarque os que não devem seguir.', 'Preencha Para e toque em "Enviar".'] },
+         { titulo: 'Cliente reconhecido', itens: ['Quando o remetente é cliente cadastrado (e-mail do cliente ou do contato, ou o domínio próprio do cliente), aparece a faixa verde "Cliente: nome". Endereços @metrolabs e domínios públicos (gmail, hotmail, outlook, yahoo, uol, bol, terra) nunca contam como cliente pelo domínio.', 'Se o mesmo endereço estiver no cadastro de mais de um cliente, aparece a faixa laranja com os nomes: o sistema não escolhe sozinho.', 'Toque em "Abrir cadastro" para ir ao cadastro do cliente.', 'Toque em "Registrar no cliente" para guardar um resumo do e-mail no histórico do cliente (com assunto, data e quem registrou).'] },
++        { titulo: 'Ler a mensagem em tela larga ou cheia', itens: ['No computador, ao abrir uma mensagem as pastas saem da tela e a lista fica estreita ao lado: a leitura ocupa a área principal, com letra maior.', 'Toque em "Tela cheia" para ler só a mensagem, sem a lista. "Mostrar a lista" volta a lista ao lado. A escolha fica guardada neste navegador para as próximas mensagens.', 'Toque em "Voltar à lista" para ver as pastas e a lista de novo.', 'No celular, a mensagem aberta já ocupa a tela toda; "Voltar à lista" volta para a lista.'] },
++        { titulo: 'Escrever em janela grande', itens: ['A janela de escrever, responder e encaminhar abre larga (até 1.120 px) e com a área do texto alta.', 'Toque em "Maximizar" para usar a tela toda. "Restaurar" volta ao tamanho normal. A escolha fica guardada neste navegador.', 'No celular a janela já ocupa a tela toda.'] },
++        { titulo: 'Fonte, tamanho e cores do texto', itens: ['Selecione o trecho do texto e escolha na barra: "Fonte" (Arial, Calibri, Georgia, Times New Roman, Verdana e outras), "Tamanho" (de 10 a 36), "A" com a faixa colorida (cor da fonte) e o marca-texto (cor de destaque, o fundo do trecho).', 'O botão com o T riscado tira a formatação do trecho selecionado.', 'A formatação vai no próprio texto da mensagem e aparece igual no Outlook, no Gmail e no celular de quem recebe.', 'Ao enviar ou salvar o rascunho, o sistema tira do texto o que não é formatação (código de páginas coladas, links que não são de site ou de e-mail). O texto e as cores ficam.'] },
++        { titulo: 'Anexos logo abaixo do assunto', itens: ['O botão "Anexar" fica na mesma linha do Assunto (no celular, só o clipe). Também dá para arrastar os arquivos para a janela.', 'Cada arquivo anexado aparece logo abaixo do assunto, antes do texto, com o nome, o tamanho e o botão "Remover".', 'Ao responder ou encaminhar, os anexos da mensagem original aparecem no mesmo lugar, com contorno tracejado e a caixinha para incluir ou não.', 'Os limites (por arquivo, somados e quantidade) aparecem embaixo da lista. Arquivo acima do limite não entra e o aviso diz o que fazer (compactar, dividir ou mandar um link).'] },
+         { titulo: 'Anexos e imagens', itens: ['Os anexos recebidos aparecem acima do texto, com nome e tamanho. Toque no anexo para baixar.', 'Imagens de fora ficam bloqueadas (elas avisam o remetente que você abriu). Se confia no remetente, toque em "Mostrar imagens".', 'Ao tocar num link, o sistema mostra o site de destino e pede confirmação.'] },
+         { titulo: 'Organizar', itens: ['"Mover para..." leva a mensagem para outra pasta.', '"Excluir" manda para a Lixeira (dá para mover de volta) e abre a próxima mensagem.', '"Sinalizar" marca a mensagem com a bandeira vermelha, para não esquecer; o filtro "Sinalizadas" mostra só essas.', 'Só dentro da Lixeira aparece "Apagar para sempre", com confirmação.', '"Marcar como não lida" volta a mensagem para negrito.'] },
+         { titulo: 'Caixa compartilhada', itens: ['Se você tem acesso, escolha a caixa no seletor acima das pastas.', 'Ao tocar em "Responder", o sistema marca que você está respondendo; quem abrir a mesma mensagem vê o aviso.', 'Depois do envio, a mensagem mostra "Respondida por" com o seu nome.'] }
+@@ -33,6 +37,8 @@ function SGO_ajudaTelas_Email_() {
+         { nome: 'Número no menu E-mail', significado: 'Mensagens não lidas na Entrada (a sua caixa e as compartilhadas). Laranja: a caixa está sem conexão; abra E-mail para ver o motivo.' },
+         { nome: 'Selo verde "Cliente: nome"', significado: 'O remetente é e-mail (ou domínio próprio) de um cliente do cadastro. "Cliente: A ou B": o endereço está no cadastro de mais de um cliente.' },
+         { nome: 'Contorno tracejado na janela de escrever', significado: 'Você está arrastando arquivos: solte para anexar.' },
++        { nome: 'Anexo com contorno azul abaixo do assunto', significado: 'Arquivo que vai junto com a mensagem. Contorno tracejado: anexo da mensagem original (marque a caixinha para incluir).' },
++        { nome: 'Faixa colorida embaixo do "A" e do marca-texto', significado: 'A última cor escolhida para a fonte e para o destaque.' },
+         { nome: 'Bandeira vermelha na linha', significado: 'Mensagem sinalizada para não esquecer. Toque de novo na bandeira para tirar.' },
+         { nome: 'Linha com faixa azul à esquerda', significado: 'Mensagem em foco: as teclas de atalho (Delete, R, U, I) valem para ela.' },
+         { nome: 'Pílula vermelha no Para, Cc ou Cco', significado: 'Endereço errado (sem @ ou sem domínio). Dê dois cliques para corrigir ou toque no × para tirar.' },
+@@ -76,6 +82,8 @@ function SGO_ajudaTelas_Email_() {
+         { p: 'Funciona no COMMAND?', r: 'Sim, na tela E-mail do COMMAND, com o mesmo funcionamento. Lá a conexão é feita uma vez também (a mesma senha da caixa).' },
+         { p: 'Se eu desconectar a caixa, perco as assinaturas?', r: 'Não. As assinaturas são suas, não da caixa: continuam guardadas e voltam quando você conectar de novo.' },
+         { p: 'Posso ter mais de uma assinatura?', r: 'Sim, até 10. Uma pode ser a padrão das mensagens novas e outra a das respostas e encaminhamentos. Na janela de escrever, o seletor "Assinatura" troca na hora.' },
++        { p: 'A formatação (fonte, tamanho e cores) chega igual para o cliente?', r: 'Sim. O sistema grava a formatação no próprio texto, do jeito que o Outlook e o Gmail leem. Só sai o que não é formatação, como código de páginas coladas da internet.' },
++        { p: 'Como volto a ver as pastas enquanto leio uma mensagem?', r: 'Toque em "Voltar à lista" no alto da mensagem. Se estiver em "Tela cheia", "Mostrar a lista" traz a lista de volta ao lado da leitura.' },
+         { p: 'O rascunho guarda os anexos?', r: 'Sim, os arquivos que você anexou ficam no rascunho e continuam nele quando você abre de novo pela pasta Rascunhos. Os anexos da mensagem original (encaminhar ou responder) vão no envio, com a janela aberta.' }
+       ],
+       secoesManual: [
+diff --git a/cand27/SGO_Ajuda_Principal.js b/cand28/SGO_Ajuda_Principal.js
+index bcc104a..a2f1f46 100644
+--- a/cand27/SGO_Ajuda_Principal.js
++++ b/cand28/SGO_Ajuda_Principal.js
+@@ -100,6 +100,7 @@ function SGO_ajudaTelas_Principal_() {
+         { nome: "Rótulo vermelho no cartão de pendência (ícone de x)", significado: "Pendência crítica: vencida, vence hoje ou bloqueia o trabalho. Resolva primeiro." },
+         { nome: "Rótulo amarelo escuro no cartão de pendência (ampulheta ou triângulo)", significado: "Atenção ou revisar: vence em até 30 dias, ou há um registro a conferir." },
+         { nome: "Rótulo azul no cartão de pendência", significado: "Informação: não exige ação imediata, mas vale ler." },
++        { nome: "Botão \"Bate-papo\" do topo em vermelho, com o número e \"N novas\"", significado: "Há mensagens, avisos ou comunicados do bate-papo que você ainda não leu. Quando chega algo novo, o botão pisca três vezes e a aba do navegador mostra o número entre parênteses. Abra e responda os colegas." },
+         { nome: "Na lista completa, \"Crítica\" em vermelho, \"Atenção\" em amarelo escuro e \"Informação\" em cinza", significado: "A mesma gravidade dos cartões. Vencido ou vence hoje é crítico; até 30 dias é atenção." },
+         { nome: "Alerta com fundo vermelho no bloco Vencimentos", significado: "Item vencido. Selos possíveis: \"Bloqueia emissão\" (padrão vencido não pode ser usado em certificado), \"Vencido\" ou \"Vencida\"." },
+         { nome: "Alerta com fundo amarelo no bloco Vencimentos", significado: "Item a vencer ou a revisar. Selos possíveis: \"A vencer\", \"Revisar\"." },
+@@ -137,6 +138,8 @@ function SGO_ajudaTelas_Principal_() {
+         { p: "Onde encontro a ajuda de cada tela?", r: "No computador, toque em \"Como usar esta tela\", no alto de cada tela. No celular, toque em \"Ajuda\", na barra do topo. O painel mostra o passo a passo, as cores, o que fazer se algo der errado e quem pode fazer cada coisa. O botão \"Manual completo do módulo\" abre o manual para imprimir ou salvar em PDF." },
+         { p: "De onde vêm as pendências do Início?", r: "De uma lista única do SGO+. A mesma lista alimenta o bloco de alertas, os números ao lado do menu, a janela ao entrar e o Painel de qualidade." },
+         { p: "O que conta como crítico?", r: "Vencido ou que vence hoje. O que vence em até 30 dias é atenção. Atividade atrasada também é crítica." },
++        { p: "Reagendei o atendimento. Por que ele ainda aparecia com prazo estourado?", r: "Desde 18/11/2026, chamado da Assistência com a visita marcada (agendada ou reagendada) para uma data futura sai das pendências do Início e da Caixa de decisões até essa data. O prazo do contrato que estourou continua registrado no chamado e nos indicadores. Se a data marcada passar sem a chegada do técnico registrada, o chamado volta à lista com o aviso de que a visita não foi registrada. O.S. do Auvo finalizada ou passada para outro dia no Auvo também sai da lista assim que a sincronização das tarefas lê a mudança." },
++        { p: "Como sei que chegou mensagem nova no bate-papo?", r: "O botão \"Bate-papo\" do topo fica vermelho com o número de não lidas (no computador, também \"N novas\"), pisca três vezes quando chega algo novo e a aba do navegador mostra o número entre parênteses. No bate-papo, em Preferências (engrenagem), dá para ligar o som das mensagens e a notificação do navegador, que vêm desligados." },
+         { p: "Por que só aparecem quatro cartões?", r: "O Início mostra os quatro grupos mais urgentes. Toque em \"Ver todas as pendências (N)\" para ver o resto." },
+         { p: "Como volto ao Início?", r: "Toque em \"Início\" no menu ou no logotipo SGO+ no alto da tela." },
+         { p: "O botão voltar do navegador funciona no SGO+?", r: "Sim. Ele volta um passo dentro do sistema: fecha a janela aberta ou volta para a tela anterior, com a mesma lista, os mesmos filtros e a mesma altura da página; dentro dos módulos, volta também à aba e à ficha de antes. Atualizar a página (F5) mantém a tela em que você estava. No computador, relatórios e documentos A4 continuam abrindo em aba nova; no celular, abrem no visualizador do SGO+, com \"Voltar\" e \"Imprimir\"." },
+@@ -221,6 +224,7 @@ function SGO_ajudaTelas_Principal_() {
+         { nome: "Rótulo vermelho no cartão de pendência", significado: "Crítica: vencida, vence hoje ou bloqueia o trabalho." },
+         { nome: "Rótulo amarelo escuro no cartão de pendência", significado: "Atenção ou revisar: vence em até 30 dias, ou há registro a conferir." },
+         { nome: "Rótulo azul no cartão de pendência", significado: "Informação, sem ação imediata." },
++        { nome: "Ícone do bate-papo no topo com fundo vermelho e número", significado: "Mensagens, avisos ou comunicados do bate-papo ainda não lidos. Pisca três vezes quando chega algo novo. Toque para abrir." },
+         { nome: "Borda verde, amarela ou vermelha na faixa do farol", significado: "Índice de conduta do mês: verde a partir de 85; amarelo de 70 a 84,9; vermelho abaixo de 70." },
+         { nome: "Veículo com barra verde", significado: "Disponível." },
+         { nome: "Veículo com barra amarela", significado: "Em uso, com o nome de quem retirou." },
+diff --git a/cand27/SGO_Alertas_Central.js b/cand28/SGO_Alertas_Central.js
+index d735a1d..8cd6586 100644
+--- a/cand27/SGO_Alertas_Central.js
++++ b/cand28/SGO_Alertas_Central.js
+@@ -1002,6 +1002,35 @@ function Pend_fonteConduta_(add, ctx) {
+   }
+ }
+ 
++/** 18/11/2026: instante em milissegundos (Date, ISO ou "aaaa-mm-dd hh:mm") ou null. */
++function Pend_ms_(v) {
++  if (v === null || v === undefined || v === '') return null;
++  if (Object.prototype.toString.call(v) === '[object Date]') return isNaN(v.getTime()) ? null : v.getTime();
++  var t = new Date(String(v).trim().replace(' ', 'T')).getTime();
++  return isFinite(t) ? t : null;
++}
++
++/** 18/11/2026: tarefas do Auvo da sincronização frequente (AUVO_TAREFAS), por número da O.S. Sem a aba: vazio. */
++function Pend_tarefasAuvoRecentes_() {
++  var mapa = {};
++  if (!SGO_CFG.SHEETS.AUVO_TAREFAS || !Pend_abaExiste_(SGO_CFG.SHEETS.AUVO_TAREFAS)) return mapa;
++  try { Pend_ler_(SGO_CFG.SHEETS.AUVO_TAREFAS).forEach(function (t) { var id = Pend_s_(t.AUVO_TASK_ID); if (id) mapa[id] = t; }); } catch (e) { mapa = {}; }
++  return mapa;
++}
++
++/**
++ * 18/11/2026 (pacote 3, item 9): a O.S. da foto de pendências já foi tratada no Auvo? Só vale a leitura da tarefa feita DEPOIS da
++ * foto: finalizada, ou com a data da tarefa num dia depois de hoje (reagendada). Sem a leitura mais nova, fica como está.
++ */
++function Pend_auvoJaTratada_(p, t, hoje) {
++  if (!t) return false;
++  var lidaFoto = Pend_ms_(p.ULTIMA_SINCRONIZACAO), lidaTarefa = Pend_ms_(t.ULTIMA_SINCRONIZACAO);
++  if (lidaTarefa === null || (lidaFoto !== null && lidaTarefa <= lidaFoto)) return false;
++  if (SGO_UTILS.safeUpper(t.FINALIZADA) === 'SIM') return true;
++  var dia = Pend_iso_(t.DATA_TAREFA);
++  return !!dia && dia > (hoje || Pend_hoje_());
++}
++
+ /** Auvo: O.S. abertas (foto da última varredura), O.S. sem vínculo de cadastro e importação parada (administrador). */
+ function Pend_fonteAuvo_(add, ctx) {
+   if (ctx.cliente) return;
+@@ -1009,10 +1038,16 @@ function Pend_fonteAuvo_(add, ctx) {
+   Pend_ler_(SGO_CFG.SHEETS.CAD_USUARIOS).forEach(function (u) { usuarios[Pend_s_(u.ID)] = u; });
+ 
+   if (SGO_CFG.SHEETS.AUVO_PENDENCIAS) {
++    // 18/11/2026 (Matheus, pacote 3, item 9): a lista de O.S. abertas é uma foto da última varredura. A O.S. que a sincronização das
++    // tarefas (AUVO_TAREFAS, mais frequente) leu DEPOIS da foto já finalizada ou com a data passada para o futuro (reagendada no
++    // Auvo) não é cobrada; a próxima varredura confirma. Nada é apagado: a foto e o Auvo continuam como estão.
++    var tarefasAuvo = Pend_tarefasAuvoRecentes_();
++    var hojeAuvo = Pend_hoje_();
+     Pend_ler_(SGO_CFG.SHEETS.AUVO_PENDENCIAS).forEach(function (p) {
+       var os = Pend_s_(p.AUVO_TASK_ID);
+       if (!os) return;
+       if (typeof Auvo_pendDentroDaJanela_ === 'function' && !Auvo_pendDentroDaJanela_(p)) return; // mais de 1 ano: fora da lista
++      if (Pend_auvoJaTratada_(p, tarefasAuvo[os], hojeAuvo)) return;
+ 
+       var tecId = Pend_s_(p.TECNICO_ID_SGO), tec = Pend_s_(p.TECNICO_NOME) || 'técnico não identificado';
+       var dias = Number(p.DIAS_ABERTA) || 0, evid = SGO_UTILS.safeUpper(p.TEM_EVIDENCIA) === 'SIM';
+diff --git a/cand27/SGO_Assistencia_Chamados.js b/cand28/SGO_Assistencia_Chamados.js
+index ce1487c..00e3c8d 100644
+--- a/cand27/SGO_Assistencia_Chamados.js
++++ b/cand28/SGO_Assistencia_Chamados.js
+@@ -208,7 +208,9 @@ function AstC_publico_(c, eu, agoraMs, regras) {
+     equipamentoId: Ast_s_(c.EQUIPAMENTO_ID), equipamentoTexto: Ast_s_(c.EQUIPAMENTO_TEXTO), equipNaoIdentificado: Ast_sim_(c.EQUIP_NAO_IDENTIFICADO),
+     solicitante: Ast_s_(c.SOLICITANTE), contato: Ast_s_(c.CONTATO), sintoma: Ast_s_(c.SINTOMA), parada: Ast_up_(c.PARADA), paradaNome: AST_PARADA[Ast_up_(c.PARADA)] || '',
+     prioridade: Ast_up_(c.PRIORIDADE), prioridadeNome: AST_PRIORIDADES[Ast_up_(c.PRIORIDADE)] || '', tipoCodigo: Ast_up_(c.TIPO_CODIGO), tipoNome: (Ast_tipo_(c.TIPO_CODIGO) || {}).nome || '',
+-    abertoEm: Ast_br_(c.ABERTO_EM), abertoPor: Ast_s_(c.ABERTO_POR_NOME), sla: sla, slaFonte: Ast_up_(c.SLA_FONTE) === 'CONTRATO' ? 'Contrato do cliente' : Ast_up_(c.SLA_FONTE) === 'REPRESENTACAO' ? 'Prazo da representada' + (Ast_s_(c.REPRESENTADA_NOME) ? ' ' + Ast_s_(c.REPRESENTADA_NOME) : '') + (typeof Rep_prazoTxt_ === 'function' && Number(c.SLA_MIN_UTEIS) ? ' (' + Rep_prazoTxt_(c.SLA_MIN_UTEIS) + ')' : '') : 'Prazo padrão',
++    abertoEm: Ast_br_(c.ABERTO_EM), abertoPor: Ast_s_(c.ABERTO_POR_NOME), sla: sla,
++    // 18/11/2026 (pacote 3, item 9): visita marcada para o futuro com o prazo estourado ou em risco: fora da lista de pendências até a data
++    visitaMarcada: (function () { if (sla.estado !== 'ESTOURADO' && sla.estado !== 'EM_RISCO') return null; var v = Ast_visitaMarcada_(c, agoraMs || Date.now()); return v ? { quando: v.quando, reagendado: v.reagendado } : null; })(), slaFonte: Ast_up_(c.SLA_FONTE) === 'CONTRATO' ? 'Contrato do cliente' : Ast_up_(c.SLA_FONTE) === 'REPRESENTACAO' ? 'Prazo da representada' + (Ast_s_(c.REPRESENTADA_NOME) ? ' ' + Ast_s_(c.REPRESENTADA_NOME) : '') + (typeof Rep_prazoTxt_ === 'function' && Number(c.SLA_MIN_UTEIS) ? ' (' + Rep_prazoTxt_(c.SLA_MIN_UTEIS) + ')' : '') : 'Prazo padrão',
+     prazoTriagem: Ast_br_(c.PRAZO_TRIAGEM_EM), triagemResponsavel: Ast_s_(c.TRIAGEM_RESPONSAVEL_NOME), triagem: Ast_json_(c.TRIAGEM_JSON, {}), acaoDecidida: Ast_up_(c.ACAO_DECIDIDA),
+     orientacaoRemota: Ast_s_(c.ORIENTACAO_REMOTA), outroDescricao: Ast_s_(c.OUTRO_DESCRICAO),
+     // 03/11/2026: entrega, retirada ou envio já realizados, registrados na triagem
+diff --git a/cand27/SGO_Assistencia_Config.js b/cand28/SGO_Assistencia_Config.js
+index 8e9c17a..4a242f4 100644
+--- a/cand27/SGO_Assistencia_Config.js
++++ b/cand28/SGO_Assistencia_Config.js
+@@ -1175,6 +1175,23 @@ function Ast_slaEstado_(c, agoraMs, regras) {
+   if (resta <= total * (Number(regras.emRiscoFracao) || 0.25)) return { estado: 'EM_RISCO', ate: ate, restaMin: resta, texto: 'Em risco: resta ' + Ast_duracaoTxt_(resta) + ' úteis (até ' + Ast_br_(ate) + ')' };
+   return { estado: 'EM_DIA', ate: ate, restaMin: resta, texto: 'Em dia: até ' + Ast_br_(ate) };
+ }
++/**
++ * 18/11/2026 (pedido do Matheus, pacote 3, item 9): visita já marcada para o futuro. O chamado "Agendado" com AGENDADO_PARA depois de
++ * agora já tem a ação de quem cuida dele (agendou ou reagendou); o prazo estourado do contrato continua no estado do prazo, nos
++ * indicadores e no histórico (Ast_slaEstado_ não muda), mas deixa de ser pendência de ação até a data marcada. Passada a data sem a
++ * chegada registrada, o chamado volta à lista. Devolve { ms, quando, reagendado } ou null.
++ */
++function Ast_visitaMarcada_(c, agoraMs) {
++  if (!c || Ast_up_(c.SITUACAO) !== 'AGENDADO') return null;
++  var ms = Ast_ms_(c.AGENDADO_PARA);
++  agoraMs = agoraMs || Date.now();
++  if (ms === null || ms <= agoraMs) return null;
++  var reag = false;
++  try {
++    reag = Ast_ler_(AST_ABAS.EVENTOS).some(function (e) { return Ast_up_(e.ENTIDADE) === 'CHAMADO' && Ast_s_(e.ENTIDADE_ID) === Ast_s_(c.ID) && Ast_up_(e.TIPO) === 'REAGENDADO'; });
++  } catch (e) { reag = false; }
++  return { ms: ms, quando: Ast_br_(c.AGENDADO_PARA), reagendado: reag };
++}
+ 
+ // ------------------------------------------------------------
+ // AVISOS (sistema na hora; e-mail e WhatsApp pela matriz de avisos, SGO_Pendencias_Assistencia.js registra os eventos)
+diff --git a/cand27/SGO_Assistencia_Painel.js b/cand28/SGO_Assistencia_Painel.js
+index 659407c..8a478e0 100644
+--- a/cand27/SGO_Assistencia_Painel.js
++++ b/cand28/SGO_Assistencia_Painel.js
+@@ -90,10 +90,16 @@ function Assistencia_fontePendencias_(add, ctx) {
+       }
+     }
+     var sla = Ast_slaEstado_(c, agoraMs, regras);
+-    if (sla.estado === 'ESTOURADO' || sla.estado === 'EM_RISCO') {
++    // 18/11/2026 (Matheus, pacote 3, item 9): visita já marcada (agendada ou reagendada) para o futuro não é pendência de ação. O prazo
++    // estourado continua no estado do prazo, nos indicadores e no histórico do chamado; passada a data sem chegada, o chamado volta aqui.
++    var visita = (sla.estado === 'ESTOURADO' || sla.estado === 'EM_RISCO') ? Ast_visitaMarcada_(c, agoraMs) : null;
++    var visitaPassou = s === 'AGENDADO' && !visita && !Ast_sim_(c.ABERTA_EM_CAMPO) && Ast_ms_(c.AGENDADO_PARA) !== null && Ast_ms_(c.AGENDADO_PARA) <= agoraMs;   // aberta em campo: não houve visita marcada
++    if ((sla.estado === 'ESTOURADO' || sla.estado === 'EM_RISCO') && !visita) {
+       add(Pend_item_('ast_sla', Object.assign({}, base, { id: 'AST:SLA:' + c.ID, paraUsuarios: triagem.ids.concat(Ast_s_(c.TECNICO_ID) ? [Ast_s_(c.TECNICO_ID)] : []), gravidade: sla.estado === 'ESTOURADO' ? 'CRITICO' : 'ATENCAO', dias: null, vencimento: Ast_br_(sla.ate),
+-        titulo: 'Prazo ' + (sla.estado === 'ESTOURADO' ? 'estourado' : 'em risco') + ': chamado ' + num + ' (' + cli + ')', detalhe: sla.texto + '. Situação: ' + (AST_SITUACOES[s] || s) + '. ' + Ast_s_(c.PROXIMA_ACAO),
+-        oQueFazer: 'Abra o chamado ' + num + ' e resolva o próximo passo: ' + (Ast_s_(c.PROXIMA_ACAO) || 'veja na ficha') + '.', tela: AST_PEND_TELA('assistencia', c.ID), extra: { area: 'TECNICA', prazo: Ast_dia_(sla.ate) } })));
++        titulo: 'Prazo ' + (sla.estado === 'ESTOURADO' ? 'estourado' : 'em risco') + ': chamado ' + num + ' (' + cli + ')' + (visitaPassou ? ': a visita marcada não foi registrada' : ''),
++        detalhe: sla.texto + '. Situação: ' + (AST_SITUACOES[s] || s) + '. ' + (visitaPassou ? 'A visita estava marcada para ' + Ast_br_(c.AGENDADO_PARA) + (Ast_s_(c.TECNICO_NOME) ? ' com ' + Ast_s_(c.TECNICO_NOME) : '') + ' e a chegada não foi registrada. ' : Ast_s_(c.PROXIMA_ACAO)),
++        oQueFazer: visitaPassou ? 'Abra o chamado ' + num + ': se a visita aconteceu, peça ao técnico para registrar a chegada no aplicativo; se não aconteceu, toque em "Reagendar" e escreva o motivo.'
++          : 'Abra o chamado ' + num + ' e resolva o próximo passo: ' + (Ast_s_(c.PROXIMA_ACAO) || 'veja na ficha') + '.', tela: AST_PEND_TELA('assistencia', c.ID), extra: { area: 'TECNICA', prazo: Ast_dia_(sla.ate) } })));
+     }
+     // 22/10/2026 (etapa 4): o cliente recusou ou pediu ajuste (link, portal ou registro manual): a gestão decide
+     var orcAtual = s === 'AGUARDANDO_ORCAMENTO' ? orcPorChamado[Ast_s_(c.ID)] : null, sitOrc = orcAtual ? Ast_up_(orcAtual.SITUACAO) : '';
+diff --git a/cand27/SGO_AssistenteManuais.js b/cand28/SGO_AssistenteManuais.js
+index a1ad72d..81e10cd 100644
+--- a/cand27/SGO_AssistenteManuais.js
++++ b/cand28/SGO_AssistenteManuais.js
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "d6844ef76c6e",
++ "versao": "7d49201d30c3",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -246,6 +246,10 @@ var SGO_ASSIST_MANUAIS = {
+      "titulo": "Para que serve",
+      "texto": "Conversas diretas entre duas pessoas, grupos, a conversa da sua área e a conversa geral de todos.\nAvisos automáticos que vêm do outro sistema e comunicados da gestão (com \"Li e estou ciente\").\nAviso no WhatsApp quando alguém manda mensagem direta para você, ou chama você com @ num grupo, e você está fora\n do sistema. A resposta pelo WhatsApp volta para a conversa."
+     },
++    {
++     "titulo": "1A. Mensagem nova à vista (18/11/2026)",
++     "texto": "Pedido do Matheus (17/11/2026): deixar o bate-papo mais visível quando chega mensagem, para responder os colegas logo.\nBotão do topo: com mensagem, aviso ou comunicado não lido, o botão \"Bate-papo\" do topo fica vermelho, com o\n número em destaque e, no computador, o texto \"· N novas\". No celular, o ícone do bate-papo na barra do topo fica com\n fundo vermelho e o número. O botão vale para todas as telas.\nChegou algo novo: o botão pisca três vezes (um pulso discreto). Quem pediu menos movimento no sistema operacional\n vê um contorno no lugar da animação.\nTítulo da aba do navegador: mostra o número entre parênteses, por exemplo \"(2) SGO+\". Com o SGO+ em outra aba, o\n título alterna com \"Nova mensagem\".\nSom: em «Preferências» (engrenagem), «Trocar» passa por \"só avisos críticos (mensagens sem som)\", que é o padrão,\n \"mensagens e avisos\" e \"desligado\". Vale só no aparelho em que foi escolhido.\nNotificação do navegador: em «Preferências», a caixa \"Mostrar notificação do navegador quando chegar mensagem\"\n vem desmarcada. Ao marcar, o navegador pede a autorização uma vez. A notificação aparece só quando o SGO+ está em\n outra aba ou com o bate-papo fechado; tocar nela abre a conversa. Se o navegador estiver bloqueando, a tela explica\n como liberar (cadeado ao lado do endereço > Notificações > Permitir).\nA ordem das mensagens na conversa continua a cronológica (a mais antiga em cima), como desde 09/11/2026."
++    },
+     {
+      "titulo": "Conversas e grupos (parte 1)",
+      "texto": "Conversa com uma pessoa: «+ Conversa» → buscar pelo nome ou pela área → tocar na pessoa → escrever. Enter envia;\nShift+Enter quebra a linha. Se a internet cair, o texto fica guardado na caixa.\n\nCriar um grupo:\n1. «+ Grupo» e escreva o nome do grupo.\n2. Busque pelo nome ou pela área e marque as pessoas. Para chamar uma área inteira, escolha a área no filtro e toque\n em «Marcar a área inteira». O que foi marcado continua marcado enquanto você busca.\n3. «Revisar e criar»: aparece \"Você vai criar o grupo … com:\" e a lista de nomes e áreas.\n4. «Confirmar e criar» (ou «Voltar e ajustar»). A criação fica escrita na conversa.\n\nVer quem está no grupo: dentro do grupo, «Participantes». Mostra o nome, a área do cadastro e o sistema que cada\npessoa usa (SGO+, COMMAND ou os dois). Quem criou o grupo tem o selo \"criou o grupo\". Só quem está na conversa vê\nessa lista.\n\nAdicionar, remover e mudar o nome: só quem criou o grupo e a gestão (Administrador, Gestor e Diretoria no SGO+;\nquem gere missões no COMMAND). Em «Participantes»: «+ Adicionar pessoas» → marcar → «Conferir» → «Confirmar»;\n«Remover» ao lado do nome; ou escreva o nome novo e toque em «Salvar nome». Cada mudança fica numa linha tracejada\nna conversa, com quem fez (\"Ana adicionou Bruno.\", \"Gil removeu Caio.\", \"Ana mudou o nome do grupo de … para …\").\n\nSair do grupo: em «Participantes», «Sair do grupo» e confirmar. Você deixa de ver o grupo; as mensagens não são\napagadas. Para voltar, peça a quem criou o grupo ou à gestão. Quem é removido também deixa de ver o grupo e recebe o\naviso \"Você não está mais nesta conversa\"."
+@@ -1210,11 +1214,11 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Central de pendências por área > Janela \"Avisos\" ao entrar (31/10/2026) (parte 1)",
+-     "texto": "Ao entrar no SGO+, a janela \"Avisos\" resume as pendências críticas da central que não têm janela própria (atividade atrasada, aviso com ciência, Programa de conduta e cobrança da gestão já abrem sozinhos). Para quem já recebe o balão de padrões, os padrões ficam fora do resumo.\n1. No topo, abaixo de \"Avisos\", aparece o total. Exemplo: \"89 pendências críticas · 7 grupos\". Se houver, aparecem também as cobranças da gestão e os reconhecimentos.\n2. Em \"Pendências críticas\" há um cartão por grupo. Cada cartão mostra o módulo, a etiqueta de gravidade (\"Crítica\" ou \"Prazo estourado\") e o motivo resumido (ex.: \"Bloqueia emissão\"). Mostra também o título com a quantidade (ex.: \"76 padrões de referência vencidos\"), até 3 exemplos com \"e mais N\", o \"Por quê\" (quando o grupo tem uma pendência só ou só parte dele é crítica) e o \"O que fazer\".\n3. Ordem: primeiro o que é da própria pessoa, depois o que está com prazo estourado, depois o resto, na ordem da central.\n4. \"Abrir\" fecha a janela e leva à tela que resolve. Quando o grupo não tem tela própria, o botão se chama \"Ver a lista\" e abre a lista do Início filtrada por aquele grupo.\n5. A janela mostra os 5 primeiros grupos. \"Ver todas as pendências\" abre a lista completa do Início, com uma pendência por linha.\n6. \"Estou ciente\" fica fixo no rodapé, também no celular. Ele só esconde o mesmo conjunto de pendências por 20 horas e não resolve nada. Se surgir uma pendência crítica nova, o resumo volta no próximo acesso.\n7. No celular a janela ocupa a tela inteira, rola por dentro, os cartões ficam em coluna e os botões têm pelo menos 44 px."
++     "texto": "Ao entrar no SGO+, a janela \"Avisos\" resume as pendências críticas da central que não têm janela própria (atividade atrasada, aviso com ciência, Programa de conduta e cobrança da gestão já abrem sozinhos). Para quem já recebe o balão de padrões, os padrões ficam fora do resumo. 1. No topo, abaixo de \"Avisos\", aparece o total. Exemplo: \"89 pendências críticas · 7 grupos\". Se houver, aparecem também as cobranças da gestão e os reconhecimentos. 2. Em \"Pendências críticas\" há um cartão por grupo. Cada cartão mostra o módulo, a etiqueta de gravidade (\"Crítica\" ou \"Prazo estourado\") e o motivo resumido (ex.: \"Bloqueia emissão\"). Mostra também o título com a quantidade (ex.: \"76 padrões de referência vencidos\"), até 3 exemplos com \"e mais N\", o \"Por quê\" (quando o grupo tem uma pendência só ou só parte dele é crítica) e o \"O que fazer\". 3. Ordem: primeiro o que é da própria pessoa, depois o que está com prazo estourado, depois o resto, na ordem da central. Desde 18/11/2026, chamado da Assistência com a visita marcada para uma data futura (agendado ou reagendado) não\n entra como prazo estourado até a data marcada; o prazo do contrato continua registrado no chamado e nos indicadores\n (Manual da Assistência, \"Visita marcada com o prazo estourado\"). 4. \"Abrir\" fecha a janela e leva à tela que resolve. Quando o grupo não tem tela própria, o botão se chama \"Ver a lista\" e abre a lista do Início filtrada por aquele grupo. 5. A janela mostra os 5 primeiros grupos. \"Ver todas as pendências\" abre a lista completa do Início, com uma pendência por linha. 6. \"Estou ciente\" fica fixo no rodapé, também no celular. Ele só esconde o mesmo conjunto de pendências por 20 horas e não resolve nada. Se surgir uma pendência crítica nova, o resumo volta no próximo acesso. 7."
+     },
+     {
+      "titulo": "Central de pendências por área > Janela \"Avisos\" ao entrar (31/10/2026) (parte 2)",
+-     "texto": "O texto corrido do resumo continua sendo montado no servidor (campo DESCRICAO) para quem lê só texto; a janela desenha os cartões a partir dos grupos estruturados (campos RESUMO e GRUPOS, Qualidade_gruposDaJanela_ em SGO_Qualidade_Ocorrencias.js)."
++     "texto": "No celular a janela ocupa a tela inteira, rola por dentro, os cartões ficam em coluna e os botões têm pelo menos 44 px.\n\nO texto corrido do resumo continua sendo montado no servidor (campo DESCRICAO) para quem lê só texto; a janela desenha os cartões a partir dos grupos estruturados (campos RESUMO e GRUPOS, Qualidade_gruposDaJanela_ em SGO_Qualidade_Ocorrencias.js)."
+     },
+     {
+      "titulo": "COMMAND",
+@@ -1363,7 +1367,11 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "Prazos de atendimento",
+-     "texto": "O prazo de atendimento conta da abertura até a execução concluída, em horas úteis do expediente da empresa\n(08:00 às 17:30, dias úteis, feriados nacionais e os cadastrados):\nPrioridade | Quando usar | Prazo de atendimento | Prazo de triagemP1, crítica | Equipamento parado que afeta o paciente | 4 horas úteis | 30 minutos úteis\nP2, alta | Equipamento com falha importante | 1 dia útil | 2 horas úteis\nP3, normal | Falha que permite uso | 3 dias úteis | 4 horas úteis\nP4, baixa | Ajuste, melhoria, dúvida | 7 dias úteis | 1 dia útil\nContrato do cliente com prazo próprio prevalece (Regras da assistência > Contratos). O prazo só pausa ao aguardar\ncliente ou peça quando o contrato permite. Selos: \"Em dia\", \"Em risco\" (resta um quarto do prazo ou menos) e\n\"Prazo estourado\". Prazo em risco ou estourado entra na Caixa de decisões da área Técnica."
++     "texto": "O prazo de atendimento conta da abertura até a execução concluída, em horas úteis do expediente da empresa\n(08:00 às 17:30, dias úteis, feriados nacionais e os cadastrados):\nPrioridade | Quando usar | Prazo de atendimento | Prazo de triagemP1, crítica | Equipamento parado que afeta o paciente | 4 horas úteis | 30 minutos úteis\nP2, alta | Equipamento com falha importante | 1 dia útil | 2 horas úteis\nP3, normal | Falha que permite uso | 3 dias úteis | 4 horas úteis\nP4, baixa | Ajuste, melhoria, dúvida | 7 dias úteis | 1 dia útil\nContrato do cliente com prazo próprio prevalece (Regras da assistência > Contratos). O prazo só pausa ao aguardar\ncliente ou peça quando o contrato permite. Selos: \"Em dia\", \"Em risco\" (resta um quarto do prazo ou menos) e\n\"Prazo estourado\". Prazo em risco ou estourado entra no Início e na Caixa de decisões da área Técnica."
++    },
++    {
++     "titulo": "Prazos de atendimento > Visita marcada com o prazo estourado (18/11/2026)",
++     "texto": "Pedido do Matheus (17/11/2026): o atendimento já reagendado continuava como \"prazo estourado\" nas prioridades do Início.\nChamado \"Agendado\" com a visita marcada para uma data futura (no primeiro agendamento ou num reagendamento) não é\n mais pendência de ação: sai do Início e da Caixa de decisões até a data marcada. Quem agendou já agiu.\nO prazo do contrato não é apagado. O selo \"Prazo estourado em ...\" continua na ficha e na lista, o reagendamento fica\n no histórico (com o motivo) e o chamado continua contado como estourado no contador da tela e nos indicadores do\n relatório mensal.\nA ficha mostra a faixa \"Visita reagendada para ...\" (ou \"Visita marcada para ...\"), com o prazo que estourou e a\n explicação de que o chamado volta à lista se a chegada não for registrada.\nPassada a data marcada sem o \"Cheguei\" da O.S., o chamado volta às pendências com o título \"Prazo estourado: chamado\n ...: a visita marcada não foi registrada\" e o que fazer: registrar a chegada pelo aplicativo, se a visita aconteceu,\n ou reagendar com o motivo. Chamado aberto em campo pelo técnico não usa esse texto (não houve visita marcada).\nPrazo em risco segue a mesma regra: com a visita marcada para o futuro, não é cobrado.\nIntegração Auvo: a lista \"O.S. aberta no Auvo\" é uma foto da última varredura. A O.S. que a sincronização das tarefas\n leu depois dessa foto já finalizada, ou com a data passada para um dia depois de hoje (reagendada no Auvo), sai da\n lista; a próxima varredura confirma. Leitura da tarefa mais antiga que a foto não muda nada."
+     },
+     {
+      "titulo": "Abrir um chamado",
+@@ -3030,7 +3038,27 @@ var SGO_ASSIST_MANUAIS = {
+     },
+     {
+      "titulo": "6B. Anexos",
+-     "texto": "Anexar pelo botão \"Anexar arquivo\" ou arrastando os arquivos para a janela de escrever (contorno tracejado; o navegador não abre o arquivo por cima do rascunho). Lista com nome, tamanho, \"Tirar\" e o total.\nConferência na tela antes de ler o arquivo e de novo no servidor: 15 MB por arquivo, 18 MB somados, 20 arquivos. Pasta arrastada é recusada com a explicação (compactar em .zip).\nEncaminhar: os anexos da original vêm marcados em \"Manter os anexos da mensagem original\" (como no Outlook); dá para desmarcar todos ou um a um. Responder: os anexos da original aparecem desmarcados em \"Incluir os anexos da mensagem original\". O servidor recebe anexosOriginais (partes escolhidas); sem a escolha, o encaminhar leva todos, como antes.\nRascunho: os arquivos anexados ficam no rascunho guardado. Ao reabrir pela pasta Rascunhos, aparecem como \"guardado no rascunho\" e vão no envio (anexosDoRascunho); salvar de novo não duplica. Os anexos da mensagem original não entram no rascunho: vão no envio, com a janela aberta.\nRecebidos: lista de anexos acima do texto, com nome e tamanho; tocar baixa (até 25 MB).\nA atualização automática da lista nunca redesenha a janela de escrever: rascunho e anexos ficam como estão."
++     "texto": "Anexar pelo botão \"Anexar\", na linha do Assunto, ou arrastando os arquivos para a janela de escrever (contorno tracejado; o navegador não abre o arquivo por cima do rascunho). Lista logo abaixo do assunto com nome, tamanho, \"Remover\" e o total (18/11/2026, seção 6D).\nConferência na tela antes de ler o arquivo e de novo no servidor: 15 MB por arquivo, 18 MB somados, 20 arquivos. Pasta arrastada é recusada com a explicação (compactar em .zip).\nEncaminhar: os anexos da original vêm marcados em \"Manter os anexos da mensagem original\" (como no Outlook); dá para desmarcar todos ou um a um. Responder: os anexos da original aparecem desmarcados em \"Incluir os anexos da mensagem original\". O servidor recebe anexosOriginais (partes escolhidas); sem a escolha, o encaminhar leva todos, como antes.\nRascunho: os arquivos anexados ficam no rascunho guardado. Ao reabrir pela pasta Rascunhos, aparecem como \"guardado no rascunho\" e vão no envio (anexosDoRascunho); salvar de novo não duplica. Os anexos da mensagem original não entram no rascunho: vão no envio, com a janela aberta.\nRecebidos: lista de anexos acima do texto, com nome e tamanho; tocar baixa (até 25 MB).\nA atualização automática da lista nunca redesenha a janela de escrever: rascunho e anexos ficam como estão."
++    },
++    {
++     "titulo": "6D. Leitura, janela de escrever, formatação e anexos (18/11/2026)",
++     "texto": "Pedido do Matheus (17/11/2026): a leitura ficava pequena, só numa coluna; a janela de escrever era estreita; faltavam fonte, tamanho e cores; e o anexo ficava embaixo, longe do assunto."
++    },
++    {
++     "titulo": "6D. Leitura, janela de escrever, formatação e anexos (18/11/2026) > Leitura",
++     "texto": "No computador, ao abrir uma mensagem, a coluna de pastas sai e a lista fica estreita ao lado (até 300 px): a leitura ocupa o resto da área, com o assunto em 19 px e o texto em 15 px.\n\"Tela cheia\" esconde a lista também e deixa só a mensagem; \"Mostrar a lista\" volta. A escolha fica guardada no navegador (sgo_email_leitura). \"Voltar à lista\" fecha a leitura e traz as pastas.\nNo celular nada mudou: a mensagem aberta já era a tela toda, com \"Voltar à lista\"."
++    },
++    {
++     "titulo": "6D. Leitura, janela de escrever, formatação e anexos (18/11/2026) > Janela de escrever",
++     "texto": "Escrever, responder, encaminhar e continuar rascunho abrem numa janela de até 1.120 px de largura, com a área do texto de pelo menos 320 px de altura.\n\"Maximizar\" usa a tela toda (e \"Restaurar\" volta). A escolha fica guardada no navegador (sgo_email_escreverMax)."
++    },
++    {
++     "titulo": "6D. Leitura, janela de escrever, formatação e anexos (18/11/2026) > Formatação",
++     "texto": "Barra acima do texto: negrito, itálico, sublinhado, Fonte (Arial, Calibri, Cambria, Georgia, Tahoma, Times New Roman, Trebuchet MS, Verdana e Courier New), Tamanho (10 a 36 px), cor da fonte, cor de destaque (fundo do trecho), limpar formatação, lista e link.\nA formatação é gravada como style em linha (font-family, font-size em px, color, background-color), que o Outlook e o Gmail mostram. O tamanho não usa <font size>.\nHTML seguro: antes de enviar ou salvar o rascunho, a tela tira script, formulário, estilo de página, atributos on*, links que não são http(s), mailto ou tel, e CSS fora da lista de aparência (sem position, url() externo ou expression). O servidor higieniza de novo, como antes (htmlSeguro), e mantém style, <font> e as marcas de texto. Nada mudou no servidor."
++    },
++    {
++     "titulo": "6D. Leitura, janela de escrever, formatação e anexos (18/11/2026) > Anexos",
++     "texto": "\"Anexar\" fica na linha do Assunto. Os anexos aparecem logo abaixo do assunto, antes da barra de formatação, um por linha, com ícone pelo tipo, nome, tamanho e \"Remover\".\nOs anexos da mensagem original (responder e encaminhar) e os guardados no rascunho aparecem no mesmo lugar; os da original com contorno tracejado e a caixinha de incluir.\nOs limites e os avisos continuam os mesmos (15 MB por arquivo, 18 MB somados, 20 arquivos), com o que fazer em cada caso."
+     },
+     {
+      "titulo": "Para as outras telas: enviar como o usuário",
+diff --git a/cand27/UI_Estilos.html b/cand28/UI_Estilos.html
+index 1266766..1e01866 100644
+--- a/cand27/UI_Estilos.html
++++ b/cand28/UI_Estilos.html
+@@ -2096,6 +2096,15 @@
+   .topo-ico[hidden] { display: none !important; }
+   .topo-qt { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bc-danger, #b42318); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
+   .topo-qt[hidden] { display: none; }
++  /* 18/11/2026 (Matheus, pacote 3, item 10): com mensagem não lida, o botão do bate-papo fica destacado (cor, número maior e o texto
++     "N novas" no computador); quando chega mensagem nova, um pulso discreto de 3 vezes. Sem animação para quem pediu menos movimento. */
++  #topoBtnChat.topo-chat-novo, #mobileBtnChat.topo-chat-novo { background: var(--bc-danger-bg, #FBEBE8) !important; border-color: var(--bc-danger, #A3261B) !important; color: var(--bc-danger, #A3261B) !important; font-weight: 700; }
++  #topoBtnChat.topo-chat-novo .topo-qt, #mobileBtnChat.topo-chat-novo .topo-qt { min-width: 22px; height: 22px; line-height: 22px; font-size: 12.5px; top: -9px; right: -9px; padding: 0 6px; border: 2px solid #FFFFFF; box-shadow: 0 1px 4px rgba(28,31,29,.25); }
++  #topoBtnChat .topo-novas { display: none; }
++  #topoBtnChat.topo-chat-novo .topo-novas { display: inline; font-weight: 700; }
++  .topo-chat-chegou { animation: topoChatPulso 1.1s ease-out 3; }
++  @keyframes topoChatPulso { 0% { box-shadow: 0 0 0 0 rgba(163,38,27,.55); } 70% { box-shadow: 0 0 0 10px rgba(163,38,27,0); } 100% { box-shadow: 0 0 0 0 rgba(163,38,27,0); } }
++  @media (prefers-reduced-motion: reduce) { .topo-chat-chegou { animation: none; outline: 3px solid var(--bc-danger, #A3261B); outline-offset: 2px; } }
+ 
+   /* ---- Toast de notificação de atendimento (Auvo) ---- */
+   /* 11/11/2026 (pedido do dono): os balões ficam acima do bate-papo e do "Tire sua dúvida" (não cobrem os botões), com × para fechar */

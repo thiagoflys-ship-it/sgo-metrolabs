@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R89, imagem
-  `sha256:073c3ae2cd561e5b08833ed8d1d2a53d8830438b81d8cbbbbeeebd4200a04ba4`,
-  tag `metrolabs/rh:competencia-versoes-20261118-r89`.
-  Evidência: `output/rh360-20261118-r89/PUBLICADO_RH360_R89_20261118.txt`.
-  Preserva as entregas anteriores; 829 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R92, imagem
+  `sha256:f084cb41988a6221c35205e3d8283755646daa09adafcc4fc0b34181c6cdedae`,
+  tag `metrolabs/rh:cct-acompanhamento-competencia-20261118-r92`.
+  Evidência: `output/rh360-20261118-r92/PUBLICADO_RH360_R92_20261118.txt`.
+  Preserva as entregas anteriores; 840 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -1053,3 +1053,43 @@ Evidências e limites: output/rh360-20261118-r89/PUBLICADO_RH360_R89_20261118.tx
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 18/11/2026 — PUBLICADO pedidos-p2-comercial-20261118 (base pedidos-p1-compras-preco-20261118; cand27). Pacote 2 Comercial: equipamento opcional na calibração/qualificação (tipo + quantidade; vínculo na triagem; volta a exigir só Diretoria/Admin/dono com motivo), contato duplicado (recusa ao cadastrar + 'Usar o existente'; 'Unificar contatos duplicados' com prévia e merge; produção: 52 grupos/108 contatos, maioria da migração 21/10), orçamento mais rápido (vários itens do catálogo de uma vez, mais usados, nova proposta com contato/condições do cliente, duplicar proposta, rascunho no aparelho; 10 itens: ~52→~15 toques). Suíte 2641/0. Relatório: output/pedidos-20261118/p2/RELATORIO.md. Produção atual = cand27.
+
+
+RH360 R90 — publicada/verificada em 18/11/2026 15:52 BRT
+Imagem: sha256:412d60657836b65df6abfb3b7eca9d5d59e2485c0540ad710a5bdfeb902764a0
+Tag: metrolabs/rh:cct-origem-ponto-20261118-r90
+Manifesto: 5e9869a1bc5c5314f34aa69e78d68cdc23f85da57a2238930078ad2d53b005f6
+Critérios CCT com origem governada na memória de ponto.
+R90 entrega origem de ponto explícita no conteúdo governado dos critérios, comparação em segundos e consulta por arquivo/pessoa/data com todas as aprovações e fontes atuais. Não tratar como somente conferência manual ou reimplementar os mesmos componentes.
+836 pins (832 fontes e quatro metadados), 17 deltas com sete fontes novas; 815 fontes anteriores preservadas. Imagem final candidato3 tem duas camadas; base real anterior R89 permanece a predecessora da publicação.
+Base filesystem equivalente R89 sha256:4395cdbcc469acaa9f3d43d85e8ca0074f9f368486391176fd76444205b639ad preserva configuração e 50.772 caminhos; diferenças somente em oito timestamps Docker. Provas/backup integral restaurado/inventários/receita acompanham o pacote. Não reexecutar a consolidação R89 como atualização posterior.
+Próximas candidatas partem da imagem R90 efetivamente em produção ou posterior, com o preparador/construtor genérico COPY único. filesystemBaseLineage é ancestralidade; não substitui a conferência da base imediata.
+Próximo foco: conferência combinada de fontes vinculadas e declarações manuais somente para critérios não vinculados, preservando proveniência, desconhecidos, campos e contexto; depois monitor de pendências sem inferir violações.
+Evidências e limites: output/rh360-20261118-r90/PUBLICADO_RH360_R90_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R91 — publicada/verificada em 18/11/2026 16:20 BRT
+Imagem: sha256:a7e2f0e642f13c69b0d823203cc9ff9330dbf473d417c111bfb4ab68e4d26272
+Tag: metrolabs/rh:cct-conferencia-combinada-20261118-r91
+Manifesto: 9d0f47720e6430ecc372423f1f5c5781c0b2f5a3f13d56ad574934313441de3b
+Conferência combinada de origens de ponto e declarações manuais CCT.
+Preserva R90 e a base equivalente já verificada, suas provas e reversões; R91 acrescenta somente uma camada à imagem R90 publicada.
+838 pins; consulta combinada sem gravação ou efeito. Não transformar correspondência em decisão jurídica ou financeira.
+Evidências e limites: output/rh360-20261118-r91/PUBLICADO_RH360_R91_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R92 — publicada/verificada em 18/11/2026 16:38 BRT
+Imagem: sha256:f084cb41988a6221c35205e3d8283755646daa09adafcc4fc0b34181c6cdedae
+Tag: metrolabs/rh:cct-acompanhamento-competencia-20261118-r92
+Manifesto: deffe959fb9bec86ff774356fcb8a9b31f65b21fc39674565bcabe75b0265dd4
+Acompanhamento técnico CCT por competência e procedimento.
+840 pins; R92 em uma camada sobre a R91 publicada, preservando toda a cadeia e a base equivalente R90.
+Monitoramento é de consulta e limitado por página, com desconhecidos e futuros explícitos.
+Evidências e limites: output/rh360-20261118-r92/PUBLICADO_RH360_R92_20261118.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 18/11/2026 — PUBLICADO pedidos-p3-pendencias-chat-email-20261118 (base pedidos-p2-comercial-20261118; cand28). Pacote 3: chamado agendado/reagendado para data futura sai das pendências até a data (prazo do contrato continua no selo/histórico/indicadores; volta se a visita não for registrada); O.S. do Auvo lida após a varredura e já finalizada/reagendada sai; produção: itens de prazo 8→6 (CH-2026-0027, CH-2026-0029). Bate-papo: botão vermelho com contador, pisca 3x, '(n)' na aba, notificação do navegador opcional (desligada). E-mail: leitura 462→754 px (tela cheia 1066), redação 820→1120 px + Maximizar, fonte/tamanho/cor/destaque com HTML limpo, Anexar na linha do Assunto. ACHADO: varredura completa das O.S. do Auvo parada desde 12/11. Suíte 2653/0. Relatório: output/pedidos-20261118/p3/RELATORIO.md. Produção atual = cand28.

@@ -106,6 +106,9 @@ Ao entrar no SGO+, a janela "Avisos" resume as pendências críticas da central 
 1. No topo, abaixo de "Avisos", aparece o total. Exemplo: "89 pendências críticas · 7 grupos". Se houver, aparecem também as cobranças da gestão e os reconhecimentos.
 2. Em "Pendências críticas" há um cartão por grupo. Cada cartão mostra o módulo, a etiqueta de gravidade ("Crítica" ou "Prazo estourado") e o motivo resumido (ex.: "Bloqueia emissão"). Mostra também o título com a quantidade (ex.: "76 padrões de referência vencidos"), até 3 exemplos com "e mais N", o "Por quê" (quando o grupo tem uma pendência só ou só parte dele é crítica) e o "O que fazer".
 3. Ordem: primeiro o que é da própria pessoa, depois o que está com prazo estourado, depois o resto, na ordem da central.
+   Desde 18/11/2026, chamado da Assistência com a visita marcada para uma data futura (agendado ou reagendado) não
+   entra como prazo estourado até a data marcada; o prazo do contrato continua registrado no chamado e nos indicadores
+   (Manual da Assistência, "Visita marcada com o prazo estourado").
 4. "Abrir" fecha a janela e leva à tela que resolve. Quando o grupo não tem tela própria, o botão se chama "Ver a lista" e abre a lista do Início filtrada por aquele grupo.
 5. A janela mostra os 5 primeiros grupos. "Ver todas as pendências" abre a lista completa do Início, com uma pendência por linha.
 6. "Estou ciente" fica fixo no rodapé, também no celular. Ele só esconde o mesmo conjunto de pendências por 20 horas e não resolve nada. Se surgir uma pendência crítica nova, o resumo volta no próximo acesso.

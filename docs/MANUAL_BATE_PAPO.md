@@ -11,6 +11,25 @@ resumido.
 - Aviso no WhatsApp quando alguém manda mensagem direta para você, ou chama você com @ num grupo, e você está fora
   do sistema. A resposta pelo WhatsApp volta para a conversa.
 
+## 1A. Mensagem nova à vista (18/11/2026)
+
+Pedido do Matheus (17/11/2026): deixar o bate-papo mais visível quando chega mensagem, para responder os colegas logo.
+
+- **Botão do topo:** com mensagem, aviso ou comunicado não lido, o botão "Bate-papo" do topo fica vermelho, com o
+  número em destaque e, no computador, o texto "· N novas". No celular, o ícone do bate-papo na barra do topo fica com
+  fundo vermelho e o número. O botão vale para todas as telas.
+- **Chegou algo novo:** o botão pisca três vezes (um pulso discreto). Quem pediu menos movimento no sistema operacional
+  vê um contorno no lugar da animação.
+- **Título da aba do navegador:** mostra o número entre parênteses, por exemplo "(2) SGO+". Com o SGO+ em outra aba, o
+  título alterna com "Nova mensagem".
+- **Som:** em «Preferências» (engrenagem), «Trocar» passa por "só avisos críticos (mensagens sem som)", que é o padrão,
+  "mensagens e avisos" e "desligado". Vale só no aparelho em que foi escolhido.
+- **Notificação do navegador:** em «Preferências», a caixa "Mostrar notificação do navegador quando chegar mensagem"
+  vem desmarcada. Ao marcar, o navegador pede a autorização uma vez. A notificação aparece só quando o SGO+ está em
+  outra aba ou com o bate-papo fechado; tocar nela abre a conversa. Se o navegador estiver bloqueando, a tela explica
+  como liberar (cadeado ao lado do endereço > Notificações > Permitir).
+- A ordem das mensagens na conversa continua a cronológica (a mais antiga em cima), como desde 09/11/2026.
+
 ## 2. Conversas e grupos
 
 **Conversa com uma pessoa:** «+ Conversa» → buscar pelo nome ou pela área → tocar na pessoa → escrever. Enter envia;

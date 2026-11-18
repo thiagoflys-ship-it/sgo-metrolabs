@@ -66,12 +66,39 @@ Como a imagem chega ao destinatário: no envio, toda imagem `data:image/...;base
 
 ## 6B. Anexos
 
-- Anexar pelo botão "Anexar arquivo" ou arrastando os arquivos para a janela de escrever (contorno tracejado; o navegador não abre o arquivo por cima do rascunho). Lista com nome, tamanho, "Tirar" e o total.
+- Anexar pelo botão "Anexar", na linha do Assunto, ou arrastando os arquivos para a janela de escrever (contorno tracejado; o navegador não abre o arquivo por cima do rascunho). Lista logo abaixo do assunto com nome, tamanho, "Remover" e o total (18/11/2026, seção 6D).
 - Conferência na tela antes de ler o arquivo e de novo no servidor: 15 MB por arquivo, 18 MB somados, 20 arquivos. Pasta arrastada é recusada com a explicação (compactar em .zip).
 - Encaminhar: os anexos da original vêm marcados em "Manter os anexos da mensagem original" (como no Outlook); dá para desmarcar todos ou um a um. Responder: os anexos da original aparecem desmarcados em "Incluir os anexos da mensagem original". O servidor recebe `anexosOriginais` (partes escolhidas); sem a escolha, o encaminhar leva todos, como antes.
 - Rascunho: os arquivos anexados ficam no rascunho guardado. Ao reabrir pela pasta Rascunhos, aparecem como "guardado no rascunho" e vão no envio (`anexosDoRascunho`); salvar de novo não duplica. Os anexos da mensagem original não entram no rascunho: vão no envio, com a janela aberta.
 - Recebidos: lista de anexos acima do texto, com nome e tamanho; tocar baixa (até 25 MB).
 - A atualização automática da lista nunca redesenha a janela de escrever: rascunho e anexos ficam como estão.
+
+## 6D. Leitura, janela de escrever, formatação e anexos (18/11/2026)
+
+Pedido do Matheus (17/11/2026): a leitura ficava pequena, só numa coluna; a janela de escrever era estreita; faltavam fonte, tamanho e cores; e o anexo ficava embaixo, longe do assunto.
+
+### Leitura
+
+- No computador, ao abrir uma mensagem, a coluna de pastas sai e a lista fica estreita ao lado (até 300 px): a leitura ocupa o resto da área, com o assunto em 19 px e o texto em 15 px.
+- "Tela cheia" esconde a lista também e deixa só a mensagem; "Mostrar a lista" volta. A escolha fica guardada no navegador (`sgo_email_leitura`). "Voltar à lista" fecha a leitura e traz as pastas.
+- No celular nada mudou: a mensagem aberta já era a tela toda, com "Voltar à lista".
+
+### Janela de escrever
+
+- Escrever, responder, encaminhar e continuar rascunho abrem numa janela de até 1.120 px de largura, com a área do texto de pelo menos 320 px de altura.
+- "Maximizar" usa a tela toda (e "Restaurar" volta). A escolha fica guardada no navegador (`sgo_email_escreverMax`).
+
+### Formatação
+
+- Barra acima do texto: negrito, itálico, sublinhado, Fonte (Arial, Calibri, Cambria, Georgia, Tahoma, Times New Roman, Trebuchet MS, Verdana e Courier New), Tamanho (10 a 36 px), cor da fonte, cor de destaque (fundo do trecho), limpar formatação, lista e link.
+- A formatação é gravada como `style` em linha (`font-family`, `font-size` em px, `color`, `background-color`), que o Outlook e o Gmail mostram. O tamanho não usa `<font size>`.
+- HTML seguro: antes de enviar ou salvar o rascunho, a tela tira script, formulário, estilo de página, atributos `on*`, links que não são http(s), mailto ou tel, e CSS fora da lista de aparência (sem `position`, `url()` externo ou `expression`). O servidor higieniza de novo, como antes (`htmlSeguro`), e mantém `style`, `<font>` e as marcas de texto. Nada mudou no servidor.
+
+### Anexos
+
+- "Anexar" fica na linha do Assunto. Os anexos aparecem logo abaixo do assunto, antes da barra de formatação, um por linha, com ícone pelo tipo, nome, tamanho e "Remover".
+- Os anexos da mensagem original (responder e encaminhar) e os guardados no rascunho aparecem no mesmo lugar; os da original com contorno tracejado e a caixinha de incluir.
+- Os limites e os avisos continuam os mesmos (15 MB por arquivo, 18 MB somados, 20 arquivos), com o que fazer em cada caso.
 
 ## 7. Para as outras telas: enviar como o usuário
 

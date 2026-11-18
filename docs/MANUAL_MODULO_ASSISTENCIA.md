@@ -51,7 +51,26 @@ O prazo de atendimento conta da abertura até a execução concluída, em horas 
 
 Contrato do cliente com prazo próprio prevalece (Regras da assistência > Contratos). O prazo só pausa ao aguardar
 cliente ou peça quando o contrato permite. Selos: "Em dia", "Em risco" (resta um quarto do prazo ou menos) e
-"Prazo estourado". Prazo em risco ou estourado entra na Caixa de decisões da área Técnica.
+"Prazo estourado". Prazo em risco ou estourado entra no Início e na Caixa de decisões da área Técnica.
+
+### Visita marcada com o prazo estourado (18/11/2026)
+
+Pedido do Matheus (17/11/2026): o atendimento já reagendado continuava como "prazo estourado" nas prioridades do Início.
+
+- Chamado "Agendado" com a visita marcada para uma data futura (no primeiro agendamento ou num reagendamento) não é
+  mais pendência de ação: sai do Início e da Caixa de decisões até a data marcada. Quem agendou já agiu.
+- O prazo do contrato não é apagado. O selo "Prazo estourado em ..." continua na ficha e na lista, o reagendamento fica
+  no histórico (com o motivo) e o chamado continua contado como estourado no contador da tela e nos indicadores do
+  relatório mensal.
+- A ficha mostra a faixa "Visita reagendada para ..." (ou "Visita marcada para ..."), com o prazo que estourou e a
+  explicação de que o chamado volta à lista se a chegada não for registrada.
+- Passada a data marcada sem o "Cheguei" da O.S., o chamado volta às pendências com o título "Prazo estourado: chamado
+  ...: a visita marcada não foi registrada" e o que fazer: registrar a chegada pelo aplicativo, se a visita aconteceu,
+  ou reagendar com o motivo. Chamado aberto em campo pelo técnico não usa esse texto (não houve visita marcada).
+- Prazo em risco segue a mesma regra: com a visita marcada para o futuro, não é cobrado.
+- Integração Auvo: a lista "O.S. aberta no Auvo" é uma foto da última varredura. A O.S. que a sincronização das tarefas
+  leu depois dessa foto já finalizada, ou com a data passada para um dia depois de hoje (reagendada no Auvo), sai da
+  lista; a próxima varredura confirma. Leitura da tarefa mais antiga que a foto não muda nada.
 
 ## Abrir um chamado
 
