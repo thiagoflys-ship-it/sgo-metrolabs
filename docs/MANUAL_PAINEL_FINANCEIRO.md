@@ -29,12 +29,12 @@ Regras que valem sempre:
 | Aba | O que mostra ou faz |
 |---|---|
 | Visão geral | Posição de hoje (saldo das contas e os próximos 10 dias), resumo do período, agenda de vencimentos e vencidos a receber por cliente. |
-| Contas a pagar e receber | Títulos por situação: Vencidos, Vencem hoje, A vencer ou Todos (mais recentes primeiro). |
+| Contas a pagar e receber | Contas de um período (vencimento, previsão, pagamento ou emissão), com as colunas da tela do Omie, situação, ordem e filtro por coluna, agrupamento com subtotais, totais e planilha (seção 8t). |
 | Ficha do cliente | Para a cobrança: busca no cadastro do SGO+ e mostra, lido do Omie, o vencido e o em aberto (saldo ainda devido), os recebimentos dos últimos 12 meses e o atraso médio ao pagar. Só consulta. |
 | Pedidos aprovados | Propostas aprovadas pelo cliente, com o preparo da conta a receber no Omie. |
 | Lançamentos e baixas | Novo lançamento, edição e registro de pagamento ou recebimento (baixa), sempre com prévia. |
 | Cobranças | Ver, gerar e prorrogar o boleto de um título a receber. |
-| Conciliação bancária | Extrato do banco (OFX ou CSV) comparado com o Omie; a conferência fica registrada no SGO+. |
+| Conciliação bancária | Extrato do banco (OFX ou CSV) casado com os títulos do Omie, inclusive os atrasados; a baixa vai ao Omie já conciliada, com prévia e confirmação (seção 8u). |
 | Faturamento de produtos e de serviços | Pedidos e O.S. cadastrados no Omie, por etapa; faturar emite a nota fiscal pelo Omie. |
 | Importação de notas | Primeiro quadro: lançar no Omie, como conta a pagar, a NF-e de compra ou a NFS-e recebida. Segundo quadro: importar no Omie a NF-e de saída emitida fora dele, ou guardar a nota só como documento no SGO+. |
 | Fluxo de caixa | Saldos e movimentos de uma conta no período, e o orçamento do mês por categoria. |
@@ -128,7 +128,7 @@ Dentro da lista, o padrão das caixas é: todas para Financeiro, Diretoria e Adm
 
 ## 8a. Mudanças de 16/11/2026 (especificação do Financeiro)
 
-**Baixa sem acréscimo, por enquanto.** Ainda não foi confirmado como o Omie soma juros e multa (e tira o desconto) no saldo do banco quando a baixa vem pela API. Até a primeira baixa acompanhada confirmar, os campos de juros, multa e desconto ficam em zero e o servidor recusa outro valor. Baixa com acréscimo ou desconto se faz direto no Omie. A prévia mostra a linha "Efeito na conta corrente" com o valor que entra ou sai.
+**Baixa sem acréscimo, por enquanto (substituído em 19/11/2026: veja a seção 8u).** Ainda não foi confirmado como o Omie soma juros e multa (e tira o desconto) no saldo do banco quando a baixa vem pela API. Até a primeira baixa acompanhada confirmar, os campos de juros, multa e desconto ficam em zero e o servidor recusa outro valor. Baixa com acréscimo ou desconto se faz direto no Omie. A prévia mostra a linha "Efeito na conta corrente" com o valor que entra ou sai.
 
 **Baixa confere o saldo em aberto.** A prévia lê no Omie o saldo em aberto do título e mostra "Saldo antes · Esta baixa · Saldo depois", dizendo se a baixa é parcial ou quita o título. Baixa maior que o saldo, de título pago, recebido, liquidado ou cancelado, ou sem o saldo lido no Omie, é recusada. Na lista, esses títulos não têm os botões "Editar" e "Registrar baixa".
 
@@ -481,6 +481,47 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
 
 **Mensagens.** Data inválida, "de" depois de "até" e intervalo maior que 400 dias são recusados com o que fazer, sem ler o Omie.
 
+## 8t. Contas a pagar e receber por período (19/11/2026, pedido do Matheus e da Wanessa)
+
+A aba **Contas a pagar e receber** mostra as contas de um período, lidas do Omie pela API (ListarMovimentos), com as colunas da tela de contas do Omie. Escolha **A receber** ou **A pagar**, a **data de referência** (vencimento, previsão, pagamento ou recebimento, emissão), o período (dd/mm/aaaa, até 400 dias, ou os atalhos Hoje, Esta semana, Este mês, Mês passado, Próximo mês e Este ano) e a **situação**: todas, em aberto, a vencer, vence hoje, atrasadas, com pagamento parcial, pagas ou recebidas, canceladas. A situação é calculada no dia de hoje, no horário de Brasília, pelo saldo em aberto e pelo vencimento.
+
+| Coluna | De onde vem no Omie |
+|---|---|
+| Situação | Status do título, saldo em aberto e vencimento (atrasado, vence hoje, a vencer, recebido ou pago, liquidado, cancelado; "pagamento parcial" quando já houve pagamento e ainda há saldo). |
+| Nº do documento, Parcela, Nota fiscal | Número do título, parcela (001/003) e número do documento fiscal. |
+| Vencimento, Previsão, Último recebimento ou pagamento | Datas do título; o último recebimento é a data do último pagamento registrado. |
+| Cliente ou fornecedor (nome fantasia) | Nome fantasia do cadastro do Omie (sem ele, a razão social; sem cadastro, o CPF/CNPJ). |
+| Valor da conta | Valor do documento. |
+| Impostos retidos | Soma do PIS, COFINS, CSLL, IR, ISS e INSS marcados como retidos. |
+| Valor líquido | Valor da conta menos os impostos retidos (o que o cliente deve pagar). |
+| Valor a receber ou a pagar | Saldo em aberto (já sem as retenções). |
+| Desconto, Juros e multa | O que foi registrado nas baixas. |
+| Valor recebido ou pago | O que entrou ou saiu no banco: valor baixado − desconto + juros + multa. |
+| Categoria, Operação | Código e nome da categoria; operação do Omie (01 Venda de serviço, 11 Venda de produto, 21 Compra de produto...). |
+| Emissão, CPF/CNPJ, Tipo de documento | Colunas extras, escondidas no começo (marque em "Colunas visíveis"). |
+
+Toque no título de uma coluna para ordenar (de novo, inverte). No computador, a linha **filtrar** embaixo dos títulos filtra cada coluna (texto, ou valores como >1000, <500, =150,00); **Procurar** busca em todas. **Agrupar por** junta por situação, cliente ou fornecedor, categoria, operação ou mês de vencimento, com o subtotal de cada grupo; o rodapé traz o total. **Baixar planilha (CSV)** sai com as colunas visíveis, na ordem e com os filtros da tela (registrada no sigilo, como as outras planilhas). Os dados ficam guardados 5 minutos no servidor (trocar a situação, a ordem, o filtro ou o agrupamento não consulta o Omie de novo); **Ler de novo do Omie** busca na hora (o Omie só responde à mesma consulta uma vez por minuto). A primeira consulta de um período pode levar alguns segundos, por causa dos nomes dos clientes; eles ficam guardados 6 horas. A tela não altera nada no Omie. Conferida em 19/11/2026 com o Omie real: 96 títulos a receber com vencimento em novembro, e os títulos conferidos um a um (ConsultarContaReceber) bateram em valor, vencimento, documento, nota e parcela.
+
+**Quem vê:** só a lista de sigilo do Financeiro (hoje: o dono, o Charles e a Wanessa). O Matheus pediu a tela, mas está fora da lista; incluí-lo é decisão do dono, em Painel financeiro > Sigilo e acessos.
+
+## 8u. Conciliação bancária com baixa no Omie (19/11/2026, relato da Wanessa e do Matheus)
+
+**O que estava errado.** A conciliação comparava o extrato do banco só com o extrato do Omie, na mesma data e no mesmo valor, e gravava uma "conferência local". (1) Conta atrasada nunca casava: no extrato do Omie ela continua na data de previsão antiga, como "Previsto", e o pagamento chega no banco em outra data. (2) O que casava não baixava no Omie: era só um registro no SGO+. (3) Os títulos em aberto que vencem no dia apareciam no extrato do Omie como "Previsto" e eram "conferidos" como se já estivessem pagos.
+
+**Como funciona agora.** Para cada movimento do arquivo do banco, o SGO+ procura:
+1. um pagamento ou recebimento **já feito** no Omie com o mesmo valor (mesma data, ou até 3 dias de diferença): o movimento é só **conferido** (a marca de conciliação desse lançamento é feita no Omie);
+2. senão, um **título em aberto** do Omie: todos os atrasados, os que vencem hoje e os a vencer até 45 dias depois do fim do extrato. Casa pelo saldo em aberto (igual ou com diferença de juros, multa ou desconto), pelo CPF ou CNPJ e pelo documento citados na descrição do extrato e pelo nome do cliente ou fornecedor. Com um título claro, ele já vem escolhido; com dois ou mais, a tela pede para escolher; "Outro título" aceita o código do título no Omie.
+
+**A baixa.** Toque em **Preparar baixa**: a prévia é a mesma de Lançamentos e baixas (saldo antes e depois, efeito na conta corrente, aprovação do pagamento, alçadas) e mais a linha "Conciliação". Toque em **Confirmar a baixa no Omie**: o SGO+ chama LancarRecebimento ou LancarPagamento com a data e a conta do extrato, o valor baixado, juros, multa e desconto, **conciliar_documento = S** (o Omie já marca a baixa como conciliada) e um código de baixa fixo para aquele movimento e aquele título. O código da baixa devolvido pelo Omie, se quitou ou não e o valor baixado ficam no histórico da conta (OMIE_CONCILIACOES) e na Trilha das operações. Várias de uma vez: marque "incluir na baixa em lote" e toque em **Preparar e baixar no Omie os marcados**; o Omie exige 1 minuto entre a leitura do título na prévia e a confirmação, e a tela espera sozinha.
+
+**Juros, multa e desconto (liberados em 19/11/2026).** Conferido nos dados reais do Omie (56 títulos recebidos entre julho e novembro com juros, multa ou desconto): o banco recebe ou paga o **valor baixado + juros + multa − desconto**. Exemplos reais: título baixado em 158,91 com multa de 31,78 entrou 190,69 no banco; título de 333,33 com desconto de 71,56 entrou 261,77. Por isso: banco a mais que o saldo → baixa do saldo e a diferença em juros ou multa; banco a menos → **Desconto** (quita o título) ou **Baixa parcial** (fica saldo). A conta precisa fechar com o extrato, senão a prévia recusa. Em emergência, o responsável pelo sistema desliga com a chave OMIE_BAIXA_ACRESCIMO_DESLIGADO = 1. A mesma regra vale em Lançamentos e baixas.
+
+**Nunca duas baixas do mesmo movimento.** Antes de preparar e de novo antes de enviar, o SGO+ confere se o movimento já foi baixado ou conferido; a mesma operação não é enviada duas vezes em 24 horas; o título é relido no Omie na confirmação (se mudou, nada é enviado); e o código de baixa fixo identifica o movimento no Omie. Se o Omie recusar (com o motivo), nada foi feito e a mesma prévia vale depois de corrigir. Se o Omie não responder, o envio fica em "Envios a conferir" e não é repetido sozinho; conferido no Omie como feito, o movimento entra no histórico.
+
+**Conta a pagar** só é baixada depois da aprovação do dono ou da Diretoria (Aprovação de pagamentos), como em Lançamentos e baixas. Débitos automáticos e tarifas também passam pela lista, a não ser que o dono defina um valor de dispensa (Regras do Financeiro).
+
+**Se a página fechar no meio**, "Baixas preparadas" mostra o que falta confirmar.
+
 ## 8s. Recarga semanal e sobra de viagem a recolher (18/11/2026, pacote 4)
 
 **Recarga semanal (aba Recarga Caju).** O portador pode pedir a recarga da semana declarando a programação prevista (dia, cidade, cliente e O.S., atividade, finalidade e valor previsto de cada item), puxada da agenda de O.S. do SGO+ quando houver. O valor pedido é o previsto menos o saldo da rotina que já está no cartão (pelo extrato importado ou, sem ele, pelo que foi lançado). Em "Pedidos e cargas", o pedido semanal mostra a programação, o previsto e o saldo descontado; só o dono e a Diretoria aprovam, mesmo com a regra do Financeiro desligada. Começada a semana, o pedido mostra o previsto × realizado por dia. A carga, a conferência, o período e a devolução seguem como em toda recarga.
@@ -503,7 +544,10 @@ Na Política da recarga, os campos novos são: recarga semanal (ligada), descont
 | A Visão geral recusa o período por ter mais de 2.500 títulos | Diminua o período. |
 | "O Omie recusou a operação: … Nada foi feito no Omie" | Corrija o que o Omie apontou em "Revisar campos" e confira uma nova prévia. |
 | "O envio não foi confirmado" | Pode ter sido feito. Confira no Omie e registre em "Envios a conferir no Omie". |
-| "Baixa com juros, multa ou desconto ainda não é feita pelo SGO+" | Registre só o valor sem acréscimo ou faça esta baixa no Omie. |
+| "Baixa com juros, multa ou desconto está desligada pelo responsável pelo sistema" | A chave OMIE_BAIXA_ACRESCIMO_DESLIGADO está ligada. Registre só o valor sem acréscimo ou faça esta baixa no Omie e avise o responsável. |
+| Na conciliação, a conta atrasada aparece "Sem título em aberto compatível" | O SGO+ procura todos os atrasados com o mesmo saldo ou com o CPF/CNPJ do extrato. Com juros grandes (mais de 25% do saldo) e sem o CPF/CNPJ no extrato, escolha "Outro título" e digite o código do título no Omie. |
+| Na conciliação, "A conta não fecha com o extrato" | Valor da baixa + juros + multa − desconto precisa ser igual ao valor do banco. Ajuste e prepare de novo. |
+| Na conciliação, "Este movimento do extrato já foi tratado" | Já foi baixado ou conferido (veja "Histórico da conta"). Nada foi enviado, para não baixar duas vezes. |
 | "Falta o CNPJ da empresa em Administração > Chaves e senhas > Omie" | Peça ao responsável pelo sistema para preencher o CNPJ da empresa. |
 | "Não foi possível ler no Omie o saldo em aberto deste título" | Nada foi feito. Tente em 1 minuto ou registre a baixa no Omie. |
 | "está aguardando a aprovação do dono do sistema ou da Diretoria" | O valor passa da alçada. Peça ao dono ou à Diretoria a aprovação em Regras do Financeiro > Aprovações pendentes e toque em Confirmar de novo (a prévia espera até 24 horas). |
@@ -547,11 +591,14 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 2. Os cartões mostram o total em aberto a pagar e a receber e quanto disso já venceu.
 3. A Agenda de vencimentos, logo abaixo, lista dia a dia o que vai entrar e sair. Use "Período" e "Mostrar" para filtrar.
 
-**Contas a pagar e receber.** Consultar os títulos a pagar e a receber, um por um.
+**Contas a pagar e receber.** Consultar as contas a pagar e a receber de um período, com as colunas da tela do Omie, totais, subtotais e planilha.
 
-1. Escolha A receber ou A pagar e a situação (vencidos, vencem hoje, a vencer ou todos).
-2. Use Anterior e Próxima para andar pelas páginas (50 títulos por página).
-3. Para lançar, alterar ou baixar um título, use a aba "Lançamentos e baixas".
+1. Escolha A receber ou A pagar, a data de referência (vencimento, previsão, pagamento ou emissão), o período (ou um atalho) e a situação, e toque em Consultar.
+2. Os cartões mostram a quantidade, o valor das contas, o que está em aberto, o atrasado e o que já foi pago ou recebido.
+3. Toque no título de uma coluna para ordenar. No computador, a linha "filtrar" embaixo dos títulos filtra cada coluna (valores aceitam >1000, <500 ou =150,00). "Procurar" busca em todas as colunas.
+4. "Agrupar por" junta por situação, cliente ou fornecedor, categoria, operação ou mês, com o subtotal de cada grupo. "Colunas visíveis" esconde o que não precisa.
+5. "Baixar planilha (CSV)" sai com o que está na tela. Os dados ficam guardados 5 minutos; "Ler de novo do Omie" busca na hora.
+6. Para lançar, alterar ou baixar um título, use a aba "Lançamentos e baixas" (ou a Conciliação bancária, a partir do extrato).
 
 **Ficha do cliente.** Preparar a cobrança de um cliente: o que ele deve, desde quando e como costuma pagar.
 
@@ -572,7 +619,7 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 3. Para corrigir: toque em "Editar" no título. Para registrar um pagamento ou recebimento: toque em "Registrar baixa".
 4. Leia a prévia com atenção. Estando certa, toque em "Confirmar no Omie". Se algo estiver errado, toque em "Revisar campos".
 5. Depois de confirmar, toque em Atualizar e confira o título na lista. A baixa registra o pagamento no Omie; ela não transfere dinheiro no banco.
-6. A baixa confere o saldo em aberto do título e não aceita título já pago ou cancelado. Juros, multa e desconto ficam em zero até a primeira baixa acompanhada.
+6. A baixa confere o saldo em aberto do título e não aceita título já pago ou cancelado. Com juros, multa ou desconto, a prévia mostra quanto entra ou sai do banco (valor da baixa + juros + multa − desconto).
 7. Se o Omie não respondeu a um envio, ele aparece em "Envios a conferir no Omie": confira no Omie e registre se foi feito ou não.
 8. Contas fixas para lançar aparecem numa faixa no topo, com o atalho para a aba Contas fixas. Para estornar uma baixa ou excluir um título lançado por engano, use a aba Trilha das operações: o pedido vai ao dono ou à Diretoria.
 9. Parcelado: em "Novo lançamento", informe as parcelas e o intervalo; o valor do documento é o total. A prévia mostra cada parcela; o envio é uma parcela por vez e, se parar no meio, "Envios a conferir" mostra de onde continuar.
@@ -585,12 +632,15 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira 
 2. "Gerar" cria o boleto no banco pelo Omie; "Prorrogar" muda o vencimento. Os dois passam pela prévia.
 3. O banco pode cobrar tarifa para gerar ou alterar boleto.
 
-**Conciliação bancária.** Conferir se cada movimento do extrato do banco está lançado no Omie.
+**Conciliação bancária.** Baixar no Omie, a partir do extrato do banco, as contas pagas e recebidas (inclusive as atrasadas), já conciliadas.
 
 1. Baixe o extrato no site do banco (de preferência em OFX).
 2. Escolha a conta, o período, o formato e o arquivo e toque em "Gerar prévia".
-3. Cada movimento do banco aparece ao lado do lançamento do Omie com a mesma data e o mesmo valor. Marque os que você conferiu e registre.
-4. O que ficou sem par é o que falta lançar (ou foi lançado com data ou valor diferente).
+3. Movimento com título em aberto no Omie (faixa azul): confira o título sugerido (ou escolha outro), o tratamento da diferença (juros e multa a mais; desconto ou baixa parcial a menos) e toque em "Preparar baixa". Leia a prévia e toque em "Confirmar a baixa no Omie".
+4. Várias de uma vez: marque "incluir na baixa em lote" e toque em "Preparar e baixar no Omie os marcados". O Omie exige 1 minuto entre a prévia e a confirmação de cada título; a tela espera sozinha.
+5. Movimento que o Omie já tem como pago ou recebido (faixa verde-azulada): marque e toque em "Registrar conferências selecionadas".
+6. Conta a pagar só é baixada depois da aprovação do dono ou da Diretoria (Aprovação de pagamentos). O que ficou sem título é o que falta lançar no Omie.
+7. Se a página fechar no meio, "Baixas preparadas" mostra o que falta confirmar. O mesmo movimento do extrato nunca é baixado duas vezes.
 
 **Faturamento de produtos.** Emitir a nota fiscal de um pedido de venda já cadastrado no Omie.
 
@@ -790,11 +840,11 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 ### Registrar baixa
 
 - **Conta corrente da baixa:** a conta em que o dinheiro entrou (recebimento) ou de onde saiu (pagamento). Confira no extrato do banco.
-- **Valor da baixa:** o valor que entrou ou saiu da conta, como está no extrato, sem juros, multa ou desconto. Não pode passar do saldo em aberto do título, que aparece na prévia. Se for menor, a baixa é parcial e o restante continua em aberto.
+- **Valor da baixa:** o valor que entrou ou saiu da conta, tirando os juros e a multa (e somando o desconto). É quanto do saldo do título esta baixa quita; não pode passar do saldo em aberto, que aparece na prévia. Se for menor que o saldo e não houver desconto, a baixa é parcial e o restante continua em aberto.
 - **Data da baixa:** o dia em que o dinheiro entrou ou saiu da conta (a data do extrato), não necessariamente hoje.
-- **Desconto:** fica em zero até a primeira baixa acompanhada confirmar como o Omie trata o desconto no saldo do banco. Baixa com desconto, por enquanto, se faz direto no Omie.
-- **Juros:** fica em zero até a primeira baixa acompanhada confirmar como o Omie soma os juros no saldo do banco (para não lançar em dobro). Baixa com juros, por enquanto, se faz direto no Omie.
-- **Multa:** fica em zero pelo mesmo motivo dos juros. Baixa com multa, por enquanto, se faz direto no Omie.
+- **Desconto:** a parte do saldo que não foi paga e fica perdoada. Com desconto, o "Valor da baixa" é o saldo inteiro do título; no banco entra ou sai o valor da baixa menos o desconto.
+- **Juros:** o que foi pago a mais por atraso. Vai separado do "Valor da baixa" (que sai do saldo do título); no banco entra ou sai o valor da baixa mais os juros e a multa.
+- **Multa:** a multa por atraso cobrada ou paga. Como os juros, vai separada do "Valor da baixa" e soma no valor do banco.
 - **Observação:** o que identifica o pagamento (ex.: número do comprovante, PIX recebido de quem).
 
 ### Envios a conferir no Omie
@@ -828,6 +878,18 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
 - **Até:** o último dia do extrato.
 - **Formato:** OFX é o arquivo padrão que os bancos exportam (prefira este); CSV é a planilha do extrato.
 - **Arquivo:** o extrato baixado no site ou aplicativo do banco, do mesmo período e da mesma conta (até 500 KB e 100 movimentos).
+- **Título no Omie (em cada movimento):** o título que este movimento pagou. Os sugeridos vêm primeiro (atrasados marcados); "Outro título" aceita o código do título no Omie.
+- **Juros, Multa e Desconto (em cada movimento):** quando o banco mostra mais do que o saldo em aberto, a diferença vai em juros ou multa; o total precisa fechar com o extrato.
+- **Tratamento (quando o banco mostra menos que o saldo):** "Desconto" quita o título e registra a diferença como desconto; "Baixa parcial" deixa o resto em aberto.
+- **Incluir na baixa em lote:** marca o movimento para "Preparar e baixar no Omie os marcados".
+
+### Contas a pagar e receber
+
+- **Contas:** A receber (o que os clientes devem) ou A pagar (o que a empresa deve).
+- **Data de referência:** qual data do título o período usa (vencimento, previsão, último pagamento ou recebimento, ou emissão).
+- **De e Até:** o período em dd/mm/aaaa (até 400 dias).
+- **Situação:** todas, em aberto, a vencer, vence hoje, atrasadas, com pagamento parcial, pagas ou recebidas, canceladas (calculada no dia de hoje, horário de Brasília).
+- **Procurar, filtro de coluna, Agrupar por e Colunas visíveis:** só mudam o que aparece na tela e na planilha; não consultam o Omie de novo.
 
 ### Faturamento e notas
 

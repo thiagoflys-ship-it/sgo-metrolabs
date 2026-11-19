@@ -1,0 +1,660 @@
+diff --git a/docs/MANUAL_PAINEL_FINANCEIRO.md b/docs/MANUAL_PAINEL_FINANCEIRO.md
+index 29b81214..31d35eeb 100644
+--- a/docs/MANUAL_PAINEL_FINANCEIRO.md
++++ b/docs/MANUAL_PAINEL_FINANCEIRO.md
+@@ -29,12 +29,12 @@ Regras que valem sempre:
+ | Aba | O que mostra ou faz |
+ |---|---|
+ | Visão geral | Posição de hoje (saldo das contas e os próximos 10 dias), resumo do período, agenda de vencimentos e vencidos a receber por cliente. |
+-| Contas a pagar e receber | Títulos por situação: Vencidos, Vencem hoje, A vencer ou Todos (mais recentes primeiro). |
++| Contas a pagar e receber | Contas de um período (vencimento, previsão, pagamento ou emissão), com as colunas da tela do Omie, situação, ordem e filtro por coluna, agrupamento com subtotais, totais e planilha (seção 8t). |
+ | Ficha do cliente | Para a cobrança: busca no cadastro do SGO+ e mostra, lido do Omie, o vencido e o em aberto (saldo ainda devido), os recebimentos dos últimos 12 meses e o atraso médio ao pagar. Só consulta. |
+ | Pedidos aprovados | Propostas aprovadas pelo cliente, com o preparo da conta a receber no Omie. |
+ | Lançamentos e baixas | Novo lançamento, edição e registro de pagamento ou recebimento (baixa), sempre com prévia. |
+ | Cobranças | Ver, gerar e prorrogar o boleto de um título a receber. |
+-| Conciliação bancária | Extrato do banco (OFX ou CSV) comparado com o Omie; a conferência fica registrada no SGO+. |
++| Conciliação bancária | Extrato do banco (OFX ou CSV) casado com os títulos do Omie, inclusive os atrasados; a baixa vai ao Omie já conciliada, com prévia e confirmação (seção 8u). |
+ | Faturamento de produtos e de serviços | Pedidos e O.S. cadastrados no Omie, por etapa; faturar emite a nota fiscal pelo Omie. |
+ | Importação de notas | Primeiro quadro: lançar no Omie, como conta a pagar, a NF-e de compra ou a NFS-e recebida. Segundo quadro: importar no Omie a NF-e de saída emitida fora dele, ou guardar a nota só como documento no SGO+. |
+ | Fluxo de caixa | Saldos e movimentos de uma conta no período, e o orçamento do mês por categoria. |
+@@ -128,7 +128,7 @@ Dentro da lista, o padrão das caixas é: todas para Financeiro, Diretoria e Adm
+ 
+ ## 8a. Mudanças de 16/11/2026 (especificação do Financeiro)
+ 
+-**Baixa sem acréscimo, por enquanto.** Ainda não foi confirmado como o Omie soma juros e multa (e tira o desconto) no saldo do banco quando a baixa vem pela API. Até a primeira baixa acompanhada confirmar, os campos de juros, multa e desconto ficam em zero e o servidor recusa outro valor. Baixa com acréscimo ou desconto se faz direto no Omie. A prévia mostra a linha "Efeito na conta corrente" com o valor que entra ou sai.
++**Baixa sem acréscimo, por enquanto (substituído em 19/11/2026: veja a seção 8u).** Ainda não foi confirmado como o Omie soma juros e multa (e tira o desconto) no saldo do banco quando a baixa vem pela API. Até a primeira baixa acompanhada confirmar, os campos de juros, multa e desconto ficam em zero e o servidor recusa outro valor. Baixa com acréscimo ou desconto se faz direto no Omie. A prévia mostra a linha "Efeito na conta corrente" com o valor que entra ou sai.
+ 
+ **Baixa confere o saldo em aberto.** A prévia lê no Omie o saldo em aberto do título e mostra "Saldo antes · Esta baixa · Saldo depois", dizendo se a baixa é parcial ou quita o título. Baixa maior que o saldo, de título pago, recebido, liquidado ou cancelado, ou sem o saldo lido no Omie, é recusada. Na lista, esses títulos não têm os botões "Editar" e "Registrar baixa".
+ 
+@@ -481,6 +481,47 @@ As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segu
+ 
+ **Mensagens.** Data inválida, "de" depois de "até" e intervalo maior que 400 dias são recusados com o que fazer, sem ler o Omie.
+ 
++## 8t. Contas a pagar e receber por período (19/11/2026, pedido do Matheus e da Wanessa)
++
++A aba **Contas a pagar e receber** mostra as contas de um período, lidas do Omie pela API (ListarMovimentos), com as colunas da tela de contas do Omie. Escolha **A receber** ou **A pagar**, a **data de referência** (vencimento, previsão, pagamento ou recebimento, emissão), o período (dd/mm/aaaa, até 400 dias, ou os atalhos Hoje, Esta semana, Este mês, Mês passado, Próximo mês e Este ano) e a **situação**: todas, em aberto, a vencer, vence hoje, atrasadas, com pagamento parcial, pagas ou recebidas, canceladas. A situação é calculada no dia de hoje, no horário de Brasília, pelo saldo em aberto e pelo vencimento.
++
++| Coluna | De onde vem no Omie |
++|---|---|
++| Situação | Status do título, saldo em aberto e vencimento (atrasado, vence hoje, a vencer, recebido ou pago, liquidado, cancelado; "pagamento parcial" quando já houve pagamento e ainda há saldo). |
++| Nº do documento, Parcela, Nota fiscal | Número do título, parcela (001/003) e número do documento fiscal. |
++| Vencimento, Previsão, Último recebimento ou pagamento | Datas do título; o último recebimento é a data do último pagamento registrado. |
++| Cliente ou fornecedor (nome fantasia) | Nome fantasia do cadastro do Omie (sem ele, a razão social; sem cadastro, o CPF/CNPJ). |
++| Valor da conta | Valor do documento. |
++| Impostos retidos | Soma do PIS, COFINS, CSLL, IR, ISS e INSS marcados como retidos. |
++| Valor líquido | Valor da conta menos os impostos retidos (o que o cliente deve pagar). |
++| Valor a receber ou a pagar | Saldo em aberto (já sem as retenções). |
++| Desconto, Juros e multa | O que foi registrado nas baixas. |
++| Valor recebido ou pago | O que entrou ou saiu no banco: valor baixado − desconto + juros + multa. |
++| Categoria, Operação | Código e nome da categoria; operação do Omie (01 Venda de serviço, 11 Venda de produto, 21 Compra de produto...). |
++| Emissão, CPF/CNPJ, Tipo de documento | Colunas extras, escondidas no começo (marque em "Colunas visíveis"). |
++
++Toque no título de uma coluna para ordenar (de novo, inverte). No computador, a linha **filtrar** embaixo dos títulos filtra cada coluna (texto, ou valores como >1000, <500, =150,00); **Procurar** busca em todas. **Agrupar por** junta por situação, cliente ou fornecedor, categoria, operação ou mês de vencimento, com o subtotal de cada grupo; o rodapé traz o total. **Baixar planilha (CSV)** sai com as colunas visíveis, na ordem e com os filtros da tela (registrada no sigilo, como as outras planilhas). Os dados ficam guardados 5 minutos no servidor (trocar a situação, a ordem, o filtro ou o agrupamento não consulta o Omie de novo); **Ler de novo do Omie** busca na hora (o Omie só responde à mesma consulta uma vez por minuto). A primeira consulta de um período pode levar alguns segundos, por causa dos nomes dos clientes; eles ficam guardados 6 horas. A tela não altera nada no Omie. Conferida em 19/11/2026 com o Omie real: 96 títulos a receber com vencimento em novembro, e os títulos conferidos um a um (ConsultarContaReceber) bateram em valor, vencimento, documento, nota e parcela.
++
++**Quem vê:** só a lista de sigilo do Financeiro (hoje: o dono, o Charles e a Wanessa). O Matheus pediu a tela, mas está fora da lista; incluí-lo é decisão do dono, em Painel financeiro > Sigilo e acessos.
++
++## 8u. Conciliação bancária com baixa no Omie (19/11/2026, relato da Wanessa e do Matheus)
++
++**O que estava errado.** A conciliação comparava o extrato do banco só com o extrato do Omie, na mesma data e no mesmo valor, e gravava uma "conferência local". (1) Conta atrasada nunca casava: no extrato do Omie ela continua na data de previsão antiga, como "Previsto", e o pagamento chega no banco em outra data. (2) O que casava não baixava no Omie: era só um registro no SGO+. (3) Os títulos em aberto que vencem no dia apareciam no extrato do Omie como "Previsto" e eram "conferidos" como se já estivessem pagos.
++
++**Como funciona agora.** Para cada movimento do arquivo do banco, o SGO+ procura:
++1. um pagamento ou recebimento **já feito** no Omie com o mesmo valor (mesma data, ou até 3 dias de diferença): o movimento é só **conferido** (a marca de conciliação desse lançamento é feita no Omie);
++2. senão, um **título em aberto** do Omie: todos os atrasados, os que vencem hoje e os a vencer até 45 dias depois do fim do extrato. Casa pelo saldo em aberto (igual ou com diferença de juros, multa ou desconto), pelo CPF ou CNPJ e pelo documento citados na descrição do extrato e pelo nome do cliente ou fornecedor. Com um título claro, ele já vem escolhido; com dois ou mais, a tela pede para escolher; "Outro título" aceita o código do título no Omie.
++
++**A baixa.** Toque em **Preparar baixa**: a prévia é a mesma de Lançamentos e baixas (saldo antes e depois, efeito na conta corrente, aprovação do pagamento, alçadas) e mais a linha "Conciliação". Toque em **Confirmar a baixa no Omie**: o SGO+ chama LancarRecebimento ou LancarPagamento com a data e a conta do extrato, o valor baixado, juros, multa e desconto, **conciliar_documento = S** (o Omie já marca a baixa como conciliada) e um código de baixa fixo para aquele movimento e aquele título. O código da baixa devolvido pelo Omie, se quitou ou não e o valor baixado ficam no histórico da conta (OMIE_CONCILIACOES) e na Trilha das operações. Várias de uma vez: marque "incluir na baixa em lote" e toque em **Preparar e baixar no Omie os marcados**; o Omie exige 1 minuto entre a leitura do título na prévia e a confirmação, e a tela espera sozinha.
++
++**Juros, multa e desconto (liberados em 19/11/2026).** Conferido nos dados reais do Omie (56 títulos recebidos entre julho e novembro com juros, multa ou desconto): o banco recebe ou paga o **valor baixado + juros + multa − desconto**. Exemplos reais: título baixado em 158,91 com multa de 31,78 entrou 190,69 no banco; título de 333,33 com desconto de 71,56 entrou 261,77. Por isso: banco a mais que o saldo → baixa do saldo e a diferença em juros ou multa; banco a menos → **Desconto** (quita o título) ou **Baixa parcial** (fica saldo). A conta precisa fechar com o extrato, senão a prévia recusa. Em emergência, o responsável pelo sistema desliga com a chave OMIE_BAIXA_ACRESCIMO_DESLIGADO = 1. A mesma regra vale em Lançamentos e baixas.
++
++**Nunca duas baixas do mesmo movimento.** Antes de preparar e de novo antes de enviar, o SGO+ confere se o movimento já foi baixado ou conferido; a mesma operação não é enviada duas vezes em 24 horas; o título é relido no Omie na confirmação (se mudou, nada é enviado); e o código de baixa fixo identifica o movimento no Omie. Se o Omie recusar (com o motivo), nada foi feito e a mesma prévia vale depois de corrigir. Se o Omie não responder, o envio fica em "Envios a conferir" e não é repetido sozinho; conferido no Omie como feito, o movimento entra no histórico.
++
++**Conta a pagar** só é baixada depois da aprovação do dono ou da Diretoria (Aprovação de pagamentos), como em Lançamentos e baixas. Débitos automáticos e tarifas também passam pela lista, a não ser que o dono defina um valor de dispensa (Regras do Financeiro).
++
++**Se a página fechar no meio**, "Baixas preparadas" mostra o que falta confirmar.
++
+ ## 8s. Recarga semanal e sobra de viagem a recolher (18/11/2026, pacote 4)
+ 
+ **Recarga semanal (aba Recarga Caju).** O portador pode pedir a recarga da semana declarando a programação prevista (dia, cidade, cliente e O.S., atividade, finalidade e valor previsto de cada item), puxada da agenda de O.S. do SGO+ quando houver. O valor pedido é o previsto menos o saldo da rotina que já está no cartão (pelo extrato importado ou, sem ele, pelo que foi lançado). Em "Pedidos e cargas", o pedido semanal mostra a programação, o previsto e o saldo descontado; só o dono e a Diretoria aprovam, mesmo com a regra do Financeiro desligada. Começada a semana, o pedido mostra o previsto × realizado por dia. A carga, a conferência, o período e a devolução seguem como em toda recarga.
+@@ -503,7 +544,10 @@ Na Política da recarga, os campos novos são: recarga semanal (ligada), descont
+ | A Visão geral recusa o período por ter mais de 2.500 títulos | Diminua o período. |
+ | "O Omie recusou a operação: … Nada foi feito no Omie" | Corrija o que o Omie apontou em "Revisar campos" e confira uma nova prévia. |
+ | "O envio não foi confirmado" | Pode ter sido feito. Confira no Omie e registre em "Envios a conferir no Omie". |
+-| "Baixa com juros, multa ou desconto ainda não é feita pelo SGO+" | Registre só o valor sem acréscimo ou faça esta baixa no Omie. |
++| "Baixa com juros, multa ou desconto está desligada pelo responsável pelo sistema" | A chave OMIE_BAIXA_ACRESCIMO_DESLIGADO está ligada. Registre só o valor sem acréscimo ou faça esta baixa no Omie e avise o responsável. |
++| Na conciliação, a conta atrasada aparece "Sem título em aberto compatível" | O SGO+ procura todos os atrasados com o mesmo saldo ou com o CPF/CNPJ do extrato. Com juros grandes (mais de 25% do saldo) e sem o CPF/CNPJ no extrato, escolha "Outro título" e digite o código do título no Omie. |
++| Na conciliação, "A conta não fecha com o extrato" | Valor da baixa + juros + multa − desconto precisa ser igual ao valor do banco. Ajuste e prepare de novo. |
++| Na conciliação, "Este movimento do extrato já foi tratado" | Já foi baixado ou conferido (veja "Histórico da conta"). Nada foi enviado, para não baixar duas vezes. |
+ | "Falta o CNPJ da empresa em Administração > Chaves e senhas > Omie" | Peça ao responsável pelo sistema para preencher o CNPJ da empresa. |
+ | "Não foi possível ler no Omie o saldo em aberto deste título" | Nada foi feito. Tente em 1 minuto ou registre a baixa no Omie. |
+ | "está aguardando a aprovação do dono do sistema ou da Diretoria" | O valor passa da alçada. Peça ao dono ou à Diretoria a aprovação em Regras do Financeiro > Aprovações pendentes e toque em Confirmar de novo (a prévia espera até 24 horas). |
+@@ -547,11 +591,14 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira
+ 2. Os cartões mostram o total em aberto a pagar e a receber e quanto disso já venceu.
+ 3. A Agenda de vencimentos, logo abaixo, lista dia a dia o que vai entrar e sair. Use "Período" e "Mostrar" para filtrar.
+ 
+-**Contas a pagar e receber.** Consultar os títulos a pagar e a receber, um por um.
++**Contas a pagar e receber.** Consultar as contas a pagar e a receber de um período, com as colunas da tela do Omie, totais, subtotais e planilha.
+ 
+-1. Escolha A receber ou A pagar e a situação (vencidos, vencem hoje, a vencer ou todos).
+-2. Use Anterior e Próxima para andar pelas páginas (50 títulos por página).
+-3. Para lançar, alterar ou baixar um título, use a aba "Lançamentos e baixas".
++1. Escolha A receber ou A pagar, a data de referência (vencimento, previsão, pagamento ou emissão), o período (ou um atalho) e a situação, e toque em Consultar.
++2. Os cartões mostram a quantidade, o valor das contas, o que está em aberto, o atrasado e o que já foi pago ou recebido.
++3. Toque no título de uma coluna para ordenar. No computador, a linha "filtrar" embaixo dos títulos filtra cada coluna (valores aceitam >1000, <500 ou =150,00). "Procurar" busca em todas as colunas.
++4. "Agrupar por" junta por situação, cliente ou fornecedor, categoria, operação ou mês, com o subtotal de cada grupo. "Colunas visíveis" esconde o que não precisa.
++5. "Baixar planilha (CSV)" sai com o que está na tela. Os dados ficam guardados 5 minutos; "Ler de novo do Omie" busca na hora.
++6. Para lançar, alterar ou baixar um título, use a aba "Lançamentos e baixas" (ou a Conciliação bancária, a partir do extrato).
+ 
+ **Ficha do cliente.** Preparar a cobrança de um cliente: o que ele deve, desde quando e como costuma pagar.
+ 
+@@ -572,7 +619,7 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira
+ 3. Para corrigir: toque em "Editar" no título. Para registrar um pagamento ou recebimento: toque em "Registrar baixa".
+ 4. Leia a prévia com atenção. Estando certa, toque em "Confirmar no Omie". Se algo estiver errado, toque em "Revisar campos".
+ 5. Depois de confirmar, toque em Atualizar e confira o título na lista. A baixa registra o pagamento no Omie; ela não transfere dinheiro no banco.
+-6. A baixa confere o saldo em aberto do título e não aceita título já pago ou cancelado. Juros, multa e desconto ficam em zero até a primeira baixa acompanhada.
++6. A baixa confere o saldo em aberto do título e não aceita título já pago ou cancelado. Com juros, multa ou desconto, a prévia mostra quanto entra ou sai do banco (valor da baixa + juros + multa − desconto).
+ 7. Se o Omie não respondeu a um envio, ele aparece em "Envios a conferir no Omie": confira no Omie e registre se foi feito ou não.
+ 8. Contas fixas para lançar aparecem numa faixa no topo, com o atalho para a aba Contas fixas. Para estornar uma baixa ou excluir um título lançado por engano, use a aba Trilha das operações: o pedido vai ao dono ou à Diretoria.
+ 9. Parcelado: em "Novo lançamento", informe as parcelas e o intervalo; o valor do documento é o total. A prévia mostra cada parcela; o envio é uma parcela por vez e, se parar no meio, "Envios a conferir" mostra de onde continuar.
+@@ -585,12 +632,15 @@ No topo de cada aba há o quadro **"Como fazer nesta aba"**, aberto na primeira
+ 2. "Gerar" cria o boleto no banco pelo Omie; "Prorrogar" muda o vencimento. Os dois passam pela prévia.
+ 3. O banco pode cobrar tarifa para gerar ou alterar boleto.
+ 
+-**Conciliação bancária.** Conferir se cada movimento do extrato do banco está lançado no Omie.
++**Conciliação bancária.** Baixar no Omie, a partir do extrato do banco, as contas pagas e recebidas (inclusive as atrasadas), já conciliadas.
+ 
+ 1. Baixe o extrato no site do banco (de preferência em OFX).
+ 2. Escolha a conta, o período, o formato e o arquivo e toque em "Gerar prévia".
+-3. Cada movimento do banco aparece ao lado do lançamento do Omie com a mesma data e o mesmo valor. Marque os que você conferiu e registre.
+-4. O que ficou sem par é o que falta lançar (ou foi lançado com data ou valor diferente).
++3. Movimento com título em aberto no Omie (faixa azul): confira o título sugerido (ou escolha outro), o tratamento da diferença (juros e multa a mais; desconto ou baixa parcial a menos) e toque em "Preparar baixa". Leia a prévia e toque em "Confirmar a baixa no Omie".
++4. Várias de uma vez: marque "incluir na baixa em lote" e toque em "Preparar e baixar no Omie os marcados". O Omie exige 1 minuto entre a prévia e a confirmação de cada título; a tela espera sozinha.
++5. Movimento que o Omie já tem como pago ou recebido (faixa verde-azulada): marque e toque em "Registrar conferências selecionadas".
++6. Conta a pagar só é baixada depois da aprovação do dono ou da Diretoria (Aprovação de pagamentos). O que ficou sem título é o que falta lançar no Omie.
++7. Se a página fechar no meio, "Baixas preparadas" mostra o que falta confirmar. O mesmo movimento do extrato nunca é baixado duas vezes.
+ 
+ **Faturamento de produtos.** Emitir a nota fiscal de um pedido de venda já cadastrado no Omie.
+ 
+@@ -790,11 +840,11 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
+ ### Registrar baixa
+ 
+ - **Conta corrente da baixa:** a conta em que o dinheiro entrou (recebimento) ou de onde saiu (pagamento). Confira no extrato do banco.
+-- **Valor da baixa:** o valor que entrou ou saiu da conta, como está no extrato, sem juros, multa ou desconto. Não pode passar do saldo em aberto do título, que aparece na prévia. Se for menor, a baixa é parcial e o restante continua em aberto.
++- **Valor da baixa:** o valor que entrou ou saiu da conta, tirando os juros e a multa (e somando o desconto). É quanto do saldo do título esta baixa quita; não pode passar do saldo em aberto, que aparece na prévia. Se for menor que o saldo e não houver desconto, a baixa é parcial e o restante continua em aberto.
+ - **Data da baixa:** o dia em que o dinheiro entrou ou saiu da conta (a data do extrato), não necessariamente hoje.
+-- **Desconto:** fica em zero até a primeira baixa acompanhada confirmar como o Omie trata o desconto no saldo do banco. Baixa com desconto, por enquanto, se faz direto no Omie.
+-- **Juros:** fica em zero até a primeira baixa acompanhada confirmar como o Omie soma os juros no saldo do banco (para não lançar em dobro). Baixa com juros, por enquanto, se faz direto no Omie.
+-- **Multa:** fica em zero pelo mesmo motivo dos juros. Baixa com multa, por enquanto, se faz direto no Omie.
++- **Desconto:** a parte do saldo que não foi paga e fica perdoada. Com desconto, o "Valor da baixa" é o saldo inteiro do título; no banco entra ou sai o valor da baixa menos o desconto.
++- **Juros:** o que foi pago a mais por atraso. Vai separado do "Valor da baixa" (que sai do saldo do título); no banco entra ou sai o valor da baixa mais os juros e a multa.
++- **Multa:** a multa por atraso cobrada ou paga. Como os juros, vai separada do "Valor da baixa" e soma no valor do banco.
+ - **Observação:** o que identifica o pagamento (ex.: número do comprovante, PIX recebido de quem).
+ 
+ ### Envios a conferir no Omie
+@@ -828,6 +878,18 @@ Embaixo de cada campo do painel aparece a explicação abaixo (nas barras de fil
+ - **Até:** o último dia do extrato.
+ - **Formato:** OFX é o arquivo padrão que os bancos exportam (prefira este); CSV é a planilha do extrato.
+ - **Arquivo:** o extrato baixado no site ou aplicativo do banco, do mesmo período e da mesma conta (até 500 KB e 100 movimentos).
++- **Título no Omie (em cada movimento):** o título que este movimento pagou. Os sugeridos vêm primeiro (atrasados marcados); "Outro título" aceita o código do título no Omie.
++- **Juros, Multa e Desconto (em cada movimento):** quando o banco mostra mais do que o saldo em aberto, a diferença vai em juros ou multa; o total precisa fechar com o extrato.
++- **Tratamento (quando o banco mostra menos que o saldo):** "Desconto" quita o título e registra a diferença como desconto; "Baixa parcial" deixa o resto em aberto.
++- **Incluir na baixa em lote:** marca o movimento para "Preparar e baixar no Omie os marcados".
++
++### Contas a pagar e receber
++
++- **Contas:** A receber (o que os clientes devem) ou A pagar (o que a empresa deve).
++- **Data de referência:** qual data do título o período usa (vencimento, previsão, último pagamento ou recebimento, ou emissão).
++- **De e Até:** o período em dd/mm/aaaa (até 400 dias).
++- **Situação:** todas, em aberto, a vencer, vence hoje, atrasadas, com pagamento parcial, pagas ou recebidas, canceladas (calculada no dia de hoje, horário de Brasília).
++- **Procurar, filtro de coluna, Agrupar por e Colunas visíveis:** só mudam o que aparece na tela e na planilha; não consultam o Omie de novo.
+ 
+ ### Faturamento e notas
+ 
+diff --git a/tests/financeiro-completo-20261116.test.cjs b/tests/financeiro-completo-20261116.test.cjs
+index 91a57a39..3f29bb42 100644
+--- a/tests/financeiro-completo-20261116.test.cjs
++++ b/tests/financeiro-completo-20261116.test.cjs
+@@ -115,12 +115,22 @@ function montar(opcoes) {
+ const fornecedorNoOmie = (a, tags) => a.clientes.push({ codigo_cliente_omie: 55, razao_social: 'PECAS FICTICIAS LTDA', cnpj_cpf: fmt(FORN), inativo: 'N', tags: (tags || ['Fornecedor']).map((t) => ({ tag: t })) });
+ 
+ // ------------------------------------------------------------------------------------------------ seção 1: B1 a B9
+-test('B1: baixa com juros, multa ou desconto é recusada antes de qualquer envio; a prévia mostra o efeito na conta', () => {
++// 19/11/2026 (auditoria do Financeiro): juros, multa e desconto LIBERADOS (conferido nos dados reais do Omie: banco = valor + juros + multa − desconto).
++// A trava de antes continua disponível pela chave OMIE_BAIXA_ACRESCIMO_DESLIGADO = 1.
++test('B1: baixa com juros, multa ou desconto mostra o efeito no banco; desligada pela chave, é recusada antes de qualquer envio', () => {
+   const a = montar();
++  const efeito = { juros: /R\$ 102,00 entram na conta escolhida \(valor baixado R\$ 100,00 \+ juros R\$ 2,00\)/, multa: /R\$ 101,00 entram/, desconto: /R\$ 99,50 entram na conta escolhida \(valor baixado R\$ 100,00 − desconto R\$ 0,50\)/ };
+   for (const extra of [{ juros: 2 }, { multa: 1 }, { desconto: 0.5 }]) {
+     const r = a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: Object.assign({ contaId: 5, valor: 100, data: '2026-11-16' }, extra) });
+-    assert.equal(r.ok, false); assert.match(r.mensagem, /confirmar, na primeira operação acompanhada/); assert.match(r.mensagem, /direto no Omie/);
++    assert.equal(r.ok, true, r.mensagem); assert.ok(r.resumo.some((l) => l[0] === 'Efeito na conta corrente' && efeito[Object.keys(extra)[0]].test(l[1])), JSON.stringify(r.resumo));
+   }
++  assert.match(a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: { contaId: 5, valor: 10, desconto: 20, data: '2026-11-16' } }).mensagem, /desconto .* é maior que o valor baixado/);
++  a.props.OMIE_BAIXA_ACRESCIMO_DESLIGADO = '1';
++  for (const extra of [{ juros: 2 }, { multa: 1 }, { desconto: 0.5 }]) {
++    const r = a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: Object.assign({ contaId: 5, valor: 100, data: '2026-11-16' }, extra) });
++    assert.equal(r.ok, false); assert.match(r.mensagem, /desligada pelo responsável pelo sistema/); assert.match(r.mensagem, /direto no Omie/);
++  }
++  delete a.props.OMIE_BAIXA_ACRESCIMO_DESLIGADO;
+   const ok = a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: { contaId: 5, valor: 100, data: '2026-11-16' } });
+   assert.equal(ok.ok, true, ok.mensagem);
+   assert.ok(ok.resumo.some((l) => l[0] === 'Efeito na conta corrente' && /R\$ 100,00 entram/.test(l[1])));
+@@ -569,10 +579,10 @@ test('(a)(b)(d) página completa do Painel: busca e cadastro no lançamento, not
+       await page.screenshot({ path: path.join(saida, largura + '-cadastro-omie.png'), fullPage: true });
+       await page.evaluate(() => OmieCad_confirmar_());
+       await page.waitForFunction(() => /Escolhido: SERVICOS FICTICIOS LTDA/.test(document.getElementById('omieCadEscolhido').textContent), null, { timeout: 8000 });
+-      // baixa: juros, multa e desconto travados em zero, com o aviso
++      // baixa: 19/11/2026 (auditoria) juros, multa e desconto liberados, com o aviso de como o Omie soma no banco
+       await page.evaluate(() => OmieOps_form_('baixar', 101)); await page.waitForSelector('#omieOpsForm [name="juros"]');
+-      assert.equal(await page.evaluate(() => document.querySelector('#omieOpsForm [name="juros"]').readOnly), true);
+-      assert.match(await page.locator('.omie-aviso-baixa').innerText(), /confirmar no primeiro uso acompanhado/);
++      assert.equal(await page.evaluate(() => document.querySelector('#omieOpsForm [name="juros"]').readOnly), false);
++      assert.match(await page.locator('.omie-aviso-baixa').innerText(), /valor da baixa \+ juros \+ multa − desconto/);
+       // nota recebida: NFS-e ABRASF lida, fornecedor já no Omie, retenções e dicas
+       await page.evaluate(() => OmieTela_abrir_('notas')); await page.waitForSelector('#omieNotaSecao');
+       await page.evaluate((xml) => { document.getElementById('omieNotaTipo').value = 'nfse'; OMIE_NOTA.xml = xml; OMIE_NOTA.tipo = 'nfse'; OmieNota_lerServidor_({}); }, abrasfPagina());
+diff --git a/tests/financeiro-omie-20261114.test.cjs b/tests/financeiro-omie-20261114.test.cjs
+index b3d0ca48..0a7494f0 100644
+--- a/tests/financeiro-omie-20261114.test.cjs
++++ b/tests/financeiro-omie-20261114.test.cjs
+@@ -796,7 +796,7 @@ test('16/11/2026: "Como fazer nesta aba" em todas as abas e explicação embaixo
+       await page.waitForTimeout(400);
+       assert.deepEqual(await semDica('#omieOpsForm'), [], 'baixa: todo campo com explicação');
+       assert.match(await page.locator('#omieOpsForm').innerText(), /Valor da baixa: o valor que entrou ou saiu da conta/); // 16/11/2026 (B1)
+-      assert.match(await page.locator('#omieOpsForm').innerText(), /Baixa com acréscimo ou desconto: confirmar no primeiro uso acompanhado/);
++      assert.match(await page.locator('#omieOpsForm').innerText(), /o banco recebe ou paga o valor da baixa \+ juros \+ multa − desconto/); // 19/11/2026: juros, multa e desconto liberados (auditoria do Financeiro)
+       if (largura < 500) await page.screenshot({ path: path.join(saida, largura + '-ajuda-baixa.png'), fullPage: true });
+       await page.evaluate(() => OmieTela_abrir_('provisoes'));
+       await page.waitForTimeout(600);
+diff --git a/tests/omie-conciliacao.test.cjs b/tests/omie-conciliacao.test.cjs
+index 5e955759..d3d4418d 100644
+--- a/tests/omie-conciliacao.test.cjs
++++ b/tests/omie-conciliacao.test.cjs
+@@ -53,7 +53,7 @@ test('duplicatas, ambiguidades e sinais opostos nunca viram correspondência ele
+   assert.equal(c.OmieConc_parear_(b, o, [], '123')[0].elegivel, true);
+   assert.equal(c.OmieConc_parear_([b[0], b[0]], o, [], '123')[0].elegivel, false);
+   assert.match(c.OmieConc_parear_(b, [o[0], { ...o[0], id: '43' }], [], '123')[0].status, /Ambíguo/);
+-  assert.equal(c.OmieConc_parear_(b, [{ ...o[0], centavos: 12550 }], [], '123')[0].candidatos, 0);
++  assert.equal(c.OmieConc_parear_(b, [{ ...o[0], centavos: 12550 }], [], '123')[0].candidatosOmie, 0); // 19/11/2026: o número de lançamentos do Omie virou candidatosOmie (candidatos = títulos em aberto)
+   const disputados = c.OmieConc_parear_([b[0], { ...b[0], identificador: 'outro' }], o, [], '123');
+   assert.equal(disputados.some(x => x.elegivel), false);
+ });
+diff --git a/tests/financeiro-auditoria-20261119.test.cjs b/tests/financeiro-auditoria-20261119.test.cjs
+new file mode 100644
+index 00000000..b11fa35a
+--- /dev/null
++++ b/tests/financeiro-auditoria-20261119.test.cjs
+@@ -0,0 +1,415 @@
++// Auditoria do Financeiro (19/11/2026, pedido do dono com os relatos do Matheus e da Wanessa):
++//  (1) Contas a pagar e receber POR PERÍODO, com as colunas do Omie (SGO_Financeiro_Contas.js, JS_Financeiro_Contas.html);
++//  (2) Conciliação bancária que casa as contas ATRASADAS e BAIXA no Omie, já conciliada (SGO_Omie_Conciliacao.js + SGO_Omie_Operacoes.js),
++//      com juros, multa, desconto e baixa parcial, idempotência (nunca duas baixas do mesmo movimento) e os erros da API.
++// Código REAL do SGO+ com o OMIE SIMULADO (tests/_financeiro_b1c3.cjs); nada sai para a rede. Os números do simulado seguem o formato
++// dos dados reais lidos do Omie em 19/11/2026 (ex.: título de 150,00 com 6,97 de retenção e 11,02 de multa: banco 154,05).
++'use strict';
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const vm = require('node:vm');
++const B = require('./_financeiro_b1c3.cjs');
++const S = require('./_financeiro_simulado.cjs');
++let chromium = null;
++try { chromium = require(process.env.PLAYWRIGHT || 'C:/Users/venda/projetos/sgo_servidor/node_modules/playwright').chromium; } catch (e) { chromium = null; }
++const saida = process.env.CAPTURAS_AUDITORIA || path.join(__dirname, '../output/financeiro-auditoria-20261119/capturas');
++
++const br = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
++const isoDe = (b) => b.slice(6, 10) + '-' + b.slice(3, 5) + '-' + b.slice(0, 2);
++const resp = (http, j) => ({ getResponseCode: () => http, getContentText: () => JSON.stringify(j) });
++
++// ------------------------------------------------------------------------------------------------ cenário
++// Hoje = 18/11/2026 (quarta). R = a receber, P = a pagar. Valores em reais. ret = retenções (retidas); jur/mul/desc já pagos.
++function movimento(t) {
++  const det = { nCodTitulo: t.id, cNumTitulo: t.doc || null, cNumParcela: t.parc || '001/001', cNumDocFiscal: t.nf || null, dDtVenc: br(t.venc), dDtPrevisao: br(t.prev || t.venc), dDtEmissao: br(t.emis || t.venc),
++    dDtPagamento: t.pgEm ? br(t.pgEm) : null, nCodCliente: t.cli, cCPFCNPJCliente: t.cnpj || '', cStatus: t.status, cNatureza: t.n, cOperacao: t.op || '01', cCodCateg: t.cat || '1.01', cTipo: 'BOL', nValorTitulo: t.valor, nCodCC: 5 };
++  if (t.ret) { det.nValorPIS = t.ret; det.cRetPIS = 'S'; det.nValorISS = 99; det.cRetISS = 'N'; }
++  const ret = t.ret || 0, pago = t.pago || 0, liq = Math.round((pago - (t.desc || 0) + (t.jur || 0) + (t.mul || 0)) * 100) / 100;
++  return { detalhes: det, resumo: { cLiquidado: t.aberto > 0 ? 'N' : 'S', nValPago: pago, nValAberto: t.aberto, nDesconto: t.desc || 0, nJuros: t.jur || 0, nMulta: t.mul || 0, nValLiquido: liq } };
++}
++const TITULOS = [
++  // a receber
++  { id: 101, n: 'R', doc: 'RPS455', nf: '456', cli: 4001, cnpj: '12.345.678/0001-95', venc: '2026-11-10', valor: 1000, aberto: 1000, status: 'ATRASADO' },        // atrasado (o a.titulo do simulado)
++  { id: 502, n: 'R', doc: 'RPS502', cli: 4002, venc: '2026-11-25', valor: 500, aberto: 500, status: 'AVENCER' },
++  { id: 503, n: 'R', doc: 'RPS503', cli: 4003, venc: '2026-11-12', valor: 300, aberto: 300, status: 'ATRASADO' },
++  { id: 504, n: 'R', doc: 'RPS504', cli: 4004, venc: '2026-11-14', valor: 300, aberto: 300, status: 'ATRASADO' },
++  { id: 505, n: 'R', doc: 'RPS505', cli: 4002, venc: '2026-11-18', valor: 800, aberto: 800, status: 'VENCEHOJE' },
++  { id: 506, n: 'R', doc: 'RPS506', nf: '507', cli: 4001, venc: '2026-11-04', valor: 150, ret: 6.97, pago: 143.03, mul: 11.02, aberto: 0, pgEm: '2026-11-12', status: 'RECEBIDO' },
++  { id: 507, n: 'R', doc: 'RPS507', cli: 4003, venc: '2026-11-05', valor: 2000, pago: 500, aberto: 1500, pgEm: '2026-11-06', status: 'PAGTOPARCIAL' },  // parcial atrasado
++  { id: 508, n: 'R', doc: 'RPS508', cli: 4004, venc: '2026-11-20', valor: 700, aberto: 0, status: 'CANCELADO' },
++  // a pagar (101 também existe como conta a pagar no ambiente da Aprovação de pagamentos)
++  { id: 101, n: 'P', doc: 'NF-001', cli: 90, cnpj: '98.765.432/0001-98', venc: '2026-11-10', valor: 1000, aberto: 1000, status: 'ATRASADO' }
++];
++function cenario(o) {
++  o = o || {};
++  const a = B.montarB1C3({ agora: '2026-11-18T10:00:00-03:00' });
++  vm.runInContext(fs.readFileSync(path.join(S.PASTA, 'SGO_Financeiro_Contas.js'), 'utf8').replace(/\r\n/g, '\n'), a.ctx, { filename: 'SGO_Financeiro_Contas.js' });
++  a.em('2026-11-18T10:00:00-03:00');
++  a.titulos = TITULOS.map((t) => Object.assign({}, t));
++  a.extrato = [
++    { nCodLancamento: 1, dDataLancamento: '16/11/2026', nValorDocumento: 0 }, // linha de saldo do Omie (sem natureza)
++    { nCodLancamento: 9001, cOrigem: 'Conta Paga', cNatureza: 'P', dDataLancamento: '17/11/2026', nValorDocumento: -125.5, cDesCliente: 'BANCO TARIFAS', cSituacao: 'Realizado' },
++    { nCodLancamento: 101, cOrigem: 'Conta a Receber', cNatureza: 'R', dDataLancamento: '10/11/2026', nValorDocumento: 1000, cDesCliente: 'CLIENTE ATRASADO', cSituacao: 'Previsto' }
++  ];
++  a.clientes.push({ codigo_cliente_omie: 4001, razao_social: 'CLIENTE ATRASADO SERVICOS LTDA', nome_fantasia: 'Cliente Atrasado', cnpj_cpf: '12.345.678/0001-95', inativo: 'N' },
++    { codigo_cliente_omie: 4002, razao_social: 'HOSPITAL BETA LTDA', nome_fantasia: 'Hospital Beta', cnpj_cpf: '22.222.222/0001-22', inativo: 'N' });
++  a.chamadas = [];
++  // planilha do histórico da conciliação (OMIE_CONCILIACOES) com a API de planilha que o servidor oferece
++  const planilhas = new Map(), getDB0 = a.ctx.SGO_DATA.getDB;
++  const aba = () => { const rows = []; return { rows, appendRow(r) { rows.push(r); }, setFrozenRows() {}, getLastRow() { return rows.length; }, getRange(r, c, nr, nc) { return { getValues() { return Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => rows[r - 1 + i]?.[c - 1 + j] ?? '')); }, setValues(v) { v.forEach((x, i) => { rows[r - 1 + i] = x; }); } }; } }; };
++  a.ctx.SGO_DATA.getDB = () => { const db = getDB0(); return Object.assign({}, db, { getSheetByName: (n) => (n === 'OMIE_CONCILIACOES' ? planilhas.get(n) || null : db.getSheetByName(n)), insertSheet: (n) => { const s = aba(); planilhas.set(n, s); return s; } }); };
++  a.historico = () => { const s = planilhas.get('OMIE_CONCILIACOES'); return s ? s.rows.slice(1).map((r) => Object.assign({ chaveBanco: r[3], chaveOmie: r[4] }, JSON.parse(r[5]))) : []; };
++  const anterior = a.ctx.UrlFetchApp.fetch;
++  a.ctx.UrlFetchApp.fetch = (url, op) => {
++    if (/app\.omie\.com\.br/.test(url)) {
++      const b = JSON.parse(op.payload), p = b.param[0];
++      const falha = a.falhas[b.call];
++      if (!(falha && falha.length)) {
++        if (b.call === 'ListarMovimentos') {
++          a.omie.push({ url, call: b.call, param: p }); a.chamadas.push(Object.assign({ call: b.call }, p));
++          let l = a.titulos;
++          if (p.nCodTitulo) { l = l.filter((t) => t.id === Number(p.nCodTitulo) && (p.cTpLancamento === 'CP' ? t.n === 'P' : t.n === 'R')); return resp(200, { nPagina: 1, nTotPaginas: 1, movimentos: l.map(movimento) }); }
++          l = l.filter((t) => (p.cTpLancamento === 'CPCR' || (p.cTpLancamento === 'CP' ? t.n === 'P' : t.n === 'R')));
++          if (p.cStatus) l = l.filter((t) => (p.cStatus === 'ATRASADO' ? t.status === 'ATRASADO' || (t.status === 'PAGTOPARCIAL' && t.venc < '2026-11-18') : t.status === p.cStatus));
++          for (const [campo, chave] of [['dDtVenc', 'venc'], ['dDtPrev', 'prev'], ['dDtPagto', 'pgEm'], ['dDtEmis', 'emis']]) {
++            if (p[campo + 'De']) l = l.filter((t) => { const v = t[chave] || (chave === 'prev' || chave === 'emis' ? t.venc : ''); return v && v >= isoDe(p[campo + 'De']) && v <= isoDe(p[campo + 'Ate']); });
++          }
++          const por = p.nRegPorPagina || 50, tot = Math.ceil(l.length / por);
++          if (!l.length) return resp(500, { faultstring: 'ERROR: Não existem registros para a página [1]!', faultcode: 'SOAP-ENV:Client-5113' });
++          return resp(200, { nPagina: p.nPagina, nTotPaginas: tot, nTotRegistros: l.length, movimentos: l.slice((p.nPagina - 1) * por, p.nPagina * por).map(movimento) });
++        }
++        if ((b.call === 'ConsultarContaReceber' || b.call === 'ConsultarContaPagar') && a.titulos.some((x) => x.id === Number(p.codigo_lancamento_omie) && x.n === (b.call === 'ConsultarContaPagar' ? 'P' : 'R'))) {
++          const t = a.titulos.find((x) => x.id === Number(p.codigo_lancamento_omie) && x.n === (b.call === 'ConsultarContaPagar' ? 'P' : 'R'));
++          a.omie.push({ url, call: b.call, param: p });
++          return resp(200, { codigo_lancamento_omie: t.id, numero_documento: t.doc, codigo_cliente_fornecedor: t.cli, codigo_categoria: t.n === 'P' ? '2.10' : '1.01', id_conta_corrente: 5, data_vencimento: br(t.venc), data_previsao: br(t.venc), valor_documento: t.valor, status_titulo: t.status });
++        }
++        if (b.call === 'ListarClientes' && p.clientesPorCodigo) {
++          a.omie.push({ url, call: b.call, param: p });
++          return resp(200, { total_de_paginas: 1, clientes_cadastro: a.clientes.filter((c) => p.clientesPorCodigo.some((x) => x.codigo_cliente_omie === c.codigo_cliente_omie)) });
++        }
++        if (b.call === 'ListarExtrato') { a.omie.push({ url, call: b.call, param: p }); return resp(200, { nCodCC: p.nCodCC, listaMovimentos: a.extrato }); }
++        if (b.call === 'ListarContasCorrentes') { a.omie.push({ url, call: b.call, param: p }); return resp(200, { total_de_paginas: 1, ListarContasCorrentes: [{ nCodCC: 5, descricao: 'Banco simulado' }] }); }
++        if ((b.call === 'LancarRecebimento' || b.call === 'LancarPagamento') && a.statusBaixa) { a.omie.push({ url, call: b.call, param: p }); return resp(200, { codigo_lancamento: p.codigo_lancamento, codigo_status: a.statusBaixa, descricao_status: 'Conta corrente bloqueada para baixas nesta data.' }); }
++        if (b.call === 'LancarRecebimento' || b.call === 'LancarPagamento') {
++          // o "Omie" baixa de verdade no simulado: o saldo do título cai (para a idempotência e para a 2ª prévia)
++          const t = a.titulos.find((x) => x.id === Number(p.codigo_lancamento) && x.n === (b.call === 'LancarPagamento' ? 'P' : 'R'));
++          if (t) { t.aberto = Math.round((t.aberto - p.valor) * 100) / 100; t.pago = (t.pago || 0) + p.valor; if (t.aberto <= 0) t.status = b.call === 'LancarPagamento' ? 'PAGO' : 'RECEBIDO'; }
++          a.omie.push({ url, call: b.call, param: p });
++          return resp(200, { codigo_lancamento: p.codigo_lancamento, codigo_baixa: a.proximaBaixa++, codigo_baixa_integracao: p.codigo_baixa_integracao, liquidado: t && t.aberto <= 0 ? 'S' : 'N', valor_baixado: p.valor, codigo_status: '0', descricao_status: 'Recebimento lançado com sucesso!' });
++        }
++      }
++    }
++    return anterior(url, op);
++  };
++  a.limparCache();
++  if (o.semGravacao) delete a.props.OMIE_GRAVACAO_LIGADA;
++  return a;
++}
++const CSV = (linhas) => 'Data;Valor;Descricao;Identificador\n' + linhas.map((l, i) => l.concat(['FIT' + (i + 1)]).join(';')).join('\n');
++const EXTRATO = CSV([
++  ['18/11/2026', '1.012,50', 'PIX RECEBIDO 12.345.678/0001-95 CLIENTE ATRASADO'], // 0: atrasado 101, com 12,50 a mais (juros/multa)
++  ['17/11/2026', '500,00', 'PIX RECEBIDO HOSPITAL BETA'],                         // 1: 502 a vencer, mesmo valor
++  ['17/11/2026', '300,00', 'TED RECEBIDA'],                                       // 2: 503 ou 504 (dois títulos com o mesmo valor)
++  ['17/11/2026', '-125,50', 'TARIFA PACOTE'],                                     // 3: já pago no Omie (conferência)
++  ['17/11/2026', '77,77', 'CREDITO SEM ORIGEM']                                    // 4: nada no Omie
++]);
++const previa = (a, texto, login) => a.F('Omie_apiConciliarPrevia', login || 'wanessa', { contaId: '5', contaNome: 'Banco simulado', inicio: '2026-11-01', fim: '2026-11-18', formato: 'CSV', texto: texto || EXTRATO });
++const escritas = (a) => a.omie.filter((c) => /^(Lancar|Conciliar|Incluir|Alterar|Excluir|Cancelar)/.test(c.call));
++
++// ================================================================================================ (1) contas por período
++test('contas por período: colunas do Omie (líquido = valor − retidos; recebido = o que entrou no banco), situação calculada no dia de Brasília, totais em centavos', () => {
++  const a = cenario();
++  const r = a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'venc', de: '01/11/2026', ate: '30/11/2026', situacao: 'todas' });
++  assert.equal(r.ok, true, r.mensagem);
++  assert.equal(r.linhas.length, 8); assert.equal(r.totalPeriodo, 8);
++  const l = Object.fromEntries(r.linhas.map((x) => [x.id, x]));
++  // título recebido com retenção e multa (o formato real conferido no Omie): 150,00 − 6,97 = 143,03 líquido; 143,03 + 11,02 = 154,05 no banco
++  assert.deepEqual([l[506].valor, l[506].ret, l[506].liq, l[506].aberto, l[506].jm, l[506].pago], [15000, 697, 14303, 0, 1102, 15405]);
++  assert.equal(l[506].sit, 'Recebido'); assert.equal(l[506].ult, '12/11/2026'); assert.equal(l[506].nf, '507'); assert.equal(l[506].parc, '001/001');
++  assert.equal(l[506].cli, 'Cliente Atrasado', 'nome fantasia do cadastro do Omie'); assert.match(l[506].op, /^01 · Venda de serviço$/); assert.match(l[506].cat, /^1\.01 · Receitas de serviços$/);
++  assert.equal(l[101].sit, 'Atrasado'); assert.equal(l[505].sit, 'Vence hoje'); assert.equal(l[502].sit, 'A vencer'); assert.equal(l[508].sit, 'Cancelado');
++  assert.equal(l[507].sit, 'Atrasado (pagamento parcial)'); assert.equal(l[507].aberto, 150000);
++  assert.equal(r.totais.valor, 100000 + 50000 + 30000 + 30000 + 80000 + 15000 + 200000 + 70000);
++  assert.equal(r.totais.atrasado, 100000 + 30000 + 30000 + 150000);
++  // filtros de situação, sem nova leitura do Omie (guardado 5 minutos)
++  const antes = a.chamadas.length;
++  const at = a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'venc', de: '01/11/2026', ate: '30/11/2026', situacao: 'atrasadas' });
++  assert.deepEqual(at.linhas.map((x) => x.id).sort(), ['101', '503', '504', '507']); assert.equal(at.doCache, true); assert.equal(a.chamadas.length, antes);
++  assert.deepEqual(a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'venc', de: '01/11/2026', ate: '30/11/2026', situacao: 'quitadas' }).linhas.map((x) => x.id), ['506']);
++  assert.deepEqual(a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'venc', de: '01/11/2026', ate: '30/11/2026', situacao: 'parciais' }).linhas.map((x) => x.id), ['507']);
++  assert.deepEqual(a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'venc', de: '01/11/2026', ate: '30/11/2026', situacao: 'canceladas' }).linhas.map((x) => x.id), ['508']);
++  // "Ler de novo do Omie" lê na hora
++  a.limparCache();
++  const f = a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'venc', de: '01/11/2026', ate: '30/11/2026', situacao: 'todas', forcar: true });
++  assert.equal(f.doCache, false); assert.ok(a.chamadas.length > antes);
++});
++
++test('contas por período: data de referência (pagamento, previsão), a pagar, paginação de várias páginas e validação do período (o quê, por quê, o que fazer)', () => {
++  const a = cenario();
++  const pg = a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'pagto', de: '01/11/2026', ate: '15/11/2026', situacao: 'todas' });
++  assert.deepEqual(pg.linhas.map((x) => x.id).sort(), ['506', '507']); assert.match(pg.periodo.texto, /^pagamento/);
++  const ultimo = a.chamadas[a.chamadas.length - 1]; assert.equal(ultimo.dDtPagtoDe, '01/11/2026'); assert.equal(ultimo.dDtPagtoAte, '15/11/2026'); assert.equal(ultimo.cTpLancamento, 'CR');
++  const cp = a.F('FinCon_apiListar', 'wanessa', { tipo: 'pagar', campo: 'venc', de: '01/11/2026', ate: '30/11/2026', situacao: 'abertas' });
++  assert.deepEqual(cp.linhas.map((x) => x.id), ['101']); assert.equal(a.chamadas[a.chamadas.length - 1].cTpLancamento === 'CP' || a.chamadas.some((c) => c.cTpLancamento === 'CP'), true);
++  // 130 títulos: 3 páginas de 50, todas lidas, cada título uma vez
++  for (let i = 0; i < 130; i++) a.titulos.push({ id: 9000 + i, n: 'R', doc: 'X' + i, cli: 4002, venc: '2026-12-' + String(1 + (i % 28)).padStart(2, '0'), valor: 10, aberto: 10, status: 'AVENCER' });
++  a.limparCache();
++  const dez = a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', campo: 'venc', de: '01/12/2026', ate: '31/12/2026', situacao: 'todas' });
++  assert.equal(dez.linhas.length, 130); assert.equal(new Set(dez.linhas.map((x) => x.id)).size, 130); assert.equal(dez.totais.valor, 130000);
++  assert.deepEqual(a.chamadas.filter((c) => c.dDtVencDe === '01/12/2026').map((c) => c.nPagina), [1, 2, 3]);
++  for (const [p, re] of [[{ de: '30/11/2026', ate: '01/11/2026' }, /é depois da data "até"/], [{ de: '01/01/2025', ate: '31/12/2026' }, /máximo é 400/], [{ de: '', ate: '' }, /Informe as duas datas/], [{ de: '31/02/2026', ate: '01/03/2026' }, /Informe as duas datas|não é válida/]]) {
++    const r = a.F('FinCon_apiListar', 'wanessa', Object.assign({ tipo: 'receber', situacao: 'todas' }, p)); assert.equal(r.ok, false); assert.match(r.mensagem, re);
++  }
++  assert.equal(escritas(a).length, 0, 'a tela de contas não grava nada no Omie');
++});
++
++test('contas por período e conciliação respeitam o sigilo: Matheus (fora da lista) não vê; o acesso fica registrado', () => {
++  const a = cenario();
++  for (const [fn, dados] of [['FinCon_apiListar', { tipo: 'receber', de: '01/11/2026', ate: '30/11/2026' }], ['Omie_apiConciliarPrevia', { contaId: '5', inicio: '2026-11-01', fim: '2026-11-18', formato: 'CSV', texto: EXTRATO }], ['OmieConc_apiBaixaPrevia', {}], ['OmieConc_apiBaixaConfirmar', {}], ['OmieConc_apiPendentes', {}]]) {
++    const r = a.F(fn, 'matheusgodoi', dados); assert.equal(r.ok, false, fn); assert.match(r.mensagem, /sigiloso/, fn);
++  }
++  assert.equal(a.chamadas.length, 0);
++  assert.ok(a.acessos().some((x) => x.USUARIO_ID === 'u_mat' && x.RESULTADO === 'NEGADO' && /FinCon_apiListar|Contas a pagar e receber por período/.test(x.CONSULTA + ' ' + x.DETALHE)));
++  assert.ok(a.F('FinCon_apiListar', 'wanessa', { tipo: 'receber', de: '01/11/2026', ate: '30/11/2026' }).ok);
++});
++
++// ================================================================================================ (2) conciliação
++test('conciliação: a conta ATRASADA é encontrada (antes ficava "sem correspondência"); a prévia diz o que fazer em cada movimento', () => {
++  const a = cenario(), r = previa(a);
++  assert.equal(r.ok, true, r.mensagem);
++  const [l0, l1, l2, l3, l4] = r.linhas;
++  // 0: título 101, atrasado desde 10/11, achado pelo CNPJ do extrato; 12,50 a mais = juros ou multa
++  assert.equal(l0.acao, 'baixar'); assert.equal(l0.escolhido, 0); assert.equal(l0.candidatos[0].id, '101'); assert.equal(l0.candidatos[0].atrasado, true);
++  assert.equal(l0.candidatos[0].dif, 1250); assert.match(l0.status, /Baixa sugerida com diferença/); assert.ok(l0.candidatos[0].motivos.some((m) => /CPF\/CNPJ/.test(m)));
++  // o "Previsto" do extrato do Omie (o mesmo título 101, na data antiga) NÃO é tratado como pagamento já feito
++  assert.notEqual(l0.acao, 'conferir');
++  assert.equal(l1.acao, 'baixar'); assert.equal(l1.candidatos[l1.escolhido].id, '502'); assert.match(l1.status, /Baixa sugerida: título em aberto com o mesmo valor/);
++  assert.equal(l2.acao, 'baixar'); assert.equal(l2.escolhido, -1); assert.deepEqual(l2.candidatos.map((c) => c.id).sort(), ['503', '504']); assert.match(l2.status, /Escolha o título/);
++  assert.equal(l3.acao, 'conferir'); assert.equal(l3.elegivel, true); assert.match(l3.status, /já baixado no Omie/);
++  assert.equal(l4.acao, 'nenhuma'); assert.match(l4.status, /Sem título em aberto compatível.*Lançamento avulso/);
++  // consultas de títulos em aberto: atrasados, vencem hoje e a vencer (até 45 dias depois do fim do extrato)
++  const ab = a.chamadas.filter((c) => c.cTpLancamento === 'CPCR');
++  assert.deepEqual(ab.map((c) => c.cStatus), ['ATRASADO', 'VENCEHOJE', 'AVENCER']); assert.equal(ab[2].dDtVencDe, '18/11/2026'); assert.equal(ab[2].dDtVencAte, '02/01/2027');
++  assert.equal(escritas(a).length, 0, 'a prévia não grava nada');
++});
++
++test('conciliação: baixa de conta atrasada com juros vai ao Omie (LancarRecebimento) já conciliada, com o código da baixa no histórico', () => {
++  const a = cenario(), r = previa(a);
++  const p = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101', juros: 12.5 });
++  assert.equal(p.ok, true, p.mensagem);
++  assert.ok(p.resumo.some((x) => x[0] === 'Efeito na conta corrente' && /R\$ 1\.012,50 entram na conta escolhida \(valor baixado R\$ 1\.000,00 \+ juros R\$ 12,50\)/.test(x[1])), JSON.stringify(p.resumo));
++  assert.ok(p.resumo.some((x) => x[0] === 'Conciliação' && /conciliar documento" = S/.test(x[1])));
++  assert.ok(p.resumo.some((x) => x[0] === 'Saldo em aberto' && /Saldo depois: R\$ 0,00 \(quitado\)/.test(x[1])));
++  assert.equal(escritas(a).length, 0);
++  const c = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token });
++  assert.equal(c.ok, true, c.mensagem); assert.match(c.mensagem, /^Baixa registrada no Omie \(código da baixa 7001\)/); assert.match(c.mensagem, /título quitado/); assert.equal(c.codigoBaixa, 7001); assert.equal(c.liquidado, 'S');
++  const w = escritas(a); assert.equal(w.length, 1); assert.equal(w[0].call, 'LancarRecebimento');
++  assert.equal(w[0].param.valor, 1000); assert.equal(w[0].param.juros, 12.5); assert.equal(w[0].param.multa, 0); assert.equal(w[0].param.desconto, 0);
++  assert.equal(w[0].param.data, '18/11/2026'); assert.equal(w[0].param.codigo_conta_corrente, 5); assert.equal(w[0].param.conciliar_documento, 'S');
++  assert.match(w[0].param.codigo_baixa_integracao, /^CB[0-9a-f]{18}$/);
++  const h = a.historico(); assert.equal(h.length, 1); assert.equal(h[0].tipo, 'BAIXA_OMIE'); assert.equal(h[0].codigoBaixa, 7001); assert.equal(h[0].juros, 12.5); assert.equal(h[0].conciliado, 'S'); assert.equal(h[0].liquidado, 'S');
++  // trilha das operações do Financeiro com o resultado
++  assert.ok(a.trilha().some((x) => /LancarRecebimento/.test(JSON.stringify(x))));
++});
++
++test('conciliação: idempotência — o mesmo movimento nunca gera duas baixas (repetir a confirmação, nova prévia, duas prévias abertas)', () => {
++  const a = cenario(), r = previa(a);
++  const p = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 1, tituloId: '502' });
++  const p2 = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 1, tituloId: '502' }); // outra aba, antes do envio
++  assert.equal(p.ok, true, p.mensagem); assert.equal(p2.ok, true, p2.mensagem);
++  assert.equal(a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token }).ok, true);
++  const rep = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token }); assert.equal(rep.ok, true); assert.match(rep.mensagem, /já confirmada/);
++  const outra = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p2.token }); assert.equal(outra.ok, false); assert.match(outra.mensagem, /já foi tratado|já foi enviada/);
++  assert.equal(escritas(a).length, 1, 'uma baixa só');
++  const de = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 1, tituloId: '502' }); assert.equal(de.ok, false); assert.match(de.mensagem, /já foi tratado.*Nada foi enviado/);
++  a.limparCache();
++  const nova = previa(a); assert.equal(nova.linhas[1].acao, 'nenhuma'); assert.match(nova.linhas[1].status, /Já baixado pelo SGO\+ em 18\/11\/2026 \(código da baixa 7001\)/);
++  assert.equal(escritas(a).length, 1);
++});
++
++test('conciliação: diferença a menor — desconto quita o título; baixa parcial deixa saldo; a conta precisa fechar com o extrato', () => {
++  const a = cenario(), r = previa(a, CSV([['17/11/2026', '950,00', 'PIX RECEBIDO 12345678000195'], ['17/11/2026', '290,00', 'TED RECEBIDA RPS503']]));
++  assert.equal(r.linhas[0].candidatos[0].id, '101'); assert.equal(r.linhas[0].candidatos[0].dif, -5000);
++  assert.equal(r.linhas[1].candidatos[0].id, '503', 'documento RPS503 citado no extrato');
++  const ruim = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101', desconto: 40 });
++  assert.equal(ruim.ok, true, 'valor 990 cabe no saldo: baixa parcial com desconto'); // valor = 950 + 40 = 990 < 1000
++  const d = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101', desconto: 50, juros: 1 });
++  assert.equal(d.ok, false); assert.match(d.mensagem, /não os dois/);
++  const desc = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101', desconto: 50 });
++  assert.equal(desc.ok, true, desc.mensagem); assert.ok(desc.resumo.some((x) => x[0] === 'Efeito na conta corrente' && /R\$ 950,00 entram .*valor baixado R\$ 1\.000,00 − desconto R\$ 50,00/.test(x[1])));
++  assert.ok(desc.resumo.some((x) => /\(quitado\)/.test(x[1])));
++  const mais = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101', desconto: 60 });
++  assert.equal(mais.ok, false); assert.match(mais.mensagem, /passa do saldo em aberto do título/);
++  assert.equal(a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: desc.token }).ok, true);
++  const w = escritas(a)[0]; assert.equal(w.param.valor, 1000); assert.equal(w.param.desconto, 50); assert.equal(w.param.juros, 0);
++  const parc = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 1, tituloId: '503' });
++  assert.equal(parc.ok, true, parc.mensagem); assert.ok(parc.resumo.some((x) => /Saldo depois: R\$ 10,00 \(baixa parcial\)/.test(x[1])));
++  assert.equal(a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: parc.token }).liquidado, 'N');
++});
++
++test('conciliação: erro da API do Omie — recusa clara (nada feito, pode corrigir e repetir), codigo_status ≠ 0 e envio sem resposta (a conferir, sem reenvio)', () => {
++  const a = cenario(), r = previa(a);
++  // recusa com motivo (validação do Omie)
++  a.falhas.LancarRecebimento = [{ faultstring: 'ERROR: A data da baixa não pode ser anterior à data de abertura da conta corrente.', faultcode: 'SOAP-ENV:Client-102' }];
++  let p = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 1, tituloId: '502' });
++  let c = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token });
++  assert.equal(c.ok, false); assert.match(c.mensagem, /O Omie recusou a operação: A data da baixa não pode ser anterior/); assert.match(c.mensagem, /Nada foi feito no Omie/);
++  assert.equal(a.historico().length, 0);
++  // codigo_status diferente de zero (falha de validação documentada): também é recusa, não "envio incerto"
++  a.statusBaixa = '1';
++  p = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 1, tituloId: '502' }); assert.equal(p.ok, true, p.mensagem);
++  c = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token });
++  assert.equal(c.ok, false); assert.match(c.mensagem, /recusou a operação: Conta corrente bloqueada/); assert.match(c.mensagem, /Nada foi feito/);
++  delete a.statusBaixa;
++  assert.equal(a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token }).ok, true, 'corrigido no Omie, a mesma prévia vale');
++  assert.equal(a.historico().length, 1);
++  // sem resposta: fica "a conferir" e não é reenviado; conferido no Omie como feito, o movimento entra no histórico
++  a.falhas.LancarRecebimento = ['transporte'];
++  p = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101', juros: 12.5 });
++  c = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token });
++  assert.equal(c.ok, false); assert.match(c.mensagem, /não foi confirmado.*Nenhum reenvio automático/);
++  assert.match(a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token }).mensagem, /precisa ser conferido no Omie/);
++  const pend = a.F('OmieConc_apiPendentes', 'wanessa'); assert.equal(pend.itens.length, 1); assert.equal(pend.itens[0].estado, 'incerta');
++  const inc = a.F('OmieOps_apiIncertos', 'wanessa'); const item = inc.itens.find((x) => /Baixa/.test(x.descricao));
++  assert.equal(a.F('OmieOps_apiResolverIncerto', 'wanessa', { chave: item.chave, desfecho: 'feito', motivo: 'O recebimento aparece no extrato do Omie em 18/11' }).ok, true);
++  assert.equal(a.historico().length, 2); assert.equal(a.historico()[1].origem, 'CONFERIDA_NO_OMIE');
++  const de = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101', juros: 12.5 }); assert.equal(de.ok, false); assert.match(de.mensagem, /já foi tratado/);
++});
++
++test('conciliação: conta a pagar só baixa com o pagamento aprovado (dono ou Diretoria); o minuto do Omie é esperado sem enviar; gravação desligada não envia', () => {
++  const a = cenario(), r = previa(a, CSV([['17/11/2026', '-1.000,00', 'PAGAMENTO PIX 98765432000198 FORNECEDOR']]));
++  const l = r.linhas[0]; assert.equal(l.acao, 'baixar'); assert.equal(l.candidatos[0].id, '101'); assert.equal(l.candidatos[0].tipo, 'pagar');
++  assert.match(l.candidatos[0].aprovacao.texto, /ainda não aprovado/); assert.equal(l.candidatos[0].aprovacao.liberado, false);
++  const sem = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101' });
++  assert.equal(sem.ok, false); assert.match(sem.mensagem, /ainda não passou pela lista de aprovação/);
++  B.listaAprovada(a, [101], 'dora');
++  const p = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 0, tituloId: '101' });
++  assert.equal(p.ok, true, p.mensagem); assert.ok(p.resumo.some((x) => x[0] === 'Aprovação do pagamento' && /Aprovado por DORA/.test(x[1])));
++  // o minuto do Omie: a confirmação antes dele não envia nada e diz quanto falta
++  vm.runInContext('OMIE_ESPERA_RECONSULTA_MS = 61000;', a.ctx);
++  const cedo = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token });
++  assert.equal(cedo.ok, false); assert.ok(cedo.esperar > 0 && cedo.esperar <= 61); assert.match(cedo.mensagem, /Nada foi enviado/); assert.equal(escritas(a).length, 0);
++  vm.runInContext('OMIE_ESPERA_RECONSULTA_MS = 0;', a.ctx);
++  // gravação desligada: recusa e nada sai
++  delete a.props.OMIE_GRAVACAO_LIGADA;
++  const des = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token }); assert.equal(des.ok, false); assert.match(des.mensagem, /gravação pelo SGO\+ ainda está desligada/); assert.equal(escritas(a).length, 0);
++  a.props.OMIE_GRAVACAO_LIGADA = '1';
++  const c = a.F('OmieConc_apiBaixaConfirmar', 'wanessa', { token: p.token }); assert.equal(c.ok, true, c.mensagem);
++  const w = escritas(a); assert.equal(w.length, 1); assert.equal(w[0].call, 'LancarPagamento'); assert.equal(w[0].param.conciliar_documento, 'S'); assert.equal(w[0].param.valor, 1000);
++  assert.equal(a.itensPag().find((x) => String(x.TITULO_OMIE) === '101').SITUACAO, 'PAGO', 'a baixa aprovada marca o item da lista como pago');
++});
++
++test('conciliação: título escolhido à mão ("Outro título"), seleção inválida e a conferência local do que já estava baixado continuam funcionando', () => {
++  const a = cenario(), r = previa(a);
++  assert.match(a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 2 }).mensagem, /Escolha o título do Omie/);
++  assert.match(a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 3, tituloId: '101' }).mensagem, /não é baixado pela conciliação/);
++  assert.match(a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: 'x', indice: 0, tituloId: '101' }).mensagem, /Prévia inválida/);
++  const m = a.F('OmieConc_apiBaixaPrevia', 'wanessa', { token: r.token, indice: 2, tituloId: '504' }); assert.equal(m.ok, true, m.mensagem);
++  const conf = a.F('Omie_apiConciliarConfirmar', 'wanessa', { token: r.token, linhas: [3] });
++  assert.equal(conf.ok, true, conf.mensagem); assert.equal(conf.registrados, 1); assert.match(conf.mensagem, /já estavam baixados no Omie/);
++  assert.equal(a.F('Omie_apiConciliarConfirmar', 'wanessa', { token: r.token, linhas: [0] }).ok, false, 'movimento com título em aberto não vira "conferência"');
++  const hist = a.F('Omie_apiConciliacaoHistorico', 'wanessa', { contaId: '5' }); assert.equal(hist.total, 1); assert.equal(hist.itens[0].tipo, 'CONFERENCIA_LOCAL');
++});
++
++test('baixa em Lançamentos e baixas: desconto não consome saldo a mais (antes: valor + desconto > saldo recusava a quitação com desconto)', () => {
++  const a = cenario();
++  const r = a.F('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: { contaId: 5, valor: 1000, desconto: 50, data: '2026-11-18' } });
++  assert.equal(r.ok, true, r.mensagem);
++  assert.ok(r.resumo.some((x) => x[0] === 'Saldo em aberto' && /Saldo depois: R\$ 0,00 \(quitado\)/.test(x[1])));
++  assert.ok(r.resumo.some((x) => x[0] === 'Efeito na conta corrente' && /R\$ 950,00 entram/.test(x[1])));
++  assert.equal(r.resumo.some((x) => x[0] === 'Conciliação'), false, 'baixa manual não é marcada como conciliada');
++  assert.equal(a.F('OmieOps_apiConfirmar', 'wanessa', { token: r.token }).ok, true);
++  const w = escritas(a)[0]; assert.equal(w.param.conciliar_documento, undefined); assert.match(w.param.codigo_baixa_integracao, /^SGO/);
++});
++
++// ================================================================================================ telas
++/** A página completa do SGO+ com o servidor simulado (as funções do Financeiro, inclusive FinCon_, vão ao código real). */
++async function abrirPagina(browser, a, largura) {
++  const page = await browser.newPage({ viewport: { width: largura, height: largura < 500 ? 844 : 900 } });
++  const erros = [];
++  page.on('pageerror', (e) => erros.push(e.message));
++  page.on('dialog', (d) => { erros.push('janela do navegador: ' + d.message()); d.dismiss().catch(() => {}); });
++  const HTML = S.htmlCompleto();
++  await page.route(/^https?:\/\//, (r) => (r.request().url() === 'http://sgo.ensaio.test/' ? r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: HTML }) : r.abort()));
++  await page.exposeFunction('qaRun', (fn, args) => {
++    if (fn === 'getSessaoAtual') { const s = a.sessoes.s_wanessa; return { ok: true, valor: { success: true, session: Object.assign({ sessionId: 's_wanessa' }, s) } }; }
++    if (/^(Omie|OmieOps|OmieConc|OmieRegras|FinCon_api|FinPag|Poderes_api)/.test(fn) && typeof a.ctx[fn] === 'function') {
++      vm.runInContext('if (typeof Poderes_memoLimpar_ === "function") Poderes_memoLimpar_();', a.ctx);
++      return { ok: true, valor: JSON.parse(JSON.stringify(a.ctx[fn](...args) || null)) };
++    }
++    return { ok: false, erro: 'indisponível no ensaio: ' + fn };
++  });
++  await page.addInitScript(() => {
++    try { sessionStorage.setItem('SGO_SESSION', 's_wanessa'); } catch (e) {}
++    const corredor = (ok, falha) => new Proxy({}, { get: (_, k) => k === 'withSuccessHandler' ? (f) => corredor(f, falha) : k === 'withFailureHandler' ? (f) => corredor(ok, f) : k === 'withUserObject' ? () => corredor(ok, falha) :
++      (...args) => { window.qaRun(String(k), args).then((r) => { if (r.ok) { if (ok) ok(r.valor); } else if (falha) falha(new Error(r.erro)); }); } });
++    window.google = { script: { run: corredor(null, null) } };
++  });
++  await page.goto('http://sgo.ensaio.test/', { waitUntil: 'domcontentloaded' });
++  await page.waitForFunction(() => typeof USER_CONTEXT !== 'undefined' && USER_CONTEXT && USER_CONTEXT.perfil, null, { timeout: 15000 });
++  return { page, erros };
++}
++test('telas: JavaScript válido, texto justificado, sem dado fora do escape; aba de contas usa a tela nova', () => {
++  const ler = (f) => fs.readFileSync(path.join(S.PASTA, f), 'utf8');
++  for (const f of ['JS_Financeiro_Contas.html', 'JS_Omie_Conciliacao.html']) {
++    const h = ler(f); for (const m of h.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(m[1]);
++    assert.match(h, /text-align:justify/, f);
++  }
++  assert.match(ler('JS_Omie_Gestao.html'), /FinConTela_render_\(\)/); assert.match(ler('Index.html'), /include\('JS_Financeiro_Contas'\)/);
++  assert.match(ler('SGO_Omie_Sigilo.js'), /FinCon_apiListar: 'Contas a pagar e receber por período'/);
++  assert.match(ler('JS_Omie_Ajuda.html'), /finConSituacao:/); assert.match(ler('SGO_Ajuda_Financeiro.js'), /Conciliar o extrato do banco e baixar no Omie/);
++});
++
++test('página completa (1366, 390 e 320 px): contas por período com colunas, ordem, agrupamento e planilha; conciliação com a baixa preparada', { skip: !chromium && 'Playwright indisponível' }, async () => {
++  fs.mkdirSync(saida, { recursive: true });
++  const browser = await chromium.launch();
++  try {
++    for (const largura of [1366, 390, 320]) {
++      const a = cenario();
++      const { page, erros } = await abrirPagina(browser, a, largura);
++      await page.waitForFunction(() => { const b = document.getElementById('menu-btn-omie'); return b && b.style.display === ''; }, null, { timeout: 10000 });
++      await page.evaluate(() => abrir('omie'));
++      await page.locator('#omieCorpo').waitFor({ timeout: 10000 });
++      await page.evaluate(() => OmieTela_abrir_('contas'));
++      await page.waitForSelector('#finConCorpo table', { timeout: 15000 });
++      const cab = await page.evaluate(() => Array.from(document.querySelectorAll('#finConCorpo thead tr:first-child th')).map((t) => t.textContent.replace(/[▲▼]/g, '').trim()));
++      for (const c of ['Situação', 'Nº do documento', 'Parcela', 'Nota fiscal', 'Vencimento', 'Cliente (nome fantasia)', 'Valor da conta', 'Previsão de recebimento', 'Último recebimento', 'Valor líquido', 'Impostos retidos', 'Valor a receber', 'Desconto', 'Juros e multa', 'Valor recebido', 'Categoria', 'Operação']) assert.ok(cab.includes(c), 'coluna ' + c + ' em ' + largura);
++      assert.match(await page.locator('#finConAviso').innerText(), /título\(s\) no período/);
++      // ordenar por valor (desc) e agrupar por situação
++      await page.evaluate(() => { document.querySelector('[data-fin-con-ordem="valor"]').click(); document.querySelector('[data-fin-con-ordem="valor"]').click(); });
++      const primeiro = await page.evaluate(() => document.querySelector('#finConCorpo tbody tr td[data-r="Valor da conta"]').textContent);
++      assert.match(primeiro, /2\.000,00/);
++      await page.selectOption('#finConGrupo', 'sit');
++      assert.ok(await page.locator('.fin-con-subtotal').count() >= 4, 'subtotais por situação');
++      assert.ok(await page.evaluate(() => OMIE_CSV.contasPeriodo && OMIE_CSV.contasPeriodo.linhas.length === 8 && /Valor da conta \(R\$\)/.test(OMIE_CSV.contasPeriodo.cab.join('|'))), 'planilha com o que está na tela');
++      const semDica = await page.evaluate(() => Array.from(document.querySelectorAll('#omieCorpo input, #omieCorpo select')).filter((el) => el.type !== 'hidden' && el.type !== 'checkbox' && !(el.getAttribute('aria-describedby') || '').trim() && !el.closest('.omie-barra')).map((el) => el.name || el.id));
++      assert.deepEqual(semDica, [], 'todo campo com explicação');
++      assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector('.fin-con-intro')).textAlign === 'justify'));
++      assert.ok(await S.semRolagem(page), 'contas: sem rolagem lateral em ' + largura);
++      if (largura !== 320) await page.screenshot({ path: path.join(saida, largura + '-contas-periodo.png'), fullPage: true });
++      // conciliação: prévia com a conta atrasada e a baixa preparada
++      await page.evaluate(() => OmieTela_abrir_('conciliacao'));
++      await page.waitForFunction(() => document.querySelectorAll('#omieConcConta option').length > 1, null, { timeout: 10000 });
++      await page.selectOption('#omieConcConta', '5');
++      await page.fill('#omieConcInicio', '2026-11-01'); await page.fill('#omieConcFim', '2026-11-18'); await page.selectOption('#omieConcFormato', 'CSV');
++      await page.setInputFiles('#omieConcArquivo', { name: 'extrato.csv', mimeType: 'text/csv', buffer: Buffer.from(EXTRATO, 'utf8') });
++      await page.evaluate(() => OmieConc_prever_());
++      await page.waitForSelector('.omie-conc-linha', { timeout: 15000 });
++      assert.match(await page.locator('[data-conc-linha="0"]').innerText(), /Baixa sugerida com diferença/);
++      assert.equal(await page.inputValue('[data-conc-linha="0"] [name="concJuros"]'), '12,50');
++      await page.evaluate(() => OmieConc_preparar_(0));
++      await page.waitForSelector('[data-conc-linha="0"] .omie-conc-resumo', { timeout: 15000 });
++      assert.match(await page.locator('[data-conc-linha="0"] .omie-conc-previa').innerText(), /R\$ 1\.012,50 entram/);
++      assert.ok(await S.semRolagem(page), 'conciliação: sem rolagem lateral em ' + largura);
++      if (largura !== 320) await page.screenshot({ path: path.join(saida, largura + '-conciliacao-previa.png'), fullPage: true });
++      await page.evaluate(() => OmieConc_confirmarBaixa_(0));
++      await page.waitForFunction(() => /Baixa registrada no Omie/.test(document.querySelector('[data-conc-linha="0"]').innerText), null, { timeout: 15000 });
++      if (largura !== 320) await page.screenshot({ path: path.join(saida, largura + '-conciliacao-baixada.png'), fullPage: true });
++      assert.equal(escritas(a).length, 1);
++      assert.deepEqual(erros, [], 'sem erro de JavaScript em ' + largura);
++      await page.close();
++    }
++  } finally { await browser.close(); }
++});

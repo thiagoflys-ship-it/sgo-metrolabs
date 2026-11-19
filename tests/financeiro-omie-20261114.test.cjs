@@ -796,7 +796,7 @@ test('16/11/2026: "Como fazer nesta aba" em todas as abas e explicação embaixo
       await page.waitForTimeout(400);
       assert.deepEqual(await semDica('#omieOpsForm'), [], 'baixa: todo campo com explicação');
       assert.match(await page.locator('#omieOpsForm').innerText(), /Valor da baixa: o valor que entrou ou saiu da conta/); // 16/11/2026 (B1)
-      assert.match(await page.locator('#omieOpsForm').innerText(), /Baixa com acréscimo ou desconto: confirmar no primeiro uso acompanhado/);
+      assert.match(await page.locator('#omieOpsForm').innerText(), /o banco recebe ou paga o valor da baixa \+ juros \+ multa − desconto/); // 19/11/2026: juros, multa e desconto liberados (auditoria do Financeiro)
       if (largura < 500) await page.screenshot({ path: path.join(saida, largura + '-ajuda-baixa.png'), fullPage: true });
       await page.evaluate(() => OmieTela_abrir_('provisoes'));
       await page.waitForTimeout(600);

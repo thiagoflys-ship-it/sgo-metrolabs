@@ -115,12 +115,22 @@ function montar(opcoes) {
 const fornecedorNoOmie = (a, tags) => a.clientes.push({ codigo_cliente_omie: 55, razao_social: 'PECAS FICTICIAS LTDA', cnpj_cpf: fmt(FORN), inativo: 'N', tags: (tags || ['Fornecedor']).map((t) => ({ tag: t })) });
 
 // ------------------------------------------------------------------------------------------------ seção 1: B1 a B9
-test('B1: baixa com juros, multa ou desconto é recusada antes de qualquer envio; a prévia mostra o efeito na conta', () => {
+// 19/11/2026 (auditoria do Financeiro): juros, multa e desconto LIBERADOS (conferido nos dados reais do Omie: banco = valor + juros + multa − desconto).
+// A trava de antes continua disponível pela chave OMIE_BAIXA_ACRESCIMO_DESLIGADO = 1.
+test('B1: baixa com juros, multa ou desconto mostra o efeito no banco; desligada pela chave, é recusada antes de qualquer envio', () => {
   const a = montar();
+  const efeito = { juros: /R\$ 102,00 entram na conta escolhida \(valor baixado R\$ 100,00 \+ juros R\$ 2,00\)/, multa: /R\$ 101,00 entram/, desconto: /R\$ 99,50 entram na conta escolhida \(valor baixado R\$ 100,00 − desconto R\$ 0,50\)/ };
   for (const extra of [{ juros: 2 }, { multa: 1 }, { desconto: 0.5 }]) {
     const r = a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: Object.assign({ contaId: 5, valor: 100, data: '2026-11-16' }, extra) });
-    assert.equal(r.ok, false); assert.match(r.mensagem, /confirmar, na primeira operação acompanhada/); assert.match(r.mensagem, /direto no Omie/);
+    assert.equal(r.ok, true, r.mensagem); assert.ok(r.resumo.some((l) => l[0] === 'Efeito na conta corrente' && efeito[Object.keys(extra)[0]].test(l[1])), JSON.stringify(r.resumo));
   }
+  assert.match(a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: { contaId: 5, valor: 10, desconto: 20, data: '2026-11-16' } }).mensagem, /desconto .* é maior que o valor baixado/);
+  a.props.OMIE_BAIXA_ACRESCIMO_DESLIGADO = '1';
+  for (const extra of [{ juros: 2 }, { multa: 1 }, { desconto: 0.5 }]) {
+    const r = a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: Object.assign({ contaId: 5, valor: 100, data: '2026-11-16' }, extra) });
+    assert.equal(r.ok, false); assert.match(r.mensagem, /desligada pelo responsável pelo sistema/); assert.match(r.mensagem, /direto no Omie/);
+  }
+  delete a.props.OMIE_BAIXA_ACRESCIMO_DESLIGADO;
   const ok = a.f('OmieOps_apiPrevia', 'wanessa', { acao: 'baixar', tipo: 'receber', id: 101, dados: { contaId: 5, valor: 100, data: '2026-11-16' } });
   assert.equal(ok.ok, true, ok.mensagem);
   assert.ok(ok.resumo.some((l) => l[0] === 'Efeito na conta corrente' && /R\$ 100,00 entram/.test(l[1])));
@@ -569,10 +579,10 @@ test('(a)(b)(d) página completa do Painel: busca e cadastro no lançamento, not
       await page.screenshot({ path: path.join(saida, largura + '-cadastro-omie.png'), fullPage: true });
       await page.evaluate(() => OmieCad_confirmar_());
       await page.waitForFunction(() => /Escolhido: SERVICOS FICTICIOS LTDA/.test(document.getElementById('omieCadEscolhido').textContent), null, { timeout: 8000 });
-      // baixa: juros, multa e desconto travados em zero, com o aviso
+      // baixa: 19/11/2026 (auditoria) juros, multa e desconto liberados, com o aviso de como o Omie soma no banco
       await page.evaluate(() => OmieOps_form_('baixar', 101)); await page.waitForSelector('#omieOpsForm [name="juros"]');
-      assert.equal(await page.evaluate(() => document.querySelector('#omieOpsForm [name="juros"]').readOnly), true);
-      assert.match(await page.locator('.omie-aviso-baixa').innerText(), /confirmar no primeiro uso acompanhado/);
+      assert.equal(await page.evaluate(() => document.querySelector('#omieOpsForm [name="juros"]').readOnly), false);
+      assert.match(await page.locator('.omie-aviso-baixa').innerText(), /valor da baixa \+ juros \+ multa − desconto/);
       // nota recebida: NFS-e ABRASF lida, fornecedor já no Omie, retenções e dicas
       await page.evaluate(() => OmieTela_abrir_('notas')); await page.waitForSelector('#omieNotaSecao');
       await page.evaluate((xml) => { document.getElementById('omieNotaTipo').value = 'nfse'; OMIE_NOTA.xml = xml; OMIE_NOTA.tipo = 'nfse'; OmieNota_lerServidor_({}); }, abrasfPagina());

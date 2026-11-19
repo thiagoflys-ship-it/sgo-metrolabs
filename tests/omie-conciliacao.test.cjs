@@ -53,7 +53,7 @@ test('duplicatas, ambiguidades e sinais opostos nunca viram correspondência ele
   assert.equal(c.OmieConc_parear_(b, o, [], '123')[0].elegivel, true);
   assert.equal(c.OmieConc_parear_([b[0], b[0]], o, [], '123')[0].elegivel, false);
   assert.match(c.OmieConc_parear_(b, [o[0], { ...o[0], id: '43' }], [], '123')[0].status, /Ambíguo/);
-  assert.equal(c.OmieConc_parear_(b, [{ ...o[0], centavos: 12550 }], [], '123')[0].candidatos, 0);
+  assert.equal(c.OmieConc_parear_(b, [{ ...o[0], centavos: 12550 }], [], '123')[0].candidatosOmie, 0); // 19/11/2026: o número de lançamentos do Omie virou candidatosOmie (candidatos = títulos em aberto)
   const disputados = c.OmieConc_parear_([b[0], { ...b[0], identificador: 'outro' }], o, [], '123');
   assert.equal(disputados.some(x => x.elegivel), false);
 });
