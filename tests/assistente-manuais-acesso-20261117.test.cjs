@@ -289,6 +289,11 @@ test('6. nenhum parágrafo da base anterior se perdeu sem justificativa', { skip
     /^\s*não houve atendimento\)\.$/,
     /^abrem só para a equipe interna\.$/,
     /^atendimento não recebe lembrete\), central de pendências, Início, ficha do equipamento e Vínculos leem a mesma lista:/,
+    // 18/11/2026 (regra do dono, output/qr-equipamento-20261118): o QR Code do equipamento deixou de mostrar o PGT, os POP e os registros
+    // da unidade e as versões anteriores; os três parágrafos do manual de vínculos foram reescritos com a regra nova
+    /^QR Code \(prontuário do equipamento no celular\): os documentos do equipamento, por pasta, mais o PGT, os POP e os registros operacionais da unidade/,
+    /^O documento mais novo vem primeiro, com a data de emissão e a validade: .*Revisões anteriores e versões do mesmo documento/,
+    /^A organização vem pronta\. Quando preciso, .*escolher quais documentos da unidade entram no prontuário do equipamento/,
     // Ganhos dos vendedores e Portal não estavam na base anterior; nada deles conta aqui
   ];
   const perdidos = [];

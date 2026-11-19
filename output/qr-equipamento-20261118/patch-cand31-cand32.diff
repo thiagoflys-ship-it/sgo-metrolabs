@@ -1,0 +1,948 @@
+diff -ruN cand31/JS_Core.html cand32/JS_Core.html
+--- cand31/JS_Core.html	2026-11-18 20:31:20.498847700 -0300
++++ cand32/JS_Core.html	2026-11-18 22:48:20.239799400 -0300
+@@ -706,7 +706,9 @@
+         </div>
+ 
+         <!-- 17/11/2026 (pedido da Priscilla): o prontuário do equipamento no próprio SGO+, organizado por pasta (JS_DocumentosPastas.html,
+-             SGO_DocumentosPastas.js): certificados, qualificações, relatórios, O.S., PGT e POP da unidade, NR-13, laudos e outros. -->
++             SGO_DocumentosPastas.js): certificados, qualificações, relatórios, O.S., NR-13, laudos e outros.
++             18/11/2026 (regra do dono): só os documentos com o ID deste equipamento e, de cada documento, só o último gerado; o PGT e
++             os POP são da unidade e não aparecem aqui. -->
+         <div id="qrProntuario" style="background: #ffffff; width: 100%; max-width: 560px; box-sizing: border-box; border-radius: 12px; border: 1px solid #dadce0; box-shadow: 0 4px 12px rgba(0,0,0,0.08); padding: 16px; margin-bottom: 20px; text-align: left;">
+           <h2 style="font-size: 16px; color: var(--metro-blue-dark, #083978); text-transform: uppercase; border-bottom: 2px solid var(--metro-green, #007b3e); padding-bottom: 10px; margin: 0 0 14px; text-align: center;">
+             Prontuário do equipamento
+diff -ruN cand31/JS_DocumentosPastas.html cand32/JS_DocumentosPastas.html
+--- cand31/JS_DocumentosPastas.html	2026-11-18 20:41:01.298937000 -0300
++++ cand32/JS_DocumentosPastas.html	2026-11-18 23:05:14.855762500 -0300
+@@ -3,8 +3,9 @@
+   Servidor: SGO_DocumentosPastas.js (documentosPastas). Usado por: prontuário do equipamento pelo QR Code (JS_Core.html,
+   renderProntuarioDigital_), ficha do cliente, da unidade e do equipamento (JS_Cadastros.html, JS_Equipamentos.html), Arquivo de
+   documentos da conta de cliente (JS_Admin.html) e "Documentos gerados e envios" (JS_EnviarDoc.html).
+-  Regras da tela: pastas recolhíveis com contagem; o mais novo primeiro; validade (vencido, vence em X dias, válido até); versões
+-  anteriores guardadas embaixo; busca e filtros redesenham só a lista (nunca os campos); nenhuma atualização automática;
++  Regras da tela: pastas recolhíveis com contagem; o mais novo primeiro; validade (vencido, vence em X dias, válido até);
++  18/11/2026 (regra do dono): cada equipamento mostra só o que tem o ID dele (PGT e POP ficam na unidade e no cliente) e, de um
++  documento gerado mais de uma vez, só o último gerado (o oficial); os substituídos aparecem só para Admin e Diretoria, na ficha; busca e filtros redesenham só a lista (nunca os campos); nenhuma atualização automática;
+   "Como fazer nesta aba" no topo, aberto na primeira vez e lembrado neste aparelho. Funciona a partir de 320 px.
+ -->
+ <style>
+@@ -61,6 +62,15 @@
+   .dpst-carregando { padding: 14px; color: var(--bc-text-3, #5F645F); font-size: 13.5px; }
+   .dpst-hist { margin: 0 12px 12px; border: 1px solid var(--bc-line-soft, #ECEAE3); border-radius: 8px; }
+   .dpst-hist > summary { cursor: pointer; padding: 8px 10px; font-size: 12.5px; font-weight: 600; min-height: 40px; display: flex; align-items: center; }
++  /* 18/11/2026: excluir documento da pasta (exclusão lógica) e a lista de excluídos (Administrador e Diretoria) */
++  .dpst-btn-perigo { background: var(--bc-surface, #fff); color: var(--bc-danger, #A3261B) !important; border-color: var(--bc-danger-line, #EBC2BC); }
++  .dpst-conf { flex: 1 1 100%; border: 1px solid var(--bc-danger-line, #EBC2BC); background: var(--bc-danger-bg, #FBEBE8); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
++  .dpst-conf p { margin: 0 0 8px; }
++  .dpst-conf textarea { width: 100%; min-height: 64px; box-sizing: border-box; border: 1px solid var(--bc-line, #E2E0D8); border-radius: 8px; padding: 8px; font: inherit; }
++  .dpst-conf-acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
++  .dpst-conf-msg { color: var(--bc-danger, #A3261B); font-weight: 600; margin-top: 6px; }
++  .dpst-excl { margin: 12px 0 0; border: 1px dashed var(--bc-danger-line, #EBC2BC); border-radius: 10px; }
++  .dpst-excl > summary { cursor: pointer; padding: 10px 12px; font-weight: 700; min-height: 44px; display: flex; align-items: center; color: var(--bc-danger, #A3261B); }
+   @media (max-width: 480px) {
+     .dpst-item { flex-direction: column; }
+     .dpst-item-texto { flex: 0 0 auto; width: 100%; }
+@@ -75,28 +85,28 @@
+   var COMO = {
+     qr: {
+       titulo: "Como usar esta tela",
+-      texto: "Esta tela reúne os documentos deste equipamento emitidos pela Metrolabs, separados por pasta, e os documentos da unidade que valem para ele, como o PGT e os POP.",
+-      passos: ["Toque no nome da pasta para abrir ou fechar. O número ao lado diz quantos documentos ela tem.", "O documento mais novo aparece primeiro. A validade mostra se está em dia, se vence em poucos dias ou se já venceu.", "Toque em \"Abrir\" para ver ou baixar o PDF.", "Revisões antigas ficam em \"Versões anteriores\", dentro do próprio documento: nada é apagado.", "Se faltar algum documento, fale com a Metrolabs."]
++      texto: "Esta tela reúne só os documentos deste equipamento emitidos pela Metrolabs, separados por pasta. Documento de outro equipamento nunca aparece aqui. O PGT e os POP são documentos da unidade e ficam nas pastas da unidade e da empresa, não no equipamento.",
++      passos: ["Toque no nome da pasta para abrir ou fechar. O número ao lado diz quantos documentos ela tem.", "O documento mais novo aparece primeiro. A validade mostra se está em dia, se vence em poucos dias ou se já venceu.", "Toque em \"Abrir\" para ver ou baixar o PDF.", "Quando um documento é gerado de novo, só a última versão (a oficial) aparece. As anteriores ficam guardadas no sistema, fora desta tela.", "Se faltar algum documento, fale com a Metrolabs."]
+     },
+     portal: {
+       titulo: "Como fazer nesta aba",
+       texto: "Aqui ficam os documentos técnicos dos equipamentos da sua empresa, organizados nas mesmas pastas do prontuário do equipamento (o mesmo que abre pelo QR Code), para auditorias e para a Vigilância Sanitária.",
+-      passos: ["Use a busca ou escolha a unidade e o equipamento para ver só o que precisa.", "Toque no nome da pasta para abrir. O documento mais novo aparece primeiro, com a validade.", "Toque em \"Abrir\" para ver ou baixar o PDF.", "Se faltar algum documento, avise a Metrolabs pela conversa geral."]
++      passos: ["Use a busca ou escolha a unidade e o equipamento para ver só o que precisa.", "Toque no nome da pasta para abrir. O documento mais novo aparece primeiro, com a validade.", "Toque em \"Abrir\" para ver ou baixar o PDF.", "Documento gerado mais de uma vez aparece uma vez só, na última versão, que é a oficial.", "Se faltar algum documento, avise a Metrolabs pela conversa geral."]
+     },
+     ficha_cliente: {
+       titulo: "Como fazer nesta aba",
+       texto: "Todos os documentos deste cliente, de todos os módulos do SGO+ (certificados, qualificações, relatórios, O.S., NR-13, PGT e POP, declarações e o Arquivo de documentos), separados nas pastas padrão. Documento novo aparece sozinho assim que o módulo emite.",
+-      passos: ["Busque pelo nome, número, TAG ou tipo, ou escolha a unidade e o equipamento.", "Toque no nome da pasta para abrir. O mais novo vem primeiro; as revisões antigas ficam em \"Versões anteriores\".", "Toque em \"Abrir\" para ver o PDF ou em \"Enviar\" para mandar por e-mail ou WhatsApp.", "O mesmo arquivo registrado em dois lugares aparece uma vez só. Documento na pasta errada: corrija o tipo dele no Arquivo de documentos.", "A pasta \"Contratos e propostas\" é interna: o cliente e o QR Code não a veem."]
++      passos: ["Busque pelo nome, número, TAG ou tipo, ou escolha a unidade e o equipamento.", "Toque no nome da pasta para abrir. O mais novo vem primeiro. De um documento gerado mais de uma vez aparece só o último (o oficial); os substituídos ficam guardados e só Admin e Diretoria os veem, em \"Substituídos\".", "Toque em \"Abrir\" para ver o PDF ou em \"Enviar\" para mandar por e-mail ou WhatsApp.", "Documento que não pertence a este equipamento ou cliente: toque em \"Excluir\", escreva o motivo e confirme (só quem tem a caixa «Excluir documento da pasta»). Ele some do QR Code, das pastas e do Portal do cliente; nada é apagado, e o Administrador e a Diretoria restauram em \"Documentos excluídos\".", "O mesmo arquivo registrado em dois lugares aparece uma vez só. Documento na pasta errada: corrija o tipo dele no Arquivo de documentos.", "A pasta \"Contratos e propostas\" é interna: o cliente e o QR Code não a veem."]
+     },
+     ficha_unidade: {
+       titulo: "Como fazer nesta aba",
+-      texto: "Documentos desta unidade e dos equipamentos dela, de todos os módulos, separados por pasta. Os documentos gerais do cliente (por exemplo, PGT feito pelo CNPJ do cliente) aparecem junto.",
+-      passos: ["Busque pelo nome, número, TAG ou tipo, ou escolha o equipamento.", "Toque no nome da pasta para abrir. O mais novo vem primeiro.", "Toque em \"Abrir\" para ver o PDF."]
++      texto: "Documentos desta unidade e dos equipamentos dela, de todos os módulos, separados por pasta, inclusive o PGT, os POP e os registros operacionais gerados pelo CNPJ da unidade. Documento ligado só ao cliente, sem unidade, fica na ficha do cliente.",
++      passos: ["Busque pelo nome, número, TAG ou tipo, ou escolha o equipamento.", "Toque no nome da pasta para abrir. O mais novo vem primeiro.", "Toque em \"Abrir\" para ver o PDF.", "Documento que não pertence a este equipamento ou cliente: toque em \"Excluir\", escreva o motivo e confirme (só quem tem a caixa «Excluir documento da pasta»). Ele some do QR Code, das pastas e do Portal do cliente; nada é apagado, e o Administrador e a Diretoria restauram em \"Documentos excluídos\"."]
+     },
+     ficha_equipamento: {
+       titulo: "Como fazer nesta aba",
+-      texto: "Prontuário do equipamento: os mesmos documentos e pastas que abrem pelo QR Code, mais o que só a equipe vê (minutas aguardando aprovação, documentos internos e o histórico de atendimentos sem relatório em PDF).",
+-      passos: ["Toque no nome da pasta para abrir. O mais novo vem primeiro; a validade mostra o que vence.", "Os documentos marcados \"Da unidade\" (PGT, POP e registros operacionais) valem para todos os equipamentos da unidade.", "Toque em \"Abrir\" para ver o PDF ou em \"Enviar\" para mandar ao cliente.", "Documento que deveria estar aqui e não está: confira no módulo que o gerou se ele foi ligado a este equipamento."]
++      texto: "Prontuário do equipamento: só os documentos ligados a este equipamento (os mesmos que abrem pelo QR Code), mais o que só a equipe vê (minutas aguardando aprovação, documentos internos e o histórico de atendimentos sem relatório em PDF). O PGT, os POP e os registros operacionais são da unidade: veja na ficha da unidade.",
++      passos: ["Toque no nome da pasta para abrir. O mais novo vem primeiro; a validade mostra o que vence.", "De um documento gerado mais de uma vez aparece só o último (o oficial). Os substituídos ficam guardados; só Admin e Diretoria os veem, em \"Substituídos\".", "Toque em \"Abrir\" para ver o PDF ou em \"Enviar\" para mandar ao cliente.", "Documento que não pertence a este equipamento ou cliente: toque em \"Excluir\", escreva o motivo e confirme (só quem tem a caixa «Excluir documento da pasta»). Ele some do QR Code, das pastas e do Portal do cliente; nada é apagado, e o Administrador e a Diretoria restauram em \"Documentos excluídos\".", "Documento que deveria estar aqui e não está: confira no módulo que o gerou se ele foi ligado a este equipamento."]
+     },
+     envios: {
+       titulo: "Como fazer nesta aba",
+@@ -136,22 +146,23 @@
+       it.emitido ? "Emitido em " + it.emitido : ""].filter(Boolean).join(" · ");
+     var selos = seloVenc(it.venc);
+     if (it.situacao && it.situacao !== "VIGENTE") selos += '<span class="dpst-chip ' + (it.situacao === "SUSPENSO" || it.situacao === "MINUTA" ? "tom-alerta" : "") + '">' + esc(it.situacaoTexto || it.situacao) + "</span>";
+-    if (it.daUnidade) selos += '<span class="dpst-chip tom-info">Da unidade: vale para todos os equipamentos dela</span>';
+-    if (it.relacionado) selos += '<span class="dpst-chip tom-ok">Deste tipo de equipamento</span>';
+     var acoes = it.url && it.podeAbrir !== false ? '<a class="dpst-btn" href="' + esc(it.url) + '" target="_blank" rel="noopener" data-sgo-sem-enviar="1"><i class="fas fa-up-right-from-square" aria-hidden="true"></i>Abrir</a>'
+       : '<span class="dpst-sem">' + esc(it.semAbrirTexto || "Sem arquivo para abrir.") + "</span>";
+     if (equipeVe && opts.enviar && it.arquivoId && window.SGO_EnviarDoc && it.situacao !== "SUSPENSO" && it.situacao !== "MINUTA" && it.situacao !== "INATIVO") {
+       acoes += '<button type="button" class="dpst-btn dpst-btn-sec" data-sgo-enviar="' + esc(it.arquivoId) + '"' + (it.docDocumentoId ? ' data-sgo-enviar-doc="' + esc(it.docDocumentoId) + '"' : "") + '><i class="fas fa-paper-plane" aria-hidden="true"></i>Enviar</button>';
+     }
++    // 18/11/2026 (pedido do Matheus): excluir da pasta o documento que não pertence a este equipamento ou cliente (só quem tem a caixa)
++    if (equipeVe && res && res.podeExcluir && it.kExcl) acoes += '<button type="button" class="dpst-btn dpst-btn-perigo" data-dpst-excluir="' + esc(it.kExcl) + '"><i class="fas fa-trash-can" aria-hidden="true"></i>Excluir</button>';
+     if (typeof opts.extraItem === "function") { try { acoes += opts.extraItem(it) || ""; } catch (e) {} }
+     var nota = equipeVe && it.repeticoes ? '<div class="dpst-nota">O mesmo arquivo está registrado em ' + (it.repeticoes + 1) + " lugares do sistema; aparece aqui uma vez só.</div>" : "";
+     if (typeof opts.notaItem === "function") { try { nota += opts.notaItem(it) || ""; } catch (e2) {} }
+     var ant = (it.anteriores || []);
+-    var antHtml = ant.length ? '<details class="dpst-ant"><summary>Versões anteriores (' + ant.length + ")</summary>" + ant.map(function (a) {
+-      return '<div class="dpst-ant-linha"><span>' + esc([a.titulo, a.emitido ? "emitido em " + a.emitido : ""].filter(Boolean).join(" · ")) + "</span>" +
++    // 18/11/2026: versões substituídas só chegam aqui para Admin e Diretoria (o servidor não as manda aos outros perfis, ao QR Code nem ao cliente)
++    var antHtml = ant.length ? '<details class="dpst-ant"><summary>Substituídos: gerados antes do oficial (' + ant.length + ") · só Admin e Diretoria veem</summary>" + ant.map(function (a) {
++      return '<div class="dpst-ant-linha"><span>' + esc([a.titulo, a.emitido ? "emitido em " + a.emitido : "", "substituído"].filter(Boolean).join(" · ")) + "</span>" +
+         (a.url && a.podeAbrir !== false ? '<a href="' + esc(a.url) + '" target="_blank" rel="noopener" data-sgo-sem-enviar="1">Abrir</a>' : "") + "</div>";
+     }).join("") + "</details>" : "";
+-    return '<div class="dpst-item' + (it.situacao === "INATIVO" ? " is-inativo" : "") + '"><div class="dpst-item-texto"><div class="dpst-tit">' + esc(it.titulo) + "</div>" +
++    return '<div class="dpst-item' + (it.situacao === "INATIVO" ? " is-inativo" : "") + '" data-dpst-k="' + esc(it.kExcl || "") + '"><div class="dpst-item-texto"><div class="dpst-tit">' + esc(it.titulo) + "</div>" +
+       (meta ? '<div class="dpst-meta">' + esc(meta) + "</div>" : "") + (selos ? '<div class="dpst-selos">' + selos + "</div>" : "") + nota + "</div>" +
+       '<div class="dpst-acoes">' + acoes + "</div>" + antHtml + "</div>";
+   }
+@@ -172,6 +183,81 @@
+     }).join("") + '<p class="dpst-desc dpst-just">Histórico do Auvo (sistema descontinuado em 18/11/2026), só para consulta. Só a equipe vê esta lista; ela não conta como documento do prontuário.</p></details>';
+   }
+ 
++  /** 18/11/2026: confirmação da exclusão dentro do próprio documento (diz o quê, de qual equipamento e cliente, e que some do QR Code). */
++  function htmlConfirmar(it, res) {
++    var onde = it.equipamentoNome ? "do equipamento " + it.equipamentoNome : (res && res.escopo === "equipamento" && res.alvo ? "do equipamento " + res.alvo.nome : (it.unidadeNome ? "da unidade " + it.unidadeNome : "da pasta"));
++    var cli = res && res.clienteNome ? ", cliente " + res.clienteNome : "";
++    return '<div class="dpst-conf dpst-just" role="alertdialog" aria-label="Confirmar exclusão"><p><b>Excluir «' + esc(it.titulo) + '» ' + esc(onde + cli) + '?</b></p>' +
++      '<p>O documento some do QR Code, das pastas, das fichas e do Portal do cliente, e o cliente não consegue mais abrir. Nada é apagado: o arquivo e o registro continuam guardados, e o Administrador e a Diretoria podem restaurar.</p>' +
++      '<label>Motivo (obrigatório, fica registrado): <textarea class="dpst-conf-motivo" maxlength="1000" placeholder="Ex.: certificado de outro cliente, registrado por engano neste equipamento"></textarea></label>' +
++      '<div class="dpst-conf-msg" aria-live="polite"></div><div class="dpst-conf-acoes"><button type="button" class="dpst-btn dpst-btn-perigo dpst-conf-sim">Confirmar exclusão</button><button type="button" class="dpst-btn dpst-btn-sec dpst-conf-nao">Cancelar</button></div></div>';
++  }
++
++  function htmlExcluidos(res) {
++    if (!res || !res.veExcluidos) return "";
++    var l = res.excluidos || [];
++    return '<details class="dpst-excl"><summary>Documentos excluídos (' + l.length + ") · só Administrador e Diretoria veem</summary>" +
++      '<p class="dpst-desc dpst-just">Documentos tirados destas pastas porque não pertencem a este equipamento ou cliente. Eles não aparecem no QR Code, nas pastas, nas fichas nem no Portal do cliente. Nada foi apagado: para trazer um de volta, escreva o motivo e toque em "Restaurar".</p>' +
++      (l.length ? l.map(function (x) {
++        return '<div class="dpst-ant-linha" data-dpst-excl-id="' + esc(x.id) + '"><span>' + esc([x.titulo, x.pasta, x.equipamentoNome ? "equipamento " + x.equipamentoNome : "", "excluído em " + x.em + " por " + x.porNome, "motivo: " + x.motivo].filter(Boolean).join(" · ")) + "</span>" +
++          (x.url ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener" data-sgo-sem-enviar="1">Abrir</a>' : "") +
++          '<input type="text" class="dpst-rest-motivo" maxlength="1000" placeholder="Motivo da restauração" aria-label="Motivo da restauração" style="flex:1 1 200px;min-height:40px;border:1px solid var(--bc-line,#E2E0D8);border-radius:8px;padding:6px 8px">' +
++          '<button type="button" class="dpst-btn dpst-btn-sec" data-dpst-restaurar="' + esc(x.id) + '">Restaurar</button><div class="dpst-conf-msg" aria-live="polite" style="flex:1 1 100%"></div></div>';
++      }).join("") : '<div class="dpst-vazio">Nenhum documento excluído aqui.</div>') + "</details>";
++  }
++
++  function chamarAcao(acao, dados, ok, falha) {
++    try {
++      google.script.run.withSuccessHandler(function (r) { if (r && r.success) ok(r); else falha((r && r.message) || "Não foi possível concluir. O que fazer: tente de novo; se repetir, avise o administrador."); })
++        .withFailureHandler(function () { falha("Não foi possível falar com o servidor. Por quê: a conexão caiu ou o servidor demorou. O que fazer: confira a internet e tente de novo."); })
++        .documentosPastasAcao(sessao(), acao, dados);
++    } catch (e) { falha("Não foi possível concluir nesta tela. O que fazer: atualize a página (F5) e tente de novo."); }
++  }
++
++  /** Cliques de excluir e restaurar (delegados no contêiner; registrados uma vez). Depois de gravar, recarrega a mesma consulta. */
++  function ligarAcoes(el) {
++    if (el.__dpstAcoes) return;
++    el.__dpstAcoes = true;
++    el.addEventListener("click", function (ev) {
++      var t = ev.target && ev.target.closest ? ev.target : null;
++      if (!t) return;
++      var st = el.__dpst, res = st && st.res;
++      var bEx = t.closest("[data-dpst-excluir]");
++      if (bEx) {
++        var item = bEx.closest(".dpst-item");
++        if (!item || item.querySelector(".dpst-conf")) return;
++        var k = bEx.getAttribute("data-dpst-excluir"), it = null;
++        (res.pastas || []).forEach(function (p) { (p.itens || []).forEach(function (x) { if (x.kExcl === k) it = x; }); });
++        if (!it) return;
++        item.insertAdjacentHTML("beforeend", htmlConfirmar(it, res));
++        var tx = item.querySelector(".dpst-conf-motivo"); if (tx) tx.focus();
++        return;
++      }
++      if (t.closest(".dpst-conf-nao")) { var c0 = t.closest(".dpst-conf"); if (c0) c0.remove(); return; }
++      var sim = t.closest(".dpst-conf-sim");
++      if (sim) {
++        var conf = sim.closest(".dpst-conf"), it2 = sim.closest(".dpst-item"), msg = conf.querySelector(".dpst-conf-msg");
++        var motivo = (conf.querySelector(".dpst-conf-motivo").value || "").trim();
++        if (motivo.length < 10) { msg.textContent = "Falta o motivo: escreva por que o documento sai desta pasta (pelo menos 10 letras). Por quê: a exclusão fica registrada para auditoria."; return; }
++        sim.disabled = true; msg.textContent = "Excluindo…";
++        chamarAcao("excluir", { k: it2.getAttribute("data-dpst-k"), motivo: motivo }, function (r) {
++          if (typeof SGO_toast === "function") { try { SGO_toast(r.message); } catch (e) {} }
++          if (el.__dpstParams) carregar(el, el.__dpstParams, el.__dpst && el.__dpst.opts); else it2.remove();
++        }, function (m) { sim.disabled = false; msg.textContent = m; });
++        return;
++      }
++      var bR = t.closest("[data-dpst-restaurar]");
++      if (bR) {
++        var linha = bR.closest("[data-dpst-excl-id]"), m2 = linha.querySelector(".dpst-conf-msg"), mot = (linha.querySelector(".dpst-rest-motivo").value || "").trim();
++        if (mot.length < 10) { m2.textContent = "Falta o motivo: escreva por que o documento volta para a pasta (pelo menos 10 letras)."; return; }
++        bR.disabled = true; m2.textContent = "Restaurando…";
++        chamarAcao("restaurar", { id: bR.getAttribute("data-dpst-restaurar"), motivo: mot }, function () {
++          if (el.__dpstParams) carregar(el, el.__dpstParams, el.__dpst && el.__dpst.opts);
++        }, function (m) { bR.disabled = false; m2.textContent = m; });
++      }
++    });
++  }
++
+   function desenharLista(el) {
+     var st = el.__dpst;
+     if (!st) return;
+@@ -226,7 +312,10 @@
+         (eqs.length ? '<select class="dpst-f-eq" aria-label="Equipamento"><option value="">Todos os equipamentos</option>' + eqs.map(function (e) { return '<option value="' + esc(e.id) + '"' + (st.filtro.e === e.id ? " selected" : "") + ">" + esc(e.nome) + " (" + (e.qtd || 0) + ")</option>"; }).join("") + "</select>" : "") +
+         '<button type="button" class="dpst-btn dpst-btn-sec dpst-limpar">Limpar</button></div>';
+     }
+-    el.innerHTML = htmlComo(ctx) + '<div class="dpst-resumo">' + resumo + "</div>" + filtros + '<div class="dpst-lista" aria-live="polite"></div>';
++    // 18/11/2026: a equipe sabe quantos documentos gerados de novo ficaram de fora (vale o último gerado) e onde estão
++    var substTxt = !ehCliente(res) && ctx !== "qr" && res.substituidosOcultos ? '<div class="dpst-desc dpst-just" style="padding:0 0 10px">' + esc(res.substituidosOcultos + (res.substituidosOcultos === 1 ? " documento gerado de novo ficou fora desta lista" : " documentos gerados de novo ficaram fora desta lista") + ": vale só o último gerado, que é o oficial. Por quê: versão repetida não pode ser vista nem enviada por engano. Os anteriores continuam guardados no sistema; Admin e Diretoria os veem na ficha, em \"Substituídos\".") + "</div>" : "";
++    el.innerHTML = htmlComo(ctx) + '<div class="dpst-resumo">' + resumo + "</div>" + substTxt + filtros + '<div class="dpst-lista" aria-live="polite"></div>' + htmlExcluidos(res);
++    if (res && (res.podeExcluir || res.veExcluidos)) ligarAcoes(el);
+     var como = el.querySelector(".dpst-como");
+     if (como) como.addEventListener("toggle", function () { gravarPref("como_" + ctx, como.open ? "1" : "0"); });
+     // abrir/fechar pasta: lembrado enquanto a tela estiver aberta (a busca redesenha só a lista)
+@@ -251,6 +340,7 @@
+     if (!el) return;
+     var pedido = String(Date.now()) + Math.random();
+     el.__dpstPedido = pedido;
++    el.__dpstParams = params;
+     el.classList.add("dpst");
+     el.innerHTML = '<div class="dpst-carregando">Carregando os documentos por pasta…</div>';
+     var falhar = function (msg) {
+diff -ruN cand31/SGO_Ajuda_Cadastros.js cand32/SGO_Ajuda_Cadastros.js
+--- cand31/SGO_Ajuda_Cadastros.js	2026-11-18 20:46:45.093033500 -0300
++++ cand32/SGO_Ajuda_Cadastros.js	2026-11-18 23:06:23.232409700 -0300
+@@ -72,7 +72,7 @@
+             "Leia \"Como fazer nesta aba\", no alto. Ele abre na primeira vez; toque no título para fechar.",
+             "Toque no nome de uma pasta para abrir. O número ao lado diz quantos documentos ela tem; vencidos e vencendo aparecem em vermelho e amarelo.",
+             "Use a busca (nome, número, TAG ou tipo) ou escolha a unidade e o equipamento. A lista se ajusta enquanto você digita.",
+-            "O documento mais novo vem primeiro. As revisões antigas e as versões repetidas ficam em \"Versões anteriores\", dentro do próprio documento: nada é apagado.",
++            "O documento mais novo vem primeiro. De um documento gerado mais de uma vez (o mesmo certificado emitido de novo, uma revisão nova, o mesmo ensaio refeito) aparece só o último gerado, que é o oficial. Os anteriores continuam guardados no sistema: só Admin e Diretoria os veem, em \"Substituídos\", dentro do documento oficial. Os demais perfis veem o aviso de quantos ficaram fora.",
+             "O mesmo arquivo registrado em dois lugares (por exemplo, o certificado que o módulo grava e o Arquivo de documentos) aparece uma vez só, com o aviso de quantos registros ele tem.",
+             "Toque em \"Abrir\" para ver o PDF ou em \"Enviar\" para mandar por e-mail ou WhatsApp.",
+             "A pasta \"Contratos e propostas\" é interna: o cliente e o QR Code não a veem. Minuta aguardando aprovação e PGT/POP suspenso aparecem marcados só para a equipe.",
+@@ -80,6 +80,17 @@
+           ]
+         },
+         {
++          titulo: "Excluir documento da pasta (documento que não é deste cliente ou equipamento)",
++          itens: [
++            "Use quando um documento foi registrado no cliente ou no equipamento errado. Quem tem a caixa «Excluir documento da pasta» (padrão: Administrador, Diretoria e gestores das áreas Técnica, Qualidade e Comercial) vê o botão \"Excluir\" em cada documento da aba \"Documentos por pasta\" do equipamento, da unidade e do cliente.",
++            "Toque em \"Excluir\". O sistema mostra o nome do documento, o equipamento e o cliente, e avisa que ele some do QR Code, das pastas, das fichas e do Portal do cliente.",
++            "Escreva o motivo (pelo menos 10 letras, por exemplo \"certificado de outro cliente, registrado por engano\") e toque em \"Confirmar exclusão\". Para desistir, toque em \"Cancelar\".",
++            "Nada é apagado: o arquivo e o registro do módulo continuam guardados. A exclusão fica registrada com quem, quando e o motivo.",
++            "Para trazer de volta, o Administrador ou a Diretoria abre \"Documentos excluídos\", no fim da mesma aba, escreve o motivo e toca em \"Restaurar\".",
++            "Se o documento é de outro cliente, depois de excluir, registre-o no cliente certo pelo Arquivo de documentos ou no módulo que o gerou."
++          ]
++        },
++        {
+           titulo: "Editar um cliente",
+           itens: [
+             "Toque em \"Editar\" na linha do cliente ou no rodapé do painel.",
+@@ -399,9 +410,10 @@
+         {
+           titulo: "O que a pessoa vê ao ler o QR Code",
+           itens: [
+-            "Depois de entrar no SGO+ (o cliente com o próprio login), abre a identificação do equipamento e, logo abaixo, o \"Prontuário do equipamento\" organizado por pasta: certificados de calibração, qualificações, relatórios técnicos e de ciclos, ordens de serviço, manutenção, PGT e POP, registros operacionais, NR-13, laudos e declarações.",
+-            "Cada pasta mostra quantos documentos tem. O documento mais novo vem primeiro, com a data e a validade (em dia, vence em X dias ou vencido); as revisões anteriores ficam em \"Versões anteriores\". A situação da qualificação aparece no alto.",
+-            "PGT, POP e registros operacionais são documentos da unidade: aparecem em todos os equipamentos dela, com o POP do tipo do equipamento primeiro.",
++            "Depois de entrar no SGO+ (o cliente com o próprio login), abre a identificação do equipamento e, logo abaixo, o \"Prontuário do equipamento\" organizado por pasta: certificados de calibração, qualificações, relatórios técnicos e de ciclos, ordens de serviço, manutenção, NR-13, laudos e declarações.",
++            "Aparecem só os documentos ligados a este equipamento, pelo cadastro dele. Documento de outro equipamento nunca aparece, nem quando os dois têm a mesma TAG e o mesmo tipo.",
++            "Cada pasta mostra quantos documentos tem. O documento mais novo vem primeiro, com a data e a validade (em dia, vence em X dias ou vencido). De um documento gerado mais de uma vez aparece só o último gerado, que é o oficial. A situação da qualificação aparece no alto.",
++            "O PGT e os POP são documentos da unidade, gerados pelo CNPJ, e não aparecem no QR Code do equipamento. Eles ficam na aba \"Documentos por pasta\" da unidade e do cliente, e no Portal do cliente, em \"Por pastas (prontuário)\". O QR Code também não abre mais a pasta de arquivos do equipamento, porque ela era achada pelo nome (TAG e tipo) e podia ser a mesma de outro equipamento.",
+             "Contratos e propostas, minutas, documentos internos e PGT/POP suspenso nunca aparecem pelo QR Code para o cliente.",
+             "Só aparecem documentos emitidos e aprovados pelo responsável técnico. Minuta nunca aparece.",
+             "O cliente só vê os equipamentos da própria empresa. Cada consulta e cada documento aberto ficam registrados."
+diff -ruN cand31/SGO_Ajuda_PortalCliente.js cand32/SGO_Ajuda_PortalCliente.js
+--- cand31/SGO_Ajuda_PortalCliente.js	2026-11-18 20:17:29.256213900 -0300
++++ cand32/SGO_Ajuda_PortalCliente.js	2026-11-18 22:59:21.245117300 -0300
+@@ -202,7 +202,7 @@
+       ],
+       passos: [
+         { titulo: 'Encontrar um documento', itens: ['Filtre por unidade, equipamento, tipo, data de emissão ou validade ("Vence até").', 'Use "Buscar" para o número do certificado, a TAG, a série ou o nome do documento.', 'Toque em "Limpar" para ver todos de novo.'] },
+-        { titulo: 'Abrir', itens: ['Toque em "Abrir": o PDF abre numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.', 'Quando um documento tem revisões, a mais nova fica na frente e as anteriores ficam em "Versões anteriores".'] },
++        { titulo: 'Abrir', itens: ['Toque em "Abrir": o PDF abre numa aba nova. No celular, o documento abre dentro do SGO+, com Voltar e Imprimir.', 'Quando um documento foi gerado mais de uma vez (uma revisão nova, o mesmo certificado emitido de novo), aparece só o último gerado, que é o oficial. Os anteriores ficam guardados pela Metrolabs e não aparecem no Portal.'] },
+         { titulo: 'Por pastas (prontuário)', itens: ['Toque na aba "Por pastas (prontuário)": aparecem todos os documentos emitidos para a sua empresa, organizados por pasta, como no prontuário do equipamento pelo QR Code.', 'Ali ficam também PGT e POP da unidade, as ordens de serviço e as qualificações. Use a busca e os filtros de unidade e equipamento e toque no documento para abrir.'] },
+         { titulo: 'Se faltar um documento', itens: ['Veja também a aba "Por pastas (prontuário)".', 'Se não estiver em nenhuma das duas, avise a Metrolabs pela Conversa geral (Chamados > Conversa geral), dizendo o equipamento e o documento que falta.'] }
+       ],
+diff -ruN cand31/SGO_AssistenteManuais.js cand32/SGO_AssistenteManuais.js
+--- cand31/SGO_AssistenteManuais.js	2026-11-18 21:20:08.738586900 -0300
++++ cand32/SGO_AssistenteManuais.js	2026-11-18 23:06:23.895432000 -0300
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "09bfddc0ffbb",
++ "versao": "c662e70c1481",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -420,11 +420,23 @@
+     },
+     {
+      "titulo": "Documentos organizados por pasta (17/11/2026) > Onde aparece",
+-     "texto": "QR Code (prontuário do equipamento no celular): os documentos do equipamento, por pasta, mais o PGT, os POP e os registros operacionais da unidade dele (o POP do tipo do equipamento vem primeiro).\nCadastros > Clientes > aba \"Documentos por pasta\": todos os documentos do cliente, com busca e filtro por unidade e equipamento, e os botões Abrir e Enviar.\nCadastros > Unidades e Equipamentos > aba \"Documentos por pasta\": o mesmo recorte para a unidade e para o equipamento (no equipamento é o mesmo prontuário do QR Code, mais o que só a equipe vê).\nArquivo de documentos, na conta de cliente: \"Documentos da sua empresa por pasta\", no alto da tela.\nCadastros > Clientes > aba \"Documentos gerados e envios\": os documentos salvos nas pastas do cliente, separados nas mesmas pastas, com o último envio."
++     "texto": "QR Code (prontuário do equipamento no celular): só os documentos ligados ao equipamento, por pasta. O PGT, os POP e os registros operacionais são da unidade e ficam nas pastas da unidade e do cliente (veja \"Cada equipamento só com o que é dele\", abaixo).\nCadastros > Clientes > aba \"Documentos por pasta\": todos os documentos do cliente, com busca e filtro por unidade e equipamento, e os botões Abrir e Enviar.\nCadastros > Unidades e Equipamentos > aba \"Documentos por pasta\": o mesmo recorte para a unidade e para o equipamento (no equipamento é o mesmo prontuário do QR Code, mais o que só a equipe vê).\nArquivo de documentos, na conta de cliente: \"Documentos da sua empresa por pasta\", no alto da tela.\nCadastros > Clientes > aba \"Documentos gerados e envios\": os documentos salvos nas pastas do cliente, separados nas mesmas pastas, com o último envio."
+     },
+     {
+      "titulo": "Documentos organizados por pasta (17/11/2026) > Como ler cada documento",
+-     "texto": "O documento mais novo vem primeiro, com a data de emissão e a validade: Válido até, Vence em X dias (amarelo, até 30 dias) ou Vencido há X dias (vermelho). Revisões anteriores e versões do mesmo documento (por exemplo, POP028 v1 e v2) ficam dentro dele, em Versões anteriores: nada é apagado. O mesmo arquivo registrado em dois lugares (o certificado que o módulo grava e o registro no Arquivo de documentos, por exemplo) aparece uma vez só; a equipe vê o aviso de quantos registros ele tem."
++     "texto": "O documento mais novo vem primeiro, com a data de emissão e a validade: Válido até, Vence em X dias (amarelo, até 30 dias) ou Vencido há X dias (vermelho). De um documento gerado mais de uma vez (por exemplo, POP028 v1 e v2, ou o mesmo certificado emitido três vezes) aparece só o último gerado, que é o oficial. Os anteriores ficam guardados, marcados como substituídos, e só Admin e Diretoria os veem, em Substituídos, dentro do documento oficial. Nada é apagado. O mesmo arquivo registrado em dois lugares (o certificado que o módulo grava e o registro no Arquivo de documentos, por exemplo) aparece uma vez só; a equipe vê o aviso de quantos registros ele tem."
++    },
++    {
++     "titulo": "Documentos organizados por pasta (17/11/2026) > Cada equipamento só com o que é dele (18/11/2026) (parte 1)",
++     "texto": "Regra do dono, depois do caso em que o QR Code de todos os equipamentos de uma unidade mostrava os mesmos 29 PGT e POP: nenhum dado de um equipamento pode aparecer em outro, e documento gerado mais de uma vez não pode ser visto repetido. 1. Vínculo exato. O prontuário do equipamento (QR Code, aba \"Documentos por pasta\" do equipamento e ficha do equipamento no Portal do cliente) mostra só os documentos que têm o identificador daquele equipamento no cadastro. Documento sem equipamento não aparece no equipamento. A pasta da unidade mostra só o que está ligado à unidade; o que é só do cliente fica na ficha do cliente. 2. PGT, POP e registros operacionais são da unidade. Eles são gerados pelo CNPJ, sem equipamento. Ficam nas pastas da unidade e do cliente e no Portal do cliente (\"Por pastas (prontuário)\"), e não aparecem mais no QR Code do equipamento. A configuração antiga que escolhia \"documentos da unidade no prontuário do equipamento\" deixou de valer. 3. Só o último gerado. O mesmo documento gerado de novo vale uma vez só, na última geração (a oficial). O sistema reconhece a repetição dentro do mesmo equipamento (ou da mesma unidade, para os documentos da unidade): o certificado de calibração pela data da calibração e pelos instrumentos calibrados (dois manômetros calibrados no mesmo dia continuam dois certificados); os relatórios de ensaio e de qualificação pelo número (espaços repetidos e acentos não contam); os demais pelo número ou pelo nome do arquivo. 4. Quem vê os substituídos. No QR Code, no Portal do cliente, na conta de cliente e para os perfis da equipe que não são Admin nem Diretoria, aparece só o oficial; a equipe vê o aviso \"N documentos gerados de novo ficaram fora desta lista\"."
++    },
++    {
++     "titulo": "Documentos organizados por pasta (17/11/2026) > Cada equipamento só com o que é dele (18/11/2026) (parte 2)",
++     "texto": "Admin e Diretoria veem os anteriores na ficha, em \"Substituídos\", marcados como substituídos. Nenhum registro é apagado do banco. 5. Pasta de arquivos do equipamento. O QR Code não abre mais a pasta de arquivos do equipamento. Ela era achada pelo nome (\"TAG - TIPO\") e equipamentos com a mesma TAG e o mesmo tipo na mesma unidade (por exemplo, vários \"N/P - TERMOHIGRÔMETRO\") caíam na mesma pasta, que também mostrava cada arquivo gerado de novo. 6. Substituição gravada pelos módulos. Os módulos de relatórios de ensaio (autoclave, lavadora, estufa e cadeia de frio) e o registro de revisões (PGT e POP, entre outros) marcavam como substituído qualquer documento com o mesmo número, até de outro equipamento ou de outro cliente. Agora marcam só o do mesmo equipamento (sem equipamento, do mesmo CNPJ). As marcas antigas erradas não foram mexidas no banco: a lista de documentos recalcula a situação dentro de cada equipamento."
++    },
++    {
++     "titulo": "Documentos organizados por pasta (17/11/2026) > Excluir documento da pasta (18/11/2026)",
++     "texto": "Pedido do Matheus: há documentos cadastrados em clientes a que não pertencem, o que pode trazer problema com a fiscalização. Na aba Documentos por pasta do equipamento (e também na da unidade e na do cliente), quem tem a caixa «Excluir documento da pasta» vê o botão Excluir em cada documento.\n1. Toque em Excluir. Aparece, dentro do próprio documento, a confirmação com o nome do documento, o equipamento e o cliente, e o aviso de que ele some do QR Code, das pastas, das fichas e do Portal do cliente.\n2. Escreva o motivo (obrigatório, pelo menos 10 letras) e toque em Confirmar exclusão. Para desistir, toque em Cancelar.\n3. O documento sai na hora de todas as telas e a conta de cliente não consegue mais abrir o arquivo, nem pelo link.\n\nExclusão lógica. Nada é apagado: o registro do módulo (certificado, relatório, Arquivo de documentos) e o arquivo continuam guardados. A exclusão é uma linha na tabela DOCP_EXCLUSOES com o documento, o cliente, a unidade, o equipamento, quem excluiu, quando e o motivo, e fica também no registro de eventos (DOCUMENTO_EXCLUIDO_PASTA).\n\nDocumentos excluídos e restaurar. Só o Administrador e a Diretoria veem, no fim da mesma aba, a lista Documentos excluídos, com quem excluiu, quando e o motivo. Para trazer um documento de volta, escrevem o motivo e tocam em Restaurar (registrado como DOCUMENTO_RESTAURADO_PASTA).\n\nCaixa de Acessos. «Excluir documento da pasta» (DOCP_EXCLUIR), grupo \"Documentos por pasta\". Padrão: Administrador, Diretoria e gestores das áreas Técnica, Qualidade e Comercial (inclui o gestor da Qualidade). Para dar ou tirar de outra pessoa, use Administração > Acessos.\n\nDepois de excluir um documento de outro cliente, registre-o no cliente certo (Arquivo de documentos ou o módulo que o gerou)."
+     },
+     {
+      "titulo": "Documentos organizados por pasta (17/11/2026) > O que o cliente vê",
+@@ -436,7 +448,7 @@
+     },
+     {
+      "titulo": "Documentos organizados por pasta (17/11/2026) > Configuração (Administrador)",
+-     "texto": "A organização vem pronta. Quando preciso, o responsável pelo sistema ajusta a configuração DOCP_CFG (propriedade do servidor), que permite: trocar o nome de uma pasta, esconder uma pasta do cliente, acrescentar uma regra pelo nome ou pelo tipo (por exemplo, \"LAUDO TECNICO\" para Relatórios técnicos), escolher quais documentos da unidade entram no prontuário do equipamento (padrão: PGT e POP e Registros operacionais), o prazo de \"vencendo\" (padrão 30 dias) e se a conta de cliente abre os documentos emitidos do prontuário pela trava de arquivo (padrão: sim).\n\n</div>"
++     "texto": "A organização vem pronta. Quando preciso, o responsável pelo sistema ajusta a configuração DOCP_CFG (propriedade do servidor), que permite: trocar o nome de uma pasta, esconder uma pasta do cliente, acrescentar uma regra pelo nome ou pelo tipo (por exemplo, \"LAUDO TECNICO\" para Relatórios técnicos), o prazo de \"vencendo\" (padrão 30 dias) e se a conta de cliente abre os documentos emitidos do prontuário pela trava de arquivo (padrão: sim).\n\n</div>"
+     }
+    ]
+   },
+@@ -4986,11 +4998,11 @@
+     },
+     {
+      "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Documentos técnicos (o que o cliente vê) (parte 1)",
+-     "texto": "A lista usa o mesmo índice de \"Documentos em pastas\" (Cadastros, ficha do equipamento e QR Code). Ele junta o Arquivo de documentos, os certificados de calibração, as qualificações, os laudos NR-13, os relatórios das O.S. encerradas (versão do cliente), os relatórios A4 com público \"cliente\", as rondas, os relatórios do ciclo da lavadora e as revisões emitidas. Não existe um segundo agregador. Rascunho, minuta, versão interna, documento suspenso, inativo e a pasta de contratos e propostas nunca chegam ao cliente.\n\nSobre essa base valem duas regras do portal:\n1. Tipos visíveis (decisão 17 do dono). Aparecem sozinhos: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros tipos (PGT e POP, registros operacionais, relatórios técnicos e de ensaio, relatórios de manutenção, laudos e declarações, outros) só aparecem quando liberados um a um. A lista fica em Regras do portal.\n2. Marca do documento (coluna PORTAL do Arquivo de documentos): em branco segue a regra do tipo; \"Oculto no portal\" esconde o documento da lista e da abertura em todas as telas do cliente (inclusive o Arquivo de documentos antigo, o QR Code e a central de vencimentos); \"Liberado um a um\" mostra o documento mesmo com o tipo fora da lista.\n\nFiltros: unidade, equipamento, tipo, data de emissão (\"Emitido\"), validade (\"Vence até\") e busca por número, TAG, série ou nome. Cada linha traz o tipo, o título, o número, o equipamento, a unidade, a emissão, a validade com o selo (em dia, vence em até 30 dias, vencido) e o botão \"Abrir\". As versões anteriores de um documento ficam guardadas logo abaixo dele."
++     "texto": "A lista usa o mesmo índice de \"Documentos em pastas\" (Cadastros, ficha do equipamento e QR Code). Ele junta o Arquivo de documentos, os certificados de calibração, as qualificações, os laudos NR-13, os relatórios das O.S. encerradas (versão do cliente), os relatórios A4 com público \"cliente\", as rondas, os relatórios do ciclo da lavadora e as revisões emitidas. Não existe um segundo agregador. Rascunho, minuta, versão interna, documento suspenso, inativo e a pasta de contratos e propostas nunca chegam ao cliente.\n\nSobre essa base valem duas regras do portal:\n1. Tipos visíveis (decisão 17 do dono). Aparecem sozinhos: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros tipos (PGT e POP, registros operacionais, relatórios técnicos e de ensaio, relatórios de manutenção, laudos e declarações, outros) só aparecem quando liberados um a um. A lista fica em Regras do portal.\n2. Marca do documento (coluna PORTAL do Arquivo de documentos): em branco segue a regra do tipo; \"Oculto no portal\" esconde o documento da lista e da abertura em todas as telas do cliente (inclusive o Arquivo de documentos antigo, o QR Code e a central de vencimentos); \"Liberado um a um\" mostra o documento mesmo com o tipo fora da lista."
+     },
+     {
+      "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Documentos técnicos (o que o cliente vê) (parte 2)",
+-     "texto": "Abrir: o documento abre numa aba nova no computador; no celular, abre dentro do SGO+, com Voltar e Imprimir. A tela pede ao servidor, que confere se o documento está na lista da pessoa e passa pela trava de arquivo (PortalCliente_arquivoPermitido_, a mesma da rota /arquivos). A abertura fica em PCL_ACESSOS como DOCUMENTO_ABERTO. Documento de outro cliente, de outra unidade, oculto ou inexistente recebe a mesma resposta: \"Não encontrado. Atualize a lista.\" Quando o documento existe na lista de outro cliente ou unidade, a tentativa fica como ESCOPO_RECUSADO."
++     "texto": "Filtros: unidade, equipamento, tipo, data de emissão (\"Emitido\"), validade (\"Vence até\") e busca por número, TAG, série ou nome. Cada linha traz o tipo, o título, o número, o equipamento, a unidade, a emissão, a validade com o selo (em dia, vence em até 30 dias, vencido) e o botão \"Abrir\". De um documento gerado mais de uma vez aparece só o último gerado, que é o oficial; os anteriores ficam no banco e não chegam ao cliente (18/11/2026). A ficha do equipamento mostra só os documentos com o identificador dele; o PGT e os POP são da unidade e ficam em \"Por pastas (prontuário)\".\n\nAbrir: o documento abre numa aba nova no computador; no celular, abre dentro do SGO+, com Voltar e Imprimir. A tela pede ao servidor, que confere se o documento está na lista da pessoa e passa pela trava de arquivo (PortalCliente_arquivoPermitido_, a mesma da rota /arquivos). A abertura fica em PCL_ACESSOS como DOCUMENTO_ABERTO. Documento de outro cliente, de outra unidade, oculto ou inexistente recebe a mesma resposta: \"Não encontrado. Atualize a lista.\" Quando o documento existe na lista de outro cliente ou unidade, a tentativa fica como ESCOPO_RECUSADO."
+     },
+     {
+      "titulo": "Documentos, equipamentos, vencimentos e cronograma (etapa 3, 18/11/2026) > Meus equipamentos",
+diff -ruN cand31/SGO_DocRevisao.js cand32/SGO_DocRevisao.js
+--- cand31/SGO_DocRevisao.js	2026-11-18 20:17:17.511099600 -0300
++++ cand32/SGO_DocRevisao.js	2026-11-18 22:47:36.955129600 -0300
+@@ -288,6 +288,16 @@
+     .sort(function (a, b) { return (parseInt(a.REVISAO, 10) || 0) - (parseInt(b.REVISAO, 10) || 0); });
+ }
+ 
++/** 18/11/2026: o registro r é do mesmo alvo da emissão info? Equipamento igual; sem equipamento, CNPJ igual; sem dado, sim (como antes). */
++function SGO_DocRev_mesmoAlvo_(r, info) {
++  if (!r || !info) return true;
++  var ea = SGO_DocRev_s_(r.EQUIPAMENTO_ID), eb = SGO_DocRev_s_(info.equipamentoId);
++  if (ea && eb) return ea === eb;
++  var ca = SGO_DocRev_s_(r.CNPJ).replace(/\D/g, ''), cb = SGO_DocRev_s_(info.cnpj).replace(/\D/g, '');
++  if (ca && cb) return ca === cb;
++  return true;
++}
++
+ /** Próxima revisão: maior revisão registrada + 1 (nunca menor que a mínima informada pelo gerador). */
+ function SGO_DocRev_proximaRevisao_(modulo, numero, minima) {
+   var lista = SGO_DocRev_doNumero_(modulo, numero);
+@@ -582,7 +592,9 @@
+     }
+     var id = 'DR-' + Utilities.getUuid().slice(0, 8).toUpperCase();
+     var agora = SGO_DocRev_agora_();
+-    var anteriores = SGO_DocRev_doNumero_(modulo, numero).filter(function (r) { return r.STATUS === 'EMITIDO'; });
++    // 18/11/2026: substitui só a do MESMO equipamento (sem equipamento, do mesmo CNPJ). Antes bastava o número: o POP003 de um
++    // cliente marcava como substituído o POP003 de outro cliente, e o ensaio "Ciclo 1 de 3" de um equipamento o de outro.
++    var anteriores = SGO_DocRev_doNumero_(modulo, numero).filter(function (r) { return r.STATUS === 'EMITIDO' && SGO_DocRev_mesmoAlvo_(r, info); });
+     SGO_DocRev_inserir_({
+       ID: id, MODULO: modulo, NUMERO: numero, REVISAO: String(revisao), STATUS: 'EMITIDO', SUBSTITUIDA_POR: '', MOTIVO: rev.ehRevisao ? rev.motivo : '',
+       ORIGEM_ID: rev.origemId || '', EMITIDO_POR: SGO_DocRev_nomeSessao_(sessao), EMITIDO_LOGIN: SGO_DocRev_s_(sessao && sessao.usuario), EMITIDO_EM: agora,
+diff -ruN cand31/SGO_DocumentosPastas.js cand32/SGO_DocumentosPastas.js
+--- cand31/SGO_DocumentosPastas.js	2026-11-18 20:17:33.957536300 -0300
++++ cand32/SGO_DocumentosPastas.js	2026-11-18 23:04:05.767829300 -0300
+@@ -29,9 +29,33 @@
+  *  { "pastas": { "PGT_POP": { "nome": "PGT e POP", "clienteVe": true } },   nome da pasta e se o cliente vê (as internas nunca)
+  *    "regras": [ { "contem": "LAUDO TECNICO", "pasta": "RELATORIOS_TECNICOS" } ],   regras extras pelo tipo/nome (vêm antes)
+  *    "clienteAbreProntuario": true,       a conta de cliente abre os documentos emitidos do prontuário dela (trava de arquivo)
+- *    "pastasDaUnidadeNoEquipamento": ["PGT_POP", "REGISTROS"],   documentos da unidade que aparecem no prontuário do equipamento
++ *    (18/11/2026: "pastasDaUnidadeNoEquipamento" deixou de valer e é ignorada — o prontuário do equipamento só mostra o que é dele)
+  *    "diasVencendo": 30 }
+  * Nenhuma função devolve Date: datas são texto (aaaa-mm-dd e dd/mm/aaaa).
++ *
++ * 18/11/2026 — REGRA DO DONO (vazamento no QR Code): "nunca, jamais, dado de nenhum equipamento pode cruzar com outro; todo
++ * equipamento só deve ter e abrir só o que é pertinente a ele; documentos gerados mais de uma vez não podem ser vistos: só o
++ * último gerado, que é o oficial."
++ *  1. Equipamento: só documentos cujo EQUIPAMENTO_ID é exatamente o dele. PGT, POP e registros operacionais são documentos da
++ *     unidade (gerados pelo CNPJ, sem equipamento) e ficam nas pastas da unidade e do cliente, nunca no do equipamento.
++ *     Unidade: só documentos ligados a ela (documento só do cliente aparece na pasta do cliente).
++ *  2. Mesmo documento gerado mais de uma vez = mesma chave de versão DENTRO do mesmo vínculo (equipamento, ou unidade, ou cliente):
++ *     certificado de calibração pela data da calibração + grandezas calibradas; relatórios de ensaio e de qualificação pelo
++ *     número (espaços e acentos não contam); demais pelo número ou pelo nome. Antes a chave não tinha o vínculo e um documento
++ *     de um equipamento podia virar "versão anterior" de outro equipamento com o mesmo número ("Ciclo 1 de 3").
++ *  3. Em cada chave vale o último gerado. Os anteriores ficam no banco (nada é apagado), marcados "substituído", e só Admin e
++ *     Diretoria os veem, na ficha da equipe. QR Code, Portal, conta de cliente e os demais perfis veem só o oficial.
++ *  4. A situação SUBSTITUIDO gravada pelos módulos de ensaio (QUALIF_EMISSOES) e de revisões (DOC_REVISOES) era marcada só pelo
++ *     número, sem olhar o equipamento ou o CNPJ: aqui ela é recalculada dentro do vínculo (a gravação também foi corrigida em
++ *     SGO_QualifEmissao.js e SGO_DocRevisao.js para as emissões novas).
++ *
++ * 18/11/2026 — EXCLUIR DOCUMENTO DA PASTA (pedido do Matheus: "existem documentos cadastrados dentro de alguns clientes que não
++ * pertencem a eles, e pode nos trazer problemas com fiscalização"): exclusão LÓGICA. Nada é apagado do banco nem do Drive: a
++ * exclusão é uma linha na aba DOCP_EXCLUSOES (quem, quando, motivo obrigatório) e o índice deixa o documento de fora em todas as
++ * telas (QR Code, pastas, fichas, Portal do cliente) e na trava de arquivo da conta de cliente. Quem exclui: caixa de Acessos
++ * «Excluir documento da pasta» (DOCP_EXCLUIR; padrão: Administrador, Diretoria e gestores das áreas Técnica, Qualidade e
++ * Comercial). Quem vê os excluídos e restaura: só Administrador e Diretoria (lista "Documentos excluídos" na própria ficha).
++ * Chamada das telas: documentosPastasAcao(sessionId, 'excluir' | 'restaurar' | 'excluidos', dados).
+  ****************************************************/
+ 
+ var DOCP_FUSO = 'America/Sao_Paulo';
+@@ -106,6 +130,31 @@
+   REGOP_LISTA: 'Registros operacionais', CLI_CONTRATOS: 'Contrato do cliente'
+ };
+ var DOCP_PERFIS_EQUIPE_QR = ['ADMIN', 'DIRETORIA', 'GESTOR', 'TECNICO', 'METROLOGIA'];
++/** 18/11/2026: exclusão lógica de documento da pasta (aba própria; nada é apagado). */
++var DOCP_ABA_EXCLUSOES = 'DOCP_EXCLUSOES';
++var DOCP_COLUNAS_EXCLUSOES = ['ID', 'CHAVE', 'ARQUIVO_ID', 'ORIGEM', 'TITULO', 'PASTA', 'CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'SITUACAO', 'MOTIVO', 'POR_ID', 'POR_NOME', 'EM',
++  'RESTAURADO_MOTIVO', 'RESTAURADO_POR_ID', 'RESTAURADO_POR_NOME', 'RESTAURADO_EM', 'CRIADO_EM'];
++var DOCP_MOTIVO_MIN = 10;
++/** Caixa de Acessos (registrada pelo próprio módulo, como as do Portal do cliente). */
++var DOCP_PODERES_ITENS = [
++  ['DOCP_EXCLUIR', 'Documentos por pasta', 'Excluir documento da pasta', 'Mostra o botão "Excluir" em cada documento das pastas (ficha do equipamento, da unidade e do cliente) e tira da lista o documento que não pertence àquele equipamento ou cliente, com motivo obrigatório. A exclusão é lógica: nada é apagado do banco nem do arquivo; o documento some do QR Code, das pastas, das fichas e do Portal do cliente, e só Administrador e Diretoria veem a lista de excluídos e restauram. Padrão: Administrador, Diretoria e gestores das áreas Técnica, Qualidade e Comercial.', 'operar', 15]
++];
++var DOCP_PODERES_PADRAO = {
++  DOCP_EXCLUIR: function (eu, c) {
++    if (c && (c.admin || c.diretoria)) return true;
++    var area = Docs_up_(eu && eu.area);
++    if (c && c.p === 'GESTOR' && ['TECNICA', 'QUALIDADE', 'COMERCIAL'].indexOf(area) >= 0) return true;
++    try { return !!(c && typeof c.com === 'function' && c.com() && c.com().gestao); } catch (e) { return false; }
++  }
++};
++var SGO_PODERES_MODULOS = (typeof SGO_PODERES_MODULOS !== 'undefined' && SGO_PODERES_MODULOS) || [];
++DOCP_PODERES_ITENS.forEach(function (it) {
++  if (SGO_PODERES_MODULOS.some(function (m) { return m && m.item && m.item[0] === it[0]; })) return;
++  SGO_PODERES_MODULOS.push({ item: it, padrao: DOCP_PODERES_PADRAO[it[0]], ligado: true });
++});
++
++/** 18/11/2026: pastas de documentos da unidade (gerados pelo CNPJ): não aparecem vazias no prontuário do equipamento. */
++var DOCP_PASTAS_DA_UNIDADE = { PGT_POP: true, REGISTROS: true };
+ 
+ /* ============================================================ utilidades */
+ 
+@@ -169,6 +218,18 @@
+     .replace(/[^A-Z0-9]+/g, ' ').trim();
+ }
+ 
++/** 18/11/2026: número como chave de versão — sem acento, maiúsculo, espaços repetidos contam como um ("Ciclo 4  de 4" = "Ciclo 4 de 4"). */
++function Docs_numChave_(v) { return Docs_norm_(v).replace(/\s+/g, ' ').trim(); }
++
++/** 18/11/2026: grandezas calibradas no certificado (títulos dos blocos do DADOS_JSON), para separar certificados do mesmo dia
++ *  que são de instrumentos diferentes do mesmo equipamento (manômetro da câmara interna e o da geradora, por exemplo). */
++function Docs_blocosCert_(dadosJson) {
++  try {
++    var d = typeof dadosJson === 'string' ? JSON.parse(dadosJson || '{}') : (dadosJson || {});
++    return (Array.isArray(d.blocos) ? d.blocos : []).map(function (b) { return Docs_numChave_(b && b.titulo); }).filter(Boolean).sort().join('+');
++  } catch (e) { return ''; }
++}
++
+ /* ============================================================ configuração */
+ 
+ function Docs_cfg_() {
+@@ -181,7 +242,8 @@
+   });
+   var regras = (Array.isArray(c.regras) ? c.regras : []).filter(function (r) { return r && Docs_s_(r.contem).length >= 3 && pastas[Docs_up_(r.pasta)]; })
+     .map(function (r) { return { contem: Docs_norm_(r.contem), pasta: Docs_up_(r.pasta) }; });
+-  var daUnidade = Array.isArray(c.pastasDaUnidadeNoEquipamento) ? c.pastasDaUnidadeNoEquipamento.map(Docs_up_).filter(function (x) { return pastas[x]; }) : ['PGT_POP', 'REGISTROS'];
++  // 18/11/2026: documento da unidade não entra mais no prontuário do equipamento (regra do dono); a chave antiga é ignorada
++  var daUnidade = [];
+   var dias = Math.round(Number(c.diasVencendo));
+   return { pastas: pastas, regras: regras, clienteAbreProntuario: c.clienteAbreProntuario !== false, pastasDaUnidadeNoEquipamento: daUnidade, diasVencendo: dias >= 1 && dias <= 180 ? dias : 30 };
+ }
+@@ -259,7 +321,7 @@
+     var st = Docs_up_(d.STATUS || 'ATIVO');
+     add({ origem: 'ARQUIVO', modulo: '', tipo: Docs_rotuloTipo_(d.TIPO_DOCUMENTO), tipoBruto: Docs_s_(d.TIPO_DOCUMENTO), titulo: Docs_semExt_(d.NOME_ARQUIVO) || 'Documento sem nome',
+       nome: Docs_s_(d.NOME_ARQUIVO), numero: '', revisao: '', clienteId: Docs_s_(d.CLIENTE_ID), unidadeId: Docs_s_(d.UNIDADE_ID), equipamentoId: Docs_s_(d.EQUIPAMENTO_ID),
+-      emitidoIso: Docs_iso_(d.DATA_EMISSAO) || Docs_iso_(d.CRIADO_EM), validadeIso: Docs_dia_(d.DATA_VENCIMENTO), situacao: st === 'INATIVO' ? 'INATIVO' : 'VIGENTE',
++      emitidoIso: Docs_iso_(d.DATA_EMISSAO) || Docs_iso_(d.CRIADO_EM), geradoIso: Docs_iso_(d.CRIADO_EM), validadeIso: Docs_dia_(d.DATA_VENCIMENTO), situacao: st === 'INATIVO' ? 'INATIVO' : 'VIGENTE',
+       arquivoId: Docs_idDoLink_(d.LINK_ARQUIVO), link: Docs_s_(d.LINK_ARQUIVO), docDocumentoId: Docs_s_(d.ID), publico: true,
+       // 18/11/2026 (Portal do cliente, etapa 3): '' segue a regra do tipo; OCULTO esconde do cliente (lista e arquivo); VISIVEL libera um a um
+       portal: Docs_up_(d.PORTAL),
+@@ -272,9 +334,13 @@
+     if (/CANCEL|EXCLU|INATIV|RASCUNHO/.test(st)) return;
+     var num = Docs_s_(r.NUMERO_CERTIFICADO), link = Docs_s_(r.LINK_PDF_CERTIFICADO);
+     if (!link && !num) return;
++    // 18/11/2026: o mesmo certificado gerado várias vezes (mesmo equipamento, mesma data de calibração, mesmas grandezas) tem
++    // números diferentes; a chave de versão é a calibração, não o número. Sem data de calibração, vale o número (como antes).
++    var dcal = Docs_dia_(r.DATA_CALIBRACAO);
+     add({ origem: 'CERT_CALIBRACAO', modulo: 'CERTIFICADO_CALIBRACAO', tipo: 'Certificado de calibração', titulo: 'Certificado de calibração' + (num ? ' nº ' + num : ''), nome: '', numero: num, revisao: '',
+       clienteId: Docs_s_(r.CLIENTE_ID), unidadeId: '', equipamentoId: Docs_s_(r.EQUIPAMENTO_ID), emitidoIso: Docs_iso_(r.DATA_EMISSAO) || Docs_iso_(r.DATA_CALIBRACAO) || Docs_iso_(r.CRIADO_EM),
+-      validadeIso: Docs_dia_(r.DATA_VALIDADE), situacao: st === 'SUBSTITUIDO' ? 'SUBSTITUIDO' : 'VIGENTE', arquivoId: Docs_idDoLink_(link), link: link, publico: true, chave: 'CERT:' + (num || link) });
++      geradoIso: Docs_iso_(r.CRIADO_EM), validadeIso: Docs_dia_(r.DATA_VALIDADE), situacao: st === 'SUBSTITUIDO' ? 'SUBSTITUIDO' : 'VIGENTE', arquivoId: Docs_idDoLink_(link), link: link, publico: true,
++      chave: dcal ? 'CERTCAL:' + dcal + ':' + Docs_blocosCert_(r.DADOS_JSON) : 'CERT:' + (num || link) });
+   });
+ 
+   // 3. Relatórios de autoclave, lavadora, estufa e cadeia de frio (QUALIF_EMISSOES): qualificação (_OFICIAL), ensaio e planilha de dados.
+@@ -289,8 +355,10 @@
+     var rev = Docs_s_(r.REVISAO);
+     add({ origem: 'QUALIF_EMISSOES', modulo: mod, tipo: titulo.replace(/ — .*$/, ''), titulo: titulo + (Docs_s_(r.NUMERO) ? ' nº ' + Docs_s_(r.NUMERO) : '') + (Number(rev) > 0 ? ' · Rev. ' + ('0' + rev).slice(-2) : ''),
+       nome: '', numero: Docs_s_(r.NUMERO), revisao: rev, clienteId: Docs_s_(r.CLIENTE_ID), unidadeId: Docs_s_(r.UNIDADE_ID), equipamentoId: Docs_s_(r.EQUIPAMENTO_ID), cnpj: Docs_digitos_(r.CNPJ),
+-      emitidoIso: Docs_iso_(r.APROVADO_EM) || Docs_iso_(r.ENVIADO_EM), validadeIso: Docs_dia_(r.VALIDADE_ATE), situacao: sit,
+-      arquivoId: sit === 'MINUTA' ? '' : (Docs_s_(r.PDF_ID) || Docs_s_(r.HTML_ID)), link: '', publico: true, chave: 'QE:' + mod + ':' + Docs_s_(r.NUMERO || r.ID) });
++      emitidoIso: Docs_iso_(r.APROVADO_EM) || Docs_iso_(r.ENVIADO_EM), geradoIso: Docs_iso_(r.APROVADO_EM) || Docs_iso_(r.ATUALIZADO_EM), validadeIso: Docs_dia_(r.VALIDADE_ATE), situacao: sit,
++      // 18/11/2026: SUBSTITUIDO aqui foi marcado pelo número, sem olhar o equipamento: o índice recalcula dentro do vínculo
++      porNumero: sit === 'SUBSTITUIDO',
++      arquivoId: sit === 'MINUTA' ? '' : (Docs_s_(r.PDF_ID) || Docs_s_(r.HTML_ID)), link: '', publico: true, chave: 'QE:' + mod + ':' + (Docs_numChave_(r.NUMERO) || Docs_s_(r.ID)) });
+   });
+ 
+   // 4. Esterilização a baixa temperatura (BT_ENSAIOS): validade de 12 meses a partir da emissão (regra do módulo).
+@@ -302,7 +370,7 @@
+     var emit = Docs_iso_(r.EMITIDO_EM), rev = Docs_s_(r.REVISAO);
+     add({ origem: 'BT_ENSAIOS', modulo: 'BAIXA_TEMPERATURA', tipo: 'Relatório de qualificação', titulo: 'Relatório de qualificação — esterilizador a baixa temperatura' + (Docs_s_(r.NUMERO) ? ' nº ' + Docs_s_(r.NUMERO) : '') + (Number(rev) > 0 ? ' · Rev. ' + ('0' + rev).slice(-2) : ''),
+       nome: '', numero: Docs_s_(r.NUMERO), revisao: rev, clienteId: Docs_s_(r.CLIENTE_ID), unidadeId: Docs_s_(r.UNIDADE_ID), equipamentoId: Docs_s_(r.EQUIPAMENTO_ID), cnpj: Docs_digitos_(r.CNPJ),
+-      emitidoIso: emit, validadeIso: sit === 'MINUTA' ? '' : Docs_somarMeses_(emit, mesesBt), situacao: sit,
++      emitidoIso: emit, geradoIso: emit || Docs_iso_(r.ATUALIZADO_EM), validadeIso: sit === 'MINUTA' ? '' : Docs_somarMeses_(emit, mesesBt), situacao: sit,
+       arquivoId: sit === 'MINUTA' ? '' : (Docs_s_(r.PDF_ID) || Docs_idDoLink_(r.LINK_PDF)), link: sit === 'MINUTA' ? '' : Docs_s_(r.LINK_PDF), publico: true, chave: 'BT:' + Docs_s_(r.NUMERO || r.ID) });
+   });
+ 
+@@ -312,7 +380,7 @@
+     if (st !== 'EMITIDO' && st !== 'SUBSTITUIDO') return;
+     var num = Docs_s_(r.NUMERO_LAUDO);
+     add({ origem: 'NR13_LAUDOS', modulo: 'NR13', tipo: 'Laudo de inspeção NR-13', titulo: 'Laudo de inspeção NR-13' + (num ? ' nº ' + num : ''), nome: '', numero: num, revisao: '',
+-      clienteId: Docs_s_(r.CLIENTE_ID), unidadeId: Docs_s_(r.UNIDADE_ID), equipamentoId: Docs_s_(r.EQUIPAMENTO_ID), emitidoIso: Docs_iso_(r.EMITIDO_EM) || Docs_iso_(r.CRIADO_EM),
++      clienteId: Docs_s_(r.CLIENTE_ID), unidadeId: Docs_s_(r.UNIDADE_ID), equipamentoId: Docs_s_(r.EQUIPAMENTO_ID), emitidoIso: Docs_iso_(r.EMITIDO_EM) || Docs_iso_(r.CRIADO_EM), geradoIso: Docs_iso_(r.CRIADO_EM),
+       validadeIso: Docs_dia_(r.DATA_PROXIMA_INSPECAO), situacao: st === 'SUBSTITUIDO' ? 'SUBSTITUIDO' : 'VIGENTE', arquivoId: Docs_idDoLink_(r.LINK_PDF), link: Docs_s_(r.LINK_PDF), publico: true, chave: 'NR13:' + (num || r.ID) });
+   });
+ 
+@@ -380,8 +448,10 @@
+     var rev = Docs_s_(r.REVISAO);
+     add({ origem: 'DOC_REVISOES', modulo: mod, tipo: nomeMod, titulo: (Docs_s_(r.TITULO) || nomeMod) + (Docs_s_(r.NUMERO) && Docs_s_(r.TITULO).indexOf(Docs_s_(r.NUMERO)) < 0 ? ' nº ' + Docs_s_(r.NUMERO) : '') + (Number(rev) > 0 ? ' · Rev. ' + ('0' + rev).slice(-2) : ''),
+       nome: '', numero: Docs_s_(r.NUMERO), revisao: rev, clienteId: '', unidadeId: '', equipamentoId: Docs_s_(r.EQUIPAMENTO_ID), cnpj: Docs_digitos_(r.CNPJ),
+-      emitidoIso: Docs_iso_(r.EMITIDO_EM), validadeIso: '', situacao: suspenso ? 'SUSPENSO' : (st === 'SUBSTITUIDO' ? 'SUBSTITUIDO' : 'VIGENTE'),
+-      arquivoId: arq, link: Docs_s_(r.PDF_URL), publico: true, chave: 'REV:' + mod + ':' + Docs_s_(r.NUMERO || r.ID) });
++      emitidoIso: Docs_iso_(r.EMITIDO_EM), geradoIso: Docs_iso_(r.EMITIDO_EM), validadeIso: '', situacao: st === 'SUBSTITUIDO' ? 'SUBSTITUIDO' : suspenso ? 'SUSPENSO' : 'VIGENTE',
++      // 18/11/2026: SUBSTITUIDO marcado só pelo número (o POP003 de um cliente substituía o POP003 de outro): recalculado no índice
++      porNumero: st === 'SUBSTITUIDO', suspenso: suspenso,
++      arquivoId: arq, link: Docs_s_(r.PDF_URL), publico: true, chave: 'REV:' + mod + ':' + (Docs_numChave_(r.NUMERO) || Docs_s_(r.ID)) });
+   });
+ 
+   // 10. Listas próprias do PGT/POP e dos Registros operacionais (planilha de cada módulo, pelo CNPJ). Só lê; não cria planilha.
+@@ -450,6 +520,7 @@
+       ja.origens[x.origem] = true;
+       ja.repeticoes++;
+       if (!ja.validadeIso && x.validadeIso) ja.validadeIso = x.validadeIso;
++      if (!ja.geradoIso && x.geradoIso) ja.geradoIso = x.geradoIso;
+       if (!ja.equipamentoId && x.equipamentoId) { ja.equipamentoId = x.equipamentoId; ja.unidadeId = ja.unidadeId || x.unidadeId; }
+       if (!ja.unidadeId && x.unidadeId) ja.unidadeId = x.unidadeId;
+       if (!ja.docDocumentoId && x.docDocumentoId) ja.docDocumentoId = x.docDocumentoId;
+@@ -464,7 +535,68 @@
+     if (k) porArquivo[k] = x;
+     itens.push(x);
+   });
+-  return { itens: itens, cad: cad, cfg: cfg };
++  itens.forEach(function (x) { x.chave = Docs_vinculo_(x) + '|' + Docs_s_(x.chave || (x.origem + ':' + (x.arquivoId || x.titulo))); x.kExcl = Docs_chaveExcl_(x); });
++  // 18/11/2026: documento excluído da pasta (exclusão lógica) sai antes das versões: ele não pertence àquele equipamento ou cliente
++  var exc = Docs_exclusoes_(), excluidos = [];
++  itens = itens.filter(function (x) {
++    var e = exc[x.kExcl];
++    if (!e) return true;
++    x.exclusao = { id: Docs_s_(e.ID), motivo: Docs_s_(e.MOTIVO), porNome: Docs_s_(e.POR_NOME), em: Docs_s_(e.EM) };
++    excluidos.push(x);
++    return false;
++  });
++  Docs_resolverVersoes_(itens);
++  return { itens: itens, excluidos: excluidos, cad: cad, cfg: cfg };
++}
++
++/** 18/11/2026: chave da exclusão — o arquivo (vale para todas as fontes do mesmo arquivo); sem arquivo, a chave de versão. */
++function Docs_chaveExcl_(x) { return x.arquivoId ? 'A:' + x.arquivoId : 'K:' + Docs_s_(x.chave); }
++/** Exclusões em vigor: { chave: linha } (a mais recente de cada chave; restaurada não conta). Aba ausente = nenhuma. */
++function Docs_exclusoes_() {
++  var m = {};
++  Docs_ler_(DOCP_ABA_EXCLUSOES).slice().sort(function (a, b) { return Docs_s_(a.EM).localeCompare(Docs_s_(b.EM)); }).forEach(function (r) {
++    var k = Docs_s_(r.CHAVE);
++    if (!k) return;
++    if (Docs_up_(r.SITUACAO) === 'EXCLUIDO') m[k] = r; else delete m[k];
++  });
++  return m;
++}
++/** O arquivo foi excluído da pasta? (trava de arquivo e listas antigas da conta de cliente) */
++function Docs_arquivoExcluido_(arquivoId) { var id = Docs_s_(arquivoId); return !!id && !!Docs_exclusoes_()['A:' + id]; }
++
++/** 18/11/2026: vínculo do documento para a chave de versão — o equipamento; sem equipamento, a unidade; sem unidade, o cliente. */
++function Docs_vinculo_(x) { return x.equipamentoId ? 'E:' + x.equipamentoId : x.unidadeId ? 'U:' + x.unidadeId : 'C:' + x.clienteId; }
++/** Ordem de geração (o mais novo primeiro): quando foi gerado, quando foi emitido, revisão, número. */
++function Docs_maisNovo_(a, b) {
++  var qa = Docs_s_(a.geradoIso || a.emitidoIso || a.quandoIso || a.quando), qb = Docs_s_(b.geradoIso || b.emitidoIso || b.quandoIso || b.quando);
++  return qb.localeCompare(qa) || Docs_s_(b.emitidoIso).localeCompare(Docs_s_(a.emitidoIso)) || (Number(b.revisao) || 0) - (Number(a.revisao) || 0) || Docs_s_(b.numero).localeCompare(Docs_s_(a.numero));
++}
++/** Peso da situação na escolha do oficial: vigente (ou SUBSTITUIDO só pelo número) antes de substituído pelo módulo, e este antes de inativo. */
++function Docs_pesoSituacao_(x) {
++  if (x.situacao === 'INATIVO') return 3;
++  if (x.situacao === 'SUBSTITUIDO' && !x.porNumero) return 2;
++  return 0;
++}
++
++/**
++ * 18/11/2026: em cada chave de versão (dentro do mesmo vínculo) só o último gerado é o oficial; os outros passam a SUBSTITUIDO
++ * (substituidoPor = título do oficial). Minuta não entra (fica à parte, só para a equipe). Nada é apagado. Muda os itens no lugar.
++ */
++function Docs_resolverVersoes_(itens) {
++  var grupos = {};
++  itens.forEach(function (x) {
++    if (x.situacao === 'MINUTA') return;
++    (grupos[x.chave] = grupos[x.chave] || []).push(x);
++  });
++  Object.keys(grupos).forEach(function (k) {
++    var g = grupos[k].slice().sort(function (a, b) { return Docs_pesoSituacao_(a) - Docs_pesoSituacao_(b) || Docs_maisNovo_(a, b); });
++    var oficial = g[0];
++    if (oficial.porNumero && oficial.situacao === 'SUBSTITUIDO') oficial.situacao = oficial.suspenso ? 'SUSPENSO' : 'VIGENTE';
++    g.slice(1).forEach(function (x) {
++      if (x.situacao === 'VIGENTE' || x.situacao === 'SUSPENSO' || x.situacao === 'ENCERRADO') x.situacao = 'SUBSTITUIDO';
++      x.substituidoPor = oficial.titulo;
++    });
++  });
+ }
+ 
+ /* ============================================================ quem vê o quê */
+@@ -546,6 +678,8 @@
+     var pid = cfg.pastas[it.pasta] ? it.pasta : 'OUTROS';
+     var grupos = porPasta[pid] || (porPasta[pid] = {});
+     var k = it.chave || it.chaveVersao || it.k || Math.random().toString(36);
++    // 18/11/2026: minuta aguardando aprovação fica à parte (nunca esconde o documento oficial nem vira "versão anterior")
++    if (it.situacao === 'MINUTA') k += '#MINUTA#' + (it.k || Math.random().toString(36));
+     (grupos[k] = grupos[k] || []).push(it);
+   });
+   var quando = function (x) { return Docs_s_(x.emitidoIso || x.quandoIso || x.quando); };
+@@ -553,14 +687,14 @@
+     var cp = cfg.pastas[p.id], itens = [];
+     Object.keys(porPasta[p.id] || {}).forEach(function (k) {
+       var g = porPasta[p.id][k].slice().sort(function (a, b) {
+-        return (a.situacao === 'INATIVO') - (b.situacao === 'INATIVO') || quando(b).localeCompare(quando(a)) || (Number(b.revisao) || 0) - (Number(a.revisao) || 0);
++        return (a.situacao === 'INATIVO') - (b.situacao === 'INATIVO') || Docs_maisNovo_(a, b);
+       });
+       var principal = g.filter(function (x) { return x.situacao !== 'SUBSTITUIDO' && x.situacao !== 'INATIVO'; })[0] || g[0];
+       var resto = g.filter(function (x) { return x !== principal; });
+       principal.anteriores = resto.map(function (x) { if (x.situacao === 'VIGENTE') { x.situacao = 'SUBSTITUIDO'; x.situacaoTexto = Docs_situacaoTexto_('SUBSTITUIDO'); } return x; });
+       itens.push(principal);
+     });
+-    itens.sort(function (a, b) { return (b.relacionado ? 1 : 0) - (a.relacionado ? 1 : 0) || (a.situacao === 'INATIVO') - (b.situacao === 'INATIVO') || quando(b).localeCompare(quando(a)); });
++    itens.sort(function (a, b) { return (a.situacao === 'INATIVO') - (b.situacao === 'INATIVO') || quando(b).localeCompare(quando(a)); });
+     var venc = itens.filter(function (x) { return x.venc && x.venc.s === 'vencido'; }).length, vendo = itens.filter(function (x) { return x.venc && x.venc.s === 'vencendo'; }).length;
+     return { id: p.id, nome: cp.nome, icone: p.icone, descricao: p.descricao, interna: !!p.interna, total: itens.filter(function (x) { return x.situacao !== 'INATIVO'; }).length, vencidos: venc, vencendo: vendo, itens: itens };
+   });
+@@ -575,15 +709,15 @@
+     k: it.origem + ':' + (it.arquivoId || it.chave), chave: it.chave, pasta: it.pasta, titulo: it.titulo, tipo: it.tipo, numero: it.numero, revisao: it.revisao,
+     unidadeId: it.unidadeId, unidadeNome: un ? Docs_s_(un.NOME_UNIDADE) : '', equipamentoId: it.equipamentoId,
+     equipamentoNome: eq ? [Docs_s_(eq.TAG), Docs_s_(eq.TIPO)].filter(Boolean).join(' · ') : '',
+-    emitidoIso: Docs_dia_(it.emitidoIso), emitido: Docs_br_(it.emitidoIso), validadeIso: it.validadeIso, validade: Docs_br_(it.validadeIso),
++    emitidoIso: Docs_dia_(it.emitidoIso), emitido: Docs_br_(it.emitidoIso), geradoIso: Docs_s_(it.geradoIso), validadeIso: it.validadeIso, validade: Docs_br_(it.validadeIso),
+     venc: it.situacao === 'VIGENTE' ? Docs_vencimento_(it.validadeIso, hoje, cfg.diasVencendo) : null,
+     situacao: it.situacao, situacaoTexto: Docs_situacaoTexto_(it.situacao), url: abre ? url : '', podeAbrir: abre,
+     semAbrirTexto: abre ? '' : (v.cliente ? 'O arquivo deste documento ainda não está liberado para abrir pelo portal. Peça a cópia à Metrolabs pela conversa geral.'
+       : it.situacao === 'MINUTA' ? 'Minuta aguardando a aprovação do responsável técnico: a prévia fica na tela do módulo, em "Aguardando aprovação". Depois de aprovada, ela aparece aqui com o arquivo.'
+       : 'Documento sem arquivo: abra o registro no Arquivo de documentos, toque em Editar e anexe o arquivo.'),
+-    origemNome: DOCP_ORIGEM_NOMES[it.origem] || '', daUnidade: !!it.daUnidade, relacionado: !!it.relacionado
++    origemNome: DOCP_ORIGEM_NOMES[it.origem] || ''
+   };
+-  if (!v.cliente) { out.arquivoId = it.arquivoId; out.docDocumentoId = it.docDocumentoId || ''; out.repeticoes = it.repeticoes || 0; out.portal = it.portal || ''; }
++  if (!v.cliente) { out.arquivoId = it.arquivoId; out.docDocumentoId = it.docDocumentoId || ''; out.repeticoes = it.repeticoes || 0; out.portal = it.portal || ''; out.substituidoPor = it.situacao === 'SUBSTITUIDO' ? Docs_s_(it.substituidoPor) : ''; out.kExcl = Docs_s_(it.kExcl); }
+   return out;
+ }
+ 
+@@ -608,34 +742,29 @@
+     throw new Error(escopo === 'equipamento' ? 'Equipamento não encontrado no cadastro. Atualize a lista e tente de novo.' : 'Unidade não encontrada no cadastro. Atualize a lista e tente de novo.');
+   }
+   if (v.cliente && clienteId !== v.cid) throw new Error('Acesso negado: este cadastro não pertence à sua empresa. Por quê: cada empresa vê só os próprios documentos. O que fazer: confira se entrou com o login da sua empresa; se o QR Code está num equipamento seu, avise a Metrolabs.');
+-  var palavrasTipo = eq ? Docs_norm_(eq.TIPO).split(/[^A-Z]+/).filter(function (w) { return w.length >= 5; }) : [];
++  // 18/11/2026 (regra do dono): versão substituída (documento gerado de novo) só para Admin e Diretoria, na ficha da equipe
++  var veSubst = Docs_veSubstituidos_(v), ocultos = 0;
+   var lista = [];
+   idx.itens.forEach(function (it) {
+     if (it.clienteId !== clienteId || !Docs_visivel_(it, v, cfg)) return;
+-    var x = it;
+-    if (escopo === 'unidade') {
+-      if (it.unidadeId && it.unidadeId !== unidadeId) return;
+-    } else if (escopo === 'equipamento') {
+-      if (it.equipamentoId) { if (it.equipamentoId !== id) return; }
+-      else {
+-        if (cfg.pastasDaUnidadeNoEquipamento.indexOf(it.pasta) < 0) return;
+-        if (it.unidadeId && it.unidadeId !== unidadeId) return;
+-        x = Object.assign({}, it, { daUnidade: true });
+-        var t = Docs_norm_(it.titulo + ' ' + it.tipo);
+-        x.relacionado = palavrasTipo.some(function (w) { return t.indexOf(w) >= 0; });
+-      }
+-    }
+-    lista.push(x);
++    // 18/11/2026: vínculo exato. Equipamento: só o que tem o ID dele (PGT, POP e registros da unidade não entram).
++    // Unidade: só o que está ligado a ela (documento só do cliente fica na pasta do cliente).
++    if (escopo === 'equipamento' && it.equipamentoId !== id) return;
++    if (escopo === 'unidade' && it.unidadeId !== unidadeId) return;
++    if (it.situacao === 'SUBSTITUIDO' && !veSubst) { ocultos++; return; }
++    lista.push(it);
+   });
+   var telas = lista.map(function (it) { var t = Docs_itemTela_(it, v, cad, hoje, cfg); return t; });
+   // pasta interna (contratos e propostas): só na ficha da equipe; o cliente e o QR Code nunca a recebem
+-  var pastas = Docs_agruparLista_(telas, cfg).filter(function (p) { var cp = cfg.pastas[p.id]; return !(p.interna && (v.cliente || v.via !== 'ficha')) && !((v.cliente || v.via !== 'ficha') && !cp.clienteVe); });
++  var pastas = Docs_agruparLista_(telas, cfg).filter(function (p) { var cp = cfg.pastas[p.id]; return !(p.interna && (v.cliente || v.via !== 'ficha')) && !((v.cliente || v.via !== 'ficha') && !cp.clienteVe); })
++    // 18/11/2026: PGT, POP e registros operacionais são da unidade; no equipamento a pasta só aparece se houver documento com o ID dele
++    .filter(function (p) { return !(escopo === 'equipamento' && DOCP_PASTAS_DA_UNIDADE[p.id] && !p.itens.length); });
+   var porEquipamento = {}, porUnidade = {}, total = 0, vencidos = 0, vencendo = 0;
+   pastas.forEach(function (p) {
+     total += p.total; vencidos += p.vencidos; vencendo += p.vencendo;
+     p.itens.forEach(function (it) {
+       if (it.situacao === 'INATIVO') return;
+-      if (it.equipamentoId && !it.daUnidade) porEquipamento[it.equipamentoId] = (porEquipamento[it.equipamentoId] || 0) + 1;
++      if (it.equipamentoId) porEquipamento[it.equipamentoId] = (porEquipamento[it.equipamentoId] || 0) + 1;
+       if (it.unidadeId) porUnidade[it.unidadeId] = (porUnidade[it.unidadeId] || 0) + 1;
+     });
+   });
+@@ -648,8 +777,97 @@
+   }
+   var nomeAlvo = escopo === 'cliente' ? (Docs_s_(alvo.NOME_FANTASIA) || Docs_s_(alvo.RAZAO_SOCIAL)) : escopo === 'unidade' ? Docs_s_(alvo.NOME_UNIDADE) : [Docs_s_(alvo.TAG), Docs_s_(alvo.TIPO)].filter(Boolean).join(' · ');
+   return { success: true, escopo: escopo, id: id, via: v.via, cliente: v.cliente, alvo: { id: id, nome: nomeAlvo }, hoje: Docs_br_(hoje), diasVencendo: cfg.diasVencendo,
+-    pastas: pastas, total: total, vencidos: vencidos, vencendo: vencendo, porEquipamento: porEquipamento, porUnidade: porUnidade, unidades: unidades, equipamentos: equipamentos };
++    pastas: pastas, total: total, vencidos: vencidos, vencendo: vencendo, porEquipamento: porEquipamento, porUnidade: porUnidade, unidades: unidades, equipamentos: equipamentos,
++    substituidosVisiveis: veSubst, substituidosOcultos: v.cliente ? 0 : ocultos,
++    // 18/11/2026: excluir documento da pasta (só na ficha da equipe) e a lista de excluídos (só Administrador e Diretoria)
++    clienteNome: cad.mC[clienteId] ? (Docs_s_(cad.mC[clienteId].NOME_FANTASIA) || Docs_s_(cad.mC[clienteId].RAZAO_SOCIAL)) : '',
++    podeExcluir: !v.cliente && v.via === 'ficha' && Docs_podeExcluir_(v.sessao),
++    veExcluidos: Docs_veExcluidos_(v),
++    excluidos: Docs_veExcluidos_(v) ? (idx.excluidos || []).filter(function (it) {
++      if (it.clienteId !== clienteId) return false;
++      if (escopo === 'equipamento') return it.equipamentoId === id;
++      if (escopo === 'unidade') return it.unidadeId === unidadeId;
++      return true;
++    }).map(function (it) {
++      var e = it.equipamentoId ? cad.mE[it.equipamentoId] : null;
++      return { id: it.exclusao.id, titulo: it.titulo, pasta: (cfg.pastas[it.pasta] || cfg.pastas.OUTROS).nome, equipamentoNome: e ? [Docs_s_(e.TAG), Docs_s_(e.TIPO)].filter(Boolean).join(' · ') : '',
++        emitido: Docs_br_(it.emitidoIso), motivo: it.exclusao.motivo, porNome: it.exclusao.porNome, em: Docs_br_(it.exclusao.em) + (Docs_iso_(it.exclusao.em).length > 10 ? ' ' + Docs_iso_(it.exclusao.em).slice(11, 16) : ''), url: Docs_url_(it, v) };
++    }) : [] };
++}
++
++/** 18/11/2026: pode excluir documento da pasta? Caixa DOCP_EXCLUIR; sem o catálogo de caixas, Administrador e Diretoria. */
++function Docs_podeExcluir_(sessao) {
++  var p = Docs_up_(sessao && sessao.perfil);
++  if (!sessao || p === 'CLIENTE' || p === 'REPRESENTADA') return false;
++  try { if (typeof SGO_pode_ === 'function') return !!SGO_pode_(sessao, 'DOCP_EXCLUIR'); } catch (e) {}
++  return p === 'ADMIN' || p === 'DIRETORIA';
++}
++/** Só Administrador e Diretoria veem a lista de excluídos e restauram (na ficha da equipe). */
++function Docs_veExcluidos_(v) { return !!v && !v.cliente && v.via === 'ficha' && (v.perfil === 'ADMIN' || v.perfil === 'DIRETORIA'); }
++
++function Docs_garantirAbaExclusoes_() {
++  if (typeof CertCal_garantirTabela_ !== 'function') return;
++  CertCal_garantirTabela_(DOCP_ABA_EXCLUSOES, DOCP_COLUNAS_EXCLUSOES);
++  if (typeof CertCal_garantirColuna_ === 'function') DOCP_COLUNAS_EXCLUSOES.forEach(function (c) { CertCal_garantirColuna_(DOCP_ABA_EXCLUSOES, c); });
+ }
++function Docs_agora_() { try { return Utilities.formatDate(new Date(), DOCP_FUSO, "yyyy-MM-dd'T'HH:mm:ss"); } catch (e) { return new Date().toISOString().slice(0, 19); } }
++
++/**
++ * 18/11/2026: excluir, restaurar e listar documentos excluídos das pastas. Exclusão lógica: só grava a linha em DOCP_EXCLUSOES.
++ * acao 'excluir': dados { k (chave do documento na lista), motivo }; 'restaurar': dados { id, motivo }; 'excluidos': dados { clienteId }.
++ */
++function documentosPastasAcao(sessionId, acao, dados) {
++  try {
++    var sessao = exigirSessao(String(sessionId || ''));
++    var d = dados || {}, a = Docs_s_(acao).toLowerCase(), perfil = Docs_up_(sessao.perfil);
++    var quem = Docs_s_(sessao.nome || sessao.usuario), quemId = Docs_s_(sessao.userId);
++    if (perfil === 'CLIENTE' || perfil === 'REPRESENTADA') return { success: false, message: 'Acesso negado: excluir ou restaurar documento das pastas é da equipe da Metrolabs. Por quê: a conta de fora só consulta os próprios documentos. O que fazer: se um documento não é da sua empresa, avise a Metrolabs pela conversa geral.' };
++    var motivo = Docs_s_(d.motivo).replace(/\s+/g, ' ');
++    if (a === 'excluir') {
++      if (!Docs_podeExcluir_(sessao)) return { success: false, message: 'Acesso negado: você não tem a caixa «Excluir documento da pasta». Por quê: tirar um documento do prontuário muda o que o cliente e a fiscalização veem. O que fazer: peça ao Administrador para liberar a caixa em Administração > Acessos, ou peça a quem tem a caixa para excluir.' };
++      if (motivo.length < DOCP_MOTIVO_MIN) return { success: false, campo: 'motivo', message: 'Falta o motivo: escreva por que o documento sai desta pasta (pelo menos ' + DOCP_MOTIVO_MIN + ' letras), por exemplo "certificado de outro cliente, registrado por engano". Por quê: a exclusão fica registrada para auditoria.' };
++      var k = Docs_s_(d.k);
++      var idx = Docs_indice_({});
++      var it = idx.itens.filter(function (x) { return x.kExcl === k; })[0];
++      if (!it) {
++        if ((idx.excluidos || []).some(function (x) { return x.kExcl === k; })) return { success: false, message: 'Este documento já está excluído da pasta. O que fazer: atualize a lista (F5). Para trazer de volta, peça ao Administrador ou à Diretoria (lista "Documentos excluídos").' };
++        return { success: false, message: 'Documento não encontrado na lista. Por quê: ele pode ter mudado depois que a tela abriu. O que fazer: atualize a lista (F5) e tente de novo.' };
++      }
++      Docs_garantirAbaExclusoes_();
++      var agora = Docs_agora_();
++      SGO_DATA.insert(DOCP_ABA_EXCLUSOES, { ID: 'DX-' + (typeof Utilities !== 'undefined' && Utilities.getUuid ? Utilities.getUuid().slice(0, 8).toUpperCase() : Date.now().toString(36)), CHAVE: k, ARQUIVO_ID: Docs_s_(it.arquivoId),
++        ORIGEM: Object.keys(it.origens || {}).join(',') || it.origem, TITULO: Docs_s_(it.titulo).slice(0, 300), PASTA: it.pasta, CLIENTE_ID: it.clienteId, UNIDADE_ID: it.unidadeId, EQUIPAMENTO_ID: it.equipamentoId,
++        SITUACAO: 'EXCLUIDO', MOTIVO: motivo.slice(0, 1000), POR_ID: quemId, POR_NOME: quem, EM: agora, CRIADO_EM: agora });
++      try { SGO_DATA.log('DOCUMENTO_EXCLUIDO_PASTA', quem, it.titulo + ' (' + k + ') do cliente ' + it.clienteId + (it.equipamentoId ? ', equipamento ' + it.equipamentoId : '') + '. Motivo: ' + motivo, 'DOCUMENTOS'); } catch (eL) {}
++      try { if (typeof PCl_memoLimpar_ === 'function') PCl_memoLimpar_(); } catch (eM) {}
++      return { success: true, message: 'Excluído da pasta: «' + it.titulo + '». Ele saiu do QR Code, das pastas, das fichas e do Portal do cliente. Nada foi apagado: o Administrador e a Diretoria veem o documento em "Documentos excluídos" e podem restaurar.' };
++    }
++    if (a === 'restaurar' || a === 'excluidos') {
++      if (perfil !== 'ADMIN' && perfil !== 'DIRETORIA') return { success: false, message: 'Acesso negado: só o Administrador e a Diretoria veem os documentos excluídos e restauram. Por quê: a exclusão foi feita para proteger o cliente e a fiscalização. O que fazer: peça ao Administrador ou à Diretoria.' };
++      if (a === 'excluidos') {
++        var cid = Docs_s_(d.clienteId);
++        var lin = Docs_ler_(DOCP_ABA_EXCLUSOES).filter(function (r) { return !cid || Docs_s_(r.CLIENTE_ID) === cid; }).map(function (r) {
++          return { id: Docs_s_(r.ID), titulo: Docs_s_(r.TITULO), clienteId: Docs_s_(r.CLIENTE_ID), equipamentoId: Docs_s_(r.EQUIPAMENTO_ID), situacao: Docs_up_(r.SITUACAO), motivo: Docs_s_(r.MOTIVO), porNome: Docs_s_(r.POR_NOME), em: Docs_s_(r.EM),
++            restauradoMotivo: Docs_s_(r.RESTAURADO_MOTIVO), restauradoPorNome: Docs_s_(r.RESTAURADO_POR_NOME), restauradoEm: Docs_s_(r.RESTAURADO_EM) };
++        }).sort(function (x, y) { return y.em.localeCompare(x.em); });
++        return { success: true, excluidos: lin };
++      }
++      if (motivo.length < DOCP_MOTIVO_MIN) return { success: false, campo: 'motivo', message: 'Falta o motivo: escreva por que o documento volta para a pasta (pelo menos ' + DOCP_MOTIVO_MIN + ' letras). Por quê: a restauração fica registrada para auditoria.' };
++      var linha = Docs_ler_(DOCP_ABA_EXCLUSOES).filter(function (r) { return Docs_s_(r.ID) === Docs_s_(d.id); })[0];
++      if (!linha || Docs_up_(linha.SITUACAO) !== 'EXCLUIDO') return { success: false, message: 'Exclusão não encontrada ou já restaurada. O que fazer: atualize a lista (F5).' };
++      SGO_DATA.update(DOCP_ABA_EXCLUSOES, Docs_s_(linha.ID), { SITUACAO: 'RESTAURADO', RESTAURADO_MOTIVO: motivo.slice(0, 1000), RESTAURADO_POR_ID: quemId, RESTAURADO_POR_NOME: quem, RESTAURADO_EM: Docs_agora_() });
++      try { SGO_DATA.log('DOCUMENTO_RESTAURADO_PASTA', quem, Docs_s_(linha.TITULO) + ' (' + Docs_s_(linha.CHAVE) + '). Motivo: ' + motivo, 'DOCUMENTOS'); } catch (eL2) {}
++      try { if (typeof PCl_memoLimpar_ === 'function') PCl_memoLimpar_(); } catch (eM2) {}
++      return { success: true, message: 'Restaurado: «' + Docs_s_(linha.TITULO) + '» voltou para a pasta e aparece de novo onde aparecia antes.' };
++    }
++    return { success: false, message: 'Pedido desconhecido. O que fazer: atualize a página (F5) e tente de novo.' };
++  } catch (e) {
++    return { success: false, message: typeof SGO_textoFalhaOperador_ === 'function' ? SGO_textoFalhaOperador_('excluir ou restaurar o documento da pasta', e) : String((e && e.message) || e) };
++  }
++}
++
++/** 18/11/2026: quem vê as versões substituídas (documentos gerados de novo): só Admin e Diretoria, na ficha da equipe. */
++function Docs_veSubstituidos_(v) { return !!v && !v.cliente && v.via === 'ficha' && (v.perfil === 'ADMIN' || v.perfil === 'DIRETORIA'); }
+ 
+ /** Histórico de atendimentos do equipamento sem relatório em PDF no SGO+ (Auvo e acervo): só a equipe, fora da contagem. */
+ function Docs_atendimentosSemPdf_(sessao, equipId) {
+diff -ruN cand31/SGO_PortalCliente_Config.js cand32/SGO_PortalCliente_Config.js
+--- cand31/SGO_PortalCliente_Config.js	2026-11-18 20:17:34.982310300 -0300
++++ cand32/SGO_PortalCliente_Config.js	2026-11-18 23:07:53.527936900 -0300
+@@ -156,6 +156,9 @@
+     try { return Utilities.formatDate(v, PCL_FUSO, 'yyyy-MM-dd'); } catch (e) { return v.toISOString().slice(0, 10); }
+   }
+   var s = PCl_s_(v), m;
++  // 18/11/2026: instante em UTC ("...T02:07:30Z" ou com fuso "+00:00") é o dia de Brasília, não o dia em UTC. Antes, uma entrada às
++  // 23h de Brasília (02h do dia seguinte em UTC) contava como o dia seguinte (o T1.8 falhava entre 21h e 24h).
++  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) { var dz = new Date(s); if (!isNaN(dz.getTime())) return PCl_dia_(dz); }
+   if ((m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s))) return PCl_diaValido_(m[1], m[2], m[3]);
+   if ((m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(s))) return PCl_diaValido_(m[3], m[2], m[1]);
+   return '';
+@@ -324,7 +327,8 @@
+   // outra unidade recebe a mesma resposta de inexistente e a tentativa fica em PCL_ACESSOS (ESCOPO_RECUSADO). Conta sem papel = todas.
+   // 18/11/2026 (etapa 3, T3.1): documento marcado OCULTO no portal não aparece nem abre para o cliente (mesma resposta de inexistente)
+   if (tabela === 'DOC_DOCUMENTOS') {
+-    var oculto = function (x) { return PCl_up_(x && x.PORTAL) === 'OCULTO'; };
++    // 18/11/2026: documento excluído da pasta (exclusão lógica) também some do Arquivo de documentos antigo da conta de cliente
++    var oculto = function (x) { return PCl_up_(x && x.PORTAL) === 'OCULTO' || (typeof Docs_arquivoExcluido_ === 'function' && typeof Docs_idDoLink_ === 'function' && !!x && Docs_arquivoExcluido_(Docs_idDoLink_(x.LINK_ARQUIVO))); };
+     if (r.item && oculto(r.item)) return { success: false, message: PCL_MSG_INEXISTENTE[tabela] || PCL_MSG_NAO_ENCONTRADO };
+     if (Array.isArray(r.items)) r.items = r.items.filter(function (x) { return !oculto(x); });
+   }
+diff -ruN cand31/SGO_PortalCliente_Documentos.js cand32/SGO_PortalCliente_Documentos.js
+--- cand31/SGO_PortalCliente_Documentos.js	2026-11-18 20:17:24.802521000 -0300
++++ cand32/SGO_PortalCliente_Documentos.js	2026-11-18 22:47:20.476111900 -0300
+@@ -139,6 +139,8 @@
+   var regras = PClD_regras_(), osN = PClD_mapaOs_(), lista = [];
+   idx.itens.forEach(function (it) {
+     if (it.clienteId !== x.cid || !Docs_visivel_(it, v, cfg)) return;
++    // 18/11/2026 (regra do dono): documento gerado de novo — no Portal só o último gerado (o oficial); os anteriores ficam no banco
++    if (it.situacao === 'SUBSTITUIDO') return;
+     var tipo = PClD_tipo_(it, osN);
+     if (!PClD_noPortal_(it, tipo, regras)) return;
+     var t = Docs_itemTela_(it, v, cad, hoje, cfg);
+@@ -146,7 +148,7 @@
+     lista.push(t);
+   });
+   var docs = [];
+-  Docs_agruparLista_(lista, cfg).forEach(function (p) { p.itens.forEach(function (i) { docs.push(i); }); });
++  Docs_agruparLista_(lista, cfg).forEach(function (p) { p.itens.forEach(function (i) { i.anteriores = []; docs.push(i); }); });
+   docs.sort(function (a, b) { return PCl_s_(b.emitidoIso).localeCompare(PCl_s_(a.emitidoIso)); });
+   return { docs: docs, cad: cad, idx: idx, regras: regras };
+ }
+diff -ruN cand31/SGO_PortalCliente_Seguranca.js cand32/SGO_PortalCliente_Seguranca.js
+--- cand31/SGO_PortalCliente_Seguranca.js	2026-11-18 20:17:42.566045800 -0300
++++ cand32/SGO_PortalCliente_Seguranca.js	2026-11-18 23:04:23.162741100 -0300
+@@ -266,6 +266,8 @@
+     var naUnidade = function (u) { return !restrito || PCl_escopoUnidade_(esc, u); };
+     // 18/11/2026 (etapa 3, T3.1): arquivo registrado no Arquivo de documentos com PORTAL = OCULTO não abre para o cliente, venha de que módulo vier
+     if (PCl_ler_('DOC_DOCUMENTOS').some(function (r) { return PCl_s_(r.CLIENTE_ID) === cid && PCl_up_(r.PORTAL) === 'OCULTO' && PCl_linhaTemArquivo_(r, PCL_REGRAS_ARQUIVO[0].colunas, id); })) return PCl_arquivoRecusado_(s, id, 'documento oculto no portal');
++    // 18/11/2026: documento excluído da pasta (exclusão lógica, SGO_DocumentosPastas.js) não abre para o cliente, venha de que módulo vier
++    if (typeof Docs_arquivoExcluido_ === 'function' && Docs_arquivoExcluido_(id)) return PCl_arquivoRecusado_(s, id, 'documento excluído da pasta');
+     // módulos com regra própria (null = o arquivo não é deles)
+     if (typeof LavCic_arquivoClientePermitido_ === 'function') { var lc = LavCic_arquivoClientePermitido_(sessionId, id); if (lc !== null && lc !== undefined) return lc && naUnidade(PCl_unidadeArquivoModulo_('LAV', id)) ? true : PCl_arquivoRecusado_(s, id, lc ? 'relatório de ciclo de outra unidade' : 'relatório de ciclo de outro cliente'); }
+     if (typeof AstRd_arquivoClientePermitido_ === 'function') { var rd = AstRd_arquivoClientePermitido_(sessionId, id); if (rd !== null && rd !== undefined) return rd && naUnidade(PCl_unidadeArquivoModulo_('RONDA', id)) ? true : PCl_arquivoRecusado_(s, id, rd ? 'relatório de ronda de outra unidade' : 'relatório de ronda interno ou de outro cliente'); }
+diff -ruN cand31/SGO_QRCode.js cand32/SGO_QRCode.js
+--- cand31/SGO_QRCode.js	2026-11-18 20:17:28.274086400 -0300
++++ cand32/SGO_QRCode.js	2026-11-18 22:49:53.097796300 -0300
+@@ -182,12 +182,13 @@
+       return { success: false, message: "Acesso negado: seu perfil não possui permissão para consultar prontuários de equipamentos via QR." };
+     }
+ 
+-    // Gera/Busca a pasta raiz desse equipamento no Google Drive.
+-    // 20/10/2026: sem a pasta (configuração das pastas ausente), a tela do equipamento abre do mesmo jeito,
+-    // com a identificação e a seção Qualificação; só o botão da pasta fica de fora, com o aviso.
+-    let linkPasta = "", avisoPasta = "";
+-    try { linkPasta = obterLinkPastaEquipamento_(eqp); }
+-    catch (ePasta) { avisoPasta = "A pasta de documentos do equipamento não está disponível agora (" + String(ePasta && ePasta.message ? ePasta.message : ePasta).replace(/[.\s]+$/, "") + "). Os relatórios de qualificação aparecem abaixo."; }
++    // 18/11/2026 (regra do dono: nenhum dado de um equipamento cruza com outro; só o último documento gerado aparece): o QR Code
++    // deixou de abrir a pasta de arquivos do equipamento. A pasta era achada pelo NOME (cliente / unidade / "TAG - TIPO"), e 169
++    // equipamentos com TAG e tipo iguais na mesma unidade ("N/P - TERMOHIGRÔMETRO", por exemplo) caíam na MESMA pasta; ela
++    // também mostrava cada arquivo gerado de novo (O.S. em dobro, certificados repetidos) e era aberta para qualquer um com o
++    // link. O prontuário por pastas (SGO_DocumentosPastas.js) lê pelo ID do equipamento e mostra só o oficial.
++    // obterLinkPastaEquipamento_ continua no arquivo, sem uso pelo QR (nada é apagado da pasta).
++    const linkPasta = "", avisoPasta = "";
+ 
+     SGO_DATA.log("QRCODE_ACESSO", sessao.usuario, "Acesso via QR liberado para TAG: " + SGO_UTILS.safe(eqp.TAG), "QRCODE");
+ 
+diff -ruN cand31/SGO_QualifEmissao.js cand32/SGO_QualifEmissao.js
+--- cand31/SGO_QualifEmissao.js	2026-11-18 20:18:16.826367800 -0300
++++ cand32/SGO_QualifEmissao.js	2026-11-18 22:47:36.953089200 -0300
+@@ -164,7 +164,21 @@
+   if (typeof SGO_DocRev_qeEmitido_ === 'function') SGO_DocRev_qeEmitido_(modulo, numero, idAtual);
+   var n = String(numero || '').trim();
+   if (!n) return;
++  // 18/11/2026: substitui só a emissão do MESMO equipamento (sem equipamento, do mesmo CNPJ). Antes bastava o número igual e o
++  // "Ciclo 1 de 3" de um equipamento marcava como substituído o de outro equipamento (até de outro cliente).
++  var atual = null;
++  try { atual = typeof SGO_QE_obter_ === 'function' ? SGO_QE_obter_(idAtual) : null; } catch (eA) { atual = null; }
+   SGO_QE_listar_(modulo, 'EMITIDO').forEach(function (r) {
+-    if (r.NUMERO === n && r.ID !== idAtual) SGO_QE_atualizar_(r.ID, { STATUS: 'SUBSTITUIDO' });
++    if (r.NUMERO === n && r.ID !== idAtual && SGO_QE_mesmoAlvo_(r, atual)) SGO_QE_atualizar_(r.ID, { STATUS: 'SUBSTITUIDO' });
+   });
+ }
++
++/** 18/11/2026: duas emissões são do mesmo alvo? Equipamento igual; sem equipamento em uma delas, CNPJ igual; sem dado para comparar, sim (como antes). */
++function SGO_QE_mesmoAlvo_(a, b) {
++  if (!a || !b) return true;
++  var ea = String(a.EQUIPAMENTO_ID || '').trim(), eb = String(b.EQUIPAMENTO_ID || '').trim();
++  if (ea && eb) return ea === eb;
++  var ca = String(a.CNPJ || '').replace(/\D/g, ''), cb = String(b.CNPJ || '').replace(/\D/g, '');
++  if (ca && cb) return ca === cb;
++  return true;
++}
+diff -ruN cand31/SGO_QualifEquipamento.js cand32/SGO_QualifEquipamento.js
+--- cand31/SGO_QualifEquipamento.js	2026-11-18 20:17:22.137783800 -0300
++++ cand32/SGO_QualifEquipamento.js	2026-11-18 23:04:23.165734500 -0300
+@@ -549,7 +549,10 @@
+ function SGO_QEQ_listarParaSessao_(sessao, equipamentoId) {
+   var e = SGO_QEQ_equipamentoVisivel_(sessao, equipamentoId);
+   var equipe = SGO_QEQ_ehEquipe_(sessao);
+-  var itens = (SGO_QEQ_todosItens_()[SGO_QEQ_s_(e.ID)] || []).filter(function (i) { return equipe || i.situacao !== 'MINUTA'; });
++  // 18/11/2026 (regra do dono): a conta de cliente vê só o oficial (sem minuta e sem a versão substituída por uma emissão mais nova)
++  var itens = (SGO_QEQ_todosItens_()[SGO_QEQ_s_(e.ID)] || []).filter(function (i) { return equipe || (i.situacao !== 'MINUTA' && i.situacao !== 'SUBSTITUIDO'); })
++    // 18/11/2026: documento excluído da pasta do equipamento (exclusão lógica) não aparece aqui
++    .filter(function (i) { return !(typeof Docs_arquivoExcluido_ === 'function' && i.pdfId && Docs_arquivoExcluido_(i.pdfId)); });
+   var sit = SGO_QEQ_situacao_(itens.filter(function (i) { return i.situacao !== 'MINUTA'; }));
+   return {
+     success: true, situacao: sit, itens: itens.map(function (i) { return SGO_QEQ_itemPublico_(i, equipe); }),
+@@ -720,7 +723,8 @@
+     try { r = SGO_QEQ_listarParaSessao_(sessao, equipamentoId); }
+     catch (eNeg) { SGO_QEQ_log_('QRCODE_QUALIFICACAO_NEGADO', sessao, 'Equipamento ' + equipamentoId + ': ' + (eNeg && eNeg.message)); throw eNeg; }
+     // No QR a lista é a do cliente: só emitido e aprovado, também para a equipe.
+-    r.itens = r.itens.filter(function (i) { return i.situacao !== 'MINUTA'; });
++    // 18/11/2026 (regra do dono): no QR só o oficial — sem minuta e sem versão substituída, também para a equipe
++    r.itens = r.itens.filter(function (i) { return i.situacao !== 'MINUTA' && i.situacao !== 'SUBSTITUIDO'; });
+     r.podeVerMinutas = false;
+     SGO_QEQ_log_('QRCODE_QUALIFICACAO_VISTA', sessao, 'Equipamento ' + equipamentoId + ' (perfil ' + SGO_QEQ_up_(sessao.perfil) + '): ' + r.itens.length + ' documento(s) listados.');
+     return JSON.parse(JSON.stringify(r));
+@@ -737,8 +741,10 @@
+     SGO_QEQ_equipamentoVisivel_(sessao, equipamentoId);
+     var itens = SGO_QEQ_todosItens_()[SGO_QEQ_s_(equipamentoId)] || [];
+     var it = itens.filter(function (i) { return i.ref === SGO_QEQ_s_(ref); })[0];
+-    if (!it) throw new Error('Documento não encontrado neste equipamento. Atualize a lista.');
++    if (!it || (typeof Docs_arquivoExcluido_ === 'function' && it.pdfId && Docs_arquivoExcluido_(it.pdfId))) throw new Error('Documento não encontrado neste equipamento. Atualize a lista.');
+     if (it.situacao === 'MINUTA') throw new Error('Este documento ainda aguarda a aprovação do responsável técnico e não pode ser aberto por aqui. A prévia fica na tela do módulo, em "Aguardando aprovação".');
++    // 18/11/2026: versão substituída não abre pela conta de cliente nem pelo QR (vale só o último documento gerado)
++    if (it.situacao === 'SUBSTITUIDO' && (SGO_QEQ_ehCliente_(sessao) || via === 'qr')) throw new Error('Este documento foi substituído por uma emissão mais nova e não pode ser aberto por aqui. Por quê: vale só o último documento gerado, que é o oficial. O que fazer: atualize a lista (F5) e abra o documento vigente.');
+     var url = it.link;
+     if (it.pdfId) {
+       var arq = DriveApp.getFileById(it.pdfId);
+@@ -749,7 +755,7 @@
+     SGO_QEQ_log_(via === 'qr' ? 'QRCODE_QUALIFICACAO_ABERTO' : 'QUALIF_DOCUMENTO_ABERTO', sessao, 'Equipamento ' + equipamentoId + ', ' + it.titulo + (it.numero ? ' nº ' + it.numero + ' rev ' + it.revisao : '') + ' (' + it.situacao + ').');
+     return { success: true, url: url };
+   } catch (e) {
+-    if (/^(Acesso negado|Este documento ainda aguarda)/.test(String(e && e.message))) return { success: false, message: String(e.message) };
++    if (/^(Acesso negado|Este documento ainda aguarda|Este documento foi substituído)/.test(String(e && e.message))) return { success: false, message: String(e.message) };
+     return { success: false, message: typeof SGO_textoFalhaOperador_ === 'function' ? SGO_textoFalhaOperador_('abrir o documento', e) : String(e && e.message ? e.message : e) };
+   }
+ }

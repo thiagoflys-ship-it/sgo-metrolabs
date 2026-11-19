@@ -19,8 +19,10 @@ const BASE = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_c
 const ler = (f) => fs.readFileSync(path.join(BASE, f), 'utf8').replace(/\r\n/g, '\n');
 const j = (x) => JSON.parse(JSON.stringify(x));
 const CTX = { ip: '200.1.2.3', agente: 'Mozilla/5.0 Teste', aparelho: '' };
-const hoje = new Date();
-const dia = (n) => new Date(hoje.getTime() + n * 86400000).toISOString().slice(0, 10);
+// 18/11/2026: o "hoje" do teste é o dia de Brasília, como no servidor (Docs_hoje_). Antes era o dia em UTC e, entre 21h e 24h de
+// Brasília, o teste esperava "Vence em 25 dias" e o servidor (certo) dizia 26.
+const hojeBrasilia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const dia = (n) => { const [y, m, d] = hojeBrasilia.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
 const br = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
 
 const ADMIN = { ID: 'u-admin', USUARIO: 'admin', SENHA: 'Velha2026x', NOME: 'ADMINISTRADOR TESTE', PERFIL: 'ADMIN', STATUS: 'ATIVO', EMAIL: 'dono@exemplo.test' };
@@ -155,19 +157,22 @@ test('classificação única: os tipos reais de todos os módulos caem na pasta 
   assert.deepEqual(j(a.ctx.DOCP_PASTAS.map((p) => p.id)), ['CALIBRACAO', 'QUALIFICACAO', 'RELATORIOS_TECNICOS', 'OS', 'MANUTENCAO', 'PGT_POP', 'REGISTROS', 'NR13', 'LAUDOS', 'CONTRATOS', 'OUTROS']);
 });
 
-test('prontuário pelo QR Code (equipe): pastas com contagem, PGT e POP da unidade, qualificação vigente com a revisão anterior guardada, O.S., sem minuta nem interno', () => {
+// 18/11/2026 (regra do dono, vazamento no QR Code): o prontuário do equipamento mostra só o que tem o ID dele — o PGT, os POP e os
+// registros operacionais da unidade saíram dele — e, de um documento gerado mais de uma vez, só o último (as revisões anteriores
+// ficam no banco e só Admin e Diretoria as veem, na ficha). Este teste foi ajustado a essa regra.
+test('prontuário pelo QR Code (equipe): pastas com contagem, só documentos do equipamento, só a revisão oficial, O.S., sem minuta nem interno', () => {
   const a = amb();
   const r = a.docs(a.sPri, 'equipamento', 'eA1', 'qr');
   assert.equal(r.success, true, r.message);
-  assert.deepEqual(r.pastas.map((p) => p.id), ['CALIBRACAO', 'QUALIFICACAO', 'RELATORIOS_TECNICOS', 'OS', 'MANUTENCAO', 'PGT_POP', 'REGISTROS', 'NR13', 'LAUDOS', 'OUTROS'], 'todas as pastas, sem a interna');
-  // qualificação: Rev. 01 vigente na frente, Rev. 00 em "versões anteriores", minuta fora
+  assert.deepEqual(r.pastas.map((p) => p.id), ['CALIBRACAO', 'QUALIFICACAO', 'RELATORIOS_TECNICOS', 'OS', 'MANUTENCAO', 'NR13', 'LAUDOS', 'OUTROS'], 'pastas do equipamento, sem a interna e sem as da unidade (PGT/POP e registros)');
+  // qualificação: só a Rev. 01 (oficial); a Rev. 00 não vai ao QR; minuta fora
   const q = a.pasta(r, 'QUALIFICACAO');
   assert.equal(q.total, 1);
   assert.match(q.itens[0].titulo, /QA-2026-0011 · Rev\. 01/);
   assert.equal(q.itens[0].venc.s, 'vencendo');
   assert.match(q.itens[0].venc.texto, /^Vence em 25 dias/);
-  assert.equal(q.itens[0].anteriores.length, 1);
-  assert.equal(q.itens[0].anteriores[0].situacao, 'SUBSTITUIDO');
+  assert.equal(q.itens[0].anteriores.length, 0, 'revisão substituída não vai ao QR');
+  assert.ok(!JSON.stringify(r).includes('qualAc01rev0'));
   assert.ok(!JSON.stringify(r).includes('minutaAc01'), 'minuta nunca no QR');
   // relatório de ensaio de ciclo em Relatórios técnicos
   assert.match(a.pasta(r, 'RELATORIOS_TECNICOS').itens[0].titulo, /ensaio de ciclo/);
@@ -175,36 +180,35 @@ test('prontuário pelo QR Code (equipe): pastas com contagem, PGT e POP da unida
   const os = a.pasta(r, 'OS');
   assert.equal(os.total, 1);
   assert.match(os.itens[0].titulo, /OS-2026-0032/);
-  assert.equal(os.itens[0].anteriores.length, 1);
+  assert.equal(os.itens[0].anteriores.length, 0);
+  assert.ok(!JSON.stringify(r).includes('relOs0032rev0'), 'revisão anterior do relatório da O.S. fora do QR');
   assert.ok(!JSON.stringify(r).includes('relOsRascunho'));
   // certificado vencido
   const cal = a.pasta(r, 'CALIBRACAO');
   assert.equal(cal.itens[0].venc.s, 'vencido');
   assert.equal(r.vencidos >= 1, true);
-  // PGT e POP: os da unidade (CNPJ da matriz), marcados "da unidade"; o POP de autoclave vem primeiro (deste tipo de equipamento)
-  const pgt = a.pasta(r, 'PGT_POP');
+  // PGT, POP e registros operacionais são da unidade: nenhum aparece no prontuário do equipamento
+  for (const id of ['pgtsNovo0001', 'pop008Novo01', 'pop028versao1', 'pop028versao2', 'pop001Velho1', 'regOpBowie01', 'popDoB00001']) assert.ok(!JSON.stringify(r).includes(id), 'documento da unidade fora do equipamento: ' + id);
+  assert.ok(a.todos(r).every((i) => i.equipamentoId === 'eA1'), 'só documentos com o ID deste equipamento');
+  // ...e continuam na pasta da unidade, com a versão mais nova do POP028 na frente
+  const un = a.docs(a.sPri, 'unidade', 'uA1', 'ficha');
+  const pgt = a.pasta(un, 'PGT_POP');
   const titulos = pgt.itens.map((i) => i.titulo);
   assert.ok(titulos.some((t) => /PGT - Plano de Gerenciamento/.test(t)), titulos.join(' | '));
-  assert.ok(titulos.some((t) => /POP028/.test(t)), 'POP da lista própria do módulo');
-  assert.equal(pgt.itens[0].relacionado, true, 'POP de autoclave primeiro');
-  assert.match(pgt.itens[0].titulo, /POP008/);
-  assert.ok(pgt.itens.every((i) => i.daUnidade));
   const pop028 = pgt.itens.find((i) => /POP028/.test(i.titulo));
   assert.match(pop028.titulo, /POP028_v2/, 'a versão mais nova na frente');
-  assert.equal(pop028.anteriores.length, 1, 'a v1 guardada como anterior');
+  assert.equal(pop028.anteriores.length, 0, 'a v1 não aparece para o Gestor');
   assert.ok(!titulos.some((t) => /POP002 do B/.test(t)), 'nada de outro cliente');
-  // POP001 emitido antes da geração revisada: suspenso, marcado só para a equipe
   const pop001 = pgt.itens.find((i) => /POP001/.test(i.titulo));
   assert.equal(pop001 && pop001.situacao, 'SUSPENSO');
-  // registros operacionais da unidade também valem para o equipamento
-  assert.equal(a.pasta(r, 'REGISTROS').total, 1);
+  assert.equal(a.pasta(un, 'REGISTROS').total, 1);
   // documento interno (contrato) e versão interna da Representação nunca no QR
   assert.ok(!JSON.stringify(r).includes('contratoDoc01') && !JSON.stringify(r).includes('contratoPdfAss'));
   // manutenção: a versão nova na frente e a antiga guardada (mesmo nome, outro arquivo)
   const man = a.pasta(r, 'MANUTENCAO');
   assert.equal(man.total, 1);
   assert.equal(man.itens[0].url, '/arquivos/manutNova0002');
-  assert.equal(man.itens[0].anteriores[0].url, '/arquivos/manutAntiga01');
+  assert.ok(!JSON.stringify(r).includes('manutAntiga01'), 'a versão antiga (mesmo nome, outro arquivo) não vai ao QR');
   // inativo do Arquivo de documentos fora do QR; a situação da qualificação vai junto; o acesso fica registrado
   assert.ok(!JSON.stringify(r).includes('fotoPlaca001'));
   assert.match(r.qualificacao.rotulo, /Requalificação vence em|Qualificado até/);
@@ -225,7 +229,8 @@ test('conta de cliente: só os documentos dela, só o liberado (sem minuta, susp
   assert.ok(!/"arquivoId"|"docDocumentoId"|"repeticoes"/.test(txt), 'campos internos fora');
   assert.ok(a.todos(r).every((i) => /^\/arquivos\//.test(i.url)), 'sempre /arquivos/<id>');
   assert.ok(!r.pastas.some((p) => p.id === 'CONTRATOS'));
-  assert.ok(a.pasta(r, 'PGT_POP').itens.length >= 3, 'PGT e POP da unidade aparecem para o cliente');
+  assert.ok(!a.pasta(r, 'PGT_POP'), 'PGT e POP não aparecem no equipamento (são da unidade)');
+  assert.ok(a.pasta(a.docs(a.sA, 'unidade', 'uA1', 'portal'), 'PGT_POP').itens.length >= 3, 'PGT e POP aparecem na unidade para o cliente');
   // Arquivo de documentos do cliente (portal): a empresa inteira, sem dizer o id
   const p = a.docs(a.sA, 'cliente', '', 'portal');
   assert.equal(p.success, true, p.message);
@@ -284,8 +289,11 @@ test('ficha do cliente (equipe): agrupada por pasta, sem repetição e sem perde
   assert.equal(ter[0].repeticoes, 2);
   assert.equal(ter[0].venc.s, 'vencendo', 'validade vem do CertCal (o Arquivo dizia "sem vencimento")');
   assert.equal(ter[0].equipamentoNome, 'TER-01 · TERMOMETRO');
-  // nada se perde: todos os arquivos do cliente A estão na resposta (principais e versões anteriores)
-  const ids = a.todos(r).map((i) => i.arquivoId);
+  // nada se perde: todos os arquivos do cliente A estão na resposta de Admin (principais e substituídos); o Gestor vê só o oficial
+  const ra = a.docs(a.sAdm, 'cliente', 'cA', 'ficha');
+  const ids = a.todos(ra).map((i) => i.arquivoId);
+  assert.ok(!a.todos(r).some((i) => ['manutAntiga01', 'qualAc01rev0', 'relOs0032rev0', 'pop028versao1'].includes(i.arquivoId)), 'Gestor não vê versão substituída');
+  assert.ok(r.substituidosOcultos >= 4, 'a equipe sabe quantos ficaram de fora');
   for (const id of ['certTer01aaa', 'certAc01soCert', 'manutAntiga01', 'manutNova0002', 'contratoDoc01', 'fotoPlaca001', 'qualAc01rev0', 'qualAc01rev1', 'ensaioAc01', 'qualLv01',
     'laudoNr13vp01', 'relOs0032pdf', 'relOs0032rev0', 'repCliPdf001', 'repIntPdf001', 'pgtsNovo0001', 'pop008Novo01', 'pop001Velho1', 'pop028versao1', 'pop028versao2', 'declExec0005', 'regOpBowie01', 'contratoPdfAss'])
     assert.ok(ids.includes(id), 'faltou ' + id);
@@ -431,7 +439,7 @@ test('telas: prontuário no celular (390/320 px), ficha do cliente (1366 px) e v
         await page.evaluate((e) => { document.querySelectorAll('#loginScreen, .login-etapa').forEach((x) => { x.style.display = 'none'; }); const m = document.querySelector('.main-layout'); if (m) m.style.display = ''; renderProntuarioDigital_('', e, ''); }, eqp);
         await page.waitForFunction(() => document.querySelectorAll('#qrDocPastas .dpst-pasta').length > 0, null, { timeout: 15000 });
         const txt = await page.locator('#qrDocPastas').innerText();
-        assert.match(txt, /PGT e POP/); assert.match(txt, /Ordens de serviço e relatórios de atendimento/); assert.match(txt, /Qualificações/);
+        assert.ok(!/PGT e POP/.test(txt), 'PGT e POP fora do equipamento'); assert.match(txt, /Ordens de serviço e relatórios de atendimento/); assert.match(txt, /Qualificações/);
         assert.ok(!/Contratos e propostas/.test(txt), 'pasta interna fora do QR');
         assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector('#qrDocPastas .dpst-como-corpo p')).textAlign === 'justify'), 'guia justificado');
         assert.ok(await semRolagem(page), 'sem rolagem lateral (' + largura + ', ' + quem + ')');
@@ -440,7 +448,7 @@ test('telas: prontuário no celular (390/320 px), ficha do cliente (1366 px) e v
         // abre a pasta PGT e POP e a de qualificação
         await page.evaluate(() => { document.querySelector('#qrDocPastas .dpst-como').open = false; ['PGT_POP', 'QUALIFICACAO'].forEach((id) => { const d = document.querySelector('#qrDocPastas .dpst-pasta[data-pasta="' + id + '"]'); if (d) d.open = true; }); });
         const txt2 = await page.locator('#qrDocPastas').innerText();
-        assert.match(txt2, /POP008/); assert.match(txt2, /Da unidade/); assert.match(txt2, /Versões anteriores/);
+        assert.ok(!/POP008|Da unidade|Versões anteriores|Substituídos/.test(txt2), 'sem documento da unidade e sem versão substituída no QR'); assert.match(txt2, /QA-2026-0011/);
         if (quem === 'cliente') assert.ok(!/POP001/.test(txt2), 'suspenso fora para o cliente');
         assert.ok(await semRolagem(page), 'sem rolagem lateral com as pastas abertas');
         await page.screenshot({ path: path.join(saida, largura + '-prontuario-qr-' + quem + '-pastas-abertas.png'), fullPage: true });

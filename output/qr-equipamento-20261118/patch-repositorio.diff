@@ -1,0 +1,580 @@
+diff --git a/docs/MANUAL_CLIENTES_UNIDADES_VINCULOS.md b/docs/MANUAL_CLIENTES_UNIDADES_VINCULOS.md
+index 794b967d..a31e4f31 100644
+--- a/docs/MANUAL_CLIENTES_UNIDADES_VINCULOS.md
++++ b/docs/MANUAL_CLIENTES_UNIDADES_VINCULOS.md
+@@ -227,7 +227,7 @@ A pasta vem do módulo que gerou o documento. Para o que foi enviado à mão no
+ 
+ ### Onde aparece
+ 
+-- **QR Code (prontuário do equipamento no celular):** os documentos do equipamento, por pasta, mais o PGT, os POP e os registros operacionais da unidade dele (o POP do tipo do equipamento vem primeiro).
++- **QR Code (prontuário do equipamento no celular):** só os documentos ligados ao equipamento, por pasta. O PGT, os POP e os registros operacionais são da unidade e ficam nas pastas da unidade e do cliente (veja "Cada equipamento só com o que é dele", abaixo).
+ - **Cadastros > Clientes > aba "Documentos por pasta":** todos os documentos do cliente, com busca e filtro por unidade e equipamento, e os botões Abrir e Enviar.
+ - **Cadastros > Unidades e Equipamentos > aba "Documentos por pasta":** o mesmo recorte para a unidade e para o equipamento (no equipamento é o mesmo prontuário do QR Code, mais o que só a equipe vê).
+ - **Arquivo de documentos, na conta de cliente:** "Documentos da sua empresa por pasta", no alto da tela.
+@@ -235,7 +235,34 @@ A pasta vem do módulo que gerou o documento. Para o que foi enviado à mão no
+ 
+ ### Como ler cada documento
+ 
+-O documento mais novo vem primeiro, com a data de emissão e a validade: **Válido até**, **Vence em X dias** (amarelo, até 30 dias) ou **Vencido há X dias** (vermelho). Revisões anteriores e versões do mesmo documento (por exemplo, POP028 v1 e v2) ficam dentro dele, em **Versões anteriores**: nada é apagado. O mesmo arquivo registrado em dois lugares (o certificado que o módulo grava e o registro no Arquivo de documentos, por exemplo) aparece uma vez só; a equipe vê o aviso de quantos registros ele tem.
++O documento mais novo vem primeiro, com a data de emissão e a validade: **Válido até**, **Vence em X dias** (amarelo, até 30 dias) ou **Vencido há X dias** (vermelho). De um documento gerado mais de uma vez (por exemplo, POP028 v1 e v2, ou o mesmo certificado emitido três vezes) aparece só o último gerado, que é o oficial. Os anteriores ficam guardados, marcados como substituídos, e só Admin e Diretoria os veem, em **Substituídos**, dentro do documento oficial. Nada é apagado. O mesmo arquivo registrado em dois lugares (o certificado que o módulo grava e o registro no Arquivo de documentos, por exemplo) aparece uma vez só; a equipe vê o aviso de quantos registros ele tem.
++
++### Cada equipamento só com o que é dele (18/11/2026)
++
++Regra do dono, depois do caso em que o QR Code de todos os equipamentos de uma unidade mostrava os mesmos 29 PGT e POP: nenhum dado de um equipamento pode aparecer em outro, e documento gerado mais de uma vez não pode ser visto repetido.
++
++1. **Vínculo exato.** O prontuário do equipamento (QR Code, aba "Documentos por pasta" do equipamento e ficha do equipamento no Portal do cliente) mostra só os documentos que têm o identificador daquele equipamento no cadastro. Documento sem equipamento não aparece no equipamento. A pasta da unidade mostra só o que está ligado à unidade; o que é só do cliente fica na ficha do cliente.
++2. **PGT, POP e registros operacionais são da unidade.** Eles são gerados pelo CNPJ, sem equipamento. Ficam nas pastas da unidade e do cliente e no Portal do cliente ("Por pastas (prontuário)"), e não aparecem mais no QR Code do equipamento. A configuração antiga que escolhia "documentos da unidade no prontuário do equipamento" deixou de valer.
++3. **Só o último gerado.** O mesmo documento gerado de novo vale uma vez só, na última geração (a oficial). O sistema reconhece a repetição dentro do mesmo equipamento (ou da mesma unidade, para os documentos da unidade): o certificado de calibração pela data da calibração e pelos instrumentos calibrados (dois manômetros calibrados no mesmo dia continuam dois certificados); os relatórios de ensaio e de qualificação pelo número (espaços repetidos e acentos não contam); os demais pelo número ou pelo nome do arquivo.
++4. **Quem vê os substituídos.** No QR Code, no Portal do cliente, na conta de cliente e para os perfis da equipe que não são Admin nem Diretoria, aparece só o oficial; a equipe vê o aviso "N documentos gerados de novo ficaram fora desta lista". Admin e Diretoria veem os anteriores na ficha, em "Substituídos", marcados como substituídos. Nenhum registro é apagado do banco.
++5. **Pasta de arquivos do equipamento.** O QR Code não abre mais a pasta de arquivos do equipamento. Ela era achada pelo nome ("TAG - TIPO") e equipamentos com a mesma TAG e o mesmo tipo na mesma unidade (por exemplo, vários "N/P - TERMOHIGRÔMETRO") caíam na mesma pasta, que também mostrava cada arquivo gerado de novo.
++6. **Substituição gravada pelos módulos.** Os módulos de relatórios de ensaio (autoclave, lavadora, estufa e cadeia de frio) e o registro de revisões (PGT e POP, entre outros) marcavam como substituído qualquer documento com o mesmo número, até de outro equipamento ou de outro cliente. Agora marcam só o do mesmo equipamento (sem equipamento, do mesmo CNPJ). As marcas antigas erradas não foram mexidas no banco: a lista de documentos recalcula a situação dentro de cada equipamento.
++
++### Excluir documento da pasta (18/11/2026)
++
++Pedido do Matheus: há documentos cadastrados em clientes a que não pertencem, o que pode trazer problema com a fiscalização. Na aba **Documentos por pasta** do equipamento (e também na da unidade e na do cliente), quem tem a caixa **«Excluir documento da pasta»** vê o botão **Excluir** em cada documento.
++
++1. Toque em **Excluir**. Aparece, dentro do próprio documento, a confirmação com o nome do documento, o equipamento e o cliente, e o aviso de que ele some do QR Code, das pastas, das fichas e do Portal do cliente.
++2. Escreva o **motivo** (obrigatório, pelo menos 10 letras) e toque em **Confirmar exclusão**. Para desistir, toque em **Cancelar**.
++3. O documento sai na hora de todas as telas e a conta de cliente não consegue mais abrir o arquivo, nem pelo link.
++
++**Exclusão lógica.** Nada é apagado: o registro do módulo (certificado, relatório, Arquivo de documentos) e o arquivo continuam guardados. A exclusão é uma linha na tabela DOCP_EXCLUSOES com o documento, o cliente, a unidade, o equipamento, quem excluiu, quando e o motivo, e fica também no registro de eventos (DOCUMENTO_EXCLUIDO_PASTA).
++
++**Documentos excluídos e restaurar.** Só o Administrador e a Diretoria veem, no fim da mesma aba, a lista **Documentos excluídos**, com quem excluiu, quando e o motivo. Para trazer um documento de volta, escrevem o motivo e tocam em **Restaurar** (registrado como DOCUMENTO_RESTAURADO_PASTA).
++
++**Caixa de Acessos.** «Excluir documento da pasta» (DOCP_EXCLUIR), grupo "Documentos por pasta". Padrão: Administrador, Diretoria e gestores das áreas Técnica, Qualidade e Comercial (inclui o gestor da Qualidade). Para dar ou tirar de outra pessoa, use Administração > Acessos.
++
++Depois de excluir um documento de outro cliente, registre-o no cliente certo (Arquivo de documentos ou o módulo que o gerou).
+ 
+ ### O que o cliente vê
+ 
+@@ -247,6 +274,6 @@ A contagem por equipamento olhava só o **Arquivo de documentos**. Certificados,
+ 
+ ### Configuração (Administrador)
+ 
+-A organização vem pronta. Quando preciso, o responsável pelo sistema ajusta a configuração **DOCP_CFG** (propriedade do servidor), que permite: trocar o nome de uma pasta, esconder uma pasta do cliente, acrescentar uma regra pelo nome ou pelo tipo (por exemplo, "LAUDO TECNICO" para Relatórios técnicos), escolher quais documentos da unidade entram no prontuário do equipamento (padrão: PGT e POP e Registros operacionais), o prazo de "vencendo" (padrão 30 dias) e se a conta de cliente abre os documentos emitidos do prontuário pela trava de arquivo (padrão: sim).
++A organização vem pronta. Quando preciso, o responsável pelo sistema ajusta a configuração **DOCP_CFG** (propriedade do servidor), que permite: trocar o nome de uma pasta, esconder uma pasta do cliente, acrescentar uma regra pelo nome ou pelo tipo (por exemplo, "LAUDO TECNICO" para Relatórios técnicos), o prazo de "vencendo" (padrão 30 dias) e se a conta de cliente abre os documentos emitidos do prontuário pela trava de arquivo (padrão: sim).
+ 
+ </div>
+diff --git a/docs/MANUAL_MODULO_PORTAL_CLIENTE.md b/docs/MANUAL_MODULO_PORTAL_CLIENTE.md
+index 7e52d7fd..81bd196c 100644
+--- a/docs/MANUAL_MODULO_PORTAL_CLIENTE.md
++++ b/docs/MANUAL_MODULO_PORTAL_CLIENTE.md
+@@ -554,7 +554,7 @@ Sobre essa base valem duas regras do portal:
+ 1. **Tipos visíveis** (decisão 17 do dono). Aparecem sozinhos: certificado de calibração, relatório de qualificação, laudo NR-13, relatório de atendimento, cronograma de execução, relatório do ciclo da lavadora e relatório de ronda. Os outros tipos (PGT e POP, registros operacionais, relatórios técnicos e de ensaio, relatórios de manutenção, laudos e declarações, outros) só aparecem quando liberados um a um. A lista fica em Regras do portal.
+ 2. **Marca do documento** (coluna `PORTAL` do Arquivo de documentos): em branco segue a regra do tipo; "Oculto no portal" esconde o documento da lista e da abertura em todas as telas do cliente (inclusive o Arquivo de documentos antigo, o QR Code e a central de vencimentos); "Liberado um a um" mostra o documento mesmo com o tipo fora da lista.
+ 
+-Filtros: unidade, equipamento, tipo, data de emissão ("Emitido"), validade ("Vence até") e busca por número, TAG, série ou nome. Cada linha traz o tipo, o título, o número, o equipamento, a unidade, a emissão, a validade com o selo (em dia, vence em até 30 dias, vencido) e o botão "Abrir". As versões anteriores de um documento ficam guardadas logo abaixo dele.
++Filtros: unidade, equipamento, tipo, data de emissão ("Emitido"), validade ("Vence até") e busca por número, TAG, série ou nome. Cada linha traz o tipo, o título, o número, o equipamento, a unidade, a emissão, a validade com o selo (em dia, vence em até 30 dias, vencido) e o botão "Abrir". De um documento gerado mais de uma vez aparece só o último gerado, que é o oficial; os anteriores ficam no banco e não chegam ao cliente (18/11/2026). A ficha do equipamento mostra só os documentos com o identificador dele; o PGT e os POP são da unidade e ficam em "Por pastas (prontuário)".
+ 
+ **Abrir:** o documento abre numa aba nova no computador; no celular, abre dentro do SGO+, com Voltar e Imprimir. A tela pede ao servidor, que confere se o documento está na lista da pessoa e passa pela trava de arquivo (`PortalCliente_arquivoPermitido_`, a mesma da rota `/arquivos`). A abertura fica em `PCL_ACESSOS` como `DOCUMENTO_ABERTO`. Documento de outro cliente, de outra unidade, oculto ou inexistente recebe a mesma resposta: "Não encontrado. Atualize a lista." Quando o documento existe na lista de outro cliente ou unidade, a tentativa fica como `ESCOPO_RECUSADO`.
+ 
+diff --git a/docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md b/docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md
+index a9977909..99b3e569 100644
+--- a/docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md
++++ b/docs/MANUAL_PORTAL_CLIENTE_PARA_O_CLIENTE.md
+@@ -174,7 +174,7 @@ A aba "Por pastas (prontuário)" mostra todos os documentos da empresa organizad
+ **Passo a passo**
+ 
+ 1. Na aba "Documentos técnicos", filtre por unidade, equipamento, tipo, data de emissão ou "Vence até", ou busque pelo número, TAG, série ou nome.
+-2. Toque em "Abrir" para ver o PDF. Versões anteriores ficam guardadas abaixo de cada documento.
++2. Toque em "Abrir" para ver o PDF. Quando um documento foi gerado mais de uma vez, aparece só a última versão, que é a oficial.
+ 3. Na aba "Por pastas (prontuário)", toque numa pasta para abri-la e use a busca e os filtros de unidade e equipamento.
+ 
+ > Se faltar algum documento, avise pela Conversa geral.
+diff --git a/tests/assistente-manuais-acesso-20261117.test.cjs b/tests/assistente-manuais-acesso-20261117.test.cjs
+index 331362cd..34d88d7b 100644
+--- a/tests/assistente-manuais-acesso-20261117.test.cjs
++++ b/tests/assistente-manuais-acesso-20261117.test.cjs
+@@ -289,6 +289,11 @@ test('6. nenhum parágrafo da base anterior se perdeu sem justificativa', { skip
+     /^\s*não houve atendimento\)\.$/,
+     /^abrem só para a equipe interna\.$/,
+     /^atendimento não recebe lembrete\), central de pendências, Início, ficha do equipamento e Vínculos leem a mesma lista:/,
++    // 18/11/2026 (regra do dono, output/qr-equipamento-20261118): o QR Code do equipamento deixou de mostrar o PGT, os POP e os registros
++    // da unidade e as versões anteriores; os três parágrafos do manual de vínculos foram reescritos com a regra nova
++    /^QR Code \(prontuário do equipamento no celular\): os documentos do equipamento, por pasta, mais o PGT, os POP e os registros operacionais da unidade/,
++    /^O documento mais novo vem primeiro, com a data de emissão e a validade: .*Revisões anteriores e versões do mesmo documento/,
++    /^A organização vem pronta\. Quando preciso, .*escolher quais documentos da unidade entram no prontuário do equipamento/,
+     // Ganhos dos vendedores e Portal não estavam na base anterior; nada deles conta aqui
+   ];
+   const perdidos = [];
+diff --git a/tests/documentos-pastas-20261117.test.cjs b/tests/documentos-pastas-20261117.test.cjs
+index ad51ce0a..f227d038 100644
+--- a/tests/documentos-pastas-20261117.test.cjs
++++ b/tests/documentos-pastas-20261117.test.cjs
+@@ -19,8 +19,10 @@ const BASE = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_c
+ const ler = (f) => fs.readFileSync(path.join(BASE, f), 'utf8').replace(/\r\n/g, '\n');
+ const j = (x) => JSON.parse(JSON.stringify(x));
+ const CTX = { ip: '200.1.2.3', agente: 'Mozilla/5.0 Teste', aparelho: '' };
+-const hoje = new Date();
+-const dia = (n) => new Date(hoje.getTime() + n * 86400000).toISOString().slice(0, 10);
++// 18/11/2026: o "hoje" do teste é o dia de Brasília, como no servidor (Docs_hoje_). Antes era o dia em UTC e, entre 21h e 24h de
++// Brasília, o teste esperava "Vence em 25 dias" e o servidor (certo) dizia 26.
++const hojeBrasilia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
++const dia = (n) => { const [y, m, d] = hojeBrasilia.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+ const br = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(0, 4);
+ 
+ const ADMIN = { ID: 'u-admin', USUARIO: 'admin', SENHA: 'Velha2026x', NOME: 'ADMINISTRADOR TESTE', PERFIL: 'ADMIN', STATUS: 'ATIVO', EMAIL: 'dono@exemplo.test' };
+@@ -155,19 +157,22 @@ test('classificação única: os tipos reais de todos os módulos caem na pasta
+   assert.deepEqual(j(a.ctx.DOCP_PASTAS.map((p) => p.id)), ['CALIBRACAO', 'QUALIFICACAO', 'RELATORIOS_TECNICOS', 'OS', 'MANUTENCAO', 'PGT_POP', 'REGISTROS', 'NR13', 'LAUDOS', 'CONTRATOS', 'OUTROS']);
+ });
+ 
+-test('prontuário pelo QR Code (equipe): pastas com contagem, PGT e POP da unidade, qualificação vigente com a revisão anterior guardada, O.S., sem minuta nem interno', () => {
++// 18/11/2026 (regra do dono, vazamento no QR Code): o prontuário do equipamento mostra só o que tem o ID dele — o PGT, os POP e os
++// registros operacionais da unidade saíram dele — e, de um documento gerado mais de uma vez, só o último (as revisões anteriores
++// ficam no banco e só Admin e Diretoria as veem, na ficha). Este teste foi ajustado a essa regra.
++test('prontuário pelo QR Code (equipe): pastas com contagem, só documentos do equipamento, só a revisão oficial, O.S., sem minuta nem interno', () => {
+   const a = amb();
+   const r = a.docs(a.sPri, 'equipamento', 'eA1', 'qr');
+   assert.equal(r.success, true, r.message);
+-  assert.deepEqual(r.pastas.map((p) => p.id), ['CALIBRACAO', 'QUALIFICACAO', 'RELATORIOS_TECNICOS', 'OS', 'MANUTENCAO', 'PGT_POP', 'REGISTROS', 'NR13', 'LAUDOS', 'OUTROS'], 'todas as pastas, sem a interna');
+-  // qualificação: Rev. 01 vigente na frente, Rev. 00 em "versões anteriores", minuta fora
++  assert.deepEqual(r.pastas.map((p) => p.id), ['CALIBRACAO', 'QUALIFICACAO', 'RELATORIOS_TECNICOS', 'OS', 'MANUTENCAO', 'NR13', 'LAUDOS', 'OUTROS'], 'pastas do equipamento, sem a interna e sem as da unidade (PGT/POP e registros)');
++  // qualificação: só a Rev. 01 (oficial); a Rev. 00 não vai ao QR; minuta fora
+   const q = a.pasta(r, 'QUALIFICACAO');
+   assert.equal(q.total, 1);
+   assert.match(q.itens[0].titulo, /QA-2026-0011 · Rev\. 01/);
+   assert.equal(q.itens[0].venc.s, 'vencendo');
+   assert.match(q.itens[0].venc.texto, /^Vence em 25 dias/);
+-  assert.equal(q.itens[0].anteriores.length, 1);
+-  assert.equal(q.itens[0].anteriores[0].situacao, 'SUBSTITUIDO');
++  assert.equal(q.itens[0].anteriores.length, 0, 'revisão substituída não vai ao QR');
++  assert.ok(!JSON.stringify(r).includes('qualAc01rev0'));
+   assert.ok(!JSON.stringify(r).includes('minutaAc01'), 'minuta nunca no QR');
+   // relatório de ensaio de ciclo em Relatórios técnicos
+   assert.match(a.pasta(r, 'RELATORIOS_TECNICOS').itens[0].titulo, /ensaio de ciclo/);
+@@ -175,36 +180,35 @@ test('prontuário pelo QR Code (equipe): pastas com contagem, PGT e POP da unida
+   const os = a.pasta(r, 'OS');
+   assert.equal(os.total, 1);
+   assert.match(os.itens[0].titulo, /OS-2026-0032/);
+-  assert.equal(os.itens[0].anteriores.length, 1);
++  assert.equal(os.itens[0].anteriores.length, 0);
++  assert.ok(!JSON.stringify(r).includes('relOs0032rev0'), 'revisão anterior do relatório da O.S. fora do QR');
+   assert.ok(!JSON.stringify(r).includes('relOsRascunho'));
+   // certificado vencido
+   const cal = a.pasta(r, 'CALIBRACAO');
+   assert.equal(cal.itens[0].venc.s, 'vencido');
+   assert.equal(r.vencidos >= 1, true);
+-  // PGT e POP: os da unidade (CNPJ da matriz), marcados "da unidade"; o POP de autoclave vem primeiro (deste tipo de equipamento)
+-  const pgt = a.pasta(r, 'PGT_POP');
++  // PGT, POP e registros operacionais são da unidade: nenhum aparece no prontuário do equipamento
++  for (const id of ['pgtsNovo0001', 'pop008Novo01', 'pop028versao1', 'pop028versao2', 'pop001Velho1', 'regOpBowie01', 'popDoB00001']) assert.ok(!JSON.stringify(r).includes(id), 'documento da unidade fora do equipamento: ' + id);
++  assert.ok(a.todos(r).every((i) => i.equipamentoId === 'eA1'), 'só documentos com o ID deste equipamento');
++  // ...e continuam na pasta da unidade, com a versão mais nova do POP028 na frente
++  const un = a.docs(a.sPri, 'unidade', 'uA1', 'ficha');
++  const pgt = a.pasta(un, 'PGT_POP');
+   const titulos = pgt.itens.map((i) => i.titulo);
+   assert.ok(titulos.some((t) => /PGT - Plano de Gerenciamento/.test(t)), titulos.join(' | '));
+-  assert.ok(titulos.some((t) => /POP028/.test(t)), 'POP da lista própria do módulo');
+-  assert.equal(pgt.itens[0].relacionado, true, 'POP de autoclave primeiro');
+-  assert.match(pgt.itens[0].titulo, /POP008/);
+-  assert.ok(pgt.itens.every((i) => i.daUnidade));
+   const pop028 = pgt.itens.find((i) => /POP028/.test(i.titulo));
+   assert.match(pop028.titulo, /POP028_v2/, 'a versão mais nova na frente');
+-  assert.equal(pop028.anteriores.length, 1, 'a v1 guardada como anterior');
++  assert.equal(pop028.anteriores.length, 0, 'a v1 não aparece para o Gestor');
+   assert.ok(!titulos.some((t) => /POP002 do B/.test(t)), 'nada de outro cliente');
+-  // POP001 emitido antes da geração revisada: suspenso, marcado só para a equipe
+   const pop001 = pgt.itens.find((i) => /POP001/.test(i.titulo));
+   assert.equal(pop001 && pop001.situacao, 'SUSPENSO');
+-  // registros operacionais da unidade também valem para o equipamento
+-  assert.equal(a.pasta(r, 'REGISTROS').total, 1);
++  assert.equal(a.pasta(un, 'REGISTROS').total, 1);
+   // documento interno (contrato) e versão interna da Representação nunca no QR
+   assert.ok(!JSON.stringify(r).includes('contratoDoc01') && !JSON.stringify(r).includes('contratoPdfAss'));
+   // manutenção: a versão nova na frente e a antiga guardada (mesmo nome, outro arquivo)
+   const man = a.pasta(r, 'MANUTENCAO');
+   assert.equal(man.total, 1);
+   assert.equal(man.itens[0].url, '/arquivos/manutNova0002');
+-  assert.equal(man.itens[0].anteriores[0].url, '/arquivos/manutAntiga01');
++  assert.ok(!JSON.stringify(r).includes('manutAntiga01'), 'a versão antiga (mesmo nome, outro arquivo) não vai ao QR');
+   // inativo do Arquivo de documentos fora do QR; a situação da qualificação vai junto; o acesso fica registrado
+   assert.ok(!JSON.stringify(r).includes('fotoPlaca001'));
+   assert.match(r.qualificacao.rotulo, /Requalificação vence em|Qualificado até/);
+@@ -225,7 +229,8 @@ test('conta de cliente: só os documentos dela, só o liberado (sem minuta, susp
+   assert.ok(!/"arquivoId"|"docDocumentoId"|"repeticoes"/.test(txt), 'campos internos fora');
+   assert.ok(a.todos(r).every((i) => /^\/arquivos\//.test(i.url)), 'sempre /arquivos/<id>');
+   assert.ok(!r.pastas.some((p) => p.id === 'CONTRATOS'));
+-  assert.ok(a.pasta(r, 'PGT_POP').itens.length >= 3, 'PGT e POP da unidade aparecem para o cliente');
++  assert.ok(!a.pasta(r, 'PGT_POP'), 'PGT e POP não aparecem no equipamento (são da unidade)');
++  assert.ok(a.pasta(a.docs(a.sA, 'unidade', 'uA1', 'portal'), 'PGT_POP').itens.length >= 3, 'PGT e POP aparecem na unidade para o cliente');
+   // Arquivo de documentos do cliente (portal): a empresa inteira, sem dizer o id
+   const p = a.docs(a.sA, 'cliente', '', 'portal');
+   assert.equal(p.success, true, p.message);
+@@ -284,8 +289,11 @@ test('ficha do cliente (equipe): agrupada por pasta, sem repetição e sem perde
+   assert.equal(ter[0].repeticoes, 2);
+   assert.equal(ter[0].venc.s, 'vencendo', 'validade vem do CertCal (o Arquivo dizia "sem vencimento")');
+   assert.equal(ter[0].equipamentoNome, 'TER-01 · TERMOMETRO');
+-  // nada se perde: todos os arquivos do cliente A estão na resposta (principais e versões anteriores)
+-  const ids = a.todos(r).map((i) => i.arquivoId);
++  // nada se perde: todos os arquivos do cliente A estão na resposta de Admin (principais e substituídos); o Gestor vê só o oficial
++  const ra = a.docs(a.sAdm, 'cliente', 'cA', 'ficha');
++  const ids = a.todos(ra).map((i) => i.arquivoId);
++  assert.ok(!a.todos(r).some((i) => ['manutAntiga01', 'qualAc01rev0', 'relOs0032rev0', 'pop028versao1'].includes(i.arquivoId)), 'Gestor não vê versão substituída');
++  assert.ok(r.substituidosOcultos >= 4, 'a equipe sabe quantos ficaram de fora');
+   for (const id of ['certTer01aaa', 'certAc01soCert', 'manutAntiga01', 'manutNova0002', 'contratoDoc01', 'fotoPlaca001', 'qualAc01rev0', 'qualAc01rev1', 'ensaioAc01', 'qualLv01',
+     'laudoNr13vp01', 'relOs0032pdf', 'relOs0032rev0', 'repCliPdf001', 'repIntPdf001', 'pgtsNovo0001', 'pop008Novo01', 'pop001Velho1', 'pop028versao1', 'pop028versao2', 'declExec0005', 'regOpBowie01', 'contratoPdfAss'])
+     assert.ok(ids.includes(id), 'faltou ' + id);
+@@ -431,7 +439,7 @@ test('telas: prontuário no celular (390/320 px), ficha do cliente (1366 px) e v
+         await page.evaluate((e) => { document.querySelectorAll('#loginScreen, .login-etapa').forEach((x) => { x.style.display = 'none'; }); const m = document.querySelector('.main-layout'); if (m) m.style.display = ''; renderProntuarioDigital_('', e, ''); }, eqp);
+         await page.waitForFunction(() => document.querySelectorAll('#qrDocPastas .dpst-pasta').length > 0, null, { timeout: 15000 });
+         const txt = await page.locator('#qrDocPastas').innerText();
+-        assert.match(txt, /PGT e POP/); assert.match(txt, /Ordens de serviço e relatórios de atendimento/); assert.match(txt, /Qualificações/);
++        assert.ok(!/PGT e POP/.test(txt), 'PGT e POP fora do equipamento'); assert.match(txt, /Ordens de serviço e relatórios de atendimento/); assert.match(txt, /Qualificações/);
+         assert.ok(!/Contratos e propostas/.test(txt), 'pasta interna fora do QR');
+         assert.ok(await page.evaluate(() => getComputedStyle(document.querySelector('#qrDocPastas .dpst-como-corpo p')).textAlign === 'justify'), 'guia justificado');
+         assert.ok(await semRolagem(page), 'sem rolagem lateral (' + largura + ', ' + quem + ')');
+@@ -440,7 +448,7 @@ test('telas: prontuário no celular (390/320 px), ficha do cliente (1366 px) e v
+         // abre a pasta PGT e POP e a de qualificação
+         await page.evaluate(() => { document.querySelector('#qrDocPastas .dpst-como').open = false; ['PGT_POP', 'QUALIFICACAO'].forEach((id) => { const d = document.querySelector('#qrDocPastas .dpst-pasta[data-pasta="' + id + '"]'); if (d) d.open = true; }); });
+         const txt2 = await page.locator('#qrDocPastas').innerText();
+-        assert.match(txt2, /POP008/); assert.match(txt2, /Da unidade/); assert.match(txt2, /Versões anteriores/);
++        assert.ok(!/POP008|Da unidade|Versões anteriores|Substituídos/.test(txt2), 'sem documento da unidade e sem versão substituída no QR'); assert.match(txt2, /QA-2026-0011/);
+         if (quem === 'cliente') assert.ok(!/POP001/.test(txt2), 'suspenso fora para o cliente');
+         assert.ok(await semRolagem(page), 'sem rolagem lateral com as pastas abertas');
+         await page.screenshot({ path: path.join(saida, largura + '-prontuario-qr-' + quem + '-pastas-abertas.png'), fullPage: true });
+diff --git a/tests/portal-cliente-etapa3-20261118.test.cjs b/tests/portal-cliente-etapa3-20261118.test.cjs
+index 7eafe95c..de651b70 100644
+--- a/tests/portal-cliente-etapa3-20261118.test.cjs
++++ b/tests/portal-cliente-etapa3-20261118.test.cjs
+@@ -270,12 +270,15 @@ test('T3.7: abrir um documento passa pela trava de arquivo e grava DOCUMENTO_ABE
+   const reg = a.lin('PCL_ACESSOS').filter((x) => x.ACAO === 'DOCUMENTO_ABERTO');
+   assert.equal(reg.length, 1); assert.equal(reg[0].USUARIO_ID, 'u_sol'); assert.equal(reg[0].REF_ID, 'arqCert1xxxx'); assert.equal(reg[0].CLIENTE_ID, 'c1');
+   assert.match(reg[0].DETALHE, /Certificado de calibração/);
+-  // versão anterior também abre (guardada junto do documento)
++  // 18/11/2026 (regra do dono, output/qr-equipamento-20261118): de um documento gerado de novo, o Portal mostra só o último (o oficial);
++  // a versão anterior não aparece nem abre pela lista (antes: "versão anterior também abre, guardada junto do documento")
+   a.tabelas.DOC_DOCUMENTOS.push({ ID: 'd1v', CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', EQUIPAMENTO_ID: 'eq1', TIPO_DOCUMENTO: '2. Certificados de calibração', NOME_ARQUIVO: 'Certificado AC-01 2026 Rev. 01.pdf', LINK_ARQUIVO: '/arquivos/arqCert1rev1x', DATA_EMISSAO: a.dia(-1), DATA_VENCIMENTO: a.dia(360), STATUS: 'ATIVO' });
+   const l = a.pcl('s_cliente.alfa', 'documentos', { tipo: 'CALIBRACAO', unidadeId: 'un1' });
+   const cert = l.documentos.find((x) => /AC-01 2026/.test(x.titulo));
+-  assert.ok(cert && cert.anteriores.length === 1, JSON.stringify(l.documentos.map((x) => [x.titulo, (x.anteriores || []).length])));
+-  assert.equal(a.pcl('s_cliente.alfa', 'abrirDocumento', { k: cert.anteriores[0].k }).ok, true);
++  assert.ok(cert && /Rev\. 01/.test(cert.titulo) && cert.anteriores.length === 0, JSON.stringify(l.documentos.map((x) => [x.titulo, (x.anteriores || []).length])));
++  assert.ok(!l.documentos.some((x) => x.titulo === 'Certificado AC-01 2026'), 'a versão anterior não aparece no Portal');
++  assert.equal(a.pcl('s_cliente.alfa', 'abrirDocumento', { k: cert.k }).ok, true);
++  assert.equal(a.pcl('s_cliente.alfa', 'abrirDocumento', { k: kDe('arqCert1xxxx') }).ok, false, 'a versão anterior não abre pela lista');
+   // documento de outra unidade (Solicitante) e de outro cliente: "Não encontrado", com ESCOPO_RECUSADO
+   for (const [sid, arq] of [['s_sonia.alfa', 'arqCert4xxxx'], ['s_cliente.alfa', 'arqCert3xxxx']]) {
+     const x = a.pcl(sid, 'abrirDocumento', { k: kDe(arq) }); assert.equal(x.ok, false); assert.equal(x.message, 'Não encontrado. Atualize a lista.');
+diff --git a/tests/qualificacao-integrada.test.cjs b/tests/qualificacao-integrada.test.cjs
+index da6fae77..e4380f46 100644
+--- a/tests/qualificacao-integrada.test.cjs
++++ b/tests/qualificacao-integrada.test.cjs
+@@ -188,7 +188,8 @@ test('nova revisão: substitui a anterior (que continua guardada), com motivo no
+   assert.equal(env.fn('SGO_QE_obter_')(envio.id).STATUS, 'SUBSTITUIDO');
+   assert.ok(env.arquivos[emi.pdfId], 'o PDF da revisão 0 continua guardado');
+   const qr = env.chamar('qrcodeQualificacao', 'cli', 'eq1').itens.filter(i => i.titulo === 'Relatório de qualificação — autoclave a vapor');
+-  assert.deepEqual(qr.map(i => [i.revisao, i.situacao]).sort(), [['0', 'SUBSTITUIDO'], ['1', 'VIGENTE']]);
++  // 18/11/2026 (regra do dono, output/qr-equipamento-20261118): pelo QR só a revisão oficial; a substituída continua guardada (PDF acima)
++  assert.deepEqual(qr.map(i => [i.revisao, i.situacao]).sort(), [['1', 'VIGENTE']]);
+   const html = htmlDe(env, em2.htmlId);
+   assert.match(html, /Inclusão de observação do ensaio/);
+   assert.match(html, /substituídas/);
+diff --git a/tests/qr-equipamento-documentos-20261118.test.cjs b/tests/qr-equipamento-documentos-20261118.test.cjs
+new file mode 100644
+index 00000000..969a4591
+--- /dev/null
++++ b/tests/qr-equipamento-documentos-20261118.test.cjs
+@@ -0,0 +1,303 @@
++// 18/11/2026 — Vazamento no QR Code do equipamento (pedido urgente do dono): "Nos equipamentos, quando lemos o QR code aparece 29 POP e
++// PGT e mais 3 documentos, para todos os equipamentos repetidos; qualquer QR de equipamento que abre aparece. Nunca, jamais, dado de
++// nenhum equipamento pode cruzar com outro: todo equipamento só deve ter e abrir só o que é pertinente a ele. E documentos gerados mais
++// de uma vez e repetidos não podem jamais ser vistos: nas pastas do equipamento só pode ser visto o último documento gerado, que é o oficial."
++// Causas (output/qr-equipamento-20261118/RELATORIO.md): (1) o prontuário do equipamento juntava o PGT, os POP e os registros operacionais
++// da unidade; (2) a chave de versão não tinha o equipamento, e o ensaio "Ciclo 1 de 3" de um equipamento virava "versão anterior" de outro;
++// (3) os módulos de ensaio e de revisões marcavam SUBSTITUIDO só pelo número (o POP003 de um cliente substituía o de outro); (4) o mesmo
++// certificado gerado várias vezes (números diferentes) aparecia várias vezes; (5) o QR abria a pasta de arquivos achada pelo NOME
++// "TAG - TIPO", a mesma para equipamentos com TAG e tipo iguais.
++// Código real num vm (SGO_Auth.js, cadastros, SGO_QualifEmissao.js, SGO_QualifEquipamento.js, SGO_DocRevisao.js, SGO_PgtPop_*.js,
++// SGO_QRCode.js, SGO_DocumentosPastas.js, Portal do cliente), com planilha e propriedades simuladas. Só dados de teste.
++// Falha na cand31 e passa na cand32. Uso: DEST=<legado> node --require ./output/lote-20261111n/fontes.cjs --test tests/qr-equipamento-documentos-20261118.test.cjs
++'use strict';
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const vm = require('node:vm');
++const { ambiente } = require('./_usuarios_ambiente.cjs');
++
++const BASE = path.resolve(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
++const ler = (f) => fs.readFileSync(path.join(BASE, f), 'utf8').replace(/\r\n/g, '\n');
++const j = (x) => JSON.parse(JSON.stringify(x));
++const CTX = { ip: '200.1.2.3', agente: 'Mozilla/5.0 Teste', aparelho: '' };
++// dia de Brasília, como o servidor (Docs_hoje_)
++const hojeBrasilia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
++const dia = (n) => { const [y, m, d] = hojeBrasilia.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
++
++const ADMIN = { ID: 'u-admin', USUARIO: 'admin', SENHA: 'Velha2026x', NOME: 'ADMINISTRADOR TESTE', PERFIL: 'ADMIN', STATUS: 'ATIVO', EMAIL: 'dono@exemplo.test' };
++const GES = { ID: 'u-pri', USUARIO: 'priscilla', SENHA: 'Pri2026xyz', NOME: 'PRISCILLA GESTORA TESTE', PERFIL: 'GESTOR', STATUS: 'ATIVO', EMAIL: 'pri@exemplo.test' };
++const TEC = { ID: 'u-tec', USUARIO: 'joao', SENHA: 'Joao!2026', NOME: 'JOAO TECNICO TESTE', PERFIL: 'TECNICO', STATUS: 'ATIVO', EMAIL: 'joao@exemplo.test' };
++const CLIA = { ID: 'u-cla', USUARIO: 'carla', SENHA: 'Cliente2026x', NOME: 'CARLA CLIENTE A TESTE', PERFIL: 'CLIENTE', STATUS: 'ATIVO', EMAIL: 'carla@hospital-a.test', CLIENTE_ID: 'cA' };
++const CNPJ_A = '11222333000181', CNPJ_A2 = '11222333000262', CNPJ_B = '22333444000172';
++
++function aba(a, nome, cab, linhas) { a.abas.set(nome, { cab: cab.slice(), linhas: (linhas || []).map((o) => cab.map((c) => (o[c] === undefined ? '' : o[c]))) }); }
++const blocos = (...t) => JSON.stringify({ blocos: t.map((x) => ({ titulo: x, unidade: 'ºC', quantidadePontos: 3 })) });
++
++function amb() {
++  const a = ambiente();
++  [ADMIN, GES, TEC, CLIA].forEach((u) => a.add(Object.assign({}, u)));
++  a.abas.get('CAD_USUARIOS').cab.push('AREA');
++  aba(a, 'CAD_CLIENTES', ['ID', 'NOME_FANTASIA', 'RAZAO_SOCIAL', 'CNPJ', 'STATUS'], [
++    { ID: 'cA', NOME_FANTASIA: 'HOSPITAL SANTA TESTE', RAZAO_SOCIAL: 'HOSPITAL SANTA TESTE LTDA', CNPJ: CNPJ_A, STATUS: 'ATIVO' },
++    { ID: 'cB', NOME_FANTASIA: 'CLINICA B TESTE', RAZAO_SOCIAL: 'CLINICA B LTDA', CNPJ: CNPJ_B, STATUS: 'ATIVO' }]);
++  aba(a, 'CAD_UNIDADES', ['ID', 'CLIENTE_ID', 'NOME_UNIDADE', 'CNPJ_UNIDADE', 'STATUS'], [
++    { ID: 'uA1', CLIENTE_ID: 'cA', NOME_UNIDADE: 'MATRIZ', CNPJ_UNIDADE: CNPJ_A, STATUS: 'ATIVO' },
++    { ID: 'uA2', CLIENTE_ID: 'cA', NOME_UNIDADE: 'FILIAL', CNPJ_UNIDADE: CNPJ_A2, STATUS: 'ATIVO' },
++    { ID: 'uB1', CLIENTE_ID: 'cB', NOME_UNIDADE: 'B UNICA', CNPJ_UNIDADE: CNPJ_B, STATUS: 'ATIVO' }]);
++  aba(a, 'CAD_EQUIPAMENTOS', ['ID', 'CLIENTE_ID', 'UNIDADE_ID', 'TIPO', 'TAG', 'SERIE', 'STATUS'], [
++    { ID: 'eA1', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', TIPO: 'AUTOCLAVE', TAG: 'AC-01', SERIE: 'S1', STATUS: 'ATIVO' },
++    { ID: 'eA2', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', TIPO: 'AUTOCLAVE', TAG: 'AC-02', SERIE: 'S2', STATUS: 'ATIVO' },
++    { ID: 'eA3', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA2', TIPO: 'TERMOMETRO', TAG: 'N/P', STATUS: 'ATIVO' },
++    { ID: 'eA4', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA2', TIPO: 'TERMOMETRO', TAG: 'N/P', STATUS: 'ATIVO' },
++    { ID: 'eB1', CLIENTE_ID: 'cB', UNIDADE_ID: 'uB1', TIPO: 'AUTOCLAVE', TAG: 'AC-01', STATUS: 'ATIVO' }]);
++  aba(a, 'DOC_DOCUMENTOS', ['ID', 'CLIENTE_ID', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'TIPO_DOCUMENTO', 'NOME_ARQUIVO', 'LINK_ARQUIVO', 'DATA_EMISSAO', 'DATA_VENCIMENTO', 'STATUS', 'CRIADO_EM'], [
++    { ID: 'd1', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', EQUIPAMENTO_ID: '', TIPO_DOCUMENTO: 'PGT / POP', NOME_ARQUIVO: 'PGTS MATRIZ.pdf', LINK_ARQUIVO: '/arquivos/pgtMatrizDoc1', STATUS: 'ATIVO', CRIADO_EM: '2026-11-01T10:00:00' }]);
++  aba(a, 'CERT_CALIBRACAO', ['ID', 'NUMERO_CERTIFICADO', 'CLIENTE_ID', 'EQUIPAMENTO_ID', 'DATA_CALIBRACAO', 'DATA_EMISSAO', 'DATA_VALIDADE', 'DADOS_JSON', 'LINK_PDF_CERTIFICADO', 'STATUS', 'CRIADO_EM'], [
++    // o mesmo certificado do termômetro N/P (eA3) gerado 3 vezes em 10 minutos (o caso real do TER-5: 202600269 a 202600273)
++    { ID: 'c269', NUMERO_CERTIFICADO: '202600269', CLIENTE_ID: 'cA', EQUIPAMENTO_ID: 'eA3', DATA_CALIBRACAO: '13/10/2026', DATA_EMISSAO: '13/10/2026', DATA_VALIDADE: dia(200), DADOS_JSON: blocos('Sensor Externo'), LINK_PDF_CERTIFICADO: '/arquivos/cert269aaaa', STATUS: 'ATIVO', CRIADO_EM: '2026-10-13T18:12:42.151Z' },
++    { ID: 'c270', NUMERO_CERTIFICADO: '202600270', CLIENTE_ID: 'cA', EQUIPAMENTO_ID: 'eA3', DATA_CALIBRACAO: '13/10/2026', DATA_EMISSAO: '13/10/2026', DATA_VALIDADE: dia(200), DADOS_JSON: blocos('Sensor Externo'), LINK_PDF_CERTIFICADO: '/arquivos/cert270aaaa', STATUS: 'ATIVO', CRIADO_EM: '2026-10-13T18:14:19.223Z' },
++    { ID: 'c273', NUMERO_CERTIFICADO: '202600273', CLIENTE_ID: 'cA', EQUIPAMENTO_ID: 'eA3', DATA_CALIBRACAO: '13/10/2026', DATA_EMISSAO: '13/10/2026', DATA_VALIDADE: dia(200), DADOS_JSON: blocos('Sensor Externo'), LINK_PDF_CERTIFICADO: '/arquivos/cert273aaaa', STATUS: 'ATIVO', CRIADO_EM: '2026-10-13T18:22:40.702Z' },
++    // a autoclave AC-01 tem dois instrumentos calibrados no mesmo dia: são dois certificados (não é repetição)
++    { ID: 'cm1', NUMERO_CERTIFICADO: '202600003', CLIENTE_ID: 'cA', EQUIPAMENTO_ID: 'eA1', DATA_CALIBRACAO: '22/08/2026', DATA_EMISSAO: '22/08/2026', DATA_VALIDADE: dia(100), DADOS_JSON: blocos('MANOMETRO CAMARA INTERNA'), LINK_PDF_CERTIFICADO: '/arquivos/certManInt01', STATUS: 'ATIVO', CRIADO_EM: '2026-08-22T23:09:00Z' },
++    { ID: 'cm2', NUMERO_CERTIFICADO: '202600007', CLIENTE_ID: 'cA', EQUIPAMENTO_ID: 'eA1', DATA_CALIBRACAO: '22/08/2026', DATA_EMISSAO: '22/08/2026', DATA_VALIDADE: dia(100), DADOS_JSON: blocos('MANOMETRO GERADORA DE VAPOR'), LINK_PDF_CERTIFICADO: '/arquivos/certManGer01', STATUS: 'ATIVO', CRIADO_EM: '2026-08-23T00:06:00Z' },
++    // o termômetro eA4 tem a mesma TAG e o mesmo tipo do eA3: o certificado dele é só dele
++    { ID: 'c4', NUMERO_CERTIFICADO: '202600300', CLIENTE_ID: 'cA', EQUIPAMENTO_ID: 'eA4', DATA_CALIBRACAO: '13/10/2026', DATA_EMISSAO: '13/10/2026', DATA_VALIDADE: dia(200), DADOS_JSON: blocos('Sensor Externo'), LINK_PDF_CERTIFICADO: '/arquivos/certEa4aaaaa', STATUS: 'ATIVO', CRIADO_EM: '2026-10-13T19:00:00Z' }]);
++  for (const f of ['SGO_PortalCliente_Config.js', 'SGO_PortalCliente_Contratos.js', 'SGO_PortalCliente_Seguranca.js', 'SGO_PortalCliente.js', 'SGO_Equipamentos.js', 'SGO_Documentos.js',
++    'SGO_Unidades.js', 'SGO_Clientes.js', 'SGO_CadastrosPainel.js', 'SGO_QualifEmissao.js', 'SGO_QualifEquipamento.js', 'SGO_DocRevisao.js', 'SGO_PgtPop_Config.js', 'SGO_PgtPop_Main.js',
++    'SGO_EnviarDoc.js', 'SGO_QRCode.js', 'SGO_DocumentosPastas.js', 'SGO_PortalCliente_Acessos.js', 'SGO_PortalCliente_Documentos.js']) vm.runInContext(ler(f), a.ctx, { filename: f });
++  a.ctx.SGO_CFG.SHEETS.CAD_UNIDADES = 'CAD_UNIDADES';
++  a.ctx.SGO_CFG.SHEETS.CAD_EQUIPAMENTOS = 'CAD_EQUIPAMENTOS';
++  a.ctx.SGO_CFG.SHEETS.DOC_DOCUMENTOS = 'DOC_DOCUMENTOS';
++  a.ctx.SGO_CFG.SHEETS.CERT_CALIBRACAO = 'CERT_CALIBRACAO';
++  a.ctx.SGO_DATA.getByField = () => null;
++  a.ctx.SGO_DATA.log = () => true;
++  a.ctx.Session = { getScriptTimeZone: () => 'America/Sao_Paulo' };
++  // Ensaios da autoclave (QUALIF_EMISSOES). O número "Ciclo 1 de 3 - Sem Carga" é o mesmo nos dois equipamentos: o módulo marcou o do
++  // AC-01 como SUBSTITUIDO quando o AC-02 emitiu o dele (marcação só pelo número). O AC-01 também tem o "Ciclo 2" gerado duas vezes,
++  // com espaços diferentes no número ("Ciclo 2  de 3" e "Ciclo 2 de 3").
++  aba(a, 'QUALIF_EMISSOES', a.ctx.SGO_QE_CAMPOS, [
++    { ID: 'q1', MODULO: 'AUTOCLAVE', STATUS: 'SUBSTITUIDO', NUMERO: 'Ciclo 1 de 3 - Sem Carga', REVISAO: '0', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', EQUIPAMENTO_ID: 'eA1', CNPJ: CNPJ_A, APROVADO_EM: '2026-10-27T10:00:00', PDF_ID: 'ensC1ac01', VALIDADE_ATE: '' },
++    { ID: 'q2', MODULO: 'AUTOCLAVE', STATUS: 'EMITIDO', NUMERO: 'Ciclo 1 de 3 - Sem Carga', REVISAO: '1', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', EQUIPAMENTO_ID: 'eA2', CNPJ: CNPJ_A, APROVADO_EM: '2026-10-28T10:00:00', PDF_ID: 'ensC1ac02', VALIDADE_ATE: '' },
++    { ID: 'q3', MODULO: 'AUTOCLAVE', STATUS: 'EMITIDO', NUMERO: 'Ciclo 2  de 3 - Sem  Carga', REVISAO: '0', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', EQUIPAMENTO_ID: 'eA1', CNPJ: CNPJ_A, APROVADO_EM: '2026-10-27T11:00:00', PDF_ID: 'ensC2ac01v', VALIDADE_ATE: '' },
++    { ID: 'q4', MODULO: 'AUTOCLAVE', STATUS: 'EMITIDO', NUMERO: 'Ciclo 2 de 3 - Sem Carga', REVISAO: '0', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', EQUIPAMENTO_ID: 'eA1', CNPJ: CNPJ_A, APROVADO_EM: '2026-10-27T15:00:00', PDF_ID: 'ensC2ac01n', VALIDADE_ATE: '' },
++    { ID: 'q5', MODULO: 'AUTOCLAVE', STATUS: 'EMITIDO', NUMERO: 'Ciclo 1 de 3 - Sem Carga', REVISAO: '0', CLIENTE_ID: 'cB', UNIDADE_ID: 'uB1', EQUIPAMENTO_ID: 'eB1', CNPJ: CNPJ_B, APROVADO_EM: '2026-10-20T10:00:00', PDF_ID: 'ensC1doB1', VALIDADE_ATE: '' }]);
++  // PGT/POP do cliente A (unidade matriz, pelo CNPJ) e do cliente B. O POP003 do A ficou SUBSTITUIDO quando o B emitiu o POP003 dele.
++  aba(a, 'DOC_REVISOES', a.ctx.SGO_DOCREV_CAMPOS, [
++    { ID: 'v1', MODULO: 'PGT_POP', NUMERO: 'PGTS', REVISAO: '0', STATUS: 'EMITIDO', EMITIDO_EM: '2026-11-15T09:00:00', TITULO: 'PGT - Plano de Gerenciamento', CNPJ: CNPJ_A, PDF_ID: 'pgtsDoA0001' },
++    { ID: 'v2', MODULO: 'PGT_POP', NUMERO: 'POP003', REVISAO: '0', STATUS: 'SUBSTITUIDO', EMITIDO_EM: '2026-11-15T09:10:00', TITULO: 'POP003 - Inventário', CNPJ: CNPJ_A, PDF_ID: 'pop003DoA01' },
++    { ID: 'v3', MODULO: 'PGT_POP', NUMERO: 'POP003', REVISAO: '1', STATUS: 'EMITIDO', EMITIDO_EM: '2026-11-16T09:10:00', TITULO: 'POP003 - Inventário', CNPJ: CNPJ_B, PDF_ID: 'pop003DoB01' }]);
++  a.props.set('PGTPOP_SUSPENSO_ANTES_DE', '');
++  const s = (u) => { const r = a.ctx.login(u.EMAIL, u.SENHA, CTX); assert.equal(r.success, true, u.EMAIL + ': ' + r.message); return r.sessionId; };
++  a.sAdm = s(ADMIN); a.sGes = s(GES); a.sTec = s(TEC); a.sA = s(CLIA);
++  a.docs = (sid, escopo, id, via) => { const r = j(a.ctx.documentosPastas(sid, { escopo, id, via })); assert.equal(r.success, true, r.message); return r; };
++  a.itens = (r) => r.pastas.flatMap((p) => p.itens);
++  a.todos = (r) => r.pastas.flatMap((p) => p.itens.flatMap((i) => [i].concat(i.anteriores || [])));
++  return a;
++}
++
++test('QR do equipamento: só o que tem o ID dele — nada de PGT, POP ou registro da unidade, nada de outro equipamento (equipe e cliente)', () => {
++  const a = amb();
++  for (const [sid, quem] of [[a.sTec, 'técnico'], [a.sGes, 'gestor'], [a.sA, 'cliente']]) {
++    for (const eq of ['eA1', 'eA2', 'eA3', 'eA4']) {
++      const r = a.docs(sid, 'equipamento', eq, 'qr');
++      const txt = JSON.stringify(r);
++      for (const proibido of ['pgtsDoA0001', 'pop003DoA01', 'pop003DoB01', 'pgtMatrizDoc1', 'PGTS MATRIZ']) assert.ok(!txt.includes(proibido), quem + ' / ' + eq + ': documento da unidade no equipamento (' + proibido + ')');
++      assert.ok(!r.pastas.some((p) => p.id === 'PGT_POP' || p.id === 'REGISTROS'), quem + ' / ' + eq + ': pasta da unidade no equipamento');
++      assert.ok(a.todos(r).every((i) => i.equipamentoId === eq), quem + ' / ' + eq + ': documento de outro equipamento: ' + a.todos(r).filter((i) => i.equipamentoId !== eq).map((i) => i.titulo).join(' | '));
++    }
++  }
++  // AC-01 e AC-02 têm o mesmo número de ensaio ("Ciclo 1 de 3 - Sem Carga"): cada um vê o seu, e o do AC-01 é o vigente dele
++  const r1 = a.docs(a.sA, 'equipamento', 'eA1', 'qr'), r2 = a.docs(a.sA, 'equipamento', 'eA2', 'qr');
++  const c1 = a.itens(r1).find((i) => /Ciclo 1 de 3/.test(i.titulo)), c2 = a.itens(r2).find((i) => /Ciclo 1 de 3/.test(i.titulo));
++  assert.ok(c1 && c2, 'cada autoclave mostra o próprio ensaio');
++  assert.equal(c1.situacao, 'VIGENTE', 'o ensaio do AC-01 não foi substituído por nada do AC-01 (a marca era do AC-02)');
++  assert.equal(c1.url, '/arquivos/ensC1ac01'); assert.equal(c2.url, '/arquivos/ensC1ac02');
++  // os dois termômetros com a mesma TAG e o mesmo tipo: cada um com o seu certificado
++  assert.deepEqual(a.itens(a.docs(a.sA, 'equipamento', 'eA4', 'qr')).map((i) => i.numero), ['202600300']);
++  // o PGT e os POP continuam na pasta da unidade e na do cliente
++  const un = a.docs(a.sA, 'unidade', 'uA1', 'portal');
++  assert.ok(JSON.stringify(un).includes('PGT - Plano de Gerenciamento'));
++  assert.ok(!JSON.stringify(a.docs(a.sA, 'unidade', 'uA2', 'portal')).includes('PGT - Plano'), 'o PGT da matriz não vai para a filial');
++});
++
++test('documento gerado mais de uma vez: no QR, na ficha de quem não é Admin/Diretoria e no Portal só o último; Admin vê os substituídos', () => {
++  const a = amb();
++  // certificado do termômetro gerado 3 vezes: só o 202600273 (o último gerado)
++  for (const [sid, via] of [[a.sA, 'qr'], [a.sTec, 'qr'], [a.sGes, 'ficha'], [a.sA, 'portal']]) {
++    const r = a.docs(sid, 'equipamento', 'eA3', via);
++    assert.deepEqual(a.todos(r).map((i) => i.numero), ['202600273'], via + ': só o último gerado');
++  }
++  // os dois instrumentos da autoclave calibrados no mesmo dia continuam dois certificados
++  const cal = a.itens(a.docs(a.sA, 'equipamento', 'eA1', 'qr')).filter((i) => i.pasta === 'CALIBRACAO').map((i) => i.numero).sort();
++  assert.deepEqual(cal, ['202600003', '202600007']);
++  // "Ciclo 2  de 3" e "Ciclo 2 de 3" do AC-01 são o mesmo ensaio gerado de novo: só o mais novo
++  const c2 = a.itens(a.docs(a.sA, 'equipamento', 'eA1', 'qr')).filter((i) => /Ciclo 2/.test(i.titulo));
++  assert.equal(c2.length, 1); assert.equal(c2[0].url, '/arquivos/ensC2ac01n');
++  // Gestor: só o oficial, com o aviso de quantos ficaram fora; Admin: o oficial com os substituídos guardados embaixo
++  const g = a.docs(a.sGes, 'equipamento', 'eA3', 'ficha');
++  assert.equal(g.substituidosOcultos, 2);
++  const ad = a.docs(a.sAdm, 'equipamento', 'eA3', 'ficha');
++  const of = a.itens(ad).find((i) => i.numero === '202600273');
++  assert.deepEqual(of.anteriores.map((x) => x.numero), ['202600270', '202600269']);
++  assert.ok(of.anteriores.every((x) => x.situacao === 'SUBSTITUIDO' && x.equipamentoId === 'eA3'));
++  // nada se perde: o Admin vê todos os arquivos do cliente A (oficiais e substituídos) e nenhum do B
++  const ids = a.todos(a.docs(a.sAdm, 'cliente', 'cA', 'ficha')).map((i) => i.arquivoId);
++  for (const id of ['cert269aaaa', 'cert270aaaa', 'cert273aaaa', 'certManInt01', 'certManGer01', 'certEa4aaaaa', 'ensC1ac01', 'ensC1ac02', 'ensC2ac01v', 'ensC2ac01n', 'pgtsDoA0001', 'pop003DoA01']) assert.ok(ids.includes(id), 'faltou ' + id);
++  assert.ok(!ids.includes('ensC1doB1') && !ids.includes('pop003DoB01'), 'nada do cliente B');
++});
++
++test('ficha do cliente: versão anterior nunca é de outro equipamento, de outra unidade ou de outro cliente (chave com o vínculo)', () => {
++  const a = amb();
++  const r = a.docs(a.sAdm, 'cliente', 'cA', 'ficha');
++  for (const it of a.itens(r)) for (const ant of it.anteriores || []) {
++    assert.equal(ant.equipamentoId, it.equipamentoId, it.titulo + ' <- ' + ant.titulo);
++    assert.equal(ant.unidadeId, it.unidadeId, it.titulo + ' <- ' + ant.titulo);
++  }
++  // o "Ciclo 1 de 3" do AC-01 e o do AC-02 são dois documentos, cada um no seu equipamento
++  const c1 = a.itens(r).filter((i) => /Ciclo 1 de 3/.test(i.titulo)).map((i) => i.equipamentoId).sort();
++  assert.deepEqual(c1, ['eA1', 'eA2']);
++  // o POP003 do cliente A (marcado SUBSTITUIDO pela emissão do cliente B) é o vigente do A
++  const pop = a.itens(r).find((i) => /POP003/.test(i.titulo));
++  assert.equal(pop && pop.situacao, 'VIGENTE');
++  // a contagem por equipamento soma só o oficial de cada documento
++  const det = j(a.ctx.cadastrosDetalhe(a.sGes, 'clientes', 'cA'));
++  assert.equal(det.contagemDocs.porEquipamento.eA3, 1, 'o certificado gerado 3 vezes conta uma');
++});
++
++test('Portal do cliente (lista de documentos e ficha do equipamento): só o oficial, sem versões anteriores', () => {
++  const a = amb();
++  const sessao = a.ctx.exigirSessao(a.sA);
++  const b = a.ctx.PClD_base_({ cid: 'cA', eu: { sessao: sessao }, esc: { todas: true } });
++  const nums = b.docs.map((d) => d.numero);
++  assert.ok(nums.includes('202600273'));
++  assert.ok(!nums.includes('202600269') && !nums.includes('202600270'), 'certificado repetido fora do Portal');
++  assert.ok(b.docs.every((d) => !(d.anteriores || []).length), 'nenhuma versão anterior no Portal');
++  assert.ok(b.docs.every((d) => d.situacao !== 'SUBSTITUIDO'));
++});
++
++test('gravação: o módulo de ensaios e o de revisões só substituem o documento do MESMO equipamento (ou do mesmo CNPJ)', () => {
++  const a = amb();
++  // AC-02 emite de novo o "Ciclo 1 de 3 - Sem Carga": o do AC-01 e o do cliente B continuam como estavam
++  a.ctx.SGO_QE_registrar_({ ID: 'q9', MODULO: 'AUTOCLAVE', STATUS: 'EMITIDO', NUMERO: 'Ciclo 1 de 3 - Sem Carga', REVISAO: '2', CLIENTE_ID: 'cA', UNIDADE_ID: 'uA1', EQUIPAMENTO_ID: 'eA2', CNPJ: CNPJ_A, APROVADO_EM: '2026-11-18T10:00:00', PDF_ID: 'ensC1ac02r2' });
++  a.ctx.SGO_QE_marcarSubstituidas_('AUTOCLAVE', 'Ciclo 1 de 3 - Sem Carga', 'q9');
++  const st = (id) => a.ctx.SGO_QE_obter_(id).STATUS;
++  assert.equal(st('q2'), 'SUBSTITUIDO', 'a emissão anterior do próprio AC-02 é substituída');
++  assert.equal(st('q5'), 'EMITIDO', 'a do cliente B não é tocada');
++  assert.equal(st('q9'), 'EMITIDO');
++  // revisões (PGT/POP): só o mesmo CNPJ; sem dado para comparar, como antes
++  const m = a.ctx.SGO_DocRev_mesmoAlvo_;
++  assert.equal(m({ CNPJ: CNPJ_A }, { cnpj: '11.222.333/0001-81' }), true);
++  assert.equal(m({ CNPJ: CNPJ_A }, { cnpj: CNPJ_B }), false);
++  assert.equal(m({ EQUIPAMENTO_ID: 'eA1', CNPJ: CNPJ_A }, { equipamentoId: 'eA2', cnpj: CNPJ_A }), false);
++  assert.equal(m({ CNPJ: '' }, { cnpj: CNPJ_B }), true);
++  assert.match(ler('SGO_DocRevisao.js'), /r\.STATUS === 'EMITIDO' && SGO_DocRev_mesmoAlvo_\(r, info\)/);
++});
++
++test('QR Code: a pasta de arquivos achada pelo nome "TAG - TIPO" não é mais aberta; a qualificação do QR mostra só o oficial', () => {
++  const a = amb();
++  const q = j(a.ctx.qrcodeAcessar(a.sA, 'eA3'));
++  assert.equal(q.success, true, q.message);
++  assert.equal(q.redirectUrl, '', 'sem link da pasta (eA3 e eA4 têm a mesma TAG e o mesmo tipo e cairiam na mesma pasta)');
++  const fonte = ler('SGO_QRCode.js');
++  const corpo = fonte.slice(fonte.indexOf('function acessarViaQR'), fonte.indexOf('return {', fonte.indexOf('function acessarViaQR')));
++  assert.ok(!/obterLinkPastaEquipamento_\(/.test(corpo), 'acessarViaQR não procura a pasta pelo nome');
++  // reserva do QR (seção Qualificação): sem versão substituída, também para a equipe
++  a.tabelasQe = null;
++  const ql = j(a.ctx.qrcodeQualificacao(a.sTec, 'eA1'));
++  assert.equal(ql.success, true, ql.message);
++  assert.ok(ql.itens.every((i) => i.situacao !== 'SUBSTITUIDO' && i.situacao !== 'MINUTA'));
++  const lc = j(a.ctx.qualifEquipamentoListar(a.sA, 'eA2'));
++  assert.ok(lc.itens.every((i) => i.situacao !== 'SUBSTITUIDO'), 'a conta de cliente não vê versão substituída');
++});
++
++test('telas, ajuda e manual: sem o selo "Da unidade", textos novos justificados, regra explicada na ajuda e no manual', () => {
++  const comp = ler('JS_DocumentosPastas.html');
++  assert.ok(!/Da unidade: vale para todos os equipamentos/.test(comp));
++  assert.match(comp, /só os documentos deste equipamento/);
++  assert.match(comp, /Substituídos: gerados antes do oficial/);
++  assert.match(comp, /Por quê: versão repetida não pode ser vista/);
++  const aj = ler('SGO_Ajuda_Cadastros.js');
++  assert.match(aj, /só o último gerado/);
++  assert.match(aj, /PGT e os POP são documentos da unidade/);
++  const man = fs.readFileSync(path.join(__dirname, '../docs/MANUAL_CLIENTES_UNIDADES_VINCULOS.md'), 'utf8');
++  assert.match(man, /### Cada equipamento só com o que é dele/);
++  assert.match(man, /último gerado/);
++  assert.ok(!/antiburro/i.test(comp + aj + man));
++});
++
++// 18/11/2026 — pedido do Matheus (extrema urgência): "Colocar um botão de excluir dentro da aba de equipamentos > documentos por pasta:
++// dentro de cada pasta, poder excluir um documento cadastrado. Existem documentos cadastrados dentro de alguns clientes que não pertencem
++// a eles, e pode nos trazer problemas com fiscalização." Exclusão lógica (DOCP_EXCLUSOES), com motivo; restaurar só Admin e Diretoria.
++test('excluir documento da pasta: lógico, com motivo; some do QR, das pastas, do Portal e da trava; Admin/Diretoria veem e restauram', () => {
++  const a = amb();
++  aba(a, 'DOCP_EXCLUSOES', a.ctx.DOCP_COLUNAS_EXCLUSOES, []);
++  const acao = (sid, ac, d) => j(a.ctx.documentosPastasAcao(sid, ac, d));
++  const f = a.docs(a.sAdm, 'equipamento', 'eA4', 'ficha');
++  assert.equal(f.podeExcluir, true, 'Administrador tem o botão');
++  assert.equal(f.veExcluidos, true);
++  const cert = a.itens(f).find((i) => i.numero === '202600300');
++  assert.ok(cert && cert.kExcl, 'o documento leva a chave da exclusão');
++  // conta de cliente e QR Code nunca recebem o botão
++  assert.ok(!a.docs(a.sA, 'equipamento', 'eA4', 'qr').podeExcluir);
++  assert.ok(!a.docs(a.sTec, 'equipamento', 'eA4', 'qr').podeExcluir);
++  assert.ok(!JSON.stringify(a.docs(a.sA, 'equipamento', 'eA4', 'qr')).includes('kExcl'));
++  // sem motivo: recusa com o quê, por quê
++  const semMotivo = acao(a.sAdm, 'excluir', { k: cert.kExcl, motivo: 'curto' });
++  assert.equal(semMotivo.success, false); assert.match(semMotivo.message, /Falta o motivo.*Por quê/);
++  // cliente e técnico sem a caixa: recusa
++  assert.match(acao(a.sA, 'excluir', { k: cert.kExcl, motivo: 'nao e da minha empresa' }).message, /Acesso negado.*Por quê.*O que fazer/);
++  assert.match(acao(a.sTec, 'excluir', { k: cert.kExcl, motivo: 'certificado de outro cliente' }).message, /Acesso negado.*Excluir documento da pasta/);
++  const ok = acao(a.sAdm, 'excluir', { k: cert.kExcl, motivo: 'Certificado de outro cliente, registrado por engano' });
++  assert.equal(ok.success, true, ok.message); assert.match(ok.message, /Nada foi apagado/);
++  // some de tudo: QR (cliente e equipe), ficha do Gestor, ficha do cliente, Portal e a trava de arquivo
++  for (const [sid, esc, id, via] of [[a.sA, 'equipamento', 'eA4', 'qr'], [a.sTec, 'equipamento', 'eA4', 'qr'], [a.sGes, 'equipamento', 'eA4', 'ficha'], [a.sGes, 'cliente', 'cA', 'ficha'], [a.sA, 'cliente', '', 'portal']])
++    assert.ok(!JSON.stringify(a.docs(sid, esc, id, via)).includes('certEa4aaaaa'), 'excluído ainda aparece: ' + esc + ' ' + via);
++  const b = a.ctx.PClD_base_({ cid: 'cA', eu: { sessao: a.ctx.exigirSessao(a.sA) }, esc: { todas: true } });
++  assert.ok(!b.docs.some((d) => d.numero === '202600300'));
++  assert.equal(a.ctx.PortalCliente_arquivoPermitido_(a.sA, 'certEa4aaaaa'), false, 'o cliente não abre mais o arquivo');
++  // nada apagado: a linha do certificado continua e a exclusão é uma linha nova com quem, quando e motivo
++  assert.ok(a.abas.get('CERT_CALIBRACAO').linhas.some((l) => l.includes('202600300')));
++  const ex = a.ctx.SGO_DATA.getAll('DOCP_EXCLUSOES');
++  assert.equal(ex.length, 1); assert.equal(ex[0].SITUACAO, 'EXCLUIDO'); assert.equal(ex[0].EQUIPAMENTO_ID, 'eA4'); assert.match(String(ex[0].MOTIVO), /outro cliente/); assert.ok(ex[0].POR_NOME && ex[0].EM);
++  // a lista de excluídos: Administrador vê (na ficha e pela ação); Gestor não
++  const fa = a.docs(a.sAdm, 'equipamento', 'eA4', 'ficha');
++  assert.equal(fa.excluidos.length, 1); assert.match(fa.excluidos[0].motivo, /outro cliente/);
++  assert.ok(!a.docs(a.sGes, 'equipamento', 'eA4', 'ficha').excluidos.length);
++  assert.equal(acao(a.sAdm, 'excluidos', { clienteId: 'cA' }).excluidos.length, 1);
++  assert.match(acao(a.sGes, 'excluidos', {}).message, /só o Administrador e a Diretoria/);
++  assert.match(acao(a.sGes, 'restaurar', { id: ex[0].ID, motivo: 'era deste equipamento mesmo' }).message, /Acesso negado/);
++  // restaurar: com motivo; o documento volta
++  assert.equal(acao(a.sAdm, 'restaurar', { id: ex[0].ID, motivo: 'x' }).success, false);
++  const rs = acao(a.sAdm, 'restaurar', { id: ex[0].ID, motivo: 'Conferido: o certificado é deste equipamento' });
++  assert.equal(rs.success, true, rs.message);
++  assert.ok(JSON.stringify(a.docs(a.sA, 'equipamento', 'eA4', 'qr')).includes('202600300'));
++  assert.equal(a.ctx.SGO_DATA.getAll('DOCP_EXCLUSOES')[0].SITUACAO, 'RESTAURADO');
++});
++
++test('caixa «Excluir documento da pasta»: registrada em Acessos, padrão Administrador, Diretoria e gestores da Técnica, Qualidade e Comercial', () => {
++  const a = amb();
++  const m = a.ctx.SGO_PODERES_MODULOS.find((x) => x.item[0] === 'DOCP_EXCLUIR');
++  assert.ok(m, 'caixa registrada');
++  assert.equal(m.item[2], 'Excluir documento da pasta');
++  const p = m.padrao;
++  assert.equal(p({}, { admin: true }), true);
++  assert.equal(p({}, { diretoria: true }), true);
++  assert.equal(p({ area: 'QUALIDADE' }, { p: 'GESTOR' }), true, 'gestor da Qualidade (o Matheus)');
++  assert.equal(p({ area: 'TECNICA' }, { p: 'GESTOR' }), true);
++  assert.equal(p({ area: 'COMERCIAL' }, { p: 'GESTOR' }), true);
++  assert.equal(p({ area: 'TECNICA' }, { p: 'TECNICO' }), false);
++  assert.equal(p({ area: 'FINANCEIRO' }, { p: 'GESTOR' }), false);
++  // tela: botão, confirmação que diz o quê, de onde e que some do QR, motivo obrigatório, lista de excluídos e restaurar
++  const comp = ler('JS_DocumentosPastas.html');
++  assert.match(comp, /data-dpst-excluir/);
++  assert.match(comp, /O documento some do QR Code, das pastas, das fichas e do Portal do cliente/);
++  assert.match(comp, /Motivo \(obrigatório, fica registrado\)/);
++  assert.match(comp, /Documentos excluídos \(/); assert.match(comp, /data-dpst-restaurar/);
++  assert.ok(!/\b(alert|confirm)\(/.test(comp), 'sem alert/confirm do navegador');
++  const aj = ler('SGO_Ajuda_Cadastros.js');
++  assert.match(aj, /Excluir documento da pasta/);
++  const man = fs.readFileSync(path.join(__dirname, '../docs/MANUAL_CLIENTES_UNIDADES_VINCULOS.md'), 'utf8');
++  assert.match(man, /### Excluir documento da pasta/);
++});

@@ -227,7 +227,7 @@ A pasta vem do módulo que gerou o documento. Para o que foi enviado à mão no 
 
 ### Onde aparece
 
-- **QR Code (prontuário do equipamento no celular):** os documentos do equipamento, por pasta, mais o PGT, os POP e os registros operacionais da unidade dele (o POP do tipo do equipamento vem primeiro).
+- **QR Code (prontuário do equipamento no celular):** só os documentos ligados ao equipamento, por pasta. O PGT, os POP e os registros operacionais são da unidade e ficam nas pastas da unidade e do cliente (veja "Cada equipamento só com o que é dele", abaixo).
 - **Cadastros > Clientes > aba "Documentos por pasta":** todos os documentos do cliente, com busca e filtro por unidade e equipamento, e os botões Abrir e Enviar.
 - **Cadastros > Unidades e Equipamentos > aba "Documentos por pasta":** o mesmo recorte para a unidade e para o equipamento (no equipamento é o mesmo prontuário do QR Code, mais o que só a equipe vê).
 - **Arquivo de documentos, na conta de cliente:** "Documentos da sua empresa por pasta", no alto da tela.
@@ -235,7 +235,34 @@ A pasta vem do módulo que gerou o documento. Para o que foi enviado à mão no 
 
 ### Como ler cada documento
 
-O documento mais novo vem primeiro, com a data de emissão e a validade: **Válido até**, **Vence em X dias** (amarelo, até 30 dias) ou **Vencido há X dias** (vermelho). Revisões anteriores e versões do mesmo documento (por exemplo, POP028 v1 e v2) ficam dentro dele, em **Versões anteriores**: nada é apagado. O mesmo arquivo registrado em dois lugares (o certificado que o módulo grava e o registro no Arquivo de documentos, por exemplo) aparece uma vez só; a equipe vê o aviso de quantos registros ele tem.
+O documento mais novo vem primeiro, com a data de emissão e a validade: **Válido até**, **Vence em X dias** (amarelo, até 30 dias) ou **Vencido há X dias** (vermelho). De um documento gerado mais de uma vez (por exemplo, POP028 v1 e v2, ou o mesmo certificado emitido três vezes) aparece só o último gerado, que é o oficial. Os anteriores ficam guardados, marcados como substituídos, e só Admin e Diretoria os veem, em **Substituídos**, dentro do documento oficial. Nada é apagado. O mesmo arquivo registrado em dois lugares (o certificado que o módulo grava e o registro no Arquivo de documentos, por exemplo) aparece uma vez só; a equipe vê o aviso de quantos registros ele tem.
+
+### Cada equipamento só com o que é dele (18/11/2026)
+
+Regra do dono, depois do caso em que o QR Code de todos os equipamentos de uma unidade mostrava os mesmos 29 PGT e POP: nenhum dado de um equipamento pode aparecer em outro, e documento gerado mais de uma vez não pode ser visto repetido.
+
+1. **Vínculo exato.** O prontuário do equipamento (QR Code, aba "Documentos por pasta" do equipamento e ficha do equipamento no Portal do cliente) mostra só os documentos que têm o identificador daquele equipamento no cadastro. Documento sem equipamento não aparece no equipamento. A pasta da unidade mostra só o que está ligado à unidade; o que é só do cliente fica na ficha do cliente.
+2. **PGT, POP e registros operacionais são da unidade.** Eles são gerados pelo CNPJ, sem equipamento. Ficam nas pastas da unidade e do cliente e no Portal do cliente ("Por pastas (prontuário)"), e não aparecem mais no QR Code do equipamento. A configuração antiga que escolhia "documentos da unidade no prontuário do equipamento" deixou de valer.
+3. **Só o último gerado.** O mesmo documento gerado de novo vale uma vez só, na última geração (a oficial). O sistema reconhece a repetição dentro do mesmo equipamento (ou da mesma unidade, para os documentos da unidade): o certificado de calibração pela data da calibração e pelos instrumentos calibrados (dois manômetros calibrados no mesmo dia continuam dois certificados); os relatórios de ensaio e de qualificação pelo número (espaços repetidos e acentos não contam); os demais pelo número ou pelo nome do arquivo.
+4. **Quem vê os substituídos.** No QR Code, no Portal do cliente, na conta de cliente e para os perfis da equipe que não são Admin nem Diretoria, aparece só o oficial; a equipe vê o aviso "N documentos gerados de novo ficaram fora desta lista". Admin e Diretoria veem os anteriores na ficha, em "Substituídos", marcados como substituídos. Nenhum registro é apagado do banco.
+5. **Pasta de arquivos do equipamento.** O QR Code não abre mais a pasta de arquivos do equipamento. Ela era achada pelo nome ("TAG - TIPO") e equipamentos com a mesma TAG e o mesmo tipo na mesma unidade (por exemplo, vários "N/P - TERMOHIGRÔMETRO") caíam na mesma pasta, que também mostrava cada arquivo gerado de novo.
+6. **Substituição gravada pelos módulos.** Os módulos de relatórios de ensaio (autoclave, lavadora, estufa e cadeia de frio) e o registro de revisões (PGT e POP, entre outros) marcavam como substituído qualquer documento com o mesmo número, até de outro equipamento ou de outro cliente. Agora marcam só o do mesmo equipamento (sem equipamento, do mesmo CNPJ). As marcas antigas erradas não foram mexidas no banco: a lista de documentos recalcula a situação dentro de cada equipamento.
+
+### Excluir documento da pasta (18/11/2026)
+
+Pedido do Matheus: há documentos cadastrados em clientes a que não pertencem, o que pode trazer problema com a fiscalização. Na aba **Documentos por pasta** do equipamento (e também na da unidade e na do cliente), quem tem a caixa **«Excluir documento da pasta»** vê o botão **Excluir** em cada documento.
+
+1. Toque em **Excluir**. Aparece, dentro do próprio documento, a confirmação com o nome do documento, o equipamento e o cliente, e o aviso de que ele some do QR Code, das pastas, das fichas e do Portal do cliente.
+2. Escreva o **motivo** (obrigatório, pelo menos 10 letras) e toque em **Confirmar exclusão**. Para desistir, toque em **Cancelar**.
+3. O documento sai na hora de todas as telas e a conta de cliente não consegue mais abrir o arquivo, nem pelo link.
+
+**Exclusão lógica.** Nada é apagado: o registro do módulo (certificado, relatório, Arquivo de documentos) e o arquivo continuam guardados. A exclusão é uma linha na tabela DOCP_EXCLUSOES com o documento, o cliente, a unidade, o equipamento, quem excluiu, quando e o motivo, e fica também no registro de eventos (DOCUMENTO_EXCLUIDO_PASTA).
+
+**Documentos excluídos e restaurar.** Só o Administrador e a Diretoria veem, no fim da mesma aba, a lista **Documentos excluídos**, com quem excluiu, quando e o motivo. Para trazer um documento de volta, escrevem o motivo e tocam em **Restaurar** (registrado como DOCUMENTO_RESTAURADO_PASTA).
+
+**Caixa de Acessos.** «Excluir documento da pasta» (DOCP_EXCLUIR), grupo "Documentos por pasta". Padrão: Administrador, Diretoria e gestores das áreas Técnica, Qualidade e Comercial (inclui o gestor da Qualidade). Para dar ou tirar de outra pessoa, use Administração > Acessos.
+
+Depois de excluir um documento de outro cliente, registre-o no cliente certo (Arquivo de documentos ou o módulo que o gerou).
 
 ### O que o cliente vê
 
@@ -247,6 +274,6 @@ A contagem por equipamento olhava só o **Arquivo de documentos**. Certificados,
 
 ### Configuração (Administrador)
 
-A organização vem pronta. Quando preciso, o responsável pelo sistema ajusta a configuração **DOCP_CFG** (propriedade do servidor), que permite: trocar o nome de uma pasta, esconder uma pasta do cliente, acrescentar uma regra pelo nome ou pelo tipo (por exemplo, "LAUDO TECNICO" para Relatórios técnicos), escolher quais documentos da unidade entram no prontuário do equipamento (padrão: PGT e POP e Registros operacionais), o prazo de "vencendo" (padrão 30 dias) e se a conta de cliente abre os documentos emitidos do prontuário pela trava de arquivo (padrão: sim).
+A organização vem pronta. Quando preciso, o responsável pelo sistema ajusta a configuração **DOCP_CFG** (propriedade do servidor), que permite: trocar o nome de uma pasta, esconder uma pasta do cliente, acrescentar uma regra pelo nome ou pelo tipo (por exemplo, "LAUDO TECNICO" para Relatórios técnicos), o prazo de "vencendo" (padrão 30 dias) e se a conta de cliente abre os documentos emitidos do prontuário pela trava de arquivo (padrão: sim).
 
 </div>

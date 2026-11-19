@@ -174,7 +174,7 @@ A aba "Por pastas (prontuário)" mostra todos os documentos da empresa organizad
 **Passo a passo**
 
 1. Na aba "Documentos técnicos", filtre por unidade, equipamento, tipo, data de emissão ou "Vence até", ou busque pelo número, TAG, série ou nome.
-2. Toque em "Abrir" para ver o PDF. Versões anteriores ficam guardadas abaixo de cada documento.
+2. Toque em "Abrir" para ver o PDF. Quando um documento foi gerado mais de uma vez, aparece só a última versão, que é a oficial.
 3. Na aba "Por pastas (prontuário)", toque numa pasta para abri-la e use a busca e os filtros de unidade e equipamento.
 
 > Se faltar algum documento, avise pela Conversa geral.

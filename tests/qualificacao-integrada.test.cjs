@@ -188,7 +188,8 @@ test('nova revisão: substitui a anterior (que continua guardada), com motivo no
   assert.equal(env.fn('SGO_QE_obter_')(envio.id).STATUS, 'SUBSTITUIDO');
   assert.ok(env.arquivos[emi.pdfId], 'o PDF da revisão 0 continua guardado');
   const qr = env.chamar('qrcodeQualificacao', 'cli', 'eq1').itens.filter(i => i.titulo === 'Relatório de qualificação — autoclave a vapor');
-  assert.deepEqual(qr.map(i => [i.revisao, i.situacao]).sort(), [['0', 'SUBSTITUIDO'], ['1', 'VIGENTE']]);
+  // 18/11/2026 (regra do dono, output/qr-equipamento-20261118): pelo QR só a revisão oficial; a substituída continua guardada (PDF acima)
+  assert.deepEqual(qr.map(i => [i.revisao, i.situacao]).sort(), [['1', 'VIGENTE']]);
   const html = htmlDe(env, em2.htmlId);
   assert.match(html, /Inclusão de observação do ensaio/);
   assert.match(html, /substituídas/);

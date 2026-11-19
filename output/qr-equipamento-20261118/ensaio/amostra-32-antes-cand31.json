@@ -1,0 +1,819 @@
+{
+ "7ada5240-c191-4fdb-a068-d99d210af861": {
+  "total": 32,
+  "porPasta": {
+   "PGT_POP": 29,
+   "REGISTROS": 3
+  },
+  "porOrigem": {
+   "PGT e POP": 29,
+   "Registros operacionais": 3
+  },
+  "daUnidade": 32,
+  "itens": [
+   {
+    "p": "PGT_POP",
+    "t": "PGTS_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP001_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP002_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP003_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP004_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP005_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP006_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP007_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP008_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP009_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP010_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP011_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP012_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP013_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP014_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP015_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP016_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP017_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP018_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP019_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP020_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP021_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP022_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP023_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP024_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP025_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP026_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP027_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP028_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "REGISTROS",
+    "t": "Saída_de_Equipamento_para_Assistência_Técnica_Externa_15082026",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "REGISTROS",
+    "t": "Retorno_de_Equipamento_da_Assistencia_Tecnica_15082026",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "REGISTROS",
+    "t": "Educação_continuada,_treinamento_de_uso_de_equipamentos_Hosp_15082026",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   }
+  ]
+ },
+ "96ee1a1c-b4ac-4955-8a57-da95b9520ddd": {
+  "total": 32,
+  "porPasta": {
+   "PGT_POP": 29,
+   "REGISTROS": 3
+  },
+  "porOrigem": {
+   "PGT e POP": 29,
+   "Registros operacionais": 3
+  },
+  "daUnidade": 32,
+  "itens": [
+   {
+    "p": "PGT_POP",
+    "t": "PGTS_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP001_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP002_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP003_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP004_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP005_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP006_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP007_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP008_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP009_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP010_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP011_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP012_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP013_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP014_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP015_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP016_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP017_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP018_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP019_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP020_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP021_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP022_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP023_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP024_v2",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP025_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP026_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP027_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "PGT_POP",
+    "t": "POP028_v1",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "REGISTROS",
+    "t": "Saída_de_Equipamento_para_Assistência_Técnica_Externa_15082026",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "REGISTROS",
+    "t": "Retorno_de_Equipamento_da_Assistencia_Tecnica_15082026",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 0
+   },
+   {
+    "p": "REGISTROS",
+    "t": "Educação_continuada,_treinamento_de_uso_de_equipamentos_Hosp_15082026",
+    "eq": "",
+    "un": "a35075f6-3fe9-48b3-b4d7-f23b1c686715",
+    "du": 1,
+    "ant": 1
+   }
+  ]
+ },
+ "29deda82-b8dc-4893-b128-4a09f09971bb": {
+  "total": 33,
+  "porPasta": {
+   "QUALIFICACAO": 1,
+   "RELATORIOS_TECNICOS": 32
+  },
+  "porOrigem": {
+   "Relatórios de autoclave, lavadora, estufa e cadeia de frio": 33
+  },
+  "daUnidade": 0,
+  "itens": [
+   {
+    "p": "QUALIFICACAO",
+    "t": "Relatório de qualificação — autoclave a vapor nº RQA-2026-00004",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 1  de 3 - Sem ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 1  de 3 - Se",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 2  de 3 - Sem ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 2  de 3 - Se",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 1  de 3 - Com ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 1  de 3 - Co",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 2  de 3 - Com ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 2  de 3 - Co",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 3  de 3 - Com ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 3  de 3 - Co",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 3  de 3 - Sem ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 3  de 3 - Se",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Sem  ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Sem",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 2 de 3 - Sem  ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 2 de 3 - Sem",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 3 de 3 - Sem  ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 3 de 3 - Sem",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Com  ",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Com",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 0
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Sem C",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 2
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Sem",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 2 de 3 - Sem C",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 2 de 3 - Sem",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 3 de 3 - Sem C",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 3
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 3 de 3 - Sem",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Com C",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 4
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 1 de 3 - Com",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 3
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 2 de 3 - Com C",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 2 de 3 - Com",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Planilha de dados de ciclo — autoclave a vapor nº Ciclo 3 de 3 - Com C",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 3
+   },
+   {
+    "p": "RELATORIOS_TECNICOS",
+    "t": "Relatório de ensaio de ciclo — autoclave a vapor nº Ciclo 3 de 3 - Com",
+    "eq": "29deda82-b8dc-4893-b128-4a09f09971bb",
+    "un": "af70cec0-6d85-4a83-8edb-444b27746bdd",
+    "du": 0,
+    "ant": 1
+   }
+  ]
+ }
+}

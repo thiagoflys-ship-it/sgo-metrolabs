@@ -270,12 +270,15 @@ test('T3.7: abrir um documento passa pela trava de arquivo e grava DOCUMENTO_ABE
   const reg = a.lin('PCL_ACESSOS').filter((x) => x.ACAO === 'DOCUMENTO_ABERTO');
   assert.equal(reg.length, 1); assert.equal(reg[0].USUARIO_ID, 'u_sol'); assert.equal(reg[0].REF_ID, 'arqCert1xxxx'); assert.equal(reg[0].CLIENTE_ID, 'c1');
   assert.match(reg[0].DETALHE, /Certificado de calibração/);
-  // versão anterior também abre (guardada junto do documento)
+  // 18/11/2026 (regra do dono, output/qr-equipamento-20261118): de um documento gerado de novo, o Portal mostra só o último (o oficial);
+  // a versão anterior não aparece nem abre pela lista (antes: "versão anterior também abre, guardada junto do documento")
   a.tabelas.DOC_DOCUMENTOS.push({ ID: 'd1v', CLIENTE_ID: 'c1', UNIDADE_ID: 'un1', EQUIPAMENTO_ID: 'eq1', TIPO_DOCUMENTO: '2. Certificados de calibração', NOME_ARQUIVO: 'Certificado AC-01 2026 Rev. 01.pdf', LINK_ARQUIVO: '/arquivos/arqCert1rev1x', DATA_EMISSAO: a.dia(-1), DATA_VENCIMENTO: a.dia(360), STATUS: 'ATIVO' });
   const l = a.pcl('s_cliente.alfa', 'documentos', { tipo: 'CALIBRACAO', unidadeId: 'un1' });
   const cert = l.documentos.find((x) => /AC-01 2026/.test(x.titulo));
-  assert.ok(cert && cert.anteriores.length === 1, JSON.stringify(l.documentos.map((x) => [x.titulo, (x.anteriores || []).length])));
-  assert.equal(a.pcl('s_cliente.alfa', 'abrirDocumento', { k: cert.anteriores[0].k }).ok, true);
+  assert.ok(cert && /Rev\. 01/.test(cert.titulo) && cert.anteriores.length === 0, JSON.stringify(l.documentos.map((x) => [x.titulo, (x.anteriores || []).length])));
+  assert.ok(!l.documentos.some((x) => x.titulo === 'Certificado AC-01 2026'), 'a versão anterior não aparece no Portal');
+  assert.equal(a.pcl('s_cliente.alfa', 'abrirDocumento', { k: cert.k }).ok, true);
+  assert.equal(a.pcl('s_cliente.alfa', 'abrirDocumento', { k: kDe('arqCert1xxxx') }).ok, false, 'a versão anterior não abre pela lista');
   // documento de outra unidade (Solicitante) e de outro cliente: "Não encontrado", com ESCOPO_RECUSADO
   for (const [sid, arq] of [['s_sonia.alfa', 'arqCert4xxxx'], ['s_cliente.alfa', 'arqCert3xxxx']]) {
     const x = a.pcl(sid, 'abrirDocumento', { k: kDe(arq) }); assert.equal(x.ok, false); assert.equal(x.message, 'Não encontrado. Atualize a lista.');

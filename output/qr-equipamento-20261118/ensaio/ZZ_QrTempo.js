@@ -1,0 +1,1 @@
+function Ensaio_qrTempo_() { var s = Ensaio_qrSessao_(), t = []; for (var i = 0; i < 4; i++) { var t0 = Date.now(); Docs_doEquipamento_(s, '98489473-50b8-4f12-b1e8-fbf203961eb9', 'qr'); t.push(Date.now() - t0); } return t; }
