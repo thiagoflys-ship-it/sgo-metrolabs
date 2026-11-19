@@ -207,7 +207,8 @@ O relatório que o cliente recebe mostra no topo como o equipamento ficou. Por i
 - A **assinatura do cliente é uma só** e vale para todos. O **Concluí** só libera com todos completos: o app diz o que
   falta e em qual equipamento ("Equipamento 2 (Lavadora · TAG LV-02): pelo menos 1 foto deste equipamento").
 - No relatório, cada equipamento tem a sua seção (identificação, conferência, resultado, serviço, peças e fotos). O
-  atendimento aparece no histórico, no prontuário e no QR de cada equipamento, sempre com o relato **dele**.
+  PDF da visita fica só no equipamento da O.S.; no histórico de cada equipamento acrescentado aparece o atendimento só com o
+  relato **dele**.
 - Acrescentou por engano: abra o equipamento e use **Acrescentei por engano: tirar este equipamento da O.S.** (com o
   motivo). A gestão vê os equipamentos da visita na ficha da O.S. (bloco "Equipamentos atendidos nesta visita").
 

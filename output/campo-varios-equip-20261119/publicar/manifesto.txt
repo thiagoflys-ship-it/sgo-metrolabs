@@ -1,0 +1,8 @@
+ALTERADO JS_Assistencia.html
+ALTERADO SGO_Ajuda_Assistencia.js
+ALTERADO SGO_Assistencia_App.js
+ALTERADO SGO_Assistencia_Config.js
+ALTERADO SGO_Assistencia_Fonte.js
+ALTERADO SGO_Assistencia_OS.js
+ALTERADO SGO_Assistencia_Relatorio.js
+ALTERADO SGO_AssistenteManuais.js

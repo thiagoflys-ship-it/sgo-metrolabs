@@ -7,10 +7,10 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R115, imagem
-  `sha256:acabe8ed882cca317420d57ec55b6778bc721c72f4d2325cef617cf38011e51e`,
-  tag `metrolabs/rh:fonte-ambito-comparacao-20261119-r115`.
-  Evidência: `output/rh360-20261119-r115/PUBLICADO_RH360_R115_20261119.txt`.
+- Última publicação RH registrada nesta revisão: R116, imagem
+  `sha256:8f71a345965123c709fcf415f08b164ed9643f9ba4b758552d1e5f2b319ae053`,
+  tag `metrolabs/rh:cct-fonte-antes-gravacao-20261119-r116`.
+  Evidência: `output/rh360-20261119-r116/PUBLICADO_RH360_R116_20261119.txt`.
   Preserva as entregas anteriores; 869 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
@@ -1405,3 +1405,16 @@ Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 19/11/2026 ~15:40 — PUBLICADO campo-sem-serie-tag-20261119 (app de campo a1fad0ddf68e; base avisos-matheus-20261119; só app.js e regras.js em /app/dist/publico/campo). Pedido do dono (técnico em campo): equipamento sem série, TAG e patrimônio pode ser cadastrado (removida exigência em faltasDoCadastro) e confirmado (botão 'O equipamento não tem série nem TAG' → SERIE_CONFIRMADA 'SEM SERIE/TAG'); gestão completa o cadastro depois. Testes do app 49/0. Fonte: output/campo-semid-20261119/. Base da próxima publicação = metrolabs/sgo:campo-sem-serie-tag-20261119; app de campo de referência = campo-semid.
 - 19/11/2026 ~15:15 — PUBLICADO contratos-aditivo-e1-20261119 (sha cdfc34b4…; legado cand37; base campo-sem-serie-tag-20261119; app de campo 94b9805bcd21 em dist e src). E1a compra de contrato de cliente (vínculo novo no Informar compra/pedido, competência, natureza, justificativa, 'Corrigir o vínculo', relatórios). E1b aditivo de recarga em viagem (técnico pede no SGO+ ou app; 1 sócio aprova; gestor parecer; GS12 a qualquer hora se parado; lembrete 30 min, ligação 60 min; carga soma ao teto, ADT VIA-…/A1; exceção noturna; prestação e A4 previsto×realizado; VG01 ao técnico; origem ADITIVO_PARADO no WhatsApp). Suíte 2733/0. Pendente do dono: cadastrar unidade IMED HCN; Matheus reclassifica REQ-2026-0017. Relatório: output/contratos-aditivo-20261119/e1/RELATORIO.md. Produção atual = cand37.
+
+
+RH360 R116 — publicada/verificada em 19/11/2026 15:55 BRT
+Imagem: sha256:8f71a345965123c709fcf415f08b164ed9643f9ba4b758552d1e5f2b319ae053
+Tag: metrolabs/rh:cct-fonte-antes-gravacao-20261119-r116
+Manifesto: 5ed49b47c15a9c1c150580cb235e042987d9689964c88fbb4eca1e236250876d
+PDF coletivo e evidências conferidos antes de gravar governança CCT.
+869 pins: três fontes existentes alteradas, nenhuma nova e 862 fontes anteriores preservadas. Chat/login, finalidade e guardas R97/R98 mantidos.
+Nenhuma migração de conteúdo/recibo ou novo formato. Reversão de imagem preservada; ela retira a nova conferência antes da gravação e não restaura dados automaticamente. Projeto integral aberto.
+Evidências e limites: output/rh360-20261119-r116/PUBLICADO_RH360_R116_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 19/11/2026 16:10 — PUBLICADO campo-varios-equip-20261119 (sha 56aa7bbc…; legado cand38, 8 arquivos; base contratos-aditivo-e1-20261119; app de campo f78affc17e5d em dist e src). Vários equipamentos na mesma O.S. (escolha do dono): passo 'Equipamentos atendidos nesta visita', '+ Acrescentar equipamento' (lista da unidade ou cadastro, sem série/TAG ok, sem sinal ok), cada um com conferência, relato, ≥1 foto, peças; assinatura única; Concluí só com todos completos; aba ATEC_OS_EQUIPAMENTOS; relatório com seção por equipamento; PDF da visita só no equipamento principal (regra de não cruzar dados); histórico de cada acrescentado com o relato dele. Suíte 2738/0 + testes afetados após o ajuste. Relatório: output/campo-varios-equip-20261119/RELATORIO.md. Produção atual = cand38.

@@ -1,0 +1,758 @@
+diff -u -r --label a --label b a b
+--- a
++++ b
+@@ -23,7 +23,7 @@
+ const diaBR = (dia) => (dia ? dia.slice(8, 10) + "/" + dia.slice(5, 7) + "/" + dia.slice(0, 4) : "");
+ const letras = (s) => String(s || "").replace(/[^A-Za-zÀ-ÿ]/g, "").length;
+ 
+-const NOMES_TIPO = { ATV_SITUACAO: "Atividade: situação", ATV_JUSTIFICAR: "Atividade: justificativa de atraso", ATV_COMENTAR: "Atividade: comentário", SAIU: "Saí para o atendimento", CHEGUEI: "Cheguei", RESPOSTA: "Resposta do checklist", FOTO: "Foto", RELATO: "Relato", PECA: "Peça", ASSINATURA: "Assinatura do cliente", CONCLUI: "Concluí", RONDA: "Ronda: registro do equipamento ou do setor", CADASTRO: "Cadastro feito em campo", NOVA_OS: "O.S. aberta em campo", ENVIAR_CLIENTE: "Envio do relatório ao cliente", DESFAZ_CONCLUSAO: "Desfazer conclusão (correção)", PEDIR_CORRECAO: "Pedido de correção à gestão" };
++const NOMES_TIPO = { ATV_SITUACAO: "Atividade: situação", ATV_JUSTIFICAR: "Atividade: justificativa de atraso", ATV_COMENTAR: "Atividade: comentário", SAIU: "Saí para o atendimento", CHEGUEI: "Cheguei", RESPOSTA: "Resposta do checklist", FOTO: "Foto", RELATO: "Relato", PECA: "Peça", ASSINATURA: "Assinatura do cliente", CONCLUI: "Concluí", RONDA: "Ronda: registro do equipamento ou do setor", CADASTRO: "Cadastro feito em campo", NOVA_OS: "O.S. aberta em campo", ENVIAR_CLIENTE: "Envio do relatório ao cliente", DESFAZ_CONCLUSAO: "Desfazer conclusão (correção)", PEDIR_CORRECAO: "Pedido de correção à gestão", EQUIPAMENTO: "Equipamento a mais da visita" };
+ const AVISO_LOCALIZACAO = "O SGO+ Campo registra a sua localização só nos toques \"Cheguei\" e \"Concluí\", nunca o tempo todo. Ela serve para confirmar o atendimento no endereço do cliente e fica no registro da O.S.";
+ 
+ /* ---------------- estado ---------------- */
+@@ -622,10 +622,14 @@
+     case "os-equipnovo": titulo("Equipamento fora do cadastro"); tela.innerHTML = telaEquipNovo(os, r.parte); break;
+     case "os-orientacoes": titulo("Orientações e resumo"); tela.innerHTML = telaOrientacoes(os); break;
+     case "os-equipamento": titulo("Equipamento"); tela.innerHTML = telaEquipamento(os); break;
++    // 19/11/2026 (pedido do dono): vários equipamentos na mesma O.S.
++    case "os-equipamentos": titulo("Equipamentos da visita"); tela.innerHTML = telaEquipamentos(os); break;
++    case "os-equipadd": titulo("Acrescentar equipamento"); tela.innerHTML = telaEquipAdd(os); break;
++    case "os-equipx": { const ex = R.equipExtraDe(execDe(os.osId), r.parte); titulo(ex ? R.nomeEquipExtra(execDe(os.osId), ex).replace(/ \(.*$/, "") : "Equipamento"); tela.innerHTML = telaEquipExtra(os, r.parte); break; }
+     case "os-checklist": titulo("Checklist"); tela.innerHTML = telaChecklist(os); break;
+     case "os-fotos": titulo("Fotos"); tela.innerHTML = telaFotos(os); break;
+-    case "os-pecas": titulo("Peças"); tela.innerHTML = telaPecas(os); break;
+-    case "os-relato": titulo("Relato"); tela.innerHTML = telaRelato(os); break;
++    case "os-pecas": titulo(r.parte ? "Peças do equipamento" : "Peças"); tela.innerHTML = telaPecas(os, r.parte); break;
++    case "os-relato": titulo(r.parte ? "Relato do equipamento" : "Relato"); tela.innerHTML = telaRelato(os, r.parte); break;
+     case "os-assinatura": titulo(R.nomePasso(os, "assinatura")); tela.innerHTML = telaAssinatura(os); montarQuadro(); break;
+     case "os-termo": titulo(R.nomePasso(os, "termo")); tela.innerHTML = telaTermo(os); break;
+     case "os-colaborador": titulo(R.nomePasso(os, "colaborador")); tela.innerHTML = telaColaborador(os); montarQuadro(); break;
+@@ -934,13 +938,14 @@
+     case "chegada": return passo(o.osId, p, nome, !!x.chegada, x.chegada ? "às " + hora(x.chegada.em) : "Falta", f);
+     case "equipamento": { const ok = !!(x.relato && x.relato.serieConfirmada); return passo(o.osId, p, nome, ok, ok ? (x.relato.identificadoPor === "QR" ? "Pelo QR" : eq.serie && x.relato.serieConfirmada !== eq.serie ? "Série diferente" : "Confirmado") : o.exigencias.qrOuSerie ? "Falta" : "Opcional", f); }
+     case "checklist": return passo(o.osId, p, nome, !f, resp + " de " + o.checklist.length, f);
+-    case "fotos": return passo(o.osId, p, nome, o.exigencias.fotosMin ? !f : x.fotos.length > 0, x.fotos.length + (o.exigencias.fotosMin ? " de " + o.exigencias.fotosMin : ""), f);
+-    case "pecas": return passo(o.osId, p, nome, x.pecas.length > 0, x.pecas.length ? x.pecas.length + " lançada(s)" : "Nenhuma", false);
++    case "fotos": { const nf = x.fotos.filter((ft) => !R.ehFotoEquip(ft)).length; return passo(o.osId, p, nome, o.exigencias.fotosMin ? !f : nf > 0, nf + (o.exigencias.fotosMin ? " de " + o.exigencias.fotosMin : ""), f); }
++    case "pecas": { const np = x.pecas.filter((q) => !q.equipChave).length; return passo(o.osId, p, nome, np > 0, np ? np + " lançada(s)" : "Nenhuma", false); }
+     case "relato": { const feito = o.exigencias.relato ? !f : R.textoDoRelato(x.relato).length >= 10; return passo(o.osId, p, nome, feito, feito ? "Feito" : o.exigencias.relato ? "Falta" : "Opcional", f); }
+     case "termo": { const n = x.termo ? x.termo.itens.filter((i) => i.descricao || i.identificacao).length : 0; return passo(o.osId, p, nome, !!x.termo && !f, n ? (f ? n + " item(ns), falta completar" : n + " item(ns)") : "Falta", f); }
+     case "assinatura": return passo(o.osId, p, nome, !!x.assinatura, x.assinatura ? (x.assinatura.ausente ? "Sem assinatura (motivo)" : "Feita") : o.exigencias.assinatura ? "Falta" : "Opcional", f);
+     case "colaborador": return passo(o.osId, p, nome, !!x.assinaturaColab, x.assinaturaColab ? "Feita" : "Falta", f);
+     case "setores": { const res = R.resumoRonda(o, x); return passo(o.osId, p, nome, !f && res.equipamentos > 0, res.equipamentos - res.semSituacao + " de " + res.equipamentos + " com situação", f); }
++    case "equipamentos": { const n = R.equipExtras(x).length; return passo(o.osId, p, nome, n > 0 && !f, n ? "Este + " + n + (f ? " · falta completar" : " · completos") : "Só este · toque para acrescentar", f); }
+     case "orientacoes": { const r = R.rondaDe(x); return passo(o.osId, p, nome, !!(r.orientacoes || r.pedidosCliente), r.orientacoes || r.pedidosCliente ? "Registrado" : "Opcional", false); }
+     case "concluir": { const n = R.faltasParaConcluir(o, x).length; return passo(o.osId, p, nome, !!x.conclusao, x.conclusao ? "às " + hora(x.conclusao.em) : n ? "Falta " + n + " item(ns)" : "Pronto para concluir", false); }
+     default: return "";
+@@ -1184,21 +1189,24 @@
+ const miniaturaFoto = (f, extra) => `<div class="foto">${f.miniatura ? `<img src="${f.miniatura}" alt="${esc(f.legenda || "Foto")}">` : `<div class="sem-mini">Foto já no servidor</div>`}<div class="leg">${esc(f.legenda || "Sem legenda")}${f.em ? `<br><span class="fraco">${esc(hora(f.em))}</span>` : ""}</div>${extra || ""}</div>`;
+ 
+ function telaFotos(o) {
+-  const x = execDe(o.osId), f = fotoTravada(o), min = o.exigencias.fotosMin;
+-  return `<p>${x.fotos.length} foto(s)${min ? " · mínimo " + min : ""}. A foto é reduzida no aparelho e leva a O.S., a data e a hora.</p>
++  const x = execDe(o.osId), f = fotoTravada(o), min = o.exigencias.fotosMin, fotos = x.fotos.filter((ft) => !R.ehFotoEquip(ft));
++  return `<p>${fotos.length} foto(s)${min ? " · mínimo " + min : ""}. A foto é reduzida no aparelho e leva a O.S., a data e a hora.${R.equipExtras(x).length ? " As fotos dos outros equipamentos ficam na tela de cada um." : ""}</p>
+     ${f ? "" : `<button type="button" class="bt primario" data-acao="camera" data-os="${esc(o.osId)}">Tirar foto</button>
+     <button type="button" class="bt" data-acao="galeria" data-os="${esc(o.osId)}">Escolher do celular (uma ou várias)</button>`}
+-    <div class="grade-fotos">${x.fotos.map((ft) => miniaturaFoto(ft, f || ft.doServidor ? "" : `<button type="button" class="bt perigo" data-acao="removerFoto" data-os="${esc(o.osId)}" data-id="${esc(ft.idLocal)}">Remover</button>`)).join("")}</div>
++    <div class="grade-fotos">${fotos.map((ft) => miniaturaFoto(ft, f || ft.doServidor ? "" : `<button type="button" class="bt perigo" data-acao="removerFoto" data-os="${esc(o.osId)}" data-id="${esc(ft.idLocal)}">Remover</button>`)).join("")}</div>
+     ${seguirOuVoltar(o, "fotos")}`;
+ }
+ 
+-function telaPecas(o) {
+-  const x = execDe(o.osId), f = fechada(o);
+-  return `${x.pecas.length ? x.pecas.map((p) => `<div class="peca"><div class="desc"><strong>${esc(String(p.quantidade).replace(".", ","))} ${esc(p.unidade || "")} ×</strong> ${esc(p.descricao)}
++function telaPecas(o, eq) {
++  // 19/11/2026: eq = chave de um equipamento a mais (as peças dele ficam na tela dele; as do equipamento da O.S., aqui)
++  const x = execDe(o.osId), f = fechada(o), ex = eq ? R.equipExtraDe(x, eq) : null;
++  if (eq && !ex) return `<p>Este equipamento não está mais na O.S.</p><button class="bt primario" data-acao="voltarOs" data-os="${esc(o.osId)}">Voltar à O.S.</button>`;
++  const pecas = x.pecas.filter((p) => (p.equipChave || "") === (eq || ""));
++  return `${ex ? `<p><strong>${esc(R.nomeEquipExtra(x, ex))}</strong></p>` : ""}${pecas.length ? pecas.map((p) => `<div class="peca"><div class="desc"><strong>${esc(String(p.quantidade).replace(".", ","))} ${esc(p.unidade || "")} ×</strong> ${esc(p.descricao)}
+       <br><span class="selo ${p.situacao === "FALTA" ? "alerta" : "ok"}">${p.situacao === "FALTA" ? "Falta: pedir" + (p.urgencia === "URGENTE" ? " (urgente)" : "") : "Aplicada"}</span>${p.codigo ? ` <span class="fraco pequeno">Código ${esc(p.codigo)}</span>` : ""}</div>
+-      ${f || p.doServidor ? "" : `<button type="button" class="bt perigo" data-acao="removerPeca" data-os="${esc(o.osId)}" data-id="${esc(p.id)}">Desfazer</button>`}</div>`).join("") : `<p class="fraco">Nenhuma peça lançada nesta O.S.</p>`}
++      ${f || p.doServidor ? "" : `<button type="button" class="bt perigo" data-acao="removerPeca" data-os="${esc(o.osId)}" data-id="${esc(p.id)}">Desfazer</button>`}</div>`).join("") : `<p class="fraco">Nenhuma peça lançada ${ex ? "neste equipamento" : "nesta O.S."}.</p>`}
+     ${f ? "" : `<h2>Lançar peça</h2>
+-    <form id="fPeca" data-os="${esc(o.osId)}">
++    <form id="fPeca" data-os="${esc(o.osId)}" data-eq="${esc(eq || "")}">
+       <div class="escolha" role="radiogroup" aria-label="Situação da peça">
+         <button type="button" class="bt" aria-pressed="true" data-acao="situacaoPeca" data-v="APLICADA">Aplicada</button>
+         <button type="button" class="bt" aria-pressed="false" data-acao="situacaoPeca" data-v="FALTA">Falta (pedir)</button>
+@@ -1223,7 +1231,7 @@
+       </div>
+       <button type="submit" class="bt primario">Lançar peça</button>
+     </form>`}
+-    ${seguirOuVoltar(o, "pecas")}`;
++    ${ex ? `<div class="rodape-acao"><button class="bt primario" data-acao="abrirEquip" data-os="${esc(o.osId)}" data-eq="${esc(eq)}">Voltar ao equipamento</button></div>` : seguirOuVoltar(o, "pecas")}`;
+ }
+ 
+ /**
+@@ -1232,7 +1240,11 @@
+  * final em botões, o que ainda falta logo acima do "Guardar" e, com sinal, "Revisar o texto" (IA corrige o português; você decide).
+  * Tudo fica no aparelho (rascunho) e sobe pela fila no evento RELATO, como antes.
+  */
+-const relatoVisivel = (x) => { const rel = x.relato || {}, rasc = rel.rascunho || {}; return { ...rel, ...rasc }; };
++/** 19/11/2026: o relato em edição: o do equipamento da O.S. (eq vazio) ou o de um equipamento a mais (eq = chave). */
++function relDe(x, eq) { if (!eq) return x.relato || (x.relato = { em: "" }); const e = R.equipExtraDe(x, eq); return e ? (e.relato || (e.relato = {})) : {}; }
++function porRel(x, eq, rel) { if (!eq) { x.relato = rel; return; } const e = R.equipExtraDe(x, eq); if (e) e.relato = rel; }
++const eqDaTela = () => { const r = rotaAtual(); return r.tela === "os-relato" ? r.parte || "" : ""; };
++const relatoVisivel = (x, eq) => { const rel = relDe(x, eq), rasc = rel.rascunho || {}; return { ...rel, ...rasc }; };
+ function campoRelato(o, k, rel, f, linhas) {
+   const def = R.CAMPOS_RELATO.find((c) => c[0] === k) || [k, k, ""], exige = o.exigencias.relato && ((o.exigencias.relatoCampos || []).includes(k) || (k === "causa" && o.exigencias.qualidade && o.exigencias.qualidade.causa));
+   return `<label class="rotulo" for="r_${k}">${esc(def[1])}${exige ? " <span class=\"obrig\">(obrigatório)</span>" : ""}</label><p class="fraco pequeno">${esc(def[2])}</p>
+@@ -1253,8 +1265,8 @@
+     <datalist id="unidadesMedicao">${R.UNIDADES_MEDICAO.map((u) => `<option value="${esc(u)}">`).join("")}</datalist>
+     ${l.map(linha).join("")}${f ? "" : `<button type="button" class="bt" data-acao="medAdd" data-os="${esc(o.osId)}">${l.length ? "Mais uma medição" : "Registrar uma medição"}</button>`}`;
+ }
+-function blocoRevisao(o) {
+-  const rv = E.revisao && E.revisao.osId === o.osId ? E.revisao : null;
++function blocoRevisao(o, eq) {
++  const rv = E.revisao && E.revisao.osId === o.osId && (E.revisao.eq || "") === (eq || "") ? E.revisao : null;
+   if (!rv) return "";
+   const nomes = Object.fromEntries(R.CAMPOS_RELATO.map((c) => [c[0], c[1]]).concat([["resultadoDetalhe", "Restrição ou pendência da liberação"]]));
+   const ks = Object.keys(rv.revisado || {});
+@@ -1264,11 +1276,14 @@
+     <div class="linha-botoes">${ks.length > 1 ? `<button type="button" class="bt primario" data-acao="usarRevisao" data-os="${esc(o.osId)}" data-k="*">Usar todos</button>` : ""}
+       <button type="button" class="bt" data-acao="fecharRevisao">${ks.length ? "Manter o meu texto" : "Fechar"}</button></div></div>`;
+ }
+-function telaRelato(o) {
+-  const x = execDe(o.osId), f = fechada(o) ? "disabled" : "", rel = relatoVisivel(x), ex = o.exigencias || {};
+-  const falta = f ? [] : R.faltasDoPasso(o, { ...x, relato: { ...rel, medicoes: R.medicoesValidas(rel.medicoes) } }, "relato");
+-  return `<p class="fraco">Escreva com as suas palavras, em frases completas: o que encontrou, por quê, o que fez, como testou e como o equipamento ficou. Pode usar o microfone do teclado para ditar.</p>
+-    ${blocoRevisao(o)}
++function telaRelato(o, eq) {
++  const x = execDe(o.osId), f = fechada(o) ? "disabled" : "", eqx = eq ? R.equipExtraDe(x, eq) : null;
++  if (eq && !eqx) return `<p>Este equipamento não está mais na O.S.</p><button class="bt primario" data-acao="voltarOs" data-os="${esc(o.osId)}">Voltar à O.S.</button>`;
++  const rel = relatoVisivel(x, eq), ex = o.exigencias || {}, relM = { ...rel, medicoes: R.medicoesValidas(rel.medicoes) };
++  const falta = f ? [] : eq ? R.faltasDoRelato(o, relM) : R.faltasDoPasso(o, { ...x, relato: relM }, "relato");
++  return `${eqx ? `<div class="aviso info"><p><strong>Relato só deste equipamento:</strong> ${esc(R.nomeEquipExtra(x, eqx))}. O que você escrever aqui sai na seção dele no relatório e no histórico dele.</p></div>` : ""}
++    <p class="fraco">Escreva com as suas palavras, em frases completas: o que encontrou, por quê, o que fez, como testou e como o equipamento ficou. Pode usar o microfone do teclado para ditar.</p>
++    ${blocoRevisao(o, eq)}
+     ${campoRelato(o, "condicaoEncontrada", rel, f, 3)}${campoRelato(o, "causa", rel, f, 3)}${campoRelato(o, "servicoRealizado", rel, f, 5)}
+     ${blocoMedicoes(o, rel, f)}
+     ${ex.resultado ? `<label class="rotulo">Resultado do teste funcional <span class="obrig">(obrigatório)</span></label>${botoesOpcao(o, "testeResultado", R.TESTE_RESULTADOS, rel.testeResultado, f)}` : ""}
+@@ -1279,10 +1294,10 @@
+       <textarea class="campo" id="r_resultadoDetalhe" rows="3" maxlength="1000" data-relato="resultadoDetalhe" data-os="${esc(o.osId)}" placeholder="${esc(R.EXEMPLOS_RELATO.resultadoDetalhe)}" ${f}>${esc(rel.resultadoDetalhe || "")}</textarea>` : ""}` : ""}
+     ${campoRelato(o, "recomendacoes", rel, f, 3)}${campoRelato(o, "relato", rel, f, 3)}
+     ${falta.length ? `<div class="faltas"><strong>Para o relato ficar completo:</strong><ul>${falta.map((m) => `<li>${esc(m.replace(/^No relato: /, ""))}</li>`).join("")}</ul></div>` : ""}
+-    <p class="fraco pequeno" id="rSit">${(x.relato || {}).em ? "Guardado às " + esc(hora(x.relato.em)) : "Ainda não guardado"}</p>
++    <p class="fraco pequeno" id="rSit">${relDe(x, eq).em ? "Guardado às " + esc(hora(relDe(x, eq).em)) : "Ainda não guardado"}</p>
+     <div class="rodape-acao">${f ? "" : `<button class="bt primario" data-acao="guardarRelato" data-os="${esc(o.osId)}">Guardar relato</button>
+       ${navigator.onLine !== false ? `<button class="bt" data-acao="revisarTexto" data-os="${esc(o.osId)}" ${E.revisando ? "disabled" : ""}>${E.revisando ? "Revisando..." : "Revisar o português (precisa de internet)"}</button>` : ""}`}
+-    <button class="bt" data-acao="voltarOs" data-os="${esc(o.osId)}">Voltar à O.S.</button></div>`;
++    ${eqx ? `<button class="bt" data-acao="abrirEquip" data-os="${esc(o.osId)}" data-eq="${esc(eq)}">Voltar ao equipamento</button>` : `<button class="bt" data-acao="voltarOs" data-os="${esc(o.osId)}">Voltar à O.S.</button>`}</div>`;
+ }
+ 
+ /*
+@@ -1500,7 +1515,7 @@
+   const fp = R.faltasPorPasso(o, x), f = fp.flatMap(([, t]) => t);
+   return `${f.length ? `<div class="faltas"><strong>Para concluir, falta:</strong>${fp.map(([p, t]) => `<div class="falta-passo"><ul>${t.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>
+       <button type="button" class="bt" data-acao="passo" data-os="${esc(o.osId)}" data-passo="${p}">${p === "chegada" ? "Registrar a chegada" : "Ir para: " + esc(R.nomePasso(o, p))}</button></div>`).join("")}</div>` : `<div class="tudo-certo">Tudo pronto para concluir.</div>`}
+-    <div class="info"><p>${o.ronda ? (() => { const rr = R.resumoRonda(o, x); return `${rr.equipamentos} equipamento(s) em ${rr.setores} setor(es): ${rr.por.FUNCIONANDO} em funcionamento, ${rr.por.OBSERVACAO} com observação, ${rr.por.FORA_USO} fora de uso, ${rr.por.NAO_LOCALIZADO} não localizado(s), ${rr.por.NAO_VERIFICADO} não verificado(s); ${rr.fotos} foto(s).`; })() : o.logistica ? `${x.termo ? x.termo.itens.filter((i) => i.descricao || i.identificacao).length : 0} item(ns) no termo, ${x.fotos.length} foto(s), ${[x.assinatura, x.assinaturaColab].filter(Boolean).length} assinatura(s).` : `${x.fotos.length} foto(s), ${x.pecas.length} peça(s), ${Object.keys(x.respostas).length} resposta(s) do checklist.`}</p>
++    <div class="info"><p>${o.ronda ? (() => { const rr = R.resumoRonda(o, x); return `${rr.equipamentos} equipamento(s) em ${rr.setores} setor(es): ${rr.por.FUNCIONANDO} em funcionamento, ${rr.por.OBSERVACAO} com observação, ${rr.por.FORA_USO} fora de uso, ${rr.por.NAO_LOCALIZADO} não localizado(s), ${rr.por.NAO_VERIFICADO} não verificado(s); ${rr.fotos} foto(s).`; })() : o.logistica ? `${x.termo ? x.termo.itens.filter((i) => i.descricao || i.identificacao).length : 0} item(ns) no termo, ${x.fotos.length} foto(s), ${[x.assinatura, x.assinaturaColab].filter(Boolean).length} assinatura(s).` : `${R.equipExtras(x).length ? (R.equipExtras(x).length + 1) + " equipamentos nesta visita (uma assinatura do cliente vale para todos), " : ""}${x.fotos.length} foto(s), ${x.pecas.length} peça(s), ${Object.keys(x.respostas).length} resposta(s) do checklist.`}</p>
+     <p class="fraco pequeno">Depois de concluir, a O.S. não pode mais ser mudada neste aparelho.</p></div>
+     <button type="button" class="bt ok" data-acao="concluir" data-os="${esc(o.osId)}" ${f.length ? "aria-disabled=\"true\"" : ""}>Concluí</button>
+     <button class="bt" data-acao="voltarOs" data-os="${esc(o.osId)}">Voltar à O.S.</button>`;
+@@ -1677,6 +1692,15 @@
+     <p><strong>Continuar:</strong> na O.S., o botão "Continuar" abre o próximo passo que falta. No fim de cada passo, "Seguir" leva ao seguinte, sem precisar voltar à O.S. a cada um.</p>
+     <p><strong>Antes do "Cheguei":</strong> checklist, fotos, relato e assinatura só valem depois da chegada. Se abrir um deles antes, o app pergunta se quer registrar a chegada agora. Registro que o servidor recusou só porque a chegada ainda não tinha subido volta sozinho para a fila depois do "Cheguei".</p>
+   </section>
++  <section id="aj-varios-equip"><h2>Vários equipamentos na mesma visita</h2>
++    <ul><li>Atendeu mais de um equipamento na mesma O.S. (corretiva, preventiva e outros serviços técnicos)? Na O.S., toque em "Equipamentos atendidos nesta visita" e em "+ Acrescentar equipamento".</li>
++    <li>Escolha o equipamento da lista da unidade (digite a TAG, a série, o tipo ou o setor para filtrar) ou toque em "Não está na lista: cadastrar o equipamento". Funciona sem sinal: tudo sobe com a fila.</li>
++    <li>Equipamento sem série, TAG nem patrimônio também entra: cadastre só com o tipo e, na tela dele, toque em "O equipamento não tem série nem TAG". A gestão completa o cadastro depois.</li>
++    <li>Em cada equipamento acrescentado: confira a série ou a TAG, escreva o relato dele (os mesmos campos e mínimos do relato da O.S., com o resultado do teste e como o equipamento ficou), tire pelo menos 1 foto dele e lance as peças dele, se houver.</li>
++    <li>A assinatura do cliente é uma só e vale para todos os equipamentos. O "Concluí" só libera com todos completos: a lista mostra o que falta e em qual equipamento.</li>
++    <li>Tudo sai num relatório só, com uma seção por equipamento. O PDF fica só no equipamento da O.S.; no histórico de cada equipamento acrescentado aparece só o relato dele.</li>
++    <li>Acrescentou por engano? Abra o equipamento e use "Acrescentei por engano: tirar este equipamento da O.S." (com o motivo).</li></ul>
++  </section>
+   <section id="aj-logistica"><h2>Retirada, entrega e envio de equipamento</h2>
+     <p>Nas O.S. de logística (entrega, retirada, entrada para calibração, envio) o formulário é o <strong>termo</strong>, não o relato de manutenção. Condição encontrada, causa, teste funcional, peças e conferência de QR ou série não se aplicam e não travam o Concluí.</p>
+     <ol><li><strong>Cheguei</strong> no local. O termo pode ser preparado antes: fica no aparelho e sobe depois da chegada.</li>
+@@ -2455,8 +2479,8 @@
+     await gravarResposta(osId, b.dataset.p, novo);
+     render();
+   },
+-  camera: (b) => abrirCamera(b.dataset.os, b.dataset.p, false),
+-  galeria: (b) => abrirCamera(b.dataset.os, b.dataset.p, true),
++  camera: (b) => abrirCamera(b.dataset.os, b.dataset.p, false, false, b.dataset.leg),
++  galeria: (b) => abrirCamera(b.dataset.os, b.dataset.p, true, false, b.dataset.leg),
+   lerQr: (b) => abrirCamera(b.dataset.os, "", false, true),
+   serieConfere: (b) => confirmarEquipamento(b.dataset.os, E.os.get(b.dataset.os).equipamento.serie, "SERIE"),
+   tagConfere: (b) => { const eq = E.os.get(b.dataset.os).equipamento; return confirmarEquipamento(b.dataset.os, eq.serie || eq.tag, "TAG"); },
+@@ -2490,38 +2514,38 @@
+     x.pecas = x.pecas.filter((q) => q.id !== id);
+     await salvarExec(x); render();
+   },
+-  guardarRelato: async (b) => { await guardarRelato(b.dataset.os, true); },
++  guardarRelato: async (b) => { await guardarRelato(b.dataset.os, true, eqDaTela()); },
+   // 13/11/2026: botões do resultado, linhas de medição e a revisão do texto (o que muda fica no rascunho até o "Guardar relato")
+   relatoOpcao: async (b) => {
+-    const osId = b.dataset.os; if (bloqueada(osId)) return;
+-    const x = execDe(osId); guardarDigitado(x);
+-    x.relato = { ...x.relato, rascunho: { ...((x.relato && x.relato.rascunho) || {}), [b.dataset.k]: b.dataset.v } };
++    const osId = b.dataset.os, eq = eqDaTela(); if (bloqueada(osId)) return;
++    const x = execDe(osId); guardarDigitado(x, eq);
++    const rl = relDe(x, eq); porRel(x, eq, { ...rl, rascunho: { ...(rl.rascunho || {}), [b.dataset.k]: b.dataset.v } });
+     await salvarExec(x); render();
+   },
+   medAdd: async (b) => {
+-    const osId = b.dataset.os; if (bloqueada(osId)) return;
+-    const x = execDe(osId); guardarDigitado(x);
+-    const r = x.relato.rascunho || {}, l = (Array.isArray(r.medicoes) ? r.medicoes : Array.isArray(x.relato.medicoes) ? x.relato.medicoes : []).slice();
+-    if (l.length >= 30) { recado("No máximo 30 medições por O.S."); return; }
++    const osId = b.dataset.os, eq = eqDaTela(); if (bloqueada(osId)) return;
++    const x = execDe(osId); guardarDigitado(x, eq);
++    const rl = relDe(x, eq), r = rl.rascunho || {}, l = (Array.isArray(r.medicoes) ? r.medicoes : Array.isArray(rl.medicoes) ? rl.medicoes : []).slice();
++    if (l.length >= 30) { recado("No máximo 30 medições por equipamento."); return; }
+     l.push({ grandeza: "", valor: "", unidade: "", obs: "" });
+-    x.relato = { ...x.relato, rascunho: { ...r, medicoes: l } };
++    porRel(x, eq, { ...rl, rascunho: { ...r, medicoes: l } });
+     await salvarExec(x); render();
+   },
+   medTirar: async (b) => {
+-    const osId = b.dataset.os; if (bloqueada(osId)) return;
+-    const x = execDe(osId); guardarDigitado(x);
+-    const r = x.relato.rascunho || {}, l = (Array.isArray(r.medicoes) ? r.medicoes : Array.isArray(x.relato.medicoes) ? x.relato.medicoes : []).slice();
++    const osId = b.dataset.os, eq = eqDaTela(); if (bloqueada(osId)) return;
++    const x = execDe(osId); guardarDigitado(x, eq);
++    const rl = relDe(x, eq), r = rl.rascunho || {}, l = (Array.isArray(r.medicoes) ? r.medicoes : Array.isArray(rl.medicoes) ? rl.medicoes : []).slice();
+     l.splice(Number(b.dataset.i), 1);
+-    x.relato = { ...x.relato, rascunho: { ...r, medicoes: l } };
++    porRel(x, eq, { ...rl, rascunho: { ...r, medicoes: l } });
+     await salvarExec(x); render();
+   },
+-  revisarTexto: async (b) => { await revisarTexto(b.dataset.os); },
++  revisarTexto: async (b) => { await revisarTexto(b.dataset.os, eqDaTela()); },
+   usarRevisao: async (b) => {
+-    const osId = b.dataset.os, rv = E.revisao; if (!rv || rv.osId !== osId || bloqueada(osId)) return;
+-    const x = execDe(osId); guardarDigitado(x);
+-    const ks = b.dataset.k === "*" ? Object.keys(rv.revisado) : [b.dataset.k], r = { ...((x.relato && x.relato.rascunho) || {}) };
++    const osId = b.dataset.os, rv = E.revisao, eq = eqDaTela(); if (!rv || rv.osId !== osId || (rv.eq || "") !== eq || bloqueada(osId)) return;
++    const x = execDe(osId); guardarDigitado(x, eq);
++    const rl = relDe(x, eq), ks = b.dataset.k === "*" ? Object.keys(rv.revisado) : [b.dataset.k], r = { ...(rl.rascunho || {}) };
+     for (const k of ks) { if (rv.revisado[k] !== undefined) { r[k] = rv.revisado[k]; delete rv.revisado[k]; } }
+-    x.relato = { ...x.relato, rascunho: r };
++    porRel(x, eq, { ...rl, rascunho: r });
+     if (!Object.keys(rv.revisado).length) E.revisao = null;
+     await salvarExec(x); render();
+     recado("Texto revisado colocado no campo. Confira e toque em \"Guardar relato\".", 5000);
+@@ -2575,6 +2599,7 @@
+     if (x.conclusao || bloqueada(osId)) return;
+     await guardarRelato(osId, false);
+     await guardarTermo(osId, false);
++    // 19/11/2026: cada equipamento a mais tem de estar completo (o que falta diz em qual)
+     await descarregarRonda();
+     const f = R.faltasParaConcluir(o, x);
+     if (f.length) { recado("Ainda falta: " + f.join(" "), 7000); render(); return; }
+@@ -2644,8 +2669,8 @@
+   delete x.relato.rascunho;
+   await salvarExec(x);
+ }
+-function lerCamposRelato(x) {
+-  const rel = { ...(x.relato || {}) }, rasc = rel.rascunho || {};
++function lerCamposRelato(x, eq) {
++  const rel = { ...relDe(x, eq) }, rasc = rel.rascunho || {};
+   let mudou = false;
+   // 13/11/2026: também a restrição/pendência da liberação (texto), o resultado do teste e a situação ao final (botões) e as medições
+   for (const k of R.CAMPOS_RELATO.map((c) => c[0]).concat(["resultadoDetalhe"])) {
+@@ -2660,26 +2685,26 @@
+   return { rel, mudou };
+ }
+ /** O que está digitado na tela do relato vai para o rascunho antes de redesenhar (botões, medições, revisão). */
+-function guardarDigitado(x) {
+-  const r = { ...((x.relato && x.relato.rascunho) || {}) };
++function guardarDigitado(x, eq) {
++  const rl = relDe(x, eq), r = { ...(rl.rascunho || {}) };
+   document.querySelectorAll("[data-relato]").forEach((t) => { r[t.dataset.relato] = t.value; });
+   const med = document.querySelectorAll("[data-med]");
+   if (med.length) {
+-    const l = (Array.isArray(r.medicoes) ? r.medicoes : Array.isArray(x.relato && x.relato.medicoes) ? x.relato.medicoes : []).map((m) => ({ ...m }));
++    const l = (Array.isArray(r.medicoes) ? r.medicoes : Array.isArray(rl.medicoes) ? rl.medicoes : []).map((m) => ({ ...m }));
+     med.forEach((t) => { const i = Number(t.dataset.med); if (l[i]) l[i][t.dataset.mk] = t.value; });
+     r.medicoes = l;
+   }
+-  x.relato = { ...x.relato, rascunho: r };
++  porRel(x, eq, { ...rl, rascunho: r });
+ }
+ /**
+  * 13/11/2026: "Revisar o português" (Ast_appRevisarTexto, precisa de sinal). A IA só corrige e organiza o que você escreveu; o
+  * servidor descarta a revisão que traz número novo ou muda muito o tamanho. Nada é trocado sem você tocar em "Usar".
+  */
+-async function revisarTexto(osId) {
++async function revisarTexto(osId, eq) {
+   const x = execDe(osId), o = E.os.get(osId);
+   if (!o || fechada(o) || E.revisando) return;
+-  guardarDigitado(x);
+-  const v = relatoVisivel(x), campos = {};
++  guardarDigitado(x, eq);
++  const v = relatoVisivel(x, eq), campos = {};
+   for (const k of R.CAMPOS_RELATO.map((c) => c[0]).concat(["resultadoDetalhe"])) if (R.palavras(v[k]) >= 2) campos[k] = String(v[k]);
+   if (!Object.keys(campos).length) { recado("Escreva o relato antes de pedir a revisão."); return; }
+   if (navigator.onLine === false || !E.sessao) { recado("A revisão do texto precisa de internet. O seu texto continua guardado no aparelho."); return; }
+@@ -2687,15 +2712,16 @@
+   try {
+     const r = await chamar("Ast_appRevisarTexto", [E.sessao.sessionId, { osId: o.provisoria ? "" : osId, campos }], { prazoMs: 60000 });
+     if (r && r.ok === false) { recado(r.message || "Não foi possível revisar agora.", 7000); return; }
+-    E.revisao = { osId, revisado: (r && r.revisado) || {}, message: (r && r.message) || "" };
++    E.revisao = { osId, eq: eq || "", revisado: (r && r.revisado) || {}, message: (r && r.message) || "" };
+     if (!Object.keys(E.revisao.revisado).length) { recado(E.revisao.message || "Nada a mudar.", 7000); }
+   } catch (e) {
+     recado(e instanceof ErroRede ? "Sem sinal agora: a revisão fica para depois. O seu texto continua guardado." : "Não foi possível revisar: " + (e.message || e), 7000);
+   } finally { E.revisando = false; render(); }
+ }
+-async function guardarRelato(osId, avisar) {
++async function guardarRelato(osId, avisar, eq) {
+   const x = execDe(osId), o = E.os.get(osId);
+   if (x.conclusao || (o && o.fechadaNoServidor)) return;
++  if (eq) return guardarRelatoEquip(osId, x, o, eq, avisar);
+   const { rel, mudou } = lerCamposRelato(x);
+   if (!mudou) {
+     if (!avisar) return;
+@@ -2941,6 +2967,7 @@
+   if (e.target.id === "fAditivo") { e.preventDefault(); enviarAditivo(e.target); return; } // 19/11/2026
+   if (/^fAtv/.test(e.target.id)) { e.preventDefault(); enviarFormAtv(e.target).catch((err) => recado("Não foi possível: " + (err && err.message || err), 6000)); return; }
+   if (/^fNovo/.test(e.target.id)) { e.preventDefault(); enviarFormNovo(e.target).catch((err) => recado("Não foi possível: " + (err && err.message || err), 6000)); return; }
++  if (e.target.id === "fEquipNovo") { e.preventDefault(); salvarEquipNovo(e.target).catch((err) => recado("Não foi possível: " + (err && err.message || err), 6000)); return; }
+   if (e.target.id === "fRondaEquip") { e.preventDefault(); salvarEquipRonda(e.target).catch((err) => recado("Não foi possível: " + (err && err.message || err), 6000)); return; }
+   if (e.target.id === "fPeca") {
+     e.preventDefault();
+@@ -2951,10 +2978,11 @@
+     if (descricao.length < 2) { recado("Escreva o nome da peça."); $("pDesc").focus(); return; }
+     if (!q || q.numero <= 0) { recado("Informe a quantidade."); $("pQtd").focus(); return; }
+     (async () => {
+-      const dados = { descricao, codigo, quantidade: q.numero, unidade, situacao };
++      const dados = { descricao, codigo, quantidade: q.numero, unidade, situacao }, equipChave = e.target.dataset.eq || "";
+       if (urgencia) dados.urgencia = urgencia;
++      if (equipChave) dados.equipChave = equipChave;   // 19/11/2026: peça de um equipamento a mais da visita
+       const item = await registrar(osId, "PECA", dados);
+-      const x = execDe(osId); x.pecas.push({ id: item.idLocal, descricao, codigo, quantidade: q.numero, unidade, situacao, urgencia, em: item.em });
++      const x = execDe(osId); x.pecas.push({ id: item.idLocal, descricao, codigo, quantidade: q.numero, unidade, situacao, urgencia, em: item.em, equipChave });
+       await salvarExec(x); recado(situacao === "FALTA" ? "Peça em falta lançada (vai para Compras)." : "Peça lançada."); render();
+     })().catch((err) => recado("Não foi possível: " + err.message));
+   }
+@@ -3008,20 +3036,22 @@
+   }
+   // 13/11/2026: linhas de medição (rascunho, como o texto) e dica da especificação da peça
+   if (e.target.dataset && e.target.dataset.med !== undefined && e.target.dataset.mk) {
+-    const xm = execDe(e.target.dataset.os), rm = { ...((xm.relato && xm.relato.rascunho) || {}) };
+-    const l = (Array.isArray(rm.medicoes) ? rm.medicoes : Array.isArray(xm.relato && xm.relato.medicoes) ? xm.relato.medicoes : []).map((m) => ({ ...m }));
++    const eqm = eqDaTela(), xm = execDe(e.target.dataset.os), rlm = relDe(xm, eqm), rm = { ...(rlm.rascunho || {}) };
++    const l = (Array.isArray(rm.medicoes) ? rm.medicoes : Array.isArray(rlm.medicoes) ? rlm.medicoes : []).map((m) => ({ ...m }));
+     const i = Number(e.target.dataset.med); if (!l[i]) return;
+     l[i][e.target.dataset.mk] = e.target.value;
+-    xm.relato = { ...xm.relato, rascunho: { ...rm, medicoes: l } };
++    porRel(xm, eqm, { ...rlm, rascunho: { ...rm, medicoes: l } });
+     clearTimeout(timerRascunho); timerRascunho = setTimeout(() => salvarExec(xm), 800);
+     const sm = $("rSit"); if (sm) sm.textContent = "Não guardado ainda: toque em \"Guardar relato\"";
+     return;
+   }
++  // 19/11/2026: filtro da lista de equipamentos da unidade (Acrescentar equipamento)
++  if (e.target.dataset && e.target.dataset.equipFiltro) { if (E.equipAdd) E.equipAdd.filtro = e.target.value; const pos = e.target.selectionStart; render(); const el = $("eqFiltro"); if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (x) { /* segue */ } } return; }
+   if (e.target.dataset && e.target.dataset.pecaDesc) { const d = $("pDica"); if (d) d.textContent = R.dicaPeca(e.target.value); return; }
+   const k = e.target.dataset && e.target.dataset.relato;
+   if (!k) return;
+-  const x = execDe(e.target.dataset.os);
+-  x.relato = { ...x.relato, rascunho: { ...((x.relato && x.relato.rascunho) || {}), [k]: e.target.value } };
++  const x = execDe(e.target.dataset.os), eqr = eqDaTela(), rlr = relDe(x, eqr);
++  porRel(x, eqr, { ...rlr, rascunho: { ...(rlr.rascunho || {}), [k]: e.target.value } });
+   clearTimeout(timerRascunho);
+   timerRascunho = setTimeout(() => salvarExec(x), 800);
+   const sit = $("rSit"); if (sit) sit.textContent = "Não guardado ainda: toque em \"Guardar relato\"";
+@@ -3030,7 +3060,7 @@
+ let rotaAnterior = rotaAtual();
+ window.addEventListener("hashchange", () => {
+   // saindo da tela do relato: guarda o que foi escrito
+-  if (rotaAnterior.tela === "os-relato" && rotaAnterior.osId && E.sessao) guardarRelato(rotaAnterior.osId, false).catch(() => {});
++  if (rotaAnterior.tela === "os-relato" && rotaAnterior.osId && E.sessao) guardarRelato(rotaAnterior.osId, false, rotaAnterior.parte || "").catch(() => {});
+   if (rotaAnterior.tela === "os-termo" && rotaAnterior.osId && E.sessao) guardarTermo(rotaAnterior.osId, false).catch(() => {});
+   if (rdPendentes.size && E.sessao) descarregarRonda().catch(() => {});
+   rotaAnterior = rotaAtual();
+@@ -3303,4 +3333,197 @@
+   recado("Equipamento cadastrado no aparelho (sobe com a fila). Agora marque a situação dele.", 6000);
+   ir("#/os/" + encodeURIComponent(osId) + "/setor/" + Math.max(0, i));
+ }
++
++/* ---------------- vários equipamentos na mesma O.S. (19/11/2026, pedido do dono) ----------------
++ * Uma visita atende vários equipamentos e tudo sai num relatório só. O equipamento da O.S. é o 1º (os passos de sempre); cada
++ * equipamento a mais tem a sua tela: conferência de série/TAG, relato próprio (mesmos campos e mínimos), fotos próprias (mín. 1)
++ * e peças. A assinatura do cliente é uma só e vale para todos. Tudo fica no aparelho e sobe pela fila (evento EQUIPAMENTO, foto
++ * com "equip:<chave>", peça com equipChave), sem sinal como o resto. */
++const ehSemIdent = (e) => !!e && (e.identificadoPor === "SEM_IDENT" || e.serieConfirmada === "SEM SERIE/TAG");
++function telaEquipamentos(o) {
++  const x = execDe(o.osId), f = fechada(o), lista = R.equipExtras(x), eq = o.equipamento;
++  const faltaOs = R.faltasPorPasso(o, x).filter(([p]) => ["equipamento", "checklist", "fotos", "relato"].includes(p)).flatMap(([, l]) => l);
++  return `<p>Atendeu mais de um equipamento nesta visita? Acrescente cada um aqui. Cada equipamento tem a sua conferência de série ou TAG, o seu relato e as suas fotos; tudo sai no mesmo relatório. A assinatura do cliente é uma só e vale para todos.</p>
++    <ul class="lista-equip">
++      <li><button type="button" class="cartao" data-acao="voltarOs" data-os="${esc(o.osId)}">
++        <span class="cli"><span class="ordem">1</span>${esc(eq.nome || "Equipamento da O.S.")}</span>
++        <span class="linha">${esc([eq.modelo, eq.tag && "TAG " + eq.tag, eq.serie && "série " + eq.serie].filter(Boolean).join(" · ") || "Equipamento da O.S.")}</span>
++        <span class="selo ${faltaOs.length ? "alerta" : "ok"}">${faltaOs.length ? "Falta " + faltaOs.length + " item(ns) nos passos da O.S." : "Completo nos passos da O.S."}</span></button></li>
++      ${lista.map((e, i) => { const fl = R.faltasDoEquipExtra(o, x, e), nf = R.fotosDoEquip(x, e.chave).length; return `<li><button type="button" class="cartao" data-acao="abrirEquip" data-os="${esc(o.osId)}" data-eq="${esc(e.chave)}">
++        <span class="cli"><span class="ordem">${i + 2}</span>${esc(e.tipo || "Equipamento")}</span>
++        <span class="linha">${esc(R.textoEquip(e))}</span>
++        <span class="linha fraco">${nf} foto(s)${e.provisorio ? " · cadastrado agora em campo" : ""}</span>
++        <span class="selo ${fl.length ? "alerta" : "ok"}">${fl.length ? "Falta " + fl.length + " item(ns): toque para completar" : "Completo"}</span></button></li>`; }).join("")}
++    </ul>
++    ${f ? "" : `<button type="button" class="bt primario" data-acao="equipAcrescentar" data-os="${esc(o.osId)}">+ Acrescentar equipamento</button>`}
++    ${seguirOuVoltar(o, "equipamentos")}`;
++}
++function telaEquipAdd(o) {
++  const x = execDe(o.osId);
++  if (!E.equipAdd || E.equipAdd.osId !== o.osId) E.equipAdd = { osId: o.osId, filtro: "", cadastrar: false, erros: {}, form: {} };
++  const n = E.equipAdd;
++  if (n.cadastrar) {
++    const fm = n.form || {}, er = n.erros || {};
++    const c = (id, k, rot, attrs) => `<label class="rotulo" for="${id}">${esc(rot)}</label><input class="campo${er[k] ? " invalido" : ""}" id="${id}" value="${esc(fm[k] || "")}" ${attrs}>${er[k] ? `<p class="erro-campo">${esc(er[k])}</p>` : ""}`;
++    return `<h2>Cadastrar o equipamento</h2><p class="fraco">Copie da plaqueta. Só o tipo é obrigatório; sem série, TAG ou patrimônio também vale (a gestão completa o cadastro depois). Funciona sem sinal: o cadastro sobe com a fila.</p>
++      <form id="fEquipNovo" data-os="${esc(o.osId)}">
++        ${c("eqnTipo", "tipo", "Tipo (autoclave, lavadora, estufa...)", 'maxlength="80" autocapitalize="words" autocomplete="off"')}
++        ${c("eqnFab", "fabricante", "Fabricante", 'maxlength="80" autocapitalize="words" autocomplete="off"')}
++        ${c("eqnModelo", "modelo", "Modelo", 'maxlength="80" autocapitalize="characters" autocomplete="off"')}
++        ${c("eqnSerie", "serie", "Número de série", 'maxlength="80" autocapitalize="characters" autocomplete="off"')}
++        ${c("eqnTag", "tag", "TAG (etiqueta do SGO+ ou do cliente)", 'maxlength="60" autocapitalize="characters" autocomplete="off"')}
++        ${c("eqnSetor", "setor", "Setor", 'maxlength="80" autocapitalize="words" autocomplete="off"')}
++        ${c("eqnPat", "patrimonio", "Patrimônio", 'maxlength="60" autocomplete="off"')}
++        <button type="submit" class="bt primario">Cadastrar e acrescentar à O.S.</button>
++      </form>
++      <div class="rodape-acao"><button class="bt" data-acao="equipVerLista" data-os="${esc(o.osId)}">Voltar à lista da unidade</button></div>`;
++  }
++  const todos = R.equipDisponiveis(o, x, ""), lista = R.equipDisponiveis(o, x, n.filtro), mostra = lista.slice(0, 60);
++  return `<label class="rotulo" for="eqFiltro">Procurar na unidade${o.unidade.nome ? " " + esc(o.unidade.nome) : ""} (TAG, série, tipo, setor)</label>
++    <input class="campo" id="eqFiltro" data-equip-filtro="1" value="${esc(n.filtro)}" autocomplete="off" autocapitalize="characters" placeholder="Ex.: LV-02 ou lavadora">
++    ${!todos.length ? `<div class="aviso info"><p>${o.provisoria ? "A lista dos equipamentos da unidade chega depois que esta O.S. subir ao servidor." : "Nenhum outro equipamento desta unidade está no cadastro (ou a lista ainda não chegou: atualize o Meu dia com sinal)."} Use "Cadastrar o equipamento" abaixo: funciona sem sinal.</p></div>`
++      : `<p class="fraco pequeno">${lista.length} de ${todos.length} equipamento(s)${lista.length > mostra.length ? "; mostrando os 60 primeiros: digite para filtrar" : ""}. Toque no equipamento para acrescentar.</p>`}
++    <ul class="lista-equip">${mostra.map((e) => `<li><button type="button" class="cartao" data-acao="equipEscolher" data-os="${esc(o.osId)}" data-id="${esc(e.id)}">
++      <span class="cli">${esc([e.tipo, e.modelo].filter(Boolean).join(" · ") || "Equipamento")}</span>
++      <span class="linha">${esc([e.tag && "TAG " + e.tag, e.serie && "série " + e.serie, e.patrimonio && "patrimônio " + e.patrimonio].filter(Boolean).join(" · ") || "Sem série nem TAG no cadastro")}</span>
++      ${e.setor ? `<span class="linha fraco">${esc(e.setor)}</span>` : ""}</button></li>`).join("")}</ul>
++    ${todos.length && !lista.length ? `<p class="fraco">Nenhum equipamento com "${esc(n.filtro)}". Confira a etiqueta ou cadastre.</p>` : ""}
++    <button type="button" class="bt" data-acao="equipCadastrarForm" data-os="${esc(o.osId)}">Não está na lista: cadastrar o equipamento</button>
++    <div class="rodape-acao"><button class="bt" data-acao="passo" data-os="${esc(o.osId)}" data-passo="equipamentos">Voltar aos equipamentos da visita</button></div>`;
++}
++function telaEquipExtra(o, chave) {
++  const x = execDe(o.osId), e = R.equipExtraDe(x, chave);
++  if (!e) return `<p>Este equipamento não está mais na O.S.</p><button class="bt primario" data-acao="passo" data-os="${esc(o.osId)}" data-passo="equipamentos">Voltar aos equipamentos da visita</button>`;
++  const f = fechada(o), d = f ? "disabled" : "", ft = fotoTravada(o), fotos = R.fotosDoEquip(x, chave), falta = f ? [] : R.faltasDoEquipExtra(o, x, e);
++  const relFalta = R.faltasDoRelato(o, e.relato || {}), relFeito = !!(e.relato && (e.relato.servicoRealizado || e.relato.relato)), pecas = x.pecas.filter((p) => p.equipChave === chave);
++  const at = `data-os="${esc(o.osId)}" data-eq="${esc(chave)}"`, leg = esc(R.textoEquip(e));
++  return `<div class="info"><p class="cli"><strong>${esc(R.nomeEquipExtra(x, e))}</strong></p><dl>
++      <dt>Tipo</dt><dd>${esc(e.tipo || "Não informado")}${e.modelo ? " · " + esc(e.modelo) : ""}</dd>
++      ${e.fabricante ? `<dt>Fabricante</dt><dd>${esc(e.fabricante)}</dd>` : ""}
++      <dt>TAG</dt><dd>${esc(e.tag || "Não informada")}</dd>
++      <dt>Nº de série</dt><dd>${esc(e.serie || "Não informado")}</dd>
++      ${e.setor ? `<dt>Setor</dt><dd>${esc(e.setor)}</dd>` : ""}${e.patrimonio ? `<dt>Patrimônio</dt><dd>${esc(e.patrimonio)}</dd>` : ""}</dl>
++      ${e.provisorio ? `<p class="fraco pequeno">Cadastrado agora em campo: o cadastro sobe com a fila.</p>` : ""}</div>
++    <h2>1. Conferir o equipamento</h2>
++    ${ehSemIdent(e) ? `<div class="tudo-certo">Confirmado: o equipamento não tem série nem TAG. A gestão completa o cadastro depois.</div>`
++      : e.serieConfirmada ? `<div class="tudo-certo">Conferido ${e.identificadoPor === "TAG" ? "pela TAG" : "pela série"}: ${esc(e.serieConfirmada)}${e.serie && e.identificadoPor !== "TAG" && e.serieConfirmada !== e.serie ? " (diferente do cadastro: a gestão será avisada)" : ""}</div>`
++      : `<p>Confira na etiqueta se este é o equipamento certo.</p>`}
++    ${e.serie ? `<button class="bt ${e.serieConfirmada ? "" : "primario"}" ${d} data-acao="equipConfere" ${at} data-v="${esc(e.serie)}" data-como="SERIE">A série da etiqueta é ${esc(e.serie)}</button>` : ""}
++    ${e.tag ? `<button class="bt" ${d} data-acao="equipConfere" ${at} data-v="${esc(e.tag)}" data-como="TAG">A TAG é ${esc(e.tag)}</button>` : ""}
++    <label class="rotulo" for="eqxSerie">A série da etiqueta é outra (ou o cadastro não tem): digite</label>
++    <input class="campo" id="eqxSerie" ${d} maxlength="80" autocomplete="off" autocapitalize="characters">
++    <button class="bt" ${d} data-acao="equipSerieDigitada" ${at}>Confirmar esta série</button>
++    <button class="bt" ${d} data-acao="equipConfere" ${at} data-v="SEM SERIE/TAG" data-como="SEM_IDENT">O equipamento não tem série nem TAG</button>
++    <h2>2. Relato deste equipamento</h2>
++    <p class="fraco pequeno">${relFeito ? (relFalta.length ? "Começado: falta completar." : "Feito.") : "Os mesmos campos do relato da O.S.: o que encontrou, a causa, o que fez, o teste e como o equipamento ficou."}</p>
++    <button class="bt ${relFalta.length ? "primario" : ""}" data-acao="equipRelato" ${at}>${relFeito ? "Abrir o relato deste equipamento" : "Escrever o relato deste equipamento"}</button>
++    <h2>3. Fotos deste equipamento (mínimo 1)</h2>
++    <p class="fraco pequeno">${fotos.length} foto(s).</p>
++    ${ft ? "" : `<button type="button" class="bt ${fotos.length ? "" : "primario"}" data-acao="camera" data-os="${esc(o.osId)}" data-p="equip:${esc(chave)}" data-leg="${leg}">${fotos.length ? "Tirar outra foto" : "Tirar foto"}</button>
++    <button type="button" class="bt" data-acao="galeria" data-os="${esc(o.osId)}" data-p="equip:${esc(chave)}" data-leg="${leg}">Escolher do celular (uma ou várias)</button>`}
++    <div class="grade-fotos">${fotos.map((fo) => miniaturaFoto(fo, ft || fo.doServidor ? "" : `<button type="button" class="bt perigo" data-acao="removerFoto" data-os="${esc(o.osId)}" data-id="${esc(fo.idLocal)}">Remover</button>`)).join("")}</div>
++    <h2>4. Peças deste equipamento (se houver)</h2>
++    <p class="fraco pequeno">${pecas.length ? pecas.length + " lançada(s)." : "Nenhuma peça lançada."}</p>
++    <button class="bt" data-acao="equipPecas" ${at}>${f ? "Ver as peças" : "Lançar ou ver as peças deste equipamento"}</button>
++    ${falta.length ? `<div class="faltas"><strong>Ainda falta neste equipamento:</strong><ul>${falta.map((m) => `<li>${esc(m.replace(/^No relato: /, "No relato, "))}</li>`).join("")}</ul></div>` : f ? "" : `<div class="tudo-certo">Este equipamento está completo.</div>`}
++    <div class="rodape-acao"><button class="bt primario" data-acao="passo" data-os="${esc(o.osId)}" data-passo="equipamentos">Voltar aos equipamentos da visita</button></div>
++    ${f ? "" : `<details class="excluir-os"><summary>Acrescentei por engano: tirar este equipamento da O.S.</summary>
++      <p class="fraco pequeno">Ele sai da O.S. e do relatório. O que já foi registrado fica no histórico do servidor.</p>
++      <label class="rotulo" for="eqxMotivo">Motivo (pelo menos 10 letras)</label>
++      <textarea class="campo" id="eqxMotivo" rows="2" maxlength="300" placeholder="Ex.: equipamento repetido, era o mesmo da O.S."></textarea>
++      <button type="button" class="bt perigo" data-acao="equipTirar" ${at}>Tirar este equipamento</button></details>`}`;
++}
++/** Acrescenta o equipamento à O.S. no aparelho e põe na fila (o 1º envio leva o equipamento; depois, as atualizações). */
++async function acrescentarEquip(osId, dados, aviso) {
++  const x = execDe(osId);
++  if (!Array.isArray(x.equipExtras)) x.equipExtras = [];
++  if (R.equipExtras(x).length >= 30) { recado("Esta O.S. já tem 31 equipamentos. Abra outra O.S. para os demais.", 7000); return; }
++  const e = { chave: "eq-" + novoIdLocal(), equipamentoId: "", tipo: "", fabricante: "", modelo: "", serie: "", tag: "", setor: "", patrimonio: "", ...dados, serieConfirmada: "", identificadoPor: "", relato: {} };
++  x.equipExtras.push(e);
++  await salvarExec(x);
++  await registrar(osId, "EQUIPAMENTO", R.dadosEquipExtra(e), "");
++  E.equipAdd = null;
++  recado((aviso ? aviso + " " : "") + "Equipamento acrescentado. Agora confira a série ou a TAG, escreva o relato e tire as fotos dele.", 7000);
++  ir("#/os/" + encodeURIComponent(osId) + "/equipx/" + encodeURIComponent(e.chave));
++}
++async function atualizarEquip(osId, x, e) {
++  await salvarExec(x);
++  await registrar(osId, "EQUIPAMENTO", R.dadosEquipExtra(e), "equip:" + e.chave);
++}
++const normId = (v) => String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
++async function salvarEquipNovo(form) {
++  const osId = form.dataset.os, o = E.os.get(osId);
++  if (!o || bloqueada(osId)) return;
++  const v = (id) => ($(id) ? $(id).value.trim() : "");
++  const d = { tipo: v("eqnTipo"), fabricante: v("eqnFab"), modelo: v("eqnModelo"), serie: v("eqnSerie").toUpperCase(), tag: v("eqnTag").toUpperCase(), setor: v("eqnSetor"), patrimonio: v("eqnPat") };
++  const er = R.faltasDoCadastro("EQUIPAMENTO", d);
++  if (E.equipAdd) { E.equipAdd.form = d; E.equipAdd.erros = er; }
++  if (Object.keys(er).length) { render(); return; }
++  if (!o.clienteId || !o.unidadeId) { recado("Esta O.S. veio de uma versão antiga do Meu dia, sem a unidade. O que fazer: atualize o Meu dia com sinal (puxe para baixo) e cadastre de novo.", 9000); return; }
++  const ids = [d.serie, d.tag].map(normId).filter(Boolean), bate = (e) => ids.length && [e.serie, e.tag].map(normId).some((k) => k && ids.includes(k));
++  if (bate(o.equipamento)) { recado("Este é o equipamento da própria O.S. (mesma série ou TAG). Registre ele nos passos da O.S.; aqui entram só os outros.", 8000); return; }
++  const x = execDe(osId);
++  if (R.equipExtras(x).some(bate)) { recado("Este equipamento já está na lista desta visita (mesma série ou TAG). Abra ele na lista.", 8000); return; }
++  const doCad = (o.equipamentosUnidade || []).find(bate);
++  if (doCad) return acrescentarEquip(osId, { equipamentoId: doCad.id, tipo: doCad.tipo, fabricante: doCad.fabricante, modelo: doCad.modelo, serie: doCad.serie, tag: doCad.tag, setor: doCad.setor, patrimonio: doCad.patrimonio }, "Ele já estava no cadastro da unidade: entrou o do cadastro.");
++  const idLocal = novoIdLocal();
++  await fila.registrar(usuario(), { tipo: "CADASTRO", osId, dados: { tipo: "EQUIPAMENTO", dados: { clienteId: o.clienteId, unidadeId: o.unidadeId, ...d } }, idLocal });
++  await acrescentarEquip(osId, { equipamentoId: idLocal, provisorio: true, ...d }, "Equipamento cadastrado no aparelho (sobe com a fila).");
++}
++const acoesEquip = {
++  abrirEquip: (b) => ir("#/os/" + encodeURIComponent(b.dataset.os) + "/equipx/" + encodeURIComponent(b.dataset.eq)),
++  equipAcrescentar: (b) => { if (bloqueada(b.dataset.os)) return; E.equipAdd = null; ir("#/os/" + encodeURIComponent(b.dataset.os) + "/equipadd"); },
++  equipCadastrarForm: (b) => { if (!E.equipAdd) E.equipAdd = { osId: b.dataset.os, filtro: "", erros: {}, form: {} }; E.equipAdd.cadastrar = true; E.equipAdd.erros = {}; render(); window.scrollTo(0, 0); },
++  equipVerLista: () => { if (E.equipAdd) E.equipAdd.cadastrar = false; render(); },
++  equipEscolher: async (b) => {
++    const osId = b.dataset.os, o = E.os.get(osId); if (!o || bloqueada(osId)) return;
++    const e = (o.equipamentosUnidade || []).find((q) => q.id === b.dataset.id); if (!e) return;
++    if (R.equipExtras(execDe(osId)).some((q) => q.equipamentoId === e.id)) { recado("Este equipamento já está na lista desta visita."); return; }
++    await acrescentarEquip(osId, { equipamentoId: e.id, tipo: e.tipo, fabricante: e.fabricante, modelo: e.modelo, serie: e.serie, tag: e.tag, setor: e.setor, patrimonio: e.patrimonio });
++  },
++  equipConfere: async (b) => {
++    const osId = b.dataset.os, x = execDe(osId), e = R.equipExtraDe(x, b.dataset.eq); if (!e || bloqueada(osId)) return;
++    e.serieConfirmada = b.dataset.v; e.identificadoPor = b.dataset.como;
++    await atualizarEquip(osId, x, e);
++    recado(b.dataset.como === "SEM_IDENT" ? "Registrado: o equipamento não tem série nem TAG. A gestão completa o cadastro depois." : "Equipamento conferido.", 5000); render();
++  },
++  equipSerieDigitada: async (b) => {
++    const s = ($("eqxSerie") ? $("eqxSerie").value : "").trim().toUpperCase();
++    if (s.length < 2) { recado("Digite a série que está na etiqueta do equipamento. Sem série nem TAG? Toque em \"O equipamento não tem série nem TAG\"."); if ($("eqxSerie")) $("eqxSerie").focus(); return; }
++    const osId = b.dataset.os, x = execDe(osId), e = R.equipExtraDe(x, b.dataset.eq); if (!e || bloqueada(osId)) return;
++    e.serieConfirmada = s; e.identificadoPor = "SERIE";
++    await atualizarEquip(osId, x, e);
++    recado(e.serie && normId(e.serie) !== normId(s) ? "Série guardada. Ela é diferente do cadastro: a gestão será avisada." : "Equipamento conferido.", 6000); render();
++  },
++  equipRelato: (b) => ir("#/os/" + encodeURIComponent(b.dataset.os) + "/relato/" + encodeURIComponent(b.dataset.eq)),
++  equipPecas: (b) => ir("#/os/" + encodeURIComponent(b.dataset.os) + "/pecas/" + encodeURIComponent(b.dataset.eq)),
++  equipTirar: async (b) => {
++    const osId = b.dataset.os, x = execDe(osId), e = R.equipExtraDe(x, b.dataset.eq); if (!e || bloqueada(osId)) return;
++    const motivo = ($("eqxMotivo") ? $("eqxMotivo").value : "").trim();
++    if (letras(motivo) < 10) { recado("Escreva o motivo (pelo menos 10 letras), por exemplo: equipamento repetido.", 6000); if ($("eqxMotivo")) $("eqxMotivo").focus(); return; }
++    if (!(await confirmar("Tirar " + R.nomeEquipExtra(x, e) + " desta O.S.?", "Tirar", "Manter"))) return;
++    e.removido = true; e.removidoMotivo = motivo;
++    await salvarExec(x);
++    await registrar(osId, "EQUIPAMENTO", { chave: e.chave, remover: true, motivo }, "");
++    recado("Equipamento tirado da O.S.", 5000);
++    ir("#/os/" + encodeURIComponent(osId) + "/equipamentos");
++  },
++};
++Object.assign(acoes, acoesEquip);
++/** Guardar o relato de um equipamento a mais: atualiza o equipamento na fila e volta para a tela dele (ou diz o que falta). */
++async function guardarRelatoEquip(osId, x, o, eq, avisar) {
++  const e = R.equipExtraDe(x, eq);
++  if (!e) return;
++  const { rel, mudou } = lerCamposRelato(x, eq);
++  if (mudou) {
++    e.relato = { ...rel, em: new Date().toISOString() }; delete e.relato.rascunho;
++    await atualizarEquip(osId, x, e);
++  } else if (avisar && !R.textoDoRelato(rel) && !rel.testeResultado && !rel.resultadoFinal) { recado("Escreva o relato antes de guardar."); return; }
++  if (!avisar) return;
++  const falta = R.faltasDoRelato(o, e.relato || {});
++  if (falta.length) { recado("Relato guardado. Ainda falta: " + falta.map((t) => t.replace(/^No relato: /, "")).join(" "), 8000); render(); return; }
++  recado("Relato do equipamento guardado.", 5000);
++  ir("#/os/" + encodeURIComponent(osId) + "/equipx/" + encodeURIComponent(eq));
++}
++
+ Object.assign(acoes, acoesRonda);   // ações da ronda (acoesRonda é definido acima, depois das ações gerais)
+diff -u -r --label a --label b a b
+--- a
++++ b
+@@ -481,3 +481,7 @@
+ .adt-urg { border: 0; padding: 0; margin: 6px 0 10px; display: grid; gap: 8px; }
+ .adt-urg label { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--linha, #dcd9cf); border-radius: 10px; background: #fff; font-size: 15px; }
+ .adt-urg input { width: 20px; height: 20px; margin-top: 2px; flex: 0 0 auto; }
++
++/* 19/11/2026: vários equipamentos na mesma O.S. (lista da visita e lista da unidade) */
++.lista-equip { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 10px; }
++.lista-equip .cartao { width: 100%; }
+diff -u -r --label a --label b a b
+--- a
++++ b
+@@ -28,7 +28,9 @@
+ // 26/10/2026: ATV_* = Minhas atividades (atividade interna do técnico; osId "ATV:<id>", vão no lote como os eventos da O.S.)
+ export const TIPOS_EVENTO = ["SAIU", "CHEGUEI", "RESPOSTA", "FOTO", "RELATO", "PECA", "ASSINATURA", "CONCLUI", "RONDA", "CADASTRO", "NOVA_OS", "ENVIAR_CLIENTE", "ATV_SITUACAO", "ATV_JUSTIFICAR", "ATV_COMENTAR",
+   // 18/11/2026: correção pelo técnico (desfazer a conclusão antes do encerramento; pedir à gestão depois dele)
+-  "DESFAZ_CONCLUSAO", "PEDIR_CORRECAO"];
++  "DESFAZ_CONCLUSAO", "PEDIR_CORRECAO",
++  // 19/11/2026: equipamento a mais atendido na mesma visita (vai no lote, como o relato)
++  "EQUIPAMENTO"];
+ /** Itens que sobem sozinhos, um por chamada (os demais vão em lote pelo Ast_appSincronizar). */
+ export const TIPOS_SOZINHOS = ["FOTO", "CADASTRO", "NOVA_OS"];
+ export const TAMANHO_LOTE = 25;
+diff -u -r --label a --label b a b
+--- a
++++ b
+@@ -124,8 +124,17 @@
+     envio: normalizarEnvio(o.envio, o.relatorioUrl, situacao),
+     // 18/11/2026: reaberta para correção (pela gestão no SGO+ ou pelo próprio técnico ao desfazer a conclusão): quando, quem, motivo
+     reaberta: reg.reaberta && typeof reg.reaberta === "object" && txt(reg.reaberta.em) ? { em: txt(reg.reaberta.em), por: txt(reg.reaberta.por), motivo: txt(reg.reaberta.motivo) } : null,
++    // 19/11/2026 (pedido do dono): vários equipamentos na mesma O.S. (o servidor diz por O.S.) e os equipamentos da unidade para escolher sem sinal
++    clienteId: prim(cli.id), unidadeId: prim(un.id),
++    variosEquipamentos: o.variosEquipamentos === true,
++    equipamentosUnidade: (Array.isArray(o.equipamentosUnidade) ? o.equipamentosUnidade : []).map(normalizarEquipUnidade).filter((e) => e.id),
+   };
+ }
++/** Equipamento da lista da unidade (Meu dia), no formato do aparelho. */
++export function normalizarEquipUnidade(e) {
++  e = obj(e);
++  return { id: txt(e.id), tipo: txt(e.tipo), fabricante: txt(e.fabricante), modelo: txt(e.modelo), serie: txt(e.serie), tag: txt(e.tag), setor: txt(e.setor), patrimonio: txt(e.patrimonio) };
++}
+ 
+ /**
+  * Estado do documento e do envio ao cliente (contrato de 22/10/2026, campo "envio" da O.S. no Meu dia e na resposta do Sincronizar).
+@@ -181,6 +190,9 @@
+     exigencias: { ...t.exigencias },
+     registrado: {}, historico: [], pendenciasServidor: [], fechadaNoServidor: false, cancelada: false,
+     abertaEmCampo: true, provisoria: true,
++    // 19/11/2026: O.S. aberta em campo (serviço técnico com visita) também aceita equipamentos a mais; a lista da unidade vem depois do envio
++    clienteId: prim(cli.id), unidadeId: prim(un.id), variosEquipamentos: !t.logistica && !t.semVisita && txt(t.grupo).toUpperCase() !== "COMERCIAL" && txt(t.codigo).toUpperCase() !== "ENVIO_ORCAMENTO",
++    equipamentosUnidade: [],
+   };
+ }
+ 
+@@ -243,7 +255,7 @@
+ }
+ 
+ /** Estado vazio da execução de uma O.S. no aparelho. termo e assinaturaColab: logística (03/11/2026); execução antiga sem eles = null. */
+-export const execucaoVazia = (usuario, osId) => ({ chave: usuario + "|" + osId, usuario, osId, saida: null, chegada: null, respostas: {}, fotos: [], relato: { em: "" }, pecas: [], assinatura: null, conclusao: null, equipamento: null, termo: null, assinaturaColab: null, ronda: null });
++export const execucaoVazia = (usuario, osId) => ({ chave: usuario + "|" + osId, usuario, osId, saida: null, chegada: null, respostas: {}, fotos: [], relato: { em: "" }, pecas: [], assinatura: null, conclusao: null, equipamento: null, termo: null, assinaturaColab: null, ronda: null, equipExtras: [] });
+ 
+ /**
+  * O que o servidor já tem (registrado) entra na execução do aparelho onde ela está vazia (ex.: troca de celular).
+@@ -278,11 +290,71 @@
+   if (!exec.termo && r.logistica && typeof r.logistica === "object" && Array.isArray(r.logistica.itens)) { exec.termo = { ...termoDeDados(r.logistica), doServidor: true }; exec.termoEnviado = JSON.stringify(termoParaEnvio(exec.termo)); mudou = true; }
+   for (const p of Array.isArray(r.pecas) ? r.pecas : []) {
+     const id = txt(p && (p.idLocal || p.id));
+-    if (id && !exec.pecas.some((x) => x.id === id)) { exec.pecas.push({ id, descricao: txt(p.descricao), codigo: txt(p.codigo), quantidade: txt(p.quantidade), unidade: txt(p.unidade), situacao: txt(p.situacao) || "APLICADA", doServidor: true }); mudou = true; }
++    if (id && !exec.pecas.some((x) => x.id === id)) { exec.pecas.push({ id, descricao: txt(p.descricao), codigo: txt(p.codigo), quantidade: txt(p.quantidade), unidade: txt(p.unidade), situacao: txt(p.situacao) || "APLICADA", equipChave: txt(p.equipChave), doServidor: true }); mudou = true; }
++  }
++  // 19/11/2026: equipamentos a mais da visita já gravados no servidor (troca de celular); nunca troca o que foi feito neste aparelho
++  if (!Array.isArray(exec.equipExtras)) exec.equipExtras = [];
++  for (const e of Array.isArray(r.equipamentos) ? r.equipamentos : []) {
++    const chave = txt(e && e.chave);
++    if (!chave || exec.equipExtras.some((x) => x.chave === chave)) continue;
++    const rel = {};
++    for (const k of CAMPOS_RELATO.map((c) => c[0]).concat(["testeResultado", "resultadoFinal", "resultadoDetalhe"])) if (txt(e[k])) rel[k] = txt(e[k]);
++    if (Array.isArray(e.medicoes) && e.medicoes.length) rel.medicoes = medicoesValidas(e.medicoes);
++    exec.equipExtras.push({ chave, equipamentoId: txt(e.equipamentoId), texto: txt(e.texto), tipo: txt(e.tipo), fabricante: txt(e.fabricante), modelo: txt(e.modelo), serie: txt(e.serie), tag: txt(e.tag),
++      setor: txt(e.setor), patrimonio: txt(e.patrimonio), serieConfirmada: txt(e.serieConfirmada), identificadoPor: txt(e.identificadoPor), relato: rel, doServidor: true });
++    mudou = true;
+   }
+   return mudou;
+ }
+ 
++/* ---------------- vários equipamentos na mesma O.S. (19/11/2026, pedido do dono) ---------------- */
++/** Equipamentos a mais da visita no aparelho (sem os tirados). */
++export const equipExtras = (exec) => (exec && Array.isArray(exec.equipExtras) ? exec.equipExtras : []).filter((e) => e && !e.removido);
++export const equipExtraDe = (exec, chave) => equipExtras(exec).find((e) => e.chave === chave) || null;
++export const ehFotoEquip = (f) => /^equip:/.test(txt(f && f.perguntaId));
++export const fotosDoEquip = (exec, chave) => (exec && Array.isArray(exec.fotos) ? exec.fotos : []).filter((f) => f.perguntaId === "equip:" + chave);
++/** Texto curto do equipamento: "Lavadora · L2 · TAG LV-02 · série S-200". */
++export function textoEquip(e) {
++  e = obj(e);
++  return [txt(e.tipo), txt(e.modelo), txt(e.tag) && "TAG " + txt(e.tag), txt(e.serie) && "série " + txt(e.serie)].filter(Boolean).join(" · ") || txt(e.texto) || "Equipamento sem identificação";
++}
++/** Equipamentos da unidade que ainda dá para acrescentar (sem o da O.S. e sem os já na lista), filtrados por tipo, TAG, série, setor ou patrimônio. */
++export function equipDisponiveis(os, exec, filtro) {
++  const ja = new Set(equipExtras(exec).map((e) => e.equipamentoId).concat([os.equipamento && os.equipamento.id]).filter(Boolean));
++  const f = txt(filtro).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
++  const norm = (v) => txt(v).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
++  return (os.equipamentosUnidade || []).filter((e) => !ja.has(e.id) && (!f || f.split(/\s+/).every((p) => norm([e.tipo, e.fabricante, e.modelo, e.serie, e.tag, e.setor, e.patrimonio].join(" ")).includes(p))));
++}
++/** O relato de um equipamento: o que falta (mesmas regras e frases do relato do equipamento da O.S.). */
++export function faltasDoRelato(os, rel) {
++  rel = rel || {};
++  const campos = os.exigencias.relatoCampos || ["servicoRealizado"], f = [];
++  if (txt(rel.servicoRealizado).length < 10 && txt(rel.relato).length < 10) f.push("No relato: o serviço realizado (pelo menos uma frase).");
++  const nomes = { condicaoEncontrada: "a condição encontrada", testeFuncional: "o teste funcional", causa: "a causa", recomendacoes: "as recomendações" };
++  for (const k of campos) if (nomes[k] && txt(rel[k]).length < 3) f.push("No relato: " + nomes[k] + ".");
++  faltasDoResultado(os, rel).forEach((x) => f.push(x));
++  return f;
++}
++/** O que falta num equipamento a mais: conferência da série/TAG, relato completo e pelo menos 1 foto (frases sem o nome do equipamento). */
++export function faltasDoEquipExtra(os, exec, e) {
++  const f = [];
++  if (!txt(e.serieConfirmada)) f.push("Conferir a série ou a TAG da etiqueta.");
++  if (os.exigencias.relato) faltasDoRelato(os, e.relato).forEach((x) => f.push(x));
++  if (!fotosDoEquip(exec, e.chave).length) f.push("Pelo menos 1 foto deste equipamento.");
++  return f;
++}
++/** Nome do equipamento a mais na ordem da O.S. (o da O.S. é o 1). */
++export const nomeEquipExtra = (exec, e) => "Equipamento " + (equipExtras(exec).findIndex((x) => x.chave === e.chave) + 2) + " (" + textoEquip(e) + ")";
++/** Dados do evento EQUIPAMENTO (sempre o estado inteiro do equipamento: o servidor atualiza o que vier). */
++export function dadosEquipExtra(e) {
++  const rel = e.relato || {}, d = { chave: e.chave, equipamentoId: txt(e.equipamentoId), descricao: textoEquip(e) };
++  if (txt(e.serieConfirmada)) { d.serieConfirmada = txt(e.serieConfirmada); d.identificadoPor = txt(e.identificadoPor) || "SERIE"; }
++  for (const [k] of CAMPOS_RELATO) if (rel[k] || rel[k] === "") d[k] = rel[k];
++  for (const k of ["testeResultado", "resultadoFinal", "resultadoDetalhe"]) if (rel[k] || rel[k] === "") d[k] = rel[k];
++  if (Array.isArray(rel.medicoes)) d.medicoes = medicoesValidas(rel.medicoes);
++  return d;
++}
++
+ /**
+  * 03/11/2026 (decisão do dono), mesma regra do servidor (Ast_nomeCompletoOk_ / Ast_documentoErro_): quem assina põe o nome
+  * completo (nome e sobrenome); o documento é opcional e, preenchido, é conferido (CPF com os dígitos; outro com 3 letras ou números).
+@@ -444,7 +516,7 @@
+ export function passosDaOs(os) {
+   if (os.ronda) return ["saida", "chegada", "setores", "orientacoes", "assinatura"].concat(exigeAssinaturaColab(os) ? ["colaborador"] : [], ["concluir"]);
+   if (os.logistica) return ["saida", "chegada", "termo"].concat(os.checklist.length ? ["checklist"] : [], ["fotos", "assinatura"], exigeAssinaturaColab(os) ? ["colaborador"] : [], ["concluir"]);
+-  return ["saida", "chegada", "equipamento"].concat(os.checklist.length ? ["checklist"] : [], ["fotos", "pecas", "relato", "assinatura"], exigeAssinaturaColab(os) ? ["colaborador"] : [], ["concluir"]);
++  return ["saida", "chegada", "equipamento"].concat(os.checklist.length ? ["checklist"] : [], ["fotos", "pecas", "relato"], os.variosEquipamentos ? ["equipamentos"] : [], ["assinatura"], exigeAssinaturaColab(os) ? ["colaborador"] : [], ["concluir"]);
+ }
+ /** 03/11/2026 (decisão do dono): a O.S. pede a assinatura do técnico ou colaborador que atendeu (o servidor diz por O.S.; a logística, pelo tipo). */
+ export function exigeAssinaturaColab(os) {
+@@ -463,10 +535,10 @@
+ export function nomePasso(os, p) {
+   const rot = rotulosLogistica(os);
+   return ({ saida: "Saí para o atendimento", chegada: "Cheguei", equipamento: "Confirmar equipamento", checklist: os.logistica ? "Conferência" : "Checklist", fotos: "Fotos", pecas: "Peças",
+-    relato: "Relato", termo: rot.termo, setores: "Setores e equipamentos", orientacoes: "Orientações e resumo", assinatura: os.logistica ? rot.assinaturaCliente : os.ronda ? "Assinatura do responsável do cliente" : "Assinatura do cliente", colaborador: os.logistica ? rot.assinaturaColab : "Sua assinatura (técnico que atendeu)", concluir: "Concluí" })[p] || p;
++    relato: "Relato", equipamentos: "Equipamentos atendidos nesta visita", termo: rot.termo, setores: "Setores e equipamentos", orientacoes: "Orientações e resumo", assinatura: os.logistica ? rot.assinaturaCliente : os.ronda ? "Assinatura do responsável do cliente" : "Assinatura do cliente", colaborador: os.logistica ? rot.assinaturaColab : "Sua assinatura (técnico que atendeu)", concluir: "Concluí" })[p] || p;
+ }
+ /** Passos que só valem depois do "Cheguei" (o servidor recusa checklist, fotos, relato e assinatura antes da chegada). */
+-export const PASSOS_DEPOIS_DA_CHEGADA = ["equipamento", "checklist", "fotos", "pecas", "relato", "termo", "assinatura", "colaborador", "setores", "setor", "orientacoes", "equipnovo"];
++export const PASSOS_DEPOIS_DA_CHEGADA = ["equipamento", "checklist", "fotos", "pecas", "relato", "termo", "assinatura", "colaborador", "setores", "setor", "orientacoes", "equipnovo", "equipamentos", "equipx", "equipadd"];
+ 
+ /**
+  * O que falta, passo a passo: [[passo, [frases]]] na ordem da tela (só os passos com falta). Base do "Concluí", do selo
+@@ -486,16 +558,11 @@
+   if (os.logistica && os.exigencias.relato) por("termo", faltasDoTermo(os, exec.termo));
+   const obrig = os.checklist.filter((p) => p.obrigatorio && p.tipo !== "ASSINATURA" && !respondida(p, exec));
+   por("checklist", obrig.length ? [plural(obrig.length, "pergunta obrigatória", "perguntas obrigatórias") + " do " + (os.logistica ? "checklist de conferência" : "checklist") + ": " + obrig.slice(0, 3).map((p) => p.texto).join("; ") + (obrig.length > 3 ? "; ..." : "") + "."] : []);
+-  const fotos = exec.fotos.length;
++  const fotos = exec.fotos.filter((f) => !ehFotoEquip(f)).length;
+   por("fotos", fotos < os.exigencias.fotosMin ? [plural(os.exigencias.fotosMin - fotos, "foto", "fotos") + " (mínimo " + os.exigencias.fotosMin + ")."] : []);
+-  if (!os.logistica && os.exigencias.relato) {
+-    const rel = exec.relato || {}, campos = os.exigencias.relatoCampos || ["servicoRealizado"], f = [];
+-    if (txt(rel.servicoRealizado).length < 10 && txt(rel.relato).length < 10) f.push("No relato: o serviço realizado (pelo menos uma frase).");
+-    const nomes = { condicaoEncontrada: "a condição encontrada", testeFuncional: "o teste funcional", causa: "a causa", recomendacoes: "as recomendações" };
+-    for (const k of campos) if (nomes[k] && txt(rel[k]).length < 3) f.push("No relato: " + nomes[k] + ".");
+-    faltasDoResultado(os, rel).forEach((x) => f.push(x));
+-    por("relato", f);
+-  }
++  if (!os.logistica && os.exigencias.relato) por("relato", faltasDoRelato(os, exec.relato));
++  // 19/11/2026: cada equipamento a mais completo (o que falta diz em qual equipamento)
++  if (os.variosEquipamentos) por("equipamentos", equipExtras(exec).flatMap((e) => faltasDoEquipExtra(os, exec, e).map((x) => nomeEquipExtra(exec, e) + ": " + x.replace(/^No relato: /, "no relato, "))));
+   const assinaturaNoChecklist = os.checklist.some((p) => p.tipo === "ASSINATURA" && p.obrigatorio);
+   por("assinatura", (os.exigencias.assinatura || assinaturaNoChecklist) && !exec.assinatura
+     ? [os.logistica ? "A assinatura de " + rotulosLogistica(os).quem + " ou o motivo de não haver assinatura." : "A assinatura do cliente ou o motivo de não haver assinatura."] : []);
+@@ -537,7 +604,7 @@
+   const falta = new Set(faltasPorPasso(os, exec).map(([p]) => p));
+   // ronda: depois dos setores completos, sempre as orientações e o resumo (opcionais, mas o técnico confere antes das assinaturas)
+   if (os.ronda && atual === "setores" && !falta.has("setores")) return "orientacoes";
+-  const lista = passosDaOs(os).filter((p) => p !== "saida" && p !== "pecas" && p !== "concluir");
++  const lista = passosDaOs(os).filter((p) => p !== "saida" && p !== "pecas" && p !== "concluir" && (p !== "equipamentos" || falta.has(p)));
+   const i = lista.indexOf(atual);
+   for (const p of lista.slice(i + 1)) if (falta.has(p)) return p;
+   for (const p of lista.slice(0, Math.max(0, i))) if (falta.has(p)) return p;
+Only in output/campo-varios-equip-20261119/novo: regras.js.orig

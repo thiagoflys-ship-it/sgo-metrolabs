@@ -1,0 +1,561 @@
+--- a/JS_Assistencia.html
++++ b/JS_Assistencia.html
+@@ -1058,6 +1058,19 @@
+       h += '<div class="at-sec">Fotos gerais</div><input type="file" accept="image/*" multiple id="atOsFotos">';
+     }
+     h += '<div class="at-fotos">' + (o.fotos || []).map(function (f) { return f.url ? '<a href="' + At_esc_(f.url) + '" target="_blank" rel="noopener">' + At_esc_(f.nome) + '</a>' : '<span>' + At_esc_(f.nome) + '</span>'; }).join("") + '</div>';
++    // 19/11/2026 (pedido do dono): equipamentos a mais atendidos na mesma visita (registrados pelo SGO+ Campo; cada um com o seu relato, fotos e peças)
++    if ((o.equipamentosExtras || []).length) {
++      var eqNomeRes = function (c, l) { return (l && l[c]) || c || ""; };
++      h += '<div class="at-sec">Equipamentos atendidos nesta visita</div><p class="at-meta">Além do equipamento da O.S., o técnico atendeu ' + o.equipamentosExtras.length + (o.equipamentosExtras.length === 1 ? ' equipamento' : ' equipamentos') + ' na mesma visita. Cada um tem a sua seção no relatório. O PDF da visita fica só no equipamento da O.S.; no histórico de cada equipamento acrescentado aparece só o relato dele. A correção é feita pelo técnico no SGO+ Campo (com a O.S. reaberta, se já estiver encerrada).</p><div class="at-lista">' +
++        o.equipamentosExtras.map(function (e) {
++          return '<div class="at-card fim"><p class="at-txt"><b>Equipamento ' + e.ordem + ':</b> ' + At_esc_(e.texto || "sem identificação") + '</p>' +
++            '<p class="at-meta">Conferido no local: ' + (e.serieConfirmada ? At_esc_(e.serieConfirmada) + (e.serieDivergente ? ' (DIVERGENTE do cadastro ' + At_esc_(e.serie) + ')' : '') : 'não') + ' · ' + e.fotos + (e.fotos === 1 ? ' foto' : ' fotos') + ' · ' + e.pecas + (e.pecas === 1 ? ' peça' : ' peças') +
++            (e.resultadoFinal ? ' · Equipamento ' + At_esc_(String(eqNomeRes(e.resultadoFinal, o.opcoesResultado && o.opcoesResultado.final)).toLowerCase()) : '') + (e.testeResultado ? ' · Teste ' + At_esc_(String(eqNomeRes(e.testeResultado, o.opcoesResultado && o.opcoesResultado.teste)).toLowerCase()) : '') + '</p>' +
++            [["Condição encontrada", e.condicaoEncontrada], ["Causa ou diagnóstico", e.causa], ["Serviço realizado", e.servicoRealizado], ["Teste funcional", e.testeFuncional], ["Restrição ou pendência", e.resultadoDetalhe], ["Recomendações", e.recomendacoes], ["Observações", e.relato]]
++              .filter(function (x) { return x[1]; }).map(function (x) { return '<p class="at-txt"><b>' + x[0] + ':</b> ' + At_esc_(x[1]) + '</p>'; }).join("") +
++            ((e.faltas || []).length ? '<p class="at-meta">Falta: ' + At_esc_(e.faltas.map(function (f) { return f.replace(/^no equipamento \d+ \([^)]*\): /, ""); }).join("; ")) + '.</p>' : '') + '</div>';
++        }).join("") + '</div>';
++    }
+     if (!o.logistica || (o.pecas || []).length) h += '<div class="at-sec">Peças</div>' + ((o.pecas || []).length ? '<div class="at-lista">' + o.pecas.map(function (p) { return '<div class="at-card fim"><p class="at-txt">' + At_esc_(p.quantidade) + ' × ' + At_esc_(p.descricao) + (p.codigo ? ' (' + At_esc_(p.codigo) + ')' : '') + ' · ' + (p.situacao === "FALTA" ? "Em falta" + (p.requisicao ? " · pedido " + At_esc_(p.requisicao) : "") : "Aplicada") +
+       (campo ? ' <button type="button" class="btn-secondary" data-peca-tirar="' + At_esc_(p.idLocal) + '">Desfazer</button>' : '') + '</p></div>'; }).join("") + '</div>' : '<p class="at-meta">Nenhuma peça lançada.</p>');
+     if (campo && !o.logistica) h += '<div class="at-grade4">' + At_campo_("Peça", '<input id="atPcDesc" maxlength="300">') + At_campo_("Código", '<input id="atPcCod" maxlength="80">') + At_campo_("Quantidade", '<input id="atPcQtd" type="number" min="0.01" step="0.01" value="1">') +
+--- a/SGO_Ajuda_Assistencia.js
++++ b/SGO_Ajuda_Assistencia.js
+@@ -80,6 +80,7 @@
+         { titulo: 'Registrar o atendimento', itens: ['Abra a O.S. e toque em "Cheguei" ao chegar ao cliente.', 'Responda o checklist (os itens com * são obrigatórios).', 'Escolha as fotos de cada pergunta de foto e as fotos gerais (a foto é reduzida antes de enviar).', 'Preencha condição encontrada, causa ou diagnóstico, serviço realizado, teste funcional, recomendações e o número de série conferido. No serviço técnico escolha também o resultado do teste funcional e a situação do equipamento ao final (veja "Resultado do atendimento").', 'Lance as peças aplicadas. Peça em falta: escolha "Em falta" (abre o pedido em Compras e a O.S. fica aguardando peça).', 'Peça ao cliente para assinar no quadro, escreva o nome e toque em "Guardar a assinatura". Sem o responsável: "Responsável ausente", com quem recebeu e a justificativa.', 'Toque em "Salvar o que preenchi" e, ao terminar, em "Concluí a execução".'] },
+         { titulo: 'As duas assinaturas', itens: ['Toda O.S. com visita tem a assinatura do cliente (quem recebe ou acompanha) e a do técnico ou colaborador da Metrolabs que atendeu, feita no SGO+ Campo.', 'Nas duas, o nome completo (nome e sobrenome) é obrigatório; o documento é opcional e, preenchido, é conferido.', 'Sem a do técnico a O.S. fica em "Documentação pendente". Só a gestão pode tocar em "Encerrar sem a assinatura do técnico (justificar)"; a justificativa fica no histórico e no relatório.'] },
+         { titulo: 'Retirada, entrega ou envio (logística)', itens: ['Nas O.S. de logística a ficha mostra o termo no lugar do relato de manutenção: itens (nome, quantidade, série, patrimônio ou TAG, estado aparente, avaria, acessórios), "Acrescentar item", de quem ou para quem, local, embalagem, lacre e observações; na retirada, o motivo e o destino.', 'Condição encontrada, causa, teste funcional, peças e conferência de QR ou série não se aplicam e não travam o encerramento.', 'A assinatura é a de quem recebe (entrega) ou de quem entrega (retirada); a do colaborador da Metrolabs é feita no SGO+ Campo e aparece aqui.', 'O documento gerado é o Termo de entrega, o Termo de retirada (recebimento) ou o Termo de envio, e vai ao cliente pelo mesmo "Enviar ao cliente".'] },
++        { titulo: 'Vários equipamentos na mesma O.S. (19/11/2026)', itens: ['Uma visita atende vários equipamentos e tudo sai num relatório só. No SGO+ Campo o técnico toca em "Equipamentos atendidos nesta visita" e em "+ Acrescentar equipamento": escolhe da lista da unidade ou cadastra o equipamento (sem sinal também; sem série nem TAG também, e a gestão completa o cadastro depois).', 'Cada equipamento acrescentado tem a conferência de série ou TAG, o relato próprio (mesmos campos e mínimos), pelo menos 1 foto e as peças dele. A assinatura do cliente é uma só e vale para todos.', 'A O.S. só encerra com todos completos: a faixa "Para fechar a O.S. falta" diz o que falta e em qual equipamento.', 'Na ficha da O.S., o bloco "Equipamentos atendidos nesta visita" mostra cada um (conferência, fotos, peças, resultado e relato). No relatório A4 cada equipamento tem a sua seção, e o atendimento aparece no histórico de cada equipamento, com o relato dele.', 'Corrigir depois do encerramento: "Reabrir para correção" (como sempre); o técnico corrige pelo aplicativo.'] },
+         { titulo: 'Resultado do atendimento (13/11/2026)', itens: ['Todo serviço técnico com visita fecha com o resultado do teste funcional (aprovado, reprovado ou não realizado) e a situação do equipamento ao final (liberado para uso, liberado com restrição ou não liberado). Base: ABNT NBR 15943 (registro do serviço, do teste e da liberação para uso) e RDC 509/2021 (rastreabilidade).', 'Teste reprovado ou não realizado: o campo Teste funcional diz o motivo (pelo menos 5 palavras). Não liberado ou com restrição: o campo "Restrição de uso ou o que falta para liberar" é obrigatório (pelo menos 4 palavras).', '"Liberado para uso" só com o teste aprovado; se o teste não foi feito, escolha "liberado com restrição" ou "não liberado" e diga o motivo.', 'Os textos têm um mínimo de palavras: condição encontrada 4, causa ou diagnóstico 3 (só na manutenção corretiva), serviço realizado 5. A faixa vermelha diz o que falta e como completar.', 'Equipamento não liberado ou com restrição: a gestão da área Técnica recebe um aviso para combinar o próximo passo com o cliente, e o e-mail de atendimento concluído diz isso ao cliente.', 'Vale para as O.S. com a chegada depois da publicação; as anteriores fecham como antes. As medições (tensão, corrente, temperatura...) são registradas no SGO+ Campo e aparecem aqui e no relatório.'] },
+         { titulo: 'O relatório A4 da O.S. (13/11/2026)', itens: ['No topo, a caixa "Resultado do atendimento" (verde: liberado; amarela: com restrição; vermelha: não liberado), com o teste funcional. O.S. antiga sem esse registro mostra o que o checklist respondeu ("Equipamento liberado para uso?") ou nada.', 'Serviço, na ordem: condição encontrada, causa ou diagnóstico, serviço realizado, medições realizadas (tabela), teste funcional com o resultado, situação do equipamento ao final, recomendações e observações do técnico.', 'Checklist sem as linhas de assinatura (as assinaturas estão na seção própria); pergunta de foto com a referência às fotos (ex.: "2 fotos (Fotos 14 e 15)"); resposta longa sai em texto corrido abaixo da tabela.', 'Fotos numeradas, até 24 no PDF, com a legenda do técnico ou a pergunta do checklist e a hora. Acima disso, a nota diz quais ficaram arquivadas e que o cliente pode pedir.', '"Rastreabilidade do atendimento" no lugar da linha do tempo: um marco por fato (abertura, saída, chegada, início, fotos agrupadas, peças, assinaturas, conclusão e encerramento com a situação do equipamento), sem nome de arquivo nem código interno. A trilha completa continua guardada no SGO+ e aparece em "Eventos" da O.S.', 'O.S. aberta em campo mostra "Aberta em campo pelo técnico, sem agendamento prévio" no lugar de "Agendado para".'] },
+         { titulo: 'Encerrar e enviar o relatório', itens: ['Se faltou algo, a faixa vermelha diz o que é. Complete e salve: a O.S. fecha sozinha e o relatório A4 é gerado uma vez só, na pasta "4. Ordens de Serviço" do equipamento e no Arquivo de documentos.', 'No bloco "Documento e envio": "Abrir o PDF" reabre o mesmo relatório (nenhuma versão nova sem motivo); "Enviar ao cliente" abre o Enviar documento com os contatos do cliente (confira o e-mail). O bloco mostra "Enviado ao cliente em ... por ... (e-mail) para ...".', 'O técnico também envia pelo aplicativo, na O.S. encerrada. Sem envio em 1 dia útil, a pendência "relatório não enviado" entra na Caixa de decisões da gestão.', 'Precisa corrigir um relatório emitido? Gestão: "Abrir para corrigir", com o motivo: sai a Rev. 01 do mesmo número, a anterior fica arquivada e a revisão precisa ser enviada de novo.',
+--- a/SGO_Assistencia_App.js
++++ b/SGO_Assistencia_App.js
+@@ -56,6 +56,7 @@
+   var eq = Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[Ast_s_(os.EQUIPAMENTO_ID)] || null, c = Ast_porId_(AST_ABAS.CHAMADOS, os.CHAMADO_ID) || {};
+   var tipo = Ast_tipo_(os.TIPO_CODIGO) || { codigo: Ast_up_(os.TIPO_CODIGO), nome: Ast_s_(os.TIPO_NOME), exige: { relato: true, assinatura: true, fotosMin: 0, qrOuSerie: false, checklist: false }, grupo: '', semVisita: false };
+   var fotos = AstO_fotos_(os.ID), pecas = AstO_pecas_(os.ID), resp = AstO_respostas_(os), s = Ast_up_(os.SITUACAO);
++  var variosEq = AstO_aceitaVariosEquip_(Ast_tipo_(os.TIPO_CODIGO));
+   var respostas = {};
+   Object.keys(resp).forEach(function (k) { respostas[k] = resp[k] && resp[k].v; });
+   var sla = c.ID ? Ast_slaEstado_(c, Date.now()) : { estado: 'SEM_PRAZO', ate: '' };
+@@ -84,7 +85,9 @@
+     registrado: { saiuEm: Ast_iso_(os.SAIU_EM), chegouEm: Ast_iso_(os.CHEGOU_EM), concluiuEm: Ast_s_(os.REABERTA_EM) && !(Ast_iso_(os.CONCLUIU_EM) > Ast_iso_(os.REABERTA_EM)) ? '' : Ast_iso_(os.CONCLUIU_EM), respostas: respostas,
+       reaberta: Ast_s_(os.REABERTA_EM) ? { em: Ast_iso_(os.REABERTA_EM), por: Ast_s_(os.REABERTA_POR_NOME), motivo: Ast_s_(os.REABERTA_MOTIVO) } : null,
+       fotos: fotos.map(function (f) { return { idLocal: Ast_s_(f.ID_LOCAL), perguntaId: Ast_s_(f.PERGUNTA_ID), nome: Ast_s_(f.NOME) }; }),
+-      pecas: pecas.map(function (p) { return { idLocal: Ast_s_(p.ID_LOCAL), descricao: Ast_s_(p.DESCRICAO), codigo: Ast_s_(p.CODIGO), quantidade: Number(p.QUANTIDADE) || 0, unidade: Ast_s_(p.UNIDADE), situacao: Ast_up_(p.SITUACAO) }; }),
++      pecas: pecas.map(function (p) { return { idLocal: Ast_s_(p.ID_LOCAL), descricao: Ast_s_(p.DESCRICAO), codigo: Ast_s_(p.CODIGO), quantidade: Number(p.QUANTIDADE) || 0, unidade: Ast_s_(p.UNIDADE), situacao: Ast_up_(p.SITUACAO), equipChave: Ast_s_(p.EQUIP_CHAVE) }; }),
++      // 19/11/2026: equipamentos a mais da visita já gravados (troca de celular: voltam ao aparelho com o relato de cada um)
++      equipamentos: variosEq ? AstO_equipExtrasPublico_(os, fotos, pecas, false) : [],
+       relato: { relato: Ast_s_(os.RELATO), condicaoEncontrada: Ast_s_(os.CONDICAO_ENCONTRADA), causa: Ast_s_(os.CAUSA), servicoRealizado: Ast_s_(os.SERVICO_REALIZADO), testeFuncional: Ast_s_(os.TESTE_FUNCIONAL),
+         recomendacoes: Ast_s_(os.RECOMENDACOES), serieConfirmada: Ast_s_(os.SERIE_CONFIRMADA), identificadoPor: Ast_up_(os.IDENTIFICADO_POR),
+         // 13/11/2026: resultado do atendimento e medições (troca de celular: o que já subiu volta ao aparelho)
+@@ -94,6 +97,10 @@
+       logistica: AstO_logistica_(os),
+       assinaturaColaborador: Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.COLAB_ASSINATURA_NOME), em: Ast_iso_(os.COLAB_ASSINATURA_EM) } : null },
+     historicoEquipamento: hist,
++    // 19/11/2026 (pedido do dono): vários equipamentos na mesma O.S. (serviço técnico com visita). A lista dos equipamentos da unidade
++    // vai junto (só na O.S. aberta, até AST_APP_EQUIP_UNIDADE_MAX) para o técnico escolher sem sinal; o aplicativo antigo ignora
++    variosEquipamentos: variosEq,
++    equipamentosUnidade: variosEq && AST_OS_ABERTAS.indexOf(s) >= 0 ? AstApp_equipUnidade_(os) : [],
+     // 03/11/2026: ronda de engenharia clínica (setores, equipamentos, perguntas fixas e o que já foi registrado); null nas demais
+     ronda: tipo.ronda && typeof AstRd_paraApp_ === 'function' ? AstRd_paraApp_(os) : null,
+     pendencias: AST_OS_ABERTAS.indexOf(s) >= 0 ? AstO_faltas_(os, fotos).map(function (x) { return 'falta ' + x; }) : [],
+@@ -106,6 +113,19 @@
+   };
+ }
+ 
++/** 19/11/2026: equipamentos ativos da unidade da O.S. (menos o da própria O.S.), leves, para o técnico acrescentar sem sinal. */
++var AST_APP_EQUIP_UNIDADE_MAX = 500;
++function AstApp_equipUnidade_(os) {
++  var cli = Ast_s_(os.CLIENTE_ID), un = Ast_s_(os.UNIDADE_ID), principal = Ast_s_(os.EQUIPAMENTO_ID);
++  if (!cli) return [];
++  return Ast_ler_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS).filter(function (e) {
++    return Ast_s_(e.CLIENTE_ID) === cli && (!un || Ast_s_(e.UNIDADE_ID) === un) && AstApp_ativo_(e) && Ast_s_(e.ID) !== principal;
++  }).sort(function (a, b) { return Ast_equipTexto_(a).localeCompare(Ast_equipTexto_(b), 'pt-BR'); }).slice(0, AST_APP_EQUIP_UNIDADE_MAX).map(function (e) {
++    return { id: Ast_s_(e.ID), tipo: Ast_s_(e.TIPO), fabricante: Ast_s_(e.FABRICANTE), modelo: Ast_s_(e.MODELO), serie: Ast_vazioCad_(e.SERIE) ? '' : Ast_s_(e.SERIE), tag: Ast_vazioCad_(e.TAG) ? '' : Ast_s_(e.TAG),
++      setor: Ast_s_(e.SETOR), patrimonio: Ast_s_(e.PATRIMONIO) };
++  });
++}
++
+ /** Estado do envio ao cliente no formato do contrato (docs/API_APP_TECNICO.md, "envio"). */
+ function AstApp_envio_(os, eu) {
+   var e = typeof AstO_envio_ === 'function' ? AstO_envio_(os, eu) : { situacao: 'SEM_PDF', contatos: [] };
+--- a/SGO_Assistencia_Config.js
++++ b/SGO_Assistencia_Config.js
+@@ -36,7 +36,9 @@
+   // 22/10/2026 (etapa 4): link de aceite do orçamento (só o resumo do token) e a trilha só-inclusão das respostas do cliente
+   ORC_LINKS: 'ATEC_ORC_LINKS', ORC_ACEITES: 'ATEC_ORC_ACEITES',
+   // 03/11/2026 (ronda de engenharia clínica, SGO_Assistencia_Ronda.js): contratos de ronda recorrente e setores cadastrados da unidade
+-  RONDA_PLANOS: 'ATEC_RONDA_PLANOS', SETORES: 'ATEC_SETORES'
++  RONDA_PLANOS: 'ATEC_RONDA_PLANOS', SETORES: 'ATEC_SETORES',
++  // 19/11/2026 (pedido do dono, técnico em campo): equipamentos a mais atendidos na mesma visita (o 1º continua em ATEC_OS)
++  OS_EQUIP: 'ATEC_OS_EQUIPAMENTOS'
+ };
+ var AST_COLUNAS = {
+   ATEC_CONFIG: ['ID', 'CHAVE', 'VALOR_JSON', 'VERSAO', 'MOTIVO', 'ATUALIZADO_POR_ID', 'ATUALIZADO_POR_NOME', 'ATUALIZADO_EM', 'CRIADO_EM'],
+@@ -91,7 +93,15 @@
+     // 03/11/2026: liberação para os documentos externos (as mesmas colunas da Representação; a ronda usa para o relatório do cliente)
+     'PUBLICO', 'LIBERADA_POR_NOME', 'LIBERADA_EM', 'RELATORIO_ARQUIVO_ID'],
+   ATEC_PECAS: ['ID', 'OS_ID', 'ID_LOCAL', 'DESCRICAO', 'CODIGO', 'QUANTIDADE', 'UNIDADE', 'SITUACAO', 'URGENCIA', 'REQUISICAO_ID', 'REQUISICAO_NUMERO', 'ATIVA', 'REMOVIDA_EM',
+-    'POR_ID', 'POR_NOME', 'CRIADO_EM'],
++    'POR_ID', 'POR_NOME', 'CRIADO_EM',
++    // 19/11/2026: peça de um equipamento acrescentado na visita (CHAVE em ATEC_OS_EQUIPAMENTOS); vazio = equipamento da O.S.
++    'EQUIP_CHAVE'],
++  // 19/11/2026 (pedido do dono): cada equipamento a mais da mesma visita, com a sua conferência de série/TAG, o seu relato e o seu
++  // resultado (mesmos nomes de coluna da ATEC_OS, para as mesmas regras). CHAVE = identificador criado no aparelho (idempotente).
++  // Fotos: ATEC_FOTOS com PERGUNTA_ID "equip:<CHAVE>"; peças: ATEC_PECAS.EQUIP_CHAVE. Nada é apagado: ATIVO = NAO tira da O.S.
++  ATEC_OS_EQUIPAMENTOS: ['ID', 'OS_ID', 'OS_NUMERO', 'CHAVE', 'ORDEM', 'EQUIPAMENTO_ID', 'EQUIPAMENTO_TEXTO', 'TIPO', 'FABRICANTE', 'MODELO', 'SERIE', 'TAG', 'SETOR', 'PATRIMONIO',
++    'SERIE_CONFIRMADA', 'IDENTIFICADO_POR', 'SERIE_DIVERGENTE', 'CONDICAO_ENCONTRADA', 'CAUSA', 'SERVICO_REALIZADO', 'TESTE_FUNCIONAL', 'TESTE_RESULTADO', 'RESULTADO_FINAL',
++    'RESULTADO_DETALHE', 'MEDICOES_JSON', 'RECOMENDACOES', 'RELATO', 'ATIVO', 'REMOVIDO_EM', 'REMOVIDO_MOTIVO', 'POR_ID', 'POR_NOME', 'EM_APARELHO', 'ATUALIZADO_EM', 'CRIADO_EM'],
+   // 22/10/2026 (etapa 1): REF_ID = registro criado por um idLocal do aparelho (cadastro em campo ou O.S. aberta em campo)
+   ATEC_SYNC: ['ID', 'ID_LOCAL', 'PEDIDO_ID', 'OS_ID', 'TIPO', 'TECNICO_ID', 'RESULTADO', 'MOTIVO', 'EM_APARELHO', 'RECEBIDO_EM', 'APARELHO', 'REF_ID', 'CRIADO_EM'],
+   ATEC_SOLICITACOES: ['ID', 'NUMERO', 'ORIGEM', 'CLIENTE_ID', 'CLIENTE_NOME', 'UNIDADE_ID', 'EQUIPAMENTO_ID', 'EQUIPAMENTO_TEXTO', 'SOLICITANTE', 'CONTATO', 'DESCRICAO',
+@@ -124,6 +134,7 @@
+     'ENVIADO_CLIENTE_EM', 'ENVIADO_CLIENTE_PARA', 'ENCERRADA_EM', 'CANCELADA_EM', 'ULTIMA_SINC_EM', 'ATUALIZADO_EM', 'SERIE_CONFIRMADA', 'SERIE_CADASTRO', 'EXCLUIDO_EM', 'COLAB_ASSINATURA_EM', 'COLAB_DISPENSA_EM',
+     'RONDA_CHAVE', 'RONDA_PREVISTA', 'RONDA_JANELA_ATE', 'RONDA_POS_EM'],
+   ATEC_RONDA_PLANOS: ['CODIGO', 'INICIO', 'HORA', 'GERADO_ATE', 'PAUSADO_EM', 'ENCERRADO_EM', 'ATUALIZADO_EM'], ATEC_SETORES: ['NOME', 'ATUALIZADO_EM'],
++  ATEC_OS_EQUIPAMENTOS: ['CHAVE', 'SERIE', 'TAG', 'PATRIMONIO', 'SERIE_CONFIRMADA', 'REMOVIDO_EM', 'EM_APARELHO', 'ATUALIZADO_EM'],
+   ATEC_EVENTOS: ['EM', 'EM_APARELHO'], ATEC_FOTOS: ['TIRADA_EM', 'RECEBIDA_EM'], ATEC_SYNC: ['EM_APARELHO', 'RECEBIDO_EM', 'ID_LOCAL'],
+   ATEC_SOLICITACOES: ['TRATADA_EM', 'CONTATO'], ATEC_CASOS: ['PRAZO', 'RESOLVIDO_EM', 'ATUALIZADO_EM'], ATEC_ORCAMENTOS: ['VALIDADE', 'EMITIDO_EM', 'ENVIADO_EM', 'DECIDIDO_EM', 'ATUALIZADO_EM', 'EXCLUIDO_EM'],
+   ATEC_RELATORIOS: ['EMITIDO_EM'], ATEC_AVISOS: ['DATA', 'LIDO_EM'], ATEC_CONFIG: ['ATUALIZADO_EM'], ATEC_TIPOS: ['ATUALIZADO_EM'], ATEC_MODELOS: ['ATUALIZADO_EM'],
+@@ -667,13 +678,13 @@
+ function Ast_memoLimpar_() { AST_MEMO = {}; }
+ function Ast_garantirAbas_() {
+   var cache = null;
+-  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V12')) return; } catch (e) {}
++  try { cache = CacheService.getScriptCache(); if (cache.get('ATEC_ABAS_OK_V13')) return; } catch (e) {}
+   Object.keys(AST_COLUNAS).forEach(function (aba) {
+     CertCal_garantirTabela_(aba, AST_COLUNAS[aba]);
+     AST_COLUNAS[aba].forEach(function (c) { CertCal_garantirColuna_(aba, c); });
+     (AST_COLUNAS_TEXTO[aba] || []).forEach(function (c) { CertCal_forcarColunaTexto_(aba, c); });
+   });
+-  try { if (cache) cache.put('ATEC_ABAS_OK_V12', '1', 21600); } catch (e) {}
++  try { if (cache) cache.put('ATEC_ABAS_OK_V13', '1', 21600); } catch (e) {}
+ }
+ /**
+  * 27/10/2026: chamado de teste ou simulação excluído pela gestão (EXCLUIDO_EM preenchido) e as O.S. e orçamentos que saíram
+--- a/SGO_Assistencia_Fonte.js
++++ b/SGO_Assistencia_Fonte.js
+@@ -25,8 +25,13 @@
+   try { return SGO_DATA.getAll(aba) || []; } catch (e) { return []; }
+ }
+ 
+-/** O.S. do SGO+ no formato das linhas do Auvo. */
+-function AstF_linhaDaOs_(o) {
++/**
++ * O.S. do SGO+ no formato das linhas do Auvo. 19/11/2026: extras = equipamentos a mais da mesma visita (ATEC_OS_EQUIPAMENTOS):
++ * entram em EQUIPAMENTOS_ID_SGO (o histórico de cada um mostra o atendimento) e EQUIP_RELATOS guarda o relato de cada equipamento,
++ * para o histórico de um equipamento nunca mostrar o relato de outro.
++ */
++function AstF_linhaDaOs_(o, extras) {
++  extras = Array.isArray(extras) ? extras : [];
+   var s = Ast_up_(o.SITUACAO);
+   var resp = Ast_json_(o.RESPOSTAS_JSON, {}) || {}, perg = Ast_normPerguntas_(Ast_json_(o.PERGUNTAS_JSON, []));
+   var questionario = perg.filter(function (p) { return resp[p.id]; }).map(function (p) { var v = resp[p.id].v; return { pergunta: p.texto, resposta: Array.isArray(v) ? v.join(', ') : String(v) }; });
+@@ -39,11 +44,25 @@
+     TECNICO_AUVO_ID: '', TECNICO_ID_SGO: Ast_s_(o.TECNICO_ID), TECNICO_NOME_AUVO: Ast_s_(o.TECNICO_NOME), TIPO_TAREFA: Ast_s_(o.TIPO_NOME),
+     DATA_TAREFA: Ast_iso_(o.AGENDADO_PARA), FINALIZADA: s === 'ENCERRADA' ? 'SIM' : 'NAO', CANCELADA: s === 'CANCELADA' ? 'SIM' : '',
+     CHECKIN_EM: Ast_iso_(o.CHEGOU_EM), CHECKOUT_EM: Ast_iso_(o.CONCLUIU_EM), PRIORIDADE: '', RELATO_SERVICO: relato, QTD_FOTOS: Number(o.QTD_FOTOS) || 0,
+-    EQUIPAMENTOS_ID_SGO: Ast_s_(o.EQUIPAMENTO_ID), ENDERECO: Ast_s_(o.ENDERECO), TASK_URL: '', QUESTIONARIO_JSON: JSON.stringify(questionario),
++    EQUIPAMENTOS_ID_SGO: [Ast_s_(o.EQUIPAMENTO_ID)].concat(extras.map(function (e) { return Ast_s_(e.EQUIPAMENTO_ID); })).filter(Boolean).join(','),
++    EQUIP_RELATOS: extras.length ? AstF_relatosExtras_(extras) : null, ENDERECO: Ast_s_(o.ENDERECO), TASK_URL: '', QUESTIONARIO_JSON: JSON.stringify(questionario),
+     ORIENTACAO: Ast_s_(o.ORIENTACAO), RELATORIO_URL: Ast_s_(o.RELATORIO_PDF_URL), DIAS_ABERTA: abertaDias, DOC_PENDENTE: s === 'DOC_PENDENTE' ? 'SIM' : ''
+   };
+ }
+ 
++function AstF_relatosExtras_(extras) {
++  var m = {};
++  extras.forEach(function (e) { if (Ast_s_(e.EQUIPAMENTO_ID)) m[Ast_s_(e.EQUIPAMENTO_ID)] = [Ast_s_(e.SERVICO_REALIZADO), Ast_s_(e.RELATO)].filter(Boolean).join(' · '); });
++  return m;
++}
++/** Equipamentos a mais ativos, por O.S. (uma leitura). */
++function AstF_extrasPorOs_() {
++  var m = {};
++  if (typeof AST_ABAS === 'undefined' || !AST_ABAS.OS_EQUIP) return m;
++  AstF_lerAba_(AST_ABAS.OS_EQUIP).forEach(function (e) { if (Ast_up_(e.ATIVO || 'SIM') === 'NAO' || !Ast_s_(e.EQUIPAMENTO_ID)) return; (m[Ast_s_(e.OS_ID)] = m[Ast_s_(e.OS_ID)] || []).push(e); });
++  return m;
++}
++
+ /**
+  * Atendimentos. opcoes: { origem: 'SGO' (padrão) | 'AUVO' | 'TODAS', semCanceladas (padrão true) }. Leitura curta guardada por 5 s
+  * (a gravação da Assistência limpa). Nunca lança: sem a aba, a origem fica vazia.
+@@ -57,7 +76,8 @@
+   if (!AST_FONTE_MEMO || agora - AST_FONTE_MEMO.em > 5000 || agora < AST_FONTE_MEMO.em) {
+     var auvo = SGO_CFG.SHEETS.AUVO_TAREFAS ? AstF_lerAba_(SGO_CFG.SHEETS.AUVO_TAREFAS).map(function (t) { return Object.assign({ ORIGEM: 'AUVO' }, t); }) : [];
+     // 27/10/2026: O.S. de chamado excluído (teste ou simulação) fica fora da fonte única (histórico, qualidade, Conduta, Frota, ponto)
+-    var sgo = AstF_lerAba_(AST_ABAS.OS).filter(function (o) { return !Ast_s_(o.EXCLUIDO_EM); }).map(AstF_linhaDaOs_);
++    var extrasOs = AstF_extrasPorOs_();
++    var sgo = AstF_lerAba_(AST_ABAS.OS).filter(function (o) { return !Ast_s_(o.EXCLUIDO_EM); }).map(function (o) { return AstF_linhaDaOs_(o, extrasOs[Ast_s_(o.ID)]); });
+     AST_FONTE_MEMO = { em: agora, auvo: auvo, sgo: sgo };
+   }
+   var semCanc = o.semCanceladas !== false;
+@@ -100,10 +120,13 @@
+     if (cliente && Ast_s_(t.CLIENTE_ID_SGO) !== clienteId) return;
+     if (cliente && t.ORIGEM === 'SGO' && Ast_up_(t.FINALIZADA) !== 'SIM') return;
+     if (t.ORIGEM === 'AUVO') vistosAuvo[Ast_s_(t.AUVO_TASK_ID)] = true;
++    var extraDaVisita = !!(t.EQUIP_RELATOS && Object.prototype.hasOwnProperty.call(t.EQUIP_RELATOS, equipId));
+     saida.push({ origem: t.ORIGEM, origemNome: t.ORIGEM === 'SGO' ? 'SGO+' : 'Auvo (histórico)', numero: Ast_s_(t.AUVO_TASK_ID), auvoTaskId: t.ORIGEM === 'AUVO' ? Ast_s_(t.AUVO_TASK_ID) : '',
+       osId: Ast_s_(t.OS_ID_SGO), chamadoId: Ast_s_(t.CHAMADO_ID_SGO), data: Ast_iso_(t.DATA_TAREFA), dataBr: Ast_brDia_(t.DATA_TAREFA), tipo: Ast_s_(t.TIPO_TAREFA),
+       finalizada: Ast_up_(t.FINALIZADA) === 'SIM', tecnico: Ast_s_(t.TECNICO_NOME_AUVO) || (t.TECNICO_AUVO_ID ? 'Técnico Auvo #' + t.TECNICO_AUVO_ID : ''),
+-      relato: Ast_s_(t.RELATO_SERVICO), relatorioUrl: Ast_s_(t.RELATORIO_URL), link: cliente ? '' : Ast_s_(t.TASK_URL), situacao: Ast_s_(t.SITUACAO_SGO) });
++      // 19/11/2026 (regra do dono: dado de um equipamento nunca cruza com outro): no equipamento a mais da visita, o relato dele e sem o
++      // PDF da visita (o PDF traz os outros equipamentos; ele fica só no equipamento principal da O.S.)
++      relato: extraDaVisita ? Ast_s_(t.EQUIP_RELATOS[equipId]) : Ast_s_(t.RELATO_SERVICO), relatorioUrl: extraDaVisita ? '' : Ast_s_(t.RELATORIO_URL), link: cliente ? '' : Ast_s_(t.TASK_URL), situacao: Ast_s_(t.SITUACAO_SGO) });
+   });
+   AstF_lerAba_(AST_ABAS.ACERVO_EQUIP).forEach(function (a) {
+     if (Ast_s_(a.EQUIPAMENTO_ID_SGO) !== equipId || vistosAuvo[Ast_s_(a.AUVO_TASK_ID)]) return;
+--- a/SGO_Assistencia_OS.js
++++ b/SGO_Assistencia_OS.js
+@@ -31,6 +31,36 @@
+ }
+ function AstO_fotos_(osId) { return Ast_ler_(AST_ABAS.FOTOS).filter(function (f) { return Ast_s_(f.OS_ID) === Ast_s_(osId) && Ast_up_(f.ATIVA || 'SIM') !== 'NAO'; }); }
+ function AstO_pecas_(osId) { return Ast_ler_(AST_ABAS.PECAS).filter(function (p) { return Ast_s_(p.OS_ID) === Ast_s_(osId) && Ast_up_(p.ATIVA || 'SIM') !== 'NAO'; }); }
++/**
++ * 19/11/2026 (pedido do dono, técnico em campo): vários equipamentos na MESMA O.S. O equipamento da O.S. continua em ATEC_OS; os
++ * outros atendidos na mesma visita ficam em ATEC_OS_EQUIPAMENTOS, cada um com a conferência de série/TAG, o relato, o resultado,
++ * as fotos (PERGUNTA_ID "equip:<CHAVE>") e as peças (EQUIP_CHAVE). A assinatura do cliente é uma só e cobre todos. Só nos serviços
++ * técnicos com visita (fora da logística e da ronda, que já têm a lista própria).
++ */
++var AST_EQUIP_EXTRA_MAX = 30;
++function AstO_aceitaVariosEquip_(tipo) { return !!tipo && !tipo.logistica && !tipo.ronda && !tipo.semVisita; }
++function AstO_equipExtras_(osId, comRemovidos) {
++  return Ast_ler_(AST_ABAS.OS_EQUIP).filter(function (e) { return Ast_s_(e.OS_ID) === Ast_s_(osId) && (comRemovidos || Ast_up_(e.ATIVO || 'SIM') !== 'NAO'); })
++    .sort(function (a, b) { return (Number(a.ORDEM) || 0) - (Number(b.ORDEM) || 0) || String(a.CRIADO_EM).localeCompare(String(b.CRIADO_EM)); });
++}
++function AstO_fotoDeEquip_(f) { return /^equip:/.test(Ast_s_(f && f.PERGUNTA_ID)); }
++function AstO_fotosDoEquip_(fotos, chave) { return (fotos || []).filter(function (f) { return Ast_s_(f.PERGUNTA_ID) === 'equip:' + Ast_s_(chave); }); }
++/** "equipamento 2 (Lavadora · L2 · TAG LV-02)": como o técnico e a gestão leem o equipamento a mais. */
++function AstO_nomeEquipExtra_(e, i) { return 'equipamento ' + (i + 2) + ' (' + (Ast_s_(e.EQUIPAMENTO_TEXTO) || 'sem identificação') + ')'; }
++/** O que falta num equipamento a mais (frases; vazia = completo). Mesmas regras do equipamento da O.S. */
++function AstO_faltasEquipExtra_(os, tipo, e, i, fotos) {
++  var f = [], pre = 'no ' + AstO_nomeEquipExtra_(e, i) + ': ';
++  if (!Ast_s_(e.SERIE_CONFIRMADA) && !Ast_s_(e.IDENTIFICADO_POR)) f.push(pre + 'a conferência do equipamento (série ou TAG da etiqueta)');
++  if (tipo.exige && tipo.exige.relato) {
++    if (Ast_s_(e.RELATO).length < 10 && Ast_s_(e.SERVICO_REALIZADO).length < 10) f.push(pre + 'o relato do serviço realizado');
++    if (!tipo.semVisita && Ast_s_(e.CONDICAO_ENCONTRADA).length < 3) f.push(pre + 'a condição encontrada');
++    if (tipo.grupo === 'TECNICO' && Ast_s_(e.TESTE_FUNCIONAL).length < 3) f.push(pre + 'o teste funcional');
++    if (Ast_regraResultadoVale_(os, tipo)) AstO_faltasResultado_(e, tipo).forEach(function (x) { f.push(pre + x); });
++  }
++  if (!AstO_fotosDoEquip_(fotos, e.CHAVE).length) f.push(pre + 'pelo menos 1 foto');
++  return f;
++}
++
+ function AstO_perguntas_(os) { return Ast_normPerguntas_(Ast_json_(os.PERGUNTAS_JSON, [])); }
+ function AstO_respostas_(os) { return Ast_json_(os.RESPOSTAS_JSON, {}) || {}; }
+ 
+@@ -96,7 +126,10 @@
+   if (outras.length) f.push(outras.length === 1 ? 'responder "' + outras[0].texto + '"' : 'responder ' + outras.length + ' perguntas obrigatórias do checklist');
+   semFoto.forEach(function (p) { f.push('a foto "' + p.texto + '"'); });
+   var minFotos = Number(tipo.exige.fotosMin) || 0;
+-  if (fotos.length < minFotos) { var n = minFotos - fotos.length; if (!semFoto.length || n > semFoto.length) f.push(Ast_plural_(n, 'foto', 'fotos') + ' (mínimo ' + minFotos + ' para ' + (tipo.nome || 'este serviço') + ')'); }
++  // 19/11/2026: as fotos dos equipamentos a mais não contam para o mínimo do equipamento da O.S. (cada um tem as suas)
++  var fotosOs = fotos.filter(function (x) { return !AstO_fotoDeEquip_(x); });
++  if (AstO_aceitaVariosEquip_(tipo)) AstO_equipExtras_(os.ID).forEach(function (e, i) { AstO_faltasEquipExtra_(os, tipo, e, i, fotos).forEach(function (x) { f.push(x); }); });
++  if (fotosOs.length < minFotos) { var n = minFotos - fotosOs.length; if (!semFoto.length || n > semFoto.length) f.push(Ast_plural_(n, 'foto', 'fotos') + ' (mínimo ' + minFotos + ' para ' + (tipo.nome || 'este serviço') + ')'); }
+   var precisaAss = tipo.exige.assinatura && regras.assinatura && regras.assinatura.obrigatoria !== false;
+   if (precisaAss && !Ast_s_(os.ASSINATURA_ARQUIVO_ID)) {
+     var semOk = AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] && Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR).length >= 3 && Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA).length >= 10;
+@@ -227,7 +260,9 @@
+   ctx = ctx || {};
+   var tipo = Ast_up_(ev.tipo), d = ev.dados || {};
+   // 18/11/2026: DESFAZ_CONCLUSAO (técnico corrige antes do encerramento) e PEDIR_CORRECAO (depois dele, a gestão decide)
+-  var tipos = ['SAIU', 'CHEGUEI', 'RESPOSTA', 'FOTO', 'RELATO', 'PECA', 'ASSINATURA', 'CONCLUI', 'RONDA', 'DESFAZ_CONCLUSAO', 'PEDIR_CORRECAO'];
++  var tipos = ['SAIU', 'CHEGUEI', 'RESPOSTA', 'FOTO', 'RELATO', 'PECA', 'ASSINATURA', 'CONCLUI', 'RONDA', 'DESFAZ_CONCLUSAO', 'PEDIR_CORRECAO',
++    // 19/11/2026: equipamento a mais atendido na mesma visita (acrescentar, atualizar relato e conferência, tirar)
++    'EQUIPAMENTO'];
+   if (tipos.indexOf(tipo) < 0) return { ok: false, definitivo: true, motivo: 'tipo de evento desconhecido (' + tipo + ')', corrigir: 'Atualize o aplicativo: os tipos aceitos são ' + tipos.join(', ') + '.' };
+   var os = Ast_porId_(AST_ABAS.OS, ev.osId);
+   if (!os) return { ok: false, definitivo: true, motivo: 'a O.S. não existe mais no servidor', corrigir: 'Atualize o Meu dia; se a O.S. sumiu, fale com a gestão da área Técnica.' };
+@@ -357,12 +392,15 @@
+         return { ok: true };
+       }
+       if (!exigeLocal()) return { ok: false, definitivo: false, motivo: 'a chegada ainda não foi registrada', corrigir: 'Toque em "Cheguei" antes de lançar peças e sincronize de novo.' };
++      // 19/11/2026: peça de um equipamento acrescentado na visita
++      var eqChave = Ast_texto_(d.equipChave, 80);
++      if (eqChave && !AstO_equipExtras_(os.ID).some(function (x) { return Ast_s_(x.CHAVE) === eqChave; })) return { ok: false, definitivo: false, motivo: 'a peça é de um equipamento acrescentado que ainda não chegou ao servidor', corrigir: 'O aplicativo envia o equipamento antes; toque em "Tentar de novo" em Envios.' };
+       var desc = Ast_texto_(d.descricao, 300), sitp = Ast_up_(d.situacao) === 'FALTA' ? 'FALTA' : 'APLICADA', q = Ast_num_(d.quantidade);
+       if (desc.length < 3) return { ok: false, definitivo: false, motivo: 'a peça veio sem descrição', corrigir: 'Escreva o nome da peça (e o número, se tiver) e sincronize de novo.' };
+       if (!(q > 0)) return { ok: false, definitivo: false, motivo: 'a quantidade da peça "' + desc + '" precisa ser maior que zero', corrigir: 'Corrija a quantidade e sincronize de novo.' };
+       iniciarExecucao();
+       var nova = Ast_inserir_(AST_ABAS.PECAS, { OS_ID: os.ID, ID_LOCAL: Ast_s_(ev.idLocal), DESCRICAO: desc, CODIGO: Ast_texto_(d.codigo, 80), QUANTIDADE: q, UNIDADE: Ast_texto_(d.unidade, 20) || 'un.',
+-        SITUACAO: sitp, URGENCIA: Ast_up_(d.urgencia), ATIVA: 'SIM', POR_ID: eu.id, POR_NOME: eu.nome });
++        SITUACAO: sitp, URGENCIA: Ast_up_(d.urgencia), ATIVA: 'SIM', POR_ID: eu.id, POR_NOME: eu.nome, EQUIP_CHAVE: eqChave });
+       var cp = { QTD_PECAS: AstO_pecas_(os.ID).filter(function (x) { return Ast_up_(x.SITUACAO) === 'APLICADA'; }).length };
+       if (sitp === 'FALTA') {
+         cp.AGUARDANDO_PECA = 'SIM'; cp.SITUACAO = 'PAUSADA';
+@@ -432,6 +470,8 @@
+       // 03/11/2026: ronda de engenharia clínica (SGO_Assistencia_Ronda.js): item por equipamento, setor e orientações
+       if (typeof AstRd_aplicarEvento_ !== 'function') return { ok: false, definitivo: false, motivo: 'o servidor ainda não tem a ronda de engenharia clínica', corrigir: 'Avise o supervisor; o que está guardado continua no aparelho.' };
+       return AstRd_aplicarEvento_(eu, os, d, { gravar: gravar, hora: hora, extraEv: extraEv, exigeLocal: exigeLocal, iniciarExecucao: iniciarExecucao });
++    case 'EQUIPAMENTO':
++      return AstO_aplicarEquipExtra_(eu, os, d, { gravar: gravar, hora: hora, extraEv: extraEv, exigeLocal: exigeLocal, iniciarExecucao: iniciarExecucao, tipoOs: tipoOs, ev: ev });
+     case 'DESFAZ_CONCLUSAO':
+       // 18/11/2026: o técnico errou e corrige antes do encerramento. Nada é apagado: a conclusão anterior fica no histórico
+       var motD = Ast_texto_(d.motivo, 500);
+@@ -466,6 +506,106 @@
+ }
+ 
+ /**
++ * 19/11/2026: evento EQUIPAMENTO do aplicativo. d: { chave, equipamentoId (id real ou o provisório do cadastro feito em campo),
++ * descricao, serieConfirmada, identificadoPor, condicaoEncontrada, causa, servicoRealizado, testeFuncional, testeResultado,
++ * resultadoFinal, resultadoDetalhe, medicoes, recomendacoes, relato } ou { chave, remover: true, motivo }. Idempotente pela chave:
++ * o primeiro acrescenta, os seguintes atualizam só o que vier. Equipamento de outro cliente nunca entra (dado não cruza).
++ */
++function AstO_aplicarEquipExtra_(eu, os, d, x) {
++  var tipoOs = x.tipoOs || {};
++  if (!AstO_aceitaVariosEquip_(tipoOs)) return { ok: false, definitivo: true, motivo: 'a O.S. ' + os.NUMERO + ' (' + (tipoOs.nome || Ast_s_(os.TIPO_NOME) || 'este serviço') + ') não aceita mais de um equipamento', corrigir: 'Equipamento a mais só nos serviços técnicos (corretiva, preventiva e parecidos). Abra outra O.S. para este equipamento.' };
++  var chave = Ast_s_(d.chave);
++  if (!/^[A-Za-z0-9_.:-]{4,80}$/.test(chave)) return { ok: false, definitivo: true, motivo: 'equipamento a mais sem o identificador do aparelho', corrigir: 'Atualize o aplicativo e acrescente o equipamento de novo.' };
++  var todos = AstO_equipExtras_(os.ID, true), ja = todos.filter(function (e) { return Ast_s_(e.CHAVE) === chave; })[0] || null;
++  var agora = Ast_agora_();
++  if (d.remover === true) {
++    if (!ja || Ast_up_(ja.ATIVO) === 'NAO') return { ok: true, nota: 'o equipamento já estava fora da O.S.' };
++    var motR = Ast_texto_(d.motivo, 300);
++    Ast_atualizar_(AST_ABAS.OS_EQUIP, ja.ID, { ATIVO: 'NAO', REMOVIDO_EM: agora, REMOVIDO_MOTIVO: motR, ATUALIZADO_EM: agora });
++    x.gravar({});
++    Ast_evento_('OS', os.ID, 'EQUIPAMENTO_RETIRADO', eu, 'Equipamento tirado da O.S.: ' + Ast_s_(ja.EQUIPAMENTO_TEXTO) + (motR ? '. Motivo: ' + motR : ''), x.extraEv);
++    return { ok: true };
++  }
++  if (!x.exigeLocal()) return { ok: false, definitivo: false, motivo: 'a chegada ainda não foi registrada', corrigir: 'Toque em "Cheguei" antes de acrescentar equipamentos e sincronize de novo.' };
++  var ativos = todos.filter(function (e) { return Ast_up_(e.ATIVO || 'SIM') !== 'NAO'; });
++  if (!ja && ativos.length >= AST_EQUIP_EXTRA_MAX) return { ok: false, definitivo: true, motivo: 'a O.S. ' + os.NUMERO + ' já tem ' + (AST_EQUIP_EXTRA_MAX + 1) + ' equipamentos', corrigir: 'Abra outra O.S. para os demais equipamentos.' };
++  var campos = {};
++  if (d.equipamentoId !== undefined || !ja) {
++    var eqId = Ast_s_(d.equipamentoId) ? (typeof AstApp_idReal_ === 'function' ? AstApp_idReal_('EQUIPAMENTO', d.equipamentoId) : Ast_s_(d.equipamentoId)) : '';
++    var cad = eqId ? Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[eqId] : null;
++    if (eqId && !cad) return { ok: false, definitivo: false, motivo: 'o cadastro do equipamento ainda não chegou ao servidor', corrigir: 'O aplicativo envia o cadastro antes; toque em "Tentar de novo" em Envios.' };
++    if (cad && Ast_s_(cad.CLIENTE_ID) !== Ast_s_(os.CLIENTE_ID)) return { ok: false, definitivo: true, motivo: 'o equipamento ' + Ast_equipTexto_(cad) + ' é de outro cliente', corrigir: 'Escolha um equipamento do cliente ' + Ast_s_(os.CLIENTE_NOME) + ' ou cadastre o equipamento nesta unidade.' };
++    if (cad && eqId === Ast_s_(os.EQUIPAMENTO_ID)) return { ok: false, definitivo: true, motivo: 'este é o equipamento da própria O.S. ' + os.NUMERO, corrigir: 'Registre este equipamento nos passos da O.S.; acrescente só os outros.' };
++    var dobra = cad ? ativos.filter(function (e) { return Ast_s_(e.EQUIPAMENTO_ID) === eqId && Ast_s_(e.CHAVE) !== chave; })[0] : null;
++    if (dobra) return { ok: false, definitivo: true, motivo: 'o equipamento ' + Ast_equipTexto_(cad) + ' já está nesta O.S.', corrigir: 'Abra o equipamento que já está na lista e complete por ele.' };
++    var texto = cad ? Ast_equipTexto_(cad) : Ast_texto_(d.descricao, 200);
++    if (Ast_s_(texto).length < 3) return { ok: false, definitivo: true, motivo: 'o equipamento veio sem identificação', corrigir: 'Escolha o equipamento da lista da unidade ou cadastre (tipo, série ou TAG).' };
++    campos.EQUIPAMENTO_ID = eqId; campos.EQUIPAMENTO_TEXTO = texto;
++    if (cad) { campos.TIPO = Ast_s_(cad.TIPO); campos.FABRICANTE = Ast_s_(cad.FABRICANTE); campos.MODELO = Ast_s_(cad.MODELO); campos.SERIE = Ast_s_(cad.SERIE); campos.TAG = Ast_s_(cad.TAG); campos.SETOR = Ast_s_(cad.SETOR); campos.PATRIMONIO = Ast_s_(cad.PATRIMONIO); }
++  }
++  var mapa = { relato: 'RELATO', condicaoEncontrada: 'CONDICAO_ENCONTRADA', causa: 'CAUSA', servicoRealizado: 'SERVICO_REALIZADO', testeFuncional: 'TESTE_FUNCIONAL', recomendacoes: 'RECOMENDACOES' };
++  Object.keys(mapa).forEach(function (k) { if (d[k] !== undefined && d[k] !== null) campos[mapa[k]] = Ast_texto_(d[k], 4000); });
++  if (d.testeResultado !== undefined && d.testeResultado !== null) {
++    var trv = Ast_up_(d.testeResultado);
++    if (trv && !AST_TESTE_RESULTADOS[trv]) return { ok: false, definitivo: true, motivo: 'resultado do teste funcional não aceito (' + trv + ')', corrigir: 'Atualize o aplicativo e escolha aprovado, reprovado ou não realizado.' };
++    campos.TESTE_RESULTADO = trv;
++  }
++  if (d.resultadoFinal !== undefined && d.resultadoFinal !== null) {
++    var rfv = Ast_up_(d.resultadoFinal);
++    if (rfv && !AST_RESULTADOS_FINAIS[rfv]) return { ok: false, definitivo: true, motivo: 'situação do equipamento ao final não aceita (' + rfv + ')', corrigir: 'Atualize o aplicativo e escolha liberado, liberado com restrição ou não liberado.' };
++    campos.RESULTADO_FINAL = rfv;
++  }
++  if (d.resultadoDetalhe !== undefined && d.resultadoDetalhe !== null) campos.RESULTADO_DETALHE = Ast_texto_(d.resultadoDetalhe, 1000);
++  if (Array.isArray(d.medicoes)) campos.MEDICOES_JSON = d.medicoes.length ? JSON.stringify(Ast_normMedicoes_(d.medicoes)) : '';
++  var avisoSerie = '';
++  if (Ast_s_(d.serieConfirmada)) {
++    campos.SERIE_CONFIRMADA = Ast_texto_(d.serieConfirmada, 80);
++    // 19/11/2026 (pedido do dono): equipamento sem série nem TAG na etiqueta (SEM_IDENT): vale como conferido; a gestão completa o cadastro
++    campos.IDENTIFICADO_POR = ['QR', 'SERIE', 'TAG', 'SEM_IDENT'].indexOf(Ast_up_(d.identificadoPor)) >= 0 ? Ast_up_(d.identificadoPor) : 'SERIE';
++    var serCad = campos.SERIE !== undefined ? campos.SERIE : Ast_s_(ja && ja.SERIE), tagCad = campos.TAG !== undefined ? campos.TAG : Ast_s_(ja && ja.TAG);
++    var nConf = AstO_normSerie_(campos.SERIE_CONFIRMADA);
++    var div = campos.IDENTIFICADO_POR !== 'SEM_IDENT' && !!AstO_normSerie_(serCad) && AstO_normSerie_(serCad) !== nConf && AstO_normSerie_(tagCad) !== nConf;
++    if (div && !Ast_sim_(ja && ja.SERIE_DIVERGENTE)) avisoSerie = 'Série no local ' + campos.SERIE_CONFIRMADA + ', no cadastro ' + serCad + '.';
++    campos.SERIE_DIVERGENTE = div ? 'SIM' : '';
++  }
++  x.iniciarExecucao();
++  campos.ATUALIZADO_EM = agora; campos.EM_APARELHO = Ast_iso_(x.ev && x.ev.em);
++  var nome;
++  if (ja) {
++    if (Ast_up_(ja.ATIVO) === 'NAO') { campos.ATIVO = 'SIM'; campos.REMOVIDO_EM = ''; }
++    Ast_atualizar_(AST_ABAS.OS_EQUIP, ja.ID, campos);
++    nome = Ast_s_(campos.EQUIPAMENTO_TEXTO || ja.EQUIPAMENTO_TEXTO);
++  } else {
++    var ordem = todos.reduce(function (m, e) { return Math.max(m, Number(e.ORDEM) || 0); }, 0) + 1;
++    Ast_inserir_(AST_ABAS.OS_EQUIP, Object.assign({ OS_ID: os.ID, OS_NUMERO: Ast_s_(os.NUMERO), CHAVE: chave, ORDEM: ordem, ATIVO: 'SIM', POR_ID: eu.id, POR_NOME: eu.nome }, campos));
++    nome = Ast_s_(campos.EQUIPAMENTO_TEXTO);
++  }
++  x.gravar({});
++  var resumo = [campos.SERIE_CONFIRMADA ? 'conferido (' + campos.SERIE_CONFIRMADA + ')' : '', campos.SERVICO_REALIZADO !== undefined || campos.RELATO !== undefined ? 'relato atualizado' : '',
++    campos.RESULTADO_FINAL ? 'equipamento ' + AST_RESULTADOS_FINAIS[campos.RESULTADO_FINAL].toLowerCase() : ''].filter(Boolean).join(', ');
++  Ast_evento_('OS', os.ID, ja ? 'EQUIPAMENTO_ATUALIZADO' : 'EQUIPAMENTO_ACRESCENTADO', eu, (ja ? 'Equipamento da visita atualizado: ' : 'Equipamento acrescentado à visita: ') + nome + (resumo ? '; ' + resumo : ''), x.extraEv);
++  if (avisoSerie) {
++    Ast_evento_('OS', os.ID, 'SERIE_DIVERGENTE', eu, avisoSerie + ' (' + nome + '). O cadastro não foi alterado.', x.extraEv);
++    Ast_avisar_(Ast_gestoresTecnica_(), 'SERIE_DIVERGENTE', 'Série divergente na ' + os.NUMERO, avisoSerie + ' Equipamento acrescentado na visita: ' + nome + ' (' + Ast_s_(os.CLIENTE_NOME) + '). Confira e corrija o cadastro em Cadastros > Equipamentos, se for o caso.', os.ID, { autorId: eu.id, evento: 'AT10' });
++  }
++  return { ok: true, nota: avisoSerie ? 'série diferente do cadastro: a gestão foi avisada' : '' };
++}
++/** Equipamentos a mais da O.S. para a tela, o aplicativo e o relatório (com as faltas de cada um quando pedido). */
++function AstO_equipExtrasPublico_(os, fotos, pecas, comFaltas) {
++  var tipo = Ast_tipo_(os.TIPO_CODIGO) || { exige: {} };
++  return AstO_equipExtras_(os.ID).map(function (e, i) {
++    return { chave: Ast_s_(e.CHAVE), ordem: i + 2, equipamentoId: Ast_s_(e.EQUIPAMENTO_ID), texto: Ast_s_(e.EQUIPAMENTO_TEXTO), tipo: Ast_s_(e.TIPO), fabricante: Ast_s_(e.FABRICANTE), modelo: Ast_s_(e.MODELO),
++      serie: Ast_s_(e.SERIE), tag: Ast_s_(e.TAG), setor: Ast_s_(e.SETOR), patrimonio: Ast_s_(e.PATRIMONIO),
++      serieConfirmada: Ast_s_(e.SERIE_CONFIRMADA), identificadoPor: Ast_up_(e.IDENTIFICADO_POR), serieDivergente: Ast_sim_(e.SERIE_DIVERGENTE),
++      relato: Ast_s_(e.RELATO), condicaoEncontrada: Ast_s_(e.CONDICAO_ENCONTRADA), causa: Ast_s_(e.CAUSA), servicoRealizado: Ast_s_(e.SERVICO_REALIZADO), testeFuncional: Ast_s_(e.TESTE_FUNCIONAL),
++      recomendacoes: Ast_s_(e.RECOMENDACOES), testeResultado: Ast_up_(e.TESTE_RESULTADO), resultadoFinal: Ast_up_(e.RESULTADO_FINAL), resultadoDetalhe: Ast_s_(e.RESULTADO_DETALHE),
++      medicoes: Ast_normMedicoes_(e.MEDICOES_JSON),
++      fotos: AstO_fotosDoEquip_(fotos, e.CHAVE).length, pecas: (pecas || []).filter(function (p) { return Ast_s_(p.EQUIP_CHAVE) === Ast_s_(e.CHAVE); }).length,
++      faltas: comFaltas ? AstO_faltasEquipExtra_(os, tipo, e, i, fotos) : [] };
++  });
++}
++
++/**
+  * Encerra a O.S. se a documentação estiver completa (O.S. em "Documentação pendente"). Chamar dentro da trava.
+  * Liga o documento técnico emitido (mesmo equipamento, depois da chegada) e agenda o relatório A4 para depois da trava.
+  */
+@@ -574,8 +714,10 @@
+     testeResultado: Ast_up_(os.TESTE_RESULTADO), resultadoFinal: Ast_up_(os.RESULTADO_FINAL), resultadoDetalhe: Ast_s_(os.RESULTADO_DETALHE), medicoes: Ast_normMedicoes_(os.MEDICOES_JSON),
+     comResultado: Ast_tipoComResultado_(tipo), opcoesResultado: { teste: AST_TESTE_RESULTADOS, final: AST_RESULTADOS_FINAIS },
+     fotos: fotos.map(function (f) { return { id: f.ID, idLocal: Ast_s_(f.ID_LOCAL), nome: Ast_s_(f.NOME), perguntaId: Ast_s_(f.PERGUNTA_ID), legenda: Ast_s_(f.LEGENDA), url: interno ? Ast_s_(f.URL) : '', em: Ast_br_(f.TIRADA_EM || f.RECEBIDA_EM) }; }),
+-    pecas: pecas.map(function (p) { return { id: p.ID, idLocal: Ast_s_(p.ID_LOCAL), descricao: Ast_s_(p.DESCRICAO), codigo: Ast_s_(p.CODIGO), quantidade: Number(p.QUANTIDADE) || 0, unidade: Ast_s_(p.UNIDADE), situacao: Ast_up_(p.SITUACAO), requisicao: Ast_s_(p.REQUISICAO_NUMERO) }; }),
++    pecas: pecas.map(function (p) { return { id: p.ID, idLocal: Ast_s_(p.ID_LOCAL), descricao: Ast_s_(p.DESCRICAO), codigo: Ast_s_(p.CODIGO), quantidade: Number(p.QUANTIDADE) || 0, unidade: Ast_s_(p.UNIDADE), situacao: Ast_up_(p.SITUACAO), requisicao: Ast_s_(p.REQUISICAO_NUMERO), equipChave: Ast_s_(p.EQUIP_CHAVE) }; }),
+     aguardandoPeca: Ast_sim_(os.AGUARDANDO_PECA),
++    // 19/11/2026: equipamentos a mais atendidos na mesma visita (cada um com o seu relato, fotos, peças e o que falta)
++    equipamentosExtras: AstO_aceitaVariosEquip_(tipo) ? AstO_equipExtrasPublico_(os, fotos, pecas, AST_OS_ABERTAS.indexOf(s) >= 0) : [],
+     assinatura: Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? { nome: Ast_s_(os.ASSINATURA_NOME), documento: Ast_s_(os.ASSINATURA_DOCUMENTO), em: Ast_br_(os.ASSINATURA_EM) } : null,
+     semAssinatura: Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? { motivo: AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || os.SEM_ASSINATURA_MOTIVO, recebidoPor: Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR), justificativa: Ast_s_(os.SEM_ASSINATURA_JUSTIFICATIVA) } : null,
+     // 03/11/2026 (logística): termo (itens, de quem/para quem, motivo, destino) e a assinatura do colaborador da Metrolabs
+@@ -647,7 +789,9 @@
+   var perg = Ast_s_(d.perguntaId);
+   // 03/11/2026 (ronda): a foto do equipamento ou do setor da ronda leva "ronda:<chave>" ou "ronda:setor:<setor>"
+   var ehRonda = typeof AstRd_ehRonda_ === 'function' && AstRd_ehRonda_(os);
+-  if (perg && !(ehRonda && /^ronda:[A-Za-z0-9_.: -]{2,200}$/.test(perg)) && !AstO_perguntas_(os).some(function (p) { return p.id === perg; })) perg = '';
++  // 19/11/2026: a foto do equipamento acrescentado na visita leva "equip:<chave>" (o equipamento pode chegar logo depois, na mesma fila)
++  var ehEquip = /^equip:[A-Za-z0-9_.:-]{4,80}$/.test(perg) && AstO_aceitaVariosEquip_(Ast_tipo_(os.TIPO_CODIGO));
++  if (perg && !ehEquip && !(ehRonda && /^ronda:[A-Za-z0-9_.: -]{2,200}$/.test(perg)) && !AstO_perguntas_(os).some(function (p) { return p.id === perg; })) perg = '';
+   var mime = /\.png$/i.test(nome) ? 'image/png' : /\.webp$/i.test(nome) ? 'image/webp' : 'image/jpeg';
+   var pasta = Ast_pastaPrivadaOS_(os.NUMERO);
+   var nomeArq = SGO_DocSalvar_sanitizarNome_(os.NUMERO + ' - ' + idLocal + ' - ' + nome);
+--- a/SGO_Assistencia_Relatorio.js
++++ b/SGO_Assistencia_Relatorio.js
+@@ -240,8 +240,11 @@
+   return (fotos || []).slice().sort(function (a, b) { return String(Ast_iso_(a.TIRADA_EM || a.RECEBIDA_EM)).localeCompare(String(Ast_iso_(b.TIRADA_EM || b.RECEBIDA_EM))) || String(a.ID).localeCompare(String(b.ID)); });
+ }
+ /** Seção de fotos numeradas (todas até o limite), com a legenda do técnico ou a pergunta do checklist e a hora. */
+-function AstR_fotosHtml_(os, ord, perg) {
+-  var cx = ord.slice(0, AST_REL_MAX_FOTOS).map(function (f, i) {
++function AstR_fotosHtml_(os, ord, perg, inicio) {
++  // 19/11/2026: inicio = quantas fotos vieram antes (os equipamentos a mais continuam a numeração do relatório)
++  var base = Number(inicio) || 0;
++  var cx = ord.slice(0, AST_REL_MAX_FOTOS).map(function (f, j) {
++    var i = base + j;
+     var b = AstR_b64Arquivo_(f.ARQUIVO_ID), pq = perg.filter(function (p) { return p.id === Ast_s_(f.PERGUNTA_ID); })[0];
+     var leg = [AstR_rotulo_(Ast_s_(f.LEGENDA) || (pq ? pq.texto : '')), Ast_br_(f.TIRADA_EM || f.RECEBIDA_EM)].filter(Boolean).join(' · ');
+     var mime = b && /^image\/(png|jpe?g|gif|webp)$/i.test(String(b.mime)) ? b.mime : 'image/jpeg';
+@@ -251,7 +254,7 @@
+     return h;
+   });
+   var resto = ord.length - AST_REL_MAX_FOTOS;
+-  return '<div class="fotos">' + cx.join('') + '</div>' + (resto > 0 ? '<p class="nota">' + Ast_esc_(AstR_refFotos_(ord.slice(AST_REL_MAX_FOTOS).map(function (f, i) { return AST_REL_MAX_FOTOS + i + 1; }))) +
++  return '<div class="fotos">' + cx.join('') + '</div>' + (resto > 0 ? '<p class="nota">' + Ast_esc_(AstR_refFotos_(ord.slice(AST_REL_MAX_FOTOS).map(function (f, i) { return base + AST_REL_MAX_FOTOS + i + 1; }))) +
+     (resto === 1 ? ' não coube' : ' não couberam') + ' neste documento e ' + (resto === 1 ? 'fica arquivada' : 'ficam arquivadas') + ' pela Metrolabs junto da O.S. ' + Ast_esc_(os.NUMERO) + ', à disposição do cliente quando solicitado.</p>' : '');
+ }
+ /**
+@@ -378,7 +381,10 @@
+   var cli = Ast_mapa_(SGO_CFG.SHEETS.CAD_CLIENTES)[Ast_s_(os.CLIENTE_ID)] || {}, tipo = Ast_tipo_(os.TIPO_CODIGO) || { nome: Ast_s_(os.TIPO_NOME), exige: {} };
+   var rascunho = Ast_up_(os.SITUACAO) !== 'ENCERRADA';
+   if (tipo.logistica) return AstR_htmlTermo_(os, o, tipo, rascunho);
+-  var resp = AstO_respostas_(os), perg = AstO_perguntas_(os), fotos = AstO_fotos_(os.ID), ord = AstR_fotosOrdenadas_(fotos);
++  var resp = AstO_respostas_(os), perg = AstO_perguntas_(os), fotos = AstO_fotos_(os.ID);
++  // 19/11/2026: as fotos e as peças dos equipamentos a mais saem na seção de cada um (nunca misturadas com as do equipamento da O.S.)
++  var ord = AstR_fotosOrdenadas_(fotos.filter(function (f) { return !AstO_fotoDeEquip_(f); }));
++  var extras = AstO_aceitaVariosEquip_(tipo) ? AstO_equipExtras_(os.ID) : [];
+   var res = AstR_resultado_(os, resp), comRes = Ast_tipoComResultado_(tipo);
+   var corpo = '';
+   if (rascunho) corpo += RelA4_caixa_('RASCUNHO: a O.S. ainda não foi encerrada' + (Ast_s_(os.FALTAS) ? ' (falta: ' + Ast_s_(os.FALTAS) + ')' : '') + '. Este documento não vale como relatório final.', 'aviso');
+@@ -405,6 +411,7 @@
+     ['Chegada', linhaHora(os.CHEGOU_EM, os.CHEGOU_EM_APARELHO)], ['Conclusão', linhaHora(os.CONCLUIU_EM, os.CONCLUIU_EM_APARELHO)], ['Tempo no local', dur]];
+   var ident = { QR: 'leitura do QR', SERIE: 'número de série', TAG: 'TAG' }[Ast_up_(os.IDENTIFICADO_POR)];
+   if (ident) atd.push(['Equipamento conferido por', ident]);
++  if (extras.length) atd.push(['Equipamentos atendidos nesta visita', (extras.length + 1) + ' (o da identificação acima e mais ' + extras.length + ', cada um na sua seção, depois das fotos)', { largo: true }]);
+   if (Ast_s_(os.OBS_LOCALIZACAO)) atd.push(['Observação da localização', Ast_s_(os.OBS_LOCALIZACAO), { largo: true }]);
+   corpo += RelA4_secao_('Atendimento', RelA4_identificacao_(atd));
+   // Serviço: o que encontrou, por quê, o que fez, o que mediu, como testou, como o equipamento ficou e o que recomenda
+@@ -426,11 +433,13 @@
+     var ck = AstR_checklistHtml_(perg, resp, ord, 'Checklist ' + ((Ast_modelo_(os.MODELO_CODIGO) || {}).nome || ''));
+     if (ck) corpo += RelA4_secao_('Checklist', ck);
+   }
+-  var pecas = AstO_pecas_(os.ID);
++  var pecasTodas = AstO_pecas_(os.ID), pecas = pecasTodas.filter(function (p) { return !Ast_s_(p.EQUIP_CHAVE); });
+   corpo += RelA4_secao_('Peças', RelA4_tabela_([{ t: 'Peça' }, { t: 'Código' }, { t: 'Qtd.', num: true }, { t: 'Situação' }], pecas.map(function (p) {
+     return [Ast_s_(p.DESCRICAO), Ast_s_(p.CODIGO), Ast_fmtNum_(Number(p.QUANTIDADE) || 0, Math.round(Number(p.QUANTIDADE)) === Number(p.QUANTIDADE) ? 0 : 2) + ' ' + Ast_unidadePeca_(p.UNIDADE), Ast_up_(p.SITUACAO) === 'FALTA' ? 'Em falta' + (Ast_s_(p.REQUISICAO_NUMERO) ? ' (pedido ' + Ast_s_(p.REQUISICAO_NUMERO) + ')' : '') : 'Aplicada'];
+   }), { vazio: 'Nenhuma peça aplicada.' }));
+   if (ord.length) corpo += RelA4_secao_('Fotos', AstR_fotosHtml_(os, ord, perg));
++  var nFotos = ord.length;
++  extras.forEach(function (e, i) { var h = AstR_equipExtraHtml_(os, tipo, e, i, fotos, pecasTodas, nFotos, comRes, rascunho); nFotos += h.fotos; corpo += h.html; });
+   var ass = [];
+   var img = Ast_s_(os.ASSINATURA_ARQUIVO_ID) ? AstR_b64Arquivo_(os.ASSINATURA_ARQUIVO_ID) : null;
+   ass.push({ papel: 'Recebido por (cliente)', nome: Ast_s_(os.ASSINATURA_NOME) || Ast_s_(os.SEM_ASSINATURA_RECEBIDO_POR) || ' ', cargo: Ast_s_(os.ASSINATURA_DOCUMENTO) || (Ast_s_(os.SEM_ASSINATURA_MOTIVO) ? 'Sem assinatura: ' + (AST_MOTIVOS_SEM_ASSINATURA[Ast_up_(os.SEM_ASSINATURA_MOTIVO)] || '') : ''),
+@@ -452,6 +461,41 @@
+ }
+ 
+ /**
++ * 19/11/2026 (pedido do dono): seção de um equipamento a mais atendido na mesma visita: identificação, conferência no local,
++ * resultado, serviço (mesma ordem do equipamento da O.S.), peças e fotos dele (a numeração continua a do relatório).
++ */
++function AstR_equipExtraHtml_(os, tipo, e, i, fotos, pecas, inicioFotos, comRes, rascunho) {
++  var ident = { QR: 'leitura do QR', SERIE: 'número de série', TAG: 'TAG', SEM_IDENT: 'sem série nem TAG na etiqueta (cadastro a completar)' }[Ast_up_(e.IDENTIFICADO_POR)];
++  var cad = Ast_s_(e.EQUIPAMENTO_ID) ? (Ast_mapa_(SGO_CFG.SHEETS.CAD_EQUIPAMENTOS)[Ast_s_(e.EQUIPAMENTO_ID)] || {}) : {};
++  var h = RelA4_identificacao_([
++    ['Equipamento', [Ast_s_(e.TIPO), Ast_s_(e.MODELO)].filter(Boolean).join(' · ') || Ast_eqSemIdent_(e.EQUIPAMENTO_TEXTO)], ['TAG', Ast_s_(e.TAG)], ['Nº de série (cadastro)', Ast_s_(e.SERIE)],
++    ['Nº de série (conferido no local)', Ast_s_(e.SERIE_CONFIRMADA) + (Ast_sim_(e.SERIE_DIVERGENTE) ? ' (DIVERGENTE do cadastro)' : '')], ['Setor', Ast_s_(e.SETOR)], ['Patrimônio', Ast_s_(e.PATRIMONIO)],
++    ['Fabricante (marca)', Ast_s_(e.FABRICANTE)], ['Capacidade ou volume', Ast_s_(cad.CAPACIDADE)], ['Ano de fabricação', Ast_s_(cad.ANO_FABRICACAO)], ['Equipamento conferido por', ident || '']
++  ].filter(function (p) { return p[0] === 'Equipamento' || !Ast_vazioCad_(p[1]); }));
++  var r = AstO_resultado_(e);
++  if (r.final) h += AstR_resultadoCaixa_({ final: r.final, nome: r.finalNome, detalhe: r.detalhe, teste: r.teste, testeNome: r.testeNome, origem: 'REGISTRO' });
++  var sub = function (t, v) { if (Ast_s_(v)) h += RelA4_subsecao_(t, AstR_par_(v)); };
++  sub('Condição encontrada', e.CONDICAO_ENCONTRADA);
++  sub('Causa ou diagnóstico', e.CAUSA);
++  sub('Serviço realizado', e.SERVICO_REALIZADO);
++  var med = Ast_normMedicoes_(e.MEDICOES_JSON);
++  if (med.length) h += RelA4_subsecao_('Medições realizadas', RelA4_tabela_([{ t: 'Grandeza' }, { t: 'Ponto ou condição da medição' }, { t: 'Valor', num: true }, { t: 'Unidade' }],
++    med.map(function (m) { return [m.grandeza, m.obs || '—', m.valor, m.unidade || '—']; })));
++  if (r.teste || Ast_s_(e.TESTE_FUNCIONAL)) h += RelA4_subsecao_('Teste funcional', (r.teste ? '<p><b>Resultado: ' + Ast_esc_(r.testeNome.toLowerCase()) + '.</b></p>' : '') + (Ast_s_(e.TESTE_FUNCIONAL) ? AstR_par_(e.TESTE_FUNCIONAL) : ''));
++  if (r.final) h += RelA4_subsecao_('Situação do equipamento ao final', '<p><b>' + Ast_esc_(r.finalNome) + '.</b></p>' + (r.detalhe ? AstR_par_(r.detalhe) : ''));
++  else if (comRes && !rascunho) h += RelA4_subsecao_('Situação do equipamento ao final', '<p class="nota">Não registrada.</p>');
++  sub('Recomendações', e.RECOMENDACOES);
++  sub('Observações do técnico', e.RELATO);
++  var pe = (pecas || []).filter(function (p) { return Ast_s_(p.EQUIP_CHAVE) === Ast_s_(e.CHAVE); });
++  if (pe.length) h += RelA4_subsecao_('Peças deste equipamento', RelA4_tabela_([{ t: 'Peça' }, { t: 'Código' }, { t: 'Qtd.', num: true }, { t: 'Situação' }], pe.map(function (p) {
++    return [Ast_s_(p.DESCRICAO), Ast_s_(p.CODIGO), Ast_fmtNum_(Number(p.QUANTIDADE) || 0, Math.round(Number(p.QUANTIDADE)) === Number(p.QUANTIDADE) ? 0 : 2) + ' ' + Ast_unidadePeca_(p.UNIDADE), Ast_up_(p.SITUACAO) === 'FALTA' ? 'Em falta' + (Ast_s_(p.REQUISICAO_NUMERO) ? ' (pedido ' + Ast_s_(p.REQUISICAO_NUMERO) + ')' : '') : 'Aplicada'];
++  })));
++  var ordE = AstR_fotosOrdenadas_(AstO_fotosDoEquip_(fotos, e.CHAVE));
++  if (ordE.length) h += RelA4_subsecao_('Fotos deste equipamento', AstR_fotosHtml_(os, ordE, [], inicioFotos));
++  return { html: RelA4_secao_('Equipamento ' + (i + 2) + ' atendido nesta visita: ' + (Ast_eqSemIdent_(e.EQUIPAMENTO_TEXTO) || 'sem identificação'), h), fotos: ordE.length };
++}
++
++/**
+  * Registro do relatório encerrado no Arquivo de documentos (tipo "ORDEM DE SERVIÇO"). Com sessão de usuário, pelo
+  * módulo Documentos; sem sessão (rotina, gancho de outro módulo), pela identidade do sistema, direto na tabela, com os
+  * mesmos campos. 22/10/2026 (etapa 2): antes, o relatório fechado pela rotina não entrava no Arquivo. Nunca lança.
+@@ -500,7 +544,9 @@
+     var marca = Ast_marca_(JSON.stringify([os.NUMERO, versao, os.RESPOSTAS_JSON, os.RELATO, os.SERVICO_REALIZADO, os.ASSINATURA_ARQUIVO_ID, os.QTD_FOTOS, os.QTD_PECAS, os.ENCERRADA_EM]
+       .concat(Ast_s_(os.LOGISTICA_JSON) || Ast_s_(os.COLAB_ASSINATURA_ARQUIVO_ID) || Ast_s_(os.COLAB_DISPENSA_JUSTIFICATIVA) ? [os.LOGISTICA_JSON, os.COLAB_ASSINATURA_ARQUIVO_ID, os.COLAB_DISPENSA_JUSTIFICATIVA] : [])
+       // 13/11/2026: resultado, medições e os demais textos do serviço (só quando a O.S. tem o resultado; a conta das antigas não muda)
+-      .concat(Ast_s_(os.RESULTADO_FINAL) || Ast_s_(os.TESTE_RESULTADO) || Ast_s_(os.MEDICOES_JSON) ? [os.TESTE_RESULTADO, os.RESULTADO_FINAL, os.RESULTADO_DETALHE, os.MEDICOES_JSON, os.CONDICAO_ENCONTRADA, os.CAUSA, os.TESTE_FUNCIONAL, os.RECOMENDACOES] : [])));
++      .concat(Ast_s_(os.RESULTADO_FINAL) || Ast_s_(os.TESTE_RESULTADO) || Ast_s_(os.MEDICOES_JSON) ? [os.TESTE_RESULTADO, os.RESULTADO_FINAL, os.RESULTADO_DETALHE, os.MEDICOES_JSON, os.CONDICAO_ENCONTRADA, os.CAUSA, os.TESTE_FUNCIONAL, os.RECOMENDACOES] : [])
++      // 19/11/2026: equipamentos a mais da visita (só quando há; a conta das O.S. de um equipamento não muda)
++      .concat(AstO_equipExtras_(os.ID).map(function (e) { return [e.CHAVE, e.EQUIPAMENTO_ID, e.SERIE_CONFIRMADA, e.CONDICAO_ENCONTRADA, e.CAUSA, e.SERVICO_REALIZADO, e.TESTE_FUNCIONAL, e.TESTE_RESULTADO, e.RESULTADO_FINAL, e.RESULTADO_DETALHE, e.MEDICOES_JSON, e.RECOMENDACOES, e.RELATO].join('|'); }))));
+     var tipoDoc = Ast_tipo_(os.TIPO_CODIGO), tituloDoc = AstR_tituloDocOS_(os);
+     var rev = null;
+     if (revisao > 0 && typeof SGO_DocRev_historico_ === 'function') {
+--- a/SGO_AssistenteManuais.js
++++ b/SGO_AssistenteManuais.js
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "05e7d7325583",
++ "versao": "059a2aec0ddc",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -69,6 +69,10 @@
+      "texto": "Na O.S., o botão Continuar (acima do passo a passo) abre o próximo passo que ainda falta. No fim de cada passo, o\n botão Seguir leva ao seguinte. Não é preciso voltar à O.S. a cada passo; \"Voltar à O.S.\" continua lá.\nGuardar relato, Guardar o termo, Guardar assinatura, Registrar sem assinatura e a confirmação do\n equipamento guardam e já levam ao próximo passo que falta (ou ao Concluí). Se ainda faltar algo no próprio passo, a\n tela fica e diz o quê (\"Ainda falta neste passo: a condição encontrada\").\nO Concluí mostra o que falta separado por passo, cada grupo com o botão Ir para que abre o passo certo.\nAntes do Cheguei: checklist, fotos, relato, peças e assinatura só valem depois da chegada (o servidor recusa antes).\n Se abrir um desses passos antes, o app pergunta \"Registrar a chegada agora\" ou \"Ainda não cheguei\". Registro que já foi\n recusado só por falta da chegada volta sozinho para a fila depois do Cheguei."
+     },
+     {
++     "titulo": "Atendimento, passo a passo > Vários equipamentos na mesma visita (19/11/2026)",
++     "texto": "Uma visita atende vários equipamentos e tudo sai numa O.S. e num relatório só (corretiva, preventiva e os demais\n serviços técnicos com visita; logística e ronda continuam com as listas próprias).\nNa O.S., o passo Equipamentos atendidos nesta visita mostra o equipamento da O.S. como o 1º. Toque em\nAcrescentar equipamento e escolha da lista da unidade (digite TAG, série, tipo ou setor para filtrar) ou toque em\n Não está na lista: cadastrar o equipamento (tipo, fabricante, modelo, série, TAG, setor, patrimônio). Funciona sem\n sinal: o cadastro e o equipamento sobem com a fila. Equipamento sem série, TAG nem patrimônio também entra (só o tipo é\n obrigatório); na tela dele, toque em O equipamento não tem série nem TAG e a gestão completa o cadastro depois.\nEm cada equipamento acrescentado: 1. confira a série ou a TAG da etiqueta; 2. escreva o relato dele (os\n mesmos campos e mínimos de palavras do relato da O.S., com o resultado do teste e como o equipamento ficou); 3. tire\n pelo menos 1 foto dele; 4. lance as peças dele, se houver.\nA assinatura do cliente é uma só e vale para todos. O Concluí só libera com todos completos: o app diz o que\n falta e em qual equipamento (\"Equipamento 2 (Lavadora · TAG LV-02): pelo menos 1 foto deste equipamento\").\nNo relatório, cada equipamento tem a sua seção (identificação, conferência, resultado, serviço, peças e fotos). O\n PDF da visita fica só no equipamento da O.S.; no histórico de cada equipamento acrescentado aparece o atendimento só com o\n relato dele.\nAcrescentou por engano: abra o equipamento e use Acrescentei por engano: tirar este equipamento da O.S. (com o\n motivo). A gestão vê os equipamentos da visita na ficha da O.S. (bloco \"Equipamentos atendidos nesta visita\")."
++    },
++    {
+      "titulo": "3a. Retirada, entrega e envio de equipamento (03/11/2026) (parte 1)",
+      "texto": "Nas O.S. de logística (Entrega de equipamento, Entrega de documentação, Entrega de insumos, Retirada de equipamento,\nRetirada para análise, preventiva, qualificação ou sensores, Entrada de equipamento para calibração, Envio de\nequipamento) o formulário é o termo, e não o relato de manutenção. Condição encontrada, causa, teste funcional, peças\ne conferência de QR ou série não se aplicam e não travam o Concluí."
+     },

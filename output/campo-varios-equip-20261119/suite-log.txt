@@ -1,0 +1,3 @@
+FASE=candidato em 2026-11-19T18:46:47.278Z
+arquivos=303 arquivos_com_saida_nao_zero=0 pass=2738 fail=0
+

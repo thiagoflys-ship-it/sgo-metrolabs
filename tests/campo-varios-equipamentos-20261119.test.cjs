@@ -85,6 +85,17 @@ test('equipamento a mais: só conclui com ele completo (o que falta diz qual equ
   const md = ok(amb.app('Ast_appMeuDia', 's_tiago', { dia: '2026-11-06' })).os.find((o) => o.id === id);
   assert.equal(md.registrado.equipamentos[0].chave, K); assert.equal(md.registrado.equipamentos[0].servicoRealizado, RELATO_EQ2.servicoRealizado);
   assert.equal(md.registrado.pecas.find((p) => p.equipChave === K).descricao, 'Vedação da porta da lavadora');
+  // regra do dono (18/11): dado de um equipamento nunca cruza com outro. O PDF da visita (traz os dois equipamentos) fica só no
+  // equipamento principal; no histórico do acrescentado vai só o relato dele, sem o link do PDF (ficha do equipamento, QR, Portal)
+  const pdf = linhaOs(amb, id).RELATORIO_PDF_URL;
+  assert.ok(pdf, 'o relatório da visita foi gerado');
+  const hEq2 = amb.ctx.SGO_Atendimentos_doEquipamento_('eq2', {}).filter((h) => h.origem === 'SGO');
+  assert.equal(hEq2.length, 1); assert.equal(hEq2[0].relatorioUrl, '', 'sem o PDF da visita no equipamento acrescentado');
+  assert.match(hEq2[0].relato, /vedação da porta/i); assert.doesNotMatch(hEq2[0].relato, /resistência/i);
+  const hEq1 = amb.ctx.SGO_Atendimentos_doEquipamento_('eq1', {}).filter((h) => h.origem === 'SGO');
+  assert.equal(hEq1[0].relatorioUrl, pdf, 'o PDF continua no equipamento principal');
+  const hCli = amb.ctx.SGO_Atendimentos_doEquipamento_('eq2', { sessao: { perfil: 'CLIENTE', clienteId: 'c1' } }).filter((h) => h.origem === 'SGO');
+  assert.equal(hCli.length, 1); assert.equal(hCli[0].relatorioUrl, ''); assert.doesNotMatch(hCli[0].relato, /resistência/i);
 });
 
 test('histórico de cada equipamento: o atendimento aparece nos dois, cada um com o seu relato (dado não cruza)', () => {
@@ -132,6 +143,10 @@ test('tela da O.S. (SGO+ web), ajuda e manual: equipamentos atendidos nesta visi
   assert.match(js, /Equipamentos atendidos nesta visita/);
   const aj = fs.readFileSync(path.join(dest, 'SGO_Ajuda_Assistencia.js'), 'utf8');
   assert.match(aj, /Acrescentar equipamento/);
+  // prontuário, QR e Portal: o índice de documentos liga o relatório da O.S. só ao EQUIPAMENTO_ID da O.S. (nunca aos acrescentados)
+  const docs = fs.readFileSync(path.join(dest, 'SGO_DocumentosPastas.js'), 'utf8');
+  assert.doesNotMatch(docs, /ATEC_OS_EQUIPAMENTOS|OS_EQUIP|extraEquip/);
+  assert.match(docs, /equipamentoId: Docs_s_\(r\.EQUIPAMENTO_ID\),\s*\n\s*emitidoIso: Docs_iso_\(r\.RELATORIO_EM\)/);
   const man = fs.readFileSync(path.join(__dirname, '../docs/MANUAL_APP_CAMPO.md'), 'utf8');
   assert.match(man, /Acrescentar equipamento/);
 });
