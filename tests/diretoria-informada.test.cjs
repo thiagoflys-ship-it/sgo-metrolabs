@@ -304,15 +304,16 @@ test('matriz de avisos: GS07 registrado (informativo, sem tipo de aviso da gest�
 });
 
 // ------------------------------------------------------------------ 6. Caixa de acesso (padrão do lote 12)
-test('caixa GESTAO_RELATORIO_DIA: registrada pelo próprio módulo, ligada, padrão Diretoria e dono; sem o módulo o catálogo continua com 150', () => {
+// 18/11/2026: Auvo descontinuado pelo dono; 4 caixas do Auvo saíram do catálogo do lote 0 (150 -> 146).
+test('caixa GESTAO_RELATORIO_DIA: registrada pelo próprio módulo, ligada, padrão Diretoria e dono; sem o módulo o catálogo continua com 146', () => {
   const amb = require('./_poderes_ambiente.cjs');
   const contas = [{ id: 'p_dono', login: 'admin', perfil: 'ADMIN', area: 'DIRETORIA' }, { id: 'p_dir', login: 'dora', perfil: 'DIRETORIA', area: 'DIRETORIA' },
     { id: 'p_gt', login: 'gil', perfil: 'GESTOR', area: 'TECNICA' }, { id: 'p_tec', login: 'tiago', perfil: 'TECNICO', area: 'TECNICA' }, { id: 'p_fin', login: 'fabi', perfil: 'FINANCEIRO', area: 'FINANCEIRO' }];
   const sem = amb.ambiente({ contas });
-  assert.equal(sem.ctx.SGO_poderesCatalogo_().lista.length, 150, 'catálogo congelado do lote 0 sem o módulo');
+  assert.equal(sem.ctx.SGO_poderesCatalogo_().lista.length, 146, 'catálogo do lote 0 sem o módulo');
   const com = amb.ambiente({ contas, extras: ['SGO_Gestao_RelatorioDiario.js'] });
   const cat = com.ctx.SGO_poderesCatalogo_();
-  assert.equal(cat.lista.length, 151);
+  assert.equal(cat.lista.length, 147); // 18/11/2026: 146 do lote 0 (sem as 4 caixas do Auvo) + GESTAO_RELATORIO_DIA
   const p = cat.mapa.GESTAO_RELATORIO_DIA;
   assert.ok(p && p.ligado && p.lote === 12);
   const pode = (login) => com.ctx.SGO_pode_({ userId: contas.find((c) => c.login === login).id, usuario: login, perfil: contas.find((c) => c.login === login).perfil }, 'GESTAO_RELATORIO_DIA');

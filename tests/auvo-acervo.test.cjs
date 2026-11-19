@@ -1,4 +1,10 @@
 // Acervo do Auvo — etapa 0 da Assistência técnica (21/10/2026).
+// 18/11/2026: Auvo descontinuado pelo dono (SGO_Auvo_Retirada.js). A cópia do acervo terminou de vez: contar, copiar, pausar,
+// continuar, repetir falhas e conferir dependiam da API do Auvo e saíram. Os testes da cópia (contagem, lotes, idempotência,
+// falhas, 403, conferência, paginação, pausa, trava, download pendurado, arquivo grande, 25 mil linhas e retomada) foram
+// retirados com essa justificativa; a versão anterior está em output/auvo-retirada-20261118/tests-antes/auvo-acervo.test.cjs.
+// Ficam aqui: a recusa de toda ação que falaria com o Auvo, o gatilho antigo que só se remove, o acesso (só Administrador e
+// Diretoria) e a consulta do que foi copiado (situação, falhas e tarefa com os arquivos), que continua funcionando.
 // Código real do SGO+ (SGO_Auvo_Config.js, SGO_Auvo_Main.js, SGO_AuvoAcervo.js) num contexto isolado, com
 // planilha, Drive e API do Auvo simulados (respostas inventadas, nada sai daqui). Só dados de teste.
 // Cobre: paginação e retomada em lotes, contagem, cópia com idempotência por sha256, versão nova sem
@@ -203,7 +209,7 @@ function ambiente(op) {
     SGO_DATA: { getDB: () => ss, log: (a, u, d) => logs.push([a, u, d]) },
     exigirSessao: (id) => { if (!sessoes[id]) throw new Error('Sessão inválida ou expirada.'); return sessoes[id]; }
   });
-  ['SGO_Auvo_Config.js', 'SGO_Auvo_Main.js', 'SGO_AuvoAcervo.js', 'SGO_AuvoAcervo_Tela.js'].forEach((f) =>
+  ['SGO_Auvo_Config.js', 'SGO_Auvo_Retirada.js', 'SGO_Auvo_Main.js', 'SGO_AuvoAcervo.js', 'SGO_AuvoAcervo_Tela.js'].forEach((f) =>
     vm.runInContext(fs.readFileSync(path.join(base, f), 'utf8'), ctx, { filename: f }));
 
   const api = (sessao, fn, payload) => ctx.AuvoAcervo_apiDispatch({ sessionId: sessao, fn, payload });
@@ -230,457 +236,89 @@ function conferirSoLeituraNoAuvo(e) {
   assert.ok(e.pedidos.filter((p) => !p.url.includes('auvo.com.br')).every((p) => !p.auth), 'o token do Auvo não vai para outro servidor');
 }
 
-/* ---------------- testes ---------------- */
-test('contagem: percorre todos os meses e páginas, conta e estima o espaço sem baixar nada', () => {
+/* ---------------- testes (18/11/2026: Auvo descontinuado pelo dono) ---------------- */
+
+test('retirada: contar, copiar, pausar, continuar, repetir falhas e conferir recusam sem chamar o Auvo e sem agendar nada', () => {
   const e = ambiente();
-  const st = e.api('s_dir', 'apiIniciarContagem', { inicio: '2023-11' });
-  assert.equal(st.estado.situacao, 'RODANDO');
-  assert.equal(e.gatilhos.length, 1, 'agenda o primeiro lote');
-  const fim = e.rodarAteParar(75000);
-  assert.ok(fim.lotes > 1, 'precisou de mais de um lote (retomada pelo marcador)');
-  assert.equal(fim.r.situacao, 'CONCLUIDO');
-  const c = JSON.parse(e.props.AUVO_ACERVO_CONTAGEM);
-  assert.equal(c.tarefas, 235);
-  assert.deepEqual(c.porAno, { 2024: 235 });
-  assert.equal(c.porTipo['Calibração'] + c.porTipo['Manutenção corretiva'] + c.porTipo['Manutenção preventiva'], 235);
-  assert.equal(c.qtdQuestionarios, 3);
-  assert.equal(c.respostasComImagem, 2 + 1 + 23 + 2); // 1001 (2 respostas com foto), 1002, 23 de fev, 4001 (instavel e pagina)
-  assert.equal(c.assinaturasQuestionario, 1);
-  assert.equal(c.assinaturasTarefa, 2);
-  assert.equal(c.anexos, 1);
-  assert.equal(c.links, 1, 'página comum fica como link; taskUrl não entra');
-  assert.equal(c.arquivos, 4 + 1 + 1 + 23 + 2 + 1); // 1001, 1002, 1003 (anexo), fev, 4001, 4002
-  assert.ok(c.amostra.imagensMedidas > 0 && c.estimativaBytes > 0, 'estima pelo tamanho da amostra');
-  assert.equal(c.listasDeApoio.equipes, 'não disponível na API');
-  assert.equal(c.listasDeApoio.clientes, 130);
-  const fev = c.porMes.find((m) => m.mes === '2024-02');
-  assert.deepEqual([fev.auvo, fev.lidas], [230, 230]);
-  // nada baixado: só HEAD nas imagens; nenhuma aba de acervo criada; só o relatório da contagem em arquivo
-  assert.equal(e.pedidos.filter((p) => p.url.startsWith(IMG) && p.metodo === 'get').length, 0);
-  assert.ok(!e.abas.AUVO_ACERVO_TAREFAS);
-  assert.deepEqual(Object.values(e.arquivos).map((a) => e.caminhoDe(a.pasta)), ['Acervo Auvo/_relatorios']);
-  conferirSoLeituraNoAuvo(e);
-  assert.equal(JSON.stringify(e.atual._linhas), e.fotoAtual, 'AUVO_TAREFAS do SGO+ intacta');
-  assert.equal(e.gatilhos.length, 0, 'terminou e removeu o gatilho');
+  for (const fn of ['apiIniciarContagem', 'apiIniciarCopia', 'apiPausar', 'apiContinuar', 'apiTentarDeNovo', 'apiConferir']) {
+    assert.throws(() => e.api('s_adm', fn, { inicio: '2022-01' }), /O Auvo foi descontinuado em 18\/11\/2026/, fn);
+  }
+  assert.throws(() => e.ctx.AuvoAcervo_getAuvo_('/tasks?page=1'), /descontinuado/);
+  e.ctx.AuvoAcervo_agendar_(5000);
+  assert.equal(e.pedidos.length, 0, 'nenhuma chamada ao Auvo');
+  assert.equal(e.gatilhos.length, 0, 'nenhum gatilho agendado');
+  assert.equal(e.fotoAtual, JSON.stringify(e.atual._linhas), 'AUVO_TAREFAS intacta');
 });
 
-test('cópia completa em lotes: registro sem cortes, arquivos com sha256, falhas com motivo e relatório', () => {
+test('retirada: o gatilho antigo da cópia, se ainda estiver na agenda, só se remove (não lê o Auvo)', () => {
   const e = ambiente();
-  e.ctx.AUVO_ACERVO_CFG.GRAVAR_JSON_NA_ABA = true; // trechos do JSON na aba (desligado por padrão)
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2023-12' });
-  const fim = e.rodarAteParar(130000);
-  assert.ok(fim.lotes > 3, 'retomou em vários lotes');
-  assert.equal(fim.r.situacao, 'CONCLUIDO');
-  const tarefas = e.tabela('AUVO_ACERVO_TAREFAS');
-  assert.equal(tarefas.length, 235, 'cada tarefa uma vez, mesmo com segunda passada');
-  // JSON completo: os trechos remontam exatamente a tarefa do Auvo, inclusive a grande
-  const grande = e.auvo.tarefas[5];
-  const partes = e.tabela('AUVO_ACERVO_JSON').filter((p) => p.AUVO_TASK_ID === String(grande.taskID)).sort((a, b) => a.PARTE - b.PARTE);
-  assert.equal(partes.length, 3);
-  assert.equal(partes.map((p) => p.TRECHO).join(''), JSON.stringify(grande));
-  const linhaGrande = tarefas.find((t) => t.AUVO_TASK_ID === String(grande.taskID));
-  assert.equal(linhaGrande.JSON_SHA256, e.sha(Buffer.from(JSON.stringify(grande))));
-  assert.equal(e.arquivos[linhaGrande.JSON_ARQUIVO_ID].bytes.toString('utf8'), JSON.stringify(grande));
-  // arquivos na pasta Acervo Auvo/<ano>/<id>, com o sha256 do conteúdo e privados
-  const arqs = e.tabela('AUVO_ACERVO_ARQUIVOS');
-  const copiados = arqs.filter((a) => a.SITUACAO === 'COPIADO');
-  assert.equal(copiados.length, 30, 'tudo menos 404 e página');
-  copiados.forEach((a) => {
-    const f = e.arquivos[a.ARQUIVO_ID];
-    assert.equal(e.caminhoDe(f.pasta), 'Acervo Auvo/2024/' + a.AUVO_TASK_ID);
-    assert.equal(a.SHA256, e.sha(f.bytes));
-    assert.equal(f.compartilhamento, 'PRIVATE:NONE');
-    assert.ok(f.nome.startsWith(a.AUVO_TASK_ID + '_'), 'número da tarefa no nome: ' + f.nome);
-  });
-  const f1001 = copiados.filter((a) => a.AUVO_TASK_ID === '1001').map((a) => e.arquivos[a.ARQUIVO_ID].nome).sort();
-  assert.deepEqual(f1001, ['1001_assinatura_questionario_q1_r4.png', '1001_assinatura_tarefa.png', '1001_foto_q1_r2.jpg', '1001_foto_q1_r3.jpg']);
-  assert.equal(copiados.find((a) => a.URL_ORIGINAL.endsWith('manual.pdf')).CONTENT_TYPE, 'application/pdf');
-  // instável: 500 na 1ª tentativa, copiada na repetição automática
-  const instavel = arqs.find((a) => a.URL_ORIGINAL.endsWith('instavel.jpg'));
-  assert.equal(instavel.SITUACAO, 'COPIADO');
-  assert.equal(Number(instavel.TENTATIVAS), 2);
-  const f404 = arqs.find((a) => a.URL_ORIGINAL.endsWith('falha404.jpg'));
-  assert.equal(f404.SITUACAO, 'FALHA');
-  assert.match(f404.MOTIVO, /HTTP 404/);
-  assert.equal(f404.RETENTAVEL, 'NAO');
-  const pag = arqs.find((a) => a.URL_ORIGINAL.endsWith('pagina.jpg'));
-  assert.equal(pag.SITUACAO, 'FALHA');
-  assert.match(pag.MOTIVO, /página da internet/);
-  assert.equal(arqs.find((a) => a.URL_ORIGINAL === 'https://site.exemplo.test/pagina').SITUACAO, 'LINK');
-  assert.ok(!arqs.some((a) => a.URL_ORIGINAL.includes('app.auvo.com.br/tarefa')), 'taskUrl não é arquivo');
-  // relatório de conferência
-  const rel = JSON.parse(e.props.AUVO_ACERVO_RELATORIO);
-  assert.equal(rel.conclusao, 'COM_FALTAS');
-  assert.deepEqual([rel.tarefas.auvo, rel.tarefas.noAcervo, rel.tarefas.faltando], [235, 235, 0]);
-  assert.deepEqual([rel.arquivos.esperados, rel.arquivos.copiados, rel.arquivos.falhas, rel.arquivos.pendentes], [32, 30, 2, 0]);
-  assert.equal(rel.arquivos.conferencia.ok, 30);
-  assert.equal(rel.tarefas.conferenciaJson.ok, 235);
-  assert.equal(rel.arquivos.falhasPorMotivo['HTTP 404 (o Auvo não tem mais este arquivo)'], 1);
-  assert.equal(rel.listasDeApoio.find((l) => l.nome === 'clientes').itens, 130);
-  assert.equal(rel.listasDeApoio.find((l) => l.nome === 'equipes').situacao, 'NAO_DISPONIVEL');
-  assert.ok(Object.values(e.arquivos).some((a) => e.caminhoDe(a.pasta) === 'Acervo Auvo/_listas_de_apoio' && a.nome.startsWith('clientes_')));
-  // token do Auvo só para o endereço do Auvo
-  assert.ok(e.pedidos.find((p) => p.url.startsWith('https://arquivos.auvo.com.br/') && p.metodo === 'get').auth);
-  conferirSoLeituraNoAuvo(e);
-  assert.equal(JSON.stringify(e.atual._linhas), e.fotoAtual, 'AUVO_TAREFAS do SGO+ intacta');
-  assert.deepEqual(Object.keys(e.abas).sort(), ['AUVO_ACERVO_ARQUIVOS', 'AUVO_ACERVO_JSON', 'AUVO_ACERVO_TAREFAS', 'AUVO_TAREFAS']);
+  e.gatilhos.push({ fn: 'AuvoAcervo_loteGatilho' }, { fn: 'AuvoAcervo_loteGatilho' }, { fn: 'Outra_rotina' });
+  const r = e.ctx.AuvoAcervo_loteGatilho();
+  assert.equal(r.removidos, 2);
+  assert.deepEqual(e.gatilhos.map((g) => g.fn), ['Outra_rotina']);
+  assert.equal(e.pedidos.length, 0);
 });
 
-test('idempotência: rodar de novo não baixa nem duplica; tarefa alterada ganha versão nova sem apagar a anterior', () => {
-  const e = ambiente();
-  e.ctx.AUVO_ACERVO_CFG.GRAVAR_JSON_NA_ABA = true;
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const getsAntes = e.pedidos.filter((p) => p.url.startsWith(IMG) && p.metodo === 'get').length;
-  const arquivosAntes = Object.keys(e.arquivos).length;
-  const partesAntes = e.tabela('AUVO_ACERVO_JSON').length;
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const novosGets = e.pedidos.filter((p) => p.url.startsWith(IMG) && p.metodo === 'get').slice(getsAntes).map((p) => p.url.split('/').pop());
-  assert.deepEqual(novosGets, [], 'nenhuma imagem é baixada de novo (falhas definitivas só voltam com "Tentar de novo")');
-  assert.equal(e.tabela('AUVO_ACERVO_TAREFAS').length, 235);
-  assert.equal(e.tabela('AUVO_ACERVO_JSON').length, partesAntes, 'sem trechos repetidos');
-  const novos = Object.values(e.arquivos).slice(arquivosAntes).map((a) => e.caminhoDe(a.pasta));
-  assert.ok(novos.every((c) => c === 'Acervo Auvo/_relatorios' || c === 'Acervo Auvo/_listas_de_apoio'), 'só relatório e listas novas: ' + novos);
-
-  // a tarefa 1001 mudou no Auvo (foto trocada e relato novo)
-  const t = e.auvo.tarefas.find((x) => x.taskID === 1001);
-  const jsonV1 = JSON.stringify(t);
-  t.questionnaires[0].answers[1].reply = IMG + '1001a-nova.jpg';
-  t.report = 'Relato revisado';
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const linha = e.tabela('AUVO_ACERVO_TAREFAS').find((x) => x.AUVO_TASK_ID === '1001');
-  assert.equal(Number(linha.JSON_VERSAO), 2);
-  const pasta = Object.values(e.arquivos).filter((a) => e.caminhoDe(a.pasta) === 'Acervo Auvo/2024/1001').map((a) => a.nome).sort();
-  assert.ok(pasta.includes('tarefa_1001.json') && pasta.includes('tarefa_1001_versao2.json'), pasta.join(', '));
-  assert.ok(pasta.includes('1001_foto_q1_r2.jpg') && pasta.includes('1001_foto_q1_r2_versao2.jpg'), 'foto antiga fica, a nova ganha outro nome: ' + pasta);
-  const v1 = Object.values(e.arquivos).find((a) => a.nome === 'tarefa_1001.json');
-  assert.equal(v1.bytes.toString('utf8'), jsonV1, 'versão anterior intacta');
-  const versoes = new Set(e.tabela('AUVO_ACERVO_JSON').filter((p) => p.AUVO_TASK_ID === '1001').map((p) => Number(p.VERSAO)));
-  assert.deepEqual([...versoes].sort(), [1, 2]);
-  conferirSoLeituraNoAuvo(e);
-});
-
-test('arquivo com o mesmo nome já gravado (lote interrompido) é reaproveitado se o sha256 bate', () => {
-  const e = ambiente({ tarefas: [tarefaFalsa(7001, '2024-01-02T08:00:00', { signatureUrl: IMG + '7001t.png' })] });
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const linha = e.tabela('AUVO_ACERVO_ARQUIVOS')[0];
-  assert.equal(linha.SITUACAO, 'COPIADO');
-  // simula a queda depois de gravar o arquivo e antes de marcar a linha: volta a linha para PENDENTE
-  const aba = e.abas.AUVO_ACERVO_ARQUIVOS._linhas; const cab = aba[0];
-  aba[1][cab.indexOf('SITUACAO')] = 'PENDENTE'; aba[1][cab.indexOf('ARQUIVO_ID')] = '';
-  const antes = e.estat.criados;
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const depois = e.tabela('AUVO_ACERVO_ARQUIVOS')[0];
-  assert.equal(depois.SITUACAO, 'COPIADO');
-  assert.equal(depois.ARQUIVO_ID, linha.ARQUIVO_ID, 'reaproveitou o arquivo já gravado');
-  assert.equal(Object.values(e.arquivos).filter((a) => a.nome === '7001_assinatura_tarefa.png').length, 1);
-  assert.equal(Object.values(e.arquivos).filter((a) => e.caminhoDe(a.pasta) === 'Acervo Auvo/2024/7001').length, 2, 'só o JSON e a assinatura na pasta da tarefa');
-  assert.equal(e.estat.criados - antes, 1, 'só o relatório novo (listas de apoio iguais no mesmo dia são reaproveitadas)');
-});
-
-test('falha de download fica registrada e "Tentar de novo as falhas" copia quando o arquivo volta', () => {
-  const e = ambiente();
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const falhas = e.api('s_dir', 'apiListarFalhas', {});
-  assert.equal(falhas.total, 2);
-  const f = falhas.itens.find((x) => x.tarefa === '1002');
-  assert.match(f.motivo, /404/);
-  assert.equal(f.repeteSozinho, false);
-  assert.equal(f.endereco, IMG + 'falha404.jpg');
-  e.auvo.voltou404 = true;
-  const st = e.api('s_adm', 'apiTentarDeNovo', {});
-  assert.equal(st.devolvidos, 2);
-  assert.equal(st.estado.fase, 'ARQUIVOS');
-  e.rodarAteParar(240000);
-  const arq = e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('falha404.jpg'));
-  assert.equal(arq.SITUACAO, 'COPIADO');
-  const rel = JSON.parse(e.props.AUVO_ACERVO_RELATORIO);
-  assert.equal(rel.arquivos.falhas, 1, 'só a página continua como falha');
-  assert.equal(rel.arquivos.copiados, 31);
-});
-
-test('endereço vencido (403): falha registrada; ao tentar de novo, relê a tarefa no Auvo (GET) e usa o endereço novo', () => {
-  const e = ambiente({ tarefas: [tarefaFalsa(8001, '2024-01-02T08:00:00', { signatureUrl: IMG + 'vencido.png' })] });
-  const fetchOriginal = e.ctx.UrlFetchApp.fetchAll;
-  e.ctx.UrlFetchApp.fetchAll = (lista) => lista.map((r) => (r.url.endsWith('vencido.png')
-    ? { getResponseCode: () => 403, getContentText: () => '', getAllHeaders: () => ({}), getHeaders: () => ({}), getBlob: () => null }
-    : fetchOriginal([r])[0]));
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  let a = e.tabela('AUVO_ACERVO_ARQUIVOS')[0];
-  assert.equal(a.SITUACAO, 'FALHA');
-  assert.equal(Number(a.TENTATIVAS), 3, 'repetiu sozinha até o limite');
-  assert.match(a.MOTIVO, /HTTP 403/);
-  // o Auvo passa a entregar outro endereço para a mesma assinatura
-  e.auvo.tarefas[0].signatureUrl = IMG + 'renovado.png';
-  e.api('s_adm', 'apiTentarDeNovo', {});
-  e.rodarAteParar(240000);
-  a = e.tabela('AUVO_ACERVO_ARQUIVOS')[0];
-  assert.equal(a.SITUACAO, 'COPIADO');
-  assert.equal(a.URL_ORIGINAL, IMG + 'renovado.png');
-  assert.equal(a.URL_ANTERIOR, IMG + 'vencido.png');
-  assert.ok(e.pedidos.some((p) => p.url === 'https://api.auvo.com.br/v2/tasks/8001' && p.metodo === 'get'));
-  conferirSoLeituraNoAuvo(e);
-});
-
-test('conferência acusa arquivo alterado no servidor (sha256 diferente) e arquivo sumido', () => {
-  const e = ambiente();
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const arqs = e.tabela('AUVO_ACERVO_ARQUIVOS').filter((a) => a.SITUACAO === 'COPIADO');
-  e.arquivos[arqs[0].ARQUIVO_ID].bytes = Buffer.from('conteúdo trocado');
-  delete e.arquivos[arqs[1].ARQUIVO_ID];
-  e.api('s_dir', 'apiConferir', {});
-  e.rodarAteParar(130000);
-  const depois = e.tabela('AUVO_ACERVO_ARQUIVOS');
-  assert.equal(depois.find((a) => a.ID === arqs[0].ID).CONFERENCIA, 'DIVERGENTE');
-  assert.equal(depois.find((a) => a.ID === arqs[1].ID).CONFERENCIA, 'ARQUIVO_NAO_ENCONTRADO');
-  const rel = JSON.parse(e.props.AUVO_ACERVO_RELATORIO);
-  assert.equal(rel.arquivos.conferencia.divergentes, 1);
-  assert.equal(rel.arquivos.conferencia.naoEncontrados, 1);
-  assert.equal(rel.conclusao, 'COM_FALTAS');
-});
-
-test('paginação: 404 em mês vazio conta como zero; 429 respeita Retry-After; Auvo fora do ar para em ERRO e continua de onde parou', () => {
-  const e = ambiente();
-  e.auvo.vazio404 = true;
-  e.auvo.limite429 = true;
-  e.api('s_adm', 'apiIniciarContagem', { inicio: '2024-01' });
-  e.auvo.falharTarefas = 1000;
-  for (let i = 0; i < 5; i++) { e.avancar(30000); e.ctx.AuvoAcervo_rodarLote_(); }
-  let st = e.api('s_adm', 'apiStatus', {});
-  assert.equal(st.estado.situacao, 'ERRO');
-  assert.match(st.estado.ultimoErro, /não respondeu depois de 6 tentativas/);
-  assert.equal(e.gatilhos.length, 0, 'parado por erro não agenda mais lotes');
-  const cursor = st.estado.cursor;
-  e.auvo.falharTarefas = 0;
-  st = e.api('s_adm', 'apiContinuar', {});
-  assert.equal(st.estado.situacao, 'RODANDO');
-  assert.deepEqual(st.estado.cursor, cursor, 'continua do mesmo ponto');
-  e.rodarAteParar(240000);
-  const c = JSON.parse(e.props.AUVO_ACERVO_CONTAGEM);
-  assert.equal(c.tarefas, 235);
-  assert.ok(c.mesesSemResposta >= 1, 'mês sem tarefa respondido com 404');
-  assert.equal(c.porMes.find((m) => m.mes === '2024-03').auvo, 0);
-  assert.ok(e.sonos.includes(7000), 'esperou o Retry-After de 7 s');
-});
-
-test('pausa: com lote parado vale na hora; com lote rodando, o lote termina o passo e para', () => {
-  const e = ambiente();
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  let st = e.api('s_dir', 'apiPausar', {});
-  assert.equal(st.estado.situacao, 'PAUSADO');
-  assert.equal(e.gatilhos.length, 0);
-  const r = e.ctx.AuvoAcervo_rodarLote_();
-  assert.equal(r.parado, true);
-  // retoma; durante um lote chega o pedido de pausa
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.props.AUVO_ACERVO_EXECUTANDO = JSON.stringify({ dono: 'outro', em: Date.parse('2024-05-10T12:00:00Z') + 10 ** 9 });
-  st = e.api('s_adm', 'apiPausar', {});
-  assert.equal(st.estado.situacao, 'RODANDO');
-  assert.equal(e.props.AUVO_ACERVO_PEDIDO, 'PAUSAR');
-  delete e.props.AUVO_ACERVO_EXECUTANDO;
-  const r2 = e.ctx.AuvoAcervo_rodarLote_();
-  assert.equal(r2.situacao, 'PAUSADO');
-  assert.ok(!e.props.AUVO_ACERVO_PEDIDO);
-  st = e.api('s_adm', 'apiContinuar', {});
-  assert.equal(st.estado.situacao, 'RODANDO');
-  assert.equal(e.rodarAteParar(240000).r.situacao, 'CONCLUIDO');
-});
-
-test('dois lotes ao mesmo tempo: o segundo não roda (trava)', () => {
-  const e = ambiente();
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.props.AUVO_ACERVO_EXECUTANDO = JSON.stringify({ dono: 'outro', em: Date.parse('2024-05-10T12:00:00Z') });
-  const r = e.ctx.AuvoAcervo_rodarLote_();
-  assert.equal(r.ocupado, true);
-  assert.ok(!e.abas.AUVO_ACERVO_TAREFAS._linhas[1], 'nada gravado');
-});
-
-test('acesso: só Administrador e Diretoria; gestor não vê nem opera', () => {
+test('acesso: só Administrador e Diretoria consultam o histórico; gestor não vê', () => {
   const e = ambiente();
   assert.equal(e.api('s_ges', 'apiPodeVer').pode, false);
   assert.equal(e.api('s_dir', 'apiPodeVer').pode, true);
   assert.throws(() => e.api('s_ges', 'apiStatus'), /Administrador e da Diretoria/);
-  assert.throws(() => e.api('s_ges', 'apiIniciarCopia', {}), /Administrador e da Diretoria/);
+  assert.throws(() => e.api('s_ges', 'apiConsultarTarefa', { taskId: '1' }), /Administrador e da Diretoria/);
   assert.throws(() => e.api('sessao-falsa', 'apiStatus'), /Sessão inválida/);
   assert.equal(e.ctx.AuvoAcervo_obterConteudo('s_ges'), '');
   assert.match(e.ctx.AuvoAcervo_obterConteudo('s_adm'), /acvCard/);
-  assert.throws(() => e.api('s_adm', 'apiIniciarCopia', { inicio: '2030-01' }), /futuro/);
-  assert.throws(() => e.api('s_adm', 'apiIniciarCopia', { inicio: 'jan' }), /inválido/);
   assert.equal(e.pedidos.length, 0, 'nenhuma chamada ao Auvo');
 });
 
-test('sem as chaves do Auvo a cópia não começa e explica o que fazer', () => {
-  const e = ambiente({ props: { AUVO_API_KEY: '', AUVO_API_TOKEN: '' } });
-  assert.throws(() => e.api('s_adm', 'apiIniciarCopia', {}), /Chaves e senhas/);
-  assert.equal(e.api('s_adm', 'apiStatus').estado.situacao, 'PARADO');
+test('consulta: situação, falhas e tarefa copiada (com fotos e registro completo) continuam abrindo, sem o Auvo', () => {
+  const e = ambiente();
+  const cfg = e.ctx.AUVO_ACERVO_CFG, cols = e.ctx.AUVO_ACERVO_COLS;
+  const raiz = e.ctx.DriveApp.getRootFolder();
+  const foto = raiz.createFile(e.ctx.Utilities.newBlob('FOTO', 'image/jpeg', 'foto_1001.jpg'));
+  const json = raiz.createFile(e.ctx.Utilities.newBlob(JSON.stringify({ taskID: 1001, orientation: 'Troca de peça' }), 'application/json', 'tarefa_1001.json'));
+  const tT = e.ctx.AuvoAcervo_tabela_(cfg.ABA_TAREFAS, cols.TAREFAS, 'AUVO_TASK_ID');
+  e.ctx.AuvoAcervo_inserir_(tT, [{ AUVO_TASK_ID: '1001', DATA_TAREFA: '2024-01-05T08:00:00', TIPO_TAREFA: 'Manutenção preventiva', CLIENTE_NOME: 'CLINICA TESTE 0',
+    TECNICO_NOME: 'TECNICO TESTE', FINALIZADA: 'SIM', JSON_VERSAO: 1, JSON_TAMANHO: 120, JSON_ARQUIVO_ID: json.getId(), CONFERENCIA: 'OK' }]);
+  const tA = e.ctx.AuvoAcervo_tabela_(cfg.ABA_ARQUIVOS, cols.ARQUIVOS, 'CHAVE');
+  e.ctx.AuvoAcervo_inserir_(tA, [
+    { CHAVE: '1001|f1', AUVO_TASK_ID: '1001', TIPO: 'FOTO', PERGUNTA: 'Foto do equipamento', NOME_ARQUIVO: 'foto_1001.jpg', ARQUIVO_ID: foto.getId(), SITUACAO: 'COPIADO', TAMANHO: 4 },
+    { CHAVE: '1001|f2', AUVO_TASK_ID: '1001', TIPO: 'FOTO', PERGUNTA: 'Foto 2', SITUACAO: 'FALHA', MOTIVO: 'HTTP 404', TENTATIVAS: 3, URL_ORIGINAL: IMG + 'x.jpg' }]);
+  e.props[cfg.PROP_ESTADO] = JSON.stringify({ modo: 'COPIA', situacao: 'CONCLUIDO', fase: 'FIM', inicio: '2022-01', fim: '2026-10' });
+  const st = e.api('s_dir', 'apiStatus');
+  assert.equal(st.ok, true); assert.equal(st.estado.situacao, 'CONCLUIDO');
+  const f = e.api('s_adm', 'apiListarFalhas', {});
+  assert.equal(f.total, 1); assert.equal(f.itens[0].motivo, 'HTTP 404');
+  const t = e.api('s_dir', 'apiConsultarTarefa', { taskId: '1001' });
+  assert.equal(t.achou, true);
+  assert.equal(t.tarefa.tipo, 'Manutenção preventiva');
+  assert.match(t.jsonPrevia, /Troca de peça/);
+  assert.ok(t.arquivos.some((a) => a.link && /foto_1001/.test(a.nome)));
+  assert.equal(e.api('s_dir', 'apiConsultarTarefa', { taskId: '999' }).achou, false);
+  assert.equal(e.pedidos.length, 0, 'nada sai para o Auvo');
 });
 
-test('tela: conteúdo sem barra invertida nem crase, script válido; ajuda "auvo/acervo" no contrato', () => {
+test('tela: "Histórico do Auvo" somente consulta (sem botões que falem com o Auvo), script válido; ajuda "auvo_historico"', () => {
   const src = fs.readFileSync(path.join(base, 'SGO_AuvoAcervo_Tela.js'), 'utf8');
   const corpo = src.slice(src.indexOf('`') + 1, src.lastIndexOf('`'));
   assert.ok(!corpo.includes('\\') && !corpo.includes('`') && !corpo.includes('${'));
   const script = /<script>([\s\S]*?)<\/script>/.exec(corpo)[1];
   assert.doesNotThrow(() => new Function(script));
-  for (const fn of ['acv_contar', 'acv_copiar', 'acv_repetir', 'acv_consultar', 'acv_falhas', 'acv_ajuda']) assert.ok(script.includes('function ' + fn + '('), fn);
+  for (const fn of ['acv_consultar', 'acv_falhas', 'acv_ajuda', 'acv_atualizar']) assert.ok(script.includes('function ' + fn + '('), fn);
+  for (const fn of ['acv_contar', 'acv_copiar', 'acv_repetir', 'acv_acao']) assert.ok(!script.includes('function ' + fn + '('), 'saiu: ' + fn);
+  for (const botao of ['Contar o acervo', 'Iniciar cópia', 'Pausar', 'Continuar', 'Tentar de novo as falhas', 'Conferir arquivos']) {
+    assert.ok(!corpo.includes('>' + botao + '</button>'), 'botão saiu: ' + botao);
+  }
+  assert.match(script, /Histórico do Auvo \(sistema descontinuado em 18\/11\/2026\) — somente consulta/);
+  assert.match(script, /Ajuda_abrir_\('auvo_historico'\)/);
   const ctx = vm.createContext({});
   vm.runInContext(fs.readFileSync(path.join(base, 'SGO_Ajuda_Auvo.js'), 'utf8'), ctx);
-  const a = ctx.SGO_ajudaTelas_Auvo_()['auvo/acervo'];
-  assert.ok(a && a.titulo && a.passos.length >= 5);
+  const a = ctx.SGO_ajudaTelas_Auvo_().auvo_historico;
+  assert.ok(a && a.titulo && a.passos.length >= 2);
   const texto = JSON.stringify(a);
-  for (const botao of ['Contar o acervo', 'Iniciar cópia', 'Pausar', 'Continuar', 'Tentar de novo as falhas', 'Conferir arquivos', 'Consultar']) {
-    assert.ok(texto.includes('\\"' + botao + '\\"'), 'ajuda cita o botão ' + botao);
-    assert.ok(corpo.includes('>' + botao + '</button>') || corpo.includes('>' + botao + '<'), 'botão existe na tela: ' + botao);
-  }
+  for (const botao of ['Atualizar', 'Consultar']) assert.ok(texto.includes('\\"' + botao + '\\"'), 'ajuda cita o botão ' + botao);
   assert.ok(!/<[a-z]/i.test(texto), 'texto puro');
   const js = fs.readFileSync(path.join(base, 'JS_Auvo.html'), 'utf8');
   assert.match(js, /AuvoAcervo_obterConteudo\(/);
-  assert.equal((js.match(/tplAuvo_montarAcervo_\(\);/g) || []).length, 2);
-});
-
-/* ---------------- 22/10/2026: lote que derrubava o servidor (memória) e download pendurado ---------------- */
-const v8 = require('node:v8');
-v8.setFlagsFromString('--expose-gc');
-const coletar = vm.runInNewContext('gc');
-
-// roda um lote como o servidor: se passar do tempo, o lote é encerrado à força (sem finally, sem gravar nada)
-function loteComLimite(e, ms) {
-  e.ctx.__orc = 10 ** 9;
-  try { vm.runInContext('AuvoAcervo_rodarLote_({ orcamentoMs: __orc })', e.ctx, { timeout: ms || 1500 }); return 'terminou'; }
-  catch (err) { if (/timed out/i.test(String(err && err.message))) return 'encerrado'; throw err; }
-}
-
-test('download que nunca responde: o lote é encerrado, a próxima rodada separa o arquivo e na 2ª vez registra FALHA e segue', () => {
-  const tarefas = [tarefaFalsa(5001, '2024-01-03T08:00:00', { questionnaires: [questionario(1, [IMG + 'ok1.jpg', IMG + 'pendurado.jpg', IMG + 'ok2.jpg'])] })];
-  const e = ambiente({ tarefas });
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  // primeiro lote: lê as tarefas e chega aos arquivos; o grupo com o pendurado trava
-  e.auvo.pendurar = new Set(['pendurado.jpg']);
-  assert.equal(loteComLimite(e), 'encerrado');
-  let arqs = e.tabela('AUVO_ACERVO_ARQUIVOS');
-  assert.ok(arqs.every((a) => a.ANDAMENTO_EM), 'os três ficaram marcados como tentativa em andamento');
-  assert.ok(e.props.AUVO_ACERVO_EXECUTANDO, 'a trava ficou (o lote morreu)');
-  // a trava vence em 330 s; o vigia retoma
-  e.avancar(6 * 60 * 1000);
-  assert.equal(loteComLimite(e), 'encerrado', 'agora cada um vai sozinho: o primeiro passa, o pendurado trava de novo');
-  arqs = e.tabela('AUVO_ACERVO_ARQUIVOS');
-  assert.deepEqual(arqs.filter((a) => a.SITUACAO === 'COPIADO').map((a) => a.URL_ORIGINAL.split('/').pop()), ['ok1.jpg']);
-  assert.ok(!arqs.find((a) => a.URL_ORIGINAL.endsWith('ok2.jpg')).ANDAMENTO_EM, 'o que não foi tentado não conta como interrompido');
-  const p = arqs.find((a) => a.URL_ORIGINAL.endsWith('pendurado.jpg'));
-  assert.ok(p.ANDAMENTO_EM && Number(p.INICIOS_SEM_FIM) === 1);
-  e.avancar(6 * 60 * 1000);
-  const fim = e.rodarAteParar(240000);
-  assert.equal(fim.r.situacao, 'CONCLUIDO');
-  const p2 = e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('pendurado.jpg'));
-  assert.equal(p2.SITUACAO, 'FALHA');
-  assert.match(p2.MOTIVO, /download não concluiu/);
-  assert.equal(p2.RETENTAVEL, 'NAO');
-  assert.equal(e.auvo.penduradas, 2, 'não tentou uma terceira vez');
-  assert.equal(e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('ok2.jpg')).SITUACAO, 'COPIADO');
-  assert.ok(!e.props.AUVO_ACERVO_EXECUTANDO, 'trava solta');
-  // "Tentar de novo as falhas" devolve o arquivo à fila; com o servidor respondendo, copia
-  e.auvo.pendurar = new Set();
-  e.api('s_adm', 'apiTentarDeNovo', {});
-  e.rodarAteParar(240000);
-  assert.equal(e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('pendurado.jpg')).SITUACAO, 'COPIADO');
-});
-
-test('arquivo grande não é baixado (FALHA com o tamanho); grupo em paralelo respeita o teto de bytes; limite sobe pela propriedade', () => {
-  const fotos = ['g1.jpg', 'g2.jpg', 'g3.jpg', 'g4.jpg', 'g5.jpg', 'g6.jpg'].map((n) => IMG + n);
-  const e = ambiente({ tarefas: [tarefaFalsa(6001, '2024-01-03T08:00:00', { questionnaires: [questionario(1, fotos)], attachments: [{ url: IMG + 'video.mp4' }] })] });
-  e.auvo.tamanhos = { 'video.mp4': 90 * 1024 * 1024 };
-  fotos.forEach((u) => { e.auvo.tamanhos[u.split('/').pop()] = 10 * 1024 * 1024; });
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  e.rodarAteParar(240000);
-  const arqs = e.tabela('AUVO_ACERVO_ARQUIVOS');
-  const video = arqs.find((a) => a.URL_ORIGINAL.endsWith('video.mp4'));
-  assert.equal(video.SITUACAO, 'FALHA');
-  assert.match(video.MOTIVO, /arquivo grande \(90 MB\), acima do limite de 40 MB/);
-  assert.ok(!e.pedidos.some((p) => p.url.endsWith('video.mp4') && p.metodo === 'get'), 'o vídeo não foi baixado');
-  assert.equal(arqs.filter((a) => a.SITUACAO === 'COPIADO').length, 6);
-  // teto de 24 MB por grupo: no máximo 2 fotos de 10 MB juntas
-  const gets = e.grupos.filter((g) => g.every((x) => x.metodo === 'get') && g.some((x) => /\/g\d\.jpg$/.test(x.url)));
-  assert.ok(gets.length >= 3 && gets.every((g) => g.length <= 2), JSON.stringify(gets.map((g) => g.length)));
-  e.props.AUVO_ACERVO_MAX_MB = '200';
-  e.api('s_adm', 'apiTentarDeNovo', {});
-  e.rodarAteParar(240000);
-  assert.equal(e.tabela('AUVO_ACERVO_ARQUIVOS').find((a) => a.URL_ORIGINAL.endsWith('video.mp4')).SITUACAO, 'COPIADO');
-});
-
-test('25 mil linhas de arquivos: cada lote para na quantidade e nos bytes, memória estável e estado pequeno', () => {
-  const N = 25000;
-  const e = ambiente({ tarefas: [] });
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  // acervo já lido (fase de arquivos), como em produção: 250 tarefas com pasta e 25 mil arquivos pendentes
-  const C = e.ctx.AUVO_ACERVO_COLS;
-  e.ctx.AuvoAcervo_aba_('AUVO_ACERVO_TAREFAS', C.TAREFAS);
-  const shA = e.ctx.AuvoAcervo_aba_('AUVO_ACERVO_ARQUIVOS', C.ARQUIVOS);
-  const raiz = e.ctx.AuvoAcervo_pastaRaiz_();
-  const ano = raiz.createFolder('2024');
-  const linT = e.abas.AUVO_ACERVO_TAREFAS._linhas;
-  for (let t = 0; t < 250; t++) { const row = C.TAREFAS.map(() => ''); row[C.TAREFAS.indexOf('AUVO_TASK_ID')] = String(90000 + t); row[C.TAREFAS.indexOf('PASTA_ID')] = ano.createFolder(String(90000 + t)).getId(); linT.push(row); }
-  const linA = shA._linhas, ix = (h) => C.ARQUIVOS.indexOf(h);
-  for (let i = 0; i < N; i++) {
-    const row = C.ARQUIVOS.map(() => '');
-    const t = 90000 + (i % 250);
-    row[ix('ID')] = 'a' + i; row[ix('CHAVE')] = t + '|q' + i; row[ix('AUVO_TASK_ID')] = String(t); row[ix('TIPO')] = 'FOTO';
-    row[ix('ORIGEM')] = 'questionnaires[0].answers[' + i + '].reply'; row[ix('URL_ORIGINAL')] = IMG + 'm' + i + '.jpg?assinatura=' + 'x'.repeat(300);
-    row[ix('SITUACAO')] = 'PENDENTE'; row[ix('TENTATIVAS')] = 0;
-    linA.push(row);
-  }
-  const est = JSON.parse(e.props.AUVO_ACERVO_ESTADO);
-  est.fase = 'ARQUIVOS';
-  e.props.AUVO_ACERVO_ESTADO = JSON.stringify(est);
-  const LIM = e.ctx.AUVO_ACERVO_CFG.LIMITE_ARQUIVOS_LOTE;
-  const heap = [];
-  let antes = 0;
-  for (let lote = 0; lote < 8; lote++) {
-    e.avancar(30000);
-    const r = e.ctx.AuvoAcervo_rodarLote_({ orcamentoMs: 10 ** 9 });
-    assert.equal(r.situacao, 'RODANDO');
-    const gets = e.pedidos.filter((p) => p.metodo === 'get' && p.url.startsWith(IMG)).length;
-    assert.ok(gets - antes <= LIM, 'lote baixou ' + (gets - antes) + ' arquivos (limite ' + LIM + ')');
-    assert.ok(gets - antes >= LIM - e.ctx.AUVO_ACERVO_CFG.DOWNLOAD_PARALELO, 'lote parou cedo demais: ' + (gets - antes));
-    antes = gets;
-    // os bytes já gravados saem da conta (o servidor guarda em disco, não na memória do lote)
-    Object.values(e.arquivos).forEach((a) => { a.bytes = Buffer.alloc(0); });
-    e.pedidos.length = 0; antes = 0;
-    coletar();
-    heap.push(process.memoryUsage().heapUsed);
-  }
-  const st = e.api('s_adm', 'apiStatus', {});
-  assert.equal(st.estado.arquivos.copiados, 8 * LIM);
-  assert.equal(st.estado.arquivos.pendentes, N - 8 * LIM);
-  assert.ok(e.props.AUVO_ACERVO_ESTADO.length < 6000, 'estado pequeno: ' + e.props.AUVO_ACERVO_ESTADO.length + ' caracteres');
-  const cresc = (heap[7] - heap[1]) / 1048576;
-  assert.ok(cresc < 40, 'memória cresceu ' + cresc.toFixed(1) + ' MB entre o 2º e o 8º lote: ' + heap.map((h) => Math.round(h / 1048576)).join(', '));
-  // a aba de trechos do JSON não é criada nem lida por padrão
-  assert.ok(!e.abas.AUVO_ACERVO_JSON);
-  // teto de bytes do lote
-  e.ctx.AUVO_ACERVO_CFG.LIMITE_BYTES_LOTE = 5000;
-  e.avancar(30000);
-  e.ctx.AuvoAcervo_rodarLote_({ orcamentoMs: 10 ** 9 });
-  const n = e.pedidos.filter((p) => p.metodo === 'get' && p.url.startsWith(IMG)).length;
-  assert.ok(n > 0 && n <= 2 * e.ctx.AUVO_ACERVO_CFG.DOWNLOAD_PARALELO, 'parou pelos bytes depois de ' + n + ' arquivos');
-});
-
-test('retomada segura depois do lote morto da versão anterior: trava velha vence sozinha; Pausar e Continuar voltam a agendar', () => {
-  const e = ambiente();
-  e.api('s_adm', 'apiIniciarCopia', { inicio: '2024-01' });
-  // como em produção: estado RODANDO, trava de um lote que morreu, gatilho apagado à mão
-  e.props.AUVO_ACERVO_EXECUTANDO = JSON.stringify({ dono: '3fa641c6-teste', em: Date.parse('2024-05-10T12:00:00Z') });
-  e.gatilhos.length = 0;
-  e.avancar(331 * 1000);
-  let st = e.api('s_adm', 'apiPausar', {});
-  assert.equal(st.estado.situacao, 'PAUSADO', 'trava vencida não segura a pausa');
-  st = e.api('s_adm', 'apiContinuar', {});
-  assert.equal(st.estado.situacao, 'RODANDO');
-  assert.equal(e.gatilhos.length, 1);
-  assert.equal(e.rodarAteParar(240000).r.situacao, 'CONCLUIDO');
+  assert.doesNotMatch(js, /Auvo_obterConteudoModulo/);
 });

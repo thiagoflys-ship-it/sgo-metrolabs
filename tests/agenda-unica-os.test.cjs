@@ -67,7 +67,8 @@ test('só a O.S. muda a atividade: situação, edição e justificativa à mão 
   assert.equal(amb.tabelas.ATV_ATIVIDADES.find((x) => x.TITULO === 'Tentativa de ligar à O.S.').OS_ID, '', 'pela tela não liga a O.S.');
 });
 
-test('painel da equipe: atendimento com o horário vivo da O.S.; O.S. cancelada sai; indicador sem a O.S.; atendimentos do Auvo (gestão vê todos, o técnico os seus)', () => {
+// 18/11/2026: Auvo descontinuado pelo dono. A agenda da equipe não mostra mais atendimentos do Auvo (lista vazia), mesmo com tarefas na aba.
+test('painel da equipe: atendimento com o horário vivo da O.S.; O.S. cancelada sai; indicador sem a O.S.; nenhum atendimento do Auvo (18/11/2026)', () => {
   const amb = comOS({ tabelas: { AUVO_TAREFAS: [
     { ID: 't1', AUVO_TASK_ID: '7001', TECNICO_ID_SGO: 'u_tec', TIPO_TAREFA: 'Preventiva', CLIENTE_NOME_AUVO: 'Clínica Auvo Teste', DATA_TAREFA: '2026-10-21T14:00', FINALIZADA: 'NAO' },
     { ID: 't2', AUVO_TASK_ID: '7002', TECNICO_ID_SGO: 'u_pj', TIPO_TAREFA: 'Corretiva', CLIENTE_NOME_AUVO: 'Hospital Auvo Teste', DATA_TAREFA: '2026-10-21T09:00', CHECKOUT_EM: '2026-10-21T11:00', FINALIZADA: 'SIM' },
@@ -85,12 +86,9 @@ test('painel da equipe: atendimento com o horário vivo da O.S.; O.S. cancelada 
   assert.equal(os.OS_SITUACAO_NOME, 'Agendada');
   assert.ok(!r.itens.some((i) => i.ID === 'atvOS2'), 'O.S. cancelada sai da agenda');
   assert.equal(r.indicadores.vencidas, 1, 'só a atividade comum conta como vencida');
-  assert.deepEqual(Array.from(r.auvo.map((t) => t.TAREFA)).sort(), ['7001', '7002']);
-  const t2 = r.auvo.find((t) => t.TAREFA === '7002');
-  assert.equal(t2.FIM, '2026-10-21T11:00'); assert.equal(t2.FINALIZADA, true);
-  assert.equal(r.auvo.find((t) => t.TAREFA === '7001').FIM, '2026-10-21T15:30', 'sem saída registrada: 90 min');
+  assert.equal(r.auvo.length, 0, 'gestão: nenhum atendimento do Auvo');
   const rt = c.Atividades_apiPainelEquipe('s_tec', {});
-  assert.deepEqual(Array.from(rt.auvo.map((t) => t.TAREFA)), ['7001'], 'o técnico vê só os seus');
+  assert.equal(rt.auvo.length, 0, 'técnico: nenhum atendimento do Auvo');
 });
 
 test('tela: Gantt com O.S. no horário da O.S. e Auvo só consulta, Kanban sem arrastar a O.S., detalhe com "Abrir a O.S."; a Assistência cria a atividade ligada', () => {

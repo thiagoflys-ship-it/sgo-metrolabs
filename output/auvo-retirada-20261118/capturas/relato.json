@@ -1,0 +1,74 @@
+[
+  {
+    "quem": "administrador",
+    "largura": 1366,
+    "menuAuvo": [
+      "auvo_historico"
+    ],
+    "inicioCitaAuvo": false,
+    "rolagemLateral": 0,
+    "erros": []
+  },
+  {
+    "quem": "administrador",
+    "largura": 1366,
+    "historico": "Histórico do Auvo (sistema descontinuado em 18/11/2026) — somente consulta\nComo usar esta tela\n\nO Auvo não faz mais parte do SGO+. Aqui fica a cópia que o SGO+ fez do Auvo antes do cancelamento: o reg"
+  },
+  {
+    "quem": "administrador",
+    "largura": 390,
+    "menuAuvo": [
+      "auvo_historico"
+    ],
+    "inicioCitaAuvo": false,
+    "rolagemLateral": 0,
+    "erros": []
+  },
+  {
+    "quem": "administrador",
+    "largura": 390,
+    "historico": "Histórico do Auvo (sistema descontinuado em 18/11/2026) — somente consulta\nComo usar esta tela\n\nO Auvo não faz mais parte do SGO+. Aqui fica a cópia que o SGO+ fez do Auvo antes do cancelamento: o reg"
+  },
+  {
+    "quem": "gestor",
+    "largura": 1366,
+    "menuAuvo": [],
+    "inicioCitaAuvo": false,
+    "rolagemLateral": 0,
+    "erros": []
+  },
+  {
+    "quem": "gestor",
+    "largura": 1366,
+    "linkAntigoAuvo": "O Auvo foi descontinuado em 18/11/2026 e não faz mais parte do SGO+. Os atendimentos são feitos e acompanhados em Assistência técnica. O histórico copiado do Auvo é consultado pelo Administrador e pel"
+  },
+  {
+    "quem": "gestor",
+    "largura": 390,
+    "menuAuvo": [],
+    "inicioCitaAuvo": false,
+    "rolagemLateral": 0,
+    "erros": []
+  },
+  {
+    "quem": "gestor",
+    "largura": 390,
+    "linkAntigoAuvo": "O Auvo foi descontinuado em 18/11/2026 e não faz mais parte do SGO+. Os atendimentos são feitos e acompanhados em Assistência técnica. O histórico copiado do Auvo é consultado pelo Administrador e pel"
+  },
+  {
+    "quem": "tecnico",
+    "largura": 1366,
+    "menuAuvo": [],
+    "inicioCitaAuvo": false,
+    "rolagemLateral": 0,
+    "erros": []
+  },
+  {
+    "quem": "tecnico",
+    "largura": 390,
+    "menuAuvo": [],
+    "inicioCitaAuvo": false,
+    "rolagemLateral": 0,
+    "erros": []
+  }
+]

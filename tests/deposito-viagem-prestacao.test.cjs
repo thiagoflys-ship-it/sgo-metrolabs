@@ -367,13 +367,14 @@ test('avisos do prazo (rotina da gestão, uma vez por dia), pendências de cada 
 });
 
 // ------------------------------------------------------------------ 8. caixa, dados para a conciliação, tela, ajuda e manual
-test('caixa VIAGEM_CONFERIR no lote 12 (registrada com o módulo; catálogo congelado de 150 intacto) e exceção em Acessos', () => {
+// 18/11/2026: Auvo descontinuado pelo dono; 4 caixas do Auvo saíram do catálogo do lote 0 (150 -> 146).
+test('caixa VIAGEM_CONFERIR no lote 12 (registrada com o módulo; catálogo do lote 0, agora 146, intacto) e exceção em Acessos', () => {
   const a = ambiente();
   const cat = a.ctx.SGO_poderesCatalogo_();
   const p = cat.mapa.VIAGEM_CONFERIR;
   assert.ok(p && p.lote === 12 && p.ligado && p.modulo === 'Depósito de viagem');
   const b = ambiente({ semArquivos: ['SGO_Viagem.js', 'SGO_Viagem_Documento.js', 'SGO_Viagem_Painel.js', 'SGO_Viagem_Prestacao.js', 'SGO_Viagem_Fechamento.js'] });
-  assert.equal(b.ctx.SGO_poderesCatalogo_().lista.length, 150);
+  assert.equal(b.ctx.SGO_poderesCatalogo_().lista.length, 146);
   const pod = (l) => a.ok(a.v(l, 'iniciar')).poderes;
   assert.equal(pod('wanessa').VIAGEM_CONFERIR, true); assert.equal(pod('fabio').VIAGEM_CONFERIR, true);
   assert.equal(pod('gil').VIAGEM_CONFERIR, false); assert.equal(pod('matheusgodoi').VIAGEM_CONFERIR, false); assert.equal(pod('dora').VIAGEM_CONFERIR, false);

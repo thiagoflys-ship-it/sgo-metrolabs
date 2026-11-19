@@ -11,7 +11,7 @@ Define, para cada aviso que o sistema manda, quem recebe e por qual canal. Uma t
 | Canal | O que vai | Quando |
 |---|---|---|
 | Sistema | Todo aviso (Início, central de pendências, Caixa de decisões, sino). Cobra até ser resolvido. | Na hora, sempre |
-| E-mail de resumo do dia | Um e-mail por pessoa com o que espera por ela: atividades, decisões (gestor), avisos da Frota, do Comercial, do Auvo e do Programa de conduta, a contagem de avisos com ciência e a contagem de mensagens não lidas no bate-papo | A partir das 08:00 do dia útil (ou 12:00, se a pessoa escolher), só se houver algo |
+| E-mail de resumo do dia | Um e-mail por pessoa com o que espera por ela: atividades, decisões (gestor), avisos da Frota, do Comercial e do Programa de conduta, a contagem de avisos com ciência e a contagem de mensagens não lidas no bate-papo | A partir das 08:00 do dia útil (ou 12:00, se a pessoa escolher), só se houver algo |
 | E-mail na hora | O que exige ciência (avisos), o que muda algo de hoje (reserva cancelada ou trocada, lembrete da reserva, cliente respondeu a proposta, pedido de apoio, atividade com prazo para hoje) | Na hora, no expediente; fora dele, sai agrupado na primeira rodada do expediente seguinte |
 | WhatsApp de resumo do dia | Só contagens: atividades atrasadas, para hoje e novas, decisões paradas, avisos para confirmar, mensagens não lidas | A partir das 09:30 do dia útil, só CLT e PJ, só se a pessoa ainda não abriu o sistema, só se há item para hoje, atrasado ou decisão parada; durante o piloto, só quem está na lista do piloto |
 | WhatsApp na hora | As quatro exceções da Frota, a campainha, o aviso urgente (S70) e todo evento que a gestão marcar "Na hora" na matriz (26/10/2026) | No expediente, só CLT e PJ; as exceções da Frota e a campainha, uma por pessoa por dia em cada uma; os demais eventos somam até 3 por pessoa por dia (teto ajustável em Alterar horários, de 1 a 10) |
@@ -30,7 +30,7 @@ Nada sai fora do expediente da empresa (Atividades da equipe › Avisos e horár
 - Escalonamento das atividades atrasadas por prioridade (26/10/2026): S71 "cobrança ao responsável" (nível 1), S72 "escalada ao gestor da área" (nível 2) e S73 "escalada à Diretoria" (nível 3). Saem no sistema e por e-mail na hora, uma vez por atividade e por previsão, só no expediente; o WhatsApp só sai se a gestão marcar "Na hora". Os prazos de cada prioridade ficam em Caixa de decisões > Regras e responsáveis (padrão: Urgente 15 min, 1 h e 4 h; Alta 1, 4 e 24 h; Normal 4, 24 e 72 h; Baixa 24, 72 e 168 h).
 - Evento marcado "Na hora" vai também pelo WhatsApp mesmo quando o módulo pediu só sistema ou e-mail: a matriz acrescenta o canal e confere expediente, vínculo, piloto e teto.
 - Cliente e contato externo não recebem WhatsApp até o fim do piloto (o evento S56 começa sem WhatsApp; o e-mail ao cliente continua na hora).
-- Evento "vira histórico": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: chamado do Auvo concluído).
+- Evento "vira histórico": ninguém é avisado; o fato continua no histórico do próprio registro (ex.: missão cadastrada em que você é executante).
 - Gestor da área no lugar de "toda a gestão": rastreador, reservas e missões do Programa de conduta vão ao gestor da área (Caixa de decisões › Regras e responsáveis). Área sem gestor: Diretoria. Compras fica na área Logística.
 - O assistente do ponto tem identificação e regra próprias; nada da matriz se aplica a ele. O resumo do dia não leva assunto do ponto e não sai a menos de 10 minutos de um lembrete do ponto da mesma pessoa.
 - O piloto do WhatsApp continua valendo: quem não está na lista fica RETIDO, e o servidor confere a mesma lista. A exceção são os avisos da gestão (seção 3A).
@@ -89,7 +89,7 @@ Travas: WhatsApp na hora só nos eventos aprovados como exceção; evento obriga
 2. Marque ou desmarque o WhatsApp de resumo do dia (para CLT e PJ).
 3. Escolha a hora do e-mail de resumo: 08:00 ou 12:00.
 4. Se quiser, receba no e-mail de resumo os avisos informativos (comentário, atividade concluída, venda ganha), que continuam no sistema.
-5. Se quiser, tire do e-mail de resumo os avisos do Comercial, da Frota ou do Auvo (continuam no sistema).
+5. Se quiser, tire do e-mail de resumo os avisos do Comercial ou da Frota (continuam no sistema).
 6. Toque em "Salvar". Vale a partir do próximo resumo.
 7. "Ver a prévia" mostra o texto do seu e-mail de resumo de hoje, sem enviar nada.
 
@@ -97,7 +97,7 @@ Não podem ser desligados: avisos com ciência (sistema e e-mail), a cobrança d
 
 ## 6. Central de pendências por área
 
-O gestor vê o da sua área (área do cadastro e áreas de Regras e responsáveis) e o que é dele; a Diretoria vê tudo; o Administrador sem área vê as falhas técnicas (rastreador sem conexão, importação do Auvo parada) e o que é dele. Gestor sem área definida continua vendo tudo, para ninguém ficar sem enxergar o que precisa. Quem publicou um aviso com ciência vê a leitura atrasada dele. O filtro desliga em Matriz de avisos › Alterar horários.
+O gestor vê o da sua área (área do cadastro e áreas de Regras e responsáveis) e o que é dele; a Diretoria vê tudo; o Administrador sem área vê as falhas técnicas (rastreador sem conexão) e o que é dele. Gestor sem área definida continua vendo tudo, para ninguém ficar sem enxergar o que precisa. Quem publicou um aviso com ciência vê a leitura atrasada dele. O filtro desliga em Matriz de avisos › Alterar horários.
 
 ### Janela "Avisos" ao entrar (31/10/2026)
 

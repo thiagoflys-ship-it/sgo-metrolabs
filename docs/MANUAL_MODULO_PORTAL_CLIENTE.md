@@ -565,7 +565,7 @@ Lista dos equipamentos das unidades da pessoa, com o **farol por categoria**: ca
 A ficha mostra:
 - os dados públicos do cadastro (tipo, fabricante, modelo, série, TAG, patrimônio, setor, unidade, instalação, situação), nunca nota fiscal, origem, QR, observações internas ou quem cadastrou;
 - os vencimentos do equipamento e os documentos dele;
-- o **histórico dos atendimentos concluídos** (O.S. do SGO+ e tarefas do Auvo encerradas), sem o nome do técnico e sem link de outro sistema;
+- o **histórico dos atendimentos concluídos** (O.S. do SGO+ e o histórico do Auvo encerrado, que fica só para consulta desde 18/11/2026), sem o nome do técnico e sem link de outro sistema;
 - os chamados do equipamento, que abrem a ficha do chamado;
 - "Abrir chamado para este equipamento" (o formulário já vem com ele) e "Informar correção de cadastro", que envia uma mensagem à Metrolabs pela Conversa geral. O cliente não edita o cadastro.
 

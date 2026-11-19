@@ -15,6 +15,14 @@ const pastaPoderes = path.join(__dirname, '../output/poderes-20261110');
 const pastaLegado = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
 const lerLegado = (f) => fs.readFileSync(path.join(pastaLegado, f), 'utf8');
 const catalogo = JSON.parse(fs.readFileSync(path.join(pastaPoderes, 'catalogo.json'), 'utf8'));
+// 18/11/2026: Auvo descontinuado pelo dono (SGO_Auvo_Retirada.js). Saíram 4 caixas que só existiam para o Auvo (integração, ferramentas
+// de implantação, "Auvo desligado" e faltas do acervo): o catálogo de referência (catalogo.json, congelado em 10/11/2026) é lido sem
+// elas, e o total passa de 150 para 146. Outras 8 caixas tiveram só o texto ajustado para não citar mais a integração; nelas o teste
+// confere que o texto não fala mais do Auvo ativo, em vez de comparar com o texto antigo do catálogo.
+const RETIRADAS_AUVO = ['AST_DESLIGAR_AUVO', 'AST_ACEITAR_FALTAS_ACERVO', 'AUVO_INTEGRACAO', 'AUVO_IMPLANTACAO'];
+const TEXTO_AJUSTADO_AUVO = ['SISTEMA_SEGREDOS_SERVIDOR', 'AST_GESTAO', 'AST_REGRAS', 'GESTAO_RESUMO_DIARIO', 'AUVO_ACERVO', 'QUALIDADE_VER_PAINEL', 'QUALIDADE_REGISTRAR', 'INICIO_PENDENCIAS_ADMIN'];
+catalogo.poderes = catalogo.poderes.filter((p) => RETIRADAS_AUVO.indexOf(p.codigo) < 0);
+const TOTAL_PODERES = 146;
 const fonteCat = require(path.join(pastaPoderes, 'ferramentas-catalogo/catalogo-fonte.cjs'));
 const DONO_TRES = ['FROTA_BLOQUEIO_ROUBO', 'COM_CATALOGO_EDITAR_VENDA', 'REP_ABRIR_EM_NOME'];
 const SETORES = ['TECNICA', 'METROLOGIA', 'COMERCIAL', 'LOGISTICA', 'ADMINISTRATIVO'];
@@ -111,11 +119,14 @@ const LIGADOS_LOTE1 = ['CONTAS_VER', 'CONTAS_CRIAR', 'CONTAS_ALTERAR_OUTROS', 'C
 test('catálogo: 150 poderes com regra padrão, desligados no lote 0 exceto os ligados pelo lote 1; nada fora do catalogo.json', () => {
   const a = ambiente();
   const cat = a.ctx.SGO_poderesCatalogo_();
-  assert.equal(cat.lista.length, 150);
+  assert.equal(cat.lista.length, TOTAL_PODERES);
+  assert.equal(catalogo.poderes.length, TOTAL_PODERES);
   assert.deepEqual(Array.from(cat.lista, (p) => p.codigo), catalogo.poderes.map((p) => p.codigo));
   for (const p of cat.lista) {
     const ref = catalogo.poderes.find((x) => x.codigo === p.codigo);
-    assert.equal(p.modulo, ref.modulo); assert.equal(p.categoria, ref.categoria); assert.equal(p.lote, ref.lote); assert.equal(p.descricao, ref.descricao);
+    assert.equal(p.categoria, ref.categoria); assert.equal(p.lote, ref.lote);
+    if (TEXTO_AJUSTADO_AUVO.indexOf(p.codigo) >= 0) assert.doesNotMatch(p.modulo + ' ' + p.nome + ' ' + p.descricao, /Integração Auvo|transição do Auvo|questionários do Auvo|resumo do Auvo|revisão do Auvo|O\.S\. do Auvo|Omie, Auvo/, p.codigo);
+    else { assert.equal(p.modulo, ref.modulo); assert.equal(p.descricao, ref.descricao); }
     assert.ok(p.nome && !/NOVO/.test(p.nome), p.codigo);
     assert.equal(typeof p.padrao, 'function', p.codigo);
     // lote 1 (11/11/2026): só as caixas de Contas, senhas e acessos ligadas (SISTEMA_* ficam no servidor Node)
@@ -148,7 +159,7 @@ test('equivalência: sem exceções, SGO_pode_ = hoje (funções do legado + con
       if (atual !== esperado) falhas.push(p.codigo + ' ' + u.login + ': SGO_pode_=' + atual + ' hoje=' + esperado);
     }
   }
-  assert.equal(comparacoes, 150 * 23);
+  assert.equal(comparacoes, TOTAL_PODERES * 23);
   assert.deepEqual(falhas, [], falhas.slice(0, 20).join('\n'));
   assert.deepEqual(donoMuda.sort(), DONO_TRES.slice().sort(), 'o dono só pode mudar nas 3 caixas documentadas');
   // a mesma resposta por todas as entradas (sessão por ID, sessão validada, pessoa)
@@ -166,7 +177,7 @@ test('equivalência: sem exceções, SGO_pode_ = hoje (funções do legado + con
     const porPoder = {};
     mudou.forEach((m) => { (porPoder[m.codigo] = porPoder[m.codigo] || []).push(m.login + ' ' + (m.real ? 'ganha' : 'perde')); });
     const linhas = ['Equivalência do lote 0 (gerado por tests/poderes-lote0.test.cjs em ' + new Date().toISOString() + ')',
-      'Comparações: ' + comparacoes + ' (150 poderes × 23 contas). Divergências SGO_pode_ × hoje: ' + falhas.length + '. Catálogo (H) × funções do legado: ' + divergHP.length + (divergHP.length ? ' (' + divergHP.join('; ') + '; vale o legado)' : '') + '.',
+      'Comparações: ' + comparacoes + ' (' + TOTAL_PODERES + ' poderes × 23 contas). Divergências SGO_pode_ × hoje: ' + falhas.length + '. Catálogo (H) × funções do legado: ' + divergHP.length + (divergHP.length ? ' (' + divergHP.join('; ') + '; vale o legado)' : '') + '.',
       'Dono (admin): SIM em tudo; muda em ' + donoMuda.length + ' caixas: ' + donoMuda.join(', ') + '.',
       'Configuração real usada: gestoresPorArea=' + JSON.stringify(CFG.gestoresPorArea) + '; triagem=' + JSON.stringify(CFG.triagem) + '; responsáveis da representação (Rep_responsaveis_)=' + JSON.stringify(CFG.repResponsaveis) + '.',
       '', 'Diferenças do "hoje" real em relação ao catalogo.json (' + mudou.length + ' células, ' + Object.keys(porPoder).length + ' poderes):'];
@@ -377,7 +388,7 @@ test('API da tela: pessoa agrupada por módulo com padrão × efetivo × origem 
   const t = ok(a.api('admin', 'pessoa', { usuarioId: elisa }));
   assert.equal(t.pessoa.nome, 'ELISA'); assert.equal(t.pessoa.perfil, 'GESTOR'); assert.equal(t.pessoa.area, 'RH'); assert.equal(t.pessoa.areaNome, 'RH'); assert.equal(t.podeAlterar, true);
   assert.equal(t.grupos.length, 18);
-  assert.equal(t.grupos.reduce((s, g) => s + g.itens.length, 0), 150);
+  assert.equal(t.grupos.reduce((s, g) => s + g.itens.length, 0), TOTAL_PODERES);
   const i = t.grupos.find((g) => g.modulo === 'Assistente do ponto').itens.find((x) => x.codigo === 'PONTO_VER_TODOS');
   assert.deepEqual([i.valor, i.padrao, i.origem, i.ligado, i.lote], [true, true, 'padrao', false, 9]);
   assert.ok(i.nome && i.descricao && i.categoriaNome && i.origemNome);

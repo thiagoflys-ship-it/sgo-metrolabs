@@ -42,8 +42,11 @@ function montar() {
 
 test('derivação: lotes curtos, faixa da aba (nunca inteira), estado numa linha, modelos em rascunho com perguntas na ordem e tipos inferidos', () => {
   const { amb, leituras } = montar();
+  // 18/11/2026: Auvo descontinuado pelo dono. O botão "Montar os checklists a partir das tarefas do Auvo" saiu (a chamada da tela recusa);
+  // a montagem continua só pela rotina da Assistência, a partir do acervo já copiado (leitura local, sem o Auvo).
+  const SIS = { id: '', nome: 'Rotina da Assistência', perfil: 'SISTEMA', gestao: true, interno: true };
   let r;
-  for (let k = 0; k < 5; k++) { r = ok(amb.api('s_gil', 'derivarQuestionarios', {})); if (r.situacao.concluido) break; amb.ctx.Ast_memoLimpar_(); }
+  for (let k = 0; k < 5; k++) { r = amb.ctx.AstQ_derivar_(SIS, { sistema: true, lote: 60, orcamentoMs: 90000 }); if (r.situacao.concluido) break; amb.ctx.Ast_memoLimpar_(); }
   assert.equal(r.situacao.concluido, true);
   assert.equal(leituras.inteira, 0, 'a aba de tarefas do acervo não é lida inteira');
   assert.ok(leituras.faixas.every((n) => n <= 60), JSON.stringify(leituras.faixas));
@@ -64,9 +67,10 @@ test('derivação: lotes curtos, faixa da aba (nunca inteira), estado numa linha
   assert.ok(!amb.ctx.Ast_modelos_(false).some((x) => x.codigo === 'AUVO_Q189072'));
   ok(amb.api('s_gil', 'salvarModelo', { modelo: { codigo: 'AUVO_Q189072', nome: 'Atendimento', perguntas: p, ativo: true }, motivo: 'Revisado pela Qualidade no ensaio' }));
   amb.ctx.Ast_memoLimpar_();
-  ok(amb.api('s_gil', 'derivarQuestionarios', { recomecar: true, gerarAgora: true }));
+  amb.ctx.AstQ_derivar_(SIS, { sistema: true, lote: 60, orcamentoMs: 90000, recomecar: true, gerarAgora: true });
   assert.equal(amb.tabelas.ATEC_MODELOS.find((x) => x.CODIGO === 'AUVO_Q189072').ATIVO, 'SIM', 'modelo revisado não é sobrescrito');
-  assert.match(amb.api('s_tiago', 'derivarQuestionarios', {}).message, /Regras da assistência/);
+  assert.match(amb.api('s_gil', 'derivarQuestionarios', {}).message, /descontinuado/);
+  assert.match(amb.api('s_tiago', 'derivarQuestionarios', {}).message, /descontinuado/);
   assert.ok(!amb.trava.aninhamentos);
 });
 

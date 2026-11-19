@@ -259,7 +259,7 @@ Os outros módulos não lançam ocorrência: geram sugestões, e a gestão decid
 | Frota | Item do checklist em ordem na retirada e com problema na devolução | VEI-08 (só se houve imprudência) |
 | Frota | Retirada ou devolução registrada pela gestão no lugar do condutor | VEI-04 |
 | Frota | KM a conferir | VEI-04 (sai da fila quando o KM é conferido) |
-| Auvo | O.S. finalizada sem foto, sem relato ou sem check-out; O.S. aberta há 3 dias ou mais | CAM-01 ou CAM-02 |
+| Assistência técnica (O.S. do SGO+; o Auvo saiu em 18/11/2026) | O.S. finalizada sem foto, sem relato ou sem check-out; O.S. aberta há 3 dias ou mais | CAM-01 ou CAM-02 |
 | Painel de qualidade | Cobrança registrada para técnico ou condutor | CAM-08 (só se a reclamação do cliente foi procedente) |
 | Minhas atividades | Três ou mais atividades atrasadas no mesmo mês | sem código: escolha ou descarte |
 | Avisos | Ciência de aviso vencida há 2 dias úteis | sem código (sai da fila quando a pessoa confirma) |

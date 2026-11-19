@@ -1,0 +1,26 @@
+ARQ = r'C:\Users\venda\projetos\google-script-dev\output\financeiro-20261116\cand31\SGO_Poderes.js'
+PARES = [
+("corrigir relatório, aguardar peça, transição do Auvo, relatório mensal.", "corrigir relatório, aguardar peça, relatório mensal."),
+('"Prazos, contratos, tipos de serviço, checklists, ligar/desligar, trazer questionários do Auvo."', '"Prazos, contratos, tipos de serviço, checklists, ligar/desligar."'),
+("""  ["AST_DESLIGAR_AUVO", "Assistência técnica", "Marcar o Auvo como desligado", "Marca o desligamento do Auvo depois dos seis critérios.", "administrar", 8],
+  ["AST_ACEITAR_FALTAS_ACERVO", "Assistência técnica", "Aceitar faltas do acervo do Auvo", "Confirma o critério \\"faltas aceitas\\" na transição do Auvo.", "aprovar", 8],
+""", "  // 18/11/2026: AST_DESLIGAR_AUVO e AST_ACEITAR_FALTAS_ACERVO saíram (Auvo descontinuado pelo dono; a transição terminou).\n"),
+('"Resumo do dia (Sedna) e resumo do Auvo no painel inicial."', '"Resumo do dia (Sedna) e resumo dos atendimentos no painel inicial."'),
+("""  ["AUVO_INTEGRACAO", "Integração Auvo e painel de qualidade", "Usar a integração com o Auvo", "Conexão, sincronização diária e incremental, pendências, envio de cadastro pendente, relatório, buscar e sincronizar um cliente.", "operar", 11],
+  ["AUVO_IMPLANTACAO", "Integração Auvo e painel de qualidade", "Ferramentas de implantação do Auvo", "Sincronizar em lote, importação reversa, técnicos e auditoria de nomes.", "administrar", 11],
+  ["AUVO_ACERVO", "Integração Auvo e painel de qualidade", "Acervo do Auvo", "Consulta o acervo histórico importado do Auvo.", "ver", 11],
+  ["QUALIDADE_VER_PAINEL", "Integração Auvo e painel de qualidade", "Painel de qualidade", "Painel, lista de ocorrências de qualidade e relatório.", "ver", 11],
+  ["QUALIDADE_REGISTRAR", "Integração Auvo e painel de qualidade", "Registrar e resolver ocorrência de qualidade", "Ocorrências de qualidade ligadas a O.S. do Auvo e à Frota.", "operar", 11],""",
+ """  // 18/11/2026: AUVO_INTEGRACAO e AUVO_IMPLANTACAO saíram (Auvo descontinuado pelo dono). Fica só a consulta do histórico.
+  ["AUVO_ACERVO", "Painel de qualidade e histórico do Auvo", "Histórico do Auvo (somente consulta)", "Consulta o histórico copiado do Auvo, sistema descontinuado em 18/11/2026.", "ver", 11],
+  ["QUALIDADE_VER_PAINEL", "Painel de qualidade e histórico do Auvo", "Painel de qualidade", "Painel, lista de ocorrências de qualidade e relatório.", "ver", 11],
+  ["QUALIDADE_REGISTRAR", "Painel de qualidade e histórico do Auvo", "Registrar e resolver ocorrência de qualidade", "Ocorrências de qualidade ligadas às O.S. da Assistência e à Frota.", "operar", 11],"""),
+('"Pendências de público \\"administrador\\" (ex.: revisão do Auvo) na central do Início."', '"Pendências de público \\"administrador\\" (falhas técnicas) na central do Início."'),
+("""    AST_DESLIGAR_AUVO: admin,
+    AST_ACEITAR_FALTAS_ACERVO: function (eu, c) { return !!c.ast().diretoria; },
+""", ""),
+("    // ---------------- Cadastros, Auvo e qualidade, Licitações, automação predial",
+ "    // ---------------- Cadastros, qualidade e histórico do Auvo, Licitações, automação predial"),
+("""    AUVO_INTEGRACAO: gestao, AUVO_IMPLANTACAO: admin,
+""", ""),
+]

@@ -302,14 +302,17 @@ test('orçamento do chamado: Comercial recebe a atividade; técnico não vê val
   assert.equal(amb.tabelas.ATV_ATIVIDADES.find((a) => /Orçamento do chamado/.test(a.TITULO)).SITUACAO, 'Concluída');
 });
 
-test('fonte única: Auvo e O.S. do SGO+ na mesma lista, com os campos de sempre; ficha do equipamento junta as duas e o acervo', () => {
+// 18/11/2026: Auvo descontinuado pelo dono. A fonte única, sem origem, devolve só as O.S. do SGO+; as tarefas do Auvo ficam como
+// histórico (origem 'AUVO' ou 'TODAS') e continuam na ficha do equipamento.
+test('fonte única: O.S. do SGO+ (o Auvo fica só como histórico), com os campos de sempre; ficha do equipamento junta O.S., Auvo e acervo', () => {
   const amb = ambiente({ tabelas: { AUVO_TAREFAS: [{ ID: 'a1', AUVO_TASK_ID: '45123', CLIENTE_ID_SGO: 'c1', CLIENTE_NOME_AUVO: 'Hospital Teste Alfa', TECNICO_ID_SGO: 'u_tec', TECNICO_NOME_AUVO: 'TIAGO', TIPO_TAREFA: 'Manutenção Preventiva',
     DATA_TAREFA: '2026-10-10T08:00:00', FINALIZADA: 'SIM', CHECKIN_EM: '2026-10-10T08:10:00', CHECKOUT_EM: '2026-10-10T09:00:00', RELATO_SERVICO: 'Preventiva feita', QTD_FOTOS: 2, EQUIPAMENTOS_ID_SGO: 'eq1', TASK_URL: 'https://app.auvo.exemplo/45123' }] } });
   const { os } = chamadoAgendado(amb);
   ok(sync(amb, 's_tiago', [ev('CHEGUEI', os.id, 1, {}, '2026-10-20T09:05:00')]));
   amb.mudar('2026-10-20T09:30:00-03:00');
-  const l = amb.ctx.SGO_Atendimentos_linhas_();
+  const l = amb.ctx.SGO_Atendimentos_linhas_({ origem: 'TODAS' });
   assert.equal(l.length, 2);
+  assert.deepEqual(JSON.parse(JSON.stringify(amb.ctx.SGO_Atendimentos_linhas_().map((x) => x.ORIGEM))), ['SGO'], 'sem origem: só o SGO+');
   const sgo = l.find((x) => x.ORIGEM === 'SGO');
   assert.equal(sgo.AUVO_TASK_ID, os.numero);
   assert.equal(sgo.TECNICO_ID_SGO, 'u_tec');
@@ -349,16 +352,16 @@ test('regras da assistência: Administrador, Diretoria e Gestor; tipo e modelo d
   assert.equal(ok(amb.app('Ast_appMeuDia', 's_tiago', { dia: '2026-10-20' })).os[0].id, os.id);
 });
 
-test('transição do Auvo: seis critérios; só o Administrador marca "Auvo desligado" e só com todos cumpridos', () => {
-  const amb = ambiente({ tabelas: { AUVO_TAREFAS: [{ ID: 'a1', AUVO_TASK_ID: '45123', CLIENTE_ID_SGO: 'c1', CLIENTE_NOME_AUVO: 'Hospital Teste Alfa', TECNICO_ID_SGO: 'u_tec', TIPO_TAREFA: 'Visita', DATA_TAREFA: '2026-10-15T08:00:00', FINALIZADA: 'NAO', EQUIPAMENTOS_ID_SGO: 'eq1' }] } });
-  let t = ok(amb.api('s_gil', 'transicao', {})).transicao;
-  assert.equal(t.criterios.length, 6);
-  assert.equal(t.todosCumpridos, false);
-  assert.equal(t.criterios[3].abertas.length, 1);
-  assert.match(amb.api('s_gil', 'auvoDesligado', { texto: 'Tentativa sem ser administrador' }).message, /só o Administrador/);
-  assert.match(amb.api('s_admin', 'auvoDesligado', { texto: 'Tentativa antes dos critérios' }).message, /ainda falta cumprir/);
-  assert.match(amb.api('s_gil', 'confirmarCriterio', { chave: 'faltasAceitas', texto: 'Aceito as faltas do relatório' }).message, /decisão do dono/);
-  const d = ok(amb.api('s_gil', 'destinoAuvo', { taskId: '45123', destino: 'RECRIAR', texto: 'Continua no SGO+' }));
-  assert.match(d.message, /chamado CH-2026-0001/);
-  assert.equal(d.transicao.criterios[3].cumprido, true);
+// 18/11/2026: Auvo descontinuado pelo dono. A "Transição do Auvo" (seis critérios, destino das O.S. abertas e "Auvo desligado")
+// saiu da tela e do servidor; o teste antigo foi substituído pela recusa, que não muda nada.
+test('transição do Auvo retirada (18/11/2026): transição, confirmar critério, destino e "Auvo desligado" recusam sem mudar nada', () => {
+  const amb = ambiente({ tabelas: { AUVO_TAREFAS: [{ ID: 'a1', AUVO_TASK_ID: '45123', CLIENTE_ID_SGO: 'c1', CLIENTE_NOME_AUVO: 'Hospital Teste Alfa', TECNICO_ID_SGO: 'u_tec', TIPO_TAREFA: 'Visita', DATA_TAREFA: '2026-10-15T08:00:00', FINALIZADA: 'NAO' }] } });
+  for (const [quem, acao, dados] of [['s_gil', 'transicao', {}], ['s_gil', 'confirmarCriterio', { chave: 'faltasAceitas', texto: 'Aceito as faltas do relatório' }],
+    ['s_gil', 'destinoAuvo', { taskId: '45123', destino: 'RECRIAR', texto: 'Continua no SGO+' }], ['s_admin', 'auvoDesligado', { texto: 'Contrato cancelado' }],
+    ['s_admin', 'importarAuvo', {}], ['s_admin', 'derivarQuestionarios', {}]]) {
+    const r = amb.api(quem, acao, dados);
+    assert.equal(r.ok, false, acao);
+    assert.match(r.message, /descontinuado em 18\/11\/2026/, acao);
+  }
+  assert.equal((amb.tabelas.ATEC_CHAMADOS || []).length, 0, 'nenhum chamado criado');
 });

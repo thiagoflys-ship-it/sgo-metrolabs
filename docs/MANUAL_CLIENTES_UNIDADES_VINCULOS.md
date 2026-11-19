@@ -33,7 +33,7 @@ Cadastro antigo incompleto continua funcionando: propostas, O.S. e certificados 
 
 O botão **Preencher pela Receita** continua disponível para conferência; confirme com o cliente o que veio da Receita antes de marcar o Ciente.
 
-Outros caminhos que criam cliente (cadastro rápido do Certificado de calibração no computador, aplicativo de campo da Assistência, sincronização do Auvo, importação do CRM) continuam como estavam; o que vier incompleto aparece em **Correções de cadastro**, com quem cadastrou. No celular, o novo cliente do assistente do certificado passa pela mesma regra da tela de Clientes.
+Outros caminhos que criam cliente (cadastro rápido do Certificado de calibração no computador, aplicativo de campo da Assistência, importação do CRM) continuam como estavam; o que vier incompleto aparece em **Correções de cadastro**, com quem cadastrou. No celular, o novo cliente do assistente do certificado passa pela mesma regra da tela de Clientes.
 
 ## Cadastrar um cliente
 
@@ -64,7 +64,7 @@ Menu **Cadastros > Correções de cadastro**. Mostra o que precisa de correção
 - **Produtos e serviços** (catálogo do Comercial): item ativo sem preço, sem unidade ou, para quem vê o custo, com preço abaixo do custo. O vendedor não vê o custo, então não vê esse aviso.
 - **Possíveis duplicados:** clientes com o mesmo CNPJ ou CPF, ou com nome muito parecido (sem acento, maiúsculas, pontuação e palavras como LTDA, ME, EPP, EIRELI e S/A); unidades com o mesmo CNPJ ou com o mesmo nome no mesmo cliente; itens ativos do catálogo com o mesmo nome. Dois clientes com CNPJs válidos e diferentes não entram (são empresas ou filiais diferentes).
 
-Cada linha mostra o problema, desde quando, quem cadastrou e quem deu o Ciente. Cadastros anteriores a 29/10/2026 aparecem com "Não registrado" em quem cadastrou (ou com a origem: Integração Auvo, Importação do CRM, cadastro em campo).
+Cada linha mostra o problema, desde quando, quem cadastrou e quem deu o Ciente. Cadastros anteriores a 29/10/2026 aparecem com "Não registrado" em quem cadastrou (ou com a origem: Histórico do Auvo, Importação do CRM, cadastro em campo).
 
 Quem vê: Diretoria e Administrador veem os cadastros de toda a empresa; os demais veem os problemas dos cadastros que eles mesmos fizeram.
 
@@ -72,7 +72,7 @@ Ações:
 
 - **Corrigir:** abre o cadastro com os campos que faltam marcados. Item do catálogo abre **Comercial > Produtos e serviços** filtrado pelo código; o item é corrigido pelo **Editar** da linha.
 - **Juntar** (Diretoria e Administrador): escolha qual cadastro fica; a prévia mostra os dois lado a lado e você escolhe, campo a campo, qual valor fica. A identificação (CNPJ ou CPF) é a do cadastro que fica; se só um tem CNPJ, ele precisa ser o que fica.
-  - Clientes e unidades: a junção usa a consolidação de **Vínculos**, com prévia válida por 10 minutos e auditoria. Unidades, equipamentos, documentos do Arquivo, contatos, a ligação com o Auvo, oportunidades, propostas e contatos registrados do Comercial vão para o cadastro que fica. Certificados, laudos NR-13 e atendimentos ficam no cadastro original. Qualquer outro registro ligado trava a junção e a prévia diz em qual tabela; nada é alterado.
+  - Clientes e unidades: a junção usa a consolidação de **Vínculos**, com prévia válida por 10 minutos e auditoria. Unidades, equipamentos, documentos do Arquivo, contatos, a ligação com o histórico do Auvo, oportunidades, propostas e contatos registrados do Comercial vão para o cadastro que fica. Certificados, laudos NR-13 e atendimentos ficam no cadastro original. Qualquer outro registro ligado trava a junção e a prévia diz em qual tabela; nada é alterado.
   - Catálogo: as propostas e os itens de pedido de compra passam a apontar o item que fica; preço e descrição já gravados nas propostas não mudam. O histórico de preço e de reajustes continua no item original.
   - O que sai nunca é apagado: fica inativo (no catálogo, arquivado) com a marca "juntado com" o que ficou, quem juntou e quando. Item do catálogo juntado não pode ser reativado.
 - **Não é duplicado** (Diretoria e Administrador): com o motivo; o par sai da lista e não volta.
@@ -103,11 +103,11 @@ Quem corrige vínculos (transferir, desvincular, consolidar): Administrador, Dir
 
 As mudanças do painel registram usuário, motivo e valores anteriores e posteriores na auditoria. Equipamentos acompanham a transferência de sua unidade; documentos antigos permanecem associados ao atendimento original.
 
-### Unidades ligadas ao Auvo (21/10/2026)
+### Unidades ligadas ao Auvo (histórico; Auvo descontinuado em 18/11/2026)
 
-- **Desvincular** uma unidade ligada ao Auvo não é mais impedido pela mensagem "vínculo com o Auvo incompleto ou repetido". A ligação da unidade com o cliente do Auvo continua guardada com a unidade; enquanto ela estiver sem cliente, tarefa nova do Auvo nesse endereço fica pendente em **Integração Auvo**.
-- **Transferir** a unidade para outro cliente leva junto os equipamentos, os documentos, os contatos da unidade e a ligação do cliente Auvo daquele endereço (quando existir).
-- **Excluir** uma unidade que só tem a ligação com o Auvo criada pelo próprio SGO+ e/ou um contato: a prévia mostra que a ligação fica guardada como de cadastro excluído (para consulta) e que o contato fica inativo; nada é apagado além da unidade. Se a unidade é o cadastro original de um cliente do Auvo (veio do Auvo) ou se o Auvo tem atendimento nesse cliente, a exclusão é impedida e a prévia orienta **Inativar** ou **Consolidar** — a ligação com o Auvo vale para o cadastro original.
+- A ligação da unidade com o cliente do Auvo fica guardada com a unidade, só para consulta. Desvincular, transferir e excluir não são impedidos por ela.
+- **Transferir** a unidade para outro cliente leva junto os equipamentos, os documentos, os contatos da unidade e a ligação com o histórico do Auvo daquele endereço (quando existir).
+- **Excluir** uma unidade que só tem a ligação com o histórico do Auvo e/ou um contato: a prévia mostra que a ligação fica guardada como de cadastro excluído (para consulta) e que o contato fica inativo; nada é apagado além da unidade.
 - **Excluir cliente ou unidade que só tem contatos** (26/10/2026): os contatos do próprio cadastro não impedem mais a exclusão, nem em Cadastros > Clientes/Unidades nem em Vínculos. Depois da exclusão eles ficam inativos na lista de contatos (não são apagados) e a mensagem diz quantos. Unidade, equipamento, documento, negociação e os demais registros ligados continuam impedindo.
 - Contatos da unidade acompanham Transferir e Consolidar; em Desvincular ficam no cadastro original.
 

@@ -1,0 +1,173 @@
+JS_Admin.html:350:     if (u.TECNICA) return '<span class="cadx-sub">Conta técnica (Auvo)</span>';
+JS_Admin.html:514:         var nota = semSenha || (u.TECNICA ? "Conta técnica do Auvo: não usa senha de pessoa." : u.SEM_EMAI
+JS_Assistencia.html:611: lass="btn-secondary" data-acervo="' + At_esc_(x.numero) + '">Fotos do Auvo (' + At_esc_(x.qtdArquivos) + ')</butto
+JS_Assistencia.html:616:       At_modal_("Tarefa " + taskId + " do Auvo (histórico)", r.arquivos.length ? '<div
+JS_Assistencia.html:1661: me) + ' · versão ' + m.versao + (m.origem === "AUVO" ? ' · trazido do Auvo' : '') + '</p><p class="at-meta">' + m.
+JS_Atividades.html:293: s += ' <span class="atv-selo neutro" title="Atendimento registrado no Auvo (só consulta)">Auvo</span>';
+JS_Atividades.html:1843:           (a._auvo ? "\nAtendimento do Auvo" + (a.TAREFA ? " nº " + a.TAREFA : "") 
+JS_CadastroCorrecoes.html:12:     AUVO_SYNC: "Histórico do Auvo (ligações)", COM_OPORTUNIDADES: "Oportu
+JS_Compras.html:303:           Cp_campo_("Número da O.S. do Auvo (se houver)", '<input type="text" id="c
+JS_Compras.html:393: lienteId; vinc.unidadeId = (Cp_$_("cpUni") || {}).value || ""; vinc.osAuvo = (Cp_$_("cpOs") || {}).value || ""; }
+JS_Compras.html:1226: adoNumero: g("ciCh"), clienteId: g("ciCli"), unidadeId: g("ciUni"), osAuvo: g("ciOs"), propostaId: g("ciProp"), ve
+JS_Core.html:889:     const btnHistAuvo = document.querySelector('#menu .menu-b
+JS_Core.html:890:     if (btnHistAuvo) btnHistAuvo.style.display = (perfilMen
+JS_Core.html:1317:       renderMotorModulo_("Histórico do Auvo", "auvo_historico");
+JS_Core.html:7062:       auvo_historico: "Histórico do Auvo",
+JS_DocumentosPastas.html:172:     }).join("") + '<p class="dpst-desc dpst-just">Atendimentos do Auvo e do histórico copiado do Auvo. Só a eq
+JS_Equipamentos.html:132: rigem || "AUVO") ? '<span class="cadx-selo bc-selo">Não finalizado no Auvo</span>' : '<span class="cadx-selo bc-se
+JS_Equipamentos.html:133:                '<div class="cadx-sub">' + CadUI_esc_(x.origemNome || "Auvo") + (x.numero ? " " + CadUI_esc_(x.nume
+JS_Equipamentos.html:138:  class="cadx-btn" data-acervo="' + CadUI_esc_(x.numero) + '">Fotos do Auvo</button>' : "") + "</div></li>";
+JS_Equipamentos.html:139: o">Nenhum atendimento ligado a este equipamento (SGO+ ou histórico do Auvo).</div>';
+JS_Equipamentos.html:141: ("equipamentosObter", [e.ID], function (res) { auvo = res.atendimentosAuvo || []; if (CADUI.painel === cfg && cfg.
+JS_Gestao.html:377:       (san ? Gestao_esc_(san) + (san === 1 ? ' O.S. do Auvo chegou' : ' O.S. do Auvo chegaram') + '
+JS_Gestao.html:526: h3>Saneamento do acúmulo</h3><p class="gd-just">Aqui ficam as O.S. do Auvo que chegaram à caixa com mais de ' + Ge
+JS_Gestao.html:527: na, não decisão parada do gestor: não entram na avaliação. Confira no Auvo pelo link de cada O.S.; se o atendiment
+JS_Gestao.html:528:       'Nada é apagado e nada muda no Auvo: o registro guarda quem marcou, quando 
+JS_Gestao.html:529:       '<div class="gd-kpis">' + kp(os.total, "O.S. antigas do Auvo", os.total ? "aviso" : "ok") + kp(os.to
+JS_Gestao.html:530: ", sv.total ? "aviso" : "ok") + kp(sv.porTecnico.length, "Técnicos do Auvo sem cadastro") + kp(s.saneadasEmVigor, 
+JS_Gestao.html:533:       '<div class="gd-caixa" style="margin-top:14px"><h3>O.S. do Auvo abertas há mais de ' + Gestao_esc_(s.co
+JS_Gestao.html:534: ois"><div><p class="gd-meta"><b>De quando são</b> (mês de abertura no Auvo)</p>' + Gestao_barrasHtml_(os.epocas, "
+JS_Gestao.html:539: : atendimentos de 2025 já faturados; as O.S. ficaram sem finalizar no Auvo"></textarea>' +
+JS_Gestao.html:541:         : '<div class="gd-vazio">Nenhuma O.S. antiga do Auvo na caixa.</div>') + '</div>' +
+JS_Gestao.html:544:       (sv.total ? '<p class="gd-just">A causa é uma por técnico do Auvo sem cadastro no SGO+. O jeito certo é v
+JS_Gestao.html:545: ar"><table class="gd-tabela gd-cartoes-cel"><thead><tr><th>Técnico no Auvo</th><th class="n">O.S.</th><th>O que fa
+JS_Gestao.html:546:           return '<tr><td data-r="Técnico no Auvo"><label><input type="checkbox" onchange
+JS_Gestao.html:547: lass="btn-secondary" onclick="abrir(\'auvo\')">Vincular em Integração Auvo</button></td></tr>';
+JS_Gestao.html:571: n-tab"><thead><tr><th></th><th>O.S.</th><th>Técnico</th><th>Aberta no Auvo</th><th>Com quem na caixa</th><th></th>
+JS_Gestao.html:574: -r="Técnico">' + Gestao_esc_(x.tecnico) + '</td><td data-r="Aberta no Auvo">' + Gestao_esc_(x.origemBr) + (x.diasO
+JS_Gestao.html:575:  + Gestao_esc_(x.url) + '" target="_blank" rel="noopener">Conferir no Auvo</a>' : '') + '</td></tr>';
+JS_Gestao.html:604: las saem') + ' da caixa e da avaliação; nada é apagado e nada muda no Auvo.<div class="gd-acoes"><button type="but
+JS_Gestao.html:934: ra da avaliação: ' + (t.saneamento ? t.saneamento + ' O.S. antigas do Auvo' : '') + (t.saneamento && t.cadastro ? 
+JS_Gestao.html:940:  da avaliação (saneamento)", fora ? "neutro" : "ok", "O.S. antigas do Auvo e O.S. sem vínculo") + '</div>';
+JS_Gestao.html:941: faixa"><div><strong>Saneamento:</strong> ' + (s.os ? s.os + ' O.S. do Auvo chegaram à caixa com mais de ' + s.cort
+JS_Gestao.html:992: Nota ? '<p class="gd-meta">Fora da nota: ' + g.foraDaNota + ' O.S. do Auvo no saneamento (antigas ou sem vínculo).
+JS_Gestao.html:999:       ["SANEAMENTO", "Saneamento: O.S. do Auvo abertas há mais de " + a.saneamento.cor
+JS_Gestao.html:1000: o: O.S. sem vínculo de técnico ou cliente", "Uma causa por técnico do Auvo sem cadastro: vincule em Integração Auv
+JS_Gestao.html:1011: '') + (g.origemMaisAntigaBr ? '<span class="gd-chip neutro">aberta no Auvo desde ' + Gestao_esc_(g.origemMaisAntig
+JS_Gestao.html:1035:       '<p class="gd-just">Fora da nota: itens do Auvo, retirados da Caixa quando o Auvo foi d
+JS_Vinculos.html:29: ó funciona se nada estiver ligado a ele; a ligação com o histórico do Auvo fica guardada e o contato da unidade fi
+JS_Vinculos.html:41: ibração", NR13_LAUDOS: "Laudos NR-13", AUVO_TAREFAS: "Atendimentos do Auvo", AUVO_SYNC: "Integração com o Auvo", C
+JS_Vinculos.html:42: ões de referência"], ["NR13", "Laudos NR-13"], ["AUVO", "Histórico do Auvo"], ["FROTA", "Frota"], ["FRT", "Frota"]
+JS_Vinculos.html:43: o", STATUS: "Situação", ENTIDADE_ID: "Cadastro ligado no histórico do Auvo", CLIENTE_ID_SGO: "Cliente", EQUIPAMENT
+JS_Vinculos.html:67:  pasta e o link não muda. Certificados, laudos NR-13 e o histórico do Auvo ficam no cadastro original. Nada é apag
+JS_WhatsappPiloto.html:87: /b> não recebem WhatsApp durante o piloto (Atendente de IA, avisos do Auvo, orçamento do chamado).</li>" +
+SGO_Assistencia_Chamados.js:598:  tipo: 'CLIENTE', clienteId: c.CLIENTE_ID, unidadeId: c.UNIDADE_ID, osAuvo: c.NUMERO },
+SGO_Assistencia_Chamados.js:769: xto: 'Tarefa ' + Ast_s_(c.ORIGEM_REF).replace(/^AUVO\s*/i, '') + ' do Auvo (transição)', efeito: 'Nada muda no Auv
+SGO_Assistencia_Fonte.js:96:   var saida = [], vistosAuvo = {};
+SGO_Assistencia_Fonte.js:102:     if (t.ORIGEM === 'AUVO') vistosAuvo[Ast_s_(t.AUVO_TASK_ID)] = true;
+SGO_Assistencia_Fonte.js:103: a.push({ origem: t.ORIGEM, origemNome: t.ORIGEM === 'SGO' ? 'SGO+' : 'Auvo (histórico)', numero: Ast_s_(t.AUVO_TAS
+SGO_Assistencia_Fonte.js:105: tecnico: Ast_s_(t.TECNICO_NOME_AUVO) || (t.TECNICO_AUVO_ID ? 'Técnico Auvo #' + t.TECNICO_AUVO_ID : ''),
+SGO_Assistencia_Fonte.js:109:     if (Ast_s_(a.EQUIPAMENTO_ID_SGO) !== equipId || vistosAuvo[Ast_s_(a.AUVO_TASK_ID)]) return;
+SGO_Assistencia_Fonte.js:111:     vistosAuvo[Ast_s_(a.AUVO_TASK_ID)] = true;
+SGO_Assistencia_Fonte.js:112:     saida.push({ origem: 'AUVO_ACERVO', origemNome: 'Auvo (histórico)', numero: Ast_s_(a.AUVO_TAS
+SGO_Assistencia_Fonte.js:122:   Ast_exigir_(eu, 'INTERNO', 'ver as fotos do histórico do Auvo');
+SGO_Assistencia_Fonte.js:124: hrow new Error('Não foi possível abrir: informe o número da tarefa do Auvo');
+SGO_Assistencia_Fonte.js:172: os: 0, total: 0, restantes: 0, concluido: false, motivo: 'o acervo do Auvo ainda não tem tarefas copiadas' };
+SGO_Assistencia_Fonte.js:198: ', nome: o.porNome || 'Rotina da Assistência' }, 'Índice do acervo do Auvo por equipamento'); } catch (e2) {}
+SGO_Assistencia_Fonte.js:203:   Ast_exigir_(eu, 'GESTAO', 'ver a revisão do histórico do Auvo');
+SGO_Assistencia_Fonte.js:205: ), data: Ast_brDia_(r.DATA_TAREFA), tipo: Ast_s_(r.TIPO_TAREFA), equipAuvo: Ast_s_(r.EQUIP_AUVO_ID), clienteSgo: !
+SGO_Assistencia_Fonte.js:219:     return l && l.length ? l : null; // lista vazia (o Auvo não respondeu): os modelos saem das tar
+SGO_Assistencia_Fonte.js:240: pcoes.sistema)) Ast_exigir_(eu, 'REGRAS', 'trazer os questionários do Auvo');
+SGO_Assistencia_Fonte.js:242: ssível trazer os questionários: a lista de questionários do acervo do Auvo não foi encontrada. Ela é copiada na et
+SGO_Assistencia_Fonte.js:243:   var tiposAuvo = AstF_listaApoio_('tipos_de_tarefa') |
+SGO_Assistencia_Fonte.js:256: t_texto_(q.description || q.name || ('Questionário ' + id), 150) + ' (Auvo)', VERSAO: 1,
+SGO_Assistencia_Fonte.js:262:   tiposAuvo.forEach(function (t) { porAuvoId[Ast_s_
+SGO_Assistencia_Fonte.js:276:   tiposAuvo.forEach(function (ta, i) {
+SGO_Assistencia_Fonte.js:281:  'OUTROS', DESCRICAO: Ast_texto_(ta.description, 300) + ' (trazido do Auvo)', EXIGE_RELATO: r.fillReport ? 'SIM' :
+SGO_Assistencia_Fonte.js:286: 'MODELOS', 'IMPORTACAO_AUVO', eu, novos.length + ' questionário(s) do Auvo viraram modelos; ' + ligados + ' tipo(s
+SGO_Assistencia_Fonte.js:288:     message: novos.length + ' questionário(s) do Auvo viraram modelos de checklist' + (ligado
+SGO_Assistencia_Painel.js:248:     if (qd && qd.concluido) return { fora: 'checklists das tarefas do Auvo já montados (rascunho)' };
+SGO_Assistencia_Painel.js:295:   { k: 'c1', t: 'Cópia do acervo do Auvo com zero faltas (ou faltas aceitas pelo
+SGO_Assistencia_Painel.js:298:   { k: 'c4', t: 'Nenhuma O.S. aberta no Auvo, ou cada uma com destino registrado' },
+SGO_Assistencia_Painel.js:312: ando.' : 'Ainda não há relatório de conferência do acervo (Integração Auvo > Acervo do Auvo).'),
+SGO_Assistencia_Painel.js:316:   var c2 = { auto: auvo28 ? auvo28 + ' tarefa(s) no Auvo nos últimos 28 dias (e ' + sgo28 + ' O.
+SGO_Assistencia_Painel.js:320:   var abertasAuvo = auvo.filter(function (x) { return Ast
+SGO_Assistencia_Painel.js:321:   var semDestino = abertasAuvo.filter(function (x) { return !destinos[
+SGO_Assistencia_Painel.js:322:   var c4 = { auto: abertasAuvo.length ? abertasAuvo.length + ' O.S. ab
+SGO_Assistencia_Painel.js:361:   if (t.auvoDesligado) throw new Error('Não foi possível mudar: o Auvo já foi marcado como desligado em ' + As
+SGO_Assistencia_Painel.js:369:   Ast_exigir_(eu, 'GESTAO', 'registrar o destino da O.S. do Auvo');
+SGO_Assistencia_Painel.js:371:  (!id) throw new Error('Não foi possível registrar: informe a O.S. do Auvo');
+SGO_Assistencia_Painel.js:372: w new Error('Não foi possível registrar: escolha o destino (fechar no Auvo, recriar como chamado no SGO+ ou não ho
+SGO_Assistencia_Painel.js:381:       equipamentoDescricao: 'Equipamento da tarefa ' + id + ' do Auvo', sintoma: Ast_texto_(d.sintoma, 1000) 
+SGO_Assistencia_Painel.js:386:   Ast_cfgGravar_('TRANSICAO', t, eu, 'Destino da tarefa ' + id + ' do Auvo: ' + dest);
+SGO_Assistencia_Painel.js:391:   Ast_exigir_(eu, 'ADMIN', 'marcar o Auvo como desligado');
+SGO_Assistencia_Painel.js:398:   Ast_cfgGravar_('TRANSICAO', t, eu, 'Auvo marcado como desligado: ' + texto);
+SGO_Assistencia_Painel.js:399:   return { transicao: AstP_transicao_(eu), message: 'Registrado: Auvo desligado. Agora desligue os gatilhos e
+SGO_Assistencia_Painel.js:724:   importarAuvo: function () { throw Auvo_erroDescontin
+SGO_Assistencia_Painel.js:738:   destinoAuvo: function () { throw Auvo_erroDescontin
+SGO_Assistencia_Painel.js:740: ervo: function (eu) { Ast_exigir_(eu, 'GESTAO', 'ligar o histórico do Auvo aos equipamentos'); return { indice: As
+SGO_Assistencia_Painel.js:801:  "Ligar" (com o motivo). Enquanto isso, o atendimento novo segue pelo Auvo.' };
+SGO_Assistencia_Questionarios.js:116: tringify(est), VERSAO: 1, MOTIVO: 'Checklists a partir das tarefas do Auvo: ' + est.cursor + ' de ' + est.total + 
+SGO_Assistencia_Questionarios.js:124: , atualizados = 0, agora = Ast_agora_(), rotina = 'Rotina (tarefas do Auvo)';
+SGO_Assistencia_Questionarios.js:137:     var dados = { NOME: (a.nome || 'Questionário ' + id) + ' (Auvo, ' + a.n + ' tarefas)', PERGUNTAS_JSON:
+SGO_Assistencia_Questionarios.js:141: s) como rascunho a partir de ' + est.comQuestionario + ' tarefa(s) do Auvo.');
+SGO_Assistencia_Questionarios.js:148: t_exigir_(eu, 'REGRAS', 'montar os checklists a partir das tarefas do Auvo');
+SGO_Assistencia_Questionarios.js:153:     message: est.total ? 'Tarefas do Auvo lidas: ' + est.cursor + ' de ' + est.to
+SGO_Assistencia_Questionarios.js:155:       'O acervo do Auvo ainda não tem tarefas copiadas (Integra
+SGO_Atividades.js:1593: || 'Atendimento') + ' · ' + String(t.CLIENTE_NOME_AUVO || 'cliente do Auvo')).slice(0, 160), INICIO: ini, FIM: fim
+SGO_Atividades.js:1596:   } catch (e) { console.error('Agenda, atendimentos do Auvo: ' + ((e && e.message) || e)); return [
+SGO_Auth.js:791:    de documentos técnicos, inventário, Integração Auvo, Painel de qualidade,
+SGO_Auth.js:813:    conduta, Integração Auvo, Painel de qualidade, excluir cadastro
+SGO_Auth.js:816:    integrações e credenciais, acervo do Auvo, modos especiais, Matriz de
+SGO_Avisos_Matriz.js:203:   { cod: 'S54', evento: 'Chamado técnico aberto (Auvo)', antes: { email: 'RESUMO', whatsapp: 
+SGO_Avisos_Matriz.js:204:   { cod: 'S55', evento: 'Chamado técnico concluído (Auvo)', antes: { email: 'NAO', whatsapp: 'NA
+SGO_Avisos_Matriz.js:205:   { cod: 'S56', evento: 'Chamado aberto ou concluído, ao cliente (Auvo)', antes: { email: 'HORA', whatsapp: 'N
+SGO_Avisos_Matriz.js:207: ssign({ retiradoEm: '2026-11-18T00:00:00', por: 'Sistema (retirada do Auvo)',
+SGO_Avisos_Matriz.js:208:     motivo: 'O Auvo foi descontinuado pelo dono em 18/11/20
+SGO_Avisos_Matriz.js:941: DO_EM: agoraTxt, MOTIVO: Mtz_s_(v.MODULO).toLowerCase() === 'auvo' ? 'Auvo descontinuado em 18/11/2026; não foi en
+SGO_CadastroQualidade.js:382:  var o = CadQ_up_(r.ORIGEM); if (/AUVO/.test(o)) nome = 'Histórico do Auvo'; else if (/CRM/.test(o)) nome = 'Impor
+SGO_CertCal_Main.js:13: º "+numero+" — "+ctx.equipamento.tag,"CERTCAL",avisos);/* 18/11/2026: Auvo descontinuado pelo dono; a emissão não 
+SGO_Compras_Config.js:136: var CMP_VINCULOS = { CLIENTE: 'Cliente (atendimento, O.S. do Auvo)', COMERCIAL: 'Pedido aprovado do Comer
+SGO_Compras_Informar.js:187: NTE', clienteId: chamado.CLIENTE_ID, unidadeId: chamado.UNIDADE_ID, osAuvo: Cmp_s_(chamado.NUMERO) };
+SGO_Compras_Requisicoes.js:52: mp_s_(r.UNIDADE_NOME) + ')' : '')) + (Cmp_s_(r.OS_AUVO) ? ' · O.S. do Auvo ' + Cmp_s_(r.OS_AUVO) : '');
+SGO_Compras_Requisicoes.js:73:     c.OS_AUVO = Cmp_texto_(v.osAuvo, 40);
+SGO_Compras_Requisicoes.js:126:       veiculoId: Cmp_s_(r.VEICULO_ID), osAuvo: Cmp_s_(r.OS_AUVO), motivoInterno: Cmp_
+SGO_Conduta_Biblioteca.js:2: o no lugar do condutor; KM a conferir</td><td>VEI-04</td></tr><tr><td>Auvo</td><td>O.S. finalizada sem foto, sem r
+SGO_Conduta_ConteudoModulo.js:1: ato descrito e, quando veio de sugestão, o registro de origem (Frota, Auvo, Atividades...).\n  if (o.DESCRICAO) h 
+SGO_Conduta_Qualidade.js:45:   AUVO: { nome: 'Auvo (descontinuado)', tela: '' },
+SGO_Conduta_Qualidade.js:410:   var retiradasAuvo = 0;
+SGO_Conduta_Qualidade.js:414:       MOTIVO: 'O Auvo foi descontinuado em 18/11/2026: sugest
+SGO_Conduta_Qualidade.js:415:     retiradasAuvo++;
+SGO_Conduta_Qualidade.js:418:   var r = { novas: novas.length, superadas: superadas, retiradasAuvo: retiradasAuvo, porOrigem: porOrigem, a
+SGO_Conduta_Qualidade.js:419:   if (novas.length || superadas || retiradasAuvo) SGO_DATA.log('CONDUTA_SUGESTOES_COLETA
+SGO_Config.js:169:          mão única SGO -> Auvo (Clientes, Técnicos/Usuários, Tarefas).
+SGO_Config.js:175:          pendências de qualidade de outros módulos (Auvo, Frota, NR-13)
+SGO_Config.js:186:          ligado ao Auvo). Valor aqui é só um marcador não-vazio
+SGO_EnviarDoc.js:86:   { rx: /^Auvo - Relat/i, tipo: 'Relatório de atendime
+SGO_Equipamentos.js:83:     const atendimentosAuvo = listarAtendimentosAuvo_(equipId, sess
+SGO_Equipamentos.js:91:       atendimentosAuvo: atendimentosAuvo
+SGO_Equipamentos.js:120:         tecnico: t.TECNICO_NOME_AUVO || (t.TECNICO_AUVO_ID ? "Técnico Auvo #" + t.TECNICO_AUVO_ID : ""),
+SGO_Frota_ConteudoModulo.js:1: paradas de 5 minutos ou mais e, quando o condutor tem atendimentos no Auvo, o deslocamento até cada um.</li>\n    
+SGO_Gestao_Decisoes.js:76: ecisão', SANEADA: 'Saneada (fora da avaliação)', RETIRADA: 'Retirada (Auvo descontinuado)' };
+SGO_Gestao_Painel.js:56:   var m = /aberta no Auvo h[áa]\s+([\d.]+)\s+dia/i.exec(Ges_s_(ti
+SGO_Gestao_Painel.js:341:     var t = i.tela || {}, tecAuvo = (/técnico "([^"]+)"/.exec(Ges_s_(i.de
+SGO_Gestao_Painel.js:342: ])[1] || '', titulo: i.titulo, tecnico: i.classe === 'CADASTRO' ? (tecAuvo || 'técnico do Auvo sem nome') : (i.env
+SGO_Gestao_Painel.js:378: plo "Atendimentos de 2025 já faturados; O.S. ficaram sem finalizar no Auvo", e toque de novo');
+SGO_Gestao_Painel.js:387: , motivo: 'não é ' + (def.tipo === 'auvo_os_aberta' ? 'O.S. aberta no Auvo' : 'O.S. sem vínculo') }); return; }
+SGO_Gestao_Painel.js:388: { id: id, motivo: 'entrou na Caixa com menos de ' + corte + ' dias no Auvo: é decisão do gestor, resolva no Auvo' 
+SGO_Gestao_Painel.js:407: aíram') + ' da Caixa e da avaliação; nada foi apagado e nada mudou no Auvo.' +
+SGO_Gestao_Painel.js:431: volta para a Caixa na próxima atualização (se ainda estiver aberta no Auvo).' };
+SGO_Main.js:259:     return t.CLIENTE_AUVO_ID ? ("Cliente Auvo #" + t.CLIENTE_AUVO_ID) : "Cliente não 
+SGO_Main.js:265:     return t.TECNICO_AUVO_ID ? ("Técnico Auvo #" + t.TECNICO_AUVO_ID) : "Técnico não 
+SGO_Notificar.js:352:     uso: 'Chamado técnico aberto (cliente, chamado, agendamento) — Auvo/COMMAND',
+SGO_Notificar.js:358:     uso: 'Chamado técnico concluído (cliente, chamado, data) — Auvo/COMMAND',
+SGO_PgtPop_IA.js:731: var PGTPOPIA_MARCAS = ['Auvo', 'Excel', 'Tasy', 'Philips', 'Siemens'
+SGO_Poderes.js:218:   ["AUVO_ACERVO", "Painel de qualidade e histórico do Auvo", "Histórico do Auvo (somente consulta)
+SGO_Poderes.js:219:   ["QUALIDADE_VER_PAINEL", "Painel de qualidade e histórico do Auvo", "Painel de qualidade", "Painel, lista
+SGO_Poderes.js:220:   ["QUALIDADE_REGISTRAR", "Painel de qualidade e histórico do Auvo", "Registrar e resolver ocorrência de q
+SGO_Ponto_Config.js:528:  return (t.origem === 'SGO' ? 'SGO+ (O.S. ' + t.id + '): chegada ' : 'Auvo (tarefa ' + t.id + '): check-in ') + (i
+SGO_PortalCliente_Seguranca.js:45: esentacao|Atividades|Avisos|AvisosMatriz|Inventario|Qualidade|AutPred|Auvo|Email|Assistente|ModoPers|WaPiloto|Port
+SGO_Qualidade_Auvo.js:65:       return t.TECNICO_AUVO_ID ? ('Técnico Auvo #' + t.TECNICO_AUVO_ID) : 'Técnico não 
+SGO_Qualidade_Auvo.js:71:       return t.CLIENTE_AUVO_ID ? ('Cliente Auvo #' + t.CLIENTE_AUVO_ID) : 'Cliente não 
+SGO_SegurancaAcesso.js:1079: Acesso_foraDoFluxo_(alvo.PERFIL)) throw new Error('A conta técnica do Auvo não usa senha de pessoa: o link não se 
+SGO_Unidades.js:341: (msg) ? " Se o que prende a unidade é só a ligação com o histórico do Auvo (AUVO_SYNC), exclua por Cadastros > Vín
+SGO_Vinculos.js:146:     const avisosAuvo=[];
+SGO_Vinculos.js:162:         if(!clientId){avisosAuvo.push(customer);return;}
+SGO_Vinculos.js:178:       if(avisosAuvo.length)warnings.push('A ligação desta u
+SGO_Vinculos.js:261:       const nAuvo=[...new Set(proprios.map(m=>text(m.AUVO
+SGO_Vinculos.js:262:       const comTarefa=nAuvo.filter(a=>base(snapshot,'AUVO_TAREFAS')
+SGO_Vinculos.js:264:       const presos=[]; // 18/11/2026: Auvo descontinuado; nenhuma ligação com o Au
+SGO_Vinculos.js:265:       const nomeTela={AUVO_SYNC:'Histórico do Auvo (ligações)',AUVO_TAREFAS:'Histórico do 
+SGO_Vinculos.js:275: sh('Não dá para excluir: este cadastro é o que está ligado ao cliente Auvo nº '+presos.join(', ')+(comTarefa.lengt
+SGO_Vinculos.js:279:         if(nAuvo.length)warnings.push('A ligação deste c
+SGO_WhatsappPiloto.js:52:  setor', descricao: 'Frota, Comercial, Compras, Assistência, Conduta, Auvo e Segurança predial' }

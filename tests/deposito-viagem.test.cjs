@@ -348,10 +348,11 @@ test('caixas no motor (lote 12): no catálogo e ligadas com o módulo; exceção
   const v = cat.lista.filter((p) => p.modulo === 'Depósito de viagem');
   assert.deepEqual(Array.from(v, (p) => p.codigo), ['VIAGEM_SOLICITAR', 'VIAGEM_VER_TODAS', 'VIAGEM_APROVAR', 'VIAGEM_APROVAR_DIRETORIA', 'VIAGEM_DEPOSITAR', 'VIAGEM_CONFERIR', 'VIAGEM_POLITICA', 'VIAGEM_CENTRO_CUSTO']);
   assert.ok(v.every((p) => p.ligado && p.lote === 12));
-  assert.equal(cat.lista.length, 158, '150 do catálogo congelado + 8 do lote 12 (E2: VIAGEM_CONFERIR)');
-  // sem o módulo, o catálogo do lote 0 fica como era (150)
+  // 18/11/2026: Auvo descontinuado pelo dono; 4 caixas do Auvo saíram do catálogo do lote 0 (150 -> 146).
+  assert.equal(cat.lista.length, 154, '146 do catálogo do lote 0 + 8 do lote 12 (E2: VIAGEM_CONFERIR)');
+  // sem o módulo, o catálogo do lote 0 fica como era (146)
   const b = ambiente({ semArquivos: ['SGO_Viagem.js', 'SGO_Viagem_Documento.js', 'SGO_Viagem_Painel.js', 'SGO_Viagem_Prestacao.js', 'SGO_Viagem_Fechamento.js'] });
-  assert.equal(b.ctx.SGO_poderesCatalogo_().lista.length, 150);
+  assert.equal(b.ctx.SGO_poderesCatalogo_().lista.length, 146);
   // exceção: tirar VIAGEM_APROVAR do Matheus -> ninguém da gerência -> Diretoria
   a.ok(a.ctx.Poderes_api('s_admin', 'salvar', { usuarioId: 'u_mat', motivo: 'Matheus de férias em novembro', mudancas: [{ codigo: 'VIAGEM_APROVAR', valor: 'NAO' }] }));
   const s = criarCompleta(a);

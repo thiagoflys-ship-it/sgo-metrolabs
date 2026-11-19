@@ -17,7 +17,7 @@ A fonte é a central de pendências do SGO+ (a mesma do Início). Entram as pend
 | Frota | KM a conferir, devolução esquecida, multa sem condutor, multa vencendo ou vencida, CNH vencida ou com 7 dias ou menos, manutenção e documento do veículo (vencidos ou com 15 dias ou menos), avaria sem caso, comprovante não enviado, reserva em risco ou com problema, uso sem registro e alertas do rastreador, caso do Kanban em análise, plano de ação vencido, sugestão do copiloto de alta gravidade |
 | Atividades | atividade atrasada da equipe; pedido de nova data para decidir (um item por atividade, desde 31/10/2026) |
 | Avisos | aviso com prazo de leitura vencido e gente sem confirmar |
-| Qualidade e Auvo | O.S. com registro incompleto, retirada com registro incompleto, O.S. aberta, O.S. sem vínculo, importação do Auvo parada (administrador) |
+| Qualidade | O.S. com registro incompleto, retirada com registro incompleto (desde 18/11/2026 os itens do Auvo não existem mais: o Auvo foi descontinuado pelo dono) |
 | Padrões e planos | padrão vencido, sem validade ou com 15 dias ou menos; plano de ação do Programa de conduta com prazo vencido |
 | Acompanhamento | documentos, calibrações e laudos NR-13 vencidos dos clientes: aparecem em aba própria e no e-mail como contagem, mas não sobem a escada nem entram na avaliação (dependem do cliente) |
 
@@ -25,7 +25,7 @@ Novos itens que a central não tinha (homologar, julgar, missão, pedido de nova
 
 ## 3. Quem recebe cada item
 
-1. Área do item: a área da pessoa envolvida (Administração > Usuários > Áreas) ou, quando o item não é de uma pessoa, a área padrão do módulo (padrões e certificados: Metrologia; documentos de clientes: Comercial; NR-13 e Auvo: Técnica/Campo; Frota, Atividades e Avisos: Administrativo; Programa de conduta: RH; Qualidade: Qualidade). Todas configuráveis.
+1. Área do item: a área da pessoa envolvida (Administração > Usuários > Áreas) ou, quando o item não é de uma pessoa, a área padrão do módulo (padrões e certificados: Metrologia; documentos de clientes: Comercial; NR-13: Técnica/Campo; Frota, Atividades e Avisos: Administrativo; Programa de conduta: RH; Qualidade: Qualidade). Todas configuráveis.
 2. Responsável pela área (Caixa de decisões > Regras e responsáveis; só Administrador e Diretoria configuram). Pode ser Gestor, RH ou Financeiro. RH e Financeiro abrem a caixa e veem só os itens das áreas em que são responsáveis.
 3. Ninguém decide sobre si mesmo: a pessoa envolvida e, no Programa de conduta, o fiscal que registrou saem da lista.
 4. Programa de conduta que envolve alguém da gestão vai direto para a Diretoria.
@@ -102,11 +102,13 @@ Relatório A4 "Desempenho da gestão" (todos, para a Diretoria; ou só o do gest
 ## Painel do Desempenho, Caixa agrupada e saneamento (11/11/2026)
 
 <!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+Atualização de 18/11/2026: o Auvo foi descontinuado pelo dono. Os itens do Auvo (O.S. aberta, O.S. sem vínculo, importação parada) saíram da Caixa na primeira atualização, marcados como "Retirada (Auvo descontinuado)": não contam como decisão, nem como resolvidos, nem na nota. O saneamento abaixo vale só como registro do que foi feito antes; o histórico fica guardado.
+
 Pedido do dono (11/11/2026): "desempenho da gestão, isso está horrível" e "Caixa de decisões, fazer o mesmo". A tela mostrava, por gestor, um parágrafo corrido com centenas de títulos (O.S. do Auvo abertas há meses, O.S. sem vínculo de técnico, sugestões e avarias repetidas) e a Caixa era uma lista única de até 400 cartões. Código novo: SGO_Gestao_Painel.js (painel, classificação e saneamento); telas em JS_Gestao.html.
 
 Regras (publicadas em Desempenho da gestão > Regra da nota):
 
-1. Saneamento: O.S. do Auvo que chegou à Caixa com mais de 30 dias em aberto no Auvo (a Diretoria ajusta de 7 a 365 dias em Regra da nota) é acúmulo antigo. Fica num bloco próprio e não pesa na nota. A O.S. que entrou nova e envelheceu na Caixa continua contando: aí o atraso é da gestão.
+1. Saneamento: O.S. do Auvo que chegou à Caixa com mais de 30 dias em aberto no Auvo é acúmulo antigo. Fica num bloco próprio e não pesa na nota. A O.S. que entrou nova e envelheceu na Caixa continua contando: aí o atraso é da gestão.
 
 2. Cadastro: O.S. do Auvo sem técnico ou cliente vinculado ao SGO+. A causa é uma por técnico do Auvo sem cadastro: aparece agrupada por técnico e não pesa na nota.
 
@@ -122,7 +124,7 @@ Desempenho da gestão: filtros de mês, área, gestor (Diretoria) e tipo. Abas: 
 
 Caixa de decisões: números do topo só das decisões (aguardando, no prazo, prazo vencido, escalados, decisão da Diretoria; tocar no número filtra). Filtros de área, responsável, tipo, prazo e busca. Ver como: Grupos (padrão, por tipo, área ou responsável, com a contagem, vencidos, escalados, mesmo fato e desde quando; tocar abre os cartões, 10 por vez), Lista ou Kanban (pela etapa da escada). Com uma providência sendo escrita, trocar o filtro é recusado com aviso e o texto fica.
 
-Saneamento (botão "Saneamento" na Caixa e no Desempenho): números (quantas O.S. antigas, de quando a quando, quantas sem vínculo, quantos técnicos do Auvo sem cadastro, quantas já saneadas), gráfico por mês de abertura e por técnico, lista com "Conferir no Auvo" em cada O.S., filtros por técnico e mês, "Marcar as O.S. deste filtro", motivo (15 letras ou mais) e confirmação na própria tela. Marcar como "encerrada fora do SGO+" grava uma linha por O.S. em GES_SANEAMENTO (quem, quando, motivo, de quando era a O.S.) e deixa a linha da Caixa como SANEADA: sai da Caixa, da escada, do relatório diário e da avaliação. Nada é apagado e nada muda no Auvo. O.S. sem vínculo: vincular o técnico em Integração Auvo (o certo) ou "Dispensar o vínculo" com motivo. "Desfazer" (com motivo; quem marcou, a Diretoria ou o Administrador) devolve a O.S. à Caixa na mesma linha. Quem pode marcar: o responsável pelo item, a Diretoria e o Administrador; no máximo 500 por vez.
+Saneamento (até 18/11/2026; o botão "Saneamento" saiu da Caixa e do Desempenho junto com o Auvo): números (quantas O.S. antigas, de quando a quando, quantas sem vínculo, quantos técnicos do Auvo sem cadastro, quantas já saneadas), gráfico por mês de abertura e por técnico, lista com "Conferir no Auvo" em cada O.S., filtros por técnico e mês, "Marcar as O.S. deste filtro", motivo (15 letras ou mais) e confirmação na própria tela. Marcar como "encerrada fora do SGO+" grava uma linha por O.S. em GES_SANEAMENTO (quem, quando, motivo, de quando era a O.S.) e deixa a linha da Caixa como SANEADA: sai da Caixa, da escada, do relatório diário e da avaliação. Nada é apagado e nada muda no Auvo. O.S. sem vínculo: vincular o técnico em Integração Auvo (o certo) ou "Dispensar o vínculo" com motivo. "Desfazer" (com motivo; quem marcou, a Diretoria ou o Administrador) devolve a O.S. à Caixa na mesma linha. Quem pode marcar: o responsável pelo item, a Diretoria e o Administrador; no máximo 500 por vez.
 
 Correção junto: o mês fechado guardava todos os escalados no registro congelado e cortava o texto em 45 mil letras, o que deixava o registro ilegível com centenas de itens. Agora o detalhe guarda até 60 escalados e o registro é sempre válido.
 

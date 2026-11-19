@@ -1,0 +1,30 @@
+ARQ = r'C:\Users\venda\projetos\google-script-dev\output\financeiro-20261116\cand31\JS_Assistencia.html'
+PARES = [
+("  // assistencia_solicitacoes, assistencia_casos, assistencia_indicadores, assistencia_regras, assistencia_transicao e,",
+ "  // assistencia_solicitacoes, assistencia_casos, assistencia_indicadores, assistencia_regras e,"),
+('assistencia_regras: "Regras da assistência", assistencia_transicao: "Transição do Auvo", assistencia_portal: "Meus chamados"',
+ 'assistencia_regras: "Regras da assistência", assistencia_portal: "Meus chamados"'),
+('      if (["assistencia_transicao", "assistencia_indicadores"].indexOf(m) >= 0) ver = !!(r && r.gestao);',
+ '      if (m === "assistencia_indicadores") ver = !!(r && r.gestao);'),
+("assistencia_regras: At_renderRegras_, assistencia_transicao: At_renderTransicao_, assistencia_portal: At_renderPortal_",
+ "assistencia_regras: At_renderRegras_, assistencia_portal: At_renderPortal_"),
+('"Cada pedido de atendimento: triagem, prazo, agenda, O.S. e relatório. Em uso junto com o Auvo: atendimento novo nasce aqui."',
+ '"Cada pedido de atendimento: triagem, prazo, agenda, O.S. e relatório."'),
+('"Atendimentos do SGO+ e do Auvo, reservas de veículo e ausências por técnico. A ordem do dia é da gestão."',
+ '"Atendimentos do SGO+, reservas de veículo e ausências por técnico. A ordem do dia é da gestão."'),
+("""        '<div id="atIndRonda"></div><p class="at-meta">Uso em paralelo: ' + At_esc_(i.osSgoMes) + ' O.S. no SGO+ e ' + At_esc_(i.tarefasAuvoMes) + ' tarefa(s) no Auvo no mês.</p>';""",
+ """        '<div id="atIndRonda"></div><p class="at-meta">O.S. no SGO+ no mês: ' + At_esc_(i.osSgoMes) + '.</p>';"""),
+("""At_selo_("verde", "Ligada") + ' Uso em paralelo ao Auvo: atendimento novo nasce no SGO+.'""",
+ """At_selo_("verde", "Ligada") + ' Atendimento novo nasce no SGO+.'"""),
+("""<p class="at-meta">Vieram dos 30 tipos do Auvo ("Entrega" e "Entrega de equipamentos" viraram um só). A Qualidade ajusta as exigências; cada mudança fica registrada.</p>""",
+ """<p class="at-meta">A Qualidade ajusta as exigências; cada mudança fica registrada.</p>"""),
+("""<button type="button" class="btn-secondary" data-modelo="">Novo modelo</button><button type="button" class="btn-secondary" id="atRgImp">Trazer os questionários do Auvo (acervo)</button><button type="button" class="btn-secondary" id="atRgDer">Montar os checklists a partir das tarefas do Auvo</button></div><p class="at-meta">Os modelos montados das tarefas nascem inativos (rascunho): revise as perguntas e marque "Ativo" no editor do modelo.</p>""",
+ """<button type="button" class="btn-secondary" data-modelo="">Novo modelo</button></div><p class="at-meta">Modelo inativo (rascunho) não aparece no aplicativo do técnico: revise as perguntas e marque "Ativo" no editor do modelo.</p>"""),
+('"O aplicativo do técnico deixa de receber O.S. novas. Nada é apagado; o Auvo continua como está." : "Atendimento novo volta a nascer no SGO+ (uso em paralelo ao Auvo)."',
+ '"O aplicativo do técnico deixa de receber O.S. novas. Nada é apagado." : "Atendimento novo volta a nascer no SGO+."'),
+("""      var der = At_$_("atRgDer"); if (der) der.onclick = function () { At_chamar_("derivarQuestionarios", {}, function (x) { alert(x.message); At_renderRegras_(div); }, null, { carregando: "Lendo um lote de tarefas do Auvo…" }); };
+      var imp = At_$_("atRgImp"); if (imp) imp.onclick = function () { At_chamar_("importarAuvo", {}, function (x) { alert(x.message); At_renderRegras_(div); }, null, { carregando: "Lendo os questionários do acervo do Auvo…" }); };
+""", ""),
+('__RE__', r"  // =========================================================\n  // TRANSIÇÃO DO AUVO \(6 critérios\)\n  // =========================================================\n  function At_renderTransicao_\(div\).*?\n  }\n\n(  // =========================================================\n  // PORTAL DO CLIENTE)",
+ r"\1", 1),
+]

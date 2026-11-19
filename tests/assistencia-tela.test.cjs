@@ -7,12 +7,14 @@ const path = require('node:path');
 const vm = require('node:vm');
 const pasta = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
 const ler = (f) => fs.readFileSync(path.join(pasta, f), 'utf8').replace(/\r\n/g, '\n');
-const MODS = ['assistencia', 'assistencia_abrir', 'assistencia_os', 'assistencia_agenda', 'assistencia_solicitacoes', 'assistencia_casos', 'assistencia_indicadores', 'assistencia_regras', 'assistencia_transicao', 'assistencia_portal'];
+// 18/11/2026: Auvo descontinuado pelo dono. A tela "Transição do Auvo" (assistencia_transicao) saiu do menu, da rota e da ajuda: 9 telas.
+const MODS = ['assistencia', 'assistencia_abrir', 'assistencia_os', 'assistencia_agenda', 'assistencia_solicitacoes', 'assistencia_casos', 'assistencia_indicadores', 'assistencia_regras', 'assistencia_portal'];
 
-test('casca: grupo do menu com as 10 telas, include, rota em abrir(), ganchos de login e saída, atalhos do celular e do Início', () => {
+test('casca: grupo do menu com as 9 telas (a Transição do Auvo saiu em 18/11/2026), include, rota em abrir(), ganchos de login e saída, atalhos do celular e do Início', () => {
   const idx = ler('Index.html'), core = ler('JS_Core.html'), ini = ler('JS_Inicio.html');
   assert.match(idx, /id="menu-secao-assistencia" style="display:none;"/);
   MODS.forEach((m) => assert.match(idx, new RegExp('data-mod="' + m + '"[^>]*onclick="abrir\\(\'' + m + '\'\\)"'), m));
+  assert.doesNotMatch(idx, /assistencia_transicao/);
   assert.ok(idx.indexOf("include('JS_Compras')") < idx.indexOf("include('JS_Assistencia')"));
   assert.match(core, /mod === "assistencia" \|\| mod\.indexOf\("assistencia_"\) === 0\) && typeof Assistencia_render_ === "function"/);
   assert.equal((core.match(/Assistencia_iniciar_\(\)/g) || []).length, 2, 'gancho nos dois caminhos do login');
@@ -36,10 +38,12 @@ test('ajuda: todas as telas com passos, quem pode e o registro no SGO_Ajuda.js; 
   const aj = ler('SGO_Ajuda.js');
   assert.match(aj, /SGO_ajudaTelas_Assistencia_ === 'function'\) fontes\.push\(\['Assistencia'/);
   MODS.forEach((m) => assert.match(aj, new RegExp(m + ': \'')));
+  assert.equal(a.assistencia_transicao, undefined, '18/11/2026: a ajuda da Transição do Auvo saiu');
   assert.match(fs.readFileSync(path.join(__dirname, '../_tools/gerar_base_assistente.cjs'), 'utf8'), /"MANUAL_MODULO_ASSISTENCIA\.md": \{ tela: "assistencia" \}/);
   assert.match(ler('SGO_AssistenteManuais.js'), /MANUAL_MODULO_ASSISTENCIA/);
   const man = fs.readFileSync(path.join(__dirname, '../docs/MANUAL_MODULO_ASSISTENCIA.md'), 'utf8');
-  ['Prazos de atendimento', 'Ordem de serviço', 'Transição do Auvo', 'Orçamento do chamado', 'Fonte única'].forEach((t) => assert.match(man, new RegExp(t.replace(/[()]/g, '\\$&'))));
+  // 18/11/2026: a seção "Transição do Auvo" do manual virou "Fim do Auvo (18/11/2026)".
+  ['Prazos de atendimento', 'Ordem de serviço', 'Fim do Auvo', 'Orçamento do chamado', 'Fonte única'].forEach((t) => assert.match(man, new RegExp(t.replace(/[()]/g, '\\$&'))));
   assert.doesNotMatch(man + JSON.stringify(a), /burr/i);
 });
 

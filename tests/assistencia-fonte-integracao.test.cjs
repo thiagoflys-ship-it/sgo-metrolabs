@@ -1,4 +1,6 @@
 // Fonte única de atendimentos (21/10/2026): os leitores do Auvo passam a ler Auvo + O.S. da Assistência do SGO+ sem quebrar.
+// 18/11/2026: Auvo descontinuado pelo dono. Ponto, Conduta, central, Frota, Início e qualidade passam a ler só as O.S. do SGO+; as
+// tarefas do Auvo ficam como histórico (ficha do equipamento). Os testes abaixo foram ajustados para isso, com o comentário datado.
 // Ponto (técnico em atendimento), Conduta (sugestões), central (qualidade), Vínculos, Frota, Início e ficha do equipamento.
 // Código real (tests/_assistencia_ambiente.cjs com arquivos extras); só dados de teste.
 const test = require('node:test');
@@ -13,22 +15,22 @@ const sync = (amb, eventos) => ok(amb.app('Ast_appSincronizar', 's_tiago', { ped
 const AUVO = [{ ID: 'a1', AUVO_TASK_ID: '45123', CLIENTE_ID_SGO: 'c1', CLIENTE_NOME_AUVO: 'Hospital Teste Alfa', TECNICO_ID_SGO: 'u_tec', TECNICO_NOME_AUVO: 'TIAGO', TIPO_TAREFA: 'Manutenção Preventiva',
   DATA_TAREFA: '2026-10-19T08:00:00', FINALIZADA: 'SIM', CHECKIN_EM: '2026-10-19T08:10:00', CHECKOUT_EM: '', RELATO_SERVICO: '', QTD_FOTOS: 0, EQUIPAMENTOS_ID_SGO: 'eq1', TASK_URL: 'https://app.auvo.exemplo/45123' }];
 
-test('ponto: técnico em atendimento pelo aplicativo novo (Cheguei sem Concluí) entra na mesma regra do Auvo; evidência diz a origem', () => {
+test('ponto: técnico em atendimento pelo aplicativo novo (Cheguei sem Concluí) não recebe lembrete; tarefa do Auvo não conta mais (18/11/2026)', () => {
   const amb = ambiente({ extras: ['SGO_Ponto_Config.js'], tabelas: { AUVO_TAREFAS: AUVO.slice() } });
   const { os } = chamadoAgendado(amb, { inicio: '2026-10-19T11:00' });
   amb.mudar('2026-10-19T11:05:00-03:00');
   sync(amb, [ev('CHEGUEI', os.id, 1, {}, '2026-10-19T11:05:00')]);
   amb.mudar('2026-10-19T12:00:00-03:00');
   const t = amb.ctx.Ponto_tarefasAuvo_('2026-10-19');
-  assert.equal(t.u_tec.length, 2);
+  assert.equal(t.u_tec.length, 1, '18/11/2026: só a O.S. do SGO+');
   const em = amb.ctx.Ponto_emAtendimento_(t, 'u_tec', Date.now());
   assert.equal(em.id, os.numero);
   const evid = amb.ctx.Ponto_evidencia_('u_tec', '2026-10-19');
   assert.match(evid, /SGO\+ \(O\.S\. OS-2026-0001\): chegada 11:05, conclusão não feito/);
-  assert.match(evid, /Auvo \(tarefa 45123\): check-in 08:10/);
+  assert.doesNotMatch(evid, /Auvo/, '18/11/2026: a evidência não usa mais o Auvo');
 });
 
-test('central e Conduta: O.S. do SGO+ aberta há 3 dias vira sugestão "O.S. aberta"; qualidade da O.S. encerrada lida pela fonte única leva à ficha da O.S.', () => {
+test('central e Conduta: O.S. do SGO+ aberta há 3 dias vira sugestão "O.S. aberta"; tarefa do Auvo não vira sugestão nem pendência (18/11/2026)', () => {
   const amb = ambiente({ extras: ['SGO_Conduta_Ocorrencias.js', 'SGO_Conduta_Ciencia.js', 'SGO_Conduta_Qualidade.js'], tabelas: { AUVO_TAREFAS: AUVO.slice() } });
   const { os } = chamadoAgendado(amb);
   sync(amb, [ev('CHEGUEI', os.id, 1), ev('CONCLUI', os.id, 2, {}, '2026-10-20T10:00:00')]);
@@ -37,25 +39,25 @@ test('central e Conduta: O.S. do SGO+ aberta há 3 dias vira sugestão "O.S. abe
   assert.equal(linha.FINALIZADA, 'NAO', 'documentação pendente conta como aberta');
   assert.ok(Number(linha.DIAS_ABERTA) >= 3);
   const avisos = [];
-  const sug = amb.ctx.Cndq_coletarAuvo_({}, '2026-10-01', avisos);
+  const sug = amb.ctx.Cndq_coletarAtendimentos_({}, '2026-10-01', avisos);
   assert.ok(sug.some((s) => s.chave === 'SGO|ABERTA|' + os.numero && /no SGO\+/.test(s.titulo)), JSON.stringify(sug.map((s) => s.chave)));
-  assert.ok(sug.some((s) => s.chave === 'AUVO|SEM_FOTO|45123'), 'o Auvo continua igual');
-  // central: item de qualidade da tarefa do Auvo continua com o link do Auvo
+  assert.equal(sug.some((s) => /^AUVO\|/.test(s.chave)), false, '18/11/2026: o Auvo não gera mais sugestão');
+  // central: tarefa do Auvo sem relato não vira cobrança de qualidade
   const itens = [];
   amb.ctx.Pend_fonteQualidade_((i) => itens.push(i), { gestao: true, userId: 'u_gt', perfil: 'GESTOR' });
-  const q = itens.find((i) => i.id === 'QUAL:OS:45123');
-  assert.ok(q && q.tela.tipo === 'link');
+  assert.equal(itens.some((i) => i.id === 'QUAL:OS:45123'), false);
 });
 
 test('Vínculos, Frota, Início, ficha do equipamento e e-mail mensal: ligados à fonte única e às abas da Assistência (código)', () => {
   const v = ler('SGO_Vinculos.js');
   assert.match(v, /knownHistorical=\[[^\]]*'ATEC_CHAMADOS','ATEC_OS'/);
   assert.match(v, /da Assistência técnica em aberto ligados a este cadastro.*Conferir impacto de novo/);
-  assert.match(ler('SGO_Frota_Rastreamento.js'), /SGO_Atendimentos_linhas_\(\) : Frota_lerSeExistir_\(SGO_CFG\.SHEETS\.AUVO_TAREFAS\)/);
+  // 18/11/2026: só a origem SGO (Auvo descontinuado pelo dono)
+  assert.match(ler('SGO_Frota_Rastreamento.js'), /SGO_Atendimentos_linhas_\(\{ origem: 'SGO' \}\) : \[\]/);
   assert.match(ler('SGO_Frota_Reservas.js'), /SGO_Atendimentos_linhas_/);
-  assert.match(ler('SGO_Main.js'), /fonteUnica \? SGO_Atendimentos_linhas_\(\) : SGO_DATA\.getAll\(aba\)/);
+  assert.match(ler('SGO_Main.js'), /var tarefas = SGO_Atendimentos_linhas_\(\{ origem: "SGO" \}\);/);
   assert.match(ler('SGO_Equipamentos.js'), /SGO_Atendimentos_doEquipamento_\(equipId/);
-  assert.match(ler('SGO_Qualidade_Auvo.js'), /fonteUnica \? SGO_Atendimentos_linhas_\(\) : SGO_DATA\.getAll\(aba\)/);
+  assert.match(ler('SGO_Qualidade_Auvo.js'), /var tarefas = SGO_Atendimentos_linhas_\(\{ origem: 'SGO' \}\);/);
   const g = ler('SGO_Gestao_Escada.js');
   assert.match(g, /\['ASSISTENCIA', 'Assistência técnica'\]/);
   // 29/10/2026: a geração de cada mensal passou para Ges_gerarMensal_ (também usada pelo pacote dos relatórios da empresa)
@@ -109,12 +111,11 @@ test('acervo do Auvo: índice por equipamento em lotes (vale o original no AUVO_
   const tid = json({ itens: [{ id: 160907, description: 'Manutenção Corretiva', requirements: { requiredQuestionnaires: [189072] } }, { id: 999001, description: 'Tipo novo do Auvo (teste)', requirements: { fillReport: true, minimumNumberOfPhotos: 1 } }] }, 'tipos.json');
   amb.props.AUVO_ACERVO_ESTADO = JSON.stringify({ situacao: 'CONCLUIDO', catalogos: [{ nome: 'questionarios', arquivoId: qid }, { nome: 'tipos_de_tarefa', arquivoId: tid }] });
   amb.ctx.AuvoAcervo_lerEstado_ = () => JSON.parse(amb.props.AUVO_ACERVO_ESTADO);
-  const imp = ok(amb.api('s_gil', 'importarAuvo', {}));
-  assert.equal(imp.modelos, 1); assert.equal(imp.ligados, 1); assert.equal(imp.tiposNovos, 1);
-  const mod = amb.tabelas.ATEC_MODELOS.find((m) => m.AUVO_QUESTIONARIO_ID === '189072');
-  const perg = JSON.parse(mod.PERGUNTAS_JSON);
-  assert.deepEqual(perg.map((p) => p.tipo), ['SIM_NAO', 'FOTO', 'OPCAO']);
-  assert.equal(amb.tabelas.ATEC_TIPOS.find((t) => t.CODIGO === 'MANUTENCAO_CORRETIVA').MODELO_CODIGO, 'AUVO_Q189072');
-  const imp2 = ok(amb.api('s_gil', 'importarAuvo', {}));
-  assert.equal(imp2.modelos, 0, 'sem duplicar');
+  // 18/11/2026: Auvo descontinuado pelo dono. O botão "Trazer os questionários do Auvo" saiu: a chamada recusa e não cria modelo.
+  // A importação em si (AstF_importarDoAcervo_, só leitura do acervo já copiado) continua no código, usada só pela rotina.
+  const imp = amb.api('s_gil', 'importarAuvo', {});
+  assert.equal(imp.ok, false); assert.match(imp.message, /descontinuado/);
+  assert.equal((amb.tabelas.ATEC_MODELOS || []).some((m) => m.AUVO_QUESTIONARIO_ID === '189072'), false);
+  const r = amb.ctx.AstF_importarDoAcervo_({ id: '', nome: 'Rotina', perfil: 'SISTEMA', gestao: true, interno: true, regras: true }, { sistema: true });
+  assert.equal(r.modelos, 1, 'a rotina ainda transforma o que já foi copiado');
 });

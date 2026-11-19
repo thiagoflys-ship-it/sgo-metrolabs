@@ -620,7 +620,7 @@ Nenhuma ferramenta foi removida, e as regras do bloqueio da partida não mudaram
 
 1. Em "Mapa e rotas" > "Rotas", escolha o período e toque em "Buscar retiradas", ou escolha um veículo e toque em "Ver rota do período".
 2. Na lista de retiradas, toque em "Ver rota": o trajeto aparece no mapa (em vermelho os trechos acima do limite de velocidade), com saída, chegada e paradas numeradas.
-3. Abaixo do mapa: km do trajeto, tempo em movimento e parado, velocidade máxima, trechos acima do limite, paradas de 5 minutos ou mais e, quando o condutor tem atendimentos no Auvo, o deslocamento até cada um.
+3. Abaixo do mapa: km do trajeto, tempo em movimento e parado, velocidade máxima, trechos acima do limite, paradas de 5 minutos ou mais e, quando o condutor tem O.S. da Assistência técnica, o deslocamento até cada uma.
 4. "Relatório A4" gera o relatório de rota da retirada para imprimir (fica salvo em PDF e HTML).
 
 A empresa do rastreador não informa trânsito. O SGO+ mostra o que os pontos permitem: velocidade, paradas, horários e uso fora do expediente. Trânsito em tempo real exigiria um serviço pago de mapas.
@@ -699,7 +699,7 @@ A reserva garante o veículo para quem já tem compromisso marcado (viagem, aten
 1. Abra a Frota, aba "Reservas", e toque em "Reservar um veículo" (ou toque num espaço vazio da agenda).
 2. Preencha o início e a devolução prevista (data e hora).
 3. O campo "Veículo" já sugere o primeiro veículo livre no período; os ocupados aparecem com o motivo.
-4. Escreva o destino e o motivo. Passageiros e "Ligar a" (O.S. do Auvo, atividade ou cliente) são opcionais.
+4. Escreva o destino e o motivo. Passageiros e "Ligar a" (O.S., atividade ou cliente) são opcionais.
 5. Toque em "Reservar". Aparece o código da reserva (RV-AAAA-NNNN).
 
 Quem pode: qualquer condutor ativo com a CNH válida até o fim da reserva, sem aprovação. A gestão (Administrador, Diretoria, Gestor, RH ou Financeiro) reserva em nome de outra pessoa (ela é avisada), lança a manutenção programada e cancela ou troca o veículo de qualquer reserva com justificativa.

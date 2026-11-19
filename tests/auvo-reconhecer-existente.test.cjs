@@ -331,7 +331,9 @@ test('a tela mantém data-rot nas tabelas novas, tem o filtro por cliente e o ma
   assert.ok(html.includes('tplAuvo_envioCliente') && html.includes("tplAuvo_chamarApi('apiIniciarEnvioEquipamentos', filtro)"));
   assert.match(html, /Equipamento sem TAG:<\/strong> "N\/P"/);
   assert.match(html, /External id already exists/);
+  // 18/11/2026: Auvo descontinuado pelo dono. A tela Integração Auvo não é mais servida (o arquivo fica só como registro) e a
+  // ajuda dela saiu; fica só a ajuda do "Histórico do Auvo".
   const ajuda = fs.readFileSync(path.join(base, 'SGO_Ajuda_Auvo.js'), 'utf8');
-  assert.match(ajuda, /Só este cliente/);
-  assert.match(ajuda, /já existia no Auvo/i);
+  assert.doesNotMatch(ajuda, /Só este cliente|"auvo":/);
+  assert.match(ajuda, /"auvo_historico"/);
 });

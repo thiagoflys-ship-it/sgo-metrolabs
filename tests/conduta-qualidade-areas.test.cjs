@@ -150,7 +150,8 @@ test('sugestões: multa com condutor identificado vira sugestão (nunca ocorrên
   ctx.Cndq_menosDias_ = () => '2026-08-20';
   const r1 = ctx.Conduta_coletarSugestoes_('gil');
   const chaves = tabelas.qual_sugestao.map((s) => s.CHAVE).sort();
-  assert.deepEqual(chaves, ['AUVO|SEM_FOTO|9001', 'FROTA|MULTA|m1']);
+  // 18/11/2026: Auvo descontinuado pelo dono. A tarefa do Auvo sem foto (9001) não vira mais sugestão (antes: 'AUVO|SEM_FOTO|9001').
+  assert.deepEqual(chaves, ['FROTA|MULTA|m1']);
   assert.equal(tabelas.qual_ocorrencia.length, 0, 'nada vira ocorrência sozinho');
   assert.ok(r1.avisos.some((a) => /sem login/.test(a)));
   const s = tabelas.qual_sugestao.find((x) => x.CHAVE === 'FROTA|MULTA|m1');
@@ -158,7 +159,7 @@ test('sugestões: multa com condutor identificado vira sugestão (nunca ocorrên
   assert.equal(s.COLABORADOR_ID, 'u_tec');
   assert.equal(s.DATA_FATO, '2026-09-20');
   ctx.Conduta_coletarSugestoes_('gil');
-  assert.equal(tabelas.qual_sugestao.length, 2, 'segunda coleta não repete');
+  assert.equal(tabelas.qual_sugestao.length, 1, 'segunda coleta não repete');
 });
 
 test('sugestões: aceitar registra a ocorrência com a origem e o prazo contado da descoberta; envolvido não decide; descarte pede motivo', () => {
@@ -166,7 +167,14 @@ test('sugestões: aceitar registra a ocorrência com a origem e o prazo contado 
   const { ctx, tabelas } = ambiente(dados(), sessao);
   ctx.Conduta_veIdentidade_ = () => true; // 28/10/2026: quem decide é a Diretoria ou o Gestor de Qualidade (sigilo); aqui o foco é outro
   ctx.Cndq_menosDias_ = () => '2026-08-20';
+  // 18/11/2026: sugestão do Auvo que já estava pendente antes da retirada: a coleta encerra sem cobrança, com o motivo
+  tabelas.qual_sugestao.push({ ID: 'sa', CHAVE: 'AUVO|SEM_FOTO|9001', STATUS: 'PENDENTE', COLABORADOR_ID: 'u_tec', TIPO_CODIGO: 'CAM-01', DATA_FATO: '2026-10-10', DETECTADA_EM: HOJE, ORIGEM_MODULO: 'AUVO' });
   ctx.Conduta_coletarSugestoes_('gil');
+  const doAuvo = tabelas.qual_sugestao.find((x) => x.ID === 'sa');
+  assert.equal(doAuvo.STATUS, 'DESCARTADA');
+  assert.equal(doAuvo.DECIDIDA_POR_NOME, 'Sistema');
+  assert.match(doAuvo.MOTIVO, /Auvo foi descontinuado em 18\/11\/2026.*sem cobrança/);
+  assert.equal(tabelas.qual_ocorrencia.length, 0, 'nenhuma ocorrência');
   const multa = tabelas.qual_sugestao.find((x) => x.CHAVE === 'FROTA|MULTA|m1');
   // o fato é de 20/09 (prazo de registro vencido), mas foi encontrado hoje: aceita
   const r = ctx.Conduta_apiAceitarSugestao('s', { id: multa.ID });
@@ -184,10 +192,11 @@ test('sugestões: aceitar registra a ocorrência com a origem e o prazo contado 
   tabelas.qual_sugestao.push({ ID: 'sx', STATUS: 'PENDENTE', COLABORADOR_ID: 'u_ges', TIPO_CODIGO: 'VEI-04', DATA_FATO: HOJE, DETECTADA_EM: HOJE, ORIGEM_MODULO: 'FROTA' });
   assert.throws(() => ctx.Conduta_apiAceitarSugestao('s', { id: 'sx' }), /é sobre você/);
   assert.throws(() => ctx.Conduta_apiDescartarSugestao('s', { id: 'sx' }), /é sobre você/);
-  const auvo = tabelas.qual_sugestao.find((x) => x.CHAVE === 'AUVO|SEM_FOTO|9001');
-  assert.throws(() => ctx.Conduta_apiDescartarSugestao('s', { id: auvo.ID, motivo: 'curto' }), /pelo menos 10/);
-  assert.equal(ctx.Conduta_apiDescartarSugestao('s', { id: auvo.ID, motivo: 'Fotos enviadas por e-mail ao cliente.' }).success, true);
-  assert.equal(tabelas.qual_sugestao.find((x) => x.ID === auvo.ID).STATUS, 'DESCARTADA');
+  // 18/11/2026: o descarte com motivo é conferido numa sugestão da Frota (antes: a do Auvo, que agora a coleta encerra sozinha)
+  tabelas.qual_sugestao.push({ ID: 'sz', CHAVE: 'FROTA|AVARIA|z1', STATUS: 'PENDENTE', COLABORADOR_ID: 'u_tec', TIPO_CODIGO: 'VEI-04', DATA_FATO: HOJE, DETECTADA_EM: HOJE, ORIGEM_MODULO: 'FROTA' });
+  assert.throws(() => ctx.Conduta_apiDescartarSugestao('s', { id: 'sz', motivo: 'curto' }), /pelo menos 10/);
+  assert.equal(ctx.Conduta_apiDescartarSugestao('s', { id: 'sz', motivo: 'Avaria já registrada no caso da Frota.' }).success, true);
+  assert.equal(tabelas.qual_sugestao.find((x) => x.ID === 'sz').STATUS, 'DESCARTADA');
   // prazo pela data do fato quando o dono decidir assim (parâmetro 0)
   tabelas.qual_sugestao.push({ ID: 'sy', STATUS: 'PENDENTE', COLABORADOR_ID: 'u_com', TIPO_CODIGO: 'COM-01', DATA_FATO: '2026-09-01', DETECTADA_EM: HOJE, ORIGEM_MODULO: 'ATIVIDADES' });
   ctx.Conduta_obterParametros_ = () => ({ PRAZO_REGISTRO_DIAS_UTEIS: 2, PRAZO_HOMOLOGACAO_DIAS_UTEIS: 3, JANELA_REINCIDENCIA_DIAS: 90, SUGESTAO_PRAZO_PELA_DESCOBERTA: '0' });

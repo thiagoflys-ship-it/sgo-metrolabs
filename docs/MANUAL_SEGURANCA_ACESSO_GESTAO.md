@@ -31,7 +31,7 @@ Siga esta ordem. Cada passo pode esperar o anterior sem prejuízo.
 - **Conta ativa sem e-mail**: a entrada é recusada com "Seu acesso precisa de um e-mail cadastrado. Peça à gestão da Metrolabs para cadastrar.".
 - **E-mail repetido em duas contas ativas**: as duas ficam recusadas até a correção (a pessoa que acerta a senha vê o porquê).
 - Quem digitar o nome de usuário antigo com a senha certa recebe a orientação de entrar pelo e-mail (com o e-mail mascarado).
-- A conta técnica do Auvo continua entrando como antes (pelo nome), fora da troca obrigatória e do código.
+- A conta técnica do Auvo ficou sem uso: o Auvo foi descontinuado em 18/11/2026. O Administrador pode inativá-la em Usuários.
 - No cadastro e na edição de usuário, o e-mail é obrigatório e único (inclusive entre contas inativas: quem volta é reativado). Reativar uma conta com o e-mail de outra conta ativa é recusado.
 - A tela Usuários mostra em vermelho quem está sem e-mail ou com e-mail repetido (faixa no topo, selos e os números Sem e-mail (não entram) e E-mail repetido).
 

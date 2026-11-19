@@ -19,13 +19,13 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
   assert.equal(r.ok, true, r.message);
   // 18/11/2026 (Pacote 1, decisão do dono): +4 eventos, GS08 a GS11 (nova solicitação de compra, prazo vencido do aprovador delegado,
   // decisão do delegado e pedido de aprovação de preço do Comercial, a qualquer hora para o dono, a Diretoria e o delegado). Antes: 95.
-  assert.equal(r.regras.length, 99); // 11/11/2026: GS07 (resumo diário da Diretoria, decisão do dono: a Diretoria é informada, não cobrada; SGO_Gestao_RelatorioDiario.js); GS06 (pedido que depende da Diretoria por regra, na hora aos dois da Diretoria); S80 (decisão da aprovação da proposta, vendedor na hora); GS04 (pedido de aprovação do Comercial na hora); 03/11/2026: S79 (refrigerador fora da faixa de temperatura, automação predial); 01/11/2026: GS01-GS03 e GI01-GI07 (avisos da gestão no celular, SGO_Avisos_Gestao.js); 31/10/2026: CP02 (compra no cartão sem informar) e CP03 (a pagar e conciliação do dia, ao Financeiro); 30/10/2026: S75 e S76 (abastecimento sem comprovante há mais de 1 dia útil); 27/10/2026: S74 (sentinela da infraestrutura); 26/10/2026: S69 (vence hoje), S70 (aviso urgente), CP01 (Compras), VC01 (vencimentos) e S71-S73 (escalonamento por prioridade)
+  // 18/11/2026: Auvo descontinuado pelo dono; S54, S55 e S56 (chamados do Auvo) saíram da matriz e ficam na trilha como retirados. Antes: 99.
+  assert.equal(r.regras.length, 96); // 11/11/2026: GS07 (resumo diário da Diretoria, decisão do dono: a Diretoria é informada, não cobrada; SGO_Gestao_RelatorioDiario.js); GS06 (pedido que depende da Diretoria por regra, na hora aos dois da Diretoria); S80 (decisão da aprovação da proposta, vendedor na hora); GS04 (pedido de aprovação do Comercial na hora); 03/11/2026: S79 (refrigerador fora da faixa de temperatura, automação predial); 01/11/2026: GS01-GS03 e GI01-GI07 (avisos da gestão no celular, SGO_Avisos_Gestao.js); 31/10/2026: CP02 (compra no cartão sem informar) e CP03 (a pagar e conciliação do dia, ao Financeiro); 30/10/2026: S75 e S76 (abastecimento sem comprovante há mais de 1 dia útil); 27/10/2026: S74 (sentinela da infraestrutura); 26/10/2026: S69 (vence hoje), S70 (aviso urgente), CP01 (Compras), VC01 (vencimentos) e S71-S73 (escalonamento por prioridade)
   const por = Object.fromEntries(r.regras.map((x) => [x.cod, x]));
   assert.equal(por.S01.email, 'RESUMO'); assert.equal(por.S01.whatsapp, 'RESUMO');
   assert.equal(por.S19.email, 'HORA'); assert.equal(por.S19.whatsapp, 'RESUMO');
-  assert.equal(por.S55.decisao, 'HISTORICO');
+  assert.equal(por.S54 || por.S55 || por.S56, undefined, 'eventos do Auvo retirados');
   assert.deepEqual(Array.from(r.regras.filter((x) => x.whatsapp === 'HORA').map((x) => x.cod)).sort(), ['S35', 'S36', 'S41', 'S44', 'S67', 'S68', 'S70', 'S74']); // S74 (27/10/2026): falha da infraestrutura que não se corrigiu; S70 (26/10/2026): aviso urgente; S67 (22/10/2026): campainha da Porta da Diretoria; S68 (23/10/2026): abertura automática; pedidos do dono
-  assert.equal(por.S56.whatsapp, 'NAO', 'WhatsApp ao cliente só depois do piloto');
   assert.deepEqual(JSON.parse(JSON.stringify(r.cfg)), { horaEmail: '08:00', horaEmailAlternativa: '12:00', horaWhats: '09:30', whatsResumo: true, centralPorArea: true, whatsTetoDia: 3 });
   // só Administrador e Diretoria
   assert.match(c.SGO_AvisosMatriz_api('s_gt', 'carregar', {}).message, /Administrador e da Diretoria.*Meus avisos/);
@@ -39,7 +39,8 @@ test('tabela de regras: matriz aprovada como padrão, ajuste com motivo e trilha
   const s = c.SGO_AvisosMatriz_api('s_adm', 'salvarRegra', { cod: 'S33', email: 'HORA', whatsapp: 'NAO', decisao: 'AVISA', motivo: 'condutor pediu para saber na hora' });
   assert.equal(s.ok, true, s.message);
   assert.equal(c.SGO_avisoRegra_('S33').email, 'HORA');
-  const t = c.SGO_AvisosMatriz_api('s_dir', 'trilha', {}).trilha;
+  // 18/11/2026: a trilha também traz a retirada dos eventos do Auvo (S54 a S56, datada de 18/11/2026); aqui vale a mudança do teste.
+  const t = c.SGO_AvisosMatriz_api('s_dir', 'trilha', {}).trilha.filter((l) => !/^S5[456]$/.test(l.codigo));
   assert.equal(t[0].codigo, 'S33'); assert.equal(t[0].antes.email, 'RESUMO'); assert.equal(t[0].depois.email, 'HORA'); assert.equal(t[0].por, 'ADAO ADMINISTRADOR TESTE');
   // voltar ao padrão: nova linha na trilha, nada apagado
   assert.equal(c.SGO_AvisosMatriz_api('s_dir', 'restaurar', { cod: 'S33', motivo: 'voltar ao combinado' }).ok, true);
@@ -105,12 +106,10 @@ test('WhatsApp na hora: só as 4 exceções da Frota, só no expediente, uma por
 });
 
 // ------------------------------------------------------------------ histórico sem aviso e "só no sistema"
-test('vira histórico: chamado do Auvo concluído (S55) não avisa ninguém; missão cadastrada (S53) fica só no sistema', () => {
+// 18/11/2026: Auvo descontinuado pelo dono. O exemplo do chamado do Auvo concluído (S55) saiu com o evento; o "vira histórico"
+// continua provado abaixo pelo evento que o Administrador transforma em histórico (S43).
+test('vira histórico: missão cadastrada (S53) fica só no sistema; evento transformado em histórico para de avisar', () => {
   const amb = ambiente();
-  const r = notificar(amb, { usuarios: ['u_tec', 'u_gt'], canais: ['email', 'whatsapp'], origem: 'AUVO_OS', evento: 'S55' });
-  assert.deepEqual([r.ok, r.erro, r.pulado], [0, 0, 0]);
-  assert.equal(amb.tabelas.NTF_ENVIOS.length, 0, 'nenhum envio, nenhuma linha');
-  assert.equal(amb.emails.length + amb.whats.length, 0);
   const r2 = notificar(amb, { usuarios: ['u_tec'], canais: ['sgo', 'email'], origem: 'CONDUTA', evento: 'S53' });
   assert.equal(r2.ok, 0);
   assert.match(amb.tabelas.NTF_ENVIOS[0].MOTIVO, /só no sistema/);
@@ -288,7 +287,8 @@ test('gestor da área: Frota vai ao gestor do Administrativo; área sem gestor v
   const amb = ambiente();
   const c = amb.ctx;
   assert.deepEqual(Array.from(c.SGO_avisoGestoresDe_('frota')), ['u_ga']);
-  assert.deepEqual(Array.from(c.SGO_avisoGestoresDe_('auvo')), ['u_gt']);
+  // 18/11/2026: o módulo "auvo" saiu (Auvo descontinuado); NR-13 continua com a área Técnica.
+  assert.deepEqual(Array.from(c.SGO_avisoGestoresDe_('nr13')), ['u_gt']);
   assert.deepEqual(Array.from(c.SGO_avisoGestoresDe_('metrologia', { area: 'METROLOGIA' })), ['u_dir'], 'sem gestor: Diretoria');
   assert.deepEqual(Array.from(c.SGO_avisoGestoresDe_('conduta', { responsavelId: 'u_tec' })), ['u_gt'], 'missão do técnico: gestor da Técnica');
   assert.deepEqual(Array.from(c.SGO_avisoGestoresDe_('conduta', { responsavelId: 'u_gt' })), ['u_dir'], 'missão de gestor: Diretoria');
@@ -372,18 +372,19 @@ test('medição: avisos por pessoa por dia antes e depois (NTF_ENVIOS), WhatsApp
 
 test('estimativa de um dia típico: os mesmos fatos antes e depois da matriz (e-mails e WhatsApp por pessoa)', () => {
   // Dia típico de um técnico CLT que é condutor: 2 atividades novas, 1 atrasada, 1 aviso com ciência publicado, retirada registrada
-  // pela gestão, reserva cancelada, missão aprovada, chamado do Auvo aberto e concluído, 1 aviso do Comercial.
+  // pela gestão, reserva cancelada, missão aprovada, 1 aviso do Comercial. (18/11/2026: o chamado do Auvo aberto e concluído saiu
+  // dos fatos, porque o Auvo foi descontinuado pelo dono e os eventos S54 e S55 não existem mais.)
   const amb = ambiente({ agora: em(SEG('09:00')) });
   const c = amb.ctx;
   const fatos = [
     { canais: ['email'], origem: 'ATIVIDADES', evento: 'S01' }, { canais: ['email'], origem: 'ATIVIDADES', evento: 'S02' }, { canais: ['email'], origem: 'ATIVIDADES', evento: 'S08' },
     { canais: ['sgo', 'email'], origem: 'AVISOS', evento: 'S19' }, { canais: ['sgo', 'email'], origem: 'FROTA', evento: 'S33' }, { canais: ['email'], origem: 'FROTA_RESERVAS', evento: 'S39' },
-    { canais: ['sgo', 'email'], origem: 'CONDUTA', evento: 'S52' }, { canais: ['email'], origem: 'AUVO_OS', evento: 'S54' }, { canais: ['email'], origem: 'AUVO_OS', evento: 'S55' },
+    { canais: ['sgo', 'email'], origem: 'CONDUTA', evento: 'S52' },
     { canais: ['email'], origem: 'COMERCIAL', evento: 'S32' }
   ];
   // ANTES (como era: cada módulo mandava por conta própria; WhatsApp em Avisos, Frota, Conduta e Auvo, sem olhar vínculo)
   const antesEmail = fatos.length - 2 /* e-mails de atividades saíam agrupados por rodada: 3 viravam ~1 */ ;
-  const antesWhats = 4 /* aviso com ciência, retirada, missão, chamado aberto */ + 1 /* chamado concluído */ + 1 /* resumo de atividades */;
+  const antesWhats = 3 /* aviso com ciência, retirada, missão */ + 1 /* resumo de atividades */;
   // DEPOIS (com a matriz)
   fatos.forEach((f) => notificar(amb, Object.assign({ usuarios: ['u_tec'] }, f, { canais: f.canais.concat(['whatsapp']) })));
   amb.mudar(SEG('09:00'));
@@ -398,19 +399,16 @@ test('estimativa de um dia típico: os mesmos fatos antes e depois da matriz (e-
   assert.ok(depoisWhats <= 1, 'no máximo um WhatsApp de resumo');
 });
 
-// ------------------------------------------------------------------ Auvo
-test('Auvo: chamado aberto vai só ao técnico, no resumo do dia (gestão não recebe um aviso por chamado); concluído vira histórico; cliente por e-mail, sem WhatsApp até o fim do piloto', () => {
-  const amb = ambiente({ extras: ['SGO_Auvo_Incremental.js'] });
+// ------------------------------------------------------------------ Auvo (18/11/2026: descontinuado pelo dono)
+// O teste dos avisos de chamado do Auvo (S54 ao técnico, S55 histórico, S56 ao cliente) saiu: a sincronização que os gerava foi
+// retirada. Fica a prova de que os eventos não estão mais na matriz e de que a retirada está registrada na trilha.
+test('Auvo descontinuado: S54, S55 e S56 fora da matriz e registrados na trilha como retirados em 18/11/2026', () => {
+  const amb = ambiente();
   const c = amb.ctx;
-  amb.tabelas.CAD_CLIENTES.push({ ID: 'cl1', NOME_FANTASIA: 'Clínica Exemplo', EMAIL: 'cliente@exemplo.test', CELULAR: '62988887777' });
-  const av = { anteriores: {}, agora: '2026-10-19T10:00:00' };
-  c.Auvo_avisosEnviar_(av, { tipo: 'abertura' }, { AUVO_TASK_ID: 123, TECNICO_ID_SGO: 'u_tec', DATA_TAREFA: '2026-10-20', TIPO_TAREFA: 'Preventiva' }, { clienteId: 'cl1' });
-  c.Auvo_avisosEnviar_(av, { tipo: 'fechamento', quando: '2026-10-19T09:00:00' }, { AUVO_TASK_ID: 124, TECNICO_ID_SGO: 'u_tec' }, { clienteId: 'cl1' });
-  const internos = amb.tabelas.NTF_ENVIOS.filter((l) => l.USUARIO_ID.indexOf('EXT:') !== 0);
-  assert.deepEqual(internos.map((l) => [l.USUARIO_ID, l.SITUACAO, l.EVENTO]), [['u_tec', 'NO_RESUMO', 'S54']], 'gestão fora; conclusão sem aviso interno');
-  assert.deepEqual(amb.emails.map((e) => e.to), ['cliente@exemplo.test', 'cliente@exemplo.test']);
-  assert.equal(amb.whats.length, 0);
-  assert.ok(amb.tabelas.NTF_ENVIOS.filter((l) => l.CANAL === 'whatsapp').every((l) => /até o fim do piloto/.test(l.MOTIVO)));
+  assert.equal(c.MTZ_PADRAO.some((e) => e.modulo === 'auvo'), false);
+  const t = c.SGO_AvisosMatriz_api('s_dir', 'trilha', {}).trilha.filter((l) => /^S5[456]$/.test(l.codigo));
+  assert.deepEqual(JSON.parse(JSON.stringify(t.map((l) => l.codigo).sort())), ['S54', 'S55', 'S56']);
+  assert.ok(t.every((l) => l.emBr === '18/11/2026 00:00' && /descontinuado/.test(l.motivo)));
 });
 
 // ------------------------------------------------------------------ piloto do WhatsApp continua valendo

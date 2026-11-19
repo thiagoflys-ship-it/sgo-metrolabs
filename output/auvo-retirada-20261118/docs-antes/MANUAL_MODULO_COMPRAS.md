@@ -1,0 +1,235 @@
+# Manual do módulo Compras e peças do SGO+
+
+Versão de 31/10/2026. Telas: Compras > Pedir peça ou material, Informar compra já feita, Meus pedidos de compra, Fila de compras (com cotações, aprovação, pedido, recebimento e pagamento), Fornecedores, Conferência do Financeiro, Painel de compras e Regras de compras. Os cartões da empresa, a conciliação das faturas e o A pagar estão no manual do Financeiro (Compras: cartões, conciliação e relatórios).
+
+## Para que serve
+
+O Compras do SGO+ acaba com dois problemas: o pedido vago ("uma mangueira de 1/2") que leva à compra errada e a compra sem rastro (sem saber para que foi, quem aprovou, como foi paga e se o Financeiro conferiu). O caminho inteiro fica no sistema: alguém pede a peça com a especificação, o comprador confere, cota com os fornecedores, a compra é aprovada por quem tem alçada para aquele valor, o pedido é feito ao fornecedor, a peça chega e é conferida, é entregue a quem pediu e o Financeiro confere o pagamento.
+
+As regras vieram do Compras do COMMAND, mais enxutas. As tarefas de cada pessoa são atividades de Minhas atividades; a aprovação por valor aparece e é cobrada na Caixa de decisões; os avisos seguem a matriz de avisos aprovada pelo dono.
+
+## Quem faz o quê
+
+Solicitante: qualquer colaborador interno. Pede, completa a especificação, acompanha em Meus pedidos de compra e recebe a peça. Não vê valores.
+
+Comprador: quem está na lista de compradores ou de substitutos em Compras > Regras de compras. Confere a especificação, cadastra fornecedores, cota, escolhe, faz o pedido, recebe, entrega e cancela com motivo. Aprova as compras da faixa do comprador.
+
+Gestor da área de Compras (Logística, no padrão): faz tudo o que o comprador faz e cobra as compras paradas.
+
+Demais gestores: veem a fila com valores e aprovam as compras da faixa do gestor quando a área é deles.
+
+Financeiro (perfil ou área): confere as compras e consulta os fornecedores.
+
+Diretoria e Administrador: tudo. A Diretoria aprova a faixa mais alta.
+
+Regras de compras: Administrador, Diretoria, Gestor, RH e Financeiro alteram. As aprovações continuam seguindo as faixas, e quem pediu não aprova o próprio pedido.
+
+Técnicos, Metrologia e RH não veem preço, orçamento nem pagamento.
+
+## Situações de um pedido de compra
+
+1. Solicitada: Compras recebeu. Quando falta algo na especificação, leva a marca "especificação incompleta" e não é cotada nem aprovada até completar.
+2. Em cotação: o comprador está pedindo orçamentos.
+3. Aguardando aprovação: orçamento escolhido; espera quem tem a alçada para aquele valor.
+4. Aprovada: o pedido ao fornecedor vai ser feito.
+5. Pedido feito: o fornecedor recebeu o pedido de compra.
+6. Recebida com divergência: chegou com problema (quantidade, especificação ou dano).
+7. Disponível: chegou e foi conferida; quem pediu é avisado.
+8. Entregue: encerra.
+9. Cancelada: sempre com o motivo.
+
+## Pedir peça ou material
+
+1. Toque em Compras > Pedir peça ou material.
+2. Escreva para que é e onde será usado (obrigatório).
+3. Escolha a urgência. Crítica é para equipamento ou atendimento parado: o comprador recebe a atividade com prazo no mesmo dia.
+4. Escolha a que a compra está ligada: cliente (com a unidade e, se houver, o número da O.S. do Auvo), pedido aprovado do Comercial, veículo da Frota ou uso interno (com a explicação de pelo menos 20 letras). Nenhuma compra fica sem vínculo.
+5. Acrescente os itens: tipo, descrição, quantidade e unidade. Um pedido pode ter vários itens.
+6. Para peça de equipamento ou de veículo, informe o equipamento de origem e o número da peça com a marca, ou pelo menos dois dados técnicos (tensão, corrente ou potência, pressão, rosca, dimensão, material). Sem o número da peça, a foto é obrigatória. Ao escolher o equipamento do cadastro, o campo de texto ao lado é preenchido com tipo, modelo, TAG, nº de série e setor do cadastro (pode completar); se o texto ficar vazio, o pedido de compra usa o rótulo do cadastro, para o documento nunca sair sem o equipamento.
+7. Toque em "Enviar a Compras". O pedido recebe o número REQ-ano-número (por exemplo REQ-2026-0001).
+
+Para material simples (papel, ferramenta comum) bastam descrição, quantidade e unidade.
+
+O que falta aparece na hora, embaixo de cada item. O pedido pode ser enviado assim mesmo, mas fica marcado "especificação incompleta" e aparece para quem pediu no Início e em Meus pedidos até completar.
+
+## Meus pedidos de compra
+
+Mostra os pedidos que você fez e, para o vendedor, os do pedido aprovado dele no Comercial. Para cada um: situação, uma frase do que está acontecendo, previsão de entrega, itens e andamento. Não mostra valores.
+
+Enquanto o pedido está "Solicitada", quem pediu pode alterar, completar a especificação ou cancelar com o motivo. Depois que a cotação começa, o cancelamento é pedido ao comprador.
+
+## Fila de compras
+
+A fila do comprador traz todos os pedidos, do mais urgente ao mais antigo, com abas por situação e busca. A ficha do pedido mostra os itens, as fotos, os dados técnicos, o vínculo, o histórico e os botões do que pode ser feito agora.
+
+Conferir a especificação: se estiver clara, toque em "Especificação conferida: iniciar cotação". Se faltar algo ou estiver ambíguo, toque em "Devolver a especificação" e escreva o que falta: quem pediu recebe o texto no sistema e no resumo de e-mail da manhã, e o pedido volta para "Solicitada" até completar. O comprador também pode completar ele mesmo pelo botão "Editar a especificação".
+
+Cada pedido novo com a especificação completa vira a atividade "Conferir e cotar" do comprador em Minhas atividades, com o prazo da urgência (crítica: no mesmo dia; alta e normal: 1 dia útil; baixa: 2 dias úteis; configurável).
+
+## Cotações
+
+Com o pedido "Em cotação", o comprador toca em "Lançar orçamento" para cada fornecedor: preço unitário de cada item, frete, impostos que não estão no preço, prazo de entrega, validade, número do orçamento do fornecedor, condição de pagamento e, para peça, se é original (mesmo número de peça), equivalente (especificação conferida) ou a confirmar. O total é calculado pelo sistema (preço vezes a quantidade pedida, mais frete e impostos). O arquivo do orçamento (PDF, foto ou e-mail salvo) é obrigatório: é a prova do preço e fica na pasta "Compras - Anexos", visto só por quem vê valores.
+
+Um orçamento por fornecedor em cada pedido: para mudar, "Corrigir"; para tirar da comparação, "Retirar" com o motivo (fica no histórico).
+
+## Escolha e aprovação por valor
+
+**Decisão do dono (16/11/2026): no começo, só o dono e a Diretoria aprovam.** Com a configuração "Aprovação só do dono e da Diretoria" em Administração > Chaves e senhas > Regras do Financeiro (padrão: Sim), toda compra, em qualquer faixa, é aprovada só pelo dono do sistema ou pela Diretoria. O comprador, os gestores das áreas e as caixas "Aprovar compra até o limite do comprador", "da própria área" e "acima de todas as faixas" deixam de aprovar; a aprovação do comprador na escolha do orçamento também não acontece, e a compra fica "Aguardando aprovação". As compras que já esperavam um gestor passaram para a Caixa de decisões do dono e da Diretoria. Quem pediu nunca aprova a própria compra (se o pedido for do dono, aprova a Diretoria, e vice-versa). Quem tenta aprovar sem poder recebe: "Você não aprova esta compra: por decisão do dono, no começo só o dono do sistema e a Diretoria aprovam [...]. Quem aprova: [nomes]". As faixas em R$ abaixo continuam guardadas e voltam a valer quando a configuração mudar para "Não".
+
+O comprador toca em "Escolher este orçamento". Só pode ser escolhido o orçamento com arquivo, dentro da validade e com a compatibilidade confirmada. Se não é o mais barato, o comprador escreve o motivo. Se há menos cotações de fornecedores diferentes que o mínimo da faixa, escreve a justificativa (fornecedor único, urgência) e a compra aparece marcada para o Financeiro.
+
+O valor total do orçamento escolhido define quem aprova (Regras de compras):
+
+1. Faixa do comprador (até R$ 1.000 no padrão): a escolha feita pelo comprador já é a aprovação, registrada com o nome dele. Se quem escolheu é quem pediu, aprova o substituto (sem ele, o gestor da área).
+2. Faixa do gestor (até R$ 10.000): o gestor da área de quem pediu (responsável em Caixa de decisões > Regras e responsáveis; sem ele, o Gestor com essa área no cadastro; sem ninguém, a Diretoria).
+3. Faixa da Diretoria (acima de R$ 10.000): a Diretoria.
+
+Quem pediu nunca aprova a própria compra. Acima da faixa do comprador, quem lançou ou escolheu orçamento também não aprova. A Diretoria pode aprovar qualquer faixa.
+
+<!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+A compra fica "Aguardando aprovação" e entra na Caixa de decisões do aprovador, com prazo de 1 dia útil (urgência crítica: no mesmo dia). Desde 11/11/2026 o pedido de aprovação chega na hora aos dois da Diretoria (e ao gestor ou comprador que aprova, no expediente) por e-mail, WhatsApp e alerta na tela, com o fornecedor, o total, a faixa e as justificativas (evento GS06). A decisão é tomada na ficha da compra: a Caixa mostra, cobra pela escada (e-mail da manhã, depois o resumo do WhatsApp da gestão e, parada, a Diretoria) e leva até a ficha. Na faixa do comprador, o item aparece no Início dos compradores.
+
+"Aprovar" (observação opcional): o comprador recebe a atividade "Fazer o pedido de compra" (crítica: no mesmo dia; demais: 1 dia útil) e o aviso no sistema e no resumo de e-mail. "Reprovar" exige o motivo: a compra volta para cotação, o comprador recebe o motivo no sistema e a atividade "Rever a cotação". Orçamento vencido não é aprovado: reprove com o motivo para o comprador pedir a revalidação.
+
+"Pedir novo orçamento" (desde 18/11/2026): quem decide escolhe o fornecedor do cadastro ou escreve o contato (nome, telefone ou e-mail) e o que pedir. A compra volta para cotação, o comprador recebe a atividade "Pedir novo orçamento a [contato]" e, com o orçamento novo lançado, escolhe de novo. Não conta como reprovação.
+
+## Aprovador delegado das compras (decisão do dono de 18/11/2026)
+
+Vale com a aprovação só do dono e da Diretoria ligada (padrão). O dono e a Diretoria (o Charles) aprovam a qualquer momento. Se não decidirem dentro do prazo, o aprovador delegado, o Matheus (a conta interna "MATHEUS GODOI"; a conta de representação com o mesmo nome nunca conta), pode aprovar, reprovar ou pedir novo orçamento a um contato específico.
+
+1. O prazo começa quando o pedido é postado (configurável: ou quando o orçamento escolhido vai à aprovação). O padrão recomendado é de 30 minutos.
+2. O pedido só vai à aprovação com 3 orçamentos de fornecedores diferentes, cada um com o fornecedor, o valor e o arquivo (PDF, foto ou print). Com menos, o comprador escreve a justificativa (fornecedor único, urgência) e a decisão fica só com o dono e a Diretoria.
+3. O comprador escolhe o orçamento mais em conta ou justifica por escrito por que escolheu outro.
+4. Vencido o prazo sem decisão, o Matheus decide se: há pelo menos 3 orçamentos válidos; o escolhido é o mais em conta ou a escolha está justificada; ele não pediu nem cotou a compra; o valor cabe no teto da regra (vazio = sem teto, como está hoje, porque o dono não informou valor).
+5. A ficha da compra mostra, em "Prazo do dono e da Diretoria", até quando vai o prazo e quanto falta (a contagem anda sozinha), cada critério cumprido ou o que falta, e para o Matheus a frase exata do que ainda impede a decisão.
+6. Toda decisão do Matheus fica no histórico e nas aprovações com o critério cumprido ("prazo de 30 minutos vencido às ... sem decisão do dono e da Diretoria; 3 orçamentos válidos; escolhido o mais em conta; não pediu nem cotou") e avisa o dono e o Charles na hora, por WhatsApp e e-mail.
+
+O resto do Financeiro (aprovação de pagamentos, estorno, orçamento anual, recarga do Caju) continua só com o dono e o Charles: o aprovador delegado vale apenas para as compras e para o preço do Comercial.
+
+## Pedido de compra ao fornecedor
+
+Com a compra "Aprovada", o comprador toca em "Emitir o pedido de compra", informa a previsão de entrega combinada e a forma de pagamento (cartão de crédito ou débito com os 4 últimos números e as parcelas, PIX, boleto com o vencimento, transferência, faturado com a condição ou reembolso a um colaborador). Nunca se digita o número inteiro do cartão.
+
+O pedido sai numerado (PC-ano-número, por exemplo PC-2026-0001, revisão 00) em folha A4 retrato, salva em PDF e HTML na pasta "Compras - Pedidos de compra", separada por mês. Traz os dados da Metrolabs (endereço de entrega e de faturamento, em Regras de compras), o fornecedor, os itens com a especificação e a quantidade, o preço unitário, o frete, os impostos e o total, a previsão, a condição e a forma de pagamento, o número do orçamento do fornecedor, quem emitiu e quem aprovou. O vínculo aparece só pela referência interna, sem o nome do cliente. No rodapé, a marca de conferência do conteúdo.
+
+"Enviar ao fornecedor" abre a janela Enviar documento com o e-mail para pedidos do fornecedor sugerido; o envio fica no histórico. Depois, "Já enviei: atualizar" marca o pedido como enviado (a rotina também confere sozinha). Enviado por outro meio (portal do fornecedor, em mãos): "Enviado por outro meio", com o relato.
+
+A previsão de entrega muda só com o motivo ("Mudar previsão ou rastreio"); quem pediu vê a data nova em Meus pedidos. Para mudar o pedido em si, "Nova revisão do pedido" com o que mudou: sai a revisão 01, 02, e a anterior continua na pasta.
+
+## Recebimento, divergência e entrega
+
+Na chegada, "Registrar o recebimento": a quantidade recebida de cada item, se a especificação confere, se chegou sem dano (com dano, a foto é obrigatória) e o número da nota fiscal (ou o motivo de vir sem nota). Qualquer divergência (quantidade diferente, especificação que não confere, dano) segura a compra em "Recebida com divergência", com a descrição, até o comprador tocar em "Divergência resolvida" (ou cancelar com o motivo).
+
+Sem divergência, a compra fica "Disponível": quem pediu é avisado no sistema e no resumo de e-mail, e o comprador recebe a atividade "Entregar" (1 dia útil). A entrega é registrada com quem recebeu e a evidência (protocolo, retirada assinada ou foto); quem pediu também pode tocar em "Recebi a peça" em Meus pedidos de compra. A entrega encerra o pedido.
+
+## Pedido aprovado do Comercial
+
+Quando o vendedor passa um pedido aprovado aos setores e há produto, além da atividade do setor Compras nasce o pedido de compra (REQ) com os produtos do pedido, ligado à proposta e sem o valor de venda. A atividade do setor Compras é a tarefa do comprador; quando todas as compras daquele pedido ficam disponíveis, ela é concluída sozinha e o vendedor é avisado.
+
+## Pagamento e conferência do Financeiro
+
+Depois do pedido feito, o comprador toca em "Registrar o pagamento": valor pago, data, forma (a do pedido ou outra) e o comprovante (recibo, extrato, cupom ou boleto pago). A compra entra na Conferência do Financeiro como "Aguardando conferência", e o Financeiro é avisado no sistema e no resumo de e-mail (sem valor).
+
+Compras > Conferência do Financeiro (perfil ou área Financeiro, Diretoria e Administrador) lista as compras por mês, situação e final do cartão, com o valor do pedido, o valor pago (selo "diferente" quando não batem), o comprovante, a nota e os selos "Sem pedido" e "Menos cotações". "Abrir o dossiê" mostra a ficha completa (vínculo, orçamentos com os arquivos, aprovação, pedido, recebimento, pagamento). "Conferida" encerra a conferência; "Divergente" exige o que não bate e volta para quem registrou o pagamento, que corrige e reenvia com o que foi corrigido. Quem registrou a compra ou o pagamento não confere a própria. "Baixar a planilha" gera o arquivo CSV com a lista filtrada, para bater a fatura do cartão.
+
+## Informar compra já feita
+
+Desde 31/10/2026 (pedido do dono), quem compra com o cartão da empresa, faturado, boleto, Pix, dinheiro do caixa ou com o próprio dinheiro informa a compra em Compras > Informar compra já feita, no celular ou no computador. Substitui o aviso no grupo do WhatsApp e o antigo "Registrar compra feita fora do sistema". A compra entra no mesmo cadastro das compras do fluxo normal (número REQ-ano-número), vai para a conferência do Financeiro e cada parcela cai na fatura certa do cartão.
+
+1. Abra Compras > Informar compra já feita (no celular, também pelo atalho "Informar compra" da tela inicial).
+2. Quadro 1, para que foi: escreva a finalidade (pelo menos 10 letras) e escolha o vínculo: chamado da Assistência técnica (a compra entra no custo do chamado), cliente (com a unidade e o número da O.S., se houver), pedido aprovado do Comercial (aparece na ficha do pedido), veículo da Frota ou uso interno (com o centro de custo e a explicação). Se houver orçamento ou pedido de compra, informe o número ou anexe o arquivo.
+3. Quadro 2, o que foi comprado: um ou mais itens (o que é, quantidade e unidade), onde foi comprado, o valor total pago (como no comprovante) e a data da compra. Se a mercadoria ainda vai chegar, marque "Ainda vai chegar" e informe a previsão: Compras registra o recebimento e avisa você quando chegar.
+4. Quadro 3, como foi pago: cartão de crédito da empresa (os 4 últimos números e as parcelas), cartão de débito, faturado ou boleto (com o vencimento), Pix, transferência, dinheiro do caixa ou dinheiro próprio (o reembolso vai para você e fica com o Financeiro, em 5 dias úteis). Nunca se digita o número inteiro do cartão. Cartão ainda não cadastrado: digite o final assim mesmo.
+5. Quadro 4: a foto do comprovante (obrigatória) e a nota fiscal (foto ou PDF, ou o número; sem nota, o motivo).
+6. "Conferir antes de enviar" mostra os apontamentos; "Enviar ao Financeiro" grava.
+
+O sistema confere na hora e grava com o apontamento, para o Financeiro olhar:
+
+- Compra parecida já informada (mesmo cartão ou mesma pessoa, mesmo valor, data próxima) ou o mesmo arquivo de comprovante: mostra a compra parecida e pede que você explique se é outra. Desde 18/11/2026, no quadro 1 há "Para onde vai a compra" (Matriz Goiânia/GO ou Filial Rio de Janeiro/RJ, opcional): compras iguais para destinos diferentes não são acusadas; o mesmo arquivo de comprovante é acusado sempre.
+- Informada depois do prazo (2 dias úteis no padrão): pede o motivo do atraso. Compra de mais de 90 dias só o Financeiro e a gestão informam.
+- Quando as duas perguntas aparecem (atraso e compra parecida), elas ficam juntas na tela, com o que você já escreveu. Responda as duas (pelo menos 10 letras cada) e toque de novo em "Enviar ao Financeiro": a compra grava e as respostas vão para os apontamentos do Financeiro e para o histórico. (Até 18/11/2026 a segunda pergunta apagava a primeira resposta e o envio voltava às mesmas perguntas.)
+- Valor acima do limite da compra direta (R$ 1.000 no padrão): vai também para a ciência da gestão na Caixa de decisões.
+- Valor bem acima da sua média de compras dos últimos 90 dias: marcado "acima do comum".
+
+Cada pessoa informa as próprias compras. O comprador, o Financeiro e a gestão podem informar em nome de outra pessoa; quem comprou é avisado no sistema.
+
+Na aba "Minhas compras informadas" ficam as suas compras com o valor, a situação no Financeiro (aguardando, conferida, divergente com o texto), as parcelas e a fatura de cada uma, e o reembolso pago com o comprovante. Informou por engano? Abra a compra e toque em "Cancelar o pedido" com o motivo, enquanto o Financeiro não conferiu e nada foi conciliado.
+
+Quem responde por um cartão da empresa vê a aba "Compras a informar": os lançamentos da fatura daquele cartão que ninguém informou. "Informar esta compra" abre o formulário com o valor, a data e o cartão preenchidos. A cobrança fica no Início; depois de 2 dias úteis vai também por e-mail (no expediente) e, no WhatsApp, só entra na contagem do resumo do dia. Depois de 5 dias úteis, a gestão é avisada. Se o lançamento não foi compra (tarifa, assinatura), fale com o Financeiro.
+
+## Compra feita sem pedido no sistema
+
+A compra registrada antes de 31/10/2026 por "Registrar compra feita fora do sistema" continua como estava: entra na conferência do Financeiro e na Caixa de decisões até a gestão tocar em "Ciente". As novas são informadas pela tela "Informar compra já feita" (seção anterior).
+
+## Painel e relatório mensal
+
+Compras > Painel de compras (compradores, gestores e Diretoria): compras em aberto por situação, entregas atrasadas, o que aguarda o Financeiro, o gasto do mês por vínculo, por área de quem pediu e por fornecedor, e os controles do mês (recebidas fora do prazo, menos cotações que o mínimo, divergências de recebimento, compras sem pedido).
+
+"Relatório do mês (A4)" abre o relatório mensal de compras e salva PDF e HTML na pasta "Compras - Relatórios". No primeiro dia útil de cada mês, a rotina de Compras gera sozinha o relatório do mês anterior e avisa a Diretoria no sistema e no resumo de e-mail.
+
+## Fornecedores
+
+Cadastro único: CNPJ (ou CPF de pessoa física) que não se repete, razão social, nome fantasia e endereço pela consulta de CNPJ, contato, telefone, WhatsApp, e-mail para pedidos, categorias, prazo médio, condição de pagamento e observações. Antes de criar, o sistema avisa se já existe fornecedor com nome parecido.
+
+Arquivar não apaga: o fornecedor sai da escolha nas cotações e o histórico continua. "Mostrar arquivados" e "Reativar" trazem de volta.
+
+Importar da planilha (opcional): copie a linha de títulos e as linhas dos fornecedores e cole no quadro. Primeiro aparece a prévia; depois "Aplicar a importação". CNPJ que já existe só ganha os campos que estavam vazios; o que já foi digitado nunca é trocado.
+
+## Regras de compras
+
+Administrador, Diretoria, Gestor, RH e Financeiro alteram; compradores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.
+
+Padrão aprovado pelo dono em 21/10/2026:
+
+| Valor total da compra | Quem aprova | Cotações mínimas |
+| --- | --- | --- |
+| Até R$ 1.000 | O comprador (fica registrado) | 1 |
+| De R$ 1.000,01 a R$ 10.000 | Gestor da área | 2 |
+| Acima de R$ 10.000 | Diretoria | 3 |
+
+Compras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código.
+
+Quadro "Aprovador delegado" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; quem decide depois do prazo (padrão: a conta interna "MATHEUS GODOI"; só conta interna ativa, nunca o dono ou a Diretoria); prazo em minutos (padrão 30); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo.
+
+## Avisos
+
+Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã (um por pessoa por dia, a partir das 8 h, no expediente); WhatsApp pelo Compras só nas exceções do dono, logo abaixo. Nenhum aviso aos demais leva valor em reais. Quem fez a ação não é avisado.
+
+Exceção autorizada pelo dono em 18/11/2026, só para o dono, a Diretoria e o aprovador delegado, a qualquer hora, inclusive fora do expediente (WhatsApp e e-mail pela fila dos avisos da gestão, mais o alerta na tela; podem levar o valor, porque são os aprovadores):
+- GS08, nova solicitação de compra: número, quem pediu, o que é, urgência e o link.
+- GS09, prazo do dono e da Diretoria vencido com os critérios cumpridos: o delegado já pode decidir (uma vez por pedido).
+- GS10, decisão do delegado: o que decidiu, o valor e o critério cumprido (para o dono e a Diretoria).
+Quem não tem celular no cadastro recebe pelo e-mail e pelo sistema. Com o WhatsApp a qualquer hora desligado em Regras de compras, esses avisos vão só pelo sistema e pelo e-mail.
+
+- Especificação incompleta ou devolvida: quem pediu, no sistema até completar; a devolução também vai no resumo de e-mail.
+- Pedido cancelado: quem pediu (e o vendedor, se for de pedido do Comercial), só no sistema.
+- Pedido novo para cotar: o comprador, como atividade.
+- Compra aguardando aprovação: o aprovador da faixa, pela Caixa de decisões (faixa do comprador: no Início dos compradores).
+- Compra aprovada: o comprador, no sistema e no resumo de e-mail, com a atividade de fazer o pedido. Compra reprovada: o comprador, só no sistema, com o motivo.
+- Aprovada sem pedido há 1 dia útil ou entrega atrasada: o comprador, no Início; depois de 2 dias úteis, a Caixa de decisões do gestor da área de Compras.
+- Peça pedida e mudança de situação: só histórico (quem pediu vê em Meus pedidos).
+- Recebida com divergência: o comprador, no sistema até resolver.
+- Peça disponível: quem pediu e, no pedido do Comercial, o vendedor, no sistema e no resumo de e-mail.
+- Peça disponível de um pedido ligado a um chamado da Assistência técnica (vínculo "CH-..."): Compras chama a
+  Assistência depois de soltar a própria trava; o chamado volta sozinho a "Planejado" como "retorno a agendar", o
+  técnico e a gestão da área Técnica são avisados (AT14) e o cliente recebe o e-mail "peça chegou, retorno será
+  agendado" (AT15). Recebimento com divergência não devolve o chamado; "Divergência resolvida" devolve (22/10/2026).
+- Compra para conferir: o Financeiro, no sistema até conferir e no resumo de e-mail (sem valor). Divergência do Financeiro: quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail.
+- Compra sem pedido e compra informada acima do limite da compra direta: a Caixa de decisões da gestão até a ciência.
+- Compra informada em seu nome por outra pessoa: você, no sistema.
+- Compra informada que "ainda vai chegar": o comprador, no sistema e no resumo de e-mail, para registrar o recebimento.
+- Compra no cartão da empresa que está na fatura e ninguém informou (evento CP02 da matriz): o responsável pelo cartão, no Início até informar; e-mail no expediente depois de 2 dias úteis; WhatsApp só na contagem do resumo do dia. Depois de 5 dias úteis, a Caixa de decisões do gestor da área da pessoa.
+- Reembolso pago: quem recebeu, no sistema e no resumo de e-mail.
+- Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.
+
+A rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês.
+
+## Etapa 5 do programa de melhoria (01/11/2026): listas vazias
+
+As listas vazias dizem o que fazer:
+
+- **Fila de compras:** "Toque em outra situação acima (ou em «Todas»)". Com busca digitada, pede para apagar a busca.
+- **Conferência do Financeiro:** "Troque o mês, apague o final do cartão ou escolha «Todas» em Situação".
+- **A pagar:** "Nada a pagar agora. Para ver o que já foi pago, escolha «Pagos nos últimos 60 dias» em Mostrar".
+
+No celular (390 px) e no computador (1366 px), as telas de Compras foram medidas sem rolagem lateral, sem campo passando da largura e, no celular, sem alvo de toque abaixo de 40 px.

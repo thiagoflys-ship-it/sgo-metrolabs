@@ -37,7 +37,7 @@ Documentos ligados (inventário de 20/10/2026):
 | Arquivo de documentos | Qualquer arquivo ligado a um cliente | cliente |
 | Padrões de referência | Inventário dos padrões, solicitação de orçamento, relatórios gerenciais | interno |
 | Frota | Relatório da frota, por veículo, reservas, rastreamento | interno |
-| Painel de qualidade, Auvo | Relatórios de gestão e de atendimentos | interno |
+| Painel de qualidade | Relatórios de gestão | interno |
 | Programa de conduta, Desempenho da gestão | Fechamentos, extratos, relatórios da equipe, avaliação do gestor | bloqueado (dado pessoal) |
 
 ## 3. Passo a passo

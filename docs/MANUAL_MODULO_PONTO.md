@@ -19,7 +19,7 @@ Não recebe lembrete naquele momento:
 
 - quem está de férias ou afastado no Programa de conduta;
 - quem tem folga, atestado, consulta ou viagem sem marcação lançada pelo RH em "Folgas e dispensas";
-- quem está em atendimento no Auvo (check-in feito, sem check-out).
+- quem está em atendimento numa O.S. do SGO+ (chegada registrada, sem conclusão).
 
 ## Horários
 
@@ -75,7 +75,7 @@ A aba mostra se você recebe os lembretes (e o motivo, se não recebe), a sua jo
 ### Pedidos de ajuste
 
 1. Abra a aba "Pedidos de ajuste". O número vermelho na aba mostra quantos estão pendentes.
-2. Leia o horário informado, a frase da pessoa e a evidência automática. A evidência é só o horário de check-in e de check-out do Auvo naquele dia. O SGO+ não usa localização.
+2. Leia o horário informado, a frase da pessoa e a evidência automática. A evidência é só o horário de chegada e de conclusão das O.S. do SGO+ naquele dia. O SGO+ não usa localização.
 3. Lance no relógio ou no sistema de ponto.
 4. Toque em "Lançado no ponto". Se não for o caso, toque em "Não lançado" e escreva o motivo.
 

@@ -4,6 +4,7 @@
 // estourado continua no estado do prazo, nos indicadores e no histórico. Passada a data marcada sem a chegada, volta à lista com o
 // texto da visita não registrada. No Auvo: O.S. da foto de pendências que a sincronização das tarefas leu depois já finalizada ou
 // com a data passada para o futuro (reagendada no Auvo) não é cobrada.
+// 18/11/2026 (mesmo dia, depois): o dono descontinuou o Auvo; nenhuma O.S. do Auvo é mais cobrada (a fonte saiu da central).
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { ambiente, ok, abrirChamado, triarVisita, agendar } = require('./_assistencia_ambiente.cjs');
@@ -70,7 +71,7 @@ test('agendado antes de estourar e a visita ainda por vir: nenhum alerta de praz
   assert.equal(ficha.visitaMarcada.reagendado, false);
 });
 
-test('Auvo: O.S. da foto já finalizada ou reagendada pela sincronização mais nova não é cobrada; leitura antiga não muda nada', () => {
+test('Auvo descontinuado (18/11/2026): nenhuma O.S. da foto de pendências é cobrada, finalizada, reagendada ou aberta', () => {
   const foto = (id, data) => ({ ID: 'p' + id, AUVO_TASK_ID: id, TASK_TYPE_DESCRICAO: 'Manutenção', CLIENTE_NOME: 'Hospital Teste Alfa', TECNICO_ID_SGO: 'u_tec', TECNICO_NOME: 'TIAGO TECNICO TESTE',
     TASK_DATE: data, DIAS_ABERTA: 5, TEM_EVIDENCIA: 'NAO', TASK_URL: '', ULTIMA_SINCRONIZACAO: '2026-10-15T08:00:00.000Z' });
   const tarefa = (id, data, fin, lida) => ({ ID: 't' + id, AUVO_TASK_ID: id, DATA_TAREFA: data, FINALIZADA: fin, ULTIMA_SINCRONIZACAO: lida });
@@ -83,6 +84,6 @@ test('Auvo: O.S. da foto já finalizada ou reagendada pela sincronização mais 
       tarefa('400', '2026-10-25T09:00:00', 'NAO', '2026-10-10T10:00:00.000Z')                // leitura ANTERIOR à foto: não vale
     ]
   } });
-  const ids = amb.pend('s_gil').filter((i) => i.tipo === 'auvo_os_aberta').map((i) => i.id).sort();
-  assert.deepEqual(ids, ['AUVO:OS:300', 'AUVO:OS:400', 'AUVO:OS:500']);
+  const ids = amb.pend('s_gil').filter((i) => /^auvo/.test(i.tipo) || /^AUVO:/.test(i.id)).map((i) => i.id).sort();
+  assert.deepEqual(ids, []);
 });

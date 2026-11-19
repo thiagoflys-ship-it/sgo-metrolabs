@@ -99,9 +99,10 @@ test('CSS: até 760 px a tabela vira cartão; no computador fica como estava', (
 test('ajuda e manual explicam o cartão no celular e a contagem de dias', () => {
   const ctxA = vm.createContext({});
   vm.runInContext(fs.readFileSync(path.join(base, 'SGO_Ajuda_Auvo.js'), 'utf8'), ctxA);
-  const ajuda = JSON.stringify(ctxA.SGO_ajudaTelas_Auvo_().auvo);
-  assert.match(ajuda, /tabelas da tela viram cartões/);
-  assert.match(ajuda, /Aberta há N dias/);
+  // 18/11/2026: Auvo descontinuado pelo dono. A ajuda da tela Integração Auvo saiu (a tela não é mais servida); a tela antiga fica
+  // no arquivo só como registro, por isso as frases dela continuam conferidas abaixo.
+  assert.equal(ctxA.SGO_ajudaTelas_Auvo_().auvo, undefined);
+  assert.ok(ctxA.SGO_ajudaTelas_Auvo_().auvo_historico);
   const html = tela();
   assert.match(html, /No celular, cada O\.S\. aparece como um cartão/);
   assert.match(html, /abertas há até 1 ano/);

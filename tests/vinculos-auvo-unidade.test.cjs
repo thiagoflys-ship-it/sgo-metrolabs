@@ -95,17 +95,17 @@ test('excluir unidade com ligação ao Auvo criada pelo SGO+: permitido, ligaç�
   assert.equal(p.changes.filter((c) => c.field === '__DELETE__').length, 1, 'só a unidade sai da lista');
 });
 
-test('excluir: vale o original — unidade que é o cadastro original de um cliente Auvo, ou com tarefa do Auvo nesse cliente, não é excluída (caminho na mensagem)', () => {
+// 18/11/2026: Auvo descontinuado pelo dono. "Vale o original" protegia a ligação viva com o Auvo; sem o Auvo, a ligação é só
+// histórico: a unidade original de um cliente Auvo (ou com tarefa do Auvo) pode ser excluída e a ligação fica guardada.
+test('excluir: unidade que era o cadastro original de um cliente Auvo, ou com tarefa do Auvo, pode ser excluída (ligação guardada como histórico)', () => {
   const s = snap();
   s.tables.AUVO_SYNC[0].CHAVE = 'UNIDADE:AUVOID:9000001';
   const p = plano(s, 'EXCLUIR');
-  assert.equal(p.blocks.length, 1, p.blocks.join(' | '));
-  assert.match(p.blocks[0], /9000001/);
-  assert.match(p.blocks[0], /Inativar/);
-  assert.match(p.blocks[0], /Consolidar/);
+  assert.deepEqual(p.blocks, [], p.blocks.join(' | '));
+  assert.ok(p.warnings.some((w) => /histórico do Auvo/.test(w) && /9000001/.test(w)), p.warnings.join(' | '));
   const s2 = snap({ AUVO_TAREFAS: [{ ID: 't1', AUVO_TASK_ID: '777', CLIENTE_AUVO_ID: 9000001, CLIENTE_ID_SGO: 'cA', FINALIZADA: 'SIM' }] });
   const p2 = plano(s2, 'EXCLUIR');
-  assert.ok(p2.blocks.some((b) => /9000001/.test(b) && /Inativar/.test(b)), p2.blocks.join(' | '));
+  assert.equal(p2.blocks.some((b) => /9000001/.test(b)), false, p2.blocks.join(' | '));
 });
 
 test('excluir com outro registro ligado continua impedido, com nome de tela da tabela', () => {

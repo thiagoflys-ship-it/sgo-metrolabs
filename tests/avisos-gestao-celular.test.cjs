@@ -353,7 +353,8 @@ test('telas: a matriz mostra e ajusta o aviso da gestão (com trilha e merge); p
   const s = c.SGO_AvisosMatriz_api('s_dir', 'salvarRegra', { cod: 'S23', email: 'HORA', whatsapp: 'NAO', decisao: 'AVISA', gestaoLigada: 'NAO', motivo: 'teste de desligar a gestão' });
   assert.equal(s.ok, true, s.message);
   assert.equal(c.SGO_avisoRegra_('S23').gestaoLigada, false);
-  const t = c.SGO_AvisosMatriz_api('s_dir', 'trilha', {}).trilha[0];
+  // 18/11/2026: a trilha também registra a retirada dos eventos do Auvo (S54 a S56); aqui vale a mudança do teste.
+  const t = c.SGO_AvisosMatriz_api('s_dir', 'trilha', {}).trilha.filter((l) => !/^S5[456]$/.test(l.codigo))[0];
   assert.equal(t.antes.gestaoLigada, true); assert.equal(t.depois.gestaoLigada, false);
   apoio(amb, ['u_gt'], 'OPO-DESL');
   assert.equal(filaG(amb).length, 0);

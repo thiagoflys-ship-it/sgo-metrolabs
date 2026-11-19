@@ -1,0 +1,643 @@
+# Manual do módulo Assistência técnica
+
+Assistência técnica nativa do SGO+ (21/10/2026). Substitui o uso do Auvo para chamados, agenda, ordens de serviço,
+relatório do atendimento e acompanhamento do cliente. Funciona em paralelo ao Auvo até os seis critérios da tela
+"Transição do Auvo" serem cumpridos. O aplicativo do técnico no celular tem manual próprio (Manual do SGO+ Campo).
+
+## Para que serve
+
+Cada pedido de atendimento técnico vira um chamado com número (CH-2026-0001). O chamado passa pela triagem da gestão
+da área Técnica, ganha prazo pela prioridade, é agendado para um técnico e gera a ordem de serviço (OS-2026-0001). O
+técnico registra o atendimento pelo aplicativo ou pela tela; a O.S. só fecha com a documentação completa e gera o
+relatório A4, salvo na pasta do equipamento e enviado ao cliente.
+
+## Quem faz o quê
+
+- Equipe interna: abre chamado (telefone, e-mail, presencial) e acompanha. Na fila livre, qualquer colaborador assume
+  o chamado ("Assumir chamado") e faz a triagem dele.
+- Técnico: registra as próprias O.S. Não vê valores de orçamento.
+- Gestor da área Técnica: triagem, agenda, reagendamento, cancelamento, série divergente, indicadores. Sem gestor da
+  área Técnica configurado em Caixa de decisões > Regras e responsáveis, a triagem vai para a Diretoria.
+- Comercial e Financeiro: preenchem, emitem e registram a resposta do orçamento do chamado.
+- Administrador, Diretoria e Gestor: alteram as Regras da assistência (inclusive quem faz a triagem e a fila livre),
+  excluem chamado de teste ou simulação (com motivo) e restauram os excluídos.
+- Administrador: marca "Auvo desligado" quando os seis critérios estão cumpridos.
+- Cliente: em "Meus chamados" pede atendimento para os próprios equipamentos e baixa os relatórios.
+
+## O caminho do chamado
+
+1. Aberto: o pedido chegou (tela interna, e-mail recebido, portal do cliente, QR do equipamento, pedido aprovado do Comercial).
+2. Em triagem: a gestão confirma os sintomas, o risco de continuar usando e o diagnóstico preliminar.
+3. Decisão da triagem: resolvido remotamente, aguardando orçamento, aguardando peça ou planejado (visita).
+4. Agendado: técnico, data, duração, tipo de serviço e preparo.
+5. Em campo: em deslocamento, no local, em execução (pausado ou aguardando cliente quando preciso).
+6. Execução concluída, documentação pendente: o técnico concluiu, mas falta algo da documentação.
+7. Encerrado (ou Cancelado, sempre com motivo).
+
+Chamado encerrado ou cancelado não muda. Se o problema voltar, abra outro chamado: ele aparece como reincidência
+quando o mesmo equipamento teve chamado nos últimos 30 dias.
+
+## Prazos de atendimento
+
+O prazo de atendimento conta da abertura até a execução concluída, em horas úteis do expediente da empresa
+(08:00 às 17:30, dias úteis, feriados nacionais e os cadastrados):
+
+| Prioridade | Quando usar | Prazo de atendimento | Prazo de triagem |
+| --- | --- | --- | --- |
+| P1, crítica | Equipamento parado que afeta o paciente | 4 horas úteis | 30 minutos úteis |
+| P2, alta | Equipamento com falha importante | 1 dia útil | 2 horas úteis |
+| P3, normal | Falha que permite uso | 3 dias úteis | 4 horas úteis |
+| P4, baixa | Ajuste, melhoria, dúvida | 7 dias úteis | 1 dia útil |
+
+Contrato do cliente com prazo próprio prevalece (Regras da assistência > Contratos). O prazo só pausa ao aguardar
+cliente ou peça quando o contrato permite. Selos: "Em dia", "Em risco" (resta um quarto do prazo ou menos) e
+"Prazo estourado". Prazo em risco ou estourado entra no Início e na Caixa de decisões da área Técnica.
+
+### Visita marcada com o prazo estourado (18/11/2026)
+
+Pedido do Matheus (17/11/2026): o atendimento já reagendado continuava como "prazo estourado" nas prioridades do Início.
+
+- Chamado "Agendado" com a visita marcada para uma data futura (no primeiro agendamento ou num reagendamento) não é
+  mais pendência de ação: sai do Início e da Caixa de decisões até a data marcada. Quem agendou já agiu.
+- O prazo do contrato não é apagado. O selo "Prazo estourado em ..." continua na ficha e na lista, o reagendamento fica
+  no histórico (com o motivo) e o chamado continua contado como estourado no contador da tela e nos indicadores do
+  relatório mensal.
+- A ficha mostra a faixa "Visita reagendada para ..." (ou "Visita marcada para ..."), com o prazo que estourou e a
+  explicação de que o chamado volta à lista se a chegada não for registrada.
+- Passada a data marcada sem o "Cheguei" da O.S., o chamado volta às pendências com o título "Prazo estourado: chamado
+  ...: a visita marcada não foi registrada" e o que fazer: registrar a chegada pelo aplicativo, se a visita aconteceu,
+  ou reagendar com o motivo. Chamado aberto em campo pelo técnico não usa esse texto (não houve visita marcada).
+- Prazo em risco segue a mesma regra: com a visita marcada para o futuro, não é cobrado.
+- Integração Auvo: a lista "O.S. aberta no Auvo" é uma foto da última varredura. A O.S. que a sincronização das tarefas
+  leu depois dessa foto já finalizada, ou com a data passada para um dia depois de hoje (reagendada no Auvo), sai da
+  lista; a próxima varredura confirma. Leitura da tarefa mais antiga que a foto não muda nada.
+
+## Abrir um chamado
+
+1. Menu > Assistência técnica > Abrir chamado.
+2. Busque o cliente pelo nome ou CNPJ e escolha a unidade e o equipamento. Equipamento fora do cadastro: marque
+   "Equipamento não identificado" e descreva; a triagem liga ao cadastro.
+3. Escreva o problema relatado, quem pediu e o contato. Escolha a prioridade e se o equipamento está parado.
+4. Toque em "Abrir o chamado". Se o equipamento já tem chamado em aberto, a tela avisa: acompanhe pelo chamado aberto
+   ou toque em "Abrir mesmo assim" se for outro problema.
+
+Pelo e-mail integrado: abra a mensagem do cliente e toque em "Abrir chamado"; o texto, o remetente e o cliente
+reconhecido já vêm preenchidos.
+
+Pedido do cliente pelo portal ou pelo QR entra em "Solicitações dos clientes": a equipe confere e abre o chamado
+(ou descarta com o motivo). O chamado não nasce sozinho, para não haver chamado duplicado ou errado.
+
+### Aberta em campo (pelo técnico, no aplicativo)
+
+Desde 22/10/2026 o técnico (e, desde 03/11/2026, qualquer colaborador da Metrolabs, de qualquer área ou vínculo) abre atendimento fora da agenda pelo SGO+ Campo (botão "Novo atendimento"): localiza ou cadastra
+o cliente, a unidade e o equipamento e abre a O.S. na hora, inclusive sem internet. No SGO+:
+
+- O chamado nasce com canal "Presencial", a **triagem feita em campo** pelo próprio técnico (sintomas confirmados no local,
+  decisão "visita") e a O.S. já no nome dele; não entra na fila de triagem. Chamado e O.S. levam o selo **Aberta em campo**
+  (lista e ficha), e a gestão da área Técnica recebe o aviso AT01 "atendimento aberto em campo".
+- O cadastro feito em campo entra marcado **criado em campo por <técnico> em <data>** e vira a pendência "cadastro criado em
+  campo para conferir" na Central e na Caixa de decisões da área Técnica (2 dias úteis). Em Assistência técnica > Chamados, o
+  quadro "Cadastros criados em campo a conferir" lista cada um: confira em Cadastros (Clientes, Unidades, Equipamentos ou
+  Vínculos), corrija se precisar e toque em "Conferido" (com o que foi conferido). Nada fica bloqueado enquanto isso.
+- Nunca em dobro: antes de criar, o servidor confere CNPJ, nome, série e TAG; se já existir, usa o existente e avisa o
+  técnico ("já cadastrado como ..."). Vale o original: cadastro repetido é consolidado em Vínculos.
+- Equipamento que já tem O.S. aberta com o mesmo técnico: o aplicativo continua nela.
+
+## Triagem
+
+### Chamado pendente de triagem e fila livre (27/10/2026)
+
+Decisão do dono: "Alerta + fila livre".
+
+- Quem faz a triagem: as pessoas marcadas em Regras da assistência > Triagem e fila livre. Sem ninguém marcado, vale o
+  de antes: o responsável da área Técnica em Caixa de decisões > Regras e responsáveis (é assim que a triagem chega à
+  Bruna hoje); sem ele, o Gestor da área Técnica; sem ele, a Diretoria.
+- Chamado novo nasce "Pendente de triagem". Quem faz a triagem recebe o aviso de sempre (AT01, no sistema e por e-mail)
+  com a hora em que o chamado vai para a fila livre. A gestão (Gestor da área Técnica e Diretoria) recebe o alerta
+  "Chamado pendente de triagem" (AT18, só no sistema). Na central de pendências o item se chama "Chamado pendente de
+  triagem" e diz até quando está reservado.
+- Contador: o número ao lado de "Chamados" no menu mostra quantos chamados a pessoa pode assumir agora (vermelho quando
+  há fila livre); ele se atualiza a cada 5 minutos com a aba aberta, sem mexer em nenhuma tela. Na lista, a faixa do alto
+  mostra os pendentes e quantos estão na fila livre, com os botões "Ver a triagem" e "Ver a fila livre".
+- Fila livre: se ninguém assumir em 30 minutos úteis (configurável de 5 a 480; conta só o expediente, então o chamado
+  aberto às 17:20 entra na fila às 08:20 do dia útil seguinte), o chamado entra na fila livre. Uma vez por chamado, os
+  técnicos disponíveis (sem atendimento em andamento), quem faz a triagem e a gestão recebem o aviso no sistema (AT19).
+  A mensagem é curta: "se puder, assuma; se já está em outro atendimento, não precisa fazer nada". E-mail e WhatsApp do
+  AT19 começam desligados na matriz de avisos; se a gestão ligar o WhatsApp, valem as regras da matriz (CLT, piloto,
+  expediente e teto do dia).
+- "Assumir chamado" (na lista e na ficha, botão grande para o celular): o chamado vai para "Em triagem" com quem assumiu
+  e quando (selo "Assumido por ... em ..." e histórico). Quem fazia a triagem é avisado no sistema quando outra pessoa
+  assume pela fila livre. Dois colegas não assumem o mesmo chamado: o segundo vê "já foi assumido por ... em ...".
+- Quem faz a triagem e a gestão podem assumir a qualquer momento; começar a preencher a triagem também é assumir.
+  Antes da fila livre, os demais colaboradores veem "reservado para a triagem de ... até ...".
+- A conferência da fila livre roda com o gatilho da Assistência (de 15 em 15 minutos) e a cada abertura da lista.
+
+### Preencher a triagem
+
+1. Abra o chamado e preencha os sintomas confirmados, o risco de continuar usando e o diagnóstico preliminar.
+2. Mude a prioridade se precisar (com o motivo; o prazo é recalculado).
+3. Escolha o tipo de serviço e o caminho:
+   - Resolvido remotamente: descreva a orientação. Depois, encerre com quem confirmou no cliente e o teste. A orientação aparece
+     no relatório do atendimento do cliente e da representada (sem o enquadramento comercial): escreva como se fosse para o cliente
+     ler. Chamado resolvido antes de 03/11/2026 (publicação) continua sem a orientação nessa seção do documento externo.
+   - Precisa de orçamento: descreva o que orçar. O Comercial recebe a atividade.
+   - Precisa de peça: diga qual peça. O pedido abre sozinho em Compras, ligado ao cliente e ao chamado.
+   - Planejar visita: o chamado vai para "Planejado" e aparece para agendar.
+   - Entrega de equipamento ou material, Retirada de equipamento, Envio por transportadora (03/11/2026): o chamado vai para
+     "Planejado" com o tipo de logística do caminho (ou o de Logística que você escolher, do mesmo sentido). Ao agendar, nasce a
+     O.S. de logística: no SGO+ Campo o colaborador preenche o termo e colhe as duas assinaturas, e o documento sai como "Termo de
+     entrega", "Termo de retirada (recebimento)" ou "Termo de envio". No preparo da agenda, a logística pede só o acesso ao
+     cliente e a documentação em mãos (instrumentos, ferramentas, peças e risco não se aplicam).
+   - Entrega, retirada ou envio já realizado (registrar): quando já aconteceu sem O.S. pelo aplicativo (por exemplo, no balcão).
+     Só a gestão registra (encerra o chamado); quem só faz a triagem vê o caminho com "peça à gestão da área Técnica". Informe o
+     sentido, o nome completo de quem recebeu ou entregou, o documento (opcional), a data e a hora (não pode ser no futuro nem antes
+     da abertura do chamado) e anexe o canhoto ou o termo em papel (opcional, recomendado): só foto JPG, PNG ou WEBP ou PDF, até
+     10 MB; o tipo é conferido pelo conteúdo do arquivo. O chamado é encerrado com o registro; o comprovante abre pela ficha do
+     chamado ("Abrir o comprovante") e o relatório do cliente diz só "Comprovante anexado".
+   - Outro (descreva): quando nenhum caminho serve. Descreva (pelo menos 10 letras) e escolha o tipo de serviço; o chamado vai
+     para "Planejado" com a descrição como próximo passo.
+   Entrega, retirada, envio, já realizado e outro não pedem sintomas, risco nem diagnóstico (são itens de conserto).
+
+## Agenda e despacho
+
+1. No chamado "Planejado", escolha o técnico (usuário ativo com perfil Técnico ou da área Técnica), a data, a hora,
+   a duração e o tipo de serviço.
+2. Confirme o preparo: ferramentas, instrumentos calibrados, acesso combinado, documentação, peças (ou por que não
+   precisa) e a avaliação de risco.
+3. Toque em "Agendar". Se o técnico já tem O.S. no horário, tarefa aberta no Auvo ou ausência (férias, afastamento,
+   dispensa do ponto), a tela mostra o conflito. Escolha outro horário ou confirme com o motivo (a gestão é avisada).
+4. Reserve o veículo livre sugerido pela Frota, se precisar. A reserva fica no nome do técnico e ligada ao cliente.
+
+O técnico recebe a atividade "Atender OS-..." em Minhas atividades, com prazo no fim do atendimento; ela é concluída
+sozinha quando a O.S. fecha. O cliente recebe por e-mail "visita agendada" no agendamento, "visita reagendada" no
+reagendamento (que exige motivo e avisa também o técnico, e o anterior, se mudou) e "retorno agendado" quando a mesma
+O.S. volta à agenda depois da peça ("Liberar para agendar" + "Agendar", ou a volta automática de Compras).
+
+Contrato com prazo de chegada ao local (Regras da assistência > Contratos, coluna "chegada em minutos úteis"): a ficha
+do chamado mostra o selo "Chegada ao local até ..." ao lado do prazo de atendimento, fechado pelo "Cheguei" da O.S.
+
+Chamado crítico (P1) sem triagem concluída em 30 minutos: pendência própria, crítica, na Caixa de decisões da gestão e
+da Diretoria, com um aviso (uma vez por chamado).
+
+O.S. com documentação pendente (ou chamado aguardando peça) pode voltar à triagem pela gestão, com motivo, quando o
+técnico descobre em campo que precisa de orçamento ou de outro diagnóstico: "Voltar à triagem" na ficha do chamado. A
+O.S. fica pausada e volta à agenda quando a triagem decidir "planejar visita".
+
+Agenda dos técnicos: dia ou semana, com os atendimentos do SGO+ e do Auvo, reservas de veículo e ausências. "Rota do
+dia" mostra as paradas na ordem e o caminho no mapa; a gestão muda a ordem e o técnico vê a mesma no Meu dia.
+
+## Ordem de serviço
+
+O técnico registra pelo aplicativo do celular (funciona sem internet) ou em Assistência técnica > Ordens de serviço:
+
+1. Cheguei: registra a hora e, se o aparelho permitir, a localização. Localização só nos toques Cheguei e Concluí,
+   nunca o tempo todo. Chegada longe do endereço da unidade vira observação para a gestão, não bloqueio.
+2. Checklist do tipo de serviço (itens com * são obrigatórios), fotos de cada pergunta de foto e fotos gerais.
+3. Relato: condição encontrada, causa ou diagnóstico, serviço realizado, medições (no SGO+ Campo), teste funcional,
+   situação do equipamento ao final, recomendações e o número de série conferido (ou leitura do QR). Série diferente do
+   cadastro é aceita, avisada à gestão e vira pendência até alguém conferir; o cadastro não muda sozinho.
+3a. Resultado do atendimento (13/11/2026): todo serviço técnico com visita fecha com o **resultado do teste funcional**
+   (aprovado, reprovado ou não realizado) e a **situação do equipamento ao final** (liberado para uso, liberado com
+   restrição ou não liberado). Teste reprovado ou não realizado pede o motivo (pelo menos 5 palavras); não liberado ou
+   com restrição pede o que falta ou a restrição (pelo menos 4 palavras); "liberado para uso" só com o teste aprovado.
+   Os textos têm um mínimo de palavras: condição encontrada 4, causa ou diagnóstico 3 (só na manutenção corretiva),
+   serviço realizado 5. Cada falta diz o quê e como completar. Equipamento não liberado ou com restrição: a gestão da
+   área Técnica recebe o aviso para combinar o próximo passo e o e-mail de atendimento concluído ao cliente diz isso.
+   A regra vale para as O.S. com a chegada a partir do instante da publicação (gravado sozinho na primeira rotina depois
+   dela, chave RESULTADO_FINAL_DESDE); as anteriores fecham como antes. Base: ABNT NBR 15943 (registro do serviço, do teste
+   e da liberação do equipamento para uso) e RDC 509/2021 (rastreabilidade das intervenções).
+4. Peças aplicadas. Peça em falta abre o pedido em Compras e a O.S. fica aguardando peça. Quando Compras recebe e
+   confere a peça, o chamado volta sozinho a "Planejado" com "peça disponível em ..." e entra na Caixa de decisões
+   como "retorno a agendar"; o técnico e a gestão são avisados e o cliente recebe o e-mail "peça chegou, retorno será
+   agendado". A gestão toca em "Agendar o retorno" (mesma O.S.) e o cliente recebe "retorno agendado para dd/mm".
+   Recebimento com divergência não devolve o chamado (só depois de "Divergência resolvida").
+5. Assinatura do cliente no quadro, com o nome completo (nome e sobrenome); o documento é opcional e, preenchido, é
+   conferido (CPF com os dígitos). Sem o responsável: "Responsável ausente", com o nome de quem recebeu e a justificativa.
+5a. Assinatura do técnico ou colaborador que atendeu (03/11/2026, decisão da Diretoria): toda O.S. com visita tem as
+   duas assinaturas. O técnico assina no SGO+ Campo, com o nome completo (documento opcional). Sem ela a O.S. fica em
+   "Documentação pendente"; só a gestão, na ficha da O.S., pode "Encerrar sem a assinatura do técnico (justificar)": a
+   justificativa (pelo menos 10 letras) fica na O.S., no histórico e no relatório. A regra vale a partir do instante da
+   publicação (gravado sozinho na primeira rotina depois dela; a gestão pode fixar outro nas regras): O.S. com a chegada
+   antes disso não pedem a assinatura do técnico e o relatório mostra a linha "assinatura não registrada" (em O.S. sem
+   visita a linha não aparece). Assinatura vinda de celular com o aplicativo antigo, ou colhida antes desse instante, é
+   aceita como veio (nome curto ou documento fora do formato) e o histórico registra a observação; nunca é recusada.
+6. Concluí: registra a conclusão.
+
+A O.S. só fecha com a documentação completa do tipo de serviço: chegada, relato, condição encontrada, teste
+funcional (com o resultado), situação do equipamento ao final, conferência do equipamento, checklist obrigatório, fotos mínimas, assinatura do cliente (ou a exceção) e
+assinatura do técnico (ou a justificativa da gestão). Faltando
+algo, fica "Documentação pendente": o técnico vê o que falta e recebe a cobrança; passadas 24 horas, a gestão também.
+Quando o que falta chega, a O.S. fecha sozinha.
+
+### Logística: entrega, retirada e envio de equipamento (03/11/2026)
+
+Os tipos do grupo Logística (Entrega de equipamento, de documentação e de insumos; Retirada de equipamento, para
+análise, preventiva, qualificação e dos sensores; Entrada de equipamento para calibração; Envio de equipamento, e os
+tipos novos que a gestão criar nesse grupo) têm formulário próprio, o **termo**, no lugar do relato de manutenção:
+
+- **Itens**: nome, quantidade, identificação (série, patrimônio ou TAG), estado aparente (bom estado, com avaria, não se
+  aplica), descrição da avaria e acessórios. O equipamento da O.S. aparece como item 1.
+- **De quem / para quem**: nome, documento ou matrícula e setor; local ou setor.
+- **Retirada**: motivo e destino (oficina, calibração, qualificação, análise técnica em bancada, outro). **Envio**:
+  transportadora e rastreio. Em todos: embalagem, lacre e observações.
+- **Assinaturas**: a de quem recebe (entrega) ou de quem entrega (retirada), no lugar da "assinatura do cliente", e a do
+  colaborador da Metrolabs, feita no SGO+ Campo.
+
+Para fechar, a O.S. de logística pede chegada, o termo com pelo menos um item, o checklist do tipo, as fotos mínimas e a
+assinatura de quem recebe ou entrega (ou a exceção). **Não pede** condição encontrada, causa, teste funcional, peças nem
+conferência de QR ou série, mesmo que o tipo esteja marcado com QR/série. A assinatura do colaborador é cobrada pelo
+aplicativo e pelo servidor, como em toda O.S. (só a gestão encerra sem, com justificativa). O.S. de logística registrada antes
+de 03/11/2026 (só com o relato escrito) continua fechando pelo relato e o documento mostra o equipamento da O.S. como item
+e o relato nas observações.
+
+Na ficha da O.S. (tela do computador), a O.S. de logística mostra o termo para conferir e completar (itens, "Acrescentar
+item", de quem/para quem, motivo e destino, embalagem, lacre, observações) e grava pelo mesmo "Salvar o que preenchi".
+
+O documento A4 dessas O.S. é o **Termo de entrega**, o **Termo de retirada (recebimento)** ou o **Termo de envio**:
+identificação, movimentação (tipo, colaborador, chegada, conclusão, de quem/para quem, motivo e destino), tabela de itens,
+avarias, conferência, observações, fotos, a declaração e as duas assinaturas ("Entregue por" e "Recebido por") e a linha do
+tempo. Sem as seções de serviço, teste funcional e peças. O arquivo leva o nome "Termo de entrega da OS - ..." (ou de
+retirada, de envio), entra no Arquivo de documentos como Ordem de Serviço e vai ao cliente pelo mesmo envio, com o
+assunto "Termo de entrega OS-...".
+
+Calibração e qualificação: emita o documento no módulo (certificado, relatório de qualificação). O documento do mesmo
+equipamento emitido depois da chegada é ligado sozinho à O.S. ao encerrar; também dá para ligar pela ficha da O.S.
+
+## Ronda de engenharia clínica (03/11/2026)
+
+A ronda de engenharia clínica é a inspeção periódica dos equipamentos de uma unidade do cliente, setor a setor, com o registro da situação de cada equipamento, as fotos dos achados, as orientações dadas à equipe e as duas assinaturas. Ela apoia o cumprimento da RDC 509/2021 da Anvisa (gerenciamento de tecnologias em saúde) e da ABNT NBR 15943 (programa de gerenciamento de equipamentos de infraestrutura e de saúde) no que diz respeito à inspeção periódica e ao registro. A ronda não substitui a manutenção preventiva, a calibração nem a qualificação de cada equipamento e, sozinha, não atesta a conformidade da unidade.
+
+Tela: **Assistência técnica > Rondas de engenharia clínica**. A ronda é uma O.S. do tipo "Ronda de engenharia clínica" (grupo Ronda), sem chamado. Ela não aparece na triagem nem no agendamento do chamado e não se abre em campo pelo "Novo atendimento".
+
+### Quem faz o quê
+
+- **Gestão da área Técnica, Diretoria e Administrador:** contratos de ronda, ronda avulsa, setores da unidade, reagendar e cancelar (com motivo), liberar ou recolher fotos para o cliente, revisão do relatório.
+- **Técnico ou engenheiro (perfil Técnico ou área Técnica):** faz a ronda no SGO+ Campo. Outro colaborador não registra ronda, mesmo que a O.S. esteja no nome dele: o servidor recusa.
+- **Comercial e Diretoria:** aceitam ou descartam as sugestões da ronda.
+- **Cliente:** vê no portal ("Meus chamados", seção Rondas de engenharia clínica) só as rondas da própria empresa e só a versão do cliente do relatório.
+
+### Contrato de ronda (recorrente)
+
+1. Toque em **Novo contrato de ronda**: cliente, unidade, periodicidade (semanal, quinzenal ou mensal), data da primeira ronda, hora, duração estimada, janela (dias de tolerância, padrão 2) e responsável (técnico ou engenheiro).
+2. Marque os setores da ronda; sem nenhum marcado, a ronda cobre todos os setores da unidade.
+3. Referência do contrato (opcional). Não há preço por ronda: a ronda está incluída no contrato do cliente (o contrato e o relatório mostram "Ronda incluída no contrato").
+4. Ao salvar, as rondas dos próximos 35 dias entram na agenda do responsável (e em Minhas atividades). As seguintes nascem sozinhas na rotina da Assistência. Cada data prevista gera uma ronda só: rodar de novo, salvar de novo ou a rotina nunca criam ronda em dobro. Data que cai em dia não útil vai para o próximo dia útil.
+5. **Pausar** (com motivo) cancela as rondas futuras que ainda não começaram e para a geração. **Retomar** (com motivo) volta a gerar as próximas datas. **Encerrar** (com motivo) cancela as futuras e encerra o contrato. A ronda cancelada uma a uma pela gestão não volta a ser gerada.
+6. Editar o contrato vale para as rondas geradas dali em diante; as já agendadas continuam como estão (reagende uma a uma, se precisar).
+
+Ronda que passa do último dia da janela sem ser concluída aparece com o selo "Fora da janela" e entra na Caixa de decisões da gestão ("Ronda fora da janela do contrato").
+
+### Ronda avulsa
+
+**Agendar ronda avulsa**: cliente, unidade, setores, responsável, data e hora, duração e orientação. Conflito na agenda do responsável é mostrado; para seguir, marque "Agendar mesmo assim" com o motivo. O cliente recebe o e-mail com a data (pode desmarcar). Na lista, **Reagendar** e **Cancelar** pedem o motivo e só valem para a ronda que ainda não começou.
+
+### Setores
+
+Os setores da unidade são os cadastrados em **Setores da unidade** (nesta tela) mais os que aparecem no campo Setor dos equipamentos ativos. Equipamento sem setor entra em "Sem setor informado". O técnico pode acrescentar um setor durante a ronda; ele entra no cadastro da unidade quando a ronda é encerrada.
+
+### Em campo (SGO+ Campo)
+
+Cheguei (o escopo de setores e equipamentos fica fixo a partir daqui) → setores um a um, com progresso → em cada equipamento um toque na situação:
+
+| Situação | O que pede |
+|---|---|
+| Em funcionamento | As perguntas fixas do tipo de equipamento, quando houver. Uma resposta "Não" não combina com esta situação. |
+| Com observação | Descrição (pelo menos uma frase), foto do problema e as perguntas fixas. |
+| Fora de uso ou com defeito | Se está parado (não pode ser usado) ou funciona com defeito ou limitação, a descrição, a foto do problema e as perguntas fixas. Vira chamado depois do encerramento. |
+| Não localizado | Nada obrigatório (observação opcional). |
+| Não verificado | O motivo (pelo menos 5 letras). |
+
+Perguntas fixas (Regras da assistência > Modelos de checklist, editáveis pela Qualidade): **Ronda: autoclave** (porta veda, registro de ciclos, testes de rotina, etiqueta de calibração ou qualificação, alarmes), **Ronda: lavadora ultrassônica ou termodesinfectora**, **Ronda: câmara fria ou refrigerador** (inclui a temperatura no display, em °C) e **Ronda: seladora**. O tipo do equipamento decide o modelo.
+
+Equipamento que está no setor e não está no cadastro: o técnico cadastra ali (tipo, modelo, série ou TAG, patrimônio, setor), como no Novo atendimento, e o cadastro fica marcado "criado em campo" para a gestão conferir. Depois: achados gerais do setor (texto e foto, opcional), orientações dadas e pedidos do cliente, o resumo em números, as duas assinaturas (responsável do cliente e técnico; nome completo obrigatório, documento opcional) e Concluí. Sem sinal, tudo fica no aparelho e sobe depois, sem registrar duas vezes.
+
+### Depois de encerrada
+
+- **Chamado automático:** cada equipamento "Fora de uso ou com defeito" abre um chamado (canal "Ronda de engenharia clínica"), ligado à ronda, com a descrição e as fotos. A prioridade sai da escolha do técnico: **P2** quando o equipamento está parado e **P3** quando funciona com defeito ou limitação. A gestão muda essas duas prioridades em Rondas > "Chamado aberto pela ronda" (com motivo; vale para as rondas encerradas dali em diante). Se o equipamento já tem chamado aberto, o achado entra no histórico dele. Reenvio do aparelho, rotina ou nova tentativa nunca abrem chamado em dobro.
+- **Sugestão ao Comercial:** calibração ou qualificação vencida (pelo Arquivo de documentos e pelos certificados) ou etiqueta respondida "Não" vira uma sugestão por ronda, com os equipamentos. Nada de orçamento: o Comercial ou a Diretoria, em **Sugestões ao Comercial**, aceita (cria a oportunidade no funil Engenharia, origem "Vencimento de calibração ou qualificação", com o contato, o valor estimado e a próxima ação) ou descarta com o motivo. A sugestão sem decisão aparece na Caixa de decisões do Comercial.
+- **Avisos:** a gestão da área Técnica recebe o resumo da ronda (matriz de avisos AT20); o Comercial e a Diretoria recebem a sugestão (AT21).
+- **Relatório A4** "Relatório de ronda de engenharia clínica", com capa e índice, em duas versões: a **do cliente** (resumo em números, identificação, setor a setor com a situação, as observações e as fotos liberadas, verificações por tipo de equipamento, achados e recomendações com prioridade, chamados abertos a partir da ronda, comparação com a ronda anterior da unidade — melhorou, continua pendente, achado novo —, orientações e pedidos, assinaturas) e a **interna** (o mesmo, mais a sugestão ao Comercial, as fotos não liberadas e a linha do tempo). A do cliente vai para o Arquivo de documentos, o portal do cliente e o e-mail ("Enviar ao cliente", como os demais relatórios). A interna nunca abre para login de cliente.
+- **Fotos:** a foto da ronda entra liberada na versão do cliente; a gestão recolhe (ou libera de novo) na ficha da ronda. Depois do encerramento, a foto recolhida só sai do documento do cliente com a revisão ("Abrir para corrigir", com motivo). Oriente a equipe a fotografar só o equipamento, nunca paciente nem documento de paciente.
+
+### Indicadores
+
+Na tela das rondas e em Indicadores da assistência (últimos 90 dias): rondas realizadas e programadas por cliente (e as concluídas fora da janela), equipamentos com problema por setor, problemas que se repetem em duas ou mais rondas e o tempo do achado (conclusão da ronda) até a solução do chamado aberto a partir dela.
+
+### Cobrança
+
+Decisão do dono (03/11/2026): não há preço por ronda nem item de catálogo. A ronda está incluída no contrato do cliente: o contrato de ronda e o relatório mostram "Ronda incluída no contrato". Nada é cobrado pela ronda no SGO+.
+
+## Relatório da O.S.
+
+Nos documentos (relatório da O.S., termo e relatório do atendimento), a série e a TAG aparecem só nos campos próprios, nunca ao
+lado do nome do equipamento, e campo de cadastro vazio ou que não informa nada ("N/S", "S/N", traço) não aparece (03/11/2026).
+
+Relatório de atendimento técnico em A4: identificação, chamado, atendimento (com a hora do aparelho quando difere da
+hora do servidor), serviço, checklist, peças, fotos, as duas assinaturas (cliente e técnico responsável, com o nome e o
+documento só quando informado; sem a do técnico, "assinatura não registrada") e rastreabilidade do atendimento. Antes do encerramento sai como
+rascunho e fica numa pasta privada. Encerrada, a versão é salva na pasta "4. Ordens de Serviço" do equipamento (a
+mesma do QR), registrada no Arquivo de documentos (também quando o encerramento vem pela rotina, sem sessão) e aparece
+na ficha do equipamento e no portal do cliente. Nenhuma versão é sobrescrita.
+
+### O que mudou no relatório em 13/11/2026 (relatório de excelência)
+
+- **Resultado do atendimento no topo**, numa caixa verde (liberado para uso), amarela (liberado com restrição, com a
+  restrição escrita) ou vermelha (não liberado, com o que falta), sempre com o resultado do teste funcional. A ficha do
+  cabeçalho ganha a linha "Equipamento ao final". O.S. antiga sem esse registro mostra só o que o checklist respondeu
+  ("Equipamento liberado para uso?", com a nota "conforme a resposta do checklist") ou nada; a seção Serviço diz "não
+  registrada de forma estruturada nesta O.S.". O relatório nunca afirma o que não foi registrado.
+- **Serviço na ordem do atendimento**: condição encontrada, causa ou diagnóstico, serviço realizado, **medições
+  realizadas** (tabela com grandeza, ponto ou condição da medição, valor e unidade), teste funcional com o resultado,
+  situação do equipamento ao final, recomendações e observações do técnico. Quebra de linha do técnico vira parágrafo.
+- **Checklist limpo**: sem as linhas de assinatura (as assinaturas estão na seção própria), rótulos em caixa normal e
+  sem dois-pontos sobrando, pergunta de foto com a referência às fotos numeradas ("2 fotos (Fotos 14 e 15)") e resposta
+  longa em texto corrido abaixo da tabela, no lugar de uma célula estreita.
+- **Fotos**: numeradas em ordem de quando foram tiradas, até 24 no PDF (antes 12), com a legenda do técnico ou a pergunta
+  do checklist e a hora. Acima de 24, a nota diz quais ficaram arquivadas com a O.S. e que o cliente pode pedir.
+- **Atendimento**: O.S. aberta em campo mostra "Aberta em campo pelo técnico, sem agendamento prévio" no lugar de
+  "Agendado para" (antes a hora da abertura parecia a chegada). "Equipamento conferido por" e "Observação da
+  localização" só aparecem quando preenchidos. A reincidência sai no bloco do chamado.
+- **Rastreabilidade do atendimento** (no lugar da "Linha do tempo"): um marco por fato, em ordem (abertura do chamado,
+  agendamento ou abertura em campo, saída, chegada e início do serviço, fotos agrupadas numa linha, última atualização do
+  checklist e do relato, peças, assinaturas, execução concluída e O.S. encerrada com a situação do equipamento). Sem
+  nome de arquivo, sem código interno, sem linhas repetidas e sem a coluna "Por": o responsável vem uma vez no alto e o
+  nome de outra pessoa só aparece quando foi ela que registrou. Nada é apagado: a trilha completa (cada foto, resposta e
+  alteração, com a hora do aparelho e a do servidor) continua no SGO+, em "Eventos" da O.S., e é apresentada quando
+  solicitada. O termo de entrega, retirada ou envio usa a mesma rastreabilidade.
+- **Peças**: a unidade aparece padronizada no documento ("un.", "UN" e "unid" viram "un"); o que foi gravado não muda.
+- **Marca de conferência**: nas O.S. com o resultado, o resultado, as medições e os textos do serviço entram na conta da
+  marca; nas O.S. antigas a conta é a mesma de antes.
+- **"Abrir para corrigir"** também corrige o resultado do teste, a situação do equipamento ao final e a restrição.
+
+O PDF é gerado **uma vez só**, no encerramento. "Abrir o PDF" numa O.S. encerrada reabre o mesmo documento; nenhuma
+versão nova nasce sem motivo. Correção depois do encerramento é da gestão: na ficha da O.S., bloco "Documento e envio",
+"Abrir para corrigir" (textos do relato e o motivo, com pelo menos 10 letras). Sai a revisão seguinte do mesmo número
+(Rev. 01, 02...), a anterior fica arquivada como substituída, o histórico de revisões entra no documento (registro
+comum de revisões do SGO+) e a revisão precisa ser enviada ao cliente de novo.
+
+### Reabrir para correção (18/11/2026)
+
+Quando o erro não é só de texto (foto errada ou faltando, assinatura cortada, resposta ou peça errada), a O.S. encerrada
+pode ser **reaberta para correção** pelo dono (Administrador), pela Diretoria e pela gestão da área (gestor da área Técnica
+ou o gestor do setor da O.S.). Na ficha da O.S., bloco **"Correção"**, toque em **"Reabrir para correção (com motivo)"** e
+escreva o motivo (pelo menos 10 letras). O.S. com a documentação pendente também pode ser reaberta.
+
+- A O.S. volta para **Em execução**. O técnico é avisado e, ao atualizar o Meu dia, o SGO+ Campo mostra "Reaberta para
+  correção" com quem reabriu e o motivo, e libera fotos, respostas, relato, peças e assinaturas.
+- A gestão também corrige pela própria ficha: anexa fotos, corrige respostas, relato e peças, e salva.
+- Nada é apagado: a conclusão anterior, a foto retirada e a assinatura antiga ficam registradas; o histórico mostra
+  "Reaberta para correção", "Conclusão desfeita" e "Correção pedida", com quem, quando e o motivo.
+- Ao concluir de novo, a O.S. é encerrada e o relatório sai como a **revisão seguinte** do mesmo número (Rev. 01, 02...),
+  com o motivo da reabertura; o chamado não anda de novo. Envie a revisão ao cliente.
+
+**Pedido do técnico.** No aplicativo, antes do encerramento o próprio técnico usa "Desfazer conclusão para corrigir" (com
+motivo). Depois do encerramento ele toca em "Pedir correção": a gestão da área recebe o aviso "Correção pedida na OS-..." e
+o pedido aparece no bloco "Correção" da ficha até a O.S. ser reaberta.
+
+## Documento e envio ao cliente
+
+O envio do PDF ao cliente é sempre ato de uma pessoa: o técnico, no aplicativo, ao concluir (O.S. encerrada > "Enviar ao
+cliente por e-mail", com os contatos do cadastro e o e-mail conferível), ou a gestão, na ficha da O.S. (Assistência
+técnica > Ordens de serviço > O.S. > bloco "Documento e envio" > "Enviar ao cliente", que abre o Enviar documento). O
+e-mail vai com o PDF anexado, o chamado no assunto e texto profissional assinado pela Metrolabs.
+
+A ficha da O.S. mostra a situação: "PDF gerado, ainda não enviado", ou "Enviado ao cliente em dd/mm/aaaa hh:mm por
+(quem) (e-mail) para (endereço)". O envio fica gravado na O.S. e no histórico do chamado. Sem envio em 1 dia útil, a
+pendência "relatório não enviado" entra na Caixa de decisões da gestão (antes disso cobra só o técnico, no Início).
+
+WhatsApp ao cliente continua fora: na janela "Enviar documento" o WhatsApp só aparece quando houver canal ativo de
+verdade; com o piloto do WhatsApp oficial ligado a opção vem desligada, com o porquê e o caminho (envie por e-mail).
+
+O cliente, em "Meus chamados", vê e baixa o PDF da O.S. encerrada.
+
+## Orçamento do chamado
+
+1. A triagem escolhe "Precisa de orçamento"; o Comercial recebe a atividade.
+2. Em Chamados > chamado > Orçamento: "Preencher valores" (peças e serviços) e "Emitir o A4".
+   Outro CNPJ paga o serviço (o equipamento é de um cliente e o faturamento é de outro): em "Preencher valores",
+   no campo "Faturar para", busque e escolha o cliente que paga. O A4 mostra "Faturar para" com o CNPJ dele e o
+   "Proprietário do equipamento"; o e-mail, o link de aceite e o comprovante saem no nome de quem paga, e os contatos
+   dele vêm sugeridos no envio. O equipamento, o chamado e o histórico continuam no dono: não é preciso transferir o
+   equipamento em Cadastros > Vínculos. O cliente que paga também vê e responde o orçamento no portal. Sem escolher,
+   quem paga é o próprio cliente do chamado. Depois de emitido, para trocar quem paga use "Nova revisão".
+   Desde 13/11/2026 o A4 do orçamento traz as mesmas condições comerciais, condições gerais, responsabilidades e
+   Termos e condições da contratação da Proposta comercial (Comercial > Metodologia > Modelo da proposta), na versão
+   em vigor na emissão; o texto do campo "Condições" sai como "Observações". Orçamento emitido antes disso fica como
+   estava: para sair com os termos, use "Nova revisão" e emita de novo.
+3. "Enviar com link de aceite": escolha os contatos do cliente (ou digite outro e-mail), confira o texto e toque em
+   "Enviar". O e-mail leva o PDF em anexo e o link "Ver e responder o orçamento". O link vale 30 dias (Regras da
+   assistência > "Link de aceite do orçamento vale (dias)", de 1 a 90) e é um por envio: enviar de novo cria outro e o
+   anterior deixa de funcionar. O sistema guarda só o resumo do link; nem a gestão consegue ver o link de novo.
+4. O cliente abre o link no celular ou no computador, sem login, e vê o orçamento (itens, valores, total, validade,
+   condições e o PDF para baixar). Ele escolhe:
+   - Aprovar: nome completo, cargo, CPF (opcional), e-mail, "Li e concordo" e a assinatura no quadro, com o dedo ou o
+     mouse.
+   - Pedir ajuste: nome, e-mail e o que precisa mudar.
+   - Recusar: nome, e-mail e o motivo (obrigatório).
+   A resposta é única: depois dela, o link mostra "Respondido em ... por ..." e não aceita outra. Orçamento vencido
+   mostra o aviso e não aprova (o cliente ainda pode pedir ajuste). Link vencido, invalidado ou trocado mostra "Link
+   indisponível" e o contato da Metrolabs.
+5. O que acontece com a resposta (o mesmo caminho do registro manual):
+   - Aprovado: o orçamento fica "Aprovado pelo cliente" e o chamado vai a "Planejado" (falta agendar) ou, com peça, a
+     "Aguardando peça", com um pedido em Compras por peça, em nome de quem enviou o orçamento. Gera o "Comprovante de
+     aprovação" (A4 em HTML e PDF, na pasta do cliente em "Assistência técnica - Orçamentos"), ligado ao orçamento como
+     o aceite. O cliente recebe a confirmação por e-mail com o comprovante.
+   - Recusado: o orçamento fica "Recusado pelo cliente" com o motivo; o chamado continua aguardando orçamento e entra
+     na Caixa de decisões como "orçamento recusado pelo cliente para decidir": negociar (Nova revisão), cobrar a visita
+     ou encerrar o chamado.
+   - Ajuste pedido: o orçamento fica "Cliente pediu ajuste"; a Caixa de decisões mostra "pedido de ajuste no orçamento
+     para revisar". Faça a Nova revisão, emita e envie de novo (o link da revisão anterior deixa de funcionar).
+   A gestão da área Técnica, o gestor comercial e o técnico do chamado são avisados (AT16 aprovado, AT17 recusa ou
+   ajuste). Ao cliente vai só e-mail; nada de WhatsApp.
+6. Bloco "Aceite do cliente" na ficha do orçamento (quem vê valores): situação do link (enviado em, para quem, válido
+   até, visto em e quantas vezes, respondido em), a resposta registrada (quem, cargo, e-mail, CPF mascarado, data e
+   hora do servidor, meio, IP, assinatura, protocolo, "registro íntegro" e "conteúdo igual ao aceito") e o comprovante.
+   Botões: "Gerar e copiar link" (cria outro link para mandar por outro meio; o anterior deixa de funcionar),
+   "Invalidar link" (com o motivo; por exemplo, enviado ao contato errado) e, se o comprovante não saiu na hora,
+   "Gerar o comprovante".
+7. Registro manual: quem responde por telefone, e-mail ou documento assinado continua em "Registrar a resposta do
+   cliente", com o aceite anexado.
+8. O cliente com acesso ao portal também responde em "Meus chamados" > Orçamentos, sem o link: os mesmos campos, a
+   mesma assinatura e o mesmo registro (meio "Portal do cliente").
+
+Prova do aceite: cada resposta fica numa trilha só de inclusão, com data e hora do servidor, endereço de rede (IP),
+navegador, nome, cargo, CPF, e-mail, a assinatura (imagem guardada na pasta privada), o resumo SHA-256 do conteúdo do
+orçamento mostrado ao cliente (itens, valores, condições e validade), o resumo do PDF e o resumo do próprio registro,
+encadeado ao anterior. Se o orçamento mudasse depois do envio do link, a resposta seria recusada e nada seria
+registrado.
+
+O técnico não vê valores.
+
+## Reclamações
+
+Reclamação do cliente ou problema que se repete vira um caso (RC-2026-0001) com dono (gestor da área Técnica) e
+prazo. Registre a causa, a ação e a resposta ao cliente e marque "Resolvido". Caso com prazo vencido vai à Caixa de
+decisões.
+
+## Indicadores e relatório mensal
+
+Atendimentos no prazo, tempo médio de atendimento em horas úteis, reincidência por equipamento (dois ou mais chamados
+em 90 dias), O.S. por técnico (encerradas, documentação pendente, tempo médio no local, sem assinatura, série
+divergente), prazos estourados e reclamações. O relatório mensal A4 é gerado no primeiro dia útil e vai no e-mail
+mensal da Diretoria, junto com os relatórios do Comercial e de Compras.
+
+## Avisos
+
+Pela matriz de avisos (eventos AT01 a AT19; AT18 = chamado pendente de triagem, à gestão, só no sistema; AT19 = chamado
+sem triagem liberado na fila livre, aos técnicos disponíveis, a quem faz a triagem e à gestão, só no sistema; AT13 = cadastro criado em campo, no resumo do dia; AT14 = peça disponível
+em Compras, chamado devolvido, ao técnico e à gestão no resumo do dia; AT15 = peça recebida e retorno agendado, ao
+cliente por e-mail; AT16 = orçamento aprovado pelo cliente pelo link ou pelo portal e AT17 = recusa ou pedido de
+ajuste, à gestão da área Técnica, ao gestor comercial e ao técnico do chamado, por e-mail na hora): tudo no sistema na hora; e-mail na hora no que tem prazo curto (chamado para a triagem, chamado
+crítico, reagendamento, cancelamento, pedido do cliente) e no resumo do dia no resto. WhatsApp só na exceção do chamado
+P1 ao gestor da área Técnica (expediente, CLT, uma vez por dia) e na contagem do resumo do dia. O cliente recebe só
+e-mail (chamado recebido, visita agendada ou reagendada, atendimento concluído, peça recebida, retorno agendado)
+enquanto durar o piloto do WhatsApp; o PDF da O.S. vai pelo Enviar documento, por uma pessoa.
+
+Interruptor "Assistência do SGO+ ligada": desligado, vale também nas telas internas. Consultar continua; abrir chamado,
+triagem, agenda, registro de campo e orçamento ficam travados, com a mensagem explicando o porquê e o caminho para
+religar (Regras da assistência > Ligar). Nada é apagado.
+
+## Regras da assistência
+
+Triagem e fila livre (quem faz a triagem, fila livre ligada e o tempo em minutos úteis, padrão 30). Prazos por prioridade, contratos com prazo próprio, assinatura obrigatória, distância para o aviso de localização,
+tamanho máximo da foto, peça em falta abrindo pedido em Compras, avisos ao cliente, relatório mensal e o interruptor
+"Assistência do SGO+ ligada". Tipos de serviço (29, vindos dos 30 tipos do Auvo) e modelos de checklist (editáveis;
+"Trazer os questionários do Auvo" cria os modelos a partir dos 13 questionários copiados no acervo). Quando a lista de questionários do acervo veio vazia, "Montar os checklists a partir das tarefas do Auvo" (e a rotina, de hora em hora) lê as tarefas copiadas em lotes e monta um modelo por questionário, com as perguntas na ordem mais frequente e o tipo de resposta inferido das respostas (foto, assinatura, sim ou não, número, opção, texto). Esses modelos nascem inativos: revise e marque "Ativo" no editor do modelo. Cada mudança
+vira uma versão com o motivo; as O.S. já agendadas seguem o checklist que tinham.
+
+## Fonte única de atendimentos e o Auvo
+
+Painel de qualidade, Programa de conduta (sugestões), Frota (deslocamento até o atendimento), ponto (técnico em
+atendimento não recebe lembrete), central de pendências, Início, ficha do equipamento e Vínculos leem a mesma lista:
+tarefas do Auvo e O.S. do SGO+. A ficha do equipamento mostra também o histórico copiado do Auvo; as fotos do acervo
+abrem só para a equipe interna.
+
+## Transição do Auvo
+
+Os seis critérios do projeto, cada um com o que o sistema mediu e a confirmação da gestão:
+
+1. Cópia do acervo do Auvo com zero faltas (ou faltas aceitas pelo dono) e o backup conferido.
+2. Quatro semanas seguidas com todos os técnicos só no SGO+, sem atendimento perdido.
+3. Painel de qualidade, Conduta e Frota mostrando os dados do módulo novo, conferidos pela gestão.
+4. Nenhuma O.S. aberta no Auvo, ou cada uma com destino registrado (fechar no Auvo, recriar como chamado no SGO+ ou
+   não houve atendimento).
+5. Pelo menos um atendimento feito sem internet e sincronizado sem perda, conferido.
+6. Relatório da O.S. aprovado pela Qualidade e já enviado a clientes reais.
+
+Com os seis cumpridos, o Administrador marca "Auvo desligado". É o registro da decisão: nada é desligado sozinho.
+Depois, desligue os gatilhos em Integração Auvo, retire a criação de tarefa nos geradores e cancele o contrato.
+
+## Excluir chamado de teste ou simulação (27/10/2026)
+
+Decisão do dono: só Gestor, Diretoria e Administrador; motivo obrigatório; confirmação antes; nada é apagado.
+
+1. Na ficha do chamado, toque em "Excluir (teste ou simulação)". Atendimento real que não vai acontecer se cancela
+   (o cliente vê o cancelamento); a exclusão é só para teste ou simulação.
+2. A janela lista cada vínculo e o efeito da exclusão nele:
+   - O.S.: sai junto (agenda, aplicativo do técnico, Minhas O.S., histórico do equipamento e fonte única de
+     atendimentos); a atividade dela em Minhas atividades é cancelada; o relatório já gerado continua no Drive; se o
+     relatório já foi enviado ao cliente ou a O.S. está em andamento com o técnico, a janela destaca em vermelho.
+   - Orçamento: sai junto; o link de aceite enviado ao cliente deixa de abrir o orçamento.
+   - Pedido de compra: não é cancelado sozinho; cancele em Compras se a peça não vai mais ser comprada.
+   - Reclamação, pedido do cliente, pedido aprovado do Comercial e tarefa do Auvo: continuam onde estão; nada muda no Auvo.
+   - Cliente: os e-mails já enviados não voltam; o chamado some de "Meus chamados".
+3. Escreva o motivo (pelo menos 10 letras), marque "Li os vínculos e o efeito" e toque em "Excluir o chamado". Se os
+   vínculos mudaram enquanto a janela estava aberta, o sistema pede para abrir de novo.
+
+O chamado (e as O.S. e orçamentos dele) sai de listas, contadores, pendências, indicadores, agenda, aplicativo, portal
+do cliente e fonte única de atendimentos. A auditoria (histórico do chamado) guarda quem excluiu, quando e o motivo; os
+avisos ainda não lidos sobre ele deixam de cobrar. O número do chamado não é reaproveitado.
+
+Excluídos: aba "Excluídos" em Chamados (Gestor, Diretoria e Administrador), com quem excluiu, quando, o motivo e o que
+saiu junto. "Restaurar" pede o motivo e devolve o chamado, a O.S. e o orçamento da mesma exclusão, na situação que
+tinham. A atividade cancelada em Minhas atividades não volta sozinha: se o atendimento vale, reagende pela ficha.
+
+## Problemas comuns
+
+Atualização de 12/11/2026:
+
+- Faixa no rodapé "Há uma versão nova do SGO+. Salve o que está fazendo e toque em Atualizar.": a página foi aberta antes
+  de uma publicação e ainda está com as telas antigas (exemplo real: o campo "Faturar para" não aparecia). Salve e toque
+  em **Atualizar**. O SGO+ nunca recarrega sozinho; **Depois** esconde o aviso por 30 minutos.
+- "O chamado acabou de ser alterado" ou "o orçamento acabou de mudar": outra pessoa, outra aba ou um segundo toque já fez a
+  mesma ação (agendar, concluir a triagem, liberar para agendar, abrir a revisão). A segunda é recusada para não criar O.S.,
+  pedido de compra ou revisão em dobro. Atualize e confira a ficha.
+- "Não foi possível falar com o servidor": a resposta não chegou, mas o pedido pode ter sido registrado. Atualize e confira
+  antes de repetir.
+- Triagem recusada (motivo da prioridade vazio, tipo de serviço que não existe mais) não grava nada: nem o início da
+  triagem nem o histórico.
+- No editor do orçamento, o código da peça e a unidade (que vêm da triagem ou da revisão) são mantidos ao salvar; item de
+  cortesia já salvo aparece com valor 0.
+- Resposta do cliente pelo link que falhou no meio: o link continua ativo e o cliente pode responder de novo; se aparecer
+  "já foi respondido", a resposta ficou registrada.
+
+- "Reservado para a triagem de ... até ...": o chamado ainda está no tempo de quem faz a triagem. Depois do horário,
+  se ninguém assumir, ele vai para a fila livre. Se é urgente, fale com quem faz a triagem ou com a gestão.
+- "Já foi assumido por ... em ...": outro colega assumiu antes; atualize a lista.
+- Não encontro um chamado: veja se ele foi excluído (aba "Excluídos", só Gestor, Diretoria e Administrador).
+
+- "Esse caminho não é permitido": siga o "Próximo passo" indicado na ficha do chamado.
+- O cliente diz que o link do orçamento mostra "Link indisponível": o link venceu, foi invalidado ou um envio mais novo
+  o trocou. Envie de novo em Chamados > chamado > Orçamento > "Enviar com link de aceite" (ou "Gerar e copiar link").
+  Se o orçamento já venceu, faça a Nova revisão antes.
+- O cliente aprovou pelo link mas o comprovante não aparece: toque em "Gerar o comprovante" no bloco "Aceite do
+  cliente". A aprovação já vale; só o documento é gerado de novo.
+- O cliente respondeu errado pelo link: a resposta é única e não se apaga. Para recusa ou ajuste, faça a Nova revisão
+  e envie de novo; para aprovação indevida, registre a conversa no chamado e trate com a gestão.
+- O técnico não aparece na lista: ajuste o perfil (Técnico) ou a área (Técnica) em Administração > Usuários.
+- "A O.S. é de outro técnico": só o técnico responsável ou a gestão da área Técnica registra.
+- A foto não subiu: verifique a conexão e salve de novo; as que já subiram não se repetem.
+- Cadastro de cliente com chamado aberto não muda de cliente em Vínculos: encerre ou cancele o chamado primeiro.
+- "Relatório ainda não enviado ao cliente" na Caixa de decisões: abra a O.S. em Ordens de serviço, bloco "Documento e
+  envio", e toque em "Enviar ao cliente" (ou peça ao técnico para enviar pelo aplicativo).
+- O WhatsApp aparece desligado na janela "Enviar documento": o piloto do WhatsApp oficial está ligado e o número
+  oficial ainda não envia documentos. Envie por e-mail.
+- Preciso corrigir um relatório já emitido: só a gestão, em "Abrir para corrigir", com o motivo; sai a Rev. 01 e ela
+  precisa ser enviada de novo ao cliente.
+
+## Agenda única com Atividades da equipe (26/10/2026)
+
+- Toda O.S. agendada cria sozinha a atividade do técnico em Minhas atividades, ligada à O.S. (OS_ID). Quem manda é a O.S.: reagendar, encerrar ou cancelar muda a atividade sozinha; ninguém conclui, edita ou justifica essa atividade à mão.
+- A atividade da O.S. não conta atraso em Atividades (nem aviso de atraso, escalonamento por prioridade, central de pendências ou avaliação do gestor): o prazo do cliente é acompanhado aqui, na Assistência.
+- Em Atividades da equipe, o Gantt mostra o atendimento em azul no horário da O.S. e os atendimentos do Auvo em cinza (só consulta). No Kanban o cartão da O.S. é só consulta; o detalhe tem "Abrir a O.S.".
+- Nova atividade > "É serviço técnico em cliente" (só gestão técnica, Diretoria e Administrador): abre o chamado (canal Interno), faz a triagem como visita planejada e agenda a O.S., conferindo tudo antes (tipo, técnico, horário, duração, preparo e conflito de agenda). Equipamento com chamado aberto: pergunta se é um deles. Chamado vindo do cliente continua pela triagem.
+- Aplicativo do técnico: o Meu dia mostra também "Minhas atividades" (tarefas internas: atrasadas, que vencem até amanhã, em andamento e aguardando), com iniciar, aguardando, concluir, justificar atraso e comentar, também sem internet. Se a gestão mudou a atividade antes do envio, vale a mudança dela e o motivo aparece em Envios.
+
+## Chamados de representada (módulo Representação, 29/10/2026)
+
+- A empresa representada (Brasmedical) entra no SGO+ com o perfil "Representada" e usa só o módulo Representação. O pedido dela entra na fila de Solicitações dos clientes com o selo roxo da representada e o prazo de aceite (4 horas úteis no padrão, configurável em Representação > Representadas).
+- Na fila: "Aceitar (vira chamado)", "Pedir complemento" (o pedido volta para a representada e o prazo de aceite pausa até a resposta) ou "Recusar com motivo" (a representada vê o motivo). A representada recebe e-mail nas três saídas.
+- O chamado aceito leva a representada (REPRESENTADA_ID), o protocolo dela e o enquadramento pretendido, e segue a triagem, a agenda, a O.S. e o relatório de sempre. O canal aparece como "Representação".
+- Ligar à representada (03/11/2026): chamado comum que a representada pediu (por exemplo, urgência atendida antes) é ligado a ela pelo botão "Ligar à representada" na ficha do chamado, com a representada, o protocolo dela (se houver) e o motivo. Só quem está na lista "Quem pode abrir pedido em nome da representada" (o Administrador define em Representação > Representadas) vê o botão; o servidor confere. Depois de ligado, a representada vê e acompanha o chamado, com quem ligou e o motivo, e recebe e-mail.
+- Lista de chamados: filtro "Representação" (só de representadas ou de uma delas) e selo roxo com o nome. Ficha: parte "Representação" com relato completo, contato no local, arquivos e número de mensagens; a conversa fica em Representação > Conversas.
+- Linha do tempo com três públicos: interno (sem marca), representada e cliente final. O que a equipe registra com público para o cliente aparece também para a representada; o resto é interno.
+- Regras da assistência > Representação: quem responde pela conta da representada (recebe pedidos, alertas e mensagens). Sem ninguém marcado, vale quem faz a triagem.
+- Alertas: 75% do prazo de aceite (responsável), prazo vencido (responsável, gestão da área Técnica e Caixa de decisões) e chamado de representada sem registro em 3 dias úteis (responsável e Caixa de decisões).
+- Aviso de pedido novo (03/11/2026): quem faz a triagem, a gestão da área Técnica e quem responde pela representação veem um aviso no canto da tela, com som, em qualquer tela do SGO+ (pedido novo, complemento respondido e 75% do prazo de aceite), com "Abrir pedido" e "Dispensar"; o SGO+ confere a cada 45 segundos sem recarregar a tela. Quem responde pela representação recebe também o aviso em Avisos (até a ciência) e o WhatsApp do sistema com o link do pedido, só no expediente e em dia útil, um por marco e até 10 por dia. Nada sai depois que o pedido é aceito, recusado ou cancelado.
+- A representada cadastra os próprios modelos (na abertura do pedido e no catálogo dela), com histórico; a garantia de cada equipamento fica gravada no cadastro dele.
+- Detalhes no Manual do módulo Representação.
+
+## Chamado de representada: processo até o dossiê (16/11/2026)
+
+O chamado com representada (selo roxo) não encerra ao fechar a O.S.: vai para "Laudo técnico em elaboração" e segue no quadro "Processo do chamado" da parte Representação (laudo, decisão da representada, ações, onde está o equipamento, confirmações e o Dossiê do atendimento). Situações novas, só neste chamado: "Laudo técnico em elaboração", "Aguardando a decisão da representada" (prazo da Metrolabs pausado) e "Concluído, aguardando confirmação". Elas não são de campo: o técnico não as escolhe nem as vê como visita. Resolvido a distância e "já realizado" também não encerram: registram "não se aplica" (ou a guarda) e pedem as confirmações. Nova ida a campo (reparo, entrega) é uma O.S. nova no mesmo chamado. No lugar de "Gerar" o relatório do atendimento, o chamado de representada tem três prévias, que não gravam nada: "Prévia do dossiê (Metrolabs)", "Prévia do dossiê (representada)" e "Prévia do resumo e dos termos (hospital)". No encerramento saem, uma vez, o Dossiê do atendimento (o mesmo para a Metrolabs e a representada; a da representada sem as anotações internas) e, para o hospital, o Resumo do serviço com o Termo de retirada e o Termo de entrega, sem o nome da representada e sem dados comerciais (garantia, protocolo, nota fiscal, rastreio, valores). Retirada sem termo assinado: o hospital recebe "Registro de retirada (sem assinatura)", e o termo de entrega da O.S. de entrega diz o período em que o equipamento esteve com a Metrolabs; a assinatura de quem recebe cobre esse período. Termo de entrega de equipamento que passou pela oficina da Metrolabs (retirada com ou sem termo, de qualquer chamado): na tela de assinatura do aplicativo, antes do quadro, aparece a declaração "Leia com quem vai assinar" (quem recebe, o equipamento com série e TAG, o estado, as verificações e os testes no local e o período na oficina), o mesmo texto do PDF do termo. Se algo estiver errado, volte ao termo e corrija antes de assinar. O PDF registra que a declaração foi mostrada antes da assinatura. Os demais termos e telas de assinatura não mudaram. Detalhes no MANUAL_MODULO_REPRESENTACAO.md, seção 12A.7.1. O e-mail ao hospital no fim da visita diz "Visita técnica concluída. O caso segue em análise; avisaremos o próximo passo." No portal "Meus chamados", o cliente lê o resultado da análise em uma frase e confirma o atendimento ("Confirmo" ou "O problema continua"). Chamado comum: nada mudou. Detalhes no MANUAL_MODULO_REPRESENTACAO.md, seção 12A.
+
+## Ficha da O.S. e do chamado no celular (01/11/2026)
+
+- Ficha com quatro seções ou mais (a O.S. do técnico: Checklist, Relato e conferência, Fotos gerais, Peças, Assinatura do cliente, Documento e envio, Histórico; e a ficha do chamado) tem um índice no alto, que fica preso enquanto você rola. Toque no nome da seção para ir direto; "Próxima: ..." desce para a seção seguinte. A seção em que você está fica destacada.
+- Depois de salvar (peça, assinatura, relato, Cheguei), a ficha continua na mesma altura, e o aviso do que foi salvo aparece também perto do botão "Salvar o que preenchi".
+- O fim da ficha passa acima dos botões redondos. No celular, os botões redondos (? e bate-papo) saem para o lado enquanto você rola para baixo e voltam ao rolar para cima, no topo e no fim da tela. Se um deles estiver por cima de um botão, role um pouco para baixo.
+- O.S. fechada pelo botão Fechar e aberta de novo por outro caminho (lista, agenda, atividade) não volta mais para o chamado antigo.
+- Meus chamados (cliente): Kanban mostra os chamados em colunas, uma por etapa; Gantt mostra os atendimentos numa linha do tempo; Lista e relatórios traz cada chamado e os documentos dele. No celular estreito, as abas quebram em duas linhas em vez de cortar o nome. Em cada chamado da lista, a faixa "Agora" diz a etapa em uma frase (por exemplo, "Agora: Em análise pelo fabricante" ou "Agora: Concluído: confirme o atendimento"), com a data da visita quando houver; nunca o nome da representada.
+- Na ficha do chamado, a explicação da versão interna do relatório diz "prazos de atendimento" (antes, "SLA").
+
+<div style="text-align: justify">
+
+## Contrato do cliente no chamado (17/11/2026)
+
+A ficha do chamado mostra a parte **"Contrato do cliente"**: a situação do contrato (vigente, carência, consulta ou "contrato a cadastrar" na vigência provisória até 31/12/2026), o número e a vigência, o objeto, os serviços com a frequência, os prazos de atendimento do contrato (SLA) e a renovação. Serve para o técnico e a triagem saberem se o serviço está coberto: sem contrato vigente, o serviço vai por orçamento. Não mostra valores. Toda a equipe vê.
+
+No portal do cliente ("Meus chamados"), o cliente vê no topo **"Meu contrato com a Metrolabs"**: número, objeto, serviços, unidades, vigência e, a partir de 90 dias antes do fim, o aviso de renovação. Ele nunca vê valores, índice nem o PDF do contrato. O cadastro do contrato fica em Portal do cliente > Contratos de clientes (manual MANUAL_MODULO_PORTAL_CLIENTE.md, seções 13 a 22).
+
+A rotina da Assistência (a cada 15 minutos) passou a chamar também a rotina diária dos contratos (régua de vencimento, índices do Banco Central e reajustes), que roda uma vez por dia, dentro do expediente.
+
+</div>

@@ -91,7 +91,7 @@ A recarga semanal é um tipo de pedido da própria Recarga Caju: o mesmo cartão
 Como pedir:
 
 1. Em "Pedir recarga", toque em "Recarga semanal (com a programação)" e escolha a semana (de segunda a domingo; a atual ou uma das próximas).
-2. Toque em "Puxar da minha agenda". As O.S. do SGO+ e os atendimentos do Auvo já agendados para você naquela semana entram como itens, com o dia, o cliente e o número. Nada é alterado na agenda.
+2. Toque em "Puxar da minha agenda". As O.S. do SGO+ já agendadas para você naquela semana entram como itens, com o dia, o cliente e o número. Nada é alterado na agenda.
 3. Complete cada item: dia, cidade, cliente, O.S. ou tarefa (quando houver), atividade prevista, finalidade do gasto e valor previsto. Item sem gasto fica com valor zero. Use "Incluir um item" para o que não está na agenda.
 4. Confira os números no fim do quadro: o previsto da semana, o saldo da rotina que já está no seu cartão e o valor do pedido (previsto menos o saldo). O valor não é digitado.
 5. Toque em "Enviar a recarga semanal".

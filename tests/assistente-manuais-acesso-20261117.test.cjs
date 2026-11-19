@@ -280,6 +280,15 @@ test('6. nenhum parágrafo da base anterior se perdeu sem justificativa', { skip
     // 18/11/2026 (Pacote 1, decisão do dono): "WhatsApp nunca pelo Compras" deixou de ser verdade (GS08 a GS10 para o dono, a Diretoria e o
     // aprovador delegado): o parágrafo dos avisos de Compras foi reescrito
     /^Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã .*WhatsApp nunca pelo Compras/,
+    // 18/11/2026 (decisão do dono): o Auvo foi descontinuado e saiu do SGO+. Os parágrafos que descreviam a integração, a transição
+    // (os seis critérios), o uso em paralelo e as tarefas do Auvo na agenda, no ponto, na Frota e na Caixa foram reescritos nos mesmos
+    // manuais (ver output/auvo-retirada-20261118/RELATORIO.md); os que citavam o Auvo e as linhas soltas da lista de critérios saíram.
+    /\bAuvo\b/,
+    /^Os seis critérios do projeto, cada um com o que o sistema mediu/,
+    /^[2356]\. (Quatro semanas seguidas com todos os técnicos|Painel de qualidade, Conduta e Frota mostrando|Pelo menos um atendimento feito sem internet|Relatório da O\.S\. aprovado pela Qualidade)/,
+    /^\s*não houve atendimento\)\.$/,
+    /^abrem só para a equipe interna\.$/,
+    /^atendimento não recebe lembrete\), central de pendências, Início, ficha do equipamento e Vínculos leem a mesma lista:/,
     // Ganhos dos vendedores e Portal não estavam na base anterior; nada deles conta aqui
   ];
   const perdidos = [];

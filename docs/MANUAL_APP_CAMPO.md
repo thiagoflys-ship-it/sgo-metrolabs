@@ -1,6 +1,6 @@
 # SGO+ Campo — Manual do aplicativo do técnico
 
-Versão de 22/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substitui o aplicativo do Auvo
+Versão de 22/10/2026. O SGO+ Campo é o aplicativo do técnico de campo da Metrolabs. Ele substituiu o aplicativo do Auvo (descontinuado em 18/11/2026)
 nos atendimentos que nascem no SGO+. É instalado pelo próprio navegador do celular (Android ou iPhone), sem loja de
 aplicativos, e usa o mesmo e-mail e senha do SGO+.
 
@@ -113,7 +113,7 @@ com a legenda para editar.
 
 Toque no cartão da O.S. Em cima ficam cliente, unidade, endereço, responsável, problema e orientação; os botões
 **Abrir no mapa** (abre o aplicativo de mapas do celular) e **Ligar**; o equipamento (TAG, nº de série, setor) e os
-últimos atendimentos dele (inclusive os do Auvo). Embaixo, o passo a passo. Cada passo fica com um visto quando está
+últimos atendimentos dele (inclusive o histórico do Auvo). Embaixo, o passo a passo. Cada passo fica com um visto quando está
 feito, e "Falta" em vermelho quando é obrigatório e ainda não foi feito.
 
 1. **Saí para o atendimento** (opcional): ao sair para o cliente. Não registra localização.

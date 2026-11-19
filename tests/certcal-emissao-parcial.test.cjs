@@ -107,11 +107,14 @@ test('falhas de integrações auxiliares e do log preservam certificado e identi
   const a = ambiente();
   a.ctx.SGO_DATA.log = () => { throw Error('Logs indisponíveis'); };
   a.ctx.SGO_DOCUMENTOS.registrarDocumentoExistente = () => { throw Error('Inventário indisponível'); };
-  a.ctx.Auvo_criarTarefa_ = () => { throw Error('Auvo indisponível'); };
+  // 18/11/2026: Auvo descontinuado pelo dono. A emissão não cria mais tarefa no Auvo: nem chama, nem avisa.
+  let chamouAuvo = 0;
+  a.ctx.Auvo_criarTarefa_ = () => { chamouAuvo++; throw Error('Auvo indisponível'); };
   const res = a.ctx.CertCal_apiGerarCertificado('QA', {});
   assert.equal(res.ok, true);
   assert.ok(res.avisos.some(v => v.includes('Inventário de Documentos')));
-  assert.ok(res.avisos.some(v => v.includes('Auvo não foi concluída')));
+  assert.equal(chamouAuvo, 0);
+  assert.ok(!res.avisos.some(v => /Auvo/.test(v)));
   assert.equal(a.registro().LINK_PDF_CERTIFICADO, res.linkPdf);
   assert.ok(!a.eventos.includes('limpar'));
 });

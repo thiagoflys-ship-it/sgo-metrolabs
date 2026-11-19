@@ -140,9 +140,12 @@ test('desligado (padrão): nada sai e nada é lido', () => {
 });
 
 // ------------------------------------------------------------------ quem recebe
-test('PJ, vínculo vazio e fora do piloto não recebem nada; Auvo em atendimento e ausência não são lembrados', () => {
+// 18/11/2026: Auvo descontinuado pelo dono. "Em atendimento" vem só da O.S. do SGO+ (fonte única, origem SGO); a tarefa do Auvo na aba
+// não conta mais. O teste usa a O.S. do SGO+ (fonte única simulada) e mantém a tarefa do Auvo para provar que ela é ignorada.
+test('PJ, vínculo vazio e fora do piloto não recebem nada; em atendimento numa O.S. e ausência não são lembrados', () => {
   const a = ambiente();
-  a.tabelas.AUVO_TAREFAS.push({ ID: 't1', AUVO_TASK_ID: '9001', TECNICO_ID_SGO: 'u_beto', CHECKIN_EM: '2026-10-19T17:20:00-03:00', CHECKOUT_EM: '', FINALIZADA: 'NAO', CLIENTE_NOME_AUVO: 'Cliente de teste' });
+  a.tabelas.AUVO_TAREFAS.push({ ID: 't1', AUVO_TASK_ID: '9001', TECNICO_ID_SGO: 'u_fabio', CHECKIN_EM: '2026-10-19T17:20:00-03:00', CHECKOUT_EM: '', FINALIZADA: 'NAO', CLIENTE_NOME_AUVO: 'Cliente de teste' });
+  a.ctx.SGO_Atendimentos_linhas_ = (o) => (o && o.origem === 'SGO' ? [{ ORIGEM: 'SGO', AUVO_TASK_ID: 'OS-2026-0001', TECNICO_ID_SGO: 'u_beto', CHECKIN_EM: '2026-10-19T17:20:00-03:00', CHECKOUT_EM: '', FINALIZADA: 'NAO', CLIENTE_NOME_AUVO: 'Cliente de teste' }] : []);
   a.tabelas.conduta_ausencia.push({ ID: 'au1', COLABORADOR_ID: 'u_fabio', DATA_INICIO: '2026-10-19', DATA_FIM: '2026-10-23', TIPO: 'FERIAS' });
   ok(a.api('s_rita', 'salvarDispensa', { usuarioId: 'u_gt', de: '2026-10-19', ate: '2026-10-19', motivo: 'CONSULTA' }));
   diaInteiro(a, '2026-10-19');
@@ -154,7 +157,7 @@ test('PJ, vínculo vazio e fora do piloto não recebem nada; Auvo em atendimento
   // Beto em atendimento às 17:55 (check-in sem check-out): a saída não é lembrada
   assert.deepEqual(nomes(a.msgs('u_beto')), ['sgo_ponto_entrada', 'sgo_ponto_almoco', 'sgo_ponto_retorno']);
   assert.equal(a.marc('u_beto', '2026-10-19', 'SAIDA').SITUACAO, 'DISPENSADO');
-  assert.match(a.marc('u_beto', '2026-10-19', 'SAIDA').OBS, /em atendimento no Auvo/);
+  assert.match(a.marc('u_beto', '2026-10-19', 'SAIDA').OBS, /em atendimento \(O\.S\. OS-2026-0001, chegada 17:20\)/);
   assert.equal(a.msgs('u_fabio').length, 0, 'férias do Programa de conduta');
   assert.equal(a.msgs('u_gt').length, 0, 'consulta lançada pelo RH');
   // a tela do RH explica por que cada um não recebe
@@ -222,7 +225,9 @@ test('"Esqueci de bater" vira pedido ao RH (atividade, pendência, aviso com e-m
   const a = ambiente();
   a.rodar(SEG('07:55'));
   const tk = a.tokenDe(a.msgs('u_ana')[0]);
-  a.tabelas.AUVO_TAREFAS.push({ ID: 't2', AUVO_TASK_ID: '9002', TECNICO_ID_SGO: 'u_ana', CHECKIN_EM: '2026-10-19T08:40:00-03:00', CHECKOUT_EM: '2026-10-19T10:05:00-03:00', FINALIZADA: 'SIM', CLIENTE_NOME_AUVO: 'Cliente de teste' });
+  // 18/11/2026: a evidência vem só das O.S. do SGO+ (Auvo descontinuado pelo dono); a tarefa do Auvo da aba é ignorada
+  a.tabelas.AUVO_TAREFAS.push({ ID: 't2', AUVO_TASK_ID: '9002', TECNICO_ID_SGO: 'u_ana', CHECKIN_EM: '2026-10-19T07:00:00-03:00', CHECKOUT_EM: '2026-10-19T07:30:00-03:00', FINALIZADA: 'SIM', CLIENTE_NOME_AUVO: 'Cliente de teste' });
+  a.ctx.SGO_Atendimentos_linhas_ = (o) => (o && o.origem === 'SGO' ? [{ ORIGEM: 'SGO', AUVO_TASK_ID: 'OS-2026-0002', TECNICO_ID_SGO: 'u_ana', CHECKIN_EM: '2026-10-19T08:40:00-03:00', CHECKOUT_EM: '2026-10-19T10:05:00-03:00', FINALIZADA: 'SIM', CLIENTE_NOME_AUVO: 'Cliente de teste' }] : []);
   a.mudar(SEG('08:30'));
   assert.match(a.ctx.Ponto_paginaResponderExec_(tk, 'ESQUECI', { horario: '09:30', justificativa: 'relógio com fila' }, new a.DataFalsa()).mensagem, /ainda não chegou/);
   assert.match(a.ctx.Ponto_paginaResponderExec_(tk, 'ESQUECI', { horario: '08:05', justificativa: 'ok' }, new a.DataFalsa()).mensagem, /frase curta/);
@@ -230,7 +235,8 @@ test('"Esqueci de bater" vira pedido ao RH (atividade, pendência, aviso com e-m
   assert.equal(r.gravado, true);
   const aj = a.tabelas.PONTO_AJUSTES[0];
   assert.equal(aj.SITUACAO, 'PENDENTE'); assert.equal(aj.HORARIO_INFORMADO, '08:05'); assert.equal(aj.DIA, '2026-10-19'); assert.equal(aj.MARCACAO, 'ENTRADA');
-  assert.match(aj.EVIDENCIA, /check-in 08:40, check-out 10:05/);
+  assert.match(aj.EVIDENCIA, /O\.S\. OS-2026-0002\): chegada 08:40, conclusão 10:05/);
+  assert.doesNotMatch(aj.EVIDENCIA, /Auvo|07:00/);
   assert.ok(!/Cliente de teste/.test(aj.EVIDENCIA), 'evidência só com horários');
   assert.equal(a.marc('u_ana', '2026-10-19', 'ENTRADA').SITUACAO, 'ESQUECI');
   // atividade do RH, restrita e sem dado além do necessário

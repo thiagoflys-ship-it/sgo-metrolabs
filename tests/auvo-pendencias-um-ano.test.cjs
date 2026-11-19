@@ -42,8 +42,10 @@ test('a lista da tela esconde a O.S. aberta há mais de 1 ano, mesmo antes da pr
   assert.equal(r.comEvidencia, 1);
 });
 
-test('relatório e central de pendências usam o mesmo corte', () => {
-  for (const f of ['SGO_Auvo_Relatorio.js', 'SGO_Alertas_Central.js']) {
-    assert.match(fs.readFileSync(path.join(base, f), 'utf8'), /Auvo_pendDentroDaJanela_\(p\)/, f);
-  }
+// 18/11/2026: Auvo descontinuado pelo dono. A central de pendências não lê mais o Auvo (a fonte saiu); a lista da tela antiga e o
+// relatório ficam só no código, sem tela. O teste confere que a central não usa mais as O.S. do Auvo.
+test('relatório usa o corte de 1 ano; a central de pendências não lê mais o Auvo (18/11/2026)', () => {
+  assert.match(fs.readFileSync(path.join(base, 'SGO_Auvo_Relatorio.js'), 'utf8'), /Auvo_pendDentroDaJanela_\(p\)/);
+  const central = fs.readFileSync(path.join(base, 'SGO_Alertas_Central.js'), 'utf8');
+  assert.doesNotMatch(central, /Auvo_pendDentroDaJanela_|Pend_fonteAuvo_|AUVO_PENDENCIAS\)/);
 });

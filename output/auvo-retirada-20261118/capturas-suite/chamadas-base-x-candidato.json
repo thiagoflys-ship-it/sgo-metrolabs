@@ -1,0 +1,34 @@
+{
+ "base": [
+  "apiListarArquivosPdf",
+  "apiListarDocumentos",
+  "apiConsultarCnpj",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiListarDocumentos",
+  "apiMontarDocumentoFinal",
+  "apiSalvarDocumento",
+  "apiListarDocumentos",
+  "apiGerarDocumento",
+  "apiListarDocumentos"
+ ],
+ "candidato": [
+  "apiListarArquivosPdf",
+  "apiListarDocumentos",
+  "apiConsultarCnpj",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiGerarDocumento",
+  "apiListarDocumentos",
+  "apiMontarDocumentoFinal",
+  "apiSalvarDocumento",
+  "apiListarDocumentos",
+  "apiGerarDocumento",
+  "apiListarDocumentos"
+ ]
+}

@@ -1,8 +1,9 @@
 # Manual do módulo Assistência técnica
 
-Assistência técnica nativa do SGO+ (21/10/2026). Substitui o uso do Auvo para chamados, agenda, ordens de serviço,
-relatório do atendimento e acompanhamento do cliente. Funciona em paralelo ao Auvo até os seis critérios da tela
-"Transição do Auvo" serem cumpridos. O aplicativo do técnico no celular tem manual próprio (Manual do SGO+ Campo).
+Assistência técnica nativa do SGO+ (21/10/2026). Substituiu o Auvo para chamados, agenda, ordens de serviço,
+relatório do atendimento e acompanhamento do cliente. Em 18/11/2026 o dono descontinuou o Auvo: ele não faz mais parte
+do SGO+ e todo atendimento é feito aqui. O histórico copiado do Auvo fica só para consulta (ficha do equipamento e
+"Histórico do Auvo"). O aplicativo do técnico no celular tem manual próprio (Manual do SGO+ Campo).
 
 ## Para que serve
 
@@ -21,7 +22,6 @@ relatório A4, salvo na pasta do equipamento e enviado ao cliente.
 - Comercial e Financeiro: preenchem, emitem e registram a resposta do orçamento do chamado.
 - Administrador, Diretoria e Gestor: alteram as Regras da assistência (inclusive quem faz a triagem e a fila livre),
   excluem chamado de teste ou simulação (com motivo) e restauram os excluídos.
-- Administrador: marca "Auvo desligado" quando os seis critérios estão cumpridos.
 - Cliente: em "Meus chamados" pede atendimento para os próprios equipamentos e baixa os relatórios.
 
 ## O caminho do chamado
@@ -68,9 +68,8 @@ Pedido do Matheus (17/11/2026): o atendimento já reagendado continuava como "pr
   ...: a visita marcada não foi registrada" e o que fazer: registrar a chegada pelo aplicativo, se a visita aconteceu,
   ou reagendar com o motivo. Chamado aberto em campo pelo técnico não usa esse texto (não houve visita marcada).
 - Prazo em risco segue a mesma regra: com a visita marcada para o futuro, não é cobrado.
-- Integração Auvo: a lista "O.S. aberta no Auvo" é uma foto da última varredura. A O.S. que a sincronização das tarefas
-  leu depois dessa foto já finalizada, ou com a data passada para um dia depois de hoje (reagendada no Auvo), sai da
-  lista; a próxima varredura confirma. Leitura da tarefa mais antiga que a foto não muda nada.
+- Desde 18/11/2026 não existem mais pendências do Auvo (O.S. aberta no Auvo, O.S. sem vínculo, importação parada): o
+  Auvo foi descontinuado pelo dono.
 
 ## Abrir um chamado
 
@@ -164,7 +163,7 @@ Decisão do dono: "Alerta + fila livre".
    a duração e o tipo de serviço.
 2. Confirme o preparo: ferramentas, instrumentos calibrados, acesso combinado, documentação, peças (ou por que não
    precisa) e a avaliação de risco.
-3. Toque em "Agendar". Se o técnico já tem O.S. no horário, tarefa aberta no Auvo ou ausência (férias, afastamento,
+3. Toque em "Agendar". Se o técnico já tem O.S. no horário ou ausência (férias, afastamento,
    dispensa do ponto), a tela mostra o conflito. Escolha outro horário ou confirme com o motivo (a gestão é avisada).
 4. Reserve o veículo livre sugerido pela Frota, se precisar. A reserva fica no nome do técnico e ligada ao cliente.
 
@@ -183,7 +182,7 @@ O.S. com documentação pendente (ou chamado aguardando peça) pode voltar à tr
 técnico descobre em campo que precisa de orçamento ou de outro diagnóstico: "Voltar à triagem" na ficha do chamado. A
 O.S. fica pausada e volta à agenda quando a triagem decidir "planejar visita".
 
-Agenda dos técnicos: dia ou semana, com os atendimentos do SGO+ e do Auvo, reservas de veículo e ausências. "Rota do
+Agenda dos técnicos: dia ou semana, com os atendimentos do SGO+, reservas de veículo e ausências. "Rota do
 dia" mostra as paradas na ordem e o caminho no mapa; a gestão muda a ordem e o técnico vê a mesma no Meu dia.
 
 ## Ordem de serviço
@@ -501,31 +500,28 @@ religar (Regras da assistência > Ligar). Nada é apagado.
 
 Triagem e fila livre (quem faz a triagem, fila livre ligada e o tempo em minutos úteis, padrão 30). Prazos por prioridade, contratos com prazo próprio, assinatura obrigatória, distância para o aviso de localização,
 tamanho máximo da foto, peça em falta abrindo pedido em Compras, avisos ao cliente, relatório mensal e o interruptor
-"Assistência do SGO+ ligada". Tipos de serviço (29, vindos dos 30 tipos do Auvo) e modelos de checklist (editáveis;
-"Trazer os questionários do Auvo" cria os modelos a partir dos 13 questionários copiados no acervo). Quando a lista de questionários do acervo veio vazia, "Montar os checklists a partir das tarefas do Auvo" (e a rotina, de hora em hora) lê as tarefas copiadas em lotes e monta um modelo por questionário, com as perguntas na ordem mais frequente e o tipo de resposta inferido das respostas (foto, assinatura, sim ou não, número, opção, texto). Esses modelos nascem inativos: revise e marque "Ativo" no editor do modelo. Cada mudança
+"Assistência do SGO+ ligada". Tipos de serviço (29, vindos dos 30 tipos que eram usados no Auvo) e modelos de checklist
+(editáveis; os modelos que vieram dos questionários do Auvo continuam na lista como os demais). Modelo inativo
+(rascunho) não aparece no aplicativo do técnico: revise as perguntas e marque "Ativo" no editor do modelo. Cada mudança
 vira uma versão com o motivo; as O.S. já agendadas seguem o checklist que tinham.
 
-## Fonte única de atendimentos e o Auvo
+## Fonte única de atendimentos e o histórico do Auvo
 
 Painel de qualidade, Programa de conduta (sugestões), Frota (deslocamento até o atendimento), ponto (técnico em
-atendimento não recebe lembrete), central de pendências, Início, ficha do equipamento e Vínculos leem a mesma lista:
-tarefas do Auvo e O.S. do SGO+. A ficha do equipamento mostra também o histórico copiado do Auvo; as fotos do acervo
-abrem só para a equipe interna.
+atendimento não recebe lembrete), central de pendências, Início, agenda, Recarga semanal e Vínculos leem a mesma
+lista: as O.S. do SGO+. Desde 18/11/2026 (Auvo descontinuado pelo dono) as tarefas do Auvo não entram mais nessa
+lista nem em nenhum indicador, aviso ou cobrança.
 
-## Transição do Auvo
+O histórico do Auvo não foi apagado. A ficha do equipamento (aba Atendimentos), o prontuário, o QR e o Portal do
+cliente continuam mostrando o histórico do Auvo ligado ao equipamento, como antes; as fotos do acervo abrem só para a
+equipe interna. A consulta completa do que foi copiado fica em "Histórico do Auvo", só para o Administrador e a
+Diretoria.
 
-Os seis critérios do projeto, cada um com o que o sistema mediu e a confirmação da gestão:
+## Fim do Auvo (18/11/2026)
 
-1. Cópia do acervo do Auvo com zero faltas (ou faltas aceitas pelo dono) e o backup conferido.
-2. Quatro semanas seguidas com todos os técnicos só no SGO+, sem atendimento perdido.
-3. Painel de qualidade, Conduta e Frota mostrando os dados do módulo novo, conferidos pela gestão.
-4. Nenhuma O.S. aberta no Auvo, ou cada uma com destino registrado (fechar no Auvo, recriar como chamado no SGO+ ou
-   não houve atendimento).
-5. Pelo menos um atendimento feito sem internet e sincronizado sem perda, conferido.
-6. Relatório da O.S. aprovado pela Qualidade e já enviado a clientes reais.
-
-Com os seis cumpridos, o Administrador marca "Auvo desligado". É o registro da decisão: nada é desligado sozinho.
-Depois, desligue os gatilhos em Integração Auvo, retire a criação de tarefa nos geradores e cancele o contrato.
+O dono cancelou o contrato com o Auvo. A tela "Transição do Auvo" e os seis critérios saíram; o registro da
+transição fica guardado. Nenhuma rotina, pendência, aviso, alerta ou item da Caixa de decisões vem mais do Auvo, e
+os documentos (certificado, laudo NR-13, PGT/POP, registro operacional) não criam mais tarefa no Auvo.
 
 ## Excluir chamado de teste ou simulação (27/10/2026)
 
@@ -539,7 +535,7 @@ Decisão do dono: só Gestor, Diretoria e Administrador; motivo obrigatório; co
      relatório já foi enviado ao cliente ou a O.S. está em andamento com o técnico, a janela destaca em vermelho.
    - Orçamento: sai junto; o link de aceite enviado ao cliente deixa de abrir o orçamento.
    - Pedido de compra: não é cancelado sozinho; cancele em Compras se a peça não vai mais ser comprada.
-   - Reclamação, pedido do cliente, pedido aprovado do Comercial e tarefa do Auvo: continuam onde estão; nada muda no Auvo.
+   - Reclamação, pedido do cliente e pedido aprovado do Comercial: continuam onde estão.
    - Cliente: os e-mails já enviados não voltam; o chamado some de "Meus chamados".
 3. Escreva o motivo (pelo menos 10 letras), marque "Li os vínculos e o efeito" e toque em "Excluir o chamado". Se os
    vínculos mudaram enquanto a janela estava aberta, o sistema pede para abrir de novo.
@@ -599,7 +595,7 @@ Atualização de 12/11/2026:
 
 - Toda O.S. agendada cria sozinha a atividade do técnico em Minhas atividades, ligada à O.S. (OS_ID). Quem manda é a O.S.: reagendar, encerrar ou cancelar muda a atividade sozinha; ninguém conclui, edita ou justifica essa atividade à mão.
 - A atividade da O.S. não conta atraso em Atividades (nem aviso de atraso, escalonamento por prioridade, central de pendências ou avaliação do gestor): o prazo do cliente é acompanhado aqui, na Assistência.
-- Em Atividades da equipe, o Gantt mostra o atendimento em azul no horário da O.S. e os atendimentos do Auvo em cinza (só consulta). No Kanban o cartão da O.S. é só consulta; o detalhe tem "Abrir a O.S.".
+- Em Atividades da equipe, o Gantt mostra o atendimento em azul no horário da O.S. No Kanban o cartão da O.S. é só consulta; o detalhe tem "Abrir a O.S.".
 - Nova atividade > "É serviço técnico em cliente" (só gestão técnica, Diretoria e Administrador): abre o chamado (canal Interno), faz a triagem como visita planejada e agenda a O.S., conferindo tudo antes (tipo, técnico, horário, duração, preparo e conflito de agenda). Equipamento com chamado aberto: pergunta se é um deles. Chamado vindo do cliente continua pela triagem.
 - Aplicativo do técnico: o Meu dia mostra também "Minhas atividades" (tarefas internas: atrasadas, que vencem até amanhã, em andamento e aguardando), com iniciar, aguardando, concluir, justificar atraso e comentar, também sem internet. Se a gestão mudou a atividade antes do envio, vale a mudança dela e o motivo aparece em Envios.
 

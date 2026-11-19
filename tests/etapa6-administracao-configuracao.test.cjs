@@ -172,7 +172,9 @@ test('Configurações e Chaves e senhas: alvos de 44 px, minutos no lugar de seg
   assert.match(srv, /var r = dono \? Chaves_lista_\(\) : \{ grupos: \[\], itens: \[\], testes: \{\} \};/);
 });
 
-test('Integração Auvo: o texto ao lado da chave liga e desliga, com 44 px no celular; o módulo continua carregando', () => {
+// 18/11/2026: Auvo descontinuado pelo dono. A tela Integração Auvo não é mais servida (Auvo_obterConteudoModulo devolve vazio); o arquivo
+// dela fica como registro e continua válido, por isso as conferências de marcação seguem, e a última linha mudou.
+test('Integração Auvo: o texto ao lado da chave liga e desliga, com 44 px no celular; o módulo antigo fica válido e não é mais servido', () => {
   const f = ler('SGO_Auvo_ConteudoModulo.js');
   assert.match(f, /<label class="toggle-texto" for="tplAuvo_toggleSincAuto">Sincronizar automaticamente a cada 30 minutos<\/label>/);
   assert.match(f, /<label class="toggle-texto" for="tplAuvo_pendToggleDiario">Atualizar automaticamente todo dia às 5h<\/label>/);
@@ -181,7 +183,7 @@ test('Integração Auvo: o texto ao lado da chave liga e desliga, com 44 px no c
   assert.ok(conteudo.length > 50000);
   const sc = conteudo.split('<script>').slice(1).map((x) => x.split('</script>')[0]).join('\n');
   assert.doesNotThrow(() => new vm.Script(sc), 'o JavaScript do módulo continua válido');
-  assert.match(ler('SGO_Auvo_Main.js'), /return AUVO_CONTEUDO_MODULO;/);
+  assert.match(ler('SGO_Auvo_Main.js'), /function Auvo_obterConteudoModulo\(\) \{\s*return '';\s*\}/);
 });
 
 test('fim de linha preservado nas telas e ajudas mexidas nesta etapa (sem arquivo misturado)', () => {
@@ -202,7 +204,8 @@ test('ajudas e manuais da Etapa 6', () => {
   assert.match(adm, /As chaves das integrações ficam com o responsável pelo sistema/);
   assert.doesNotMatch(adm, /\\"Z-API desligada\\"/);
   assert.match(ler('SGO_Ajuda_AutomacaoPredial.js'), /trocar de parte \(Dispositivos, Permissões, Auditoria, Saúde da infraestrutura\) é um passo do voltar/);
-  assert.match(ler('SGO_Ajuda_Auvo.js'), /Toque também no texto ao lado da chave/);
+  // 18/11/2026: a ajuda da Integração Auvo saiu com a tela (Auvo descontinuado); fica a do Histórico do Auvo.
+  assert.match(ler('SGO_Ajuda_Auvo.js'), /"auvo_historico"/);
   assert.match(lerDoc('MANUAL_NAVEGACAO_VOLTAR.md'), /## Etapa 6 \(01\/11\/2026\): Administração e telas de configuração/);
   assert.match(lerDoc('MANUAL_MATRIZ_DE_AVISOS.md'), /as regras vêm agrupadas por módulo/);
   assert.match(lerDoc('MANUAL_MODULO_AUTOMACAO_PREDIAL.md'), /trocar de parte \(Dispositivos, Permissões, Auditoria, Saúde da infraestrutura\) é um passo do voltar/);
