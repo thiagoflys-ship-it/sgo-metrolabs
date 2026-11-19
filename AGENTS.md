@@ -7,10 +7,10 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R110, imagem
-  `sha256:b7d7f487404fe6f978a867751a68c66faf9a7601d95f52412001ae4fdb7ed5c3`,
-  tag `metrolabs/rh:cct-documento-por-criterio-20261119-r110`.
-  Evidência: `output/rh360-20261119-r110/PUBLICADO_RH360_R110_20261119.txt`.
+- Última publicação RH registrada nesta revisão: R115, imagem
+  `sha256:acabe8ed882cca317420d57ec55b6778bc721c72f4d2325cef617cf38011e51e`,
+  tag `metrolabs/rh:fonte-ambito-comparacao-20261119-r115`.
+  Evidência: `output/rh360-20261119-r115/PUBLICADO_RH360_R115_20261119.txt`.
   Preserva as entregas anteriores; 869 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
@@ -1343,3 +1343,64 @@ Evidências e limites: output/rh360-20261119-r110/PUBLICADO_RH360_R110_20261119.
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 19/11/2026 13:05 — PUBLICADO avisos-matheus-20261119 (sha 28f65137…; legado cand36; base segredos-financeiro-v2-20261119). Diagnóstico: GS08–GS11 nunca saíram porque nenhum evento elegível aconteceu (compra informada não disparava GS08; nenhuma cotação chegou a aprovação; único pedido de preço pós-P1 era do próprio Matheus). Agora: espera do delegado = configuração padrão 0 (Compras e Comercial); GS08 também na compra informada; Matheus na Caixa de decisões; 'decisor operacional' (padrão Matheus) recebe itens da Diretoria não financeiros/não sigilosos; Financeiro, depósito, Caju, comissão, Conduta, RH só sócios. Suíte 2714/1 (email-outlook-20261117 intermitente de layout, 2 de 3 passam, não tocado). Relatório: output/avisos-matheus-20261119/RELATORIO.md. Produção atual = cand36.
+
+
+RH360 R111 — publicada/verificada em 19/11/2026 13:06 BRT
+Imagem: sha256:116aaafe46a4d6623e623962b9aae413a37df89dc485abb0d144f95242d92c9b
+Tag: metrolabs/rh:admissao-preparacao-20261119-r111
+Manifesto: 76c915a4b3c62806968607569e367d2c1478171473a5f34b7d5fc0f199d04c7e
+Conferência prévia dos requisitos da admissão no formulário existente.
+869 pins: cinco fontes existentes alteradas, nenhuma fonte nova, 860 fontes anteriores preservadas; mesmos módulos/runtimes e guardas R97/R98.
+Consulta de preparação não é autorização duradoura; abertura continua revalidando as fontes e permissões. Projeto integral permanece aberto.
+Evidências e limites: output/rh360-20261119-r111/PUBLICADO_RH360_R111_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R112 — publicada/verificada em 19/11/2026 13:26 BRT
+Imagem: sha256:82eab70cc673684c35cbb2947c6db8a2193ae412769ffb6d5596139a72630b4a
+Tag: metrolabs/rh:indicadores-origem-oficial-20261119-r112
+Manifesto: fdd12ee4cd4544b0e9912e3c52b11caaa38722edf120ecadac5d2b923ef6f071
+Origem oficial e cobertura administrativa no relatório de colaboradores existente.
+869 pins: três fontes existentes alteradas, nenhuma nova, 862 fontes anteriores preservadas. Nenhum módulo/runtime paralelo ou novo acesso; chat/login, privacidade e guardas R97/R98 mantidos.
+F19 ganha distinção entre contagem textual e origem oficial atual com cobertura administrativa explícita; projeto integral permanece aberto.
+Evidências e limites: output/rh360-20261119-r112/PUBLICADO_RH360_R112_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R113 — publicada/verificada em 19/11/2026 13:56 BRT
+Imagem: sha256:48731118d7c610c60213853a604f6b79983d9fe8fbd88e5cf0666b46bfc1a52a
+Tag: metrolabs/rh:cct-busca-local-fonte-20261119-r113
+Manifesto: 12c1ba606f415383dc7f2fcaa6cec916e95d7fb58cf4ec940c3a4bd314bdba40
+Busca literal no texto local das fontes CCT pelo leitor existente.
+869 pins: seis fontes existentes alteradas, nenhuma nova, 859 fontes anteriores preservadas. Mesmos runtime/leitor, índice/PDFs, chat/login, privacidade e guardas R97/R98.
+Assistência local ganha localização textual e referência explícita de página; governança e projeto integral continuam abertos.
+Evidências e limites: output/rh360-20261119-r113/PUBLICADO_RH360_R113_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R114 — publicada/verificada em 19/11/2026 14:32 BRT
+Imagem: sha256:40e27b28b3a1b2f716ab72268c9d9625b036afbd548d4256786243e962d7908c
+Tag: metrolabs/rh:auditoria-recibos-consulta-20261119-r114
+Manifesto: 945d441cfcdc0d3c29e76b0c3f221ea891a04941c9b4c0b1f8a82b91fb4e7929
+Consulta de metadados dos recibos administrativos no painel Auditoria existente.
+869 pins: duas fontes existentes alteradas, nenhuma nova, 863 fontes anteriores preservadas. Nenhum runtime/módulo paralelo ou nova autoridade; chat/login, privacidade e guardas R97/R98 mantidos.
+Consulta facilita conferência humana de tentativas administrativas sem reenviar comandos ou certificar seus efeitos. Projeto integral continua aberto.
+Evidências e limites: output/rh360-20261119-r114/PUBLICADO_RH360_R114_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R115 — publicada/verificada em 19/11/2026 14:56 BRT
+Imagem: sha256:acabe8ed882cca317420d57ec55b6778bc721c72f4d2325cef617cf38011e51e
+Tag: metrolabs/rh:fonte-ambito-comparacao-20261119-r115
+Manifesto: 4da396c1acf09c7d5e3da3062f580a4d9c5c4e3173fef32d9e155fd3d2537480
+Âmbito solicitado explícito na comparação de originais existente.
+869 pins: três fontes existentes alteradas, nenhuma nova; 862 fontes anteriores preservadas. Chat/login, privacidade e guardas R97/R98 mantidos.
+Confronto mantém resultados e hashes anteriores, acrescentando somente contexto do âmbito solicitado. Projeto integral permanece aberto.
+Evidências e limites: output/rh360-20261119-r115/PUBLICADO_RH360_R115_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 19/11/2026 ~15:40 — PUBLICADO campo-sem-serie-tag-20261119 (app de campo a1fad0ddf68e; base avisos-matheus-20261119; só app.js e regras.js em /app/dist/publico/campo). Pedido do dono (técnico em campo): equipamento sem série, TAG e patrimônio pode ser cadastrado (removida exigência em faltasDoCadastro) e confirmado (botão 'O equipamento não tem série nem TAG' → SERIE_CONFIRMADA 'SEM SERIE/TAG'); gestão completa o cadastro depois. Testes do app 49/0. Fonte: output/campo-semid-20261119/. Base da próxima publicação = metrolabs/sgo:campo-sem-serie-tag-20261119; app de campo de referência = campo-semid.
