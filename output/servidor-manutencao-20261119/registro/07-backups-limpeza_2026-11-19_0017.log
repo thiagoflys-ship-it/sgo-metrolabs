@@ -1,0 +1,747 @@
+== Limpeza 19/11/2026 00:17  ==
+/dev/sda1       193G  150G   43G  78% /
+
+-- 1. cache de build
+Total:	0B
+
+-- 2. imagens metrolabs/* fora da retenção (6 mais recentes por repositório)
+imagens a remover: 0
+
+-- 3. backups de publicação (7 dias inteiros; 10 mais recentes por sistema; 1 por semana até 60 dias)
+  21/10/2026  sgo     18.6 MB  /opt/metrolabs/backup/dump_antes_assistencia_20261021_1549.sql.gz
+      - (arquivo inteiro)
+  21/10/2026  sgo     18.8 MB  /opt/metrolabs/backup/dump_antes_vinculos_auvo_20261021_2122.sql.gz
+      - (arquivo inteiro)
+  21/10/2026  sgo     18.8 MB  /opt/metrolabs/backup/dump_antes_bloqueio_partida_20261021_2202.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.0 MB  /opt/metrolabs/backup/dump_antes_bloqueio_conexao_20261022_0609.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.0 MB  /opt/metrolabs/backup/dump_antes_bloqueio_colunas_20261022_0644.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.0 MB  /opt/metrolabs/backup/dump_antes_geradores_revisoes_20261022_0732.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.4 MB  /opt/metrolabs/backup/dump_antes_campo_visual_20261022_1205.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.7 MB  /opt/metrolabs/backup/dump_antes_assistencia_etapas123_20261022_1735.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.7 MB  /opt/metrolabs/backup/dump_antes_automacao_predial_20261022_2143.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.8 MB  /opt/metrolabs/backup/dump_antes_sheetid_orcamento_link_20261022_2304.sql.gz
+      - (arquivo inteiro)
+  22/10/2026  sgo     19.8 MB  /opt/metrolabs/backup/dump_antes_bloqueio_confirmacao_20261022_2344.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     19.8 MB  /opt/metrolabs/backup/dump_antes_automacao_campainha_20261023_0014.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     20.1 MB  /opt/metrolabs/backup/dump_antes_portoes_auto_20261023_20261023_1213.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     20.1 MB  /opt/metrolabs/backup/dump_antes_portoes_tela_20261023_20261023_1304.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     20.1 MB  /opt/metrolabs/backup/dump_antes_garagem_sensor_20261023_20261023_1322.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     20.2 MB  /opt/metrolabs/backup/dump_antes_portoes_pulso_20261023_20261023_1350.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     20.2 MB  /opt/metrolabs/backup/dump_antes_portoes_percurso_20261023_20261023_1439.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     20.3 MB  /opt/metrolabs/backup/dump_antes_portoes_contagem_20261023_20261023_1650.sql.gz
+      - (arquivo inteiro)
+  23/10/2026  sgo     29.3 MB  /opt/metrolabs/sgo/backups/integracao-20261023-4c7fb312cefc1402f0ef852c4f9146dd20a465f7
+      - /fontes-anteriores.tgz
+      - /banco.dump
+      - /app-anterior/legado/SGO_Conduta_Biblioteca.js
+  23/10/2026  sgo     29.4 MB  /opt/metrolabs/sgo/backups/integracao-20261023-5fc6759f2e3c759bd1667b3825c10d12b1e1bf22
+      - /fontes-anteriores.tgz
+      - /banco.dump
+      - /app-anterior/legado/SGO_Conduta_Biblioteca.js
+  26/10/2026  sgo     20.7 MB  /opt/metrolabs/backup/dump_antes_atividades_dono_20261026_1052.sql.gz
+      - (arquivo inteiro)
+  26/10/2026  sgo     20.8 MB  /opt/metrolabs/backup/dump_antes_crm_gantt_20261026_1226.sql.gz
+      - (arquivo inteiro)
+  26/10/2026  sgo     21.7 MB  /opt/metrolabs/backup/dump_antes_avisos_fases1a5_20261026_1533.sql.gz
+      - (arquivo inteiro)
+  26/10/2026  sgo     21.7 MB  /opt/metrolabs/backup/dump_antes_contatos_modelos_20261026_1608.sql.gz
+      - (arquivo inteiro)
+  26/10/2026  sgo     21.7 MB  /opt/metrolabs/backup/dump_antes_campo_visual_20261026_1733.sql.gz
+      - (arquivo inteiro)
+  26/10/2026  sgo     21.9 MB  /opt/metrolabs/backup/dump_antes_agenda_unica_20261026_1916.sql.gz
+      - (arquivo inteiro)
+  26/10/2026  sgo     21.9 MB  /opt/metrolabs/backup/dump_antes_pgtpop-especialista_20261026_2113.sql.gz
+      - (arquivo inteiro)
+  26/10/2026  sgo     21.9 MB  /opt/metrolabs/backup/dump_antes_auvo-gestao-envio-cliente_20261026_2331.sql.gz
+      - (arquivo inteiro)
+  27/10/2026  sgo     22.2 MB  /opt/metrolabs/backup/dump_antes_auvo_celular_pendencias_externalid_20261027_1134.sql.gz
+      - (arquivo inteiro)
+  27/10/2026  sgo     22.3 MB  /opt/metrolabs/backup/dump_antes_tuya_eventos_preservado_20261027_1755.sql.gz
+      - (arquivo inteiro)
+  27/10/2026  sgo     22.3 MB  /opt/metrolabs/backup/dump_antes_comercial_assistencia_email_chat_20261027_1948.sql.gz
+      - (arquivo inteiro)
+  28/10/2026  sgo     22.8 MB  /opt/metrolabs/backup/dump_antes_conduta_sigilo_ponte_comercial_20261028_1501.sql.gz
+      - (arquivo inteiro)
+  28/10/2026  sgo     22.9 MB  /opt/metrolabs/backup/dump_antes_ponte_sincrona_numerada_20261028_1818.sql.gz
+      - (arquivo inteiro)
+  28/10/2026  sgo     22.9 MB  /opt/metrolabs/backup/dump_antes_comercial_termos_catalogo_20261028_2232.sql.gz
+      - (arquivo inteiro)
+  29/10/2026  sgo     23.0 MB  /opt/metrolabs/backup/dump_antes_comercial_precificacao_relatorios_20261029_0112.sql.gz
+      - (arquivo inteiro)
+  29/10/2026  sgo     23.2 MB  /opt/metrolabs/backup/dump_antes_cadeiafrio_hora24h_20261029_1609.sql.gz
+      - (arquivo inteiro)
+  29/10/2026  sgo     23.2 MB  /opt/metrolabs/backup/dump_antes_comercial_catalogo_baixatemp_20261029_1739.sql.gz
+      - (arquivo inteiro)
+  29/10/2026  sgo     23.2 MB  /opt/metrolabs/backup/dump_antes_cadastros_qualidade_20261029_1811.sql.gz
+      - (arquivo inteiro)
+  29/10/2026  sgo     23.3 MB  /opt/metrolabs/backup/dump_antes_representacao_etapas01_20261029_2120.sql.gz
+      - (arquivo inteiro)
+  30/10/2026  sgo     23.3 MB  /opt/metrolabs/backup/dump_antes_frota_leva1_20261030_0759.sql.gz
+      - (arquivo inteiro)
+  30/10/2026  sgo     23.4 MB  /opt/metrolabs/backup/dump_antes_representacao_completa_20261030_0817.sql.gz
+      - (arquivo inteiro)
+  30/10/2026  sgo     23.5 MB  /opt/metrolabs/backup/dump_antes_frota_leva2_20261030_1102.sql.gz
+      - (arquivo inteiro)
+  30/10/2026  sgo     23.5 MB  /opt/metrolabs/backup/dump_antes_polling_recusas_20261030_1120.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.7 MB  /opt/metrolabs/backup/dump_antes_avisos_cartoes_20261031_1127.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.7 MB  /opt/metrolabs/backup/dump_antes_rastreamento_redesenho_20261031_1211.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.7 MB  /opt/metrolabs/backup/dump_antes_seguranca_acesso_20261031_1313.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_compras_leva1_20261031_1414.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_login_email_20261031_1510.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_relatorio_ciclo_20261031_1655.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_relatorio_ciclo_painel_20261031_1852.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_casca_celular_20261031_1934.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_relatorio_ciclo_rev20261101_20261031_2159.sql.gz
+      - (arquivo inteiro)
+  31/10/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_atividades_pedido_nova_data_20261031_2325.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_etapa1_navegacao_voltar_20261101_0212.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_comercial_c2_precos_20261101_0432.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_comercial_c3_orcamentista_20261101_0627.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_etapa2_voltar_modulos_20261101_0800.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.8 MB  /opt/metrolabs/backup/dump_antes_etapa3_campo_celular_20261101_0904.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.9 MB  /opt/metrolabs/backup/dump_antes_etapa4_documentos_celular_20261101_1022.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.9 MB  /opt/metrolabs/backup/dump_antes_etapa5_compras_email_cadastros_gestao_20261101_1103.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.9 MB  /opt/metrolabs/backup/dump_antes_comercial_c4_20261101_1208.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.9 MB  /opt/metrolabs/backup/dump_antes_etapa6_administracao_20261101_1308.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.9 MB  /opt/metrolabs/backup/dump_antes_especialista_comercial_20261101_1350.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.9 MB  /opt/metrolabs/backup/dump_antes_avisos_gestao_whatsapp_20261101_1506.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     23.9 MB  /opt/metrolabs/backup/dump_antes_decisao-precos-20261101_20261101_1811.sql.gz
+      - (arquivo inteiro)
+  01/11/2026  sgo     24.0 MB  /opt/metrolabs/backup/dump_antes_catalogo-oficial-20261101_20261101_1947.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     39.7 MB  /opt/metrolabs/backup/dump_antes_licitacoes-etapa2_20261102_0705.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     39.8 MB  /opt/metrolabs/backup/dump_antes_licitacoes-etapa2-fabricante_20261102_0730.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     39.8 MB  /opt/metrolabs/backup/dump_antes_licitacoes-etapa2-ajustes_20261102_0756.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     41.1 MB  /opt/metrolabs/backup/dump_antes_seguranca-chave-ia_20261102_0947.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.3 MB  /opt/metrolabs/backup/dump_antes_licitacoes-etapa3_20261102_1045.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.7 MB  /opt/metrolabs/backup/dump_antes_licitacoes-ia-calibrada_20261102_1407.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.8 MB  /opt/metrolabs/backup/dump_antes_licitacoes-etapa4_20261102_1715.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.8 MB  /opt/metrolabs/backup/dump_antes_licitacoes-leitura-edital_20261102_1857.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.8 MB  /opt/metrolabs/backup/dump_antes_licitacoes-precos_20261102_1943.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.8 MB  /opt/metrolabs/backup/dump_antes_licitacoes-leitura-calibrada_20261102_2011.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.9 MB  /opt/metrolabs/backup/dump_antes_licitacoes-habilitacao_20261102_2107.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.9 MB  /opt/metrolabs/backup/dump_antes_licitacoes-proposta-a4_20261102_2210.sql.gz
+      - (arquivo inteiro)
+  02/11/2026  sgo     42.9 MB  /opt/metrolabs/backup/dump_antes_licitacoes-disputas_20261102_2300.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     56.1 MB  /opt/metrolabs/backup/dump_antes_licitacoes-contratos_20261103_0006.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     56.5 MB  /opt/metrolabs/backup/dump_antes_licitacoes-alertas-agrupados_20261103_0036.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     56.5 MB  /opt/metrolabs/backup/dump_antes_licitacoes-ajustes-finais_20261103_0130.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     56.5 MB  /opt/metrolabs/backup/dump_antes_licitacoes-fila-analise_20261103_0253.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     57.2 MB  /opt/metrolabs/backup/dump_antes_licitacoes-nota-calibrada2_20261103_0638.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     57.4 MB  /opt/metrolabs/backup/dump_antes_licitacoes-alta-aderencia_20261103_0718.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     58.1 MB  /opt/metrolabs/backup/dump_antes_pareceres-alcadas_20261103_0820.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     59.3 MB  /opt/metrolabs/backup/dump_antes_mercado_20261103_0950.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     62.2 MB  /opt/metrolabs/backup/dump_antes_rep_documentos_20261103_1523.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     62.2 MB  /opt/metrolabs/backup/dump_antes_rep_modelos_avisos_20261103_1545.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     63.2 MB  /opt/metrolabs/backup/dump_antes_campo_todos_20261103_1710.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     63.2 MB  /opt/metrolabs/backup/dump_antes_usuarios_em_nome_20261103_1722.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     64.4 MB  /opt/metrolabs/backup/dump_antes_aut_canal_20261103_1917.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     64.4 MB  /opt/metrolabs/backup/dump_antes_campo_logistica_20261103_1937.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     64.6 MB  /opt/metrolabs/backup/dump_antes_relatorio_caminho_20261103_2055.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     64.6 MB  /opt/metrolabs/backup/dump_antes_botao_avisos_20261103_2107.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     64.6 MB  /opt/metrolabs/backup/dump_antes_texto_justificado_20261103_2116.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     64.6 MB  /opt/metrolabs/backup/dump_antes_a4_tabelas_justificadas_20261103_2228.sql.gz
+      - (arquivo inteiro)
+  03/11/2026  sgo     66.5 MB  /opt/metrolabs/backup/dump_antes_alertas_radar_20261103_2333.sql.gz
+      - (arquivo inteiro)
+  05/11/2026  sgo     87.2 MB  /opt/metrolabs/backup/prova.zVZJ5N
+      - /sgo.dump
+  06/11/2026  sgo      1.1 MB  /opt/metrolabs/sgo/backups/cf-restauro-20261106
+      - /SGO_AssistenteManuais.js
+  06/11/2026  sgo     92.4 MB  /opt/metrolabs/backup/comercial-20261106T192009Z
+      - /sgo-antes.dump
+  06/11/2026  rh      11.6 MB  /opt/metrolabs/backup/rh-comunicacao-20261106T194926Z
+      - /dados.tar
+      - /rh.dump
+  06/11/2026  rh      11.6 MB  /opt/metrolabs/backup/rh-comunicacao-20261106T195142Z
+      - /dados.tar
+      - /rh.dump
+  06/11/2026  rh      11.6 MB  /opt/metrolabs/backup/rh-comunicacao-20261106T232623Z
+      - /dados.tar
+      - /rh.dump
+  06/11/2026  rh      11.6 MB  /opt/metrolabs/backup/rh-comunicacao-20261106T233716Z
+      - /dados.tar
+      - /rh.dump
+  06/11/2026  rh      11.6 MB  /opt/metrolabs/backup/rh-cct-governanca-20261107T002952Z
+      - /dados.tar
+      - /rh.dump
+  09/11/2026  rh      18.6 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261110T022902Z-abbc64
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-5b176d37/dados/historico-google-20261019/source-private.json
+      - /verify/dados/historico-google-20261019/source-private.json
+      - /verify-5c7d7c74/dados/historico-google-20261019/source-private.json
+      - /verify-5b9424a0/dados/historico-google-20261019/source-private.json
+  10/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261110T031043Z-04cf59
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-fbcb7500/dados/historico-google-20261019/source-private.json
+  10/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261110T032000Z-b86e62
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-055ae170/dados/historico-google-20261019/source-private.json
+  10/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261110T033744Z-18e520
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-7ed184bd/dados/historico-google-20261019/source-private.json
+  10/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261110T045618Z-3b6df8
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-5f6b28ad/dados/historico-google-20261019/source-private.json
+  10/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261110T172602Z-1547b8
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-018126e0/dados/historico-google-20261019/source-private.json
+  10/11/2026  sgo    119.1 MB  /opt/metrolabs/backup/comercial-20261110-sgo
+      - /banco-antes.dump
+      - /pacote.tgz
+  10/11/2026  sgo    124.9 MB  /opt/metrolabs/backup/poderes-lote0-20261110
+      - /banco-antes.dump
+      - /pacote-l0.tgz
+  11/11/2026  sgo    153.3 MB  /opt/metrolabs/backup/comercial-precos-custos-20261111
+      - /banco-antes.dump
+      - /pacote-pc.tgz
+      - /qa/docs.tgz
+      - /qa/docs/COMERCIAL_C1_HISTORICO_PROPOSTAS.json
+  11/11/2026  sgo    287.5 MB  /opt/metrolabs/backup/qualif-simulacao-20261111
+      - /banco-antes.dump
+      - /pacote-qs.tgz
+      - /qa/docs/COMERCIAL_C1_HISTORICO_PROPOSTAS.json
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/__init__.cpython-314.pyc
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/mupdf.cpython-314.pyc
+      - /qa/_tools/.uv-cache/simple-v21/pypi/pymupdf.rkyv
+  11/11/2026  sgo    287.7 MB  /opt/metrolabs/backup/poderes-lote1-20261111
+      - /banco-antes.dump
+      - /pacote-l1.tgz
+      - /qa/docs/COMERCIAL_C1_HISTORICO_PROPOSTAS.json
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/__init__.cpython-314.pyc
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/mupdf.cpython-314.pyc
+      - /qa/_tools/.uv-cache/simple-v21/pypi/pymupdf.rkyv
+  11/11/2026  sgo    287.7 MB  /opt/metrolabs/backup/poderes-lote4-20261111
+      - /banco-antes.dump
+      - /pacote-l4.tgz
+      - /qa/docs/COMERCIAL_C1_HISTORICO_PROPOSTAS.json
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/__init__.cpython-314.pyc
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/mupdf.cpython-314.pyc
+      - /qa/_tools/.uv-cache/simple-v21/pypi/pymupdf.rkyv
+  11/11/2026  sgo    287.5 MB  /opt/metrolabs/backup/poderes-lote5-20261111
+      - /banco-antes.dump
+      - /pacote-l5.tgz
+      - /qa/docs/COMERCIAL_C1_HISTORICO_PROPOSTAS.json
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/__init__.cpython-314.pyc
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/mupdf.cpython-314.pyc
+      - /qa/_tools/.uv-cache/simple-v21/pypi/pymupdf.rkyv
+  11/11/2026  sgo    287.6 MB  /opt/metrolabs/backup/poderes-lote6-20261111
+      - /banco-antes.dump
+      - /pacote-l6.tgz
+      - /qa/docs/COMERCIAL_C1_HISTORICO_PROPOSTAS.json
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/td3BWlNJ54eKr18r_UDRh/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf.py
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdfcpp64.dll
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/_mupdf.pyd
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/mupdf-devel/lib/mupdfcpp64.lib
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/__init__.cpython-314.pyc
+      - /qa/_tools/.uv-cache/archive-v0/818GkzkFLmuJKIVXJFxhG/Lib/site-packages/pymupdf/__pycache__/mupdf.cpython-314.pyc
+      - /qa/_tools/.uv-cache/simple-v21/pypi/pymupdf.rkyv
+  11/11/2026  sgo    129.1 MB  /opt/metrolabs/backup/frota-sessao-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  sgo    128.1 MB  /opt/metrolabs/backup/aprovacao-chat-20261111
+      - /banco-antes.dump
+  11/11/2026  sgo    129.3 MB  /opt/metrolabs/backup/frota-gestora-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  sgo    129.4 MB  /opt/metrolabs/backup/padroes-secadora-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T165136Z-e78472
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-d9175d8b/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    128.6 MB  /opt/metrolabs/backup/decisao-aviso-20261111
+      - /banco-antes.dump
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T170716Z-2bf29f
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-41278bdb/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T171730Z-2a249a
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-e20fc494/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T172943Z-72380d
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-7263128b/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    129.7 MB  /opt/metrolabs/backup/deposito-viagem-e1-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T175500Z-b63736
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-4f83bec6/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T181404Z-ac08c9
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-5ab7ee05/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    129.7 MB  /opt/metrolabs/backup/representacao-midia-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T183101Z-368666
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-b58ac468/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T184417Z-7053d9
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-22eeab23/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    130.7 MB  /opt/metrolabs/backup/deposito-viagem-org-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T190619Z-803f7f
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-6fea7ed3/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    130.8 MB  /opt/metrolabs/backup/representacao-regua-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T191921Z-ea0357
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-c42985bf/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    131.3 MB  /opt/metrolabs/backup/deposito-viagem-e2-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  sgo    131.3 MB  /opt/metrolabs/backup/diretoria-avisos-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  sgo    130.2 MB  /opt/metrolabs/backup/topo-regras-20261111
+      - /banco-antes.dump
+  11/11/2026  sgo    131.4 MB  /opt/metrolabs/backup/diretoria-resumo-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T223609Z-5755a7
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-bcec50f5/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T225604Z-e4c6b7
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-f31ba6ea/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    131.7 MB  /opt/metrolabs/backup/conciliacao-caju-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T232000Z-fe0372
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-0b8f66d0/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    131.7 MB  /opt/metrolabs/backup/desempenho-gestao-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T235104Z-d116ed
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-6f069e70/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261111T235757Z-8adc62
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-ab918450/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T000647Z-10de9f
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-1387609c/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T001400Z-e00aca
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-72a62619/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    130.6 MB  /opt/metrolabs/backup/segredos-cofre-20261111
+      - /dump_antes_completo.dump
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T002253Z-94a4ff
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-efb31af7/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T002900Z-1c6826
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-c914a55c/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo     28.0 MB  /opt/metrolabs/backup/catalogo-antes-20261111.dump
+      - (arquivo inteiro)
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T010431Z-85ca4f
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-4ec5d8aa/dados/historico-google-20261019/source-private.json
+  11/11/2026  sgo    132.2 MB  /opt/metrolabs/backup/comercial-dados-completos-20261111
+      - /banco-antes.dump
+      - /build/app/legado/SGO_AssistenteManuais.js
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T014157Z-fa3e7b
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-967fbe43/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T015156Z-984bc3
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-f1e95fe3/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T020357Z-af8f97
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-15ddba12/dados/historico-google-20261019/source-private.json
+  11/11/2026  rh      12.3 MB  /opt/metrolabs/backup/rh360-dossie-preparacao-20261112T021753Z-3be963
+      - /rh.dump
+      - /dados.tar.gz
+      - /verify-c0b5f824/dados/historico-google-20261019/source-private.json
+backups: 162 item(ns) aliviados, 7.7 GB liberados
+
+-- 4. /tmp com mais de 2 dias
+  2026-10-23  /tmp/SGO_Frota_KmNoturno.js
+  2026-10-23  /tmp/consulta-km.jsonl
+  2026-10-23  /tmp/consultar-km.mjs
+  2026-10-23  /tmp/consultar-piloto-frota.mjs
+  2026-10-23  /tmp/deploy_portoes_contagem_20261023.log
+  2026-10-23  /tmp/diagnostico-intelbras-candidato.mjs
+  2026-10-23  /tmp/diagnostico-modulos.mjs
+  2026-10-23  /tmp/diagnostico-sessao.mjs
+  2026-10-23  /tmp/diagnostico-smartlife-agora.jsonl
+  2026-10-23  /tmp/diagnostico-smartlife.jsonl
+  2026-10-23  /tmp/diagnostico-smartlife.mjs
+  2026-10-23  /tmp/historico-km.jsonl
+  2026-10-23  /tmp/historico-km.mjs
+  2026-10-23  /tmp/intelbrasProtocolo-candidato.mjs
+  2026-10-23  /tmp/piloto-frota.jsonl
+  2026-10-23  /tmp/sgo-alarme-botoes-20261023
+  2026-10-23  /tmp/sgo-frota-odometro-20261023
+  2026-10-23  /tmp/sgo-garagem-booleano-20261023
+  2026-10-23  /tmp/sgo-garagem-diagnostico.jsonl
+  2026-10-23  /tmp/sgo-garagem-intelbras-20261023
+  2026-10-23  /tmp/sgo-imagem-estavel.sha256
+  2026-10-23  /tmp/sgo-imagem-incidente.sha256
+  2026-10-23  /tmp/sgo-inicio-acabamento-20261023
+  2026-10-23  /tmp/sgo-inicio-seguranca-20261023
+  2026-10-23  /tmp/sgo-intelbras-20261023
+  2026-10-23  /tmp/sgo-km-noturno-20261023
+  2026-10-23  /tmp/sgo-publicacao-20261023-4c7fb312cefc1402f0ef852c4f9146dd20a465f7
+  2026-10-23  /tmp/sgo-publicacao-20261023-5fc6759f2e3c759bd1667b3825c10d12b1e1bf22
+  2026-10-23  /tmp/sgo-publicacao-20261023-a2e1a34327477b799adbd2653fcb200aa96f1c98
+  2026-10-23  /tmp/telemetria-km.mjs
+  2026-10-23  /tmp/verificar-ia.mjs
+  2026-10-23  /tmp/verificar-publicacao.mjs
+  2026-10-26  /tmp/a.md5
+  2026-10-26  /tmp/b.md5
+  2026-10-26  /tmp/deploy_agenda_unica.log
+  2026-10-26  /tmp/deploy_atividades_dono.log
+  2026-10-26  /tmp/deploy_auvo-gestao-envio-cliente.log
+  2026-10-26  /tmp/deploy_avisos_fases1a5.log
+  2026-10-26  /tmp/deploy_campo_visual.log
+  2026-10-26  /tmp/deploy_contatos_modelos.log
+  2026-10-26  /tmp/deploy_crm_gantt.log
+  2026-10-26  /tmp/deploy_pgtpop-especialista.log
+  2026-10-27  /tmp/deploy_auvo_celular_pendencias_externalid.log
+  2026-10-27  /tmp/deploy_comercial_assistencia_email_chat.log
+  2026-10-27  /tmp/deploy_tuya_eventos_preservado.log
+  2026-10-28  /tmp/deploy_comercial_termos_catalogo.log
+  2026-10-28  /tmp/deploy_conduta_sigilo_ponte_comercial.log
+  2026-10-28  /tmp/deploy_ponte_sincrona_numerada.log
+  2026-10-29  /tmp/deploy_cadastros_qualidade.log
+  2026-10-29  /tmp/deploy_cadeiafrio_hora24h.log
+  2026-10-29  /tmp/deploy_comercial_catalogo_baixatemp.log
+  2026-10-29  /tmp/deploy_comercial_precificacao_relatorios.log
+  2026-10-29  /tmp/deploy_representacao_etapas01.log
+  2026-10-30  /tmp/deploy_frota_leva1.log
+  2026-10-30  /tmp/deploy_frota_leva2.log
+  2026-10-30  /tmp/deploy_polling_recusas.log
+  2026-10-30  /tmp/deploy_representacao_completa.log
+  2026-10-31  /tmp/deploy_atividades_pedido_nova_data.log
+  2026-10-31  /tmp/deploy_avisos_cartoes.log
+  2026-10-31  /tmp/deploy_casca_celular.log
+  2026-10-31  /tmp/deploy_compras_leva1.log
+  2026-10-31  /tmp/deploy_login_email.log
+  2026-10-31  /tmp/deploy_rastreamento_redesenho.log
+  2026-10-31  /tmp/deploy_relatorio_ciclo.log
+  2026-10-31  /tmp/deploy_relatorio_ciclo_painel.log
+  2026-10-31  /tmp/deploy_relatorio_ciclo_rev20261101.log
+  2026-10-31  /tmp/deploy_seguranca_acesso.log
+  2026-10-31  /tmp/seguranca_listar_emails.ts
+  2026-11-01  /tmp/deploy_avisos_gestao_whatsapp.log
+  2026-11-01  /tmp/deploy_catalogo-oficial-20261101.log
+  2026-11-01  /tmp/deploy_comercial_c2_precos.log
+  2026-11-01  /tmp/deploy_comercial_c3_orcamentista.log
+  2026-11-01  /tmp/deploy_comercial_c4.log
+  2026-11-01  /tmp/deploy_decisao-precos-20261101.log
+  2026-11-01  /tmp/deploy_especialista_comercial.log
+  2026-11-01  /tmp/deploy_etapa1_navegacao_voltar.log
+  2026-11-01  /tmp/deploy_etapa2_voltar_modulos.log
+  2026-11-01  /tmp/deploy_etapa3_campo_celular.log
+  2026-11-01  /tmp/deploy_etapa4_documentos_celular.log
+  2026-11-01  /tmp/deploy_etapa5_compras_email_cadastros_gestao.log
+  2026-11-01  /tmp/deploy_etapa6_administracao.log
+  2026-11-01  /tmp/deploy_licitacoes-etapa1.log
+  2026-11-02  /tmp/deploy_licitacoes-disputas.log
+  2026-11-02  /tmp/deploy_licitacoes-etapa2-ajustes.log
+  2026-11-02  /tmp/deploy_licitacoes-etapa2-fabricante.log
+  2026-11-02  /tmp/deploy_licitacoes-etapa2.log
+  2026-11-02  /tmp/deploy_licitacoes-etapa3.log
+  2026-11-02  /tmp/deploy_licitacoes-etapa4.log
+  2026-11-02  /tmp/deploy_licitacoes-habilitacao.log
+  2026-11-02  /tmp/deploy_licitacoes-ia-calibrada.log
+  2026-11-02  /tmp/deploy_licitacoes-leitura-calibrada.log
+  2026-11-02  /tmp/deploy_licitacoes-leitura-edital.log
+  2026-11-02  /tmp/deploy_licitacoes-precos.log
+  2026-11-02  /tmp/deploy_licitacoes-proposta-a4.log
+  2026-11-02  /tmp/deploy_seguranca-chave-ia.log
+  2026-11-03  /tmp/deploy_a4_tabelas_justificadas.log
+  2026-11-03  /tmp/deploy_alertas_radar.log
+  2026-11-03  /tmp/deploy_aut_canal.log
+  2026-11-03  /tmp/deploy_botao_avisos.log
+  2026-11-03  /tmp/deploy_campo_logistica.log
+  2026-11-03  /tmp/deploy_campo_todos.log
+  2026-11-03  /tmp/deploy_licitacoes-ajustes-finais.log
+  2026-11-03  /tmp/deploy_licitacoes-alertas-agrupados.log
+  2026-11-03  /tmp/deploy_licitacoes-alta-aderencia.log
+  2026-11-03  /tmp/deploy_licitacoes-contratos.log
+  2026-11-03  /tmp/deploy_licitacoes-fila-analise.log
+  2026-11-03  /tmp/deploy_licitacoes-nota-calibrada2.log
+  2026-11-03  /tmp/deploy_mercado.log
+  2026-11-03  /tmp/deploy_pareceres-alcadas.log
+  2026-11-03  /tmp/deploy_relatorio_caminho.log
+  2026-11-03  /tmp/deploy_rep_documentos.log
+  2026-11-03  /tmp/deploy_rep_modelos_avisos.log
+  2026-11-03  /tmp/deploy_texto_justificado.log
+  2026-11-03  /tmp/deploy_usuarios_em_nome.log
+  2026-11-03  /tmp/q1.sql
+  2026-11-03  /tmp/q5.sql
+  2026-11-03  /tmp/q6.sql
+  2026-11-03  /tmp/q7.sql
+  2026-11-03  /tmp/q8.sql
+  2026-11-03  /tmp/rastr_probe.ts
+  2026-11-03  /tmp/tuya_probe.ts
+  2026-11-05  /tmp/sgo-avisos.USNKFdSE
+  2026-11-05  /tmp/sgo-cadq-final.8VJIJvWD
+  2026-11-05  /tmp/sgo-cadq.mlYTUd64
+  2026-11-06  /tmp/sgo-cf-comparacao-20261106.txt
+  2026-11-06  /tmp/tmp.6xD7wOS1yn
+  2026-11-06  /tmp/tmp.AfMACLq5Rn
+  2026-11-06  /tmp/tmp.I2cti3pn1i
+  2026-11-06  /tmp/tmp.O3pGUgOSLA
+  2026-11-06  /tmp/tmp.PY1hPC7VVs
+  2026-11-06  /tmp/tmp.zzcMJlTBEy
+  2026-11-10  /tmp/cfv
+  2026-11-11  /tmp/agora.txt
+  2026-11-11  /tmp/agora2.txt
+  2026-11-11  /tmp/b5.txt
+  2026-11-11  /tmp/base13.txt
+  2026-11-11  /tmp/base3.txt
+  2026-11-11  /tmp/basef.txt
+  2026-11-11  /tmp/baseg.txt
+  2026-11-11  /tmp/baseh.txt
+  2026-11-11  /tmp/basei.txt
+  2026-11-11  /tmp/basej.txt
+  2026-11-11  /tmp/basek.txt
+  2026-11-11  /tmp/basel.txt
+  2026-11-11  /tmp/basem.txt
+  2026-11-11  /tmp/basen.txt
+  2026-11-11  /tmp/baseo.txt
+  2026-11-11  /tmp/basep.txt
+  2026-11-11  /tmp/baseq.txt
+  2026-11-11  /tmp/baser.txt
+  2026-11-11  /tmp/bases.txt
+  2026-11-11  /tmp/baset.txt
+  2026-11-11  /tmp/depois13.txt
+  2026-11-11  /tmp/p5.txt
+  2026-11-11  /tmp/p8
+  2026-11-11  /tmp/p8.tgz
+  2026-11-11  /tmp/pacote-aprovacao-chat.tgz
+  2026-11-11  /tmp/pacote-c.tgz
+  2026-11-11  /tmp/pacote-d.tgz
+  2026-11-11  /tmp/pacote-e.tgz
+  2026-11-11  /tmp/pacote-f.tgz
+  2026-11-11  /tmp/pacote-frota-sessao.tgz
+  2026-11-11  /tmp/pacote-g.tgz
+  2026-11-11  /tmp/pacote-h.tgz
+  2026-11-11  /tmp/pacote-i.tgz
+  2026-11-11  /tmp/pacote-j.tgz
+  2026-11-11  /tmp/pacote-k.tgz
+  2026-11-11  /tmp/pacote-l.tgz
+  2026-11-11  /tmp/pacote-m.tgz
+  2026-11-11  /tmp/pacote-n.tgz
+  2026-11-11  /tmp/pacote-o.tgz
+  2026-11-11  /tmp/pacote-p.tgz
+  2026-11-11  /tmp/pacote-q.tgz
+  2026-11-11  /tmp/pacote-r.tgz
+  2026-11-11  /tmp/pacote-s.tgz
+  2026-11-11  /tmp/pacote-t.tgz
+  2026-11-11  /tmp/pg.html
+  2026-11-11  /tmp/prod13.txt
+  2026-11-11  /tmp/prod3.txt
+  2026-11-11  /tmp/prodantes.txt
+  2026-11-11  /tmp/prodf.txt
+  2026-11-11  /tmp/prodg.txt
+  2026-11-11  /tmp/prodh.txt
+  2026-11-11  /tmp/prodi.txt
+  2026-11-11  /tmp/prodj.txt
+  2026-11-11  /tmp/prodk.txt
+  2026-11-11  /tmp/prodl.txt
+  2026-11-11  /tmp/prodm.txt
+  2026-11-11  /tmp/prodn.txt
+  2026-11-11  /tmp/prodo.txt
+  2026-11-11  /tmp/prodp.txt
+  2026-11-11  /tmp/prodq.txt
+  2026-11-11  /tmp/prodr.txt
+  2026-11-11  /tmp/prods.txt
+  2026-11-11  /tmp/prodt.txt
+  2026-11-11  /tmp/r.txt
+  2026-11-11  /tmp/zz_cad.js
+  2026-11-11  /tmp/zz_cad.ts
+  2026-11-11  /tmp/zz_cat.js
+  2026-11-11  /tmp/zz_cat.ts
+  2026-11-11  /tmp/zz_ch.js
+  2026-11-11  /tmp/zz_ch.ts
+  2026-11-11  /tmp/zz_ch2.js
+  2026-11-11  /tmp/zz_ch2.ts
+  2026-11-11  /tmp/zz_ch3.js
+  2026-11-11  /tmp/zz_ch3.ts
+  2026-11-11  /tmp/zz_dec.js
+  2026-11-11  /tmp/zz_dec.ts
+  2026-11-11  /tmp/zz_env.js
+  2026-11-11  /tmp/zz_env.ts
+  2026-11-11  /tmp/zz_exc.js
+  2026-11-11  /tmp/zz_exc.ts
+  2026-11-11  /tmp/zz_ges.js
+  2026-11-11  /tmp/zz_ges.ts
+  2026-11-11  /tmp/zz_meta.js
+  2026-11-11  /tmp/zz_meta.ts
+  2026-11-11  /tmp/zz_mon.js
+  2026-11-11  /tmp/zz_mon.ts
+  2026-11-11  /tmp/zz_ntf.ts
+  2026-11-11  /tmp/zz_pad.js
+  2026-11-11  /tmp/zz_pad.ts
+  2026-11-11  /tmp/zz_pos.ts
+  2026-11-11  /tmp/zz_prop.ts
+  2026-11-11  /tmp/zz_pt.js
+  2026-11-11  /tmp/zz_pt.ts
+  2026-11-11  /tmp/zz_rd.js
+  2026-11-11  /tmp/zz_rd.ts
+  2026-11-11  /tmp/zz_rep.js
+  2026-11-11  /tmp/zz_rep.ts
+  2026-11-11  /tmp/zz_resp.js
+  2026-11-11  /tmp/zz_resp.ts
+  2026-11-11  /tmp/zz_rg.js
+  2026-11-11  /tmp/zz_rg.ts
+  2026-11-11  /tmp/zz_rv.js
+  2026-11-11  /tmp/zz_rv.ts
+  2026-11-11  /tmp/zz_sec.ts
+  2026-11-11  /tmp/zz_sec2.js
+  2026-11-11  /tmp/zz_sec2.ts
+  2026-11-11  /tmp/zz_wa.js
+  2026-11-11  /tmp/zz_wa.ts
+  2026-11-13  /tmp/q2.sql
+  2026-11-13  /tmp/q3.sql
+  2026-11-13  /tmp/q4.sql
+
+/dev/sda1       193G  143G   51G  74% /
+  sgo-app-1: running healthy reinicios=0
+  sgo-db-1: running healthy reinicios=0
+  rh-app-1: running healthy reinicios=0
+  rh-db-1: running healthy reinicios=0
+  caddy-caddy-1: running  reinicios=0
+  sgo-app-1 HTTP local: 200
+  rh-app-1 HTTP local: 200
+  HTTPS via Caddy (sgo): 200
+  /dev/sda1       193G  143G   51G  74% /
+19/11 00:17: 7 GB liberados; disco em 74% (51G livres). Detalhe: /opt/metrolabs/manutencao/logs/limpeza_2026-11-19_0017.log
