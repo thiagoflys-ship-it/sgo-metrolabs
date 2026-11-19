@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R98, imagem
-  `sha256:c881a9dbbdc6437a4f5efdb64262c19bec97ade258a14b9de51ffb577086b825`,
-  tag `metrolabs/rh:ponto-causalidade-20261118-r98`.
-  Evidência: `output/rh360-20261118-r98/PUBLICADO_RH360_R98_20261118.txt`.
-  Preserva as entregas anteriores; 847 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R104, imagem
+  `sha256:d879b578a91a2cf32791b21d9dee222eaa7c3193ccd707efcc1df82a1ec04ec3`,
+  tag `metrolabs/rh:fonte-protocolo-paginacao-20261119-r104`.
+  Evidência: `output/rh360-20261119-r104/PUBLICADO_RH360_R104_20261119.txt`.
+  Preserva as entregas anteriores; 863 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -1193,3 +1193,79 @@ Execução depende do computador ligado, sessão de usuário conectada e Codex/d
 - 19/11/2026 — Manutenção do servidor: disco 8,0 GB → 107 GB livres (QA antigo 53 GB, imagens 19 GB, build cache 21 GB, backups 7,7 GB, migração 3,2 GB, 215 contêineres de ensaio parados). backup.sh corrigido (pipefail/grep -q). Rotina semanal /opt/metrolabs/manutencao/limpeza.sh domingo 03:30. Relatório: output/servidor-manutencao-20261119/RELATORIO.md.
 - 19/11/2026 — PUBLICADO financeiro-auditoria-20261119 (sha 2b6913ee…; legado cand33; base qr-equipamento-docs-20261118). Contas a pagar/receber por período (17 colunas do Omie, filtros, agrupar, CSV); conciliação casa títulos em aberto inclusive atrasados e BAIXA no Omie já conciliada (idempotente; a pagar exige aprovação dono/Charles); juros/multa/desconto liberados (chave de emergência OMIE_BAIXA_ACRESCIMO_DESLIGADO=1); recusa do Omie (status≠0) com motivo claro. Suíte 2687/0. Falta: 1ª baixa real assistida com a Wanessa (roteiro seção 11), conferir fotografia diária (18/11 não existe), decisões do dono (Matheus no sigilo; aprovação de débito automático/tarifa). Relatório: output/financeiro-auditoria-20261119/RELATORIO.md. Produção atual = cand33.
 - 19/11/2026 02:40 — PUBLICADO manutencao-geral-20261119 (sha 58601338…; legado cand34; base financeiro-auditoria-20261119). Fotografia diária do Financeiro: causa = reinícios por publicação apagavam o andamento em memória (14 publicações em 18/11); agora registra recomeços/falhas e se refaz sozinha (máx. 2x/dia); NÃO publicar entre 06:00 e 08:30. Ajudas sem restos do Auvo; atalho do e-mail para Clientes. Verificações 'tudo se conversa' (funções do front, 116 menus, 14 gatilhos) ok. Suíte 2698/0. Pendências: decisão de guardar progresso da fotografia no banco (sigilo); servidor Node: Tuya reconecta a cada ~5 min, representada sem SGO_versaoTelas/chat, 'sessão expirada' logada como erro, CertCal lento (medir). Relatório: output/manutencao-geral-20261119/RELATORIO.md. Produção atual = cand34.
+
+
+RH360 R99 — publicada/verificada em 19/11/2026 05:14 BRT
+Imagem: sha256:31c39c235a66af69fffa2f09b38af4e3cba38067a33178ac9b685de011e07b66
+Tag: metrolabs/rh:cct-expressoes-fundamento-20261119-r99
+Manifesto: d9dbb130151c0d6a83cd98f163f625dfe189981b654b117d706d3d49545ffaaa
+Fundamento executável das condições e exceções CCT.
+849 pins, duas novas fontes; todos os fontes anteriores preservados.
+Próximo incremento deve ligar o contrato aos fluxos existentes, com novos conteúdos sujeitos ao parecer e à aprovação próprios; não promover declaração manual a fato verificado.
+Evidências e limites: output/rh360-20261119-r99/PUBLICADO_RH360_R99_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R100 — publicada/verificada em 19/11/2026 06:02 BRT
+Imagem: sha256:d2867086907cf0bf21c282b3528327bc039fbcd29cf30d028c37f4ede028a205
+Tag: metrolabs/rh:cct-condicoes-excecoes-20261119-r100
+Manifesto: 9f49189ce8877990cf873168787f9a4e1985f134859d351287b882c4b49a2037
+Condições e exceções estruturadas no fluxo CCT existente.
+849 pins; 25 fontes alteradas sobre R99, sem novo esquema físico de banco ou ampliação de autoridade. Guardas de sobreposição R97 e causalidade R98 preservadas.
+Fundamento de condições/exceções estruturadas implementado e integrado no módulo existente; contrato de fatos operacionais, cobertura da fonte, conteúdo homologado e cenários completos ainda abertos. Não considerar F08 ou projeto integral concluídos apenas por esta entrega.
+Evidências e limites: output/rh360-20261119-r100/PUBLICADO_RH360_R100_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R101 — publicada/verificada em 19/11/2026 06:50 BRT
+Imagem: sha256:3e0fe070f2f27a23409f192f11db4bf749ef8f83366aafb08799f8afea460c87
+Tag: metrolabs/rh:fonte-recorte-conciliacao-20261119-r101
+Manifesto: 28f7f8daa68fe7d656a654763e38d9d836bdb61d4f1df82be110aed46b87a366
+Preparação de conciliação dos originais de ponto.
+853 pins; dez fontes sobre R100, incluindo quatro novas. Scripts.html recebeu somente o nome da nova leitura na lista sem bloqueio; restante do código da API e controles de gravação preservados byte a byte.
+Memórias/CCT R99/R100 e guardas R97/R98 preservadas. Recorte de fonte não depende de programação de jornada ou de procedimento CCT; alterações de identidade, contrato/prova temporal ou originais bloqueiam/revisam seu próprio contexto.
+Prévia não é registro de cobertura ou aceite. Horas, direito, ausência, valor, estabilidade/cursor e completude permanecem não avaliados.
+Evidências e limites: output/rh360-20261119-r101/PUBLICADO_RH360_R101_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R102 — publicada/verificada em 19/11/2026 07:28 BRT
+Imagem: sha256:4f220e2b5c4a70cf1065cf8f930f0ab432474461b192548cefbb10cddf317531
+Tag: metrolabs/rh:fonte-recorte-registro-20261119-r102
+Manifesto: 7cf3238003f028eed71957be8119cc1749f847c83a1ba023b4ffaf3cc8fbe6a3
+Registro técnico de recortes com prova e histórico.
+857 pins; dez fontes sobre a R101, quatro novas e 843 fontes anteriores preservadas. Guardas R97/R98, CCT R99/R100 e preparação R101 mantidas.
+Domínio comprovado na candidata 1 e herdado por identidade dos fontes/dependências/metadados; somente exibição do identificador da prova histórica mudou na candidata final. Integração, página completa e recuperação usam a imagem final.
+Registros técnicos não conferem completude ou contrato do fornecedor e não alimentam horas, CCT, folha ou disciplina.
+Evidências e limites: output/rh360-20261119-r102/PUBLICADO_RH360_R102_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R103 — publicada/verificada em 19/11/2026 08:14 BRT
+Imagem: sha256:ade423cd0ceaf26e715b2a5fa6e0636a4d013635368d478bbf9aed3b50cd0b95
+Tag: metrolabs/rh:cct-leitura-assistida-20261119-r103
+Manifesto: 23f974b97f8af007980bc546a759a4006ecfa85d3bc6d1d5a9f9d89e1cb918e2
+Leitura assistida da fonte CCT e rascunhos dos dois POPs.
+861 pins; quatro novas fontes e 847 fontes anteriores preservadas. Índice derivado somente dos PDFs existentes verificados; metadados de runtime preservados.
+Minutas comuns sem marcador conservam hashes, resultados e transições comparados à fonte R102; R99/R100, ponto, chat/login e guardas R97/R98 permanecem.
+Assistência local de F17 implementada para a biblioteca fornecida; revisão de conteúdo/POP, validações e eventual provedor externo permanecem dependências próprias.
+Evidências e limites: output/rh360-20261119-r103/PUBLICADO_RH360_R103_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R104 — publicada/verificada em 19/11/2026 09:03 BRT
+Imagem: sha256:d879b578a91a2cf32791b21d9dee222eaa7c3193ccd707efcc1df82a1ec04ec3
+Tag: metrolabs/rh:fonte-protocolo-paginacao-20261119-r104
+Manifesto: 0dacaacd77b8c47dd796eb93b1f0e9cba435c419a92396c076154b2b9c464283
+Protocolo público da fonte e conferência do encadeamento preservado.
+863 pins; duas novas fontes e 851 fontes anteriores preservadas. Camada incremental sobre R103, com chat/login, leitura assistida CCT, expressões e guardas R97/R98 mantidos.
+F05 avança na especificação pública e conferência das páginas preservadas; não comprova cobertura integral nem ativa operação real.
+Evidências e limites: output/rh360-20261119-r104/PUBLICADO_RH360_R104_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 19/11/2026 09:27 — SGO+ trocado para metrolabs/sgo:achatada-20261119 (1 camada, mesmo conteúdo de manutencao-geral-20261119; sha256 de /app idêntico). É A NOVA BASE das publicações do SGO+ (montar-camada ... metrolabs/sgo:achatada-20261119). Servidor parte 2: QA do RH removido (31 contêineres, 90 volumes, 10 GB de pastas), migração SGO+ 4,9 GB e pacotes RH 2,1 GB apagados, Caddy lb_try_duration 30s (sgo/command/rh), disco 126 GB livres. Reboot + apt agendados 19/11 22:30 (timer metrolabs-reboot-20261119; pós-boot metrolabs-pos-boot com e-mail). Relatório: output/servidor-manutencao-20261119/RELATORIO-PARTE2.md.

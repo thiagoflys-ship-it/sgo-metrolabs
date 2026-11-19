@@ -1,0 +1,115 @@
+== 0. abrir os pacotes .zip e conferir com o mapa ==
+ Container sgo-app-run-6b3e0490cb8f Creating 
+ Container sgo-app-run-6b3e0490cb8f Created 
+lote_0001.zip: 201 arquivos
+lote_0002.zip: 172 arquivos
+lote_0003.zip: 37 arquivos
+lote_0004.zip: 80 arquivos
+lote_0005.zip: 136 arquivos
+lote_0006.zip: 189 arquivos
+lote_0007.zip: 47 arquivos
+lote_0008.zip: 49 arquivos
+lote_0009.zip: 1 arquivos
+lote_0010.zip: 1 arquivos
+lote_0011.zip: 2 arquivos
+lote_0012.zip: 1 arquivos
+lote_0013.zip: 1 arquivos
+lote_0014.zip: 1 arquivos
+lote_0015.zip: 1 arquivos
+lote_0016.zip: 1 arquivos
+lote_0017.zip: 1 arquivos
+lote_0018.zip: 1 arquivos
+lote_0019.zip: 1 arquivos
+lote_0020.zip: 1 arquivos
+lote_0021.zip: 1 arquivos
+lote_0022.zip: 1 arquivos
+lote_0023.zip: 1 arquivos
+lote_0024.zip: 1 arquivos
+lote_0025.zip: 1 arquivos
+lote_0026.zip: 2 arquivos
+lote_0027.zip: 4 arquivos
+lote_0028.zip: 5 arquivos
+lote_0029.zip: 1 arquivos
+lote_0030.zip: 3 arquivos
+lote_0031.zip: 2 arquivos
+lote_0032.zip: 3 arquivos
+lote_0033.zip: 3 arquivos
+lote_0034.zip: 18 arquivos
+lote_0035.zip: 98 arquivos
+lote_0036.zip: 68 arquivos
+lote_0037.zip: 94 arquivos
+lote_0038.zip: 85 arquivos
+lote_0039.zip: 96 arquivos
+lote_0040.zip: 95 arquivos
+lote_0041.zip: 16 arquivos
+lote_0042.zip: 98 arquivos
+lote_0043.zip: 104 arquivos
+lote_0044.zip: 35 arquivos
+lote_0045.zip: 71 arquivos
+lote_0046.zip: 1 arquivos
+lote_0047.zip: 43 arquivos
+lote_0048.zip: 54 arquivos
+Mapa: 1928 · abertos: 1928 · faltando: 0 · tamanho diferente: 0 · erro no Google: 0 · nativos sem conversão: 0 · estranhos: 0
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+== 1. backup do que está aí ==
+Drive: dump e arquivos enviados (criptografados)
+== OK ==
+== 2. modo OFICIAL, sem banco de teste ==
+== 3. banco e arquivos zerados ==
+ Container sgo-app-1 Stopping 
+ Container sgo-app-1 Stopped 
+ Container sgo-app-1 Removing 
+ Container sgo-app-1 Removed 
+ Container sgo-db-1 Stopping 
+ Container sgo-db-1 Stopped 
+ Container sgo-db-1 Removing 
+ Container sgo-db-1 Removed 
+ Network sgo_interno Removing 
+ Network sgo_interno Removed 
+ Network sgo_interno Creating 
+ Network sgo_interno Creating 
+ Network sgo_interno Created 
+ Network sgo_interno Created 
+ Container sgo-db-1 Creating 
+ Container sgo-db-1 Created 
+ Container sgo-db-1 Starting 
+ Container sgo-db-1 Started 
+== 4. importação ==
+ Container sgo-db-1 Running 
+ Container sgo-db-1 Waiting 
+ Container sgo-db-1 Healthy 
+ Container sgo-app-run-31f7ebb7962e Creating 
+ Container sgo-app-run-31f7ebb7962e Created 
+Importação concluída em 18 s
+  banco COM_DB_ID: METROLABS — Comunicação — 7 abas, 461 linhas
+  banco CRONEXEC_DB_ID: METROLABS_CRONEXEC_DB — 5 abas, 17 linhas
+  banco DB_ID: PORTAL SGO+ VERSÃO CNPJ_DB — 50 abas, 16304 linhas
+  banco PGTPOP_DB_ID: METROLABS_PGTPOP_DB — 6 abas, 123 linhas
+  banco PLANCME_DB_ID: METROLABS_CME_DB — 7 abas, 51 linhas
+  banco REGOP_DB_ID: METROLABS_REGOP_DB — 6 abas, 23 linhas
+  propriedades: 79 (segredos para configurar à mão: AUVO_API_KEY, AUVO_API_TOKEN, AUVO_TOKEN_CACHE, GEMINI_API_KEY, MODO_PERSONALIZADO_SENHA, PONTE_COMMAND_SEGREDO, SIMULADOR_ADMIN_SENHA)
+  pastas: 343 · arquivos: 1831 copiados de 1928, 0 não achados no Drive do computador, 97 planilhas Google importadas, 0 documentos Google sem cópia, 7 sem acesso
+  detalhes: /dados/relatorio_importacao.json
+npm notice
+npm notice New major version of npm available! 11.19.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice
+== 5. sistema no ar (OFICIAL) ==
+ Container sgo-db-1 Running 
+ Container sgo-app-1 Creating 
+ Container sgo-app-1 Created 
+ Container sgo-db-1 Waiting 
+ Container sgo-db-1 Healthy 
+ Container sgo-app-1 Starting 
+ Container sgo-app-1 Started 
+app: healthy
+planilhas 103
+linhas 158981
+arquivos 1931
+propriedades 79
+== PRONTO ==

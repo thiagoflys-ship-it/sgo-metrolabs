@@ -1,0 +1,106 @@
+{
+  "bancos": [
+    {
+      "chave": "COM_DB_ID",
+      "id": "1RTX5223UuDqXRsE8klHCB4jF2djvwrj8GhPbvo--Uv8",
+      "nome": "METROLABS — Comunicação",
+      "abas": 7,
+      "linhas": 461
+    },
+    {
+      "chave": "CRONEXEC_DB_ID",
+      "id": "1wHayGcg9LBVLMZ8bkpPPwUdyVCAdLZJ8xhqFK4XIftk",
+      "nome": "METROLABS_CRONEXEC_DB",
+      "abas": 5,
+      "linhas": 17
+    },
+    {
+      "chave": "DB_ID",
+      "id": "1Ny2wiUrzqa8i3IirgEaW11ZZe_IFH9cs1kpXkxu3VzM",
+      "nome": "PORTAL SGO+ VERSÃO CNPJ_DB",
+      "abas": 50,
+      "linhas": 16304
+    },
+    {
+      "chave": "PGTPOP_DB_ID",
+      "id": "1Def_LT2hHMbFBgVhFbbTrDmWZILDqWTi1I_QW_zzlAo",
+      "nome": "METROLABS_PGTPOP_DB",
+      "abas": 6,
+      "linhas": 123
+    },
+    {
+      "chave": "PLANCME_DB_ID",
+      "id": "166vT0VRbqXkF84LMP5SdQSPLn4t34cNo4n_Lukks-BU",
+      "nome": "METROLABS_CME_DB",
+      "abas": 7,
+      "linhas": 51
+    },
+    {
+      "chave": "REGOP_DB_ID",
+      "id": "1KJmZ5qAjOj_tradssbGzPWILfdeho4pWX0eWCnAmeRg",
+      "nome": "METROLABS_REGOP_DB",
+      "abas": 6,
+      "linhas": 23
+    }
+  ],
+  "propriedades": {
+    "importadas": 79,
+    "segredosIgnorados": [
+      "AUVO_API_KEY",
+      "AUVO_API_TOKEN",
+      "AUVO_TOKEN_CACHE",
+      "GEMINI_API_KEY",
+      "MODO_PERSONALIZADO_SENHA",
+      "PONTE_COMMAND_SEGREDO",
+      "SIMULADOR_ADMIN_SENHA"
+    ]
+  },
+  "arquivos": {
+    "mapa": 1928,
+    "copiados": 1831,
+    "jaExistiam": 0,
+    "atualizados": 0,
+    "googleNativos": 0,
+    "planilhasGoogle": 97,
+    "naoAchados": [],
+    "semAcesso": 7
+  },
+  "pastas": 343,
+  "modelos": [
+    {
+      "id": "10yOcEVhCXO3lsmCIBHeF8yY_gVdpzVzxuSD9jZPdM04",
+      "uso": "Template Autoclave",
+      "ok": true
+    },
+    {
+      "id": "1tMsIsW5Ng6Mz0KSC5s8ujYyWHi1tWqaio13RHbdSctc",
+      "uso": "Template Lavadora (1)",
+      "ok": true
+    },
+    {
+      "id": "1nnUGRulKtf9C_rgp_4dnws43YXG5pTg4QOKIBH1wNds",
+      "uso": "Template Lavadora (2)",
+      "ok": true
+    },
+    {
+      "id": "1WuoymOh5_0S2X3jC2otSq89HMltdDEoP",
+      "uso": "Logotipo dos templates",
+      "ok": true
+    },
+    {
+      "id": "1FiWs9EmnnOBnFNqmXYF2oF-8flfRDgiQ",
+      "uso": "Pasta de saída Template Autoclave",
+      "ok": true
+    },
+    {
+      "id": "1BOKYbVvsuvZYxw56pK-xoi21BG5oOycE",
+      "uso": "Pasta de saída Template Lavadora (1)",
+      "ok": true
+    },
+    {
+      "id": "18NFqpFosi7mHOwvNxX4grfSM5SDlL9kL",
+      "uso": "Pasta de saída Template Lavadora (2)",
+      "ok": true
+    }
+  ]
+}

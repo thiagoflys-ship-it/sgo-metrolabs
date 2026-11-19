@@ -1,0 +1,3 @@
+SGO+ servidor em https://sgo.metrolabs.com.br (6 workers, pronto em 3711 ms)
+[aviso] portoes-locais ponte local dos portões: conectada
+[aviso] tuya-mensagens eventos da Tuya: conectado (event)

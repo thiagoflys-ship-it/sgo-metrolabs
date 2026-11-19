@@ -1,0 +1,12 @@
+User "pwuser"
+Entrypoint null
+Cmd ["node", "dist/servidor.js"]
+WorkingDir "/app"
+Env ["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C.UTF-8", "LC_ALL=C.UTF-8", "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright", "TZ=America/Sao_Paulo", "NODE_ENV=production", "HOST=0.0.0.0", "PORTA=8080", "PASTA_DADOS=/dados", "PASTA_LEGADO=/app/legado"]
+ExposedPorts {"8080/tcp": {}}
+Healthcheck {"Interval": 30000000000, "Retries": null, "StartInterval": null, "StartPeriod": 60000000000, "Test": ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8080/saude').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""], "Timeout": 5000000000}
+Labels {"org.opencontainers.image.version": "24.04"}
+Volumes null
+StopSignal null
+Shell null
+OnBuild null

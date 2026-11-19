@@ -1,0 +1,16 @@
+Thu Nov 19 09:27:06 -03 2026
+1847230
+build em andamento, abortado
+Thu Nov 19 09:27:24 -03 2026
+dump ok 186M
+16c16
+<     image: metrolabs/sgo:manutencao-geral-20261119
+---
+>     image: metrolabs/sgo:achatada-20261119
+troca 09:27:52
+ Container sgo-db-1 Healthy 
+ Container sgo-app-1 Starting 
+ Container sgo-app-1 Started 
+estado: healthy após 20 s (09:28:09)
+GET local 200, HTTPS público 200
+metrolabs/sgo:achatada-20261119 running healthy reinicios=0
