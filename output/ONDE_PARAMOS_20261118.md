@@ -6,13 +6,15 @@
 - Conta técnica do Auvo em Usuários: não existe (conferido no banco).
 
 ## Em andamento (fila, um especialista por vez)
-1. **QR do equipamento** (rodando, cópia `cand32`): documentos de um equipamento aparecendo em outros (29 PGT/POP + 3 em todo QR) e duplicados. Regra do dono: cada equipamento só mostra o que é dele; nas pastas só o último documento gerado (oficial). Entrega: `output/qr-equipamento-20261118/`.
-2. **Servidor** (próximo — disco 96%, 8,2 GB livres): limpar imagens antigas, contêineres parados, cache de build, backups antigos (26 GB em 341 pastas, ~190 MB por publicação). Nunca tocar no cofre, no banco nem nos volumes em uso.
+1. **QR do equipamento** — PUBLICADO 19/11 00:05 (qr-equipamento-docs-20261118, cand32; suíte 2674/0): documentos de um equipamento aparecendo em outros (29 PGT/POP + 3 em todo QR) e duplicados. Regra do dono: cada equipamento só mostra o que é dele; nas pastas só o último documento gerado (oficial). Entrega: `output/qr-equipamento-20261118/`.
+2. **Servidor** (RODANDO desde 19/11 00:10 — disco 96%, 8,2 GB livres): limpar imagens antigas, contêineres parados, cache de build, backups antigos (26 GB em 341 pastas, ~190 MB por publicação). Nunca tocar no cofre, no banco nem nos volumes em uso.
    - Acrescentado ao item 1 (Matheus, extrema urgência): botão Excluir documento nas pastas do equipamento (exclusão lógica, motivo, some do QR/Portal, restaurar só Admin/Diretoria) + lista de documentos que parecem estar no cliente errado.
 3. **Financeiro — especialista de verdade (dono, 18/11 noite)**: mapear e testar o módulo inteiro com dados reais; contas a pagar e a receber por PERÍODO e com os filtros/colunas do Omie (Situação, Nº documento, Parcela, NF, Vencimento, Cliente, Valor da conta, Previsão, Último recebimento, Valor líquido, Impostos retidos, Valor a receber, Desconto, Juros e multa, Valor recebido, Categoria, Operação); conciliação com erro ("Conferência local registrada... permanece sob controle do Omie": não concilia contas atrasadas e o que concilia não baixa no Omie) — fazer a baixa real pela API do Omie.
 4. **Manutenção geral do SGO+**: mapear tudo, procurar erros, corrigir, conferir que os módulos conversam.
 
 ## Pendências do dono / terceiros
+- Decidir: numeração de revisão dos ensaios conta por número em todos os equipamentos ("Rev. 43"); corrigir muda o número impresso nos próximos documentos.
+- Matheus revisar documentos suspeitos (lista em output/qr-equipamento-20261118/RELATORIO.md item 5) e usar o botão Excluir.
 - Piloto do Portal do Cliente na CRM (contrato + 3 pessoas) e ligar a trava por volta de 25/11.
 - Respostas da Wanessa (contador, Caju, Omie, Sicoob).
 - Valores opcionais vazios: teto do Matheus, desconto máximo comercial, percentual da recarga.
