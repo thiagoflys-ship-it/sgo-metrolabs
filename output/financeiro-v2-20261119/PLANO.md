@@ -21,3 +21,12 @@
 ## Depende do dono / terceiros
 - Gravar em /_sgo/segredos: chaves Sicredi e Caju (já tem), Omie da filial e da prestadora (App Key/Secret de cada empresa), Sicoob e Itaú quando chegarem.
 - Wanessa: lista do que ainda faz fora do SGO+ (Omie, banco) e com que frequência.
+
+## Pedido 19/11 (print do Omie: output/financeiro-v2-20261119/pedido-baixa-em-lote-omie.png) — OBRIGATÓRIO na etapa (b)
+Contas a pagar e a receber com **ações em lote**, como no Omie: marcar várias (ou "selecionar todos deste filtro"), painel lateral com o total selecionado e as ações:
+- **Pagar agora / Receber agora** (baixa em lote no Omie, uma chamada por título, idempotente, com resultado por linha: baixado / recusado com motivo / a conferir). Data, conta corrente, juros/multa/desconto comuns ou por linha. Contas a pagar: só baixa o que estiver aprovado pelo dono ou Charles (ou pede a aprovação do lote inteiro numa tela só).
+- **Cancelar pagamentos** (estornar baixa) em lote.
+- **Alterar contas selecionadas** (vencimento, categoria, conta corrente, departamento/empresa, previsão) em lote.
+- **Anexos** (anexar o comprovante/boleto/NF a várias contas).
+- **Excluir as contas selecionadas** (com confirmação e motivo; respeita o que o Omie permite).
+Mostrar progresso (x de y), permitir parar, e um resumo final exportável.
