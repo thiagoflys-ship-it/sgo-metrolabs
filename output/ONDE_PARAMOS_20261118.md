@@ -1,7 +1,7 @@
 # Onde paramos — 19/11/2026, 02:45
 
 ## Produção agora
-- Imagem: `metrolabs/sgo:manutencao-geral-20261119` (legado = `output/financeiro-20261116/cand34`). NÃO publicar entre 06:00 e 08:30 (fotografia diária do Financeiro).
+- Imagem: `metrolabs/sgo:achatada-20261119` (mesmo conteúdo de manutencao-geral-20261119; legado = `output/financeiro-20261116/cand34`). É a BASE das próximas publicações. NÃO publicar entre 06:00 e 08:30 (fotografia diária do Financeiro).
 - Publicado hoje: pacotes P1–P4 (Wanessa/Matheus), app de campo (foto, assinatura em tela cheia, desfazer/reabrir), retirada completa do Auvo (rotinas 3→0, pendências, avisos, alertas, menus, chaves), tela de segredos sem o Auvo.
 - Conta técnica do Auvo em Usuários: não existe (conferido no banco).
 
@@ -12,7 +12,7 @@
 3. **Financeiro** — PUBLICADO 19/11 (financeiro-auditoria-20261119, cand33, suíte 2687/0). Falta: 1ª baixa real assistida com a Wanessa (roteiro seção 11 do relatório); conferir fotografia diária; decisões: Matheus no sigilo? débito automático/tarifa precisam de aprovação?: mapear e testar o módulo inteiro com dados reais; contas a pagar e a receber por PERÍODO e com os filtros/colunas do Omie (Situação, Nº documento, Parcela, NF, Vencimento, Cliente, Valor da conta, Previsão, Último recebimento, Valor líquido, Impostos retidos, Valor a receber, Desconto, Juros e multa, Valor recebido, Categoria, Operação); conciliação com erro ("Conferência local registrada... permanece sob controle do Omie": não concilia contas atrasadas e o que concilia não baixa no Omie) — fazer a baixa real pela API do Omie.
 4. **Manutenção geral do SGO+** — PUBLICADO 19/11 02:40 (cand34, suíte 2698/0; output/manutencao-geral-20261119/). Pendências: guardar progresso da fotografia no banco (decisão de sigilo); servidor Node: Tuya reconecta a cada ~5 min, representada sem aviso de versão/chat, "sessão expirada" como erro, CertCal lento (medir antes); dados a corrigir pelos responsáveis (U95 de padrão do CertCal, cadastros incompletos, CNH sem validade, abastecimento do GFU5G11).: mapear tudo, procurar erros, corrigir, conferir que os módulos conversam.
 
-## PRÓXIMO (prioridade do dono, 19/11 08:00): Financeiro v2 — refazer o módulo inteiro
+## EM ANDAMENTO: Financeiro v2 — fase 1 (especificação) e fase 2 (design) PRONTAS; etapa (a) de desenvolvimento RODANDO (cand35: navegação nova, painel, empresas, chaves no /_sgo/segredos)
 Plano: output/financeiro-v2-20261119/PLANO.md (fases: finanças → design → desenvolvimento; Sicredi + Caju já com chave; Sicoob/Itaú quando chegar; 3 CNPJs: matriz, filial, prestadora).
 Depois dele: correções menores (Tuya reconecta, representada sem aviso de versão/chat, sessão expirada como aviso, CertCal lento, progresso da fotografia no banco, numeração de revisão dos ensaios por equipamento).
 
@@ -23,6 +23,8 @@ Depois dele: correções menores (Tuya reconecta, representada sem aviso de vers
 - Respostas da Wanessa (contador, Caju, Omie, Sicoob).
 - Valores opcionais vazios: teto do Matheus, desconto máximo comercial, percentual da recarga.
 - km 127,2 do GFU5G11 na Frota.
+
+## Servidor — reboot + atualizações agendados 19/11 22:30 (conferir e-mail do pós-boot)
 
 ## Servidor — depende do dono
 - URGENTE: rclone (backup criptografado no Google Drive) avisa que o acesso dele ao Drive para em 2026 — criar acesso próprio no Google Cloud com a conta da empresa.
