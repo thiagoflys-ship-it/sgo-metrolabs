@@ -16,6 +16,11 @@
 Plano: output/financeiro-v2-20261119/PLANO.md (fases: finanças → design → desenvolvimento; Sicredi + Caju já com chave; Sicoob/Itaú quando chegar; 3 CNPJs: matriz, filial, prestadora).
 Depois dele: correções menores (Tuya reconecta, representada sem aviso de versão/chat, sessão expirada como aviso, CertCal lento, progresso da fotografia no banco, numeração de revisão dos ensaios por equipamento).
 
+## Em andamento 19/11 tarde
+- Financeiro v2 etapa (a) PUBLICADA 11:45 (cand35) + chaves no /_sgo/segredos. Próxima: etapa (b) contas/baixa/ações em lote/transferências/fornecedores.
+- Avisos ao Matheus (GS08–GS11 nunca gerados; Matheus decide na hora Compras e preço; demais autorizações não financeiras) — especialista na cand36.
+- Contratos + aditivo de recarga em viagem + compra de contrato recorrente (Matheus) — estudo em output/contratos-aditivo-20261119/.
+
 ## Pendências do dono / terceiros
 - Decidir: numeração de revisão dos ensaios conta por número em todos os equipamentos ("Rev. 43"); corrigir muda o número impresso nos próximos documentos.
 - Matheus revisar documentos suspeitos (lista em output/qr-equipamento-20261118/RELATORIO.md item 5) e usar o botão Excluir.
