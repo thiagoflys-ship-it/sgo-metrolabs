@@ -7,9 +7,9 @@
 
 ## Em andamento (fila, um especialista por vez)
 1. **QR do equipamento** — PUBLICADO 19/11 00:05 (qr-equipamento-docs-20261118, cand32; suíte 2674/0): documentos de um equipamento aparecendo em outros (29 PGT/POP + 3 em todo QR) e duplicados. Regra do dono: cada equipamento só mostra o que é dele; nas pastas só o último documento gerado (oficial). Entrega: `output/qr-equipamento-20261118/`.
-2. **Servidor** (RODANDO desde 19/11 00:10 — disco 96%, 8,2 GB livres): limpar imagens antigas, contêineres parados, cache de build, backups antigos (26 GB em 341 pastas, ~190 MB por publicação). Nunca tocar no cofre, no banco nem nos volumes em uso.
+2. **Servidor** — CONCLUÍDO 19/11 (8,0 → 107 GB livres; rotina semanal domingo 03:30; relatório output/servidor-manutencao-20261119/): limpar imagens antigas, contêineres parados, cache de build, backups antigos (26 GB em 341 pastas, ~190 MB por publicação). Nunca tocar no cofre, no banco nem nos volumes em uso.
    - Acrescentado ao item 1 (Matheus, extrema urgência): botão Excluir documento nas pastas do equipamento (exclusão lógica, motivo, some do QR/Portal, restaurar só Admin/Diretoria) + lista de documentos que parecem estar no cliente errado.
-3. **Financeiro — especialista de verdade (dono, 18/11 noite)**: mapear e testar o módulo inteiro com dados reais; contas a pagar e a receber por PERÍODO e com os filtros/colunas do Omie (Situação, Nº documento, Parcela, NF, Vencimento, Cliente, Valor da conta, Previsão, Último recebimento, Valor líquido, Impostos retidos, Valor a receber, Desconto, Juros e multa, Valor recebido, Categoria, Operação); conciliação com erro ("Conferência local registrada... permanece sob controle do Omie": não concilia contas atrasadas e o que concilia não baixa no Omie) — fazer a baixa real pela API do Omie.
+3. **Financeiro — especialista de verdade (RODANDO desde 19/11, cópia cand33; entrega output/financeiro-auditoria-20261119/)**: mapear e testar o módulo inteiro com dados reais; contas a pagar e a receber por PERÍODO e com os filtros/colunas do Omie (Situação, Nº documento, Parcela, NF, Vencimento, Cliente, Valor da conta, Previsão, Último recebimento, Valor líquido, Impostos retidos, Valor a receber, Desconto, Juros e multa, Valor recebido, Categoria, Operação); conciliação com erro ("Conferência local registrada... permanece sob controle do Omie": não concilia contas atrasadas e o que concilia não baixa no Omie) — fazer a baixa real pela API do Omie.
 4. **Manutenção geral do SGO+**: mapear tudo, procurar erros, corrigir, conferir que os módulos conversam.
 
 ## Pendências do dono / terceiros
@@ -19,6 +19,14 @@
 - Respostas da Wanessa (contador, Caju, Omie, Sicoob).
 - Valores opcionais vazios: teto do Matheus, desconto máximo comercial, percentual da recarga.
 - km 127,2 do GFU5G11 na Frota.
+
+## Servidor — depende do dono
+- URGENTE: rclone (backup criptografado no Google Drive) avisa que o acesso dele ao Drive para em 2026 — criar acesso próprio no Google Cloud com a conta da empresa.
+- Reiniciar o servidor fora do expediente (~2 min) para concluir kernel/libc6; 2 atualizações de segurança pendentes.
+- ~27 GB de QA do RH (31 contêineres de ensaio, 67 volumes de banco soltos com dados de pessoas): apagar precisa de ok.
+- Caddy `lb_try_duration 30s` para não dar erro de segundos durante publicação (~170 requisições em 18/11).
+- Reconstruir imagens SGO+/RH a partir da base (4,6/5,6 GB cada → <1 GB).
+- Restante da migração do SGO+ (4,9 GB) e pacotes do RH (2,1 GB): apagar se confirmar.
 
 ## Conferir quando acontecer
 - Foto no celular do Gabriel (OS-2026-0042) depois de atualizar o app.
