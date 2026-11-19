@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R104, imagem
-  `sha256:d879b578a91a2cf32791b21d9dee222eaa7c3193ccd707efcc1df82a1ec04ec3`,
-  tag `metrolabs/rh:fonte-protocolo-paginacao-20261119-r104`.
-  Evidência: `output/rh360-20261119-r104/PUBLICADO_RH360_R104_20261119.txt`.
-  Preserva as entregas anteriores; 863 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R108, imagem
+  `sha256:01a85ab73b1a825109a441bbfbab23313f51205b4d009882657352310118d950`,
+  tag `metrolabs/rh:periodos-conferencia-20261119-r108`.
+  Evidência: `output/rh360-20261119-r108/PUBLICADO_RH360_R108_20261119.txt`.
+  Preserva as entregas anteriores; 867 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -1269,3 +1269,52 @@ Evidências e limites: output/rh360-20261119-r104/PUBLICADO_RH360_R104_20261119.
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 19/11/2026 09:27 — SGO+ trocado para metrolabs/sgo:achatada-20261119 (1 camada, mesmo conteúdo de manutencao-geral-20261119; sha256 de /app idêntico). É A NOVA BASE das publicações do SGO+ (montar-camada ... metrolabs/sgo:achatada-20261119). Servidor parte 2: QA do RH removido (31 contêineres, 90 volumes, 10 GB de pastas), migração SGO+ 4,9 GB e pacotes RH 2,1 GB apagados, Caddy lb_try_duration 30s (sgo/command/rh), disco 126 GB livres. Reboot + apt agendados 19/11 22:30 (timer metrolabs-reboot-20261119; pós-boot metrolabs-pos-boot com e-mail). Relatório: output/servidor-manutencao-20261119/RELATORIO-PARTE2.md.
+
+
+RH360 R105 — publicada/verificada em 19/11/2026 09:35 BRT
+Imagem: sha256:67d772302ae70603a6b0213dc4ca697799ac50a20e4c9fbefa4ebc227a66dbee
+Tag: metrolabs/rh:fonte-captura-periodo-20261119-r105
+Manifesto: f3d7db2892a1553b23ce7e642c130a4f594636e26670fd12ba67d2603522f39e
+Captura original por filtro de datas com proveniência e recibo.
+865 pins; duas novas fontes e 841 fontes anteriores preservadas. Camada sobre R104; contratos/intent/recibos antigos por ID conservados e todos os consumidores de summary afetados usam o descriptor opcional de datas.
+F05 ganha consulta manual por intervalo com proveniência e recuperação; cobertura integral, contrato real/estabilidade e homologação permanecem abertos.
+Evidências e limites: output/rh360-20261119-r105/PUBLICADO_RH360_R105_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R106 — publicada/verificada em 19/11/2026 10:11 BRT
+Imagem: sha256:dabf0111766c691ed506432c410ae376f7705d29b256b7a3a761aa3f8e6a4476
+Tag: metrolabs/rh:pedido-revisao-ponto-20261119-r106
+Manifesto: 5e8ada2d393fa69c38e7a0b61c30443c0949030ef88fcdd72ee2576b9bd39d56
+Pedido próprio de revisão de espelho de ponto ou horas no atendimento existente.
+865 pins; três telas/serviços legados incrementados, nenhuma fonte nova e 858 fontes anteriores preservadas. Governança CCT, dados privados, fonte/recibos R105, chat/login e guardas R97/R98 mantidos.
+JOR-07 implementado como pedido de conferência, com circuito de atendimento existente e impressão mínima; F10 e projeto integral seguem abertos pelos requisitos restantes e aceites adiados.
+Evidências e limites: output/rh360-20261119-r106/PUBLICADO_RH360_R106_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R107 — publicada/verificada em 19/11/2026 11:03 BRT
+Imagem: sha256:18a5b9a9c5bb716d606c6205ec6b09de9e55e10ea6fee1427eb827efcabf98b6
+Tag: metrolabs/rh:revisao-previsao-retorno-20261119-r107
+Manifesto: 7fbf39330eeee2071ed343887fc9797eff1e0b1456f8122445c4b3b9179ee0fa
+Previsão administrativa de retorno do RH no protocolo JOR-07 existente.
+865 pins: quatro fontes existentes alteradas, zero fontes novas e 857 fontes anteriores preservadas. Chat/login, privacidade por finalidade, CCT, fonte e guardas R97/R98 mantidos.
+Previsão informada e histórico disponíveis no atendimento existente; F10 e projeto integral permanecem abertos por dados, decisões, homologação e integrações restantes.
+Evidências e limites: output/rh360-20261119-r107/PUBLICADO_RH360_R107_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R108 — publicada/verificada em 19/11/2026 11:27 BRT
+Imagem: sha256:01a85ab73b1a825109a441bbfbab23313f51205b4d009882657352310118d950
+Tag: metrolabs/rh:periodos-conferencia-20261119-r108
+Manifesto: 52503e8e10649baa83f0f9e96781b63e9afdda81ac433dbe0931fbb4679ee444
+Conferência dos limites administrativos de períodos no dossiê existente.
+867 pins: oito fontes alteradas, duas novas e 855 fontes anteriores preservadas. Reaproveita o runtime de períodos existente; não cria módulo paralelo ou constructor operacional.
+F12 ganha consulta conjunta de limites administrativos, mantendo fatos/cobertura/decisões não avaliados. Projeto integral permanece aberto.
+Evidências e limites: output/rh360-20261119-r108/PUBLICADO_RH360_R108_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 19/11/2026 11:45 — PUBLICADO financeiro-v2-etapa-a-20261119 (legado cand35; base achatada-20261119) e em seguida segredos-financeiro-v2-20261119 (sha c74af6e2…; /_sgo/segredos com 116 chaves: Omie por empresa, Sicredi/Sicoob/Itaú por empresa e produto; cofre cifra chave privada/.pfx/código de acesso). Financeiro v2 etapa (a): 17 páginas (29 abas antigas dentro), Painel diretoria/Meu dia com dados reais (0,4 s), Empresas e bancos (Matriz, Filial RJ Omie próprio sem chave, Prestadora dentro do Omie da matriz), seletores empresa/período. Suíte 2706/0. FIN_SALDO_MINIMO=30000.00 gravado (FORM-FIN-001). Produção atual = cand35; base da próxima publicação = metrolabs/sgo:segredos-financeiro-v2-20261119.

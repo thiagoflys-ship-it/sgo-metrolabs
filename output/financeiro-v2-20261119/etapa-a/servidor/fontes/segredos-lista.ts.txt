@@ -1,0 +1,69 @@
+/**
+ * 19/11/2026 (Financeiro v2, etapa a): grupos na tela e as chaves novas do Financeiro (Omie da filial e da prestadora, Sicredi, Sicoob,
+ * Itaú e o opcional SERPRO; a Caju continua em Administração > Chaves e senhas > Caju, um lugar só por chave), uma por empresa (MATRIZ, FILIAL, PRESTADORA). Nomes de output/financeiro-v2-20261119/CREDENCIAIS_PARA_O_DONO.md.
+ * tipo "pem": certificado ou chave privada colados inteiros (campo de várias linhas, ou "Escolher arquivo" .pem/.crt/.cer/.key);
+ * tipo "pfx": certificado A1 em arquivo .pfx/.p12, convertido em texto (base64) no próprio navegador. O valor continua só entrando.
+ */
+type Segredo = { chave: string; nome: string; ajuda: string; exemplo?: string; grupo?: string; tipo?: "texto" | "pem" | "pfx" };
+const BASE: Segredo[] = [
+__BASE__
+];
+const EMPRESAS_FIN: Array<[string, string]> = [["MATRIZ", "Matriz"], ["FILIAL", "Filial"], ["PRESTADORA", "Prestadora"]];
+const ONDE_SICREDI = "Cada produto (Pix, Boletos, Extrato e saldo, Pagamentos) tem a própria credencial e funciona sozinho: grave só o que o Sicredi já liberou. Peça ao gerente da cooperativa e pegue no portal developer.sicredi.com.br (passo a passo no documento Credenciais para o dono, item 2).";
+const ONDE_SICOOB = "Gerado no portal developers.sicoob.com.br depois que o gerente de Cash libera as APIs (documento Credenciais para o dono, item 3).";
+const ONDE_ITAU = "O Client ID vem do Analista de Operações do Itaú; o certificado é gerado com o desenvolvedor na sessão marcada (documento Credenciais para o dono, item 4).";
+function chavesFinanceiro(): Segredo[] {
+  const l: Segredo[] = [];
+  for (const [e, n] of EMPRESAS_FIN.slice(1)) {
+    l.push({ chave: "OMIE_APP_KEY_" + e, grupo: "Omie da filial e da prestadora", nome: "Omie da " + n + " — App Key", ajuda: "Só se a " + n + " tiver Omie próprio (login e notas separados). No Omie da " + n + ": Configurações → Aplicativos → Desenvolvedor → App Key. Sem Omie próprio, deixe em branco: o SGO+ separa a " + n + " pelas contas correntes dentro do Omie da matriz." });
+    l.push({ chave: "OMIE_APP_SECRET_" + e, grupo: "Omie da filial e da prestadora", nome: "Omie da " + n + " — App Secret", ajuda: "O App Secret do mesmo aplicativo do Omie da " + n + "." });
+  }
+  l.push({ chave: "SICREDI_AMBIENTE", grupo: "Sicredi", nome: "Sicredi — ambiente", exemplo: "homologacao", ajuda: "Digite homologacao (testes) ou producao. Vazio: as integrações do Sicredi ficam desligadas." });
+  for (const [e, n] of EMPRESAS_FIN) {
+    const g = "Sicredi · " + n, p = "SICREDI_" + e + "_";
+    l.push({ chave: p + "CONTA_CLIENT_ID", grupo: g, nome: "Sicredi " + n + " — extrato e saldo: Client ID", ajuda: "Credencial das APIs de Extrato e Saldo de Conta Corrente. " + ONDE_SICREDI });
+    l.push({ chave: p + "CONTA_CLIENT_SECRET", grupo: g, nome: "Sicredi " + n + " — extrato e saldo: Client Secret", ajuda: "O segredo da mesma credencial de extrato e saldo." });
+    l.push({ chave: p + "CONTA_CERT", grupo: g, tipo: "pem", nome: "Sicredi " + n + " — extrato e saldo: certificado (se for outro)", ajuda: "Só se o portal der um certificado próprio para extrato e saldo. Se for o mesmo do Pix, deixe em branco: o SGO+ usa o do Pix." });
+    l.push({ chave: p + "CONTA_CHAVE_PRIVADA", grupo: g, tipo: "pem", nome: "Sicredi " + n + " — extrato e saldo: chave privada (se for outra)", ajuda: "A chave privada do certificado de extrato e saldo, quando ele não for o do Pix. Fica cifrada no cofre." });
+    l.push({ chave: p + "PIX_CLIENT_ID", grupo: g, nome: "Sicredi " + n + " — Pix: Client ID", ajuda: "Gerado no portal depois do chamado \"Acesso à API Pix\" com o CNPJ e o ID da adesão." });
+    l.push({ chave: p + "PIX_CLIENT_SECRET", grupo: g, nome: "Sicredi " + n + " — Pix: Client Secret", ajuda: "O segredo da credencial do Pix." });
+    l.push({ chave: p + "PIX_CERT", grupo: g, tipo: "pem", nome: "Sicredi " + n + " — Pix: certificado (.cer ou .pem)", ajuda: "Cole inteiro, do -----BEGIN ao -----END, ou escolha o arquivo. O SGO+ avisa 30 dias antes de vencer." });
+    l.push({ chave: p + "PIX_CHAVE_PRIVADA", grupo: g, tipo: "pem", nome: "Sicredi " + n + " — Pix: chave privada (.key)", ajuda: "A chave privada do mesmo certificado. Cole inteira ou escolha o arquivo. Fica cifrada no cofre do servidor." });
+    l.push({ chave: p + "PIX_CHAVE", grupo: g, nome: "Sicredi " + n + " — chave Pix aleatória da conta", ajuda: "A chave Pix aleatória cadastrada na conta (o boleto híbrido exige uma chave aleatória)." });
+    l.push({ chave: p + "COB_API_KEY", grupo: g, nome: "Sicredi " + n + " — boletos: Developer Key (x-api-key)", ajuda: "No portal: aplicação com \"API COBRANÇA BOLETO\"; a Developer Key aparece em Tokens de Acesso." });
+    l.push({ chave: p + "COB_CODIGO_ACESSO", grupo: g, nome: "Sicredi " + n + " — boletos: Código de Acesso", ajuda: "Gerado no Internet Banking: Cobrança → Código de Acesso → Gerar." });
+    l.push({ chave: p + "COOPERATIVA", grupo: g, nome: "Sicredi " + n + " — número da cooperativa", ajuda: "Informado pelo gerente." });
+    l.push({ chave: p + "POSTO", grupo: g, nome: "Sicredi " + n + " — número do posto", ajuda: "Informado pelo gerente." });
+    l.push({ chave: p + "BENEFICIARIO", grupo: g, nome: "Sicredi " + n + " — código do beneficiário", ajuda: "Informado pelo gerente (cobrança)." });
+    l.push({ chave: p + "PAG_CLIENT_ID", grupo: g, nome: "Sicredi " + n + " — pagamentos (Multipag): Client ID", ajuda: "Só depois que o gerente liberar o Multipag. Pergunte se o pagamento enviado fica esperando aprovação no Internet Banking." });
+    l.push({ chave: p + "PAG_CLIENT_SECRET", grupo: g, nome: "Sicredi " + n + " — pagamentos (Multipag): Client Secret", ajuda: "O segredo da credencial do Multipag." });
+    l.push({ chave: p + "PAG_CERT", grupo: g, tipo: "pem", nome: "Sicredi " + n + " — pagamentos: certificado (se for outro)", ajuda: "Só se o Multipag tiver certificado próprio; senão o SGO+ usa o do Pix." });
+    l.push({ chave: p + "PAG_CHAVE_PRIVADA", grupo: g, tipo: "pem", nome: "Sicredi " + n + " — pagamentos: chave privada (se for outra)", ajuda: "A chave privada do certificado do Multipag, quando ele não for o do Pix. Fica cifrada no cofre." });
+  }
+  l.push({ chave: "SICOOB_AMBIENTE", grupo: "Sicoob", nome: "Sicoob — ambiente", exemplo: "homologacao", ajuda: "Digite homologacao ou producao. Vazio: as integrações do Sicoob ficam desligadas." });
+  for (const [e, n] of EMPRESAS_FIN) {
+    const g = "Sicoob · " + n, p = "SICOOB_" + e + "_";
+    l.push({ chave: p + "CLIENT_ID", grupo: g, nome: "Sicoob " + n + " — Client ID", ajuda: ONDE_SICOOB });
+    l.push({ chave: p + "CERT_PFX", grupo: g, tipo: "pfx", nome: "Sicoob " + n + " — certificado A1 (.pfx)", ajuda: "O certificado digital e-CNPJ A1 da empresa (o mesmo da nota fiscal serve). Escolha o arquivo .pfx: o navegador converte em texto e grava. Fica cifrado no cofre." });
+    l.push({ chave: p + "CERT_SENHA", grupo: g, nome: "Sicoob " + n + " — senha do certificado A1", ajuda: "A senha do arquivo .pfx." });
+    l.push({ chave: p + "NUMERO_CLIENTE", grupo: g, nome: "Sicoob " + n + " — número do cliente (cooperado)", ajuda: "Informado pelo gerente." });
+    l.push({ chave: p + "CONTA", grupo: g, nome: "Sicoob " + n + " — conta corrente", ajuda: "O número da conta corrente no Sicoob." });
+    l.push({ chave: p + "PIX_CHAVE", grupo: g, nome: "Sicoob " + n + " — chave Pix aleatória da conta", ajuda: "Para o boleto com Pix." });
+  }
+  l.push({ chave: "ITAU_AMBIENTE", grupo: "Itaú", nome: "Itaú — ambiente", exemplo: "homologacao", ajuda: "Digite homologacao ou producao. Vazio: as integrações do Itaú ficam desligadas." });
+  for (const [e, n] of EMPRESAS_FIN) {
+    const g = "Itaú · " + n, p = "ITAU_" + e + "_";
+    l.push({ chave: p + "CLIENT_ID", grupo: g, nome: "Itaú " + n + " — Client ID", ajuda: ONDE_ITAU });
+    l.push({ chave: p + "CLIENT_SECRET", grupo: g, nome: "Itaú " + n + " — Client Secret", ajuda: "Aparece uma única vez, na geração do certificado. Grave na hora." });
+    l.push({ chave: p + "CERT", grupo: g, tipo: "pem", nome: "Itaú " + n + " — certificado (.crt)", ajuda: "Cole inteiro, do -----BEGIN ao -----END, ou escolha o arquivo. Vence em até 1 ano; o SGO+ avisa." });
+    l.push({ chave: p + "CHAVE_PRIVADA", grupo: g, tipo: "pem", nome: "Itaú " + n + " — chave privada (.key)", ajuda: "A chave privada do mesmo certificado. Fica cifrada no cofre do servidor." });
+    l.push({ chave: p + "AGENCIA", grupo: g, nome: "Itaú " + n + " — agência", ajuda: "Só os números." });
+    l.push({ chave: p + "CONTA", grupo: g, nome: "Itaú " + n + " — conta", ajuda: "Só os números, com o dígito." });
+    l.push({ chave: p + "PIX_CHAVE", grupo: g, nome: "Itaú " + n + " — chave Pix aleatória", ajuda: "Para o BolePix." });
+  }
+  // Caju: as chaves continuam só em Administração > Chaves e senhas > Caju do SGO+ (SGO_Chaves.js); um lugar só por chave.
+  l.push({ chave: "SERPRO_CONSUMER_KEY", grupo: "Guias de imposto (opcional, SERPRO)", nome: "SERPRO Integra Contador — Consumer Key", ajuda: "Só se o dono contratar a emissão automática de guias (tem custo por guia). Sem ela, as guias continuam pelo PDF do contador." });
+  l.push({ chave: "SERPRO_CONSUMER_SECRET", grupo: "Guias de imposto (opcional, SERPRO)", nome: "SERPRO Integra Contador — Consumer Secret", ajuda: "O segredo da mesma credencial." });
+  return l;
+}
+export const SEGREDOS: Segredo[] = [...BASE, ...chavesFinanceiro()];

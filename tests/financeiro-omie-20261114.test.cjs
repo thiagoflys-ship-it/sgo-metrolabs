@@ -195,6 +195,9 @@ test('página completa: menu Financeiro, faixa da gravação e visão geral (136
         await page.waitForFunction(() => { const b = document.getElementById('menu-btn-omie'); return b && b.style.display === ''; }, null, { timeout: 10000 });
         assert.notEqual(await page.locator('#menu-secao-financeiro').evaluate((g) => g.style.display), 'none');
         await page.evaluate(() => abrir('omie'));
+        // 19/11/2026 (Financeiro v2, etapa a, ajuste de propósito): o endereço antigo abre o Painel financeiro novo (Meu dia, para a Wanessa);
+        // a antiga Visão geral é a aba "Posição no Omie" da mesma página, com o mesmo conteúdo e o mesmo comportamento de antes.
+        await page.evaluate(() => OmieTela_abrir_('resumo'));
         await page.locator('#omieFaixaGravacao').waitFor();
         await page.evaluate(() => OmieGest_vencidos_()); // tocado enquanto a Visão geral ainda carrega
         assert.match(await page.locator('#omieFaixaGravacao').innerText(), /gravação no Omie desligada/);

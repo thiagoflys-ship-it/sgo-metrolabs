@@ -1,12 +1,72 @@
-# Manual — Painel financeiro (16/11/2026)
+# Manual — Financeiro (Painel financeiro e as 17 páginas, 19/11/2026)
 
 <div style="text-align: justify">
+
+## 0. O Financeiro em 17 páginas (Financeiro v2, etapa a, 19/11/2026)
+
+Desde 19/11/2026 o Financeiro não é mais uma página com 29 abas. Ele tem **17 páginas no menu**, em três grupos, cada uma sobre um assunto. As abas de antes continuam iguais, cada uma dentro da página do assunto: nenhuma função saiu. O endereço antigo (o atalho "Financeiro" do celular, os avisos e os links "Painel financeiro > ...") abre o Painel financeiro novo, e o atalho de uma aba antiga abre a página onde ela está agora.
+
+| Grupo do menu | Página | O que tem (abas de antes entre aspas) |
+|---|---|---|
+| Financeiro · dia a dia | Painel financeiro | Visão da diretoria, Meu dia, "Posição no Omie" (a antiga Visão geral) e "Indicadores e saúde" |
+| | Aprovações | "Pagamentos do dia" (Aprovação de pagamentos) e "Acima da alçada e regras" (Regras do Financeiro) |
+| | Contas a receber | "Contas por período" (abre em A receber) e "Reajustes de contratos" |
+| | Contas a pagar | "Contas por período" (abre em A pagar), "Lançamentos e baixas", "Contas fixas", "Compras e Caju no Omie" e "Comissões" |
+| | Conciliação | "Conciliação bancária" |
+| | Cobrança (Pix e boleto) | "Régua de cobrança" e "Boletos pelo Omie" (a antiga Cobranças) |
+| Financeiro · bancos e documentos | Bancos e saldos | em construção; hoje lista cada conta com a empresa e o que falta gravar |
+| | Transferências | em construção (etapa b) |
+| | Notas fiscais | "Pedidos aprovados", "Faturar serviços", "Faturar produtos" e "Importação de notas" |
+| | Fornecedores e clientes | "Ficha do cliente" |
+| | Impostos e guias | em construção (etapa d) |
+| | Caju | "Recarga Caju da rotina" (a Conciliação Caju continua no item próprio do menu) |
+| Financeiro · gestão | Orçamento | "Orçamento anual" e "Provisões" |
+| | Fechamento do mês | "Checklist do mês" |
+| | Relatórios | "Relatórios semanais", "Resultado do mês", "Fluxo de caixa", "Agenda e previsão" e "Especialista financeiro" |
+| | Empresas e bancos | as três empresas, as contas de cada uma, o estado de cada banco e as regras em vigor |
+| | Trilha | "Trilha das operações" e "Sigilo e acessos" |
+
+**Páginas em construção.** Bancos e saldos, Transferências e Impostos e guias mostram, no lugar do conteúdo, três linhas: o que vai ter ali, quando (a etapa) e o que usar enquanto isso, com o botão que leva direto à aba de hoje. Outras páginas têm uma faixa azul "Em construção nesta página" quando parte do que o desenho prevê ainda vai chegar.
+
+**No celular.** Toda página do Financeiro abre com a barra de páginas no topo (Painel, Aprovações, Receber, Pagar...), que rola para o lado; a página aberta fica no meio. As abas de cada página aparecem logo abaixo do cabeçalho.
+
+### 0.1 Seletor de empresa e de período
+
+- **Empresa.** No topo de toda página: Todas, Matriz, Filial RJ e Metrolabs prestadora (no celular, a lista "Empresa"). A escolha fica guardada neste aparelho.
+- **Todas** é o Omie da matriz inteiro, como sempre foi.
+- **Uma empresa** mostra só os títulos das contas correntes ligadas a ela em Empresas e bancos. Isso vale no Painel e em Contas por período. As outras abas ainda mostram as três juntas, e uma nota no topo avisa.
+- **Filial RJ** tem Omie próprio. Enquanto as chaves dela não forem gravadas, a tela diz "Falta credencial" com o nome das chaves. Com as chaves gravadas, Contas por período lê o Omie da Filial RJ. O painel dela vem na próxima entrega.
+- **Período** (Contas por período): Hoje, Esta semana, Este mês, Mês passado, Próximo mês, Este ano ou "Outro…", que leva aos campos De e Até.
+
+### 0.2 Painel financeiro: as duas visões
+
+- **Visão da diretoria** (padrão do dono e do Charles): avisos do dia, caixa disponível (saldo somado do resumo do Omie, com a origem e a hora), aprovações pendentes, a receber e a pagar (hoje, 7 dias e mês), vencidos, previsão de caixa de 30, 60 ou 90 dias, resultado por mês, idade do a receber, inadimplência, concentração, despesas por categoria, orçamento × realizado e a DRE de caixa de 6 meses.
+- **Meu dia** (padrão da Wanessa): o que fazer hoje em ordem de prioridade, os cartões de conciliação, vencido a pagar, fornecedores sem dados e fechamento, a semana em dias úteis, a cobrança de hoje e as pendências do fechamento.
+- **De onde vêm os números.** Vêm da fotografia diária do Financeiro, lida do Omie a partir das 06:00, e das tabelas do SGO+. O painel não chama o Omie a cada clique; abre em menos de 1 segundo e se atualiza sozinho a cada 5 minutos. "Atualizar agora" pede uma nova fotografia.
+- **Bloco sem fonte.** Não mostra número inventado: mostra o motivo, por exemplo "Só no consolidado", "Falta credencial" ou "etapa b".
+
+### 0.3 Empresas e bancos
+
+- **As três empresas.** Matriz 32.487.278/0001-21, Filial RJ 32.487.278/0002-02 e Metrolabs prestadora 62.909.375/0001-26. Os CNPJs foram informados pelo dono em 19/11/2026, com os dígitos conferidos.
+- **Razão social e inscrições.** Ficam em branco até o dono conferir. A tela sugere a razão pela consulta de CNPJ do SGO+, marcada "conferir".
+- **Omie de cada empresa.** A Matriz e a Filial RJ têm Omie próprio (dois aplicativos no Omie: METROLAB e METROLAB’S FILIAL RJ). A Metrolabs prestadora vive dentro do Omie da matriz e é separada pelas contas correntes e pelo departamento.
+- **Contas correntes.** Por decisão do dono, toda conta do Omie da matriz é da Matriz até alguém mudar aqui. A conta cujo nome cita outra empresa ("Sicredi filial", "Itaú Unibanco Prestadora", "CAIXA FILIAL"...) continua da Matriz, com o selo "conferir: o nome cita a Filial/Prestadora".
+- **Estado de cada banco, produto a produto.** Sicredi, Sicoob e Itaú mostram cada produto separado: Saldo e extrato, Pix, Boletos e Pagamentos. Cada um fica "credencial gravada" ou "falta credencial", com o nome das chaves que faltam. Cada produto funciona só com as chaves dele: o Sicredi libera um produto por vez e nada exige todas as chaves do banco. "Credencial gravada" ainda não é "Ligado": os conectores dos bancos entram na etapa c (Sicredi) e na etapa e (Sicoob e Itaú).
+- **Caju.** Usa as chaves de sempre, em Administração > Chaves e senhas > Caju, e mostra o ambiente em uso (Produção ou Homologação). A conta do Caju é da Matriz.
+- **Quem altera.** Só o dono e o Charles alteram, sempre com o motivo, que fica no histórico com o antes e o depois. A Wanessa consulta: a página mostra a trava explicando.
+- **Onde gravar as chaves.** O dono grava as chaves dos bancos e do Omie da Filial RJ em Chaves e senhas (`/_sgo/segredos`), agrupadas por banco e empresa. Certificados e chaves privadas se colam inteiros ou se escolhem pelo arquivo; o certificado .pfx do Sicoob vira texto no próprio navegador. O valor nunca aparece de novo. Os nomes estão no documento "Credenciais para o dono".
+
+### 0.4 Quem pode
+
+- **Ver o Financeiro.** Só a lista de sigilo: o dono, o Charles e a Wanessa. Quem está fora não vê o menu, e o endereço mostra "O Financeiro é restrito".
+- **Aprovar.** Só o dono ou o Charles; quem preparou não aprova o próprio item.
+- **Alterar Empresas e bancos.** Só o dono e o Charles.
 
 ## 1. Para que serve
 
 O Painel financeiro é onde o Financeiro trabalha sem abrir o Omie. Pela tela do SGO+, ele vê a posição do caixa, o que vence, quem está devendo, os títulos a pagar e a receber, os pedidos aprovados, os boletos, o faturamento, as notas, o fluxo de caixa e as provisões. O Omie continua sendo o lugar da nota fiscal e da contabilidade: o SGO+ lê e grava no Omie pela conexão do sistema.
 
-Menu: **Financeiro > Painel financeiro**. No celular, o atalho **Financeiro**. O Financeiro é **sigiloso**: o botão só aparece para as contas da lista de sigilo (hoje: Thiago e Charles, da Diretoria, e Wanessa, do Financeiro). Veja a seção 8.
+Menu: os três grupos **Financeiro · dia a dia**, **Financeiro · bancos e documentos** e **Financeiro · gestão** (seção 0). No celular, o atalho **Financeiro** abre o Painel financeiro. O Financeiro é **sigiloso**: o botão só aparece para as contas da lista de sigilo (hoje: Thiago e Charles, da Diretoria, e Wanessa, do Financeiro). Veja a seção 8.
 
 ## 2. Gravação no Omie: ligada (16/11/2026, decisão do dono)
 
@@ -24,7 +84,7 @@ Regras que valem sempre:
 - **Gerar e prorrogar boleto** podem ter tarifa do banco. **Faturar** emite nota fiscal: acompanhe a autorização no Omie.
 - Se a faixa amarela **"Consultas ligadas; gravação no Omie desligada"** voltar a aparecer, a gravação foi desligada pelo responsável pelo sistema: a prévia continua aparecendo, mas nada é enviado.
 
-## 3. As abas
+## 3. As abas (cada uma dentro da página do assunto: veja a seção 0)
 
 | Aba | O que mostra ou faz |
 |---|---|
