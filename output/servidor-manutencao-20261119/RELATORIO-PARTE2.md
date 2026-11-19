@@ -149,6 +149,24 @@ Também **não instalei as atualizações sem o reboot**. Os pacotes de seguran�
 
 Todos os compose têm `restart: unless-stopped`, então os sistemas voltam sozinhos.
 
+## 6. Restos de QA de antes de 05/11 — feito (11:35, autorizado: "fazer todas")
+
+**Critério:** pastas de `/opt/metrolabs/qa` sem **nenhum arquivo** alterado depois de 05/11, ou seja, 126 pastas.
+
+A data do diretório não serve como critério. As pastas aliviadas na parte 1 ficaram com a data de 19/11 no diretório, porque apagar arquivos dentro dele atualiza essa data. A primeira lista, feita por essa data, saiu errada (70 pastas) e foi descartada antes de apagar qualquer coisa.
+
+**Conferência antes de apagar:**
+- Nenhum contêiner monta pasta de QA.
+- Nenhuma das 126 é citada em `/etc/cron.d`, `/etc/systemd/system`, nos compose do RH e do SGO+, no `rh/backup.sh`, no `backup.sh`, no `manutencao_semanal.sh` ou nos scripts de `/opt/metrolabs/manutencao`.
+- Nenhuma é citada dentro das **46 pastas do RH em uso**: as publicações r82 a r108 de 18 e 19/11.
+- As únicas citações encontradas estavam nas listas do próprio registro desta manutenção.
+
+**Removido:** 126 pastas, **4,7 GB**. Lista em `registro/19-qa-pastas-antigas-removidas.txt`.
+
+**Mantido:** as 46 pastas das publicações do RH de 18 e 19/11 (`registro/19-qa-pastas-mantidas-rh-ativo.txt`). `/opt/metrolabs/qa` passou de 68 GB (início da parte 1) para **144 MB**.
+
+Sistemas depois: os 5 de produção saudáveis, HTTP local 200 e HTTPS 200. Disco: **131 GB livres (33%)**.
+
 ## Estado final (19/11 09:30)
 
 - **Disco:** 67 G usados, **126 G livres (35%)**. Antes da parte 1 eram 8 G livres (96%).
