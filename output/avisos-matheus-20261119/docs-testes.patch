@@ -1,0 +1,461 @@
+diff --git a/docs/MANUAL_MATRIZ_DE_AVISOS.md b/docs/MANUAL_MATRIZ_DE_AVISOS.md
+index 3dfc5f9d..05e8e4cb 100644
+--- a/docs/MANUAL_MATRIZ_DE_AVISOS.md
++++ b/docs/MANUAL_MATRIZ_DE_AVISOS.md
+@@ -63,6 +63,10 @@ Regras:
+ <!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+ PEDIDO QUE DEPENDE DA DIRETORIA (11/11/2026, regra do dono: tudo o que fala Diretoria chega aos dois). Evento GS06. Quando uma solicitação passa a depender da Diretoria por regra (só ela decide, ou "a gestão da área ou a Diretoria"), o pedido chega NA HORA a todos da Diretoria (o dono, no login admin, e quem tem o perfil Diretoria), menos quem pediu, por e-mail, WhatsApp e alerta na tela do SGO+, com o que está sendo aprovado (item, valores, motivo, quem pediu) e o link do item. A Diretoria recebe a qualquer hora; o gestor que também decide recebe pela mesma fila, no expediente. Pontos ligados: preço do catálogo aguardando aprovação (cadastro novo da equipe comercial e redução acima da alçada); preço de tabela abaixo do mínimo depois de atualizar o custo; compra a aprovar (faixa da Diretoria aos dois; faixa do gestor ou do comprador, ao aprovador e à Diretoria, que também pode aprovar); proposta enviada ao cliente sem a aprovação de preço. Já chegavam assim: pedido de aprovação da proposta que só a Diretoria aprova (GS04) e depósito de viagem na etapa da Diretoria (GS05). A escalada de uma decisão parada (GS03) vai aos dois. O GS01 da Caixa não repete o item para quem já recebeu o aviso na hora. Quem decide não mudou: só como e quando o aviso chega. GS06 desligado na matriz: o e-mail sai pela regra comum e o alerta na tela continua. Decisão do preço do catálogo: quem pediu recebe na hora o alerta na tela e o e-mail (evento S80), além da lista do Comercial. MODELO DO WHATSAPP (11/11/2026): a Meta classificou o sgo_gestao_acao como Marketing (pode deixar de entregar por limite de mensagens de marketing por pessoa). Há um modelo novo de utilidade, sgo_gestao_item (nome, situação, item, link). A fila da gestão usa o modelo novo quando ele está aprovado E na categoria Utilidade (Chaves e senhas › Situação dos modelos); até lá, continua no sgo_gestao_acao. O registro de cada aviso diz o modelo usado. Cadastro do modelo novo: Chaves e senhas › Cadastrar modelos na Meta.
+ 
++## 3C. Compras e preço do Comercial: aprovador delegado na hora (19/11/2026, pedido do dono)
++
++GS08 (nova solicitação de compra e, desde 19/11/2026, compra informada depois de feita), GS09 (pedido de aprovação da compra ao aprovador delegado, na escolha do orçamento com a espera 0, que é o padrão), GS10 (decisão do aprovador delegado, ao dono e à Diretoria) e GS11 (pedido de aprovação de preço do Comercial) vão na hora, a qualquer hora, ao dono, à Diretoria e ao Matheus, por WhatsApp e e-mail, e ficam na fila dos avisos da gestão (Meus avisos e o registro de cada envio). A espera antes de o Matheus decidir é configurável em Compras > Regras de compras e em Comercial > Metodologia (padrão 0 desde 19/11/2026). Quem pediu nunca recebe o próprio pedido para decidir.
++
+ ## 4. Matriz de avisos (Administrador e Diretoria)
+ 
+ 1. Abra Menu › Administração › Matriz de avisos.
+diff --git a/docs/MANUAL_MODULO_COMERCIAL.md b/docs/MANUAL_MODULO_COMERCIAL.md
+index 2a7dfd2b..ab827bfc 100644
+--- a/docs/MANUAL_MODULO_COMERCIAL.md
++++ b/docs/MANUAL_MODULO_COMERCIAL.md
+@@ -297,6 +297,8 @@ Na proposta, o quadro "Prazo do dono e da Diretoria" mostra até quando vai o pr
+ 
+ No preço do catálogo abaixo do mínimo, o aprovador delegado só aprova com o desconto máximo definido na regra, depois do prazo e sem ter pedido o preço.
+ 
++**Decisão na hora (pedido do dono de 19/11/2026).** A espera antes do aprovador delegado passou a **0 minutos (padrão)**: cada pedido de aprovação de preço chega ao mesmo tempo ao dono, ao Charles e ao Matheus (GS11), e o Matheus pode autorizar na hora, com o mesmo critério de preço (nenhum item abaixo do preço mínimo do catálogo, custo conferível em todos os itens). Na proposta, o quadro passa a se chamar "Aprovador delegado: decisão na hora". Com espera 0, a rodada de 15 minutos não repete o aviso (GS09). Proposta do próprio Matheus continua só com o dono e o Charles; cada autorização dele avisa os dois na hora (GS10). Com uma espera maior que 0 na regra, volta o comportamento com prazo e contagem descrito acima.
++
+ A regra fica em Comercial > Metodologia, no quadro "Aprovador delegado do preço fora da política", com versão e motivo; só o dono e a Diretoria alteram. O quadro mostra quem recebe os avisos e o final do celular de cada um, ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail".
+ 
+ ### Proposta errada: editar, excluir ou cancelar
+diff --git a/docs/MANUAL_MODULO_COMPRAS.md b/docs/MANUAL_MODULO_COMPRAS.md
+index b6cffd14..9de26d7f 100644
+--- a/docs/MANUAL_MODULO_COMPRAS.md
++++ b/docs/MANUAL_MODULO_COMPRAS.md
+@@ -106,6 +106,15 @@ Vale com a aprovação só do dono e da Diretoria ligada (padrão). O dono e a D
+ 
+ O resto do Financeiro (aprovação de pagamentos, estorno, orçamento anual, recarga do Caju) continua só com o dono e o Charles: o aprovador delegado vale apenas para as compras e para o preço do Comercial.
+ 
++### Decisão na hora (pedido do dono de 19/11/2026)
++
++O dono e o Charles não estavam dando conta de acompanhar os pedidos. Desde 19/11/2026 a espera antes do aprovador delegado é **0 minutos (padrão)**: escolhido o orçamento, o pedido de aprovação chega ao mesmo tempo ao dono, ao Charles e ao Matheus, e o Matheus pode aprovar, reprovar ou pedir novo orçamento **na hora**, com os mesmos critérios (3 orçamentos válidos, o mais em conta ou justificado, não pediu nem cotou, teto). Quem decidir primeiro resolve; cada decisão do Matheus avisa o dono e o Charles na hora (GS10). Compra pedida pelo próprio Matheus continua só com o dono e o Charles.
++
++- O aviso ao Matheus (GS09) sai na escolha do orçamento. Se faltar critério, o aviso diz o que falta e que, até lá, a decisão é do dono ou da Diretoria.
++- Na ficha, o quadro passa a se chamar "Aprovador delegado: decisão na hora". Com uma espera maior que 0 em Regras de compras, volta o quadro "Prazo do dono e da Diretoria", com a contagem.
++- A compra informada depois de feita também avisa na hora o dono, o Charles e o Matheus (GS08, para conhecimento), menos quem informou e quem comprou.
++- O valor de 30 minutos gravado em 18/11/2026 não vale mais: a regra passou a usar o campo "Espera antes do aprovador delegado decidir", com padrão 0.
++
+ ## Pedido de compra ao fornecedor
+ 
+ Com a compra "Aprovada", o comprador toca em "Emitir o pedido de compra", informa a previsão de entrega combinada e a forma de pagamento (cartão de crédito ou débito com os 4 últimos números e as parcelas, PIX, boleto com o vencimento, transferência, faturado com a condição ou reembolso a um colaborador). Nunca se digita o número inteiro do cartão.
+@@ -189,15 +198,15 @@ Padrão aprovado pelo dono em 21/10/2026:
+ 
+ Compras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código.
+ 
+-Quadro "Aprovador delegado" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; quem decide depois do prazo (padrão: a conta interna "MATHEUS GODOI"; só conta interna ativa, nunca o dono ou a Diretoria); prazo em minutos (padrão 30); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo.
++Quadro "Aprovador delegado" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; aprovador delegado (padrão: a conta interna "MATHEUS GODOI"; só conta interna ativa, nunca o dono ou a Diretoria); espera antes de ele decidir, em minutos (padrão 0 = na hora, desde 19/11/2026; de 0 a 2.880); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo.
+ 
+ ## Avisos
+ 
+ Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã (um por pessoa por dia, a partir das 8 h, no expediente); WhatsApp pelo Compras só nas exceções do dono, logo abaixo. Nenhum aviso aos demais leva valor em reais. Quem fez a ação não é avisado.
+ 
+ Exceção autorizada pelo dono em 18/11/2026, só para o dono, a Diretoria e o aprovador delegado, a qualquer hora, inclusive fora do expediente (WhatsApp e e-mail pela fila dos avisos da gestão, mais o alerta na tela; podem levar o valor, porque são os aprovadores):
+-- GS08, nova solicitação de compra: número, quem pediu, o que é, urgência e o link.
+-- GS09, prazo do dono e da Diretoria vencido com os critérios cumpridos: o delegado já pode decidir (uma vez por pedido).
++- GS08, nova solicitação de compra (número, quem pediu, o que é, urgência e o link) e, desde 19/11/2026, compra informada depois de feita (onde, valor, quem comprou), para conhecimento.
++- GS09, pedido de aprovação ao delegado: na escolha do orçamento (espera 0, padrão) ou quando vence a espera configurada; diz os critérios cumpridos ou o que falta (uma vez por pedido).
+ - GS10, decisão do delegado: o que decidiu, o valor e o critério cumprido (para o dono e a Diretoria).
+ Quem não tem celular no cadastro recebe pelo e-mail e pelo sistema. Com o WhatsApp a qualquer hora desligado em Regras de compras, esses avisos vão só pelo sistema e pelo e-mail.
+ 
+diff --git a/docs/MANUAL_MODULO_GESTAO_DECISOES.md b/docs/MANUAL_MODULO_GESTAO_DECISOES.md
+index 4242fef3..433fb730 100644
+--- a/docs/MANUAL_MODULO_GESTAO_DECISOES.md
++++ b/docs/MANUAL_MODULO_GESTAO_DECISOES.md
+@@ -59,6 +59,14 @@ Regras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-ma
+ 
+ Tudo configurável em Regras e responsáveis (horas, dias úteis do WhatsApp e da Diretoria, liga e desliga de cada etapa e de cada automação). O horário de trabalho e os feriados continuam em Atividades da equipe > Avisos e horários.
+ 
++## Decisor operacional da Diretoria (19/11/2026)
++
++Pedido do dono de 19/11/2026: o dono e o Charles não dão conta de acompanhar tudo. O que cairia só com eles (área sem gestor responsável, ou item que vai à reserva da Diretoria) e **não é saída de dinheiro nem assunto de sigilo** passa a ir também ao decisor operacional (padrão: a conta interna "MATHEUS GODOI"). Ele recebe pela Caixa (aviso GS01, na hora) e decide com as travas de cada módulo. Ninguém decide sobre si mesmo (a pessoa envolvida e quem não pode decidir ficam fora).
++
++Fica sempre só com a Diretoria: Financeiro (pagamentos, orçamento anual, estornos e demais lançamentos), depósito de viagem, Recarga Caju, comissão dos vendedores, Programa de conduta, ponto e RH, a aprovação de compras (tem regra própria: aprovador delegado em Compras > Regras de compras) e todo item com sigilo (ocorrência de conduta, Financeiro) ou só da Diretoria (sugestão sobre gestor).
++
++Configuração em Regras e responsáveis, caixa "Decisor operacional da Diretoria": liga e desliga, quem (padrão ou uma pessoa da gestão fora da Diretoria) e tipos a mais que ficam só com a Diretoria (códigos separados por vírgula).
++
+ ## Diretoria informada, não cobrada (11/11/2026)
+ 
+ <!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->
+diff --git a/tests/pedidos-20261118-p1-comercial.test.cjs b/tests/pedidos-20261118-p1-comercial.test.cjs
+index 00992c36..28593370 100644
+--- a/tests/pedidos-20261118-p1-comercial.test.cjs
++++ b/tests/pedidos-20261118-p1-comercial.test.cjs
+@@ -32,6 +32,13 @@ function montar(o) {
+   }
+   a.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
+   a.ctx.SGO_waModeloSituacao_ = (n) => (n === 'sgo_gestao_acao' ? 'APPROVED' : '');
++  // 19/11/2026: o padrão da espera passou a 0 (tests/avisos-matheus-20261119.test.cjs); aqui fica gravada a regra de 15 minutos do
++  // cenário do Pacote 1, para continuar conferindo o caminho com prazo (configurável)
++  if (!o.esperaPadrao) {
++    a.tabelas.COM_CONFIG = a.tabelas.COM_CONFIG || [];
++    a.tabelas.COM_CONFIG.push({ ID: 'cfg_del_p1', CHAVE: 'DELEGADO_PRECO', VALOR_JSON: JSON.stringify({ prazoMinutos: 15 }), VERSAO: 1, MOTIVO: 'Cenário do Pacote 1: espera de 15 minutos',
++      ATUALIZADO_POR_ID: 'u_dir', ATUALIZADO_POR_NOME: 'DORA DIRETORA TESTE', ATUALIZADO_EM: '2026-10-19T09:00:00' });
++  }
+   return a;
+ }
+ function produto(a, extra) {
+@@ -129,7 +136,7 @@ test('P1-5d: o Matheus não autoriza a própria proposta; a regra mostra quem re
+   const t = ok(a.api('s_gaspar', 'delegadoPreco', {}));
+   assert.equal(t.podeEditar, false); assert.deepEqual(Array.from(t.ids), ['u_mat']); assert.equal(t.regra.prazoMinutos, 15); assert.equal(t.regra.descontoMaxPct, null);
+   assert.match(t.avisados.find((x) => x.nome === 'MATHEUS GODOI').situacao, /celular final 6527|celular final 0077/);
+-  recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { prazoMinutos: '0' }, motivo: 'Prazo zero de teste' }), /de 1 a 1\.440 minutos/);
++  recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { prazoMinutos: '1441' }, motivo: 'Espera longa demais de teste' }), /de 0 a 1\.440 minutos/);
+   recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { aprovadorIds: ['u_ven'] }, motivo: 'Vendedora como delegada' }), /não é da gestão comercial/);
+   recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { aprovadorIds: ['u_rep'] }, motivo: 'Representada como delegada' }), /conta interna ativa/);
+   const s = ok(a.api('s_dora', 'salvarDelegadoPreco', { regra: { prazoMinutos: '20' }, motivo: 'Vinte minutos pedidos pelo dono' }));
+@@ -147,7 +154,7 @@ test('P1-5e: preço do catálogo abaixo do mínimo: sem desconto máximo, só o
+   const d1 = a.api('s_matheusgodoi', 'decidirPreco', { id: 'prod_srv', aprovar: true, texto: 'Contrato anual compensa a redução' });
+   if (!d1.ok) {
+     assert.match(d1.message, /a regra do dono não tem desconto máximo definido/);
+-    ok(a.api('s_admin', 'salvarDelegadoPreco', { regra: { descontoMaxPct: '40' }, motivo: 'Até 40% de redução para o Matheus' }));
++    ok(a.api('s_admin', 'salvarDelegadoPreco', { regra: { descontoMaxPct: '40', prazoMinutos: 15 }, motivo: 'Até 40% de redução para o Matheus' }));
+     const d2 = ok(a.api('s_matheusgodoi', 'decidirPreco', { id: 'prod_srv', aprovar: true, texto: 'Contrato anual compensa a redução' }));
+     assert.match(d2.message, /Preço aprovado/);
+     assert.match(a.tabelas.COM_PRODUTOS[0].PRECO_DECISAO_TEXTO, /aprovador delegado, depois do prazo do dono e da Diretoria/);
+diff --git a/tests/pedidos-20261118-p1-compras.test.cjs b/tests/pedidos-20261118-p1-compras.test.cjs
+index 6af418a9..84bb21a0 100644
+--- a/tests/pedidos-20261118-p1-compras.test.cjs
++++ b/tests/pedidos-20261118-p1-compras.test.cjs
+@@ -7,6 +7,8 @@
+ //     cotado, dentro do teto (vazio = sem teto). Regra configurável só pelo dono e pela Diretoria.
+ //  4. WhatsApp para o dono, a Diretoria e o delegado a cada nova solicitação, a qualquer hora (GS08), no prazo vencido (GS09) e na decisão
+ //     do delegado (GS10).
++// 19/11/2026: o padrão da espera passou a 0 (decisão na hora, tests/avisos-matheus-20261119.test.cjs). Aqui a regra é gravada com
++// esperaMinutos 30, o cenário do Pacote 1, para continuar conferindo o caminho com prazo (configurável).
+ // Código REAL do SGO+ (tests/_compras_ambiente.cjs + avisos da gestão); nada sai de verdade; dados fictícios.
+ 'use strict';
+ const test = require('node:test');
+@@ -41,6 +43,9 @@ function montar(o) {
+   amb.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
+   amb.ctx.SGO_waModeloSituacao_ = (n) => (n === 'sgo_gestao_acao' ? 'APPROVED' : '');
+   C.regrasDeTeste(amb);
++  // 19/11/2026: cenário do Pacote 1 (espera de 30 minutos gravada pela Diretoria)
++  const g0 = ok(amb.api('s_dora', 'regras', {})).regras;
++  ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g0, { delegado: Object.assign({}, g0.delegado, { esperaMinutos: 30 }) }), motivo: 'Espera de 30 minutos do cenário do Pacote 1' }));
+   amb.fs = C.fornecedoresDeTeste(amb);
+   return amb;
+ }
+@@ -252,14 +257,14 @@ test('P1-3e: a regra do aprovador delegado está em Regras de compras, mostra qu
+   assert.equal(mat.semTelefone, true); assert.match(mat.situacao, /sem telefone: o aviso vai só pelo sistema e pelo e-mail/);
+   assert.match(r.delegado.avisados.find((x) => x.nome === 'DORA DIRETORA TESTE').situacao, /celular final 0010/);
+   // gestor de Compras salva as outras regras, mas não o quadro do delegado
+-  recusa(amb.api('s_lia', 'regras', { salvar: Object.assign({}, r.regras, { delegado: Object.assign({}, r.regras.delegado, { prazoMinutos: 5 }) }), motivo: 'Tentativa de mudar o prazo do delegado' }), /só o dono e a Diretoria alteram/);
++  recusa(amb.api('s_lia', 'regras', { salvar: Object.assign({}, r.regras, { delegado: Object.assign({}, r.regras.delegado, { esperaMinutos: 5 }) }), motivo: 'Tentativa de mudar o prazo do delegado' }), /só o dono e a Diretoria alteram/);
+   ok(amb.api('s_lia', 'regras', { salvar: Object.assign({}, r.regras, { prazos: Object.assign({}, r.regras.prazos, { cotarDiasUteis: 2 }) }), motivo: 'Prazo de cotação de dois dias úteis' }));
+   // a Diretoria muda: versão nova com o motivo; validações dizem o que fazer
+   const g = ok(amb.api('s_dora', 'regras', {})).regras;
+-  recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { prazoMinutos: 2 }) }), motivo: 'Prazo curto demais de teste' }), /de 5 a 2\.880 minutos/);
++  recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { esperaMinutos: 3000 }) }), motivo: 'Espera longa demais de teste' }), /de 0 a 2\.880 minutos/);
+   recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { aprovadorIds: ['u_rep'] }) }), motivo: 'Representada como delegado' }), /não é conta interna ativa/);
+   recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { aprovadorIds: ['u_dir2'] }) }), motivo: 'Diretoria como delegado' }), /o dono e a Diretoria já aprovam a qualquer momento/);
+-  const s = ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { prazoMinutos: '45', aprovadorIds: ['u_sub'] }) }), motivo: 'Sara como delegada nas férias do Matheus' }));
++  const s = ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { esperaMinutos: '45', aprovadorIds: ['u_sub'] }) }), motivo: 'Sara como delegada nas férias do Matheus' }));
+   assert.equal(s.regras.delegado.prazoMinutos, 45); assert.deepEqual(Array.from(s.regras.delegado.aprovadorIds), ['u_sub']);
+   const versoes = ok(amb.api('s_dora', 'regras', {})).versoes;
+   assert.match(versoes[0].motivo, /Sara como delegada/);
+diff --git a/tests/pedidos-20261118-p1-telas.test.cjs b/tests/pedidos-20261118-p1-telas.test.cjs
+index d993c513..cc52bba0 100644
+--- a/tests/pedidos-20261118-p1-telas.test.cjs
++++ b/tests/pedidos-20261118-p1-telas.test.cjs
+@@ -82,6 +82,9 @@ function compras(agora) {
+   amb.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
+   amb.ctx.SGO_waModeloSituacao_ = (n) => (n === 'sgo_gestao_acao' ? 'APPROVED' : '');
+   C.regrasDeTeste(amb);
++  // 19/11/2026: o padrão da espera passou a 0 (tests/avisos-matheus-20261119.test.cjs); as telas do Pacote 1 ficam no cenário de 30 minutos
++  const g0 = ok(amb.api('s_dora', 'regras', {})).regras;
++  ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g0, { delegado: Object.assign({}, g0.delegado, { esperaMinutos: 30 }) }), motivo: 'Espera de 30 minutos do cenário do Pacote 1' }));
+   amb.fs = C.fornecedoresDeTeste(amb);
+   const r = C.pedidoSimples(amb, { itens: [{ categoria: 'FERRAMENTA', descricao: 'Alicate amperímetro digital', quantidade: 1, unidade: 'un.' }] });
+   ok(amb.api('s_carlos', 'iniciarCotacao', { id: r.id }));
+@@ -228,6 +231,8 @@ test('telas do Pacote 1 a 1366 e 390 px: sem erro de JavaScript, sem rolagem lat
+         a.sessoes.s_matheusgodoi = { userId: 'u_mat', usuario: 'matheusgodoi', nome: 'MATHEUS GODOI', perfil: 'GESTOR' };
+         carregarAvisos(a.ctx);
+         a.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
++        // 19/11/2026: cenário do Pacote 1 (espera de 15 minutos gravada); o padrão novo (0) está em tests/avisos-matheus-20261119.test.cjs
++        a.tabelas.COM_CONFIG = (a.tabelas.COM_CONFIG || []).concat([{ ID: 'cfg_del_p1', CHAVE: 'DELEGADO_PRECO', VALOR_JSON: JSON.stringify({ prazoMinutos: 15 }), VERSAO: 1, MOTIVO: 'Cenário do Pacote 1: espera de 15 minutos', ATUALIZADO_POR_ID: 'u_dir', ATUALIZADO_POR_NOME: 'DORA DIRETORA TESTE', ATUALIZADO_EM: '2026-10-19T09:00:00' }]);
+         a.tabelas.COM_PRODUTOS = [{ ID: 'prod_bat', CODIGO: 'BAT-01', NOME: 'Bateria estacionária de teste', TIPO: 'PRODUTO', UNIDADE_MEDIDA: 'un', PRECO: 2100, CUSTO: 900, ATIVO: 'SIM', PRECO_PEDIDO_SITUACAO: 'PENDENTE', PRECO_PEDIDO: 2100, PRECO_PEDIDO_POR_ID: 'u_ven', PRECO_PEDIDO_POR_NOME: 'VERA VENDEDORA TESTE', PRECO_PEDIDO_EM: '2026-10-19T09:00', CRIADO_EM: '2026-10-19T12:00:00.000Z' }];
+         const { oportunidade, contato } = COM.oportunidadeDeTeste(a);
+         const id = ok(a.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id })).proposta.id;
+diff --git a/tests/avisos-matheus-20261119.test.cjs b/tests/avisos-matheus-20261119.test.cjs
+new file mode 100644
+index 00000000..e513c406
+--- /dev/null
++++ b/tests/avisos-matheus-20261119.test.cjs
+@@ -0,0 +1,269 @@
++// 19/11/2026 — "O Matheus disse que não está recebendo os pedidos de autorização no WhatsApp nem no e-mail" (dono).
++// Diagnóstico (output/avisos-matheus-20261119/DIAGNOSTICO.md): os GS08–GS11 estavam ligados, mas os gatilhos eram estreitos (a compra
++// informada não avisava) e o Matheus só decidia depois de 15/30 minutos. Pedido novo do dono: o Matheus recebe NA HORA e decide NA HORA
++// os pedidos de Compras e de preço do Comercial, com os mesmos critérios e sem decidir o próprio pedido; a espera vira configuração com
++// padrão 0; o dono e o Charles continuam decidindo e recebem cada decisão dele (GS10). O que hoje cai só na Diretoria e não é dinheiro
++// nem sigilo vai também ao decisor operacional (Caixa de decisões). Código REAL do SGO+; WhatsApp e e-mail são simuladores; nada sai.
++'use strict';
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const vm = require('node:vm');
++const C = require('./_compras_ambiente.cjs');
++const CA = require('./_comercial_ambiente.cjs');
++
++const PASTA = path.join(__dirname, '../apps-script-imports/portal_sgo_versao_cnpj_db');
++const ok = (r) => { assert.equal(r.ok, true, r.message); return r; };
++const recusa = (r, re) => { assert.equal(r.ok, false, 'devia recusar'); assert.match(r.message, re); return r; };
++const FONE_MAT = '5562999990077';
++const B64 = (t) => Buffer.from(t).toString('base64');
++const gs = (amb, ev) => (amb.tabelas.NTF_GESTAO || []).filter((l) => l.EVENTO === ev);
++const ids = (l) => l.map((x) => x.USUARIO_ID).sort();
++const whatsPara = (amb, fone) => amb.whats.filter((w) => w.corpo && w.corpo.to === fone);
++
++function carregarAvisos(ctx) {
++  for (const f of ['SGO_Avisos.js', 'SGO_Avisos_Matriz.js', 'SGO_Avisos_Gestao.js']) {
++    const p = path.join(PASTA, f);
++    if (fs.existsSync(p)) vm.runInContext(fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n'), ctx, { filename: f });
++  }
++  ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
++  ctx.SGO_waModeloSituacao_ = (n) => (n === 'sgo_gestao_acao' ? 'APPROVED' : '');
++}
++
++/** Compras com a aprovação só do dono e da Diretoria (SIM, produção), o dono (admin), a Diretoria e o Matheus. Regra do delegado no padrão. */
++function montarCompras(o) {
++  o = o || {};
++  const amb = C.ambiente({ agora: o.agora, props: Object.assign({ APROVACAO_SO_DIRETORIA: 'SIM', META_WA_TOKEN: 'tok-teste', META_WA_PHONE_ID: '123456' }, o.props || {}) });
++  const us = amb.tabelas.CAD_USUARIOS, u = (id) => us.find((x) => x.ID === id);
++  Object.assign(u('u_adm'), { NOME: 'DONO DO SISTEMA TESTE', EMAIL: 'dono@exemplo.test', CELULAR: '62999990099', VINCULO_TRABALHO: 'DIRETORIA', AREA: 'DIRETORIA' });
++  u('u_dir').CELULAR = '62999990010';
++  us.push({ ID: 'u_mat', USUARIO: 'matheusgodoi', NOME: 'MATHEUS GODOI', PERFIL: 'GESTOR', STATUS: 'ATIVO', EMAIL: 'matheus@exemplo.test', CELULAR: '62999990077', VINCULO_TRABALHO: 'PJ', AREA: 'QUALIDADE' });
++  amb.sessoes.s_matheusgodoi = { userId: 'u_mat', usuario: 'matheusgodoi', nome: 'MATHEUS GODOI', perfil: 'GESTOR' };
++  carregarAvisos(amb.ctx);
++  C.regrasDeTeste(amb);
++  amb.fs = C.fornecedoresDeTeste(amb);
++  return amb;
++}
++/** Pedido do técnico, cotado com 3 orçamentos (ou só os preços dados) e escolhido. */
++function emAprovacao(amb, o) {
++  o = o || {};
++  const r = C.pedidoSimples(amb, { itens: [{ categoria: 'FERRAMENTA', descricao: 'Ferramenta de teste', quantidade: 1, unidade: 'un.' }] }, o.sid || 's_tiago');
++  ok(amb.api('s_carlos', 'iniciarCotacao', { id: r.id }));
++  let q = ok(amb.api('s_carlos', 'requisicao', { id: r.id })).requisicao;
++  (o.precos || ['150,00', '180,00', '210,00']).forEach((p, i) => { q = ok(amb.api('s_carlos', 'salvarCotacao', { requisicaoId: q.id, fornecedorId: amb.fs[i].id, precos: [{ itemId: q.itens[0].id, precoUnitario: p }], prazoDias: 5, validade: '2026-11-30', arquivo: C.PDF })).requisicao; });
++  const alvo = q.cotacoes.filter((c) => c.situacao !== 'RETIRADA').sort((a, b) => a.total - b.total)[0];
++  const e = ok(amb.api('s_carlos', 'escolher', Object.assign({ requisicaoId: q.id, cotacaoId: alvo.id }, o.extra || {})));
++  return { id: q.id, numero: q.numero, e };
++}
++
++// ------------------------------------------------------------------ Compras
++test('AM-1: a espera do aprovador delegado de Compras é 0 por padrão; a regra de 18/11 gravada com 30 minutos (sem esperaMinutos) deixa de valer', () => {
++  const amb = montarCompras();
++  const L = amb.ctx.Cmp_delegadoLimpo_;
++  assert.equal(L({}).prazoMinutos, 0);
++  assert.equal(L({ ligado: true, aprovadorIds: null, prazoMinutos: 30, contaDe: 'POSTADO', minimoOrcamentos: 3, tetoValor: null, whatsappTres: true }).prazoMinutos, 0, 'o que está em produção (v4) passa a 0');
++  assert.equal(L({ esperaMinutos: '45' }).prazoMinutos, 45, 'configurável');
++  const r = ok(amb.api('s_dora', 'regras', {}));
++  assert.equal(r.delegado.regra.esperaMinutos, 0);
++  const g = r.regras;
++  recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { esperaMinutos: '-1' }) }), motivo: 'Espera negativa de teste' }), /de 0 a 2\.880 minutos/);
++  ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { esperaMinutos: '0' }) }), motivo: 'Decisão na hora, pedido do dono de 19/11' }));
++});
++
++test('AM-2: escolhido o orçamento (sábado à noite), o Matheus recebe NA HORA por WhatsApp e e-mail (GS09) e decide NA HORA; o dono e a Diretoria recebem o GS06 e a decisão dele (GS10)', () => {
++  const amb = montarCompras({ agora: Date.parse('2026-10-24T22:00:00-03:00') });
++  const p = emAprovacao(amb);
++  assert.match(p.e.message, /MATHEUS GODOI \(aprovador delegado\) foi avisado na hora e também pode decidir\./);
++  const g9 = gs(amb, 'GS09');
++  assert.deepEqual(ids(g9), ['u_mat'], 'o dono e a Diretoria recebem o GS06, não o GS09 repetido');
++  assert.equal(g9[0].WA_SITUACAO, 'ENVIADO', 'fora do expediente: saiu na hora'); assert.equal(g9[0].EMAIL_SITUACAO, 'ENVIADO');
++  assert.match(g9[0].TITULO, /Aprovação · Compras: compra REQ-2026-\d+ \(Ferramenta de teste\), R\$ 150,00, MATHEUS GODOI pode decidir agora/);
++  assert.match(g9[0].TEXTO, /Critérios cumpridos: 3 orçamentos válidos/);
++  assert.equal(whatsPara(amb, FONE_MAT).length >= 1, true);
++  assert.deepEqual(ids(gs(amb, 'GS06')), ['u_adm', 'u_dir', 'u_dir2']);
++  assert.match(gs(amb, 'GS06')[0].TEXTO, /MATHEUS GODOI \(aprovador delegado\) recebeu este pedido na hora e também pode decidir\./);
++  // a ficha: decisão na hora, sem contagem
++  const f = ok(amb.api('s_matheusgodoi', 'requisicao', { id: p.id })).requisicao;
++  assert.equal(f.aprovacao.podeEu, true); assert.equal(f.aprovacao.delegado.prazoMinutos, 0); assert.equal(f.aprovacao.delegado.decideComoDelegado, true);
++  // a rodada não repete o aviso
++  amb.ctx.CmpC_rodadaDelegado_(new amb.ctx.Date());
++  assert.equal(gs(amb, 'GS09').length, 1);
++  // na Caixa de decisões, a compra também é dele (e ele a vê, embora o item seja da Diretoria)
++  const it = amb.ctx.Ges_caixa_().itens.find((i) => i.id === 'CMP:APROVAR:' + p.id);
++  assert.ok(it && it.responsaveis.includes('u_mat') && it.responsaveis.includes('u_dir'), 'responsáveis: ' + (it && it.responsaveis));
++  const cx = amb.ctx.Gestao_apiCaixa('s_matheusgodoi', { filtro: 'minhas' });
++  assert.equal(cx.ok, true, cx.message);
++  assert.ok(JSON.stringify(cx).indexOf('CMP:APROVAR:' + p.id) >= 0, 'a compra aparece na Caixa do Matheus');
++  const d = ok(amb.api('s_matheusgodoi', 'decidir', { requisicaoId: p.id, aprovar: true, texto: 'Ferramenta para o atendimento de segunda' }));
++  assert.equal(d.requisicao.situacao, 'APROVADA');
++  const req = amb.tabelas.CMP_REQUISICOES.find((x) => x.ID === p.id);
++  assert.match(req.DECISAO_CRITERIO, /^decisão na hora \(regra do dono de 19\/11\/2026, espera de 0 minutos\); 3 orçamentos válidos[\s\S]*não pediu nem cotou/);
++  const g10 = gs(amb, 'GS10');
++  assert.deepEqual(ids(g10), ['u_adm', 'u_dir', 'u_dir2']);
++  assert.match(g10[0].TITULO, /MATHEUS GODOI aprovou a compra REQ-2026-\d+ \(Ferramenta de teste\), R\$ 150,00, como aprovador delegado/);
++  assert.match(g10[0].TEXTO, /decisão na hora, regra do dono de 19\/11\/2026/);
++});
++
++test('AM-3: pedido do próprio Matheus não vai a ele e ele não decide (vai ao dono e à Diretoria); o dono decide na hora', () => {
++  const amb = montarCompras();
++  const p = emAprovacao(amb, { sid: 's_matheusgodoi' });
++  assert.equal(gs(amb, 'GS09').length, 0);
++  assert.deepEqual(ids(gs(amb, 'GS06')), ['u_adm', 'u_dir', 'u_dir2']);
++  recusa(amb.api('s_matheusgodoi', 'decidir', { requisicaoId: p.id, aprovar: true }), /Quem pediu não aprova a própria compra/);
++  ok(amb.api('s_admin', 'decidir', { requisicaoId: p.id, aprovar: true, texto: 'Aprovado pelo dono' }));
++});
++
++test('AM-4: sem os critérios (1 orçamento com justificativa), o Matheus recebe o pedido dizendo o que falta, mas não decide; a decisão fica com o dono e a Diretoria', () => {
++  const amb = montarCompras();
++  const r = C.pedidoSimples(amb);
++  ok(amb.api('s_carlos', 'iniciarCotacao', { id: r.id }));
++  let q = ok(amb.api('s_carlos', 'requisicao', { id: r.id })).requisicao;
++  q = ok(amb.api('s_carlos', 'salvarCotacao', { requisicaoId: q.id, fornecedorId: amb.fs[0].id, precos: [{ itemId: q.itens[0].id, precoUnitario: '90,00' }], prazoDias: 5, validade: '2026-11-30', arquivo: C.PDF })).requisicao;
++  ok(amb.api('s_carlos', 'escolher', { requisicaoId: q.id, cotacaoId: q.cotacoes[0].id, justificativaMinimo: 'Fornecedor único da peça original do fabricante' }));
++  const g9 = gs(amb, 'GS09');
++  assert.deepEqual(ids(g9), ['u_mat']);
++  assert.match(g9[0].TITULO, /aguarda o dono ou a Diretoria \(falta critério para o aprovador delegado\)/);
++  assert.match(g9[0].TEXTO, /Falta para o aprovador delegado decidir: pelo menos 3 orçamentos válidos[\s\S]*Por quê:[\s\S]*O que fazer:/);
++  assert.equal(String(amb.tabelas.CMP_REQUISICOES.find((x) => x.ID === q.id).DELEGADO_AVISADO_EM || ''), '');
++  recusa(amb.api('s_matheusgodoi', 'decidir', { requisicaoId: q.id, aprovar: true }), /Como aprovador delegado, você decide na hora quando se cumprir a regra; falta: pelo menos 3 orçamentos válidos/);
++  ok(amb.api('s_dora', 'decidir', { requisicaoId: q.id, aprovar: true, texto: 'Fornecedor único conferido' }));
++});
++
++test('AM-5: a compra informada depois de feita avisa na hora o dono, a Diretoria e o Matheus (GS08, para conhecimento); quem informou fica fora', () => {
++  const amb = montarCompras();
++  const comp = (n) => ({ nome: 'comprovante' + n + '.jpg', tipo: 'image/jpeg', base64: B64('comprovante de teste ' + n) });
++  const base = (extra) => Object.assign({ finalidade: 'Peças para a manutenção do equipamento do cliente', vinculo: { tipo: 'CLIENTE', clienteId: 'c1', unidadeId: 'un1' },
++    itens: [{ descricao: 'Rolamento 6204', quantidade: 2, unidade: 'un.' }], fornecedorNome: 'Loja de Peças Teste', valor: '80,00', formaPagamento: 'CARTAO_CREDITO',
++    cartaoFinal: '4321', parcelas: 1, dataCompra: '2026-10-19', nfNumero: '12345', recebido: true, destino: 'Matriz Goiânia/GO' }, extra || {});
++  const r = ok(amb.api('s_tiago', 'informar', base({ comprovante: comp('a') })));
++  assert.equal(r.gravada, true, r.message);
++  const g8 = gs(amb, 'GS08');
++  assert.deepEqual(ids(g8), ['u_adm', 'u_dir', 'u_dir2', 'u_mat']);
++  const m = g8.find((l) => l.USUARIO_ID === 'u_mat');
++  assert.match(m.TITULO, new RegExp('Compra informada \\(já feita\\) ' + r.numero + ', de TIAGO TECNICO TESTE'));
++  assert.match(m.TEXTO, /Onde: Loja de Peças Teste, em 19\/10\/2026\. Valor: R\$ 80,00\.[\s\S]*Para conhecimento/);
++  assert.equal(m.SITUACAO, 'RESOLVIDO', 'informativo: não pede ação'); assert.equal(m.WA_SITUACAO, 'ENVIADO');
++  // o Matheus informa a compra dele: os outros três recebem, ele não
++  const antes = gs(amb, 'GS08').length;
++  ok(amb.api('s_matheusgodoi', 'informar', base({ comprovante: comp('b'), valor: '95,00', itens: [{ descricao: 'Fita isolante', quantidade: 1, unidade: 'un.' }] })));
++  assert.deepEqual(ids(gs(amb, 'GS08').slice(antes)), ['u_adm', 'u_dir', 'u_dir2']);
++});
++
++// ------------------------------------------------------------------ Caixa de decisões: decisor operacional
++test('AM-6: reserva da Diretoria que não é dinheiro nem sigilo vai também ao Matheus (decisor operacional); dinheiro, conduta, sigilo e o próprio item ficam fora; configurável', () => {
++  const amb = montarCompras();
++  const X = amb.ctx, us = X.Ges_usuarios_(), cfg = X.Ges_cfg_();
++  const rot = (it, c) => Array.from(X.Ges_rotear_(Object.assign({ modulo: 'gestao', extra: {} }, it), c || cfg, us).ids).sort();
++  assert.deepEqual(rot({ tipo: 'plano_atrasado', extra: { soDiretoria: true } }), ['u_adm', 'u_dir', 'u_dir2', 'u_mat']);
++  assert.deepEqual(rot({ tipo: 'comercial_sem_proxima', modulo: 'comercial', extra: { area: 'COMERCIAL' } }), ['u_adm', 'u_dir', 'u_dir2', 'u_mat'], 'área sem gestor: reserva + Matheus');
++  assert.ok(!rot({ tipo: 'atividade_justificativa', modulo: 'atividades', responsavelId: 'u_mat', extra: { soDiretoria: true } }).includes('u_mat'), 'ninguém decide sobre si mesmo');
++  for (const it of [{ tipo: 'fin_pag_aprovar', modulo: 'financeiro', extra: { soDiretoria: true, sigiloFin: true } }, { tipo: 'fin_orc_aprovar', extra: { soDiretoria: true } },
++    { tipo: 'fin_estorno_decidir', extra: { soDiretoria: true } }, { tipo: 'viagem_aprovar', modulo: 'viagem', extra: { soDiretoria: true } }, { tipo: 'recarga_aprovar', extra: { soDiretoria: true } },
++    { tipo: 'ganhos_aprovar', extra: { soDiretoria: true } }, { tipo: 'conduta_sugestao', modulo: 'conduta', extra: { soDiretoria: true } }, { tipo: 'ponto_ajuste_parado', modulo: 'ponto', extra: { soDiretoria: true } },
++    { tipo: 'compras_aprovar', modulo: 'compras', extra: { soDiretoria: true } }, { tipo: 'qualidade_os', extra: { soDiretoria: true, sigilo: true } }, { tipo: 'plano_atrasado', publico: 'DIRETORIA', extra: { soDiretoria: true } }]) {
++    assert.ok(!rot(it).includes('u_mat'), it.tipo + ' fica só com a Diretoria');
++  }
++  // área com gestor configurado: nada muda
++  assert.deepEqual(rot({ tipo: 'plano_atrasado', extra: { area: 'LOGISTICA' } }, Object.assign({}, cfg, { gestoresPorArea: { LOGISTICA: ['u_log'] } })), ['u_log']);
++  // configuração: desligado e tipo a mais fora
++  const off = JSON.parse(JSON.stringify(cfg)); off.decisorOperacional.ligado = false;
++  assert.ok(!rot({ tipo: 'plano_atrasado', extra: { soDiretoria: true } }, off).includes('u_mat'));
++  const fora = JSON.parse(JSON.stringify(cfg)); fora.decisorOperacional.tiposFora = ['plano_atrasado'];
++  assert.ok(!rot({ tipo: 'plano_atrasado', extra: { soDiretoria: true } }, fora).includes('u_mat'));
++  // tela de regras: mostra quem está em uso; só gestão fora da Diretoria; grava ligado/desligado
++  const t = X.Gestao_apiConfig('s_dora', {});
++  assert.equal(t.ok, true, t.message); assert.deepEqual(Array.from(t.operacional.nomes), ['MATHEUS GODOI']); assert.match(t.operacional.foraFixo, /depósito de viagem, Recarga Caju/);
++  const base = { gestoresPorArea: t.cfg.gestoresPorArea, areaPorModulo: t.cfg.areaPorModulo, escada: t.cfg.escada, automacoes: t.cfg.automacoes };
++  const r1 = X.Gestao_apiConfig('s_dora', { salvar: Object.assign({}, base, { decisorOperacional: { ligado: true, ids: ['u_dir'] } }) });
++  assert.equal(r1.ok, false); assert.match(r1.message, /fora da Diretoria/);
++  const r2 = X.Gestao_apiConfig('s_dora', { salvar: Object.assign({}, base, { decisorOperacional: { ligado: false, ids: null, tiposFora: 'plano_atrasado, x' } }) });
++  assert.equal(r2.ok, true, r2.message); assert.equal(r2.cfg.decisorOperacional.ligado, false); assert.deepEqual(Array.from(r2.cfg.decisorOperacional.tiposFora), ['plano_atrasado']);
++  assert.deepEqual(Array.from(r2.operacional.nomes), []);
++  const r3 = X.Gestao_apiConfig('s_tiago', { salvar: Object.assign({}, base, { decisorOperacional: { ligado: true } }) });
++  assert.equal(r3.ok, false);
++});
++
++// ------------------------------------------------------------------ Comercial
++function montarComercial(o) {
++  o = o || {};
++  const a = CA.ambiente({ agora: Date.parse(o.agora || '2026-10-19T10:46:00-03:00'),
++    props: { META_WA_TOKEN: 'tok-teste', META_WA_PHONE_ID: '123456', GESTAO_DECISOES_CFG: JSON.stringify({ gestoresPorArea: { COMERCIAL: ['u_gc', 'u_mat'] } }) } });
++  const us = a.tabelas.CAD_USUARIOS, u = (id) => us.find((x) => x.ID === id);
++  u('u_dir').CELULAR = '62999990010';
++  Object.assign(u('u_adm'), { NOME: 'DONO DO SISTEMA TESTE', EMAIL: 'dono@exemplo.test', CELULAR: '62999990099', VINCULO_TRABALHO: 'DIRETORIA' });
++  us.push({ ID: 'u_mat', USUARIO: 'matheusgodoi', NOME: 'MATHEUS GODOI', PERFIL: 'GESTOR', STATUS: 'ATIVO', EMAIL: 'matheus@exemplo.test', CELULAR: '62999990077', VINCULO_TRABALHO: 'PJ', AREA: 'QUALIDADE' });
++  a.sessoes.s_matheusgodoi = { userId: 'u_mat', usuario: 'matheusgodoi', nome: 'MATHEUS GODOI', perfil: 'GESTOR' };
++  carregarAvisos(a.ctx);
++  return a;
++}
++const COM_CUSTO = { CUSTO: 900, PRECO_PEDIDO_SITUACAO: 'PENDENTE', PRECO_PEDIDO: 2100, PRECO_PEDIDO_POR_ID: 'u_ven', PRECO_PEDIDO_POR_NOME: 'VERA VENDEDORA TESTE', PRECO_PEDIDO_EM: '2026-10-19T09:00' };
++function pedir(a, preco, sid, prod) {
++  a.tabelas.COM_PRODUTOS = a.tabelas.COM_PRODUTOS || [];
++  a.tabelas.COM_PRODUTOS.push(Object.assign({ ID: 'prod_bat', CODIGO: 'BAT-01', NOME: 'Bateria estacionária de teste', TIPO: 'PRODUTO', UNIDADE_MEDIDA: 'un', PRECO: 2100, CUSTO: '', ATIVO: 'SIM',
++    ATUALIZADO_POR_NOME: 'VERA VENDEDORA TESTE', CRIADO_EM: '2026-11-05T14:30:00.000Z' }, prod || {}));
++  const { oportunidade, contato } = CA.oportunidadeDeTeste(a);
++  const np = ok(a.api(sid || 's_vera', 'novaProposta', { oportunidadeId: oportunidade.id }));
++  ok(a.api(sid || 's_vera', 'salvarProposta', { id: np.proposta.id, deslocamento: CA.SEM_VIAGEM, escopo: 'Troca da bateria do equipamento de teste do cliente.', contatoId: contato.id,
++    itens: [{ produtoId: 'prod_bat', descricao: 'Bateria estacionária de teste', quantidade: 1, precoUnitario: preco }], condicoes: { pagamento: 'Boleto em 28 dias', prazoExecucao: 'Entrega em até 30 dias corridos' } }));
++  ok(a.api(sid || 's_vera', 'concluirProposta', { id: np.proposta.id, justificativa: 'Cliente recebeu orçamento de outro equipamento esta semana' }));
++  return np.proposta.id;
++}
++
++test('AM-7: preço fora da política (segunda à noite): o Matheus recebe NA HORA (GS11) e autoriza NA HORA com o critério de preço; o dono e a Diretoria recebem o GS04 e a autorização (GS10); a rodada não repete', () => {
++  const a = montarComercial({ agora: '2026-10-19T21:30:00-03:00' });
++  assert.equal(a.ctx.ComDel_cfg_().prazoMinutos, 0, 'padrão 0');
++  const id = pedir(a, '2.447,00', null, COM_CUSTO);
++  const g11 = gs(a, 'GS11');
++  assert.deepEqual(ids(g11), ['u_mat']); assert.equal(g11[0].WA_SITUACAO, 'ENVIADO');
++  assert.match(g11[0].TEXTO, /MATHEUS GODOI \(aprovador delegado\) recebeu este pedido na hora e pode autorizar agora: só sem item abaixo do preço mínimo do catálogo/);
++  assert.deepEqual(ids(gs(a, 'GS04')), ['u_adm', 'u_dir']);
++  const v = ok(a.api('s_matheusgodoi', 'proposta', { id })).proposta;
++  assert.equal(v.delegadoPreco.prazoMinutos, 0); assert.equal(v.delegadoPreco.podeEu, true); assert.equal(v.podeAprovarDesconto, true);
++  assert.equal(a.ctx.ComDel_rodada_(new a.ctx.Date()).fora.length > 0, true);
++  assert.equal(gs(a, 'GS09').length, 0, 'com espera 0 o GS11 já é o pedido');
++  ok(a.api('s_matheusgodoi', 'decidirDesconto', { id, aprovar: true, texto: 'Preço acima do mínimo, cliente estratégico' }));
++  const p = a.tabelas.COM_PROPOSTAS.find((x) => x.ID === id);
++  assert.equal(p.SITUACAO, 'PRONTA');
++  assert.match(p.DESCONTO_DECISAO_TEXTO, /\(aprovador delegado\. Critério: decisão na hora \(regra do dono de 19\/11\/2026, espera de 0 minutos\); nenhum item abaixo do preço mínimo do catálogo; não é o responsável/);
++  const g10 = gs(a, 'GS10');
++  assert.deepEqual(ids(g10), ['u_adm', 'u_dir']);
++  assert.match(g10[0].TITULO, /MATHEUS GODOI autorizou o preço da proposta PROP-2026-\d+.*como aprovador delegado/);
++});
++
++test('AM-8: Comercial: sem custo válido o Matheus não autoriza (critério mantido); a proposta dele vai só ao dono e à Diretoria; a espera é configurável de 0 a 1.440', () => {
++  let a = montarComercial();
++  let id = pedir(a, '2.447,00');
++  assert.deepEqual(ids(gs(a, 'GS11')), ['u_mat'], 'recebe mesmo sem poder autorizar');
++  recusa(a.api('s_matheusgodoi', 'decidirDesconto', { id, aprovar: true, texto: 'Tentativa sem custo válido' }), /Como aprovador delegado, você autoriza na hora quando se cumpre a regra; falta: o preço mínimo conferível em todos os itens/);
++  a = montarComercial();
++  id = pedir(a, '2.447,00', 's_matheusgodoi', COM_CUSTO);
++  assert.equal(gs(a, 'GS11').length, 0);
++  recusa(a.api('s_matheusgodoi', 'decidirDesconto', { id, aprovar: true, texto: 'Minha própria proposta, não pode' }), /O pedido de aprovação é seu/);
++  assert.deepEqual(ids(gs(a, 'GS04')), ['u_adm', 'u_dir']);
++  recusa(a.api('s_dora', 'salvarDelegadoPreco', { regra: { prazoMinutos: '-1' }, motivo: 'Espera negativa de teste' }), /de 0 a 1\.440 minutos/);
++  const s = ok(a.api('s_dora', 'salvarDelegadoPreco', { regra: { prazoMinutos: '0' }, motivo: 'Decisão na hora, pedido do dono de 19/11' }));
++  assert.equal(s.regra.prazoMinutos, 0);
++});
++
++// ------------------------------------------------------------------ o que continua só com os sócios, telas e ajuda
++test('AM-9: saída de dinheiro continua só com os sócios; telas, ajuda e matriz mostram a regra nova', () => {
++  const ler = (f) => fs.readFileSync(path.join(PASTA, f), 'utf8');
++  const fin = ['SGO_Financeiro_Pagamentos.js', 'SGO_Financeiro_Orcamento.js', 'SGO_RecargaCaju.js', 'SGO_Financeiro_Trilha.js', 'SGO_Viagem.js'].filter((f) => fs.existsSync(path.join(PASTA, f))).map(ler).join('\n');
++  assert.doesNotMatch(fin, /SGO_delegadoIds_|decisorOperacional|Ges_operacional/);
++  const ges = ler('SGO_Gestao_Decisoes.js');
++  assert.match(ges, /var GES_OPERACIONAL_FORA = \/\^\(fin_\|financeiro\|omie\|viagem_\|via_\|recarga_\|rcj_\|caju\|ganhos_\|comissao\|conduta_\|ponto_\|rh_\|compras_aprovar\)\/i/);
++  const jsC = ler('JS_Compras.html').replace(/\r\n/g, '\n');
++  assert.match(jsC, /id="rgDlPrazo" value="' \+ Cp_esc_\(x\.esperaMinutos === undefined/); assert.match(jsC, /min="0" max="2880" step="1" id="rgDlPrazo"/); assert.match(jsC, /esperaMinutos: Cp_\$_\("rgDlPrazo"\)\.value/);
++  assert.match(jsC, /Aprovador delegado: decisão na hora/);
++  const jsCo = ler('JS_Comercial.html');
++  assert.match(jsCo, /min="0" max="1440" step="1" id="cmDlPrazo"/); assert.match(jsCo, /Aprovador delegado: decisão na hora/);
++  const jsG = ler('JS_Gestao.html');
++  assert.match(jsG, /Decisor operacional da Diretoria/); assert.match(jsG, /decisorOperacional: document\.getElementById\("gdOpLig"\)/);
++  assert.match(ler('SGO_Ajuda_Compras.js'), /Desde 19\/11\/2026 a espera é 0 \(padrão\)/);
++  assert.match(ler('SGO_Ajuda_Comercial.js'), /Desde 19\/11\/2026 \(pedido do dono\) a espera é 0/);
++  assert.match(ler('SGO_Ajuda_Gestao.js'), /Decisor operacional da Diretoria \(decisão do dono de 19\/11\/2026\)/);
++  assert.match(ler('SGO_Avisos_Gestao.js'), /compra informada depois de feita \(desde 19\/11\/2026\)', origem: 'SGO_Compras_Requisicoes\.js; SGO_Compras_Pedido\.js; SGO_Compras_Informar\.js/);
++  const man = ler('SGO_AssistenteManuais.js');
++  assert.match(man, /Decisor operacional da Diretoria \(19\/11\/2026\)/); assert.match(man, /Decisão na hora \(pedido do dono de 19\/11\/2026\)/);
++});

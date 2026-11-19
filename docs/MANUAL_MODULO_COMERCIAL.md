@@ -297,6 +297,8 @@ Na proposta, o quadro "Prazo do dono e da Diretoria" mostra até quando vai o pr
 
 No preço do catálogo abaixo do mínimo, o aprovador delegado só aprova com o desconto máximo definido na regra, depois do prazo e sem ter pedido o preço.
 
+**Decisão na hora (pedido do dono de 19/11/2026).** A espera antes do aprovador delegado passou a **0 minutos (padrão)**: cada pedido de aprovação de preço chega ao mesmo tempo ao dono, ao Charles e ao Matheus (GS11), e o Matheus pode autorizar na hora, com o mesmo critério de preço (nenhum item abaixo do preço mínimo do catálogo, custo conferível em todos os itens). Na proposta, o quadro passa a se chamar "Aprovador delegado: decisão na hora". Com espera 0, a rodada de 15 minutos não repete o aviso (GS09). Proposta do próprio Matheus continua só com o dono e o Charles; cada autorização dele avisa os dois na hora (GS10). Com uma espera maior que 0 na regra, volta o comportamento com prazo e contagem descrito acima.
+
 A regra fica em Comercial > Metodologia, no quadro "Aprovador delegado do preço fora da política", com versão e motivo; só o dono e a Diretoria alteram. O quadro mostra quem recebe os avisos e o final do celular de cada um, ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail".
 
 ### Proposta errada: editar, excluir ou cancelar

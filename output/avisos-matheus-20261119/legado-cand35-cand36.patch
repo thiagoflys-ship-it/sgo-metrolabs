@@ -1,0 +1,709 @@
+--- cand35/SGO_Compras_Config.js	2026-11-19 09:23:16.125217800 -0300
++++ cand36/SGO_Compras_Config.js	2026-11-19 11:48:50.930018400 -0300
+@@ -183,7 +183,9 @@
+   // teto; o dono não informou valor). aprovadorIds null = a conta interna "MATHEUS GODOI" (SGO_delegadoIds_). minimoOrcamentos também é o
+   // mínimo para o pedido ir à aprovação (com menos, o comprador justifica e só o dono e a Diretoria decidem). Só o dono e a Diretoria
+   // alteram este bloco (Cmp_gravarRegras_). whatsappTres: WhatsApp a qualquer hora ao dono, à Diretoria e ao delegado (GS08 a GS10).
+-  delegado: { ligado: true, aprovadorIds: null, prazoMinutos: 30, contaDe: 'POSTADO', minimoOrcamentos: 3, tetoValor: null, whatsappTres: true }
++  // 19/11/2026 (pedido do dono: "não estamos dando conta"): a espera antes do aprovador delegado vira esperaMinutos, padrão 0 (ele recebe
++  // e decide na hora, com os mesmos critérios). O prazoMinutos gravado antes de 19/11 (30) não vale mais: sem esperaMinutos, vale 0.
++  delegado: { ligado: true, aprovadorIds: null, esperaMinutos: 0, contaDe: 'POSTADO', minimoOrcamentos: 3, tetoValor: null, whatsappTres: true }
+ };
+ var CMP_DELEGADO_CONTA = { POSTADO: 'da postagem do pedido de compra', APROVACAO: 'do envio do orçamento escolhido à aprovação' };
+ 
+@@ -383,7 +385,7 @@
+   });
+   // 18/11/2026: aprovador delegado
+   var dl = Cmp_delegadoLimpo_(r.delegado);
+-  if (!(dl.prazoMinutos >= 5 && dl.prazoMinutos <= 2880)) throw new Error('confira o prazo do dono e da Diretoria antes do aprovador delegado: de 5 a 2.880 minutos (padrão 30). Corrija e salve de novo');
++  if (!(dl.prazoMinutos >= 0 && dl.prazoMinutos <= 2880) || Math.round(dl.prazoMinutos) !== dl.prazoMinutos) throw new Error('confira a espera antes do aprovador delegado: de 0 a 2.880 minutos, número inteiro (padrão 0 = ele recebe e decide na hora). Corrija e salve de novo');
+   if (!CMP_DELEGADO_CONTA[dl.contaDe]) throw new Error('escolha de onde o prazo começa a contar (postagem do pedido ou envio à aprovação) e salve de novo');
+   if (!(dl.minimoOrcamentos >= 1 && dl.minimoOrcamentos <= 5) || Math.round(dl.minimoOrcamentos) !== dl.minimoOrcamentos) throw new Error('confira o mínimo de orçamentos para ir à aprovação: de 1 a 5 (padrão 3). Corrija e salve de novo');
+   if (dl.tetoValor !== null && !(dl.tetoValor > 0)) throw new Error('confira o teto de valor do aprovador delegado: deixe em branco (sem teto) ou digite um valor em reais maior que zero. Corrija e salve de novo');
+@@ -402,7 +404,9 @@
+   var teto = x.tetoValor === null || x.tetoValor === undefined || Cmp_s_(x.tetoValor) === '' ? null : Cmp_r2_(num(x.tetoValor, 0));
+   var ids = x.aprovadorIds === null || x.aprovadorIds === undefined || x.aprovadorIds === 'PADRAO' ? null : (Array.isArray(x.aprovadorIds) ? x.aprovadorIds : [x.aprovadorIds]).map(Cmp_s_).filter(Boolean);
+   if (Array.isArray(ids) && !ids.length) ids = [];
+-  return { ligado: x.ligado !== false && Cmp_up_(x.ligado) !== 'NAO', aprovadorIds: ids, prazoMinutos: num(x.prazoMinutos, p.prazoMinutos), contaDe: Cmp_up_(x.contaDe) || p.contaDe,
++  // 19/11/2026: espera em minutos (padrão 0). O prazoMinutos antigo só vale se vier junto com esperaMinutos (gravado depois de 19/11).
++  var esp = x.esperaMinutos === null || x.esperaMinutos === undefined || Cmp_s_(x.esperaMinutos) === '' ? p.esperaMinutos : num(x.esperaMinutos, p.esperaMinutos);
++  return { ligado: x.ligado !== false && Cmp_up_(x.ligado) !== 'NAO', aprovadorIds: ids, esperaMinutos: esp, prazoMinutos: esp, contaDe: Cmp_up_(x.contaDe) || p.contaDe,
+     minimoOrcamentos: num(x.minimoOrcamentos, p.minimoOrcamentos), tetoValor: teto, whatsappTres: x.whatsappTres !== false && Cmp_up_(x.whatsappTres) !== 'NAO' };
+ }
+ /** Regra do aprovador delegado em vigor, com os ids válidos agora (ids) e os nomes. Nunca lança. */
+--- cand35/SGO_Compras_Cotacoes.js	2026-11-19 09:23:16.072977700 -0300
++++ cand36/SGO_Compras_Cotacoes.js	2026-11-19 12:01:14.124862600 -0300
+@@ -151,7 +151,8 @@
+     // 18/11/2026 (Pacote 1): aprovador delegado depois do prazo do dono e da Diretoria (CmpC_delegado_)
+     rota.delegado = CmpC_delegado_(r, regras, us);
+     rota.delegadoIds = rota.delegado ? rota.delegado.ids.filter(function (id) { return imp.indexOf(id) < 0; }) : [];
+-    if (rota.delegado && rota.delegado.ids.length) rota.motivo += ' Se o dono e a Diretoria não decidirem até ' + rota.delegado.liberaEmTxt + ', ' + rota.delegado.nomes.join(', ') + ' pode decidir, com os critérios da regra.';
++    if (rota.delegado && rota.delegado.ids.length) rota.motivo += rota.delegado.naHora ? ' ' + rota.delegado.nomes.join(', ') + ' (aprovador delegado) também decide na hora, com os critérios da regra.'
++      : ' Se o dono e a Diretoria não decidirem até ' + rota.delegado.liberaEmTxt + ', ' + rota.delegado.nomes.join(', ') + ' pode decidir, com os critérios da regra.';
+     return rota;
+   }
+   if (nivel === 'COMPRADOR') {
+@@ -203,10 +204,10 @@
+     var dl = rota.delegado;
+     if (dl && dl.ids.indexOf(eu.id) >= 0) {
+       if (!dl.liberado) return { pode: false, delegado: true, motivo: 'O prazo do dono e da Diretoria vai até ' + dl.liberaEmTxt + ' (faltam ' + dl.faltaTxt + '). Se ninguém decidir até lá, você poderá aprovar, reprovar ou pedir novo orçamento' + (dl.pendentes.length ? ', desde que se cumpra: ' + dl.pendentes.join('; ') : ' (os critérios da regra já estão cumpridos)') + '.' };
+-      if (dl.pendentes.length) return { pode: false, delegado: true, motivo: 'O prazo do dono e da Diretoria venceu, mas falta cumprir: ' + dl.pendentes.join('; ') + '. Sem isso, a decisão continua só com ' + (rota.nomes.join(', ') || 'a Diretoria') + ' (Caixa de decisões). Para resolver, o comprador lança os orçamentos que faltam ou justifica a escolha.' };
++      if (dl.pendentes.length) return { pode: false, delegado: true, motivo: (dl.naHora ? 'Como aprovador delegado, você decide na hora quando se cumprir a regra; falta: ' : 'O prazo do dono e da Diretoria venceu, mas falta cumprir: ') + dl.pendentes.join('; ') + '. Sem isso, a decisão continua só com ' + (rota.nomes.join(', ') || 'a Diretoria') + ' (Caixa de decisões). Para resolver, o comprador lança os orçamentos que faltam ou justifica a escolha.' };
+       return { pode: true, delegado: true, motivo: '' };
+     }
+-    return { pode: false, motivo: 'Você não aprova esta compra: ' + (typeof SGO_MSG_SO_DIRETORIA_APROVA === 'string' ? SGO_MSG_SO_DIRETORIA_APROVA : 'por decisão do dono, só o dono do sistema e a Diretoria aprovam') + '. Quem aprova: ' + (rota.nomes.join(', ') || 'a Diretoria') + (dl && dl.ids.length ? ' e, depois de ' + dl.liberaEmTxt + ', ' + dl.nomes.join(', ') : '') + '; a compra está na Caixa de decisões deles.' };
++    return { pode: false, motivo: 'Você não aprova esta compra: ' + (typeof SGO_MSG_SO_DIRETORIA_APROVA === 'string' ? SGO_MSG_SO_DIRETORIA_APROVA : 'por decisão do dono, só o dono do sistema e a Diretoria aprovam') + '. Quem aprova: ' + (rota.nomes.join(', ') || 'a Diretoria') + (dl && dl.ids.length ? (dl.naHora ? ' e ' : ' e, depois de ' + dl.liberaEmTxt + ', ') + dl.nomes.join(', ') + ' (com os critérios da regra)' : '') + '; a compra está na Caixa de decisões deles.' };
+   }
+   // Lote 5 (caixas): a faixa (R$) define o nível; a caixa do nível diz se a pessoa aprova. Sem alteração gravada vale a rota de antes.
+   var cod = CMP_CAIXA_FAIXA[Cmp_up_(rota.nivel)] || '', cx = cod && eu.cx ? eu.cx[cod] : '';
+@@ -252,7 +253,7 @@
+   ];
+   return { ids: cfg.ids, nomes: cfg.nomes, baseIso: base, baseTxt: Cmp_br_(base), liberaEm: libera, liberaEmTxt: libera ? Cmp_br_(libera) : 'a data da postagem (não lida)', liberado: !!libera && falta !== null && falta <= 0,
+     faltaMin: falta === null ? null : Math.max(0, falta), faltaTxt: typeof SGO_duracaoTxt_ === 'function' ? SGO_duracaoTxt_(Math.max(0, falta || 0)) : Math.max(0, falta || 0) + ' min',
+-    prazoMinutos: cfg.prazoMinutos, contaDeTxt: CMP_DELEGADO_CONTA[cfg.contaDe] || '', minimo: cfg.minimoOrcamentos, teto: cfg.tetoValor, tetoTxt: cfg.tetoValor === null ? 'sem teto' : Cmp_moeda_(cfg.tetoValor),
++    prazoMinutos: cfg.prazoMinutos, naHora: !(cfg.prazoMinutos > 0), contaDeTxt: CMP_DELEGADO_CONTA[cfg.contaDe] || '', minimo: cfg.minimoOrcamentos, teto: cfg.tetoValor, tetoTxt: cfg.tetoValor === null ? 'sem teto' : Cmp_moeda_(cfg.tetoValor),
+     criterios: crit, pendentes: crit.filter(function (c) { return !c.ok; }).map(function (c) { return c.texto; }), criteriosOk: crit.every(function (c) { return c.ok; }),
+     cumpridos: crit.filter(function (c) { return c.ok; }).map(function (c) { return c.texto; }).join('; ') };
+ }
+@@ -277,14 +278,27 @@
+   try {
+     var regras = Cmp_regras_(), us = Cmp_usuarios_(), cfg = Cmp_delegadoCfg_(regras, us), NL = String.fromCharCode(10);
+     var sol = Cmp_s_(r.SOLICITANTE_ID), num = Cmp_s_(r.NUMERO), urg = Cmp_up_(r.URGENCIA);
+-    var dest = CmpC_destinosTres_(us, cfg, [sol]);
++    // 19/11/2026: compra informada (já feita) também avisa, para conhecimento; quem informou e quem comprou ficam fora
++    var inf = Cmp_up_(r.ORIGEM) === (typeof CMP_ORIGEM_INFORMADA === 'string' ? CMP_ORIGEM_INFORMADA : 'INFORMADA');
++    var fora = [sol].concat(inf && eu && eu.id ? [Cmp_s_(eu.id)] : []);
++    var dest = CmpC_destinosTres_(us, cfg, fora);
+     if (!dest.length) return null;
++    if (inf) {
++      var tituloI = 'Compra informada (já feita) ' + num + ', de ' + Cmp_s_(r.SOLICITANTE_NOME) + ': ' + Cmp_s_(r.TITULO).slice(0, 70);
++      var textoI = 'Compra ' + num + ' informada por ' + Cmp_s_(eu && eu.nome || r.CRIADO_POR_NOME) + (Cmp_s_(eu && eu.id) !== sol ? ' em nome de ' + Cmp_s_(r.SOLICITANTE_NOME) : '') + ' em ' + Cmp_br_(r.CRIADO_EM || Cmp_agora_()) + '.' + NL +
++        'O que é: ' + Cmp_s_(r.TITULO).slice(0, 200) + '.' + NL + 'Para que: ' + Cmp_s_(r.FINALIDADE).slice(0, 300) + NL +
++        (Cmp_s_(r.FORNECEDOR_INFORMADO) ? 'Onde: ' + Cmp_s_(r.FORNECEDOR_INFORMADO) + (Cmp_s_(r.DATA_COMPRA) ? ', em ' + Cmp_brDia_(r.DATA_COMPRA) : '') + '. ' : '') + 'Valor: ' + Cmp_moeda_(r.VALOR_TOTAL) + '.' + NL +
++        'Para conhecimento: a compra já foi feita e segue para a conferência do Financeiro. Se algo não estiver certo, abra em Compras > Fila de compras > ' + num + '.';
++      return CmpC_avisoTres_({ evento: 'GS08', modulo: 'compras', quem: { id: Cmp_s_(eu && eu.id) || sol, nome: Cmp_s_(eu && eu.nome) || Cmp_s_(r.SOLICITANTE_NOME) }, destinos: dest, excluir: fora,
++        refId: 'CMP:NOVA:' + Cmp_s_(r.ID), marco: Cmp_s_(r.CRIADO_EM) || num, titulo: tituloI, texto: textoI, tela: { tipo: 'compras', mod: 'compras', id: Cmp_s_(r.ID) }, resolvePor: '' }, cfg);
++    }
+     var titulo = 'Nova solicitação de compra ' + num + ', de ' + Cmp_s_(r.SOLICITANTE_NOME) + ': ' + Cmp_s_(r.TITULO).slice(0, 70) + (urg === 'CRITICA' || urg === 'ALTA' ? ' (urgência ' + (urg === 'CRITICA' ? 'crítica' : 'alta') + ')' : '');
+     var vinc = Cmp_s_(r.CLIENTE_NOME) ? 'cliente ' + Cmp_s_(r.CLIENTE_NOME) + (Cmp_s_(r.UNIDADE_NOME) ? ' (' + Cmp_s_(r.UNIDADE_NOME) + ')' : '') : Cmp_s_(r.VEICULO_PLACA) ? 'veículo ' + Cmp_s_(r.VEICULO_PLACA) : Cmp_s_(r.PROPOSTA_NUMERO) ? 'pedido do Comercial ' + Cmp_s_(r.PROPOSTA_NUMERO) : Cmp_s_(r.USO_INTERNO_MOTIVO) ? 'uso interno' : '';
+     var texto = 'Pedido ' + num + ' postado por ' + Cmp_s_(r.SOLICITANTE_NOME) + (Cmp_s_(r.SOLICITANTE_AREA) ? ' (' + Cmp_s_(r.SOLICITANTE_AREA) + ')' : '') + ' em ' + Cmp_br_(r.CRIADO_EM || Cmp_agora_()) + '.' + NL +
+       'O que é: ' + Cmp_s_(r.TITULO).slice(0, 200) + '.' + NL + 'Para que: ' + Cmp_s_(r.FINALIDADE).slice(0, 300) + NL + (vinc ? 'Vínculo: ' + vinc + '.' + NL : '') +
+       'Urgência: ' + (CMP_URGENCIAS[urg] || 'Normal') + (Cmp_s_(r.PRECISA_ATE) ? '; precisa até ' + Cmp_brDia_(r.PRECISA_ATE) : '') + '. Comprador: ' + (Cmp_s_(r.COMPRADOR_NOME) || 'a definir') + '.' + NL +
+-      (cfg.ligado && cfg.ids.length && Cmp_soDiretoria_() ? 'Prazo de aprovação: ' + cfg.prazoMinutos + ' minutos ' + (CMP_DELEGADO_CONTA[cfg.contaDe] || '') + '. Escolhidos os orçamentos (mínimo de ' + cfg.minimoOrcamentos + '), o dono e a Diretoria decidem a qualquer momento; vencido o prazo, ' + cfg.nomes.join(', ') + ' pode decidir com os critérios.' + NL : '') +
++      (cfg.ligado && cfg.ids.length && Cmp_soDiretoria_() && !(cfg.prazoMinutos > 0) ? 'Aprovação: escolhidos os orçamentos (mínimo de ' + cfg.minimoOrcamentos + '), o dono, a Diretoria e ' + cfg.nomes.join(', ') + ' (aprovador delegado, com os critérios da regra) decidem na hora; quem pediu não aprova a própria compra.' + NL : '') +
++      (cfg.ligado && cfg.ids.length && Cmp_soDiretoria_() && cfg.prazoMinutos > 0 ? 'Prazo de aprovação: ' + cfg.prazoMinutos + ' minutos ' + (CMP_DELEGADO_CONTA[cfg.contaDe] || '') + '. Escolhidos os orçamentos (mínimo de ' + cfg.minimoOrcamentos + '), o dono e a Diretoria decidem a qualquer momento; vencido o prazo, ' + cfg.nomes.join(', ') + ' pode decidir com os critérios.' + NL : '') +
+       'Abra em Compras > Fila de compras > ' + num + '.';
+     return CmpC_avisoTres_({ evento: 'GS08', modulo: 'compras', quem: { id: Cmp_s_(eu && eu.id) || sol, nome: Cmp_s_(eu && eu.nome) || Cmp_s_(r.SOLICITANTE_NOME) }, destinos: dest, excluir: [sol],
+       refId: 'CMP:NOVA:' + Cmp_s_(r.ID), marco: Cmp_s_(r.CRIADO_EM) || num, titulo: titulo, texto: texto, tela: { tipo: 'compras', mod: 'compras', id: Cmp_s_(r.ID) }, resolvePor: '' }, cfg);
+@@ -300,12 +314,16 @@
+     var dl = rota.delegado, NL = String.fromCharCode(10), num = Cmp_s_(r.NUMERO);
+     var c = SGO_DATA.getById(CMP_ABAS.COTACOES, Cmp_s_(r.COTACAO_ID)) || {};
+     var dest = rota.delegadoIds.concat(soDelegado ? [] : rota.ids).filter(function (id, i, l) { return l.indexOf(id) === i; });
+-    var titulo = 'Prazo vencido na compra ' + num + ' (' + Cmp_s_(r.TITULO).slice(0, 50) + '), ' + Cmp_moeda_(r.VALOR_TOTAL) + ': ' + dl.nomes.join(', ') + ' já pode decidir';
++    // 19/11/2026: com a espera 0 (padrão), o aviso sai na escolha do orçamento: o delegado recebe e decide na hora (ou sabe o que falta)
++    var titulo = dl.naHora ? 'Aprovação · Compras: compra ' + num + ' (' + Cmp_s_(r.TITULO).slice(0, 50) + '), ' + Cmp_moeda_(r.VALOR_TOTAL) + (dl.criteriosOk ? ', ' + dl.nomes.join(', ') + ' pode decidir agora' : ', aguarda o dono ou a Diretoria (falta critério para o aprovador delegado)')
++      : 'Prazo vencido na compra ' + num + ' (' + Cmp_s_(r.TITULO).slice(0, 50) + '), ' + Cmp_moeda_(r.VALOR_TOTAL) + ': ' + dl.nomes.join(', ') + ' já pode decidir';
+     var texto = 'Compra ' + num + ': ' + Cmp_s_(r.TITULO).slice(0, 150) + '.' + NL + 'Pedida por ' + Cmp_s_(r.SOLICITANTE_NOME) + '; postada em ' + Cmp_br_(r.CRIADO_EM) + '; orçamento escolhido por ' + Cmp_s_(r.ESCOLHA_POR_NOME) + ' em ' + Cmp_br_(r.ESCOLHA_EM) + '.' + NL +
+       'Orçamento escolhido: ' + Cmp_s_(c.FORNECEDOR_NOME) + ', total ' + Cmp_moeda_(r.VALOR_TOTAL) + '.' + NL +
+-      'O prazo do dono e da Diretoria (' + dl.prazoMinutos + ' minutos ' + dl.contaDeTxt + ') venceu em ' + dl.liberaEmTxt + ' sem decisão.' + NL +
+-      'Critérios cumpridos: ' + dl.cumpridos + '.' + NL +
+-      'O que fazer: ' + dl.nomes.join(', ') + ' abre a ficha em Compras > Fila de compras > ' + num + ' e aprova, reprova (com o motivo) ou pede novo orçamento a um contato específico. O dono e a Diretoria continuam podendo decidir até lá.';
++      (dl.naHora ? 'Pedido de aprovação na hora (regra do dono de 19/11/2026): o dono, a Diretoria e ' + dl.nomes.join(', ') + ' foram avisados juntos; quem decidir primeiro resolve, e o dono e a Diretoria recebem o aviso da decisão.' + NL
++        : 'O prazo do dono e da Diretoria (' + dl.prazoMinutos + ' minutos ' + dl.contaDeTxt + ') venceu em ' + dl.liberaEmTxt + ' sem decisão.' + NL) +
++      (dl.cumpridos ? 'Critérios cumpridos: ' + dl.cumpridos + '.' + NL : '') +
++      (dl.criteriosOk ? 'O que fazer: ' + dl.nomes.join(', ') + ' abre a ficha em Compras > Fila de compras > ' + num + ' e aprova, reprova (com o motivo) ou pede novo orçamento a um contato específico. O dono e a Diretoria continuam podendo decidir.'
++        : 'Falta para o aprovador delegado decidir: ' + dl.pendentes.join('; ') + '. Por quê: é a regra do dono para quem decide no lugar dele. O que fazer: o comprador lança os orçamentos que faltam ou justifica a escolha; até lá, a decisão é do dono ou da Diretoria (Caixa de decisões).');
+     return CmpC_avisoTres_({ evento: 'GS09', modulo: 'compras', quem: { id: '', nome: 'Compras (prazo)' }, destinos: dest, excluir: rota.naoPode, refId: 'CMP:APROVAR:' + Cmp_s_(r.ID), marco: Cmp_s_(r.APROVACAO_PEDIDA_EM),
+       titulo: titulo, texto: texto, tela: { tipo: 'compras', mod: 'compras', id: Cmp_s_(r.ID) }, resolvePor: 'CAIXA:CMP:APROVAR:' + Cmp_s_(r.ID) }, cfg);
+   } catch (e) { console.error('Compras, aviso ao aprovador delegado: ' + ((e && e.message) || e)); return null; }
+@@ -326,8 +344,11 @@
+       if (soIds && soIds.indexOf(Cmp_s_(r.ID)) < 0) return;
+       if (Cmp_up_(r.SITUACAO) !== 'AGUARDANDO_APROVACAO' || Cmp_s_(r.DELEGADO_AVISADO_EM)) return;
+       var rota = CmpC_rota_(r, regras, us), dl = rota.delegado;
+-      if (!dl || !dl.liberado || !dl.criteriosOk || !rota.delegadoIds.length) return;
+-      SGO_DATA.update(CMP_ABAS.REQUISICOES, r.ID, { DELEGADO_AVISADO_EM: Cmp_agora_() });
++      if (!dl || !dl.liberado || !rota.delegadoIds.length) return;
++      // 19/11/2026: na escolha do orçamento com a espera 0, o delegado recebe o pedido mesmo sem os critérios (o aviso diz o que falta);
++      // a marca só é gravada com os critérios cumpridos (na rodada, quando se cumprirem, ele é avisado que já pode decidir)
++      if (!dl.criteriosOk && !(dl.naHora && soIds)) return;
++      if (dl.criteriosOk) SGO_DATA.update(CMP_ABAS.REQUISICOES, r.ID, { DELEGADO_AVISADO_EM: Cmp_agora_() });
+       CmpC_avisarDelegado_(r, rota, !!soDelegado, cfg);
+       n++;
+     });
+@@ -341,9 +362,10 @@
+     var regras = Cmp_regras_(), us = Cmp_usuarios_(), cfg = Cmp_delegadoCfg_(regras, us), NL = String.fromCharCode(10), num = Cmp_s_(r.NUMERO);
+     var verbo = acao === 'APROVAR' ? 'aprovou' : acao === 'NOVO_ORCAMENTO' ? 'pediu novo orçamento para' : 'reprovou';
+     var dest = rota.ids.slice();
+-    var titulo = eu.nome + ' ' + verbo + ' a compra ' + num + ' (' + Cmp_s_(r.TITULO).slice(0, 50) + '), ' + Cmp_moeda_(r.VALOR_TOTAL) + ', depois do prazo';
++    var naHora = !!(rota.delegado && rota.delegado.naHora);
++    var titulo = eu.nome + ' ' + verbo + ' a compra ' + num + ' (' + Cmp_s_(r.TITULO).slice(0, 50) + '), ' + Cmp_moeda_(r.VALOR_TOTAL) + (naHora ? ', como aprovador delegado' : ', depois do prazo');
+     var txt = eu.nome + ' (aprovador delegado) ' + verbo + ' a compra ' + num + ': ' + Cmp_s_(r.TITULO).slice(0, 150) + ', total ' + Cmp_moeda_(r.VALOR_TOTAL) + '.' + NL +
+-      'Quando: ' + Cmp_br_(Cmp_agora_()) + ', depois do prazo do dono e da Diretoria (venceu em ' + rota.delegado.liberaEmTxt + ').' + NL + 'Critério cumprido: ' + criterio + '.' + NL +
++      'Quando: ' + Cmp_br_(Cmp_agora_()) + (naHora ? ' (decisão na hora, regra do dono de 19/11/2026).' : ', depois do prazo do dono e da Diretoria (venceu em ' + rota.delegado.liberaEmTxt + ').') + NL + 'Critério cumprido: ' + criterio + '.' + NL +
+       (contato ? 'Novo orçamento pedido a: ' + contato + '.' + NL : '') + (texto ? (acao === 'APROVAR' ? 'Observação: ' : 'Motivo: ') + texto + NL : '') + 'A decisão está no histórico da ficha em Compras > Fila de compras > ' + num + '.';
+     dest.forEach(function (id) { Cmp_avisar_(id, 'DELEGADO_DECIDIU', titulo, txt.replace(/R\$ [\d.,]+/g, 'valor na ficha'), r.ID, { autorId: eu.id }); });
+     return CmpC_avisoTres_({ evento: 'GS10', modulo: 'compras', quem: eu, destinos: dest, refId: 'CMP:DELEGADO:' + Cmp_s_(r.ID), marco: Cmp_agora_() + acao, titulo: titulo, texto: txt,
+@@ -424,7 +446,7 @@
+       var rr2 = Object.assign({}, r, campos), rota2 = rota;
+       Cmp_depois_(function () { CmpC_avisarAprovacaoNaHora_(rr2, c, rota2, eu, maisBarata, fornecedores.length, fx); });
+       // 18/11/2026 (Pacote 1): se o prazo do dono e da Diretoria já venceu (conta da postagem), o aprovador delegado é avisado agora (GS09)
+-      if (rota.delegado && rota.delegado.liberado) { msg += ' O prazo do dono e da Diretoria já venceu: ' + rota.delegado.nomes.join(', ') + ' também pode decidir' + (rota.delegado.criteriosOk ? '.' : ' quando se cumprir: ' + rota.delegado.pendentes.join('; ') + '.'); Cmp_depois_(function () { CmpC_rodadaDelegado_(null, [Cmp_s_(r.ID)], true); }); }
++      if (rota.delegado && rota.delegado.liberado) { msg += (rota.delegado.naHora ? ' ' + rota.delegado.nomes.join(', ') + ' (aprovador delegado) foi avisado na hora e também pode decidir' : ' O prazo do dono e da Diretoria já venceu: ' + rota.delegado.nomes.join(', ') + ' também pode decidir') + (rota.delegado.criteriosOk ? '.' : ' quando se cumprir: ' + rota.delegado.pendentes.join('; ') + '.'); Cmp_depois_(function () { CmpC_rodadaDelegado_(null, [Cmp_s_(r.ID)], true); }); }
+       else if (rota.delegado && rota.delegado.ids.length) msg += ' Se o dono e a Diretoria não decidirem até ' + rota.delegado.liberaEmTxt + ', ' + rota.delegado.nomes.join(', ') + ' pode decidir.';
+     }
+     return { requisicao: CmpR_paraTela_(eu, Object.assign({}, r, campos), true), message: msg };
+@@ -443,7 +465,7 @@
+       (Number(c.TOTAL) > maisBarata + 0.005 ? 'Não é o mais barato (o mais barato é ' + Cmp_moeda_(maisBarata) + '): ' + Cmp_s_(r.ESCOLHA_JUSTIFICATIVA) + NL : '') +
+       (crit ? 'Urgência crítica.' + NL : '') +
+       'Quem aprova: ' + (rota.nomes.join(', ') || 'a Diretoria') + '. Quem pediu e quem cotou não aprovam.' + NL +
+-      (rota.delegado && rota.delegado.ids.length ? (rota.delegado.liberado ? 'O prazo do dono e da Diretoria já venceu (' + rota.delegado.prazoMinutos + ' minutos ' + rota.delegado.contaDeTxt + '): ' + rota.delegado.nomes.join(', ') + ' também pode decidir' + (rota.delegado.criteriosOk ? '.' : ' quando se cumprir: ' + rota.delegado.pendentes.join('; ') + '.')
++      (rota.delegado && rota.delegado.ids.length ? (rota.delegado.liberado ? (rota.delegado.naHora ? rota.delegado.nomes.join(', ') + ' (aprovador delegado) recebeu este pedido na hora e também pode decidir' : 'O prazo do dono e da Diretoria já venceu (' + rota.delegado.prazoMinutos + ' minutos ' + rota.delegado.contaDeTxt + '): ' + rota.delegado.nomes.join(', ') + ' também pode decidir') + (rota.delegado.criteriosOk ? '.' : ' quando se cumprir: ' + rota.delegado.pendentes.join('; ') + '.')
+         : 'Se ninguém decidir até ' + rota.delegado.liberaEmTxt + ', ' + rota.delegado.nomes.join(', ') + ' pode decidir com os critérios da regra.') + NL : '') +
+       'O que fazer: abra a ficha em Compras > Fila de compras > ' + num + ', confira os orçamentos e toque em "Aprovar" ou "Reprovar" (com o motivo).';
+     return SGO_avisoDiretoriaNaHora_({ evento: 'GS06', modulo: 'compras', quem: eu, refId: 'CMP:APROVAR:' + Cmp_s_(r.ID), marco: Cmp_s_(r.APROVACAO_PEDIDA_EM), soDiretoria: soDir,
+@@ -495,8 +517,8 @@
+     if (aprovar && CmpC_vencida_(c)) throw new Error('Não foi possível aprovar: o orçamento escolhido venceu em ' + Cmp_brDia_(c.VALIDADE) + '. Reprove com o motivo "orçamento vencido" para o comprador pedir a revalidação, ou peça a ele que atualize');
+     var agora = Cmp_agora_(), campos;
+     // 18/11/2026: decisão do aprovador delegado leva o critério cumprido (histórico, aprovações e o aviso ao dono e à Diretoria)
+-    var criterio = pa.delegado ? 'prazo de ' + rota.delegado.prazoMinutos + ' minutos ' + rota.delegado.contaDeTxt + ' vencido em ' + rota.delegado.liberaEmTxt + ' sem decisão do dono e da Diretoria; ' + rota.delegado.cumpridos + '; não pediu nem cotou esta compra' : '';
+-    var marcaDel = pa.delegado ? ' (aprovador delegado, depois do prazo do dono e da Diretoria. Critério: ' + criterio + ')' : '';
++    var criterio = pa.delegado && rota.delegado.naHora ? 'decisão na hora (regra do dono de 19/11/2026, espera de 0 minutos); ' + rota.delegado.cumpridos + '; não pediu nem cotou esta compra' : pa.delegado ? 'prazo de ' + rota.delegado.prazoMinutos + ' minutos ' + rota.delegado.contaDeTxt + ' vencido em ' + rota.delegado.liberaEmTxt + ' sem decisão do dono e da Diretoria; ' + rota.delegado.cumpridos + '; não pediu nem cotou esta compra' : '';
++    var marcaDel = pa.delegado ? ' (aprovador delegado' + (rota.delegado.naHora ? '' : ', depois do prazo do dono e da Diretoria') + '. Critério: ' + criterio + ')' : '';
+     if (aprovar) {
+       campos = { SITUACAO: 'APROVADA', APROVADA_POR_ID: eu.id, APROVADA_POR_NOME: eu.nome, APROVADA_EM: agora, APROVACAO_TEXTO: (texto || 'Aprovada.') + marcaDel, ATUALIZADO_EM: agora, DECISAO_CRITERIO: criterio };
+       SGO_DATA.update(CMP_ABAS.REQUISICOES, r.ID, campos);
+@@ -586,6 +608,8 @@
+   var rota = CmpC_rota_(r, o.regras, o.usuarios());
+   var crit = Cmp_up_(r.URGENCIA) === 'CRITICA', num = Cmp_s_(r.NUMERO);
+   var extra = Object.assign({}, rota.extra, { desde: Cmp_dia_(r.APROVACAO_PEDIDA_EM) || o.hoje });
++  // 19/11/2026: o aprovador delegado liberado e com os critérios entra também nos responsáveis da Caixa (Ges_rotear_)
++  if (rota.delegado && rota.delegado.liberado && rota.delegado.criteriosOk && rota.delegadoIds.length) extra.alemDaDiretoria = rota.delegadoIds.slice();
+   if (crit) extra.prazo = o.hoje;
+   // 18/11/2026 (Pacote 1): vencido o prazo do dono e da Diretoria com os critérios cumpridos, o item aparece também para o aprovador delegado
+   var dlP = rota.delegado, paraP = rota.ids.concat(dlP && dlP.liberado && dlP.criteriosOk ? rota.delegadoIds : []).filter(function (id, i, l) { return l.indexOf(id) === i; });
+@@ -594,7 +618,7 @@
+     gravidade: crit ? 'CRITICO' : 'ATENCAO', dias: null,
+     titulo: 'Aprovar a compra ' + num + ' (' + Cmp_s_(r.TITULO).slice(0, 60) + ')' + (crit ? ' — urgência crítica' : ''),
+     detalhe: 'Faixa: ' + rota.nivelNome + '. Pedida por ' + Cmp_s_(r.SOLICITANTE_NOME) + '; orçamento escolhido por ' + Cmp_s_(r.ESCOLHA_POR_NOME) + ' em ' + Cmp_br_(r.ESCOLHA_EM) + '. O valor e os orçamentos estão na ficha da compra.',
+-    oQueFazer: 'Abra a ficha em Compras > Fila de compras, confira os orçamentos e toque em "Aprovar", "Reprovar" ou "Pedir novo orçamento" (com o motivo). Quem pediu não aprova a própria compra.' + (Cmp_soDiretoria_() ? ' Por decisão do dono, o dono do sistema e a Diretoria aprovam compras' + (dlP && dlP.ids.length ? '; depois de ' + dlP.liberaEmTxt + ', também ' + dlP.nomes.join(', ') + ', com os critérios da regra.' : '.') : ''),
++    oQueFazer: 'Abra a ficha em Compras > Fila de compras, confira os orçamentos e toque em "Aprovar", "Reprovar" ou "Pedir novo orçamento" (com o motivo). Quem pediu não aprova a própria compra.' + (Cmp_soDiretoria_() ? ' Por decisão do dono, o dono do sistema e a Diretoria aprovam compras' + (dlP && dlP.ids.length ? (dlP.naHora ? '; também ' : '; depois de ' + dlP.liberaEmTxt + ', também ') + dlP.nomes.join(', ') + ', com os critérios da regra.' : '.') : ''),
+     tela: CMP_PEND_TELA('compras', Cmp_s_(r.ID)), extra: extra
+   }));
+ }
+--- cand35/SGO_Compras_Informar.js	2026-11-19 09:23:15.257452800 -0300
++++ cand36/SGO_Compras_Informar.js	2026-11-19 11:51:48.794015300 -0300
+@@ -334,6 +334,9 @@
+     if (!c.recebido && comprador) Cmp_avisar_(comprador.id, 'INFORMADA_A_RECEBER', 'Compra informada a receber: ' + numero, quem.nome + ' comprou em ' + c.fNome + ' e a entrega está prevista para ' + Cmp_brDia_(c.prev) + '. Quando chegar, registre o recebimento em Compras > Fila de compras.', r.ID, { email: true, autorId: eu.id });
+     return { r: r, parcelas: parcelas, numero: numero };
+   });
++  // 19/11/2026 (pedido do dono): a compra informada também avisa na hora o dono, a Diretoria e o aprovador delegado (GS08, para
++  // conhecimento), menos quem informou e quem comprou. Antes só o pedido pela tela e o do Comercial avisavam (diagnóstico de 19/11).
++  if (typeof CmpC_avisarNovaSolicitacao_ === 'function') { try { CmpC_avisarNovaSolicitacao_(Object.assign({}, res.r, { FORNECEDOR_INFORMADO: c.fNome, DATA_COMPRA: c.dia }), eu); } catch (eAv) { console.error('Compras, aviso da compra informada: ' + ((eAv && eAv.message) || eAv)); } }
+   var msg = 'Compra ' + res.numero + ' informada. ' + (c.ciencia ? 'O valor passa do limite da compra direta: a gestão vai dar ciência. ' : '') + (c.recebido ? '' : 'Compras confere o recebimento e avisa quando chegar. ') +
+     (c.ap.length ? 'Apontamentos registrados para o Financeiro: ' + c.ap.map(function (x) { return x.tipo === 'ATRASO' ? 'informada com atraso' : x.tipo === 'DUPLICIDADE' ? 'duplicidade possível' : x.tipo === 'CARTAO_SEM_CADASTRO' ? 'cartão ainda não cadastrado' : 'acima do comum'; }).filter(function (x, i, l) { return l.indexOf(x) === i; }).join(', ') + '.' : 'Ela foi para a conferência do Financeiro.');
+   return { gravada: true, requisicao: CmpR_paraTela_(Object.assign({}, eu, { veValores: true }), Object.assign({}, res.r), true), message: msg, numero: res.numero };
+--- cand35/SGO_Comercial_Propostas.js	2026-11-19 09:23:13.785950200 -0300
++++ cand36/SGO_Comercial_Propostas.js	2026-11-19 11:52:52.623598700 -0300
+@@ -189,7 +189,7 @@
+       var cfgD = ComDel_cfg_(), tres = cfgD.whatsappTres ? cfgD.ids.filter(function (id) { return id !== eu.id; }) : []; // a Diretoria já recebe o GS06 a qualquer hora
+       if (tres.length) ComDel_avisoTres_({ evento: 'GS11', modulo: 'comercial', quem: eu, destinos: tres, refId: 'COM:PRECO:' + Com_s_(p.ID), marco: marco,
+         titulo: 'Aprovação · Comercial: preço do catálogo ' + Com_s_(p.CODIGO) + ' (' + Com_texto_(p.NOME, 50) + '), ' + Com_moeda_(preco) + ', pedido de ' + eu.nome,
+-        texto: txt + String.fromCharCode(10) + (cfgD.ids.length ? 'A gestão comercial (' + cfgD.nomes.join(', ') + ') decide até o preço mínimo; abaixo dele, o dono e a Diretoria' + (cfgD.descontoMaxPct === null ? '.' : ' e, depois de ' + cfgD.prazoMinutos + ' minutos, o aprovador delegado com redução de até ' + Com_pct_(cfgD.descontoMaxPct) + '.') : ''),
++        texto: txt + String.fromCharCode(10) + (cfgD.ids.length ? 'A gestão comercial (' + cfgD.nomes.join(', ') + ') decide até o preço mínimo; abaixo dele, o dono e a Diretoria' + (cfgD.descontoMaxPct === null ? '.' : (cfgD.prazoMinutos > 0 ? ' e, depois de ' + cfgD.prazoMinutos + ' minutos, o aprovador delegado' : ' e, na hora, o aprovador delegado') + ' com redução de até ' + Com_pct_(cfgD.descontoMaxPct) + '.') : ''),
+         tela: { tipo: 'comercial', aba: 'catalogo', id: Com_s_(p.ID) }, resolvePor: '' }, cfgD);
+       if (typeof SGO_avisoDiretoriaNaHora_ === 'function') SGO_avisoDiretoriaNaHora_({ evento: 'GS06', modulo: 'comercial', quem: eu, refId: 'COM:PRECO:' + Com_s_(p.ID), marco: marco, decisores: gc, excluir: tres,
+         titulo: 'Aprovação · Comercial: preço do catálogo ' + Com_s_(p.CODIGO) + ' (' + Com_texto_(p.NOME, 50) + '), ' + Com_moeda_(preco) + ', pedido de ' + eu.nome,
+@@ -408,7 +408,7 @@
+     // 18/11/2026 (Pacote 1, item 5): depois do prazo do dono e da Diretoria, o aprovador delegado aprova abaixo do mínimo só com o desconto máximo da regra
+     var dlCat = abaixoMin && !(eu.diretoria || eu.perfil === 'ADMIN' || Com_ehDono_(eu.usuario || eu.login)) ? ComDel_precoCatalogo_(eu, p, novo) : null;
+     if (dlCat && !dlCat.pode) throw new Error('Não foi possível aprovar: ' + Com_moeda_(novo) + ' fica abaixo do preço mínimo do item ' + Com_s_(p.CODIGO) + ' (' + cNovo.minimoTxt + '), e preço abaixo do mínimo só a Diretoria aprova. Você pode aprovar com o preço mínimo ou o sugerido, negar com a fundamentação, ou deixar a decisão para a Diretoria (ela já foi avisada)' + (dlCat.motivo ? '. ' + dlCat.motivo.replace(/\.$/, '') : ''));
+-    if (dlCat && dlCat.pode) { texto = texto + ' (aprovador delegado, depois do prazo do dono e da Diretoria. Critério: ' + dlCat.criterio + ')'; var pDel = p, novoDel = novo; Com_depois_(function () { ComDel_avisarDecisao_(eu, 'o preço do catálogo', Com_s_(pDel.CODIGO) + ' (' + Com_texto_(pDel.NOME, 50) + ')', Com_moeda_(novoDel), dlCat.criterio, texto, { tipo: 'comercial', aba: 'catalogo', id: Com_s_(pDel.ID) }, 'COM:PRECO:' + Com_s_(pDel.ID)); }); }
++    if (dlCat && dlCat.pode) { texto = texto + ' (aprovador delegado' + (/^decisão na hora/.test(dlCat.criterio) ? '' : ', depois do prazo do dono e da Diretoria') + '. Critério: ' + dlCat.criterio + ')'; var pDel = p, novoDel = novo; Com_depois_(function () { ComDel_avisarDecisao_(eu, 'o preço do catálogo', Com_s_(pDel.CODIGO) + ' (' + Com_texto_(pDel.NOME, 50) + ')', Com_moeda_(novoDel), dlCat.criterio, texto, { tipo: 'comercial', aba: 'catalogo', id: Com_s_(pDel.ID) }, 'COM:PRECO:' + Com_s_(pDel.ID)); }); }
+     var marca = aprovar && rotOp ? ' (aprovado ' + rotOp + ', ' + Com_moeda_(novo) + '; pedido ' + Com_moeda_(pedido) + ')' : '';
+     var marcaMin = abaixoMin ? ' Aprovado abaixo do preço mínimo (' + cNovo.minimoTxt + '): as propostas com este preço vão para a aprovação da Diretoria.' : '';
+     var campos = { PRECO_PEDIDO_SITUACAO: aprovar ? 'APROVADO' : 'NEGADO', PRECO_DECISAO_POR_NOME: eu.nome, PRECO_DECISAO_EM: agora, PRECO_DECISAO_TEXTO: texto + marca, ATUALIZADO_EM: agora };
+@@ -840,7 +840,9 @@
+  * Diretoria (GS10). Cada pedido de aprovação de preço avisa os três na hora, a qualquer hora (GS11). Regra em Comercial > Metodologia
+  * (quadro do aprovador delegado), com versão e motivo; só o dono e a Diretoria alteram.
+  */
+-var COM_DELEGADO_PADRAO = { ligado: true, aprovadorIds: null, prazoMinutos: 15, descontoMaxPct: null, whatsappTres: true };
++// 19/11/2026 (pedido do dono: "não estamos dando conta"): a espera antes do aprovador delegado passa a 0 (padrão): ele recebe e decide na hora,
++// com o mesmo critério de preço. Configurável em Comercial > Metodologia (0 a 1.440 minutos).
++var COM_DELEGADO_PADRAO = { ligado: true, aprovadorIds: null, prazoMinutos: 0, descontoMaxPct: null, whatsappTres: true };
+ function ComDel_limpo_(d) {
+   var p = COM_DELEGADO_PADRAO, x = Object.assign({}, p, d || {});
+   var num = function (v, padrao) { var n = Com_num_(v); return isNaN(n) ? padrao : n; };
+@@ -869,7 +871,7 @@
+   base = Com_s_(Com_iso_(base)).slice(0, 16);
+   var libera = base.length === 16 && typeof SGO_somarMinutos_ === 'function' ? SGO_somarMinutos_(base, cfg.prazoMinutos) : '';
+   var falta = libera ? SGO_minutosEntre_((agora || Com_agora_()).slice(0, 16), libera) : null;
+-  return { baseTxt: Com_br_(base), liberaEm: libera, liberaEmTxt: libera ? Com_br_(libera) : 'a hora do pedido (não lida)', liberado: !!libera && falta !== null && falta <= 0,
++  return { naHora: !(cfg.prazoMinutos > 0), baseTxt: Com_br_(base), liberaEm: libera, liberaEmTxt: libera ? Com_br_(libera) : 'a hora do pedido (não lida)', liberado: !!libera && falta !== null && falta <= 0,
+     faltaMin: falta === null ? null : Math.max(0, falta), faltaTxt: ComDel_txtDur_(Math.max(0, falta || 0)) };
+ }
+ /**
+@@ -911,7 +913,7 @@
+   try { Com_ler_(COM_ABAS.HISTORICO).forEach(function (h) { if (Com_s_(h.ENTIDADE) === 'PROPOSTA' && Com_s_(h.ENTIDADE_ID) === Com_s_(p.ID) && Com_up_(h.TIPO) === 'AGUARDANDO_APROVACAO') pedidoPor = Com_s_(h.USUARIO_ID); }); } catch (eH) { pedidoPor = ''; }
+   if (pedidoPor && pedidoPor === eu.id) return { pode: false, delegado: true, motivo: 'O pedido de aprovação é seu (você concluiu a proposta): o aprovador delegado não autoriza o próprio pedido. Quem decide é o dono ou a Diretoria' };
+   if (!sit.liberado) return { pode: false, delegado: true, motivo: 'O prazo do dono e da Diretoria vai até ' + sit.liberaEmTxt + ' (faltam ' + sit.faltaTxt + '). Se ninguém decidir até lá, você poderá autorizar' + (sit.pendentes.length ? ', desde que se cumpra: ' + sit.pendentes.join('; ') : ' (o critério de preço já está cumprido)') };
+-  if (sit.pendentes.length) return { pode: false, delegado: true, motivo: 'O prazo do dono e da Diretoria venceu, mas falta cumprir: ' + sit.pendentes.join('; ') + '. Sem isso, só o dono e a Diretoria aprovam; você pode negar (a proposta volta ao vendedor para ajustar)' };
++  if (sit.pendentes.length) return { pode: false, delegado: true, motivo: (sit.naHora ? 'Como aprovador delegado, você autoriza na hora quando se cumpre a regra; falta: ' : 'O prazo do dono e da Diretoria venceu, mas falta cumprir: ') + sit.pendentes.join('; ') + '. Sem isso, só o dono e a Diretoria aprovam; você pode negar (a proposta volta ao vendedor para ajustar)' };
+   return { pode: true, delegado: true, motivo: '' };
+ }
+ /** Destinos dos avisos de preço: o dono, a Diretoria e o aprovador delegado, menos excluir. */
+@@ -934,6 +936,7 @@
+   if (!cfg.ligado || !cfg.ids.length) return '';
+   if (!exigeDiretoria) return 'A gestão comercial (' + cfg.nomes.join(', ') + ') já pode decidir; o dono e a Diretoria também.';
+   var pr = ComDel_prazo_(baseIso, cfg);
++  if (pr.naHora) return cfg.nomes.join(', ') + ' (aprovador delegado) recebeu este pedido na hora e pode autorizar agora: ' + (cfg.descontoMaxPct === null ? 'só sem item abaixo do preço mínimo do catálogo e com o custo de todos os itens conferido' : 'desconto até ' + Com_pct_(cfg.descontoMaxPct) + ' sobre a tabela') + '; fora disso, o dono ou a Diretoria. Quem pediu não autoriza o próprio pedido.';
+   return 'Se o dono e a Diretoria não decidirem até ' + pr.liberaEmTxt + ' (' + cfg.prazoMinutos + ' minutos), ' + cfg.nomes.join(', ') + ' pode autorizar: ' + (cfg.descontoMaxPct === null ? 'só sem item abaixo do preço mínimo do catálogo e com o custo de todos os itens conferido' : 'desconto até ' + Com_pct_(cfg.descontoMaxPct) + ' sobre a tabela') + '.';
+ }
+ /** Rodada de 15 minutos: prazo vencido com o critério cumprido avisa o aprovador delegado uma vez por pedido (GS09). Nunca lança. */
+@@ -941,6 +944,8 @@
+   try {
+     var cfg = ComDel_cfg_();
+     if (!cfg.ligado || !cfg.ids.length) return { fora: cfg.ligado ? 'sem aprovador delegado válido na gestão comercial' : 'aprovador delegado do preço desligado' };
++    // 19/11/2026: com a espera 0, o aprovador delegado já recebeu o pedido na hora (GS11): a rodada não repete o aviso
++    if (!(cfg.prazoMinutos > 0)) return { fora: 'espera 0: o aprovador delegado recebe o pedido na hora (GS11)' };
+     try { if (typeof Pend_abaExiste_ === 'function' && !Pend_abaExiste_(COM_ABAS.PROPOSTAS)) return { fora: 'Comercial sem propostas' }; } catch (e0) { return { fora: 'Comercial sem propostas' }; }
+     var props = PropertiesService.getScriptProperties(), n = 0, NL = String.fromCharCode(10);
+     Com_ler_(COM_ABAS.PROPOSTAS).forEach(function (p) {
+@@ -966,8 +971,9 @@
+ function ComDel_avisarDecisao_(eu, oQue, item, valorTxt, criterio, texto, tela, refId) {
+   try {
+     var cfg = ComDel_cfg_(), NL = String.fromCharCode(10), dest = ComP_idsDiretoria_([eu.id]);
+-    var titulo = eu.nome + ' autorizou ' + oQue + ' ' + item + (valorTxt ? ', ' + valorTxt : '') + ', depois do prazo';
+-    var txt = eu.nome + ' (aprovador delegado) autorizou ' + oQue + ' ' + item + (valorTxt ? ', ' + valorTxt : '') + ', em ' + Com_br_(Com_agora_()) + ', depois do prazo do dono e da Diretoria.' + NL +
++    var naHora = !(cfg.prazoMinutos > 0);
++    var titulo = eu.nome + ' autorizou ' + oQue + ' ' + item + (valorTxt ? ', ' + valorTxt : '') + (naHora ? ', como aprovador delegado' : ', depois do prazo');
++    var txt = eu.nome + ' (aprovador delegado) autorizou ' + oQue + ' ' + item + (valorTxt ? ', ' + valorTxt : '') + ', em ' + Com_br_(Com_agora_()) + (naHora ? ' (decisão na hora, regra do dono de 19/11/2026).' : ', depois do prazo do dono e da Diretoria.') + NL +
+       'Critério cumprido: ' + criterio + '.' + NL + 'Fundamentação: ' + texto + NL + 'Está no histórico do item no Comercial.';
+     dest.forEach(function (id) { Com_avisar_(id, 'DELEGADO_AUTORIZOU', titulo.replace(/R\$ [\d.,]+/g, 'valor no item'), txt.replace(/R\$ [\d.,]+/g, 'valor no item'), tela && tela.id ? { tipo: tela.aba === 'catalogo' ? 'catalogo' : 'proposta', id: tela.id } : null); });
+     return ComDel_avisoTres_({ evento: 'GS10', modulo: 'comercial', quem: eu, destinos: dest, refId: refId, marco: Com_agora_(), titulo: titulo, texto: txt, tela: tela, resolvePor: '' }, cfg);
+@@ -983,10 +989,10 @@
+   if (Com_s_(p.PRECO_PEDIDO_POR_ID) === eu.id) return { pode: false, motivo: 'O pedido de preço é seu: quem decide é o dono ou a Diretoria.' };
+   var pr = ComDel_prazo_(p.PRECO_PEDIDO_EM, cfg);
+   if (cfg.descontoMaxPct === null) return { pode: false, motivo: 'Como aprovador delegado, você não autoriza preço abaixo do mínimo do catálogo: a regra do dono não tem desconto máximo definido (Comercial > Metodologia, quadro do aprovador delegado).' };
+-  if (!pr.liberado) return { pode: false, motivo: 'Como aprovador delegado, você poderá decidir depois de ' + pr.liberaEmTxt + ' (faltam ' + pr.faltaTxt + '), se o dono e a Diretoria não decidirem antes.' };
++  if (!pr.liberado && !pr.naHora) return { pode: false, motivo: 'Como aprovador delegado, você poderá decidir depois de ' + pr.liberaEmTxt + ' (faltam ' + pr.faltaTxt + '), se o dono e a Diretoria não decidirem antes.' };
+   var base = ComP_basePreco_(p), red = base > 0 ? Math.round((base - novo) / base * 10000) / 100 : 0;
+   if (red > cfg.descontoMaxPct + 1e-9) return { pode: false, motivo: 'Como aprovador delegado, você autoriza redução de até ' + Com_pct_(cfg.descontoMaxPct) + ' sobre o preço de ' + Com_moeda_(base) + '; este pedido reduz ' + Com_pct_(red) + '.' };
+-  return { pode: true, motivo: '', criterio: 'prazo de ' + cfg.prazoMinutos + ' minutos vencido em ' + pr.liberaEmTxt + ' sem decisão do dono e da Diretoria; redução de ' + Com_pct_(red) + ' sobre ' + Com_moeda_(base) + ', dentro do máximo de ' + Com_pct_(cfg.descontoMaxPct) + '; não pediu o preço' };
++  return { pode: true, motivo: '', criterio: (pr.naHora ? 'decisão na hora (regra do dono de 19/11/2026, espera de 0 minutos)' : 'prazo de ' + cfg.prazoMinutos + ' minutos vencido em ' + pr.liberaEmTxt + ' sem decisão do dono e da Diretoria') + '; redução de ' + Com_pct_(red) + ' sobre ' + Com_moeda_(base) + ', dentro do máximo de ' + Com_pct_(cfg.descontoMaxPct) + '; não pediu o preço' };
+ }
+ /** Quadro da regra (Comercial > Metodologia). */
+ function ComDel_tela_(eu) {
+@@ -1010,7 +1016,7 @@
+   var motivo = Com_texto_(d.motivo, 500);
+   if (motivo.length < 10) throw new Error('Não foi possível salvar: escreva o que mudou e por quê (pelo menos 10 letras). Cada versão fica no histórico');
+   var x = ComDel_limpo_(d.regra);
+-  if (!(x.prazoMinutos >= 1 && x.prazoMinutos <= 1440)) throw new Error('Não foi possível salvar: o prazo do dono e da Diretoria vai de 1 a 1.440 minutos (padrão 15). Corrija e salve de novo');
++  if (!(x.prazoMinutos >= 0 && x.prazoMinutos <= 1440) || Math.round(x.prazoMinutos) !== x.prazoMinutos) throw new Error('Não foi possível salvar: a espera antes do aprovador delegado vai de 0 a 1.440 minutos, número inteiro (padrão 0 = ele decide na hora). Corrija e salve de novo');
+   if (x.descontoMaxPct !== null && !(x.descontoMaxPct > 0 && x.descontoMaxPct <= 60)) throw new Error('Não foi possível salvar: o desconto máximo do aprovador delegado fica vazio (não autoriza abaixo do preço mínimo do catálogo) ou entre 0,01% e 60%. Corrija e salve de novo');
+   if (x.aprovadorIds !== null) {
+     var us = Com_usuarios_(), gest = Com_gestoresConfigurados_();
+@@ -1734,8 +1740,8 @@
+     // 18/11/2026 (Pacote 1, item 5): depois do prazo do dono e da Diretoria, o aprovador delegado autoriza com o critério de preço
+     var dlD = d.aprovar === true && !(eu.diretoria || eu.perfil === 'ADMIN') && polDD.exigeDiretoria ? ComDel_pode_(eu, p, ComDel_proposta_(p, avDD)) : null;
+     if (d.aprovar === true && !(eu.diretoria || eu.perfil === 'ADMIN') && polDD.exigeDiretoria && !(dlD && dlD.pode)) throw new Error('Não foi possível aprovar: ' + (polDD.codigos.indexOf('MARGEM_MIN') >= 0 ? 'a margem da proposta ficou abaixo da mínima da política de precificação' : 'a proposta tem ' + polDD.motivos.join('; ')) + ', e essa exceção é da Diretoria. Você pode negar (a proposta volta para o vendedor ajustar) ou pedir à Diretoria para decidir' + (dlD && dlD.motivo ? '. Aprovador delegado: ' + dlD.motivo.replace(/\.$/, '') : ''));
+-    var sitDD = dlD && dlD.pode ? ComDel_proposta_(p, avDD) : null, criterioDD = sitDD ? 'prazo de ' + sitDD.prazoMinutos + ' minutos vencido em ' + sitDD.liberaEmTxt + ' sem decisão do dono e da Diretoria; ' + sitDD.cumpridos + '; não é o responsável pela proposta' : '';
+-    if (sitDD) texto = texto + ' (aprovador delegado, depois do prazo do dono e da Diretoria. Critério: ' + criterioDD + ')';
++    var sitDD = dlD && dlD.pode ? ComDel_proposta_(p, avDD) : null, criterioDD = sitDD ? (sitDD.naHora ? 'decisão na hora (regra do dono de 19/11/2026, espera de 0 minutos)' : 'prazo de ' + sitDD.prazoMinutos + ' minutos vencido em ' + sitDD.liberaEmTxt + ' sem decisão do dono e da Diretoria') + '; ' + sitDD.cumpridos + '; não é o responsável pela proposta' : '';
++    if (sitDD) texto = texto + ' (aprovador delegado' + (sitDD.naHora ? '' : ', depois do prazo do dono e da Diretoria') + '. Critério: ' + criterioDD + ')';
+     var agora = Com_agora_(), aprovar = d.aprovar === true;
+     var campos = { SITUACAO: aprovar ? 'PRONTA' : 'RASCUNHO', DESCONTO_SITUACAO: aprovar ? 'APROVADO' : 'NEGADO', DESCONTO_DECISAO_POR_ID: eu.id, DESCONTO_DECISAO_POR_NOME: eu.nome,
+       DESCONTO_DECISAO_EM: agora, DESCONTO_DECISAO_TEXTO: texto, ATUALIZADO_EM: agora };
+--- cand35/SGO_Gestao_Decisoes.js	2026-11-19 09:23:13.987710500 -0300
++++ cand36/SGO_Gestao_Decisoes.js	2026-11-19 12:01:14.117250600 -0300
+@@ -131,8 +131,21 @@
+   diretoriaResumo: { ligado: true, hora: '08:30' },
+   // 11/11/2026 (SGO_Gestao_Painel.js): O.S. do Auvo que entra na Caixa com mais de auvoDias em aberto é pendência de saneamento
+   // (bloco próprio, fora da nota do gestor). A Diretoria ajusta em Desempenho da gestão > Regra da nota.
+-  saneamento: { auvoDias: 30 }
++  saneamento: { auvoDias: 30 },
++  // 19/11/2026 (pedido do dono: "não estamos dando conta"): o que hoje cai só no dono e no Charles (reserva da Diretoria) e não é saída de
++  // dinheiro nem assunto de sigilo passa a ter também o decisor operacional (ids null = a conta interna padrão, SGO_DELEGADO_NOME_PADRAO,
++  // hoje o Matheus). Ele recebe pela Caixa (GS01) e decide com as travas de cada módulo. tiposFora: tipos a mais que ficam só com a
++  // Diretoria (além da lista fixa GES_OPERACIONAL_FORA). Liga, desliga e escolhe em Caixa de decisões > Regras e responsáveis.
++  decisorOperacional: { ligado: true, ids: null, tiposFora: [] }
+ };
++/**
++ * 19/11/2026: o que NUNCA vai ao decisor operacional (fica só com a Diretoria): saída de dinheiro (Financeiro, depósito de viagem, Recarga
++ * Caju, comissão/ganhos dos vendedores; regra do FORM-FIN-001: só os sócios aprovam), Programa de conduta e ponto/RH (sigilo e assunto
++ * pessoal) e a aprovação de compras (tem regra própria: aprovador delegado com critérios, Regras de compras). Item com sigilo (extra.sigilo,
++ * extra.sigiloFin) ou só da Diretoria (sugestão sobre gestor) também nunca vai.
++ */
++var GES_OPERACIONAL_FORA = /^(fin_|financeiro|omie|viagem_|via_|recarga_|rcj_|caju|ganhos_|comissao|conduta_|ponto_|rh_|compras_aprovar)/i;
++var GES_OPERACIONAL_MODULOS_FORA = ['financeiro', 'omie', 'viagem', 'recarga', 'ganhos', 'conduta', 'ponto', 'rh'];
+ 
+ // ------------------------------------------------------------
+ // UTILITÁRIOS
+@@ -263,6 +276,10 @@
+   if (Ges_horaValida_(dr.hora)) c.diretoriaResumo.hora = dr.hora;
+   var sn = g.saneamento || {};
+   if (Number(sn.auvoDias) >= 7 && Number(sn.auvoDias) <= 365) c.saneamento.auvoDias = Math.round(Number(sn.auvoDias));
++  var dop = g.decisorOperacional || {};
++  if (dop.ligado === false) c.decisorOperacional.ligado = false;
++  if (Array.isArray(dop.ids)) c.decisorOperacional.ids = dop.ids.map(Ges_s_).filter(Boolean).slice(0, 3);
++  if (Array.isArray(dop.tiposFora)) c.decisorOperacional.tiposFora = dop.tiposFora.map(function (t) { return Ges_s_(t).toLowerCase(); }).filter(Boolean);
+   return c;
+ }
+ 
+@@ -348,8 +365,45 @@
+   var r = Ges_rotearBase_(it, cfg, us);
+   // 16/11/2026 (Financeiro, E1): item de atividade do Financeiro só vai para quem está na lista de sigilo
+   if (it && it.extra && it.extra.sigiloFin) r.ids = r.ids.filter(function (id) { return Ges_noSigiloFin_(id); });
++  // 19/11/2026: quem o módulo diz que também decide junto com a Diretoria (ex.: o aprovador delegado da compra, com os critérios cumpridos)
++  if (r.reserva && it && it.extra && Array.isArray(it.extra.alemDaDiretoria)) {
++    var npA = (it.extra.naoPode || []).map(Ges_s_);
++    it.extra.alemDaDiretoria.map(Ges_s_).forEach(function (id) { if (id && us[id] && us[id].ativo && npA.indexOf(id) < 0 && r.ids.indexOf(id) < 0) r.ids.push(id); });
++  }
++  // 19/11/2026: reserva da Diretoria que não é dinheiro nem sigilo: o decisor operacional também recebe e decide
++  if (r.reserva) Ges_somarOperacional_(it, r, cfg, us);
+   return r;
+ }
++
++/** Ids do decisor operacional em vigor (contas internas ativas, fora a Diretoria). Nunca lança. */
++function Ges_operacionalIds_(cfg, us) {
++  try {
++    var c = (cfg || Ges_cfg_()).decisorOperacional || {};
++    if (c.ligado === false) return [];
++    var ids = typeof SGO_delegadoIds_ === 'function' ? SGO_delegadoIds_(Array.isArray(c.ids) ? c.ids : null) : (c.ids || []);
++    us = us || Ges_usuarios_();
++    return ids.filter(function (id) { return us[id] && us[id].ativo && !us[id].diretoria && us[id].gestao; });
++  } catch (e) { return []; }
++}
++/** O item pode ir ao decisor operacional? { pode, motivo }. */
++function Ges_operacionalCabe_(it, cfg) {
++  var ex = (it && it.extra) || {}, tipo = Ges_s_(it && it.tipo).toLowerCase(), mod = Ges_s_(it && it.modulo).toLowerCase();
++  if (it.publico === 'DIRETORIA' || it.publico === 'ADMIN') return { pode: false, motivo: 'item só da Diretoria' };
++  if (ex.sigilo || ex.sigiloFin) return { pode: false, motivo: 'sigilo' };
++  if (GES_OPERACIONAL_FORA.test(tipo) || GES_OPERACIONAL_MODULOS_FORA.indexOf(mod) >= 0) return { pode: false, motivo: 'saída de dinheiro, sigilo ou regra própria' };
++  if ((((cfg || {}).decisorOperacional || {}).tiposFora || []).indexOf(tipo) >= 0) return { pode: false, motivo: 'tipo fora por configuração' };
++  return { pode: true, motivo: '' };
++}
++function Ges_somarOperacional_(it, r, cfg, us) {
++  try {
++    if (!Ges_operacionalCabe_(it, cfg).pode) return;
++    var ex = it.extra || {}, naoPode = (ex.naoPode || []).map(Ges_s_).concat(Ges_s_(it.responsavelId) && !ex.decisor ? [Ges_s_(it.responsavelId)] : []);
++    var add = Ges_operacionalIds_(cfg, us).filter(function (id) { return naoPode.indexOf(id) < 0 && r.ids.indexOf(id) < 0; });
++    if (!add.length) return;
++    r.ids = r.ids.concat(add); r.operacional = add;
++    r.motivo += ' Também ' + add.map(function (id) { return us[id] ? us[id].nome : id; }).join(', ') + ' (decisor operacional, decisão do dono de 19/11/2026: o que não é dinheiro nem sigilo).';
++  } catch (e) { console.error('Caixa de decisões, decisor operacional: ' + ((e && e.message) || e)); }
++}
+ function Ges_rotearBase_(it, cfg, us) {
+   var ex = it.extra || {}, nomesAreas = typeof Areas_mapaNomes_ === 'function' ? Areas_mapaNomes_() : {};
+   var envolvido = Ges_s_(it.responsavelId);
+@@ -796,7 +850,8 @@
+ function Ges_montarCaixa_(s, p) {
+   var cx = Ges_caixa_(), uid = Ges_s_(s.userId), us = cx.us, cfg = cx.cfg;
+   // item só da Diretoria (sugestão sobre gestor, da avaliação): os demais da gestão não veem nem na lista geral
+-  if (!Ges_ehDiretoriaSessao_(s)) cx.itens = cx.itens.filter(function (i) { return !i.soDiretoria; });
++  // 19/11/2026: quem é responsável pelo item (aprovador delegado, decisor operacional) também o vê
++  if (!Ges_ehDiretoriaSessao_(s)) cx.itens = cx.itens.filter(function (i) { return !i.soDiretoria || i.responsaveis.indexOf(uid) >= 0; });
+   // 28/10/2026: ocorrência do Programa de conduta (com o nome do envolvido) só para a Diretoria e o Gestor de Qualidade
+   if (!Ges_veSigilo_(us[uid])) cx.itens = cx.itens.filter(function (i) { return !i.sigilo || i.responsaveis.indexOf(uid) >= 0; });
+   // 16/11/2026 (Financeiro, E1): item de atividade do Financeiro só para a lista de sigilo
+@@ -977,14 +1032,25 @@
+       atual.automacoes = {}; Object.keys(GES_CFG_PADRAO.automacoes).forEach(function (k) { atual.automacoes[k] = au[k] !== false; });
+       // 26/10/2026: escalonamento por prioridade e resumo do dia (SGO_Sedna.js); valida antes de gravar qualquer coisa
+       var sedna = v.sedna && typeof Sedna_cfgSalvar_ === 'function' ? Sedna_cfgSalvar_(v.sedna) : null;
++      // 19/11/2026: decisor operacional (quem não manda o campo mantém o que estava gravado)
++      if (v.decisorOperacional && typeof v.decisorOperacional === 'object') {
++        var dv = v.decisorOperacional, dIds = dv.ids === null || dv.ids === undefined || dv.ids === 'PADRAO' ? null : (Array.isArray(dv.ids) ? dv.ids : [dv.ids]).map(Ges_s_).filter(Boolean);
++        if (dIds && (dIds.length < 1 || dIds.length > 3)) throw new Error('escolha de 1 a 3 pessoas como decisor operacional (ou deixe o padrão) e salve de novo');
++        if (dIds && dIds.some(function (id) { return !us[id] || !us[id].ativo || !us[id].gestao || us[id].diretoria || (typeof SGO_delegadoIds_ === 'function' && !SGO_delegadoIds_([id]).length); })) throw new Error('o decisor operacional precisa ser conta interna ativa da gestão (Gestor ou Administrador), fora da Diretoria (o dono e o Charles já decidem tudo). Escolha de novo e salve');
++        var tf = (Array.isArray(dv.tiposFora) ? dv.tiposFora : Ges_s_(dv.tiposFora).split(/[,;\s]+/)).map(function (t) { return Ges_s_(t).toLowerCase(); }).filter(function (t, i, l) { return /^[a-z_]{3,40}$/.test(t) && l.indexOf(t) === i; });
++        atual.decisorOperacional = { ligado: dv.ligado !== false && Ges_up_(dv.ligado) !== 'NAO', ids: dIds, tiposFora: tf };
++      }
+       Ges_cfgGravar_(atual);
+       if (sedna) { try { SGO_DATA.log('GESTAO_REGRAS', s.usuario, 'Escalonamento e resumo do dia: ' + JSON.stringify(sedna).slice(0, 1000), 'GESTAO'); } catch (eS) {} }
+-      try { SGO_DATA.log('GESTAO_REGRAS', s.usuario, 'Caixa de decisões: ' + JSON.stringify({ gestoresPorArea: gpa, areaPorModulo: apm, escada: atual.escada, automacoes: atual.automacoes, diretoriaResumo: atual.diretoriaResumo }).slice(0, 1500), 'GESTAO'); } catch (eL) {}
++      try { SGO_DATA.log('GESTAO_REGRAS', s.usuario, 'Caixa de decisões: ' + JSON.stringify({ gestoresPorArea: gpa, areaPorModulo: apm, escada: atual.escada, automacoes: atual.automacoes, diretoriaResumo: atual.diretoriaResumo, decisorOperacional: atual.decisorOperacional }).slice(0, 1500), 'GESTAO'); } catch (eL) {}
+       try { CacheService.getScriptCache().remove('GES_SINC_RECENTE'); } catch (eC) {}
+     }
+     var cfg = Ges_cfg_();
+     return {
+-      podeConfigurar: Ges_podeConfigurar_(s), cfg: { gestoresPorArea: cfg.gestoresPorArea, areaPorModulo: cfg.areaPorModulo, escada: cfg.escada, automacoes: cfg.automacoes, diretoriaResumo: cfg.diretoriaResumo },
++      podeConfigurar: Ges_podeConfigurar_(s), cfg: { gestoresPorArea: cfg.gestoresPorArea, areaPorModulo: cfg.areaPorModulo, escada: cfg.escada, automacoes: cfg.automacoes, diretoriaResumo: cfg.diretoriaResumo, decisorOperacional: cfg.decisorOperacional },
++      // 19/11/2026: quem é o decisor operacional agora e o que fica só com a Diretoria
++      operacional: { nomes: Ges_operacionalIds_(cfg, us).map(function (id) { return us[id].nome; }), nomePadrao: typeof SGO_DELEGADO_NOME_PADRAO === 'string' ? SGO_DELEGADO_NOME_PADRAO : '',
++        foraFixo: 'Financeiro (pagamentos, orçamento, estornos, cobrança), depósito de viagem, Recarga Caju, comissão dos vendedores, Programa de conduta, ponto e RH, aprovação de compras (regra própria em Regras de compras) e todo item com sigilo' },
+       sedna: typeof Sedna_cfg_ === 'function' ? Sedna_cfg_() : null,
+       areaPadrao: GES_AREA_MODULO_PADRAO, modulos: GES_MODULOS_CONFIG.map(function (m) { return { chave: m[0], nome: m[1] }; }),
+       areas: areas.map(function (a) { return { codigo: a.CODIGO, nome: a.NOME }; }),
+--- cand35/SGO_Avisos_Gestao.js	2026-11-19 09:23:13.836143000 -0300
++++ cand36/SGO_Avisos_Gestao.js	2026-11-19 11:54:23.811232900 -0300
+@@ -95,7 +95,7 @@
+ var AVG_EVENTOS_INFO = ['GS08', 'GS10'];
+ var AVG_SITUACAO_EVENTO = {
+   GS08: 'nova solicitação de compra, para conhecimento',
+-  GS09: 'prazo do dono e da Diretoria vencido; o aprovador delegado já pode decidir',
++  GS09: 'pedido de aprovação para o aprovador delegado (na hora ou depois da espera da regra)',
+   GS10: 'decisão do aprovador delegado, para conhecimento',
+   GS11: 'preço fora da política, aguarda a decisão'
+ };
+@@ -117,8 +117,8 @@
+   // 18/11/2026 (decisão do dono, Pacote 1, itens 3 a 5): o dono, a Diretoria e o aprovador delegado (Matheus) recebem WhatsApp e e-mail
+   // de cada solicitação de compra e de cada pedido de aprovação de preço do Comercial, A QUALQUER HORA, inclusive fora do expediente
+   // (exceção à regra "WhatsApp sutil" autorizada pelo dono só para estes avisos e só para estas pessoas). Saem por SGO_avisoTresNaHora_.
+-  { cod: 'GS08', modulo: 'compras', evento: 'Nova solicitação de compra (pedido de peça ou material, inclusive o que vem do Comercial)', origem: 'SGO_Compras_Requisicoes.js; SGO_Compras_Pedido.js (SGO_avisoTresNaHora_)', publico: 'Dono, Diretoria e aprovador delegado de Compras, menos quem pediu', email: 'NAO', whatsapp: 'NAO', limite: '1 por solicitação por pessoa', obs: 'Aviso da gestão na hora, a qualquer hora (decisão do dono de 18/11/2026): número, quem pediu, o que é, urgência e o link. Para conhecimento: não pede ação.', area: 'LOGISTICA', gestao: 'PENDENCIA' },
+-  { cod: 'GS09', modulo: 'gestao', evento: 'Prazo do dono e da Diretoria vencido: o aprovador delegado já pode decidir (compra ou preço do Comercial)', origem: 'SGO_Compras_Cotacoes.js; SGO_Comercial_Propostas.js (rodada de 15 minutos e na hora da escolha)', publico: 'Aprovador delegado; dono e Diretoria ficam sabendo', email: 'NAO', whatsapp: 'NAO', limite: '1 por pedido por pessoa', obs: 'Aviso da gestão na hora, a qualquer hora: o que está parado, há quanto tempo e quais critérios o aprovador delegado precisa cumprir.', gestao: 'PENDENCIA' },
++  { cod: 'GS08', modulo: 'compras', evento: 'Nova solicitação de compra (pedido de peça ou material, inclusive o que vem do Comercial) e compra informada depois de feita (desde 19/11/2026)', origem: 'SGO_Compras_Requisicoes.js; SGO_Compras_Pedido.js; SGO_Compras_Informar.js (SGO_avisoTresNaHora_)', publico: 'Dono, Diretoria e aprovador delegado de Compras, menos quem pediu', email: 'NAO', whatsapp: 'NAO', limite: '1 por solicitação por pessoa', obs: 'Aviso da gestão na hora, a qualquer hora (decisão do dono de 18/11/2026): número, quem pediu, o que é, urgência e o link. Para conhecimento: não pede ação.', area: 'LOGISTICA', gestao: 'PENDENCIA' },
++  { cod: 'GS09', modulo: 'gestao', evento: 'Pedido de aprovação de compra para o aprovador delegado: na hora da escolha do orçamento (espera 0, padrão desde 19/11/2026) ou quando vence a espera da regra; no Comercial, só com espera maior que 0 (com 0, o GS11 já é o pedido)', origem: 'SGO_Compras_Cotacoes.js; SGO_Comercial_Propostas.js (na hora da escolha e rodada de 15 minutos)', publico: 'Aprovador delegado; dono e Diretoria ficam sabendo', email: 'NAO', whatsapp: 'NAO', limite: '1 por pedido por pessoa', obs: 'Aviso da gestão na hora, a qualquer hora: a compra, o valor, os critérios cumpridos e o que falta para o aprovador delegado decidir.', gestao: 'PENDENCIA' },
+   { cod: 'GS10', modulo: 'gestao', evento: 'Decisão do aprovador delegado (compra aprovada, reprovada ou com novo orçamento pedido; preço autorizado)', origem: 'SGO_Compras_Cotacoes.js; SGO_Comercial_Propostas.js', publico: 'Dono e Diretoria', email: 'NAO', whatsapp: 'NAO', limite: '1 por decisão por pessoa', obs: 'Aviso da gestão na hora, a qualquer hora: quem decidiu, o quê, o valor e o critério cumprido. Para conhecimento.', gestao: 'PENDENCIA' },
+   { cod: 'GS11', modulo: 'comercial', evento: 'Pedido de aprovação de preço no Comercial (proposta fora da política ou preço do catálogo abaixo da alçada)', origem: 'SGO_Comercial_Propostas.js (SGO_avisoTresNaHora_)', publico: 'Dono, Diretoria e aprovador delegado do Comercial, menos quem pediu', email: 'NAO', whatsapp: 'NAO', limite: '1 por pedido por pessoa', obs: 'Aviso da gestão na hora, a qualquer hora (decisão do dono de 18/11/2026): proposta ou item, total, quem pediu e o link.', area: 'COMERCIAL', gestao: 'PENDENCIA' },
+   { cod: 'GS02', modulo: 'gestao', evento: 'Decisão da Caixa com o prazo vencido e sem nenhuma ação', origem: 'SGO_Avisos_Gestao.js (rodada de 15 minutos)', publico: 'Gestor responsável pelo item (nunca a Diretoria: ela é informada no resumo diário, GS07)', email: 'NAO', whatsapp: 'NAO', limite: '1 por item por pessoa', obs: 'Atraso: sai na hora (gestor no expediente). Sem ação, a escada da Caixa sobe à Diretoria.', gestao: 'ATRASO' },
+--- cand35/SGO_Ajuda_Administracao.js	2026-11-19 09:23:12.789684500 -0300
++++ cand36/SGO_Ajuda_Administracao.js	2026-11-19 11:54:51.455362500 -0300
+@@ -633,7 +633,7 @@
+         { situacao: "Aviso da gestão com \"WhatsApp aguardando modelo\"", oQueFazer: "O modelo sgo_gestao_acao ainda não foi aprovado pela Meta. O e-mail já saiu. Cadastre em Chaves e senhas > Cadastrar modelos na Meta e acompanhe em Situação dos modelos." },
+         { situacao: "Qual modelo do WhatsApp a fila da gestão usa", oQueFazer: "Desde 11/11/2026: o sgo_gestao_item (Utilidade) quando a Meta o aprovou e o manteve na categoria Utilidade; senão o sgo_gestao_acao (que a Meta classificou como Marketing e pode não entregar). Confira em Chaves e senhas > Situação dos modelos; o registro de cada aviso diz o modelo usado." },
+         { situacao: "A Diretoria não recebe mais GS03 (escalada) item a item", oQueFazer: "Decisão do dono de 11/11/2026: a Diretoria é informada, não cobrada. Com o resumo diário da Diretoria ligado (Caixa de decisões > Regras e responsáveis, padrão 08:30), a escalada, a decisão nova e o prazo vencido em que a Diretoria aparece e as escaladas da SEDNA vão num resumo por dia útil (evento GS07: e-mail com a lista e o link do relatório diário da empresa, WhatsApp curto pelo modelo de utilidade e alerta na tela). GS04, GS05, GS06 e os atos irreversíveis continuam na hora." },
+-        { situacao: "Compras e preço do Comercial a qualquer hora (GS08 a GS11)", oQueFazer: "Decisão do dono de 18/11/2026: cada nova solicitação de compra (GS08), o prazo do dono e da Diretoria vencido com o aprovador delegado já podendo decidir (GS09), a decisão do aprovador delegado (GS10) e cada pedido de aprovação de preço do Comercial (GS11) vão na hora, a qualquer hora, inclusive fora do expediente, só para o dono, a Diretoria e o aprovador delegado (Matheus), por WhatsApp e e-mail e no alerta na tela. É a única exceção à regra do WhatsApp no expediente. Para desligar o WhatsApp a qualquer hora, use Compras > Regras de compras ou Comercial > Metodologia (quadro do aprovador delegado); desligar a linha na matriz deixa o aviso só no sistema e no e-mail." },
++        { situacao: "Compras e preço do Comercial a qualquer hora (GS08 a GS11)", oQueFazer: "Decisão do dono de 18/11/2026: cada nova solicitação de compra e, desde 19/11/2026, cada compra informada depois de feita (GS08), o pedido de aprovação da compra ao aprovador delegado (GS09: na hora da escolha do orçamento, com a espera 0 que é o padrão desde 19/11/2026), a decisão do aprovador delegado (GS10) e cada pedido de aprovação de preço do Comercial (GS11) vão na hora, a qualquer hora, inclusive fora do expediente, só para o dono, a Diretoria e o aprovador delegado (Matheus), por WhatsApp e e-mail e no alerta na tela. É a única exceção à regra do WhatsApp no expediente. Para desligar o WhatsApp a qualquer hora, use Compras > Regras de compras ou Comercial > Metodologia (quadro do aprovador delegado); desligar a linha na matriz deixa o aviso só no sistema e no e-mail." },
+         { situacao: "Pedido que depende da Diretoria (GS06)", oQueFazer: "Preço do catálogo, preço abaixo do mínimo, compra a aprovar e proposta enviada sem a aprovação de preço chegam na hora aos dois da Diretoria (e-mail, WhatsApp e alerta na tela), menos quem pediu. Para desligar, use a linha GS06 da matriz: o alerta na tela e o e-mail pela regra comum continuam." },
+         { situacao: "Aviso da gestão com \"Sem celular no cadastro\"", oQueFazer: "Complete o celular da pessoa em Administração > Usuários. O e-mail já saiu." },
+         { situacao: "Uma pessoa diz que não recebeu o WhatsApp de resumo", oQueFazer: "Em \"Resumos do dia\", veja o motivo: PJ ou vínculo não informado, já abriu o sistema, nada para hoje, fora do piloto ou desligado por ela em Meus avisos." },
+--- cand35/SGO_Ajuda_Comercial.js	2026-11-19 09:23:14.690499800 -0300
++++ cand36/SGO_Ajuda_Comercial.js	2026-11-19 11:54:51.458821400 -0300
+@@ -127,7 +127,7 @@
+         { titulo: 'Legendas e cenários prontos da viagem (desde 13/11/2026)', itens: ['Cada linha de "Ver a conta linha por linha e ajustar" tem a legenda com o "i": a primeira frase diz a conta da linha (por exemplo, "Km rodado = valor por km da regra do estado de origem × km de ida e volta"). Toque nela para abrir o "Como preencher": o que é, de onde vem o valor, quando mudar, quando marcar "Não se aplica" e um exemplo com os valores da política em vigor.', 'Transporte, Viagens e O.S. previstas também têm legenda: toque em "Ver" para saber o que muda em cada transporte (para não cobrar o combustível junto com o km) e a diferença entre viagens e O.S.', 'Em "Como o custo entra no preço", toque em "Ver o exemplo e quando usar cada um": a conta dos dois modos com o caso real da PROP-2026-0071.', 'Para começar de um caso comum, informe o destino e o km (botão "Calcular km e pedágio") e toque em "Aplicar um cenário pronto".', 'Escolha o cenário: a) cidade próxima, sem pernoite; b) viagem com pernoite, 1 técnico; c) 2 técnicos, vários dias, acima de 200 km; d) contrato com várias visitas; e) Rio de Janeiro; f) transporte aéreo.', 'Ajuste as quantidades que aparecem (técnicos, engenheiros, dias, noites, viagens e O.S. previstas). No avião, informe também as passagens e as horas de viagem.', 'Toque em "Aplicar e calcular". O cenário preenche as quantidades e o transporte, devolve as linhas à regra e salva o rascunho. Confira cada linha e mude o que for diferente: tudo continua editável.', 'O cenário não muda nenhuma regra nem o preço dos serviços: a conta é a mesma que você faria preenchendo à mão.', 'No fim do bloco da viagem fica a aba "Guia da viagem: o que significa cada linha e o que fazer": toque nela para ver o passo a passo, cada linha da conta (o que significa, a conta, o que fazer e um exemplo) e os erros comuns. É o mesmo guia da equipe, dentro da tela.'] },
+         { titulo: 'Deslocamento (passo 2)', itens: ['Diga se há viagem. Não: escreva o motivo.', 'Sim: escolha a cidade de destino (a lista vem da tabela de distâncias do Programa de conduta e já traz o km), os dias, as noites, quantos técnicos e engenheiros vão e o pedágio (0 se não há).', 'Escolha a unidade que emite a nota: Goiânia (padrão) ou Rio de Janeiro. Ela muda os impostos e a sede de onde a distância é medida (no Rio, digite o km a partir da sede do Rio).', 'O sistema calcula o km rodado, o Incentivo de Missão (R$ 300 por executante em trecho de 200 km ou mais a partir da sede), a alimentação, o hotel e as horas de estrada, e o custo vira o item "Despesas de deslocamento e estadia" (custo mais impostos, sem margem e sem desconto). A antiga taxa por viagem de R$ 300 foi removida pelo dono (era o Incentivo de Missão). Toque em "Calcular (salva o rascunho)".', 'Se precisar digitar outro preço para o deslocamento, use "Preço do deslocamento na proposta". Abaixo do custo da viagem a tela avisa em vermelho: a empresa estaria pagando para ir.', 'Transporte diferente do veículo da empresa, várias viagens ou um valor diferente: abra "Ver a conta linha por linha e ajustar".'] },
+         { titulo: 'Preço mínimo, preço sugerido e as opções (passo 4)', itens: ['No passo 4 aparece cada item com o seu preço, o preço mínimo (o que garante a sobra mínima da política) e o preço sugerido (o da margem alvo), e onde o seu preço está: abaixo do mínimo, entre o mínimo e o sugerido, ou no sugerido ou acima. A equipe comercial vê o mínimo e o sugerido em reais; a gestão vê também o custo e a sobra.', 'Abaixo aparecem o total, a situação da sobra, o desconto sobre a tabela e a sua alçada, e o efeito do desconto geral na sobra.', 'As opções: "Usar preço sugerido" (sobe ao sugerido os itens abaixo dele e mostra o novo total), "Ajustar para o mínimo" (só os itens abaixo do mínimo), "Manter meu preço e pedir autorização" (você escreve o motivo; a faixa mostra quem aprova e o que será aprovado) e, no item sem custo válido, "Pedir atualização do custo".', 'Os botões nunca baixam preço e só mudam o rascunho; o histórico da proposta registra o que mudou.'] },
+-        { titulo: 'Preço fora da política: o aprovador delegado (decisão do dono de 18/11/2026)', itens: ['Proposta que só a Diretoria aprova (sobra abaixo da mínima, item sem custo válido, custo sem cotação, preço do catálogo não aprovado) chega na hora ao dono, à Diretoria e ao Matheus, por WhatsApp e e-mail, a qualquer hora.', 'Na proposta, o quadro "Prazo do dono e da Diretoria" mostra até quando vai o prazo (padrão: 15 minutos desde o pedido), quanto falta e o critério de preço, cumprido ou o que falta.', 'Vencido o prazo sem decisão, o Matheus toca em "Autorizar (aprovador delegado)" se nenhum item estiver abaixo do preço mínimo do catálogo e o custo de todos os itens for conferível (sem desconto máximo definido pelo dono; com ele, o desconto sobre a tabela até esse percentual).', 'Ele não autoriza proposta da qual é o responsável nem o pedido que ele mesmo fez. A autorização fica no histórico com o critério e avisa o dono e a Diretoria.'] },
++        { titulo: 'Preço fora da política: o aprovador delegado (decisão do dono de 18/11/2026)', itens: ['Proposta que só a Diretoria aprova (sobra abaixo da mínima, item sem custo válido, custo sem cotação, preço do catálogo não aprovado) chega na hora ao dono, à Diretoria e ao Matheus, por WhatsApp e e-mail, a qualquer hora.', 'Desde 19/11/2026 (pedido do dono) a espera é 0: o Matheus recebe junto com o dono e a Diretoria e pode autorizar na hora. Na proposta, o quadro "Aprovador delegado: decisão na hora" mostra o critério de preço, cumprido ou o que falta. Com uma espera maior que 0 na regra, o quadro vira "Prazo do dono e da Diretoria", com a contagem.', 'Com o critério cumprido, o Matheus toca em "Autorizar (aprovador delegado)" se nenhum item estiver abaixo do preço mínimo do catálogo e o custo de todos os itens for conferível (sem desconto máximo definido pelo dono; com ele, o desconto sobre a tabela até esse percentual).', 'Ele não autoriza proposta da qual é o responsável nem o pedido que ele mesmo fez. A autorização fica no histórico com o critério e avisa o dono e a Diretoria.'] },
+         { titulo: 'Orçamento rápido: vários itens de uma vez, mais usados e copiar (desde 18/11/2026)', itens: ['Na oportunidade, "Nova proposta" abre duas saídas: "Em branco" (o contato principal do cliente e as condições de pagamento, garantia e frete da última proposta dele já vêm preenchidos; confira) ou "Copiar esta" numa proposta anterior do cliente.', 'Na proposta aberta, "Duplicar proposta" cria uma oportunidade nova do mesmo cliente com um rascunho igual: itens, quantidades, parâmetros técnicos, tipo de equipamento, equipamentos ainda ativos, condições, escopo e viagem. Os preços vêm da tabela de hoje; o desconto, as aprovações e a validação do escopo não são copiados, porque a proposta nova passa por todas as regras de novo. Item que saiu do catálogo vem como avulso, com aviso.', 'No passo 1, "Do catálogo" marca vários itens de uma vez: toque no item (ou na caixa) e ajuste a quantidade de cada um; a busca pode mudar à vontade e o que foi marcado continua marcado. No topo aparecem os mais usados (os seus, ou os da equipe enquanto você tem menos de 5 propostas no ano). "Acrescentar N itens" põe todos no rascunho; item igual que já estava na proposta soma na quantidade.', 'Para colar o pedido do cliente (lista de e-mail ou WhatsApp), use o botão "Orçamentista" do passo 1: ele separa os itens e as quantidades.', 'O editor guarda neste aparelho o que você mudou e ainda não salvou. Se a página fechar, ao abrir a proposta aparece "Há alterações desta proposta feitas neste aparelho": toque em "Recuperar e salvar" ou em "Descartar". Ao salvar, a cópia do aparelho é apagada.'] },
+         { titulo: 'Equipamento na calibração e na qualificação: o vínculo é opcional (desde 18/11/2026)', itens: ['Nos itens de calibração e de qualificação (QI, QO e QD), vincular cada equipamento é opcional. A proposta é emitida com a quantidade e o "Tipo de equipamento" do item (por exemplo "termômetro digital"). Em branco, vale o tipo da descrição do catálogo ("Calibração de termômetro digital" dá "termômetro digital"); se a descrição não diz o tipo, o quadro "Faltam dados para emitir" pede o tipo.', 'Se você já sabe os equipamentos, "Identificar equipamentos" continua igual; com parte deles, o documento lista os identificados e diz que os demais são identificados na execução.', 'O documento A4, o escopo da especialista e a passagem aos setores dizem que cada equipamento é identificado na execução. A Área técnica liga o equipamento do cadastro na triagem do chamado ("Ligar ao equipamento do cadastro") e o certificado identifica cada um.', 'Preço, parâmetros técnicos do catálogo oficial e quantidade não dependem do vínculo. Manutenção, NR-13, ensaio e inspeção continuam exigindo o equipamento identificado.', 'A Diretoria pode voltar a exigir o vínculo em Metodologia comercial > "Equipamento na calibração e na qualificação".'] },
+         { titulo: 'Montar e concluir', itens: ['Toque em "Acrescentar item" e comece a digitar o nome ou o código no campo "Produto ou serviço": aparecem os itens ativos do catálogo (Produtos e serviços). Escolha um (toque, ou setas e Enter): código, tipo, descrição, unidade e preço de tabela entram sozinhos. O botão "Do catálogo" abre a mesma busca numa janela.', 'Item que não está no catálogo fica "Avulso (fora do catálogo)": escreva a descrição e o preço. Para desligar um item do catálogo, toque em "Tornar avulso".', 'O preço pode ser ajustado. Diferente da tabela, o item mostra "Abaixo da tabela" (conta como desconto na política) ou "Acima da tabela", e o preço de tabela e o praticado ficam no histórico da proposta.', 'A descrição (escopo) é opcional: escreva só o que for específico desta proposta. Os termos e condições da contratação já vão fixos no documento.', 'Confira o "Tipo de orçamento": Serviço, Produto ou Serviço e produto (misto). Sem escolha, vale o automático pelos itens. O tipo muda os dizeres do documento (apresentação, prazo e local, responsabilidades e aceite); ao trocar, o rascunho é salvo e os textos padrão passam para o modelo escolhido, e o que você escreveu fica.', 'Confira as condições (pagamento, prazo, garantia) e a validade.', 'Preencha "Custos da viagem e do frete" (próximo passo). Sem esse checklist a proposta não conclui.', 'Toque em "Revisão da gestora" para ver o que impede o envio e os alertas.', 'Toque em "Concluir". Dentro da política, a proposta fica pronta; acima do limite de desconto, informe o motivo e ela vai para a aprovação do gestor comercial (Caixa de decisões); abaixo da margem mínima da política de precificação, ela vai para a Diretoria.', 'Item sem custo (item do catálogo sem custo cadastrado ou item avulso) e item com o preço do catálogo ainda não aprovado também levam a proposta para a Diretoria: sem o custo o sistema não confere o preço mínimo que garante a sobra. O passo 4 avisa antes de concluir ("Vai para a Caixa de decisões ao concluir"). Para não depender da aprovação, peça à gestão comercial ou ao Financeiro o custo do item em Produtos e serviços e conclua de novo.', 'A conta usa o custo de hoje no catálogo. A aprovação vale para o que foi aprovado: se depois o custo sobe e a sobra fica abaixo da mínima, ou se os itens mudam, o envio é barrado com a faixa "Preço a conferir antes do envio": toque em "Voltar para rascunho" e conclua de novo.'] },
+@@ -403,7 +403,7 @@
+         { titulo: 'Mudar uma regra (tabelas)', itens: ['Escolha a página no topo.', 'Funis, cadência, estratégias, objeções e listas são tabelas: uma linha por item. Toque em "+ adicionar" para uma linha nova e em "Remover" para tirar.', 'Escreva o que mudou e por quê e toque em "Salvar". A versão anterior fica em "Versões" e a gestora passa a usar a nova.'] },
+         { titulo: 'Preço e desconto (Diretoria e Administrador)', itens: ['Cada campo diz o que é. Os marcados "valor provisório" ainda dependem do dono; o sistema já funciona com eles.', 'Ao lado aparece a regra do preço em linguagem simples, com o exemplo da qualificação de autoclave refeito na hora a cada número que você muda.', 'Sobra mínima: uma só (35%, decisão do dono), depois de impostos, comissão e custos diretos, antes de IR e CSLL. Abaixo dela a proposta vai para a Caixa de decisões e só a Diretoria aprova.', 'Impostos por unidade que emite a nota (Goiânia e Rio, Lucro Real): PIS, COFINS e ISS para serviço; PIS, COFINS, ICMS e FECP para produto, menos os créditos sobre o custo de compra. ISS e ICMS da compra são provisórios até o contador confirmar.', 'Bônus Coletivo diluído na hora: a página mostra a conta (bônus x colaboradores ativos ÷ horas faturáveis = R$ por hora). Deixe as horas em branco para o sistema usar 140 h por colaborador de campo ou informe o número real.', 'Quadro "Decisão do dono de 01/11/2026": veja a prévia da política e aplique (versão nova, campo a campo; o que a Diretoria gravou de diferente fica); depois veja a prévia dos preços e aplique (lote de reajuste, só sobe, com "Desfazer o último reajuste").', 'Faixas de prazo: prazo em dias úteis e acréscimo de cada faixa; a Prioritária fica desligada até o dono aprovar. Escolha se o prazo conta até a entrega do relatório (padrão) ou até a execução.', 'Quando o dono confirmar um valor, marque em "O que o dono já confirmou".'] },
+         { titulo: 'Equipamento na calibração e na qualificação (Diretoria, Administrador e dono)', itens: ['No topo da Metodologia, abra "Equipamento na calibração e na qualificação". Opcional (padrão desde 18/11/2026): o item é emitido com a quantidade e o tipo de equipamento, e cada equipamento é identificado na execução. Obrigatório: cada unidade do item precisa do equipamento identificado antes de gerar o documento.', 'Escolha, escreva o motivo e toque em "Salvar". A mudança fica no histórico do Comercial com quem, quando e o motivo. Manutenção, NR-13, ensaio e inspeção sempre exigem o equipamento.'] },
+-        { titulo: 'Aprovador delegado do preço (só o dono e a Diretoria alteram)', itens: ['No topo da Metodologia, abra o quadro "Aprovador delegado do preço fora da política".', 'Escolha se fica ligado, quem autoriza depois do prazo (padrão: a conta interna "MATHEUS GODOI", da gestão comercial), o prazo em minutos (padrão 15) e o desconto máximo sobre a tabela que ele autoriza (vazio, o padrão: ele não autoriza abaixo do preço mínimo do catálogo).', 'Escolha se os três recebem WhatsApp a qualquer hora e confira o celular de cada um em "Quem recebe estes avisos".', 'Escreva o que mudou e por quê e toque em "Salvar a regra do aprovador delegado": cada versão fica com o motivo.'] },
++        { titulo: 'Aprovador delegado do preço (só o dono e a Diretoria alteram)', itens: ['No topo da Metodologia, abra o quadro "Aprovador delegado do preço fora da política".', 'Escolha se fica ligado, quem é o aprovador delegado (padrão: a conta interna "MATHEUS GODOI", da gestão comercial), a espera em minutos antes de ele poder autorizar (padrão 0 = na hora, desde 19/11/2026) e o desconto máximo sobre a tabela que ele autoriza (vazio, o padrão: ele não autoriza abaixo do preço mínimo do catálogo).', 'Escolha se os três recebem WhatsApp a qualquer hora e confira o celular de cada um em "Quem recebe estes avisos".', 'Escreva o que mudou e por quê e toque em "Salvar a regra do aprovador delegado": cada versão fica com o motivo.'] },
+         { titulo: 'Critérios para avançar de etapa', itens: ['Em "Como vendemos", marque o que o sistema exige para uma oportunidade avançar: confirmar a lista da etapa, decisor mapeado, contato registrado, proposta enviada e aceite para a etapa de 100%.', 'A lista de cada etapa é a coluna "Lista da etapa" da tabela do funil (um item por linha).'] }
+       ],
+       cores: [{ nome: 'Selo laranja "valor provisório"', significado: 'Valor inicial da tabela de preços que o dono ainda vai confirmar.' }],
+--- cand35/SGO_Ajuda_Compras.js	2026-11-19 09:23:15.910273000 -0300
++++ cand36/SGO_Ajuda_Compras.js	2026-11-19 11:54:51.460736800 -0300
+@@ -78,7 +78,7 @@
+         { titulo: 'Lançar os orçamentos', itens: ['Na ficha de um pedido "Em cotação", toque em "Lançar orçamento".', 'Escolha o fornecedor.', 'Digite o preço unitário de cada item, o frete e os impostos que não estão no preço. O total é calculado pelo sistema.', 'Informe o prazo de entrega, a validade, o número do orçamento e a condição de pagamento.', 'Para peça, diga se é original, equivalente ou a confirmar.', 'Anexe o arquivo do orçamento (obrigatório) e toque em "Salvar o orçamento".', 'Repita para cada fornecedor. Para trocar algo, toque em "Corrigir"; para tirar da comparação, "Retirar" com o motivo.'] },
+         { titulo: 'Escolher o orçamento', itens: ['Toque em "Escolher este orçamento" no orçamento vencedor.', 'Se não for o mais barato, escreva o motivo.', 'Se a faixa pede mais cotações do que há, escreva a justificativa (por exemplo, fornecedor único).', 'Na faixa do comprador (até R$ 1.000 no padrão), a sua escolha já é a aprovação registrada.', 'Nas outras faixas, a compra vai para a Caixa de decisões de quem aprova.'] },
+         { titulo: 'Aprovar ou reprovar (quem tem a alçada)', itens: ['Decisão do dono (16/11/2026): no começo, só o dono do sistema e a Diretoria aprovam compras, em qualquer faixa (Chaves e senhas > Regras do Financeiro > Aprovação só do dono e da Diretoria). Gestores e comprador acompanham, mas não aprovam; nem a faixa do comprador é aprovada na escolha do orçamento. Quem pediu nunca aprova a própria compra: se o pedido for do dono, aprova a Diretoria, e vice-versa.', 'Abra a compra pela Caixa de decisões ou pela fila (aba "Aguardando aprovação").', 'Confira os orçamentos, os arquivos e as justificativas.', 'Toque em "Aprovar" (observação opcional) ou em "Reprovar" e escreva o motivo.', 'Aprovada: o comprador recebe a atividade para fazer o pedido. Reprovada: volta para cotação com o motivo.'] },
+-        { titulo: 'Aprovador delegado depois do prazo (decisão do dono de 18/11/2026)', itens: ['O pedido vai à aprovação com 3 orçamentos de fornecedores diferentes, cada um com o arquivo. Com menos, o comprador justifica e só o dono e a Diretoria decidem.', 'Na ficha, o quadro "Prazo do dono e da Diretoria" mostra até quando vai o prazo (padrão: 30 minutos desde a postagem do pedido), quanto falta e cada critério cumprido ou o que falta.', 'Vencido o prazo sem decisão, o Matheus (aprovador delegado) aprova, reprova ou toca em "Pedir novo orçamento", se houver 3 orçamentos válidos, o escolhido for o mais em conta ou justificado, ele não tiver pedido nem cotado e o valor couber no teto (vazio = sem teto).', '"Pedir novo orçamento": escolha o fornecedor do cadastro ou escreva o contato e o que pedir. A compra volta para cotação e o comprador recebe a atividade.', 'Toda decisão do aprovador delegado fica no histórico com o critério e avisa o dono e a Diretoria na hora.'] },
++        { titulo: 'Aprovador delegado (decisões do dono de 18 e 19/11/2026)', itens: ['O pedido vai à aprovação com 3 orçamentos de fornecedores diferentes, cada um com o arquivo. Com menos, o comprador justifica e só o dono e a Diretoria decidem.', 'Desde 19/11/2026 a espera é 0 (padrão): escolhido o orçamento, o Matheus recebe o pedido na hora, junto com o dono e a Diretoria, e o quadro "Aprovador delegado: decisão na hora" mostra cada critério cumprido ou o que falta. Com uma espera maior que 0 em Regras de compras, o quadro vira "Prazo do dono e da Diretoria", com a contagem.', 'Com os critérios cumpridos, o Matheus (aprovador delegado) aprova, reprova ou toca em "Pedir novo orçamento", se houver 3 orçamentos válidos, o escolhido for o mais em conta ou justificado, ele não tiver pedido nem cotado e o valor couber no teto (vazio = sem teto).', '"Pedir novo orçamento": escolha o fornecedor do cadastro ou escreva o contato e o que pedir. A compra volta para cotação e o comprador recebe a atividade.', 'Toda decisão do aprovador delegado fica no histórico com o critério e avisa o dono e a Diretoria na hora.'] },
+         { titulo: 'Fazer o pedido ao fornecedor', itens: ['Na ficha de uma compra "Aprovada", toque em "Emitir o pedido de compra".', 'Informe a previsão de entrega combinada e a forma de pagamento (cartão com os 4 últimos números e as parcelas, PIX, boleto com vencimento, transferência, faturado com a condição ou reembolso).', 'Toque em "Emitir o pedido". Sai a folha A4 numerada (PC-ano-número) na pasta Compras - Pedidos de compra.', 'Toque em "Enviar ao fornecedor": o e-mail para pedidos do fornecedor já vem sugerido.', 'Depois de enviar, toque em "Já enviei: atualizar".'] },
+         { titulo: 'Mudar a previsão ou o pedido', itens: ['Toque em "Mudar previsão ou rastreio", informe a data nova e o motivo. Quem pediu vê a data nova.', 'Para mudar o próprio pedido (quantidade, forma de pagamento), toque em "Nova revisão do pedido" e escreva o que mudou. Sai a revisão 01, 02...'] },
+         { titulo: 'Receber e conferir', itens: ['Quando a compra chegar, toque em "Registrar o recebimento".', 'Conte e informe a quantidade recebida de cada item.', 'Marque se a especificação confere e se chegou sem dano.', 'Informe o número da nota fiscal (ou o motivo de vir sem nota).', 'Com dano, anexe a foto. Com qualquer divergência, descreva o que aconteceu.', 'Sem divergência, a peça fica "Disponível" e quem pediu é avisado. Com divergência, fica segura até você tocar em "Divergência resolvida".'] },
+@@ -100,7 +100,7 @@
+         { situacao: 'Aparece "Você não tem a permissão «Cotar e comprar»" (ou «Ver a fila e o painel de compras», «Ver valores de compras e fornecedores», «Gestão de Compras», «Alterar as regras de compras», «Dar ciência de compra fora do fluxo»).', oQueFazer: 'Essa caixa foi tirada da sua conta em Administração > Acessos, mesmo que o seu nome esteja na lista de compradores. Se você precisa fazer isso, peça ao responsável pelo sistema para rever a caixa. Sem alteração gravada vale a lista de compradores e substitutos de Regras de compras, como sempre.' },
+         { situacao: 'Aparece "Você não tem a permissão «Aprovar compra até o limite do comprador»" (ou «… da própria área», «… acima de todas as faixas»).', oQueFazer: 'A compra é da faixa indicada (o valor escolhido define a faixa, pelas Regras de compras) e a caixa daquela faixa foi tirada da sua conta em Administração > Acessos. A mensagem diz quem aprova. A caixa diz se a pessoa aprova; o valor máximo de cada faixa continua nas Regras de compras.' },
+         { situacao: 'A lista está vazia (Fila, Conferência do Financeiro, A pagar).', oQueFazer: 'A mensagem da lista diz o que trocar: outra situação nas abas do alto (ou «Todas»), outro mês, o final do cartão apagado ou, em A pagar, «Pagos nos últimos 60 dias» em Mostrar.' },
+-        { situacao: 'Aparece "O prazo do dono e da Diretoria vai até ... (faltam ...)".', oQueFazer: 'Você é o aprovador delegado e o prazo do dono e da Diretoria ainda corre. A contagem na ficha mostra quanto falta. Vencido o prazo sem decisão, você recebe o WhatsApp e pode decidir.' },
++        { situacao: 'Aparece "O prazo do dono e da Diretoria vai até ... (faltam ...)".', oQueFazer: 'Só aparece quando a regra tem espera maior que 0 (o padrão desde 19/11/2026 é 0, decisão na hora). Você é o aprovador delegado e o prazo do dono e da Diretoria ainda corre; a contagem na ficha mostra quanto falta. Vencido o prazo sem decisão, você recebe o WhatsApp e pode decidir.' },
+         { situacao: 'Aparece "O prazo do dono e da Diretoria venceu, mas falta cumprir: ...".', oQueFazer: 'Faltam orçamentos válidos (fornecedor, valor e arquivo), a justificativa da escolha ou o valor passa do teto. O comprador lança o que falta; até lá, só o dono e a Diretoria decidem.' },
+         { situacao: 'O botão "iniciar cotação" não aparece.', oQueFazer: 'A especificação está incompleta ou foi devolvida. Complete pelo botão "Editar a especificação" ou espere quem pediu completar.' },
+         { situacao: 'Aparece "anexe o arquivo do orçamento".', oQueFazer: 'Só conta orçamento com a prova do preço. Salve o e-mail ou o PDF do fornecedor (ou tire foto) e anexe.' },
+--- cand35/SGO_Ajuda_Gestao.js	2026-11-19 09:23:15.262794800 -0300
++++ cand36/SGO_Ajuda_Gestao.js	2026-11-19 11:54:58.956641200 -0300
+@@ -92,6 +92,7 @@
+         { titulo: 'Escolher os responsáveis', itens: ['Em "Gestor responsável por área", marque uma ou mais pessoas em cada área.', 'Deixe em branco a área que a Diretoria acompanha diretamente.', 'Toque em "Salvar regras".'] },
+         { titulo: 'Ajustar a escada', itens: ['Escolha a hora do e-mail diário (dentro do horário de trabalho).', 'Escolha depois de quantos dias úteis parado o item entra no WhatsApp e vai para a Diretoria.', 'Toque em "Salvar regras".'] },
+         { titulo: 'Ajustar o resumo diário da Diretoria', itens: ['Na caixa "Diretoria informada (resumo diário)", deixe marcado "Resumo diário da Diretoria" (padrão).', 'Escolha a hora (dia útil, dentro do horário de trabalho; padrão 08:30).', 'Desmarcado, volta o comportamento anterior: aviso item a item à Diretoria (decisão nova, prazo vencido, escalada e SEDNA) e a janela obrigatória de nova data também para a Diretoria.', 'Toque em "Salvar regras".'] },
++        { titulo: 'Decisor operacional da Diretoria (decisão do dono de 19/11/2026)', itens: ['Na caixa "Decisor operacional da Diretoria", deixe marcado "Decisor operacional ligado" (padrão) e escolha quem (padrão: a conta interna "MATHEUS GODOI").', 'O que cairia só no dono e na Diretoria (área sem gestor, item que só a Diretoria decide) e não é saída de dinheiro nem sigilo passa a ir também a essa pessoa: ela recebe pela Caixa (aviso GS01) e decide com as travas de cada módulo. Ninguém decide sobre si mesmo.', 'Fica sempre só com a Diretoria: Financeiro (pagamentos, orçamento, estornos, cobrança), depósito de viagem, Recarga Caju, comissão dos vendedores, Programa de conduta, ponto e RH, aprovação de compras (regra própria em Compras > Regras de compras) e todo item com sigilo.', 'Para tirar mais algum tipo, escreva o código do tipo em "Tipos a mais só da Diretoria" e salve.'] },
+         { titulo: 'Ajustar o escalonamento por prioridade', itens: ['Vá à caixa "Atividade atrasada: escalonamento por prioridade".', 'Deixe marcado "Escalonar as atividades atrasadas" (desmarque para parar).', 'Em cada prioridade, escreva as horas para o responsável, o gestor da área e a Diretoria. Use números crescentes, de 0,25 (15 minutos) a 720.', 'Toque em "Salvar regras".'] },
+         { titulo: 'Ajustar o resumo do dia', itens: ['Na mesma caixa, em "Resumo do dia da gestão", marque ou desmarque "Mostrar o resumo do dia no Início".', 'Escolha a hora (dentro do horário de trabalho).', 'Marque ou desmarque o texto reescrito pela IA.', 'Toque em "Salvar regras".'] }
+       ],
+--- cand35/SGO_AssistenteManuais.js	2026-11-19 10:39:09.258697100 -0300
++++ cand36/SGO_AssistenteManuais.js	2026-11-19 12:31:03.684344000 -0300
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "42fe9aea39f7",
++ "versao": "90df470e7e3b",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -1229,6 +1229,10 @@
+      "texto": "A fila da gestão usa o modelo novo quando ele está aprovado E na categoria Utilidade (Chaves e senhas › Situação dos modelos); até lá, continua no sgo_gestao_acao. O registro de cada aviso diz o modelo usado. Cadastro do modelo novo: Chaves e senhas › Cadastrar modelos na Meta."
+     },
+     {
++     "titulo": "3C. Compras e preço do Comercial: aprovador delegado na hora (19/11/2026, pedido do dono)",
++     "texto": "GS08 (nova solicitação de compra e, desde 19/11/2026, compra informada depois de feita), GS09 (pedido de aprovação da compra ao aprovador delegado, na escolha do orçamento com a espera 0, que é o padrão), GS10 (decisão do aprovador delegado, ao dono e à Diretoria) e GS11 (pedido de aprovação de preço do Comercial) vão na hora, a qualquer hora, ao dono, à Diretoria e ao Matheus, por WhatsApp e e-mail, e ficam na fila dos avisos da gestão (Meus avisos e o registro de cada envio). A espera antes de o Matheus decidir é configurável em Compras > Regras de compras e em Comercial > Metodologia (padrão 0 desde 19/11/2026). Quem pediu nunca recebe o próprio pedido para decidir."
++    },
++    {
+      "titulo": "Matriz de avisos (Administrador e Diretoria) (parte 1)",
+      "texto": "1. Abra Menu › Administração › Matriz de avisos. 2. \"Resumo do dia e filtro por área\": confira as horas (e-mail 08:00, WhatsApp 09:30), o WhatsApp de resumo e a central por área. Para mudar, abra \"Alterar horários\", ajuste, escreva o motivo e toque em \"Salvar horários\". 3. \"Gestor de cada área\": mostra quem responde por cada área. Área sem gestor aparece em amarelo (vai para a Diretoria). Para definir, toque no botão que abre Caixa de decisões › Regras e responsáveis. 4. \"Regras de cada evento\": filtre pelo módulo. Em cada evento escolha o canal do e-mail (só no sistema, no resumo do dia, na hora), o do WhatsApp (sem WhatsApp, na contagem do dia; na hora só nas exceções) e a decisão (continua avisando ou vira só histórico). Toque em \"Salvar\" e escreva o motivo. 5. \"Voltar ao padrão aprovado\" desfaz uma mudança (também pede o motivo). 6. \"Resumos do dia\": escolha o dia e veja, por pessoa e canal, se o resumo saiu e por quê não saiu (sem novidade, já abriu o sistema, PJ, desligado pela pessoa, retido pelo piloto). 7. \"Medição\": antes (16/10 a 20/10) e depois; mostra a média e o maior número de e-mails e WhatsApp por pessoa por dia, quantas pessoas-dia passaram da meta, WhatsApp fora do expediente e para PJ, retidos pelo piloto e e-mails guardados para o resumo. 8. \"Preferências da equipe\": o que cada pessoa escolheu em Meus avisos (só leitura). 9. \"Trilha de mudanças\": quem mudou, quando, o antes, o depois e o motivo. 10. \"Avisos da gestão\" (01/11/2026): escolha o dia e toque em \"Mostrar\". Aparecem os totais (enviados, na fila, falhas, parados e WhatsApp aguardando modelo), a situação do modelo sgo_gestao_acao e uma linha por aviso: quando, pessoa, tipo, item, situação, canais e o motivo."
+     },
+@@ -2522,7 +2526,7 @@
+     },
+     {
+      "titulo": "Propostas > Preço fora da política: o aprovador delegado (decisão do dono de 18/11/2026) (parte 2)",
+-     "texto": "A regra fica em Comercial > Metodologia, no quadro \"Aprovador delegado do preço fora da política\", com versão e motivo; só o dono e a Diretoria alteram. O quadro mostra quem recebe os avisos e o final do celular de cada um, ou \"sem telefone: o aviso vai só pelo sistema e pelo e-mail\"."
++     "texto": "Decisão na hora (pedido do dono de 19/11/2026). A espera antes do aprovador delegado passou a 0 minutos (padrão): cada pedido de aprovação de preço chega ao mesmo tempo ao dono, ao Charles e ao Matheus (GS11), e o Matheus pode autorizar na hora, com o mesmo critério de preço (nenhum item abaixo do preço mínimo do catálogo, custo conferível em todos os itens). Na proposta, o quadro passa a se chamar \"Aprovador delegado: decisão na hora\". Com espera 0, a rodada de 15 minutos não repete o aviso (GS09). Proposta do próprio Matheus continua só com o dono e o Charles; cada autorização dele avisa os dois na hora (GS10). Com uma espera maior que 0 na regra, volta o comportamento com prazo e contagem descrito acima.\n\nA regra fica em Comercial > Metodologia, no quadro \"Aprovador delegado do preço fora da política\", com versão e motivo; só o dono e a Diretoria alteram. O quadro mostra quem recebe os avisos e o final do celular de cada um, ou \"sem telefone: o aviso vai só pelo sistema e pelo e-mail\"."
+     },
+     {
+      "titulo": "Propostas > Proposta errada: editar, excluir ou cancelar",
+@@ -2785,6 +2789,10 @@
+      "texto": "O resto do Financeiro (aprovação de pagamentos, estorno, orçamento anual, recarga do Caju) continua só com o dono e o Charles: o aprovador delegado vale apenas para as compras e para o preço do Comercial."
+     },
+     {
++     "titulo": "Aprovador delegado das compras (decisão do dono de 18/11/2026) > Decisão na hora (pedido do dono de 19/11/2026)",
++     "texto": "O dono e o Charles não estavam dando conta de acompanhar os pedidos. Desde 19/11/2026 a espera antes do aprovador delegado é 0 minutos (padrão): escolhido o orçamento, o pedido de aprovação chega ao mesmo tempo ao dono, ao Charles e ao Matheus, e o Matheus pode aprovar, reprovar ou pedir novo orçamento na hora, com os mesmos critérios (3 orçamentos válidos, o mais em conta ou justificado, não pediu nem cotou, teto). Quem decidir primeiro resolve; cada decisão do Matheus avisa o dono e o Charles na hora (GS10). Compra pedida pelo próprio Matheus continua só com o dono e o Charles.\nO aviso ao Matheus (GS09) sai na escolha do orçamento. Se faltar critério, o aviso diz o que falta e que, até lá, a decisão é do dono ou da Diretoria.\nNa ficha, o quadro passa a se chamar \"Aprovador delegado: decisão na hora\". Com uma espera maior que 0 em Regras de compras, volta o quadro \"Prazo do dono e da Diretoria\", com a contagem.\nA compra informada depois de feita também avisa na hora o dono, o Charles e o Matheus (GS08, para conhecimento), menos quem informou e quem comprou.\nO valor de 30 minutos gravado em 18/11/2026 não vale mais: a regra passou a usar o campo \"Espera antes do aprovador delegado decidir\", com padrão 0."
++    },
++    {
+      "titulo": "Pedido de compra ao fornecedor",
+      "texto": "Com a compra \"Aprovada\", o comprador toca em \"Emitir o pedido de compra\", informa a previsão de entrega combinada e a forma de pagamento (cartão de crédito ou débito com os 4 últimos números e as parcelas, PIX, boleto com o vencimento, transferência, faturado com a condição ou reembolso a um colaborador). Nunca se digita o número inteiro do cartão.\n\nO pedido sai numerado (PC-ano-número, por exemplo PC-2026-0001, revisão 00) em folha A4 retrato, salva em PDF e HTML na pasta \"Compras - Pedidos de compra\", separada por mês. Traz os dados da Metrolabs (endereço de entrega e de faturamento, em Regras de compras), o fornecedor, os itens com a especificação e a quantidade, o preço unitário, o frete, os impostos e o total, a previsão, a condição e a forma de pagamento, o número do orçamento do fornecedor, quem emitiu e quem aprovou. O vínculo aparece só pela referência interna, sem o nome do cliente. No rodapé, a marca de conferência do conteúdo.\n\n\"Enviar ao fornecedor\" abre a janela Enviar documento com o e-mail para pedidos do fornecedor sugerido; o envio fica no histórico. Depois, \"Já enviei: atualizar\" marca o pedido como enviado (a rotina também confere sozinha). Enviado por outro meio (portal do fornecedor, em mãos): \"Enviado por outro meio\", com o relato.\n\nA previsão de entrega muda só com o motivo (\"Mudar previsão ou rastreio\"); quem pediu vê a data nova em Meus pedidos. Para mudar o pedido em si, \"Nova revisão do pedido\" com o que mudou: sai a revisão 01, 02, e a anterior continua na pasta."
+     },
+@@ -2826,7 +2834,7 @@
+     },
+     {
+      "titulo": "Regras de compras",
+-     "texto": "Administrador, Diretoria, Gestor, RH e Financeiro alteram; compradores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.\n\nPadrão aprovado pelo dono em 21/10/2026:\nValor total da compra | Quem aprova | Cotações mínimasAté R$ 1.000 | O comprador (fica registrado) | 1\nDe R$ 1.000,01 a R$ 10.000 | Gestor da área | 2\nAcima de R$ 10.000 | Diretoria | 3\nCompras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código.\n\nQuadro \"Aprovador delegado\" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; quem decide depois do prazo (padrão: a conta interna \"MATHEUS GODOI\"; só conta interna ativa, nunca o dono ou a Diretoria); prazo em minutos (padrão 30); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou \"sem telefone: o aviso vai só pelo sistema e pelo e-mail\". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo."
++     "texto": "Administrador, Diretoria, Gestor, RH e Financeiro alteram; compradores consultam. Cada alteração vira uma versão nova, com o motivo, e a anterior fica no histórico.\n\nPadrão aprovado pelo dono em 21/10/2026:\nValor total da compra | Quem aprova | Cotações mínimasAté R$ 1.000 | O comprador (fica registrado) | 1\nDe R$ 1.000,01 a R$ 10.000 | Gestor da área | 2\nAcima de R$ 10.000 | Diretoria | 3\nCompras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código.\n\nQuadro \"Aprovador delegado\" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; aprovador delegado (padrão: a conta interna \"MATHEUS GODOI\"; só conta interna ativa, nunca o dono ou a Diretoria); espera antes de ele decidir, em minutos (padrão 0 = na hora, desde 19/11/2026; de 0 a 2.880); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou \"sem telefone: o aviso vai só pelo sistema e pelo e-mail\". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo."
+     },
+     {
+      "titulo": "Avisos (parte 1)",
+@@ -2834,11 +2842,11 @@
+     },
+     {
+      "titulo": "Avisos (parte 2)",
+-     "texto": "Exceção autorizada pelo dono em 18/11/2026, só para o dono, a Diretoria e o aprovador delegado, a qualquer hora, inclusive fora do expediente (WhatsApp e e-mail pela fila dos avisos da gestão, mais o alerta na tela; podem levar o valor, porque são os aprovadores): GS08, nova solicitação de compra: número, quem pediu, o que é, urgência e o link. GS09, prazo do dono e da Diretoria vencido com os critérios cumpridos: o delegado já pode decidir (uma vez por pedido). GS10, decisão do delegado: o que decidiu, o valor e o critério cumprido (para o dono e a Diretoria). Quem não tem celular no cadastro recebe pelo e-mail e pelo sistema. Com o WhatsApp a qualquer hora desligado em Regras de compras, esses avisos vão só pelo sistema e pelo e-mail. Especificação incompleta ou devolvida: quem pediu, no sistema até completar; a devolução também vai no resumo de e-mail. Pedido cancelado: quem pediu (e o vendedor, se for de pedido do Comercial), só no sistema. Pedido novo para cotar: o comprador, como atividade. Compra aguardando aprovação: o aprovador da faixa, pela Caixa de decisões (faixa do comprador: no Início dos compradores). Compra aprovada: o comprador, no sistema e no resumo de e-mail, com a atividade de fazer o pedido. Compra reprovada: o comprador, só no sistema, com o motivo. Aprovada sem pedido há 1 dia útil ou entrega atrasada: o comprador, no Início; depois de 2 dias úteis, a Caixa de decisões do gestor da área de Compras. Peça pedida e mudança de situação: só histórico (quem pediu vê em Meus pedidos). Recebida com divergência: o comprador, no sistema até resolver. Peça disponível: quem pediu e, no pedido do Comercial, o vendedor, no sistema e no resumo de e-mail. Peça disponível de um pedido ligado a um chamado da Assistência técnica (vínculo \"CH-...\"):"
++     "texto": "Exceção autorizada pelo dono em 18/11/2026, só para o dono, a Diretoria e o aprovador delegado, a qualquer hora, inclusive fora do expediente (WhatsApp e e-mail pela fila dos avisos da gestão, mais o alerta na tela; podem levar o valor, porque são os aprovadores): GS08, nova solicitação de compra (número, quem pediu, o que é, urgência e o link) e, desde 19/11/2026, compra informada depois de feita (onde, valor, quem comprou), para conhecimento. GS09, pedido de aprovação ao delegado: na escolha do orçamento (espera 0, padrão) ou quando vence a espera configurada; diz os critérios cumpridos ou o que falta (uma vez por pedido). GS10, decisão do delegado: o que decidiu, o valor e o critério cumprido (para o dono e a Diretoria). Quem não tem celular no cadastro recebe pelo e-mail e pelo sistema. Com o WhatsApp a qualquer hora desligado em Regras de compras, esses avisos vão só pelo sistema e pelo e-mail. Especificação incompleta ou devolvida: quem pediu, no sistema até completar; a devolução também vai no resumo de e-mail. Pedido cancelado: quem pediu (e o vendedor, se for de pedido do Comercial), só no sistema. Pedido novo para cotar: o comprador, como atividade. Compra aguardando aprovação: o aprovador da faixa, pela Caixa de decisões (faixa do comprador: no Início dos compradores). Compra aprovada: o comprador, no sistema e no resumo de e-mail, com a atividade de fazer o pedido. Compra reprovada: o comprador, só no sistema, com o motivo. Aprovada sem pedido há 1 dia útil ou entrega atrasada: o comprador, no Início; depois de 2 dias úteis, a Caixa de decisões do gestor da área de Compras. Peça pedida e mudança de situação: só histórico (quem pediu vê em Meus pedidos). Recebida com divergência: o comprador, no sistema até resolver. Peça disponível:"
+     },
+     {
+      "titulo": "Avisos (parte 3)",
+-     "texto": "Compras chama a\n Assistência depois de soltar a própria trava; o chamado volta sozinho a \"Planejado\" como \"retorno a agendar\", o\n técnico e a gestão da área Técnica são avisados (AT14) e o cliente recebe o e-mail \"peça chegou, retorno será\n agendado\" (AT15). Recebimento com divergência não devolve o chamado; \"Divergência resolvida\" devolve (22/10/2026). Compra para conferir: o Financeiro, no sistema até conferir e no resumo de e-mail (sem valor). Divergência do Financeiro: quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail. Compra sem pedido e compra informada acima do limite da compra direta: a Caixa de decisões da gestão até a ciência. Compra informada em seu nome por outra pessoa: você, no sistema. Compra informada que \"ainda vai chegar\": o comprador, no sistema e no resumo de e-mail, para registrar o recebimento. Compra no cartão da empresa que está na fatura e ninguém informou (evento CP02 da matriz): o responsável pelo cartão, no Início até informar; e-mail no expediente depois de 2 dias úteis; WhatsApp só na contagem do resumo do dia. Depois de 5 dias úteis, a Caixa de decisões do gestor da área da pessoa. Reembolso pago: quem recebeu, no sistema e no resumo de e-mail. Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.\n\nA rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês."
++     "texto": "quem pediu e, no pedido do Comercial, o vendedor, no sistema e no resumo de e-mail. Peça disponível de um pedido ligado a um chamado da Assistência técnica (vínculo \"CH-...\"): Compras chama a\n Assistência depois de soltar a própria trava; o chamado volta sozinho a \"Planejado\" como \"retorno a agendar\", o\n técnico e a gestão da área Técnica são avisados (AT14) e o cliente recebe o e-mail \"peça chegou, retorno será\n agendado\" (AT15). Recebimento com divergência não devolve o chamado; \"Divergência resolvida\" devolve (22/10/2026). Compra para conferir: o Financeiro, no sistema até conferir e no resumo de e-mail (sem valor). Divergência do Financeiro: quem registrou o pagamento, no sistema até corrigir e no resumo de e-mail. Compra sem pedido e compra informada acima do limite da compra direta: a Caixa de decisões da gestão até a ciência. Compra informada em seu nome por outra pessoa: você, no sistema. Compra informada que \"ainda vai chegar\": o comprador, no sistema e no resumo de e-mail, para registrar o recebimento. Compra no cartão da empresa que está na fatura e ninguém informou (evento CP02 da matriz): o responsável pelo cartão, no Início até informar; e-mail no expediente depois de 2 dias úteis; WhatsApp só na contagem do resumo do dia. Depois de 5 dias úteis, a Caixa de decisões do gestor da área da pessoa. Reembolso pago: quem recebeu, no sistema e no resumo de e-mail. Relatório do mês: a Diretoria, no primeiro dia útil, no sistema e no resumo de e-mail.\n\nA rotina automática de Compras (roda no máximo uma vez por hora e também quando alguém abre Compras) manda os resumos de e-mail, confere os envios do pedido de compra e gera o relatório do mês."
+     },
+     {
+      "titulo": "Etapa 5 do programa de melhoria (01/11/2026): listas vazias",
+@@ -3707,6 +3715,10 @@
+      "texto": "Regras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-mail por dia (as decisões dela, os escalados, as áreas sem gestor e os relatórios do dia); o mesmo item não é cobrado duas vezes no mesmo dia (cada envio fica em GES_ENVIOS). WhatsApp: no máximo uma mensagem por pessoa por dia somando atividades e gestão (no dia em que o gestor recebe o resumo da gestão, ele já leva a contagem das atividades dele), só no horário de trabalho, só para o vínculo liberado (padrão CLT). Modelo da Meta próprio: sgo_gestao_resumo_dia (até ser aprovado, sai pelo sgo_aviso_geral).\n\nTudo configurável em Regras e responsáveis (horas, dias úteis do WhatsApp e da Diretoria, liga e desliga de cada etapa e de cada automação). O horário de trabalho e os feriados continuam em Atividades da equipe > Avisos e horários."
+     },
+     {
++     "titulo": "Decisor operacional da Diretoria (19/11/2026)",
++     "texto": "Pedido do dono de 19/11/2026: o dono e o Charles não dão conta de acompanhar tudo. O que cairia só com eles (área sem gestor responsável, ou item que vai à reserva da Diretoria) e não é saída de dinheiro nem assunto de sigilo passa a ir também ao decisor operacional (padrão: a conta interna \"MATHEUS GODOI\"). Ele recebe pela Caixa (aviso GS01, na hora) e decide com as travas de cada módulo. Ninguém decide sobre si mesmo (a pessoa envolvida e quem não pode decidir ficam fora).\n\nFica sempre só com a Diretoria: Financeiro (pagamentos, orçamento anual, estornos e demais lançamentos), depósito de viagem, Recarga Caju, comissão dos vendedores, Programa de conduta, ponto e RH, a aprovação de compras (tem regra própria: aprovador delegado em Compras > Regras de compras) e todo item com sigilo (ocorrência de conduta, Financeiro) ou só da Diretoria (sugestão sobre gestor).\n\nConfiguração em Regras e responsáveis, caixa \"Decisor operacional da Diretoria\": liga e desliga, quem (padrão ou uma pessoa da gestão fora da Diretoria) e tipos a mais que ficam só com a Diretoria (códigos separados por vírgula)."
++    },
++    {
+      "titulo": "Diretoria informada, não cobrada (11/11/2026) (parte 1)",
+      "texto": "Decisão do dono de 11/11/2026: os donos (o dono, no login admin, e quem tem o perfil Diretoria) não são cobrados como funcionários; são informados e decidem só o que é da Diretoria. Com o \"Resumo diário da Diretoria\" ligado (padrão; Regras e responsáveis, caixa \"Diretoria informada\"), a Diretoria deixa de receber aviso item a item de decisão nova (GS01), prazo vencido (GS02), escalada (GS03) e das escaladas de atividade da SEDNA (S71 a S73). A escada continua marcando o item como escalado e ele continua na aba \"Com a Diretoria\". No lugar, um resumo por dia útil, à hora das regras (padrão 08:30): e-mail com os números do dia, o que está parado em cada setor (item, com quem está, há quantos dias, prazo e link), as atividades da equipe atrasadas, o que está com a Diretoria e as atividades da própria pessoa (lembrete); WhatsApp curto (quantidade por setor e o link) pelo modelo de utilidade da gestão (sgo_gestao_item quando aprovado e na categoria Utilidade, senão o sgo_gestao_acao); alerta na tela. Evento GS07 da matriz de avisos. Texto informativo, sem pedir ação nem justificativa. Continuam na hora: o que só a Diretoria decide (GS04 proposta, GS05 depósito de viagem, GS06 preço, compra e demais pedidos por regra) e os atos irreversíveis (GI01 a GI07). O resumo do dia das 08:00 da Diretoria fica com os relatórios do dia e diz que o resto vai no resumo da Diretoria. Para os gestores nada mudou. Relatório diário da empresa (Gestão > Relatório diário da empresa, ou o link do resumo): documento A4 com índice clicável, visão geral com gráficos, Kanban da empresa, uma seção por setor, ranking de atrasos por pessoa e por setor, o que está com a Diretoria, atos irreversíveis do dia e o Programa de conduta só em números. Abre para a Diretoria e o dono;"
+     },
+--- cand35/JS_Compras.html	2026-11-19 09:23:15.805708100 -0300
++++ cand36/JS_Compras.html	2026-11-19 11:51:33.372422800 -0300
+@@ -547,7 +547,10 @@
+       h += '<div class="cp-faixa aviso"><b>Aguardando aprovação</b> (' + Cp_esc_(q.aprovacao.nivelNome) + ') desde ' + Cp_esc_(q.aprovacao.pedidaEm) + '. Quem aprova: ' + Cp_esc_(q.aprovacao.quem.join(", ")) + '. ' + Cp_esc_(q.aprovacao.motivoRota) + '</div>';
+       // 18/11/2026 (Pacote 1): contagem do prazo do dono e da Diretoria e os critérios do aprovador delegado
+       var dl = q.aprovacao.delegado;
+-      if (dl) h += '<div class="cp-caixa cp-delegado"><h3>Prazo do dono e da Diretoria</h3><p>' + (dl.liberado
++      // 19/11/2026 (pedido do dono): com a espera 0 (padrão), o aprovador delegado decide na hora, com os mesmos critérios
++      if (dl) h += '<div class="cp-caixa cp-delegado"><h3>' + (Number(dl.prazoMinutos) > 0 ? 'Prazo do dono e da Diretoria' : 'Aprovador delegado: decisão na hora') + '</h3><p>' + (!(Number(dl.prazoMinutos) > 0)
++          ? 'O dono, a Diretoria e ' + Cp_esc_(dl.nomes.join(", ")) + ' (aprovador delegado) receberam o pedido na hora. ' + Cp_esc_(dl.nomes.join(", ")) + (dl.criterios.every(function (c) { return c.ok; }) ? ' já pode decidir.' : ' só pode decidir quando se cumprir o que falta abaixo; até lá, o dono ou a Diretoria decidem.')
++          : dl.liberado
+           ? 'Venceu em <b>' + Cp_esc_(dl.liberaEm) + '</b> (' + dl.prazoMinutos + ' minutos ' + Cp_esc_(dl.contaDe) + ', a partir de ' + Cp_esc_(dl.postadoEm) + '). ' + Cp_esc_(dl.nomes.join(", ")) + (dl.criterios.every(function (c) { return c.ok; }) ? ' já pode decidir.' : ' só pode decidir quando se cumprir o que falta abaixo.')
+           : 'Vai até <b>' + Cp_esc_(dl.liberaEm) + '</b> (' + dl.prazoMinutos + ' minutos ' + Cp_esc_(dl.contaDe) + ', a partir de ' + Cp_esc_(dl.postadoEm) + '). Faltam <b data-cp-contagem="' + Cp_esc_(dl.faltaMin) + '">' + Cp_esc_(dl.faltaTxt) + '</b>. Depois disso, se ninguém decidir, ' + Cp_esc_(dl.nomes.join(", ")) + ' pode decidir com estes critérios:') + '</p>' +
+         '<ul class="cp-criterios">' + dl.criterios.map(function (c) { return '<li class="' + (c.ok ? "ok" : "falta") + '">' + (c.ok ? "Cumprido: " : "Falta: ") + Cp_esc_(c.texto) + '</li>'; }).join("") + '<li class="ok">Quem decide não pediu nem cotou esta compra (conferido na hora da decisão).</li></ul>' +
+@@ -1008,11 +1011,11 @@
+           var x = D.regra, disD = ed && D.podeEditar ? "" : " disabled";
+           var quem = [{ v: "PADRAO", t: "Padrão: conta interna \"" + D.nomePadrao + "\"" + (D.padrao && D.nomes.length ? " (" + D.nomes.join(", ") + ")" : D.padrao ? " (não encontrada: ninguém decide no lugar)" : "") }].concat(D.candidatos.map(function (p) { return { v: p.id, t: p.nome + " · " + p.perfil + (p.area ? " · " + p.area : "") }; }));
+           return '<div class="cp-caixa cp-delegado"><h3>Aprovador delegado (decisão do dono de 18/11/2026)</h3>' +
+-            '<p>' + (D.soDiretoriaLigada ? 'O dono e a Diretoria aprovam as compras a qualquer momento. Se não decidirem dentro do prazo, o aprovador delegado aprova, reprova ou pede novo orçamento a um contato específico, desde que haja o mínimo de orçamentos válidos (fornecedor, valor e arquivo), a escolha seja a mais em conta ou justificada por escrito, ele não tenha pedido nem cotado a compra e o valor caiba no teto. Toda decisão dele vai para o histórico com o critério e avisa o dono e a Diretoria.' : 'A aprovação só do dono e da Diretoria está desligada (Chaves e senhas > Regras do Financeiro): valem as faixas acima e esta regra não se aplica.') + '</p>' +
++            '<p>' + (D.soDiretoriaLigada ? 'O dono e a Diretoria aprovam as compras a qualquer momento. O aprovador delegado recebe o pedido junto com eles e, passada a espera (padrão 0 = na hora, decisão do dono de 19/11/2026), aprova, reprova ou pede novo orçamento a um contato específico, desde que haja o mínimo de orçamentos válidos (fornecedor, valor e arquivo), a escolha seja a mais em conta ou justificada por escrito, ele não tenha pedido nem cotado a compra e o valor caiba no teto. Toda decisão dele vai para o histórico com o critério e avisa o dono e a Diretoria.' : 'A aprovação só do dono e da Diretoria está desligada (Chaves e senhas > Regras do Financeiro): valem as faixas acima e esta regra não se aplica.') + '</p>' +
+             (D.podeEditar ? '' : '<p class="cp-meta">Só o dono e a Diretoria alteram este quadro. As demais regras continuam com quem já as altera.</p>') +
+             '<div class="cp-grade3">' + Cp_campo_("Aprovador delegado ligado", '<select id="rgDlLig"' + disD + '>' + Cp_opcoes_([{ v: "SIM", t: "Sim" }, { v: "NAO", t: "Não (só o dono e a Diretoria)" }], x.ligado ? "SIM" : "NAO") + '</select>') +
+-            Cp_campo_("Quem decide depois do prazo", '<select id="rgDlQuem"' + disD + '>' + Cp_opcoes_(quem, x.aprovadorIds === null ? "PADRAO" : (x.aprovadorIds[0] || "PADRAO")) + '</select>', "Só conta interna ativa. Cliente e representada ficam fora.") +
+-            Cp_campo_("Prazo do dono e da Diretoria (minutos)", '<input type="number" min="5" max="2880" id="rgDlPrazo" value="' + Cp_esc_(x.prazoMinutos) + '"' + disD + '>', "Padrão recomendado: 30 minutos.") + '</div><div class="cp-grade3">' +
++            Cp_campo_("Aprovador delegado", '<select id="rgDlQuem"' + disD + '>' + Cp_opcoes_(quem, x.aprovadorIds === null ? "PADRAO" : (x.aprovadorIds[0] || "PADRAO")) + '</select>', "Só conta interna ativa. Cliente e representada ficam fora.") +
++            Cp_campo_("Espera antes do aprovador delegado decidir (minutos)", '<input type="number" min="0" max="2880" step="1" id="rgDlPrazo" value="' + Cp_esc_(x.esperaMinutos === undefined ? x.prazoMinutos : x.esperaMinutos) + '"' + disD + '>', "Padrão: 0 = recebe e decide na hora (decisão do dono de 19/11/2026). Com um número, o dono e a Diretoria têm esse tempo antes dele.") + '</div><div class="cp-grade3">' +
+             Cp_campo_("O prazo começa a contar", '<select id="rgDlConta"' + disD + '>' + Cp_opcoes_(Cp_mapaOpcoes_(D.contaDe), x.contaDe) + '</select>', "Decisão do dono: da postagem do pedido.") +
+             Cp_campo_("Mínimo de orçamentos para ir à aprovação", '<input type="number" min="1" max="5" id="rgDlMin" value="' + Cp_esc_(x.minimoOrcamentos) + '"' + disD + '>', "Com menos, o comprador justifica e só o dono e a Diretoria decidem.") +
+             Cp_campo_("Teto de valor do aprovador delegado (R$)", '<input type="text" inputmode="decimal" id="rgDlTeto" value="' + Cp_esc_(x.tetoValor === null ? "" : String(x.tetoValor).replace(".", ",")) + '" placeholder="Vazio = sem teto"' + disD + '>', "Vazio = sem teto (o dono não informou valor).") + '</div>' +
+@@ -1047,7 +1050,7 @@
+           informar: { limiteDireta: Cp_$_("rgInfLim").value, prazoDiasUteis: Cp_$_("rgInfPrazo").value, maxDiasAtras: Cp_$_("rgInfMax").value, multiploMedia: Cp_$_("rgInfMult").value, reembolsoDiasUteis: Cp_$_("rgInfReemb").value, cobrancaEmailDiasUteis: Cp_$_("rgInfEmail").value, cobrancaGestaoDiasUteis: Cp_$_("rgInfGestao").value } };
+         // 18/11/2026: o quadro do aprovador delegado só vai quando quem salva é o dono ou a Diretoria (o servidor confere de novo)
+         if (r.delegado && r.delegado.podeEditar && Cp_$_("rgDlLig")) nova.delegado = { ligado: Cp_$_("rgDlLig").value === "SIM", aprovadorIds: Cp_$_("rgDlQuem").value === "PADRAO" ? null : [Cp_$_("rgDlQuem").value],
+-          prazoMinutos: Cp_$_("rgDlPrazo").value, contaDe: Cp_$_("rgDlConta").value, minimoOrcamentos: Cp_$_("rgDlMin").value, tetoValor: Cp_$_("rgDlTeto").value.trim(), whatsappTres: Cp_$_("rgDlWa").value === "SIM" };
++          esperaMinutos: Cp_$_("rgDlPrazo").value, contaDe: Cp_$_("rgDlConta").value, minimoOrcamentos: Cp_$_("rgDlMin").value, tetoValor: Cp_$_("rgDlTeto").value.trim(), whatsappTres: Cp_$_("rgDlWa").value === "SIM" };
+         Cp_chamar_("regras", { salvar: nova, motivo: Cp_$_("rgMotivo").value }, function (rr) { CP.ini = null; Compras_garantirInicio_(function () {}); Compras_renderRegras_(div); setTimeout(function () { alert(rr.message); }, 50); }, function (m) { Cp_msg_("rgMsg", m); }, { carregando: "Salvando…" });
+       };
+     }, function (m) { Cp_msg_("cpRegras", m); });
+--- cand35/JS_Comercial.html	2026-11-19 09:23:15.656441000 -0300
++++ cand36/JS_Comercial.html	2026-11-19 11:52:52.623598700 -0300
+@@ -1221,7 +1221,10 @@
+     if (p.podeDecidirDesconto) { if (p.podeAprovarDesconto) acoes.push(b("aprovarDesc", dlp && dlp.podeEu ? "Autorizar (aprovador delegado)" : p.decisaoSoDiretoria ? "Aprovar (Diretoria)" : "Aprovar o desconto", "btn-primary")); acoes.push(b("negarDesc", p.decisaoSoDiretoria ? "Negar (volta ao vendedor)" : "Negar o desconto")); }
+     if (p.podeDecidirDesconto && !p.podeAprovarDesconto) h += '<div class="cm-faixa aviso">Esta proposta só a Diretoria aprova' + ((p.aguardandoMotivos || []).length ? ' (' + Com_esc_(p.aguardandoMotivos.join(", ")) + ')' : '') + '. Você pode negar (a proposta volta para o vendedor ajustar preço, escopo, custo ou repasse da viagem).' + (dlp && dlp.euDelegado && dlp.motivoEu ? ' Aprovador delegado: ' + Com_esc_(dlp.motivoEu) + '.' : '') + '</div>';
+     // 18/11/2026 (Pacote 1, item 5): contagem do prazo do dono e da Diretoria e o critério do aprovador delegado
+-    if (dlp) h += '<div class="cm-caixa cm-delegado"><p class="cm-sec" style="margin-top:0">Prazo do dono e da Diretoria</p><p>' + (dlp.liberado
++    // 19/11/2026 (pedido do dono): espera 0 (padrão) = o aprovador delegado recebe e autoriza na hora, com o mesmo critério
++    if (dlp) h += '<div class="cm-caixa cm-delegado"><p class="cm-sec" style="margin-top:0">' + (Number(dlp.prazoMinutos) > 0 ? 'Prazo do dono e da Diretoria' : 'Aprovador delegado: decisão na hora') + '</p><p>' + (!(Number(dlp.prazoMinutos) > 0)
++        ? 'O dono, a Diretoria e ' + Com_esc_(dlp.nomes.join(", ")) + ' (aprovador delegado) receberam o pedido na hora. ' + Com_esc_(dlp.nomes.join(", ")) + (dlp.criterios.every(function (c) { return c.ok; }) ? ' já pode autorizar.' : ' só pode autorizar quando se cumprir o critério abaixo; até lá, o dono ou a Diretoria decidem.')
++        : dlp.liberado
+         ? 'Venceu em <b>' + Com_esc_(dlp.liberaEm) + '</b> (' + dlp.prazoMinutos + ' minutos desde o pedido de ' + Com_esc_(dlp.pedidoEm) + '). ' + Com_esc_(dlp.nomes.join(", ")) + (dlp.criterios.every(function (c) { return c.ok; }) ? ' já pode autorizar.' : ' só pode autorizar quando se cumprir o critério abaixo.')
+         : 'Vai até <b>' + Com_esc_(dlp.liberaEm) + '</b> (' + dlp.prazoMinutos + ' minutos desde o pedido de ' + Com_esc_(dlp.pedidoEm) + '). Faltam <b data-cm-contagem="' + Com_esc_(dlp.faltaMin) + '">' + Com_esc_(dlp.faltaTxt) + '</b>. Depois disso, se ninguém decidir, ' + Com_esc_(dlp.nomes.join(", ")) + ' pode autorizar com este critério:') + '</p>' +
+       '<ul class="cm-criterios">' + dlp.criterios.map(function (c) { return '<li class="' + (c.ok ? "ok" : "falta") + '">' + (c.ok ? "Cumprido: " : "Falta: ") + Com_esc_(c.texto) + '</li>'; }).join("") + '<li class="ok">Quem autoriza não é o responsável pela proposta (conferido na hora).</li></ul>' +
+@@ -3907,18 +3910,18 @@
+     var alvo = Com_$_("cmDelPreco"); if (!alvo) return;
+     var x = r.regra, dis = r.podeEditar ? "" : " disabled";
+     var quem = [{ v: "PADRAO", t: "Padrão: conta interna \"" + r.nomePadrao + "\"" + (r.padrao && r.nomes.length ? " (" + r.nomes.join(", ") + ")" : r.padrao ? " (não encontrada na gestão comercial)" : "") }].concat(r.candidatos.map(function (c) { return { v: c.id, t: c.nome }; }));
+-    alvo.innerHTML = '<details class="cm-caixa cm-delegado"' + (aviso ? " open" : "") + '><summary><b>Aprovador delegado do preço fora da política (decisão do dono de 18/11/2026)</b> · ' + Com_esc_(x.ligado && r.nomes.length ? r.nomes.join(", ") + ", depois de " + x.prazoMinutos + " minutos" : "desligado") + '</summary>' +
++    alvo.innerHTML = '<details class="cm-caixa cm-delegado"' + (aviso ? " open" : "") + '><summary><b>Aprovador delegado do preço fora da política (decisão do dono de 18/11/2026)</b> · ' + Com_esc_(x.ligado && r.nomes.length ? r.nomes.join(", ") + (Number(x.prazoMinutos) > 0 ? ", depois de " + x.prazoMinutos + " minutos" : ", na hora") : "desligado") + '</summary>' +
+       (aviso ? '<div class="cm-faixa ok">' + Com_esc_(aviso) + '</div>' : '') +
+-      '<p>O dono e a Diretoria aprovam a qualquer momento o preço que só eles aprovam (sobra abaixo da mínima, item sem custo válido, custo sem cotação, preço do catálogo não aprovado). Se não decidirem no prazo, o aprovador delegado autoriza com o critério de preço abaixo, para não atrasar o comercial. Quem é responsável pela proposta não autoriza o próprio preço. Cada pedido de aprovação de preço avisa o dono, a Diretoria e o aprovador delegado na hora, por WhatsApp e e-mail, a qualquer hora.</p>' +
++      '<p>O dono e a Diretoria aprovam a qualquer momento o preço que só eles aprovam (sobra abaixo da mínima, item sem custo válido, custo sem cotação, preço do catálogo não aprovado). O aprovador delegado recebe o pedido junto com eles e, passada a espera (padrão 0 = na hora, decisão do dono de 19/11/2026), autoriza com o critério de preço abaixo, para não atrasar o comercial. Quem é responsável pela proposta não autoriza o próprio preço. Cada pedido de aprovação de preço avisa o dono, a Diretoria e o aprovador delegado na hora, por WhatsApp e e-mail, a qualquer hora.</p>' +
+       (r.podeEditar ? '' : '<p class="cm-meta">Só o dono e a Diretoria alteram este quadro.</p>') + (r.foraGestao && r.foraGestao.length ? '<div class="cm-faixa aviso">' + Com_esc_(r.foraGestao.join(", ") + " não é da gestão comercial e não abre as propostas: inclua na área Comercial em Caixa de decisões > Regras e responsáveis, ou escolha outra pessoa.") + '</div>' : '') +
+       '<div class="cm-grade3">' + Com_campo_("Aprovador delegado ligado", '<select id="cmDlLig"' + dis + '>' + Com_opcoes_([{ v: "SIM", t: "Sim" }, { v: "NAO", t: "Não (só o dono e a Diretoria)" }], x.ligado ? "SIM" : "NAO") + '</select>') +
+-      Com_campo_("Quem autoriza depois do prazo", '<select id="cmDlQuem"' + dis + '>' + Com_opcoes_(quem, x.aprovadorIds === null ? "PADRAO" : (x.aprovadorIds[0] || "PADRAO")) + '</select>', "Da gestão comercial; conta interna ativa.") +
+-      Com_campo_("Prazo do dono e da Diretoria (minutos)", '<input type="number" min="1" max="1440" id="cmDlPrazo" value="' + Com_esc_(x.prazoMinutos) + '"' + dis + '>', "Padrão recomendado: 15 minutos.") + '</div><div class="cm-grade2">' +
++      Com_campo_("Aprovador delegado", '<select id="cmDlQuem"' + dis + '>' + Com_opcoes_(quem, x.aprovadorIds === null ? "PADRAO" : (x.aprovadorIds[0] || "PADRAO")) + '</select>', "Da gestão comercial; conta interna ativa.") +
++      Com_campo_("Espera antes do aprovador delegado autorizar (minutos)", '<input type="number" min="0" max="1440" step="1" id="cmDlPrazo" value="' + Com_esc_(x.prazoMinutos) + '"' + dis + '>', "Padrão: 0 = recebe e autoriza na hora (decisão do dono de 19/11/2026). Com um número, o dono e a Diretoria têm esse tempo antes dele.") + '</div><div class="cm-grade2">' +
+       Com_campo_("Desconto máximo sobre a tabela que ele autoriza (%)", '<input type="text" inputmode="decimal" id="cmDlPct" value="' + Com_esc_(x.descontoMaxPct === null ? "" : String(x.descontoMaxPct).replace(".", ",")) + '" placeholder="Vazio = não autoriza abaixo do preço mínimo"' + dis + '>', "Vazio (padrão): ele não autoriza item abaixo do preço mínimo do catálogo, nem item sem custo válido. Com número: autoriza desconto até esse percentual sobre a tabela.") +
+       Com_campo_("WhatsApp a qualquer hora para os três", '<select id="cmDlWa"' + dis + '>' + Com_opcoes_([{ v: "SIM", t: "Sim: cada pedido de aprovação de preço, o prazo vencido e a autorização do delegado" }, { v: "NAO", t: "Não: só pelo sistema e pelo e-mail" }], x.whatsappTres ? "SIM" : "NAO") + '</select>', "Exceção à regra do WhatsApp no expediente, autorizada pelo dono só para estes avisos.") + '</div>' +
+       '<p class="cm-sec">Quem recebe estes avisos</p>' + r.avisados.map(function (a) { return '<p class="cm-meta"><b>' + Com_esc_(a.nome) + '</b> (' + Com_esc_(a.papel) + '): ' + Com_esc_(a.situacao) + '.</p>'; }).join("") +
+       (r.podeEditar ? Com_campo_("O que mudou e por quê (obrigatório)", '<textarea id="cmDlMotivo" maxlength="500"></textarea>') + '<div id="cmDlMsg"></div><div class="cm-acoes"><button type="button" class="btn-primary" id="cmDlSalvar">Salvar a regra do aprovador delegado</button></div>' : '') +
+-      (r.versoes && r.versoes.length ? r.versoes.slice(0, 10).map(function (v) { return '<p class="cm-meta">Versão ' + v.versao + ' · ' + Com_esc_(v.em) + ' · ' + Com_esc_(v.por) + ': ' + Com_esc_(v.motivo) + '</p>'; }).join("") : '<p class="cm-meta">Em uso o padrão da decisão do dono (15 minutos, conta interna "' + Com_esc_(r.nomePadrao) + '", sem desconto máximo).</p>') + '</details>';
++      (r.versoes && r.versoes.length ? r.versoes.slice(0, 10).map(function (v) { return '<p class="cm-meta">Versão ' + v.versao + ' · ' + Com_esc_(v.em) + ' · ' + Com_esc_(v.por) + ': ' + Com_esc_(v.motivo) + '</p>'; }).join("") : '<p class="cm-meta">Em uso o padrão da decisão do dono (na hora, sem espera, conta interna "' + Com_esc_(r.nomePadrao) + '", sem desconto máximo).</p>') + '</details>';
+     var bt = Com_$_("cmDlSalvar");
+     if (bt) bt.onclick = function () {
+       var regra = { ligado: Com_$_("cmDlLig").value === "SIM", aprovadorIds: Com_$_("cmDlQuem").value === "PADRAO" ? null : [Com_$_("cmDlQuem").value], prazoMinutos: Com_$_("cmDlPrazo").value, descontoMaxPct: Com_$_("cmDlPct").value.trim(), whatsappTres: Com_$_("cmDlWa").value === "SIM" };
+--- cand35/JS_Gestao.html	2026-11-19 09:23:14.224121200 -0300
++++ cand36/JS_Gestao.html	2026-11-19 11:54:08.240747300 -0300
+@@ -761,6 +761,7 @@
+         chk("gdMensal", "Relatórios do mês à Diretoria (primeiro dia útil do mês)", e.mensal) + '</div>' +
+       '<div class="gd-caixa" style="margin-top:14px"><h3>Diretoria informada (resumo diário)</h3><p class="gd-meta">Decisão do dono (11/11/2026): a Diretoria é informada, não cobrada. Ligado, o que escala ou cai na Diretoria não vira aviso item a item: vai num resumo por dia útil (e-mail com a lista e o relatório diário da empresa, WhatsApp curto e alerta na tela), e a atividade vencida da Diretoria vira lembrete, sem justificativa obrigatória. O que só a Diretoria decide e os atos irreversíveis continuam na hora.</p>' +
+         chk("gdDirResumo", "Resumo diário da Diretoria (no lugar dos avisos item a item)", !r.cfg.diretoriaResumo || r.cfg.diretoriaResumo.ligado !== false) + hora("gdDirHora", "Hora do resumo da Diretoria (dia útil)", (r.cfg.diretoriaResumo && r.cfg.diretoriaResumo.hora) || "08:30") + '</div>' +
++      Gestao_htmlOperacional_(r, dis, chk) +
+       '<div class="gd-caixa" style="margin-top:14px"><h3>Automações</h3>' +
+         chk("gdAutoCnh", "CNH: avisar o condutor com 30, 15 e 7 dias", au.cnhCondutor) + chk("gdAutoMan", "Manutenção prevista vira atividade do gestor da Frota", au.manutencaoAgenda) +
+         chk("gdAutoSem", "Atividade sem responsável ativo volta para quem lançou", au.atividadeSemResponsavel) + chk("gdAutoRel", "Gerar os relatórios do mês sozinho", au.relatoriosMensais) + '</div>' +
+@@ -769,6 +770,18 @@
+       '<button type="button" class="btn-secondary" onclick="SGO_voltarOu_(Gestao_renderCaixa_)">Voltar à caixa</button></div><div id="gdRegrasSt"></div>';
+   }
+ 
++  // 19/11/2026 (pedido do dono): decisor operacional da Diretoria (o que não é dinheiro nem sigilo também vai a ele)
++  function Gestao_htmlOperacional_(r, dis, chk) {
++    var d = (r.cfg && r.cfg.decisorOperacional) || { ligado: true, ids: null, tiposFora: [] }, op = r.operacional || { nomes: [], nomePadrao: "", foraFixo: "" };
++    var atual = d.ids && d.ids.length ? d.ids[0] : "PADRAO";
++    var opc = '<option value="PADRAO"' + (atual === "PADRAO" ? " selected" : "") + '>Padrão: conta interna "' + Gestao_esc_(op.nomePadrao) + '"</option>' +
++      (r.gestao || []).filter(function (p) { return p.perfil === "GESTOR" || p.perfil === "ADMIN"; }).map(function (p) { return '<option value="' + Gestao_esc_(p.id) + '"' + (p.id === atual ? " selected" : "") + '>' + Gestao_esc_(p.nome) + '</option>'; }).join("");
++    return '<div class="gd-caixa" style="margin-top:14px"><h3>Decisor operacional da Diretoria</h3><p class="gd-meta">Decisão do dono (19/11/2026): o que hoje cai só no dono e na Diretoria (área sem gestor ou item só da Diretoria) e não é saída de dinheiro nem sigilo vai também a esta pessoa, que recebe pela Caixa e decide com as travas de cada módulo. Ninguém decide sobre si mesmo. Em uso agora: ' + Gestao_esc_(op.nomes.join(", ") || "ninguém") + '. Fica só com a Diretoria: ' + Gestao_esc_(op.foraFixo) + '.</p>' +
++      chk("gdOpLig", "Decisor operacional ligado", d.ligado !== false) +
++      '<div class="gd-linha"><label for="gdOpQuem">Quem</label><select id="gdOpQuem"' + dis + '>' + opc + '</select></div>' +
++      '<div class="gd-linha"><label for="gdOpFora">Tipos a mais só da Diretoria (códigos separados por vírgula)</label><input type="text" id="gdOpFora" value="' + Gestao_esc_((d.tiposFora || []).join(", ")) + '" placeholder="Vazio = só a lista fixa"' + dis + '></div></div>';
++  }
++
+   // 26/10/2026: escalonamento das atividades atrasadas por prioridade e resumo do dia da gestão (SGO_Sedna.js)
+   var GD_SEDNA_PRI = ["Urgente", "Alta", "Normal", "Baixa"];
+   function Gestao_htmlSedna_(sd, dis, chk, hora) {
+@@ -806,7 +819,8 @@
+     Gestao_chamar_("Gestao_apiConfig", { salvar: { gestoresPorArea: gpa, areaPorModulo: apm,
+       escada: { emailDiario: ck("gdEmail"), horaEmail: v("gdHoraEmail"), whatsapp: ck("gdWhats"), whatsDiasUteis: Number(v("gdWhatsDias")), diretoriaDiasUteis: Number(v("gdDirDias")), semanal: ck("gdSemanal"), horaSemanal: v("gdHoraSemanal"), mensal: ck("gdMensal") },
+       automacoes: { cnhCondutor: ck("gdAutoCnh"), manutencaoAgenda: ck("gdAutoMan"), atividadeSemResponsavel: ck("gdAutoSem"), relatoriosMensais: ck("gdAutoRel") }, sedna: Gestao_lerSedna_(),
+-      diretoriaResumo: document.getElementById("gdDirResumo") ? { ligado: ck("gdDirResumo"), hora: v("gdDirHora") } : undefined } }, function (res) {
++      diretoriaResumo: document.getElementById("gdDirResumo") ? { ligado: ck("gdDirResumo"), hora: v("gdDirHora") } : undefined,
++      decisorOperacional: document.getElementById("gdOpLig") ? { ligado: ck("gdOpLig"), ids: v("gdOpQuem") === "PADRAO" ? null : [v("gdOpQuem")], tiposFora: v("gdOpFora") } : undefined } }, function (res) {
+       GD.regras = res; Gestao_desenharRegras_();
+       var s2 = document.getElementById("gdRegrasSt"); if (s2) s2.innerHTML = '<div class="gd-msg ok">' + Gestao_esc_(res.message) + '</div>';
+     }, function (m) { if (bt) bt.disabled = false; if (st) st.innerHTML = '<div class="gd-msg erro">' + Gestao_esc_(m) + '</div>'; });

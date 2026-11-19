@@ -106,6 +106,15 @@ Vale com a aprovação só do dono e da Diretoria ligada (padrão). O dono e a D
 
 O resto do Financeiro (aprovação de pagamentos, estorno, orçamento anual, recarga do Caju) continua só com o dono e o Charles: o aprovador delegado vale apenas para as compras e para o preço do Comercial.
 
+### Decisão na hora (pedido do dono de 19/11/2026)
+
+O dono e o Charles não estavam dando conta de acompanhar os pedidos. Desde 19/11/2026 a espera antes do aprovador delegado é **0 minutos (padrão)**: escolhido o orçamento, o pedido de aprovação chega ao mesmo tempo ao dono, ao Charles e ao Matheus, e o Matheus pode aprovar, reprovar ou pedir novo orçamento **na hora**, com os mesmos critérios (3 orçamentos válidos, o mais em conta ou justificado, não pediu nem cotou, teto). Quem decidir primeiro resolve; cada decisão do Matheus avisa o dono e o Charles na hora (GS10). Compra pedida pelo próprio Matheus continua só com o dono e o Charles.
+
+- O aviso ao Matheus (GS09) sai na escolha do orçamento. Se faltar critério, o aviso diz o que falta e que, até lá, a decisão é do dono ou da Diretoria.
+- Na ficha, o quadro passa a se chamar "Aprovador delegado: decisão na hora". Com uma espera maior que 0 em Regras de compras, volta o quadro "Prazo do dono e da Diretoria", com a contagem.
+- A compra informada depois de feita também avisa na hora o dono, o Charles e o Matheus (GS08, para conhecimento), menos quem informou e quem comprou.
+- O valor de 30 minutos gravado em 18/11/2026 não vale mais: a regra passou a usar o campo "Espera antes do aprovador delegado decidir", com padrão 0.
+
 ## Pedido de compra ao fornecedor
 
 Com a compra "Aprovada", o comprador toca em "Emitir o pedido de compra", informa a previsão de entrega combinada e a forma de pagamento (cartão de crédito ou débito com os 4 últimos números e as parcelas, PIX, boleto com o vencimento, transferência, faturado com a condição ou reembolso a um colaborador). Nunca se digita o número inteiro do cartão.
@@ -189,15 +198,15 @@ Padrão aprovado pelo dono em 21/10/2026:
 
 Compras fica na área Logística (configurável). O comprador e o substituto são escolhidos na tela, sem nomes no código.
 
-Quadro "Aprovador delegado" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; quem decide depois do prazo (padrão: a conta interna "MATHEUS GODOI"; só conta interna ativa, nunca o dono ou a Diretoria); prazo em minutos (padrão 30); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo.
+Quadro "Aprovador delegado" (desde 18/11/2026; só o dono e a Diretoria alteram, com versão e motivo como as demais regras): ligado ou não; aprovador delegado (padrão: a conta interna "MATHEUS GODOI"; só conta interna ativa, nunca o dono ou a Diretoria); espera antes de ele decidir, em minutos (padrão 0 = na hora, desde 19/11/2026; de 0 a 2.880); de onde o prazo conta (postagem do pedido, padrão, ou envio à aprovação); mínimo de orçamentos para ir à aprovação (padrão 3); teto de valor do delegado (vazio = sem teto); WhatsApp a qualquer hora para o dono, a Diretoria e o delegado (padrão sim). Logo abaixo, a lista de quem recebe esses avisos mostra o final do celular de cada um ou "sem telefone: o aviso vai só pelo sistema e pelo e-mail". Outra pessoa da gestão salva as demais regras normalmente; uma mudança neste quadro é recusada com o motivo.
 
 ## Avisos
 
 Seguem a matriz de avisos aprovada: no sistema até resolver; e-mail só no resumo da manhã (um por pessoa por dia, a partir das 8 h, no expediente); WhatsApp pelo Compras só nas exceções do dono, logo abaixo. Nenhum aviso aos demais leva valor em reais. Quem fez a ação não é avisado.
 
 Exceção autorizada pelo dono em 18/11/2026, só para o dono, a Diretoria e o aprovador delegado, a qualquer hora, inclusive fora do expediente (WhatsApp e e-mail pela fila dos avisos da gestão, mais o alerta na tela; podem levar o valor, porque são os aprovadores):
-- GS08, nova solicitação de compra: número, quem pediu, o que é, urgência e o link.
-- GS09, prazo do dono e da Diretoria vencido com os critérios cumpridos: o delegado já pode decidir (uma vez por pedido).
+- GS08, nova solicitação de compra (número, quem pediu, o que é, urgência e o link) e, desde 19/11/2026, compra informada depois de feita (onde, valor, quem comprou), para conhecimento.
+- GS09, pedido de aprovação ao delegado: na escolha do orçamento (espera 0, padrão) ou quando vence a espera configurada; diz os critérios cumpridos ou o que falta (uma vez por pedido).
 - GS10, decisão do delegado: o que decidiu, o valor e o critério cumprido (para o dono e a Diretoria).
 Quem não tem celular no cadastro recebe pelo e-mail e pelo sistema. Com o WhatsApp a qualquer hora desligado em Regras de compras, esses avisos vão só pelo sistema e pelo e-mail.
 

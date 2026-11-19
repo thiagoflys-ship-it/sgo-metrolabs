@@ -7,6 +7,8 @@
 //     cotado, dentro do teto (vazio = sem teto). Regra configurável só pelo dono e pela Diretoria.
 //  4. WhatsApp para o dono, a Diretoria e o delegado a cada nova solicitação, a qualquer hora (GS08), no prazo vencido (GS09) e na decisão
 //     do delegado (GS10).
+// 19/11/2026: o padrão da espera passou a 0 (decisão na hora, tests/avisos-matheus-20261119.test.cjs). Aqui a regra é gravada com
+// esperaMinutos 30, o cenário do Pacote 1, para continuar conferindo o caminho com prazo (configurável).
 // Código REAL do SGO+ (tests/_compras_ambiente.cjs + avisos da gestão); nada sai de verdade; dados fictícios.
 'use strict';
 const test = require('node:test');
@@ -41,6 +43,9 @@ function montar(o) {
   amb.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
   amb.ctx.SGO_waModeloSituacao_ = (n) => (n === 'sgo_gestao_acao' ? 'APPROVED' : '');
   C.regrasDeTeste(amb);
+  // 19/11/2026: cenário do Pacote 1 (espera de 30 minutos gravada pela Diretoria)
+  const g0 = ok(amb.api('s_dora', 'regras', {})).regras;
+  ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g0, { delegado: Object.assign({}, g0.delegado, { esperaMinutos: 30 }) }), motivo: 'Espera de 30 minutos do cenário do Pacote 1' }));
   amb.fs = C.fornecedoresDeTeste(amb);
   return amb;
 }
@@ -252,14 +257,14 @@ test('P1-3e: a regra do aprovador delegado está em Regras de compras, mostra qu
   assert.equal(mat.semTelefone, true); assert.match(mat.situacao, /sem telefone: o aviso vai só pelo sistema e pelo e-mail/);
   assert.match(r.delegado.avisados.find((x) => x.nome === 'DORA DIRETORA TESTE').situacao, /celular final 0010/);
   // gestor de Compras salva as outras regras, mas não o quadro do delegado
-  recusa(amb.api('s_lia', 'regras', { salvar: Object.assign({}, r.regras, { delegado: Object.assign({}, r.regras.delegado, { prazoMinutos: 5 }) }), motivo: 'Tentativa de mudar o prazo do delegado' }), /só o dono e a Diretoria alteram/);
+  recusa(amb.api('s_lia', 'regras', { salvar: Object.assign({}, r.regras, { delegado: Object.assign({}, r.regras.delegado, { esperaMinutos: 5 }) }), motivo: 'Tentativa de mudar o prazo do delegado' }), /só o dono e a Diretoria alteram/);
   ok(amb.api('s_lia', 'regras', { salvar: Object.assign({}, r.regras, { prazos: Object.assign({}, r.regras.prazos, { cotarDiasUteis: 2 }) }), motivo: 'Prazo de cotação de dois dias úteis' }));
   // a Diretoria muda: versão nova com o motivo; validações dizem o que fazer
   const g = ok(amb.api('s_dora', 'regras', {})).regras;
-  recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { prazoMinutos: 2 }) }), motivo: 'Prazo curto demais de teste' }), /de 5 a 2\.880 minutos/);
+  recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { esperaMinutos: 3000 }) }), motivo: 'Espera longa demais de teste' }), /de 0 a 2\.880 minutos/);
   recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { aprovadorIds: ['u_rep'] }) }), motivo: 'Representada como delegado' }), /não é conta interna ativa/);
   recusa(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { aprovadorIds: ['u_dir2'] }) }), motivo: 'Diretoria como delegado' }), /o dono e a Diretoria já aprovam a qualquer momento/);
-  const s = ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { prazoMinutos: '45', aprovadorIds: ['u_sub'] }) }), motivo: 'Sara como delegada nas férias do Matheus' }));
+  const s = ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g, { delegado: Object.assign({}, g.delegado, { esperaMinutos: '45', aprovadorIds: ['u_sub'] }) }), motivo: 'Sara como delegada nas férias do Matheus' }));
   assert.equal(s.regras.delegado.prazoMinutos, 45); assert.deepEqual(Array.from(s.regras.delegado.aprovadorIds), ['u_sub']);
   const versoes = ok(amb.api('s_dora', 'regras', {})).versoes;
   assert.match(versoes[0].motivo, /Sara como delegada/);

@@ -59,6 +59,14 @@ Regras: nunca à noite, fim de semana ou feriado; a Diretoria recebe um só e-ma
 
 Tudo configurável em Regras e responsáveis (horas, dias úteis do WhatsApp e da Diretoria, liga e desliga de cada etapa e de cada automação). O horário de trabalho e os feriados continuam em Atividades da equipe > Avisos e horários.
 
+## Decisor operacional da Diretoria (19/11/2026)
+
+Pedido do dono de 19/11/2026: o dono e o Charles não dão conta de acompanhar tudo. O que cairia só com eles (área sem gestor responsável, ou item que vai à reserva da Diretoria) e **não é saída de dinheiro nem assunto de sigilo** passa a ir também ao decisor operacional (padrão: a conta interna "MATHEUS GODOI"). Ele recebe pela Caixa (aviso GS01, na hora) e decide com as travas de cada módulo. Ninguém decide sobre si mesmo (a pessoa envolvida e quem não pode decidir ficam fora).
+
+Fica sempre só com a Diretoria: Financeiro (pagamentos, orçamento anual, estornos e demais lançamentos), depósito de viagem, Recarga Caju, comissão dos vendedores, Programa de conduta, ponto e RH, a aprovação de compras (tem regra própria: aprovador delegado em Compras > Regras de compras) e todo item com sigilo (ocorrência de conduta, Financeiro) ou só da Diretoria (sugestão sobre gestor).
+
+Configuração em Regras e responsáveis, caixa "Decisor operacional da Diretoria": liga e desliga, quem (padrão ou uma pessoa da gestão fora da Diretoria) e tipos a mais que ficam só com a Diretoria (códigos separados por vírgula).
+
 ## Diretoria informada, não cobrada (11/11/2026)
 
 <!-- recuperado da base do assistente em produção (versão 0a0b5125a2fe) em 17/11/2026: texto publicado que não estava em docs/ -->

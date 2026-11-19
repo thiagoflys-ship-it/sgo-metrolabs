@@ -7,11 +7,11 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R108, imagem
-  `sha256:01a85ab73b1a825109a441bbfbab23313f51205b4d009882657352310118d950`,
-  tag `metrolabs/rh:periodos-conferencia-20261119-r108`.
-  Evidência: `output/rh360-20261119-r108/PUBLICADO_RH360_R108_20261119.txt`.
-  Preserva as entregas anteriores; 867 pins de fontes/metadados.
+- Última publicação RH registrada nesta revisão: R110, imagem
+  `sha256:b7d7f487404fe6f978a867751a68c66faf9a7601d95f52412001ae4fdb7ed5c3`,
+  tag `metrolabs/rh:cct-documento-por-criterio-20261119-r110`.
+  Evidência: `output/rh360-20261119-r110/PUBLICADO_RH360_R110_20261119.txt`.
+  Preserva as entregas anteriores; 869 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
   diagnóstico antigo como uma falha ainda aberta nem como aceite operacional.
@@ -1318,3 +1318,28 @@ Evidências e limites: output/rh360-20261119-r108/PUBLICADO_RH360_R108_20261119.
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 19/11/2026 11:45 — PUBLICADO financeiro-v2-etapa-a-20261119 (legado cand35; base achatada-20261119) e em seguida segredos-financeiro-v2-20261119 (sha c74af6e2…; /_sgo/segredos com 116 chaves: Omie por empresa, Sicredi/Sicoob/Itaú por empresa e produto; cofre cifra chave privada/.pfx/código de acesso). Financeiro v2 etapa (a): 17 páginas (29 abas antigas dentro), Painel diretoria/Meu dia com dados reais (0,4 s), Empresas e bancos (Matriz, Filial RJ Omie próprio sem chave, Prestadora dentro do Omie da matriz), seletores empresa/período. Suíte 2706/0. FIN_SALDO_MINIMO=30000.00 gravado (FORM-FIN-001). Produção atual = cand35; base da próxima publicação = metrolabs/sgo:segredos-financeiro-v2-20261119.
+
+
+RH360 R109 — publicada/verificada em 19/11/2026 11:53 BRT
+Imagem: sha256:4b50f5f423936b5cbeecb8ecb5404a14e3a235742f20462171b2b4e4baedc9fb
+Tag: metrolabs/rh:cct-origem-declaracoes-20261119-r109
+Manifesto: 5509b8c62dc6a3d235dcdaeba728b837646c1909e6bf11caee49fa76295c330d
+Dia, versão e comunicação da origem declarada na conferência CCT existente.
+869 pins: dez fontes alteradas, duas novas e 855 fontes anteriores preservadas. Contrato legado, governança/aprovações próprias, privacidade por finalidade, chat/login e guardas R97/R98 mantidos.
+F08 ganha rastreabilidade temporal/versionada das origens declaradas por critério, sem certificar fatos, fonte ou direito. Projeto integral permanece aberto.
+Evidências e limites: output/rh360-20261119-r109/PUBLICADO_RH360_R109_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R110 — publicada/verificada em 19/11/2026 12:42 BRT
+Imagem: sha256:b7d7f487404fe6f978a867751a68c66faf9a7601d95f52412001ae4fdb7ed5c3
+Tag: metrolabs/rh:cct-documento-por-criterio-20261119-r110
+Manifesto: 97238de4d3e9c53ebc9d5518b98655d61aa8954edb82f66e7f73a7114267473b
+Documento RH neutro por declaração manual na conferência CCT existente.
+869 pins: 12 fontes existentes alteradas, nenhuma fonte nova e 853 fontes anteriores preservadas. Runtime existente, privacidade por finalidade, chat/login e guardas R97/R98 mantidos.
+F08 ganha referência documental por critério com versão/bytes/fingerprint conferidos; fatos e direitos permanecem não avaliados. Projeto integral continua aberto.
+Evidências e limites: output/rh360-20261119-r110/PUBLICADO_RH360_R110_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+- 19/11/2026 13:05 — PUBLICADO avisos-matheus-20261119 (sha 28f65137…; legado cand36; base segredos-financeiro-v2-20261119). Diagnóstico: GS08–GS11 nunca saíram porque nenhum evento elegível aconteceu (compra informada não disparava GS08; nenhuma cotação chegou a aprovação; único pedido de preço pós-P1 era do próprio Matheus). Agora: espera do delegado = configuração padrão 0 (Compras e Comercial); GS08 também na compra informada; Matheus na Caixa de decisões; 'decisor operacional' (padrão Matheus) recebe itens da Diretoria não financeiros/não sigilosos; Financeiro, depósito, Caju, comissão, Conduta, RH só sócios. Suíte 2714/1 (email-outlook-20261117 intermitente de layout, 2 de 3 passam, não tocado). Relatório: output/avisos-matheus-20261119/RELATORIO.md. Produção atual = cand36.

@@ -32,6 +32,13 @@ function montar(o) {
   }
   a.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
   a.ctx.SGO_waModeloSituacao_ = (n) => (n === 'sgo_gestao_acao' ? 'APPROVED' : '');
+  // 19/11/2026: o padrão da espera passou a 0 (tests/avisos-matheus-20261119.test.cjs); aqui fica gravada a regra de 15 minutos do
+  // cenário do Pacote 1, para continuar conferindo o caminho com prazo (configurável)
+  if (!o.esperaPadrao) {
+    a.tabelas.COM_CONFIG = a.tabelas.COM_CONFIG || [];
+    a.tabelas.COM_CONFIG.push({ ID: 'cfg_del_p1', CHAVE: 'DELEGADO_PRECO', VALOR_JSON: JSON.stringify({ prazoMinutos: 15 }), VERSAO: 1, MOTIVO: 'Cenário do Pacote 1: espera de 15 minutos',
+      ATUALIZADO_POR_ID: 'u_dir', ATUALIZADO_POR_NOME: 'DORA DIRETORA TESTE', ATUALIZADO_EM: '2026-10-19T09:00:00' });
+  }
   return a;
 }
 function produto(a, extra) {
@@ -129,7 +136,7 @@ test('P1-5d: o Matheus não autoriza a própria proposta; a regra mostra quem re
   const t = ok(a.api('s_gaspar', 'delegadoPreco', {}));
   assert.equal(t.podeEditar, false); assert.deepEqual(Array.from(t.ids), ['u_mat']); assert.equal(t.regra.prazoMinutos, 15); assert.equal(t.regra.descontoMaxPct, null);
   assert.match(t.avisados.find((x) => x.nome === 'MATHEUS GODOI').situacao, /celular final 6527|celular final 0077/);
-  recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { prazoMinutos: '0' }, motivo: 'Prazo zero de teste' }), /de 1 a 1\.440 minutos/);
+  recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { prazoMinutos: '1441' }, motivo: 'Espera longa demais de teste' }), /de 0 a 1\.440 minutos/);
   recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { aprovadorIds: ['u_ven'] }, motivo: 'Vendedora como delegada' }), /não é da gestão comercial/);
   recusa(a.api('s_admin', 'salvarDelegadoPreco', { regra: { aprovadorIds: ['u_rep'] }, motivo: 'Representada como delegada' }), /conta interna ativa/);
   const s = ok(a.api('s_dora', 'salvarDelegadoPreco', { regra: { prazoMinutos: '20' }, motivo: 'Vinte minutos pedidos pelo dono' }));
@@ -147,7 +154,7 @@ test('P1-5e: preço do catálogo abaixo do mínimo: sem desconto máximo, só o 
   const d1 = a.api('s_matheusgodoi', 'decidirPreco', { id: 'prod_srv', aprovar: true, texto: 'Contrato anual compensa a redução' });
   if (!d1.ok) {
     assert.match(d1.message, /a regra do dono não tem desconto máximo definido/);
-    ok(a.api('s_admin', 'salvarDelegadoPreco', { regra: { descontoMaxPct: '40' }, motivo: 'Até 40% de redução para o Matheus' }));
+    ok(a.api('s_admin', 'salvarDelegadoPreco', { regra: { descontoMaxPct: '40', prazoMinutos: 15 }, motivo: 'Até 40% de redução para o Matheus' }));
     const d2 = ok(a.api('s_matheusgodoi', 'decidirPreco', { id: 'prod_srv', aprovar: true, texto: 'Contrato anual compensa a redução' }));
     assert.match(d2.message, /Preço aprovado/);
     assert.match(a.tabelas.COM_PRODUTOS[0].PRECO_DECISAO_TEXTO, /aprovador delegado, depois do prazo do dono e da Diretoria/);

@@ -82,6 +82,9 @@ function compras(agora) {
   amb.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
   amb.ctx.SGO_waModeloSituacao_ = (n) => (n === 'sgo_gestao_acao' ? 'APPROVED' : '');
   C.regrasDeTeste(amb);
+  // 19/11/2026: o padrão da espera passou a 0 (tests/avisos-matheus-20261119.test.cjs); as telas do Pacote 1 ficam no cenário de 30 minutos
+  const g0 = ok(amb.api('s_dora', 'regras', {})).regras;
+  ok(amb.api('s_dora', 'regras', { salvar: Object.assign({}, g0, { delegado: Object.assign({}, g0.delegado, { esperaMinutos: 30 }) }), motivo: 'Espera de 30 minutos do cenário do Pacote 1' }));
   amb.fs = C.fornecedoresDeTeste(amb);
   const r = C.pedidoSimples(amb, { itens: [{ categoria: 'FERRAMENTA', descricao: 'Alicate amperímetro digital', quantidade: 1, unidade: 'un.' }] });
   ok(amb.api('s_carlos', 'iniciarCotacao', { id: r.id }));
@@ -228,6 +231,8 @@ test('telas do Pacote 1 a 1366 e 390 px: sem erro de JavaScript, sem rolagem lat
         a.sessoes.s_matheusgodoi = { userId: 'u_mat', usuario: 'matheusgodoi', nome: 'MATHEUS GODOI', perfil: 'GESTOR' };
         carregarAvisos(a.ctx);
         a.ctx.Chaves_ehDonoUsuario_ = (login) => String(login || '').toLowerCase() === 'admin';
+        // 19/11/2026: cenário do Pacote 1 (espera de 15 minutos gravada); o padrão novo (0) está em tests/avisos-matheus-20261119.test.cjs
+        a.tabelas.COM_CONFIG = (a.tabelas.COM_CONFIG || []).concat([{ ID: 'cfg_del_p1', CHAVE: 'DELEGADO_PRECO', VALOR_JSON: JSON.stringify({ prazoMinutos: 15 }), VERSAO: 1, MOTIVO: 'Cenário do Pacote 1: espera de 15 minutos', ATUALIZADO_POR_ID: 'u_dir', ATUALIZADO_POR_NOME: 'DORA DIRETORA TESTE', ATUALIZADO_EM: '2026-10-19T09:00:00' }]);
         a.tabelas.COM_PRODUTOS = [{ ID: 'prod_bat', CODIGO: 'BAT-01', NOME: 'Bateria estacionária de teste', TIPO: 'PRODUTO', UNIDADE_MEDIDA: 'un', PRECO: 2100, CUSTO: 900, ATIVO: 'SIM', PRECO_PEDIDO_SITUACAO: 'PENDENTE', PRECO_PEDIDO: 2100, PRECO_PEDIDO_POR_ID: 'u_ven', PRECO_PEDIDO_POR_NOME: 'VERA VENDEDORA TESTE', PRECO_PEDIDO_EM: '2026-10-19T09:00', CRIADO_EM: '2026-10-19T12:00:00.000Z' }];
         const { oportunidade, contato } = COM.oportunidadeDeTeste(a);
         const id = ok(a.api('s_vera', 'novaProposta', { oportunidadeId: oportunidade.id })).proposta.id;
