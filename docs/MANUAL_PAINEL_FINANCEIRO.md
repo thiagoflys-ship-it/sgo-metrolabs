@@ -192,6 +192,8 @@ A aba **Indicadores** mostra os números do Financeiro calculados pelo sistema, 
 
 **Atualizar agora** só pede uma nova fotografia: a próxima rodada automática a faz (até 15 minutos). O botão fica parado, com o motivo escrito, enquanto uma fotografia está em andamento, quando já há um pedido e por 15 minutos depois da última. Indicador cuja fonte falhou aparece como **"não calculado"** com o motivo, nunca como zero; a faixa do topo diz quando a fotografia ficou incompleta.
 
+**Quando a fotografia não sai.** Cada reinício do servidor (atualização do sistema) apaga da memória o que a fotografia já tinha lido e ela recomeça do primeiro passo; com muitos reinícios no mesmo dia ela pode não terminar. Desde 19/11/2026 o registro do servidor guarda, como aviso, cada recomeço, cada leitura do Omie que falhou e a fotografia que não terminou no dia (até onde chegou e quantas vezes recomeçou). Os números da fotografia anterior continuam valendo até a próxima.
+
 ### Os indicadores
 
 Cada cartão mostra o valor de hoje, o da fotografia de 7 dias atrás (ou 30, em "Comparar com"), a seta (verde: melhorou; vermelha: piorou) e as duas linhas abaixo.
@@ -306,7 +308,7 @@ A aba **Agenda financeira** mostra, num quadro de linha do tempo (Gantt), o que 
 
 As taxas usadas aparecem em "Como a previsão é feita". **Saldo mínimo de segurança:** por decisão do dono, não há valor fixo e o campo começa vazio. Sem ele, a previsão não compara com mínimo nenhum e avisa só se o saldo previsto ficar negativo. Com o valor definido em Chaves e senhas, a linha vermelha tracejada aparece e a faixa diz o dia em que a curva realista cruza o mínimo. A mesma previsão vira o gráfico G2 da aba Indicadores e entra no relatório semanal.
 
-**Memória do servidor.** A lista de títulos da fotografia fica até 6 horas na memória do servidor (renovada a cada 15 minutos enquanto a fotografia for a de hoje) e nunca é gravada em tabela. Se o servidor reiniciar, a Régua e a Agenda pedem uma nova fotografia ("Pedir nova fotografia"), sem gravar nada no Omie.
+**Memória do servidor.** A lista de títulos da fotografia fica até 6 horas na memória do servidor (renovada a cada 15 minutos enquanto a fotografia for a de hoje) e nunca é gravada em tabela. Se o servidor reiniciar (atualização do sistema), a lista se perde: a rotina refaz a fotografia de hoje sozinha nas rodadas seguintes (até duas vezes por dia) e, enquanto isso, a Régua e a Agenda mostram o aviso com o botão "Pedir nova fotografia". Nada é gravado no Omie.
 
 ## 8h. Relatório semanal de saúde financeira (18/11/2026, Bloco B da onda 3)
 
@@ -554,7 +556,8 @@ Na Política da recarga, os campos novos são: recarga semanal (ligada), descont
 | "O valor digitado não confere com o da prévia" | Digite de novo exatamente o valor da prévia no campo "Digite o valor de novo". |
 | "Quem preparou a operação não aprova a própria operação" | Peça ao dono do sistema ou à Diretoria (a outra pessoa, não você). |
 | "Você não aprova nem recusa operações do Financeiro" | Por decisão do dono (16/11/2026), só o dono do sistema e a Diretoria decidem as operações acima da alçada. O Financeiro prepara e acompanha em Aprovações pendentes. |
-| Régua ou Agenda: "a lista de títulos da fotografia não está mais na memória do servidor" | Toque em "Pedir nova fotografia" e volte em até 15 minutos; nada é gravado no Omie. |
+| Régua ou Agenda: "a lista de títulos da fotografia não está mais na memória do servidor" | O servidor reiniciou. A rotina refaz a fotografia sozinha (até duas vezes por dia); com pressa, toque em "Pedir nova fotografia" e volte em até 15 minutos. Nada é gravado no Omie. |
+| "Atualizar agora" diz que a fotografia recomeçou | O servidor reiniciou durante a fotografia e ela recomeça do primeiro passo. Espere as próximas rodadas; os números da fotografia anterior continuam na tela. |
 | Régua: "Este título não está na fotografia" | O título pode ter sido pago, cancelado ou criado depois da fotografia. Atualize o quadro; se faltar, peça nova fotografia em Indicadores. |
 | Régua: "Você não registra esta decisão" | Protesto, negativação, cobrança jurídica e perda são só da Diretoria. Encaminhe o título à Diretoria com o motivo. |
 | Relatório com "análise parcialmente substituída pelo texto padrão" | É a conferência de números: o parágrafo da IA citou número ou nome fora dos dados e foi trocado pelo texto do sistema. Nada a fazer. |

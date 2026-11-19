@@ -259,8 +259,10 @@ test('Agenda: Gantt com losangos (cheio vencido, vazado a vencer), barra de prom
   assert.match(quadro(a).semLista, /não está mais na memória do servidor/);
   assert.match(a.j(a.ctx.Fin_apiIndicadores('s_wanessa', {})).graficos.find((g) => g.id === 'G2').svg, /não está mais lá/);
   // a rodada seguinte renova a memória enquanto a fotografia é a de hoje
+  // 19/11/2026 (manutenção): sem a lista (reinício), a rodada não para mais em "já foi feita": refaz a fotografia sozinha
+  // (até 2 vezes por dia; detalhes em tests/manutencao-geral-20261119.test.cjs)
   const b = pronto(); delete b.cache['FIN_FOTO_TIT_2026-11-16']; b.em('2026-11-16T10:15:00-03:00');
-  assert.match(b.rodada().fora, /já foi feita/);
+  assert.doesNotMatch(JSON.stringify(b.rodada()), /já foi feita/);
   const c = pronto(); const antes = c.cache['FIN_FOTO_TIT_2026-11-16']; c.em('2026-11-16T10:15:00-03:00'); c.rodada(); assert.equal(c.cache['FIN_FOTO_TIT_2026-11-16'], antes, 'renovada com o mesmo conteúdo');
 });
 

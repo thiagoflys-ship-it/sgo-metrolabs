@@ -1,0 +1,224 @@
+diff -ru cand33/JS_Email.html cand34/JS_Email.html
+--- cand33/JS_Email.html	2026-11-19 00:04:13.278643900 -0300
++++ cand34/JS_Email.html	2026-11-19 01:54:15.057846400 -0300
+@@ -609,7 +609,7 @@
+     var l = document.getElementById("emLeitor"); if (l) l.innerHTML = '<div class="em-msg ok">' + Email_esc_(texto) + '</div>';
+     Email_carregarLista_(true); Email_carregarPastas_(); Email_verificar_();
+   }
+-  function Email_abrirCliente_(id) { if (typeof CadTela_irPara_ === "function") CadTela_irPara_("clientes", id); else abrir("cadastros"); }
++  function Email_abrirCliente_(id) { if (typeof CadTela_irPara_ === "function") CadTela_irPara_("clientes", id); else abrir("clientes"); }
+ 
+   function Email_registrar_() {
+     var m = EM.aberta; if (!m) return;
+diff -ru cand33/SGO_Ajuda_Administracao.js cand34/SGO_Ajuda_Administracao.js
+--- cand33/SGO_Ajuda_Administracao.js	2026-11-19 00:04:11.110782700 -0300
++++ cand34/SGO_Ajuda_Administracao.js	2026-11-19 01:55:23.921906800 -0300
+@@ -532,7 +532,7 @@
+     "chaves/zapi": {
+       titulo: "WhatsApp pela Z-API",
+       // 21/10/2026: a Z-API saiu do sistema (piloto do WhatsApp); o cartão fica só para consulta.
+-      paraQueServe: "Desde 21/10/2026 a Z-API está fora do sistema: com o piloto do WhatsApp ligado (ou o provedor meta), nenhuma mensagem sai pela Z-API e as mensagens que chegam por ela são ignoradas; o WhatsApp do sistema é o oficial (Meta). O texto abaixo vale só se o dono decidir religar a Z-API depois do piloto. Liga o WhatsApp da empresa pela Z-API para o SGO+ e o COMMAND: avisos, resumo de atividades, reservas da frota, conduta, chamados do Auvo, lembretes do ponto e as mensagens recebidas no COMMAND. Não depende de modelo aprovado pela Meta.",
++      paraQueServe: "Desde 21/10/2026 a Z-API está fora do sistema: com o piloto do WhatsApp ligado (ou o provedor meta), nenhuma mensagem sai pela Z-API e as mensagens que chegam por ela são ignoradas; o WhatsApp do sistema é o oficial (Meta). O texto abaixo vale só se o dono decidir religar a Z-API depois do piloto. Liga o WhatsApp da empresa pela Z-API para o SGO+ e o COMMAND: avisos, resumo de atividades, reservas da frota, conduta, chamados da Assistência, lembretes do ponto e as mensagens recebidas no COMMAND. Não depende de modelo aprovado pela Meta.",
+       antesDeComecar: [
+         "Tenha a conta da Z-API aberta (app.z-api.io) e o celular da empresa à mão, com o WhatsApp instalado e internet.",
+         "Cadastre o seu celular em Administração > Usuários > Celular, para receber a mensagem de teste.",
+diff -ru cand33/SGO_Ajuda_Assistencia.js cand34/SGO_Ajuda_Assistencia.js
+--- cand33/SGO_Ajuda_Assistencia.js	2026-11-19 00:04:11.108797900 -0300
++++ cand34/SGO_Ajuda_Assistencia.js	2026-11-19 01:55:33.569767800 -0300
+@@ -165,7 +165,7 @@
+       passos: [
+         { titulo: 'Mudar prazos e avisos', itens: ['Ajuste as horas úteis de cada prioridade e as opções.', 'Escreva o que mudou e por quê e toque em "Salvar as regras".'] },
+         { titulo: 'Contrato com prazo próprio', itens: ['Toque em "Mais um contrato", escolha o cliente e preencha as horas das prioridades que o contrato define (em branco vale o padrão).', 'Marque se o contrato permite pausar o prazo ao aguardar cliente ou peça.', 'Salve com o motivo.'] },
+-        { titulo: 'Tipos de serviço e checklists', itens: ['Em "Tipos de serviço", toque em "Editar" para mudar relato, assinatura, fotos mínimas, conferência do equipamento, checklist e documento técnico.', 'Em "Modelos de checklist", edite as perguntas (texto, tipo de resposta, opções, obrigatória). A versão nova vale para as próximas O.S.', '"Trazer os questionários do Auvo" lê os 13 questionários copiados no acervo e cria os modelos, sem apagar nada.', 'Sem a lista de questionários no acervo, toque em "Montar os checklists a partir das tarefas do Auvo": cada toque lê um lote de tarefas copiadas; no fim, cada questionário vira um modelo inativo para revisar e ativar.'] },
++        { titulo: 'Tipos de serviço e checklists', itens: ['Em "Tipos de serviço", toque em "Editar" para mudar relato, assinatura, fotos mínimas, conferência do equipamento, checklist e documento técnico.', 'Em "Modelos de checklist", edite as perguntas (texto, tipo de resposta, opções, obrigatória). A versão nova vale para as próximas O.S.', 'Os modelos que vieram dos questionários do Auvo (descontinuado em 18/11/2026) continuam aqui como qualquer outro; não há mais importação do Auvo.'] },
+         { titulo: 'Triagem e fila livre', itens: ['Marque quem faz a triagem (pode ser mais de uma pessoa). Sem ninguém marcado, vale o responsável da área Técnica em Caixa de decisões > Regras e responsáveis; sem ele, o Gestor da área Técnica; sem ele, a Diretoria.', '"Fila livre ligada" e o tempo em minutos úteis (padrão 30, de 5 a 480): passado esse tempo sem ninguém assumir, qualquer colaborador pode assumir o chamado.', 'Salve com o motivo. Vale para os chamados abertos a partir de agora e também para os que ainda estão pendentes.'] },
+         { titulo: 'Representação', itens: ['Marque quem responde pela conta da representada (Brasmedical): essas pessoas recebem os pedidos do módulo Representação, o alerta a 75% do prazo de aceite e as mensagens. Sem ninguém marcado, vale quem faz a triagem.', 'Os prazos de cada representada (aceite, alerta, chamado sem registro) ficam em Representação > Representadas.'] },
+         { titulo: 'Ligar ou desligar', itens: ['"Desligar" faz o aplicativo do técnico parar de receber O.S. novas. Nada é apagado.'] },
+diff -ru cand33/SGO_Ajuda_Cadastros.js cand34/SGO_Ajuda_Cadastros.js
+--- cand33/SGO_Ajuda_Cadastros.js	2026-11-19 00:04:11.125456600 -0300
++++ cand34/SGO_Ajuda_Cadastros.js	2026-11-19 01:55:23.921426100 -0300
+@@ -714,7 +714,7 @@
+       ],
+       perguntas: [
+         { p: "O que acompanha uma unidade transferida para outro cliente?", r: "Os equipamentos da unidade, os documentos do Arquivo de documentos, os contatos da unidade e a ligação do cliente Auvo daquele endereço. O arquivo fica na mesma pasta e o link não muda." },
+-        { p: "E a ligação com o Auvo quando desvinculo uma unidade?", r: "Continua guardada com a unidade. Enquanto ela estiver sem cliente, tarefa nova do Auvo nesse endereço fica pendente em Integração Auvo; ao transferir a unidade para um cliente, a ligação acompanha." },
++        { p: "E a ligação com o Auvo quando desvinculo uma unidade?", r: "Continua guardada com a unidade, só para consulta do histórico (o Auvo foi descontinuado em 18/11/2026 e não chega tarefa nova). Ao transferir a unidade para um cliente, a ligação acompanha." },
+         { p: "Certificados e laudos também mudam de cliente?", r: "Não. Certificados, laudos NR-13 e atendimentos do Auvo ficam no cadastro original. A prévia mostra quantos registros ficam." },
+         { p: "Juntar cadastros repetidos apaga a origem?", r: "Não. Tudo vai para o destino e a origem fica inativa." },
+         { p: "Desvincular é o mesmo que excluir?", r: "Não. Desvincular tira a unidade do cliente, ou o equipamento da unidade. O cadastro fica com vínculo pendente até ser ligado de novo." },
+diff -ru cand33/SGO_Ajuda_Financeiro.js cand34/SGO_Ajuda_Financeiro.js
+--- cand33/SGO_Ajuda_Financeiro.js	2026-11-19 00:52:29.308902900 -0300
++++ cand34/SGO_Ajuda_Financeiro.js	2026-11-19 01:52:46.806507100 -0300
+@@ -87,7 +87,8 @@
+         { situacao: 'A Visão geral recusa o período por ter mais de 2.500 títulos.', oQueFazer: 'Diminua o período para o resumo sair completo.' },
+         { situacao: 'Em Indicadores aparece "Ainda não há fotografia do Financeiro".', oQueFazer: 'A primeira fotografia sai na rodada automática a partir das 06:00. Se precisar antes, toque em "Atualizar agora" e volte em até 15 minutos.' },
+         { situacao: 'Um cartão de Indicadores mostra "Não calculado".', oQueFazer: 'A linha abaixo do número diz o motivo (por exemplo, a leitura do Omie falhou naquele dia ou não há orçamento cadastrado). Os outros números continuam valendo; a próxima fotografia completa resolve.' },
+-        { situacao: 'A Régua de cobrança ou a Agenda financeira mostra "a lista de títulos da fotografia não está mais na memória do servidor".', oQueFazer: 'A lista dos títulos fica até 6 horas na memória do servidor e se perde quando ele reinicia. Toque em "Pedir nova fotografia" e volte em até 15 minutos; nada é gravado no Omie.' },
++        { situacao: 'A Régua de cobrança ou a Agenda financeira mostra "a lista de títulos da fotografia não está mais na memória do servidor".', oQueFazer: 'A lista dos títulos fica na memória do servidor e se perde quando ele reinicia (atualização do sistema). A rotina refaz a fotografia sozinha nas rodadas seguintes (até duas vezes por dia); se tiver pressa, toque em "Pedir nova fotografia" e volte em até 15 minutos. Nada é gravado no Omie.' },
++        { situacao: 'Em Indicadores, "Atualizar agora" diz que a fotografia recomeçou.', oQueFazer: 'O servidor do SGO+ foi reiniciado durante a fotografia e o que já tinha sido lido do Omie se perdeu; ela recomeça sozinha do primeiro passo. Espere as próximas rodadas (de 15 em 15 minutos). Os números da fotografia anterior continuam na tela até lá.' },
+         { situacao: 'Ao registrar uma ação na régua, aparece "Este título não está na fotografia".', oQueFazer: 'O título pode ter sido pago, cancelado ou criado depois da fotografia. Toque em "Atualizar o quadro"; se ele ainda faltar, peça uma nova fotografia em Indicadores.' },
+         { situacao: 'Ao registrar a decisão, aparece "Você não registra esta decisão".', oQueFazer: 'Protesto, negativação, cobrança jurídica e perda são decididos só pela Diretoria. Encaminhe o título à Diretoria com o motivo; a decisão aparece no histórico.' },
+         { situacao: 'O relatório semanal saiu com "Análise parcialmente substituída pelo texto padrão".', oQueFazer: 'É a conferência funcionando: a IA citou um número ou um nome que não estava nos dados e o sistema trocou aquele parágrafo pelo texto padrão, com os números certos. Nada precisa ser feito.' },
+diff -ru cand33/SGO_Ajuda_Principal.js cand34/SGO_Ajuda_Principal.js
+--- cand33/SGO_Ajuda_Principal.js	2026-11-19 00:04:11.075168600 -0300
++++ cand34/SGO_Ajuda_Principal.js	2026-11-19 01:55:23.918145700 -0300
+@@ -138,7 +138,7 @@
+         { p: "Onde encontro a ajuda de cada tela?", r: "No computador, toque em \"Como usar esta tela\", no alto de cada tela. No celular, toque em \"Ajuda\", na barra do topo. O painel mostra o passo a passo, as cores, o que fazer se algo der errado e quem pode fazer cada coisa. O botão \"Manual completo do módulo\" abre o manual para imprimir ou salvar em PDF." },
+         { p: "De onde vêm as pendências do Início?", r: "De uma lista única do SGO+. A mesma lista alimenta o bloco de alertas, os números ao lado do menu, a janela ao entrar e o Painel de qualidade." },
+         { p: "O que conta como crítico?", r: "Vencido ou que vence hoje. O que vence em até 30 dias é atenção. Atividade atrasada também é crítica." },
+-        { p: "Reagendei o atendimento. Por que ele ainda aparecia com prazo estourado?", r: "Desde 18/11/2026, chamado da Assistência com a visita marcada (agendada ou reagendada) para uma data futura sai das pendências do Início e da Caixa de decisões até essa data. O prazo do contrato que estourou continua registrado no chamado e nos indicadores. Se a data marcada passar sem a chegada do técnico registrada, o chamado volta à lista com o aviso de que a visita não foi registrada. O.S. do Auvo finalizada ou passada para outro dia no Auvo também sai da lista assim que a sincronização das tarefas lê a mudança." },
++        { p: "Reagendei o atendimento. Por que ele ainda aparecia com prazo estourado?", r: "Desde 18/11/2026, chamado da Assistência com a visita marcada (agendada ou reagendada) para uma data futura sai das pendências do Início e da Caixa de decisões até essa data. O prazo do contrato que estourou continua registrado no chamado e nos indicadores. Se a data marcada passar sem a chegada do técnico registrada, o chamado volta à lista com o aviso de que a visita não foi registrada." },
+         { p: "Como sei que chegou mensagem nova no bate-papo?", r: "O botão \"Bate-papo\" do topo fica vermelho com o número de não lidas (no computador, também \"N novas\"), pisca três vezes quando chega algo novo e a aba do navegador mostra o número entre parênteses. No bate-papo, em Preferências (engrenagem), dá para ligar o som das mensagens e a notificação do navegador, que vêm desligados." },
+         { p: "Por que só aparecem quatro cartões?", r: "O Início mostra os quatro grupos mais urgentes. Toque em \"Ver todas as pendências (N)\" para ver o resto." },
+         { p: "Como volto ao Início?", r: "Toque em \"Início\" no menu ou no logotipo SGO+ no alto da tela." },
+diff -ru cand33/SGO_AssistenteManuais.js cand34/SGO_AssistenteManuais.js
+--- cand33/SGO_AssistenteManuais.js	2026-11-19 01:09:36.994305900 -0300
++++ cand34/SGO_AssistenteManuais.js	2026-11-19 01:54:10.024030300 -0300
+@@ -4,7 +4,7 @@
+  * (a importação do servidor gera sozinha a cada publicação; o teste tests/assistente-duvidas.test.cjs confere).
+  */
+ var SGO_ASSIST_MANUAIS = {
+- "versao": "9865a065fd99",
++ "versao": "32a0b834a583",
+  "manuais": [
+   {
+    "arquivo": "MANUAL_APP_CAMPO.md",
+@@ -5866,7 +5866,7 @@
+     },
+     {
+      "titulo": "8d. Indicadores e saúde financeira (Onda 2, 16/11/2026)",
+-     "texto": "A aba Indicadores mostra os números do Financeiro calculados pelo sistema, sem consultar o Omie a cada toque. Uma rotina lê o Omie uma vez por dia (só leitura, nada é gravado no Omie) a partir das 06:00, antes do expediente, e guarda uma fotografia só com números agregados: nenhum nome de cliente, CNPJ ou número de documento vai para a tabela (os maiores clientes ficam pelo código do Omie; os nomes ficam só na memória do servidor por 6 horas). A fotografia sai em uma a três rodadas automáticas (de 15 em 15 minutos), com no máximo 20 páginas do Omie por rodada (8 no expediente); no expediente, se a tela do Financeiro acabou de consultar o Omie, a rotina espera a rodada seguinte, para não disputar o limite do Omie com quem está trabalhando. Depois de feita, a fotografia não é repetida no mesmo dia.\n\nAtualizar agora só pede uma nova fotografia: a próxima rodada automática a faz (até 15 minutos). O botão fica parado, com o motivo escrito, enquanto uma fotografia está em andamento, quando já há um pedido e por 15 minutos depois da última. Indicador cuja fonte falhou aparece como \"não calculado\" com o motivo, nunca como zero; a faixa do topo diz quando a fotografia ficou incompleta."
++     "texto": "A aba Indicadores mostra os números do Financeiro calculados pelo sistema, sem consultar o Omie a cada toque. Uma rotina lê o Omie uma vez por dia (só leitura, nada é gravado no Omie) a partir das 06:00, antes do expediente, e guarda uma fotografia só com números agregados: nenhum nome de cliente, CNPJ ou número de documento vai para a tabela (os maiores clientes ficam pelo código do Omie; os nomes ficam só na memória do servidor por 6 horas). A fotografia sai em uma a três rodadas automáticas (de 15 em 15 minutos), com no máximo 20 páginas do Omie por rodada (8 no expediente); no expediente, se a tela do Financeiro acabou de consultar o Omie, a rotina espera a rodada seguinte, para não disputar o limite do Omie com quem está trabalhando. Depois de feita, a fotografia não é repetida no mesmo dia.\n\nAtualizar agora só pede uma nova fotografia: a próxima rodada automática a faz (até 15 minutos). O botão fica parado, com o motivo escrito, enquanto uma fotografia está em andamento, quando já há um pedido e por 15 minutos depois da última. Indicador cuja fonte falhou aparece como \"não calculado\" com o motivo, nunca como zero; a faixa do topo diz quando a fotografia ficou incompleta.\n\nQuando a fotografia não sai. Cada reinício do servidor (atualização do sistema) apaga da memória o que a fotografia já tinha lido e ela recomeça do primeiro passo; com muitos reinícios no mesmo dia ela pode não terminar. Desde 19/11/2026 o registro do servidor guarda, como aviso, cada recomeço, cada leitura do Omie que falhou e a fotografia que não terminou no dia (até onde chegou e quantas vezes recomeçou). Os números da fotografia anterior continuam valendo até a próxima."
+     },
+     {
+      "titulo": "8d. Indicadores e saúde financeira (Onda 2, 16/11/2026) > Os indicadores (parte 1)",
+@@ -5926,7 +5926,7 @@
+     },
+     {
+      "titulo": "8g. Agenda financeira e previsão de caixa (18/11/2026, Bloco B da onda 3) (parte 2)",
+-     "texto": "As taxas usadas aparecem em \"Como a previsão é feita\". Saldo mínimo de segurança: por decisão do dono, não há valor fixo e o campo começa vazio. Sem ele, a previsão não compara com mínimo nenhum e avisa só se o saldo previsto ficar negativo. Com o valor definido em Chaves e senhas, a linha vermelha tracejada aparece e a faixa diz o dia em que a curva realista cruza o mínimo. A mesma previsão vira o gráfico G2 da aba Indicadores e entra no relatório semanal.\n\nMemória do servidor. A lista de títulos da fotografia fica até 6 horas na memória do servidor (renovada a cada 15 minutos enquanto a fotografia for a de hoje) e nunca é gravada em tabela. Se o servidor reiniciar, a Régua e a Agenda pedem uma nova fotografia (\"Pedir nova fotografia\"), sem gravar nada no Omie."
++     "texto": "As taxas usadas aparecem em \"Como a previsão é feita\". Saldo mínimo de segurança: por decisão do dono, não há valor fixo e o campo começa vazio. Sem ele, a previsão não compara com mínimo nenhum e avisa só se o saldo previsto ficar negativo. Com o valor definido em Chaves e senhas, a linha vermelha tracejada aparece e a faixa diz o dia em que a curva realista cruza o mínimo. A mesma previsão vira o gráfico G2 da aba Indicadores e entra no relatório semanal.\n\nMemória do servidor. A lista de títulos da fotografia fica até 6 horas na memória do servidor (renovada a cada 15 minutos enquanto a fotografia for a de hoje) e nunca é gravada em tabela. Se o servidor reiniciar (atualização do sistema), a lista se perde: a rotina refaz a fotografia de hoje sozinha nas rodadas seguintes (até duas vezes por dia) e, enquanto isso, a Régua e a Agenda mostram o aviso com o botão \"Pedir nova fotografia\". Nada é gravado no Omie."
+     },
+     {
+      "titulo": "8h. Relatório semanal de saúde financeira (18/11/2026, Bloco B da onda 3) (parte 1)",
+@@ -6066,19 +6066,19 @@
+     },
+     {
+      "titulo": "Problemas comuns (parte 2)",
+-     "texto": "Nada foi enviado, para não baixar duas vezes. \"Falta o CNPJ da empresa em Administração > Chaves e senhas > Omie\" | Peça ao responsável pelo sistema para preencher o CNPJ da empresa. \"Não foi possível ler no Omie o saldo em aberto deste título\" | Nada foi feito. Tente em 1 minuto ou registre a baixa no Omie. \"está aguardando a aprovação do dono do sistema ou da Diretoria\" | O valor passa da alçada. Peça ao dono ou à Diretoria a aprovação em Regras do Financeiro > Aprovações pendentes e toque em Confirmar de novo (a prévia espera até 24 horas). \"O valor digitado não confere com o da prévia\" | Digite de novo exatamente o valor da prévia no campo \"Digite o valor de novo\". \"Quem preparou a operação não aprova a própria operação\" | Peça ao dono do sistema ou à Diretoria (a outra pessoa, não você). \"Você não aprova nem recusa operações do Financeiro\" | Por decisão do dono (16/11/2026), só o dono do sistema e a Diretoria decidem as operações acima da alçada. O Financeiro prepara e acompanha em Aprovações pendentes. Régua ou Agenda: \"a lista de títulos da fotografia não está mais na memória do servidor\" | Toque em \"Pedir nova fotografia\" e volte em até 15 minutos; nada é gravado no Omie. Régua: \"Este título não está na fotografia\" | O título pode ter sido pago, cancelado ou criado depois da fotografia. Atualize o quadro; se faltar, peça nova fotografia em Indicadores. Régua: \"Você não registra esta decisão\" | Protesto, negativação, cobrança jurídica e perda são só da Diretoria. Encaminhe o título à Diretoria com o motivo. Relatório com \"análise parcialmente substituída pelo texto padrão\" | É a conferência de números: o parágrafo da IA citou número ou nome fora dos dados e foi trocado pelo texto do sistema. Nada a fazer."
++     "texto": "Nada foi enviado, para não baixar duas vezes. \"Falta o CNPJ da empresa em Administração > Chaves e senhas > Omie\" | Peça ao responsável pelo sistema para preencher o CNPJ da empresa. \"Não foi possível ler no Omie o saldo em aberto deste título\" | Nada foi feito. Tente em 1 minuto ou registre a baixa no Omie. \"está aguardando a aprovação do dono do sistema ou da Diretoria\" | O valor passa da alçada. Peça ao dono ou à Diretoria a aprovação em Regras do Financeiro > Aprovações pendentes e toque em Confirmar de novo (a prévia espera até 24 horas). \"O valor digitado não confere com o da prévia\" | Digite de novo exatamente o valor da prévia no campo \"Digite o valor de novo\". \"Quem preparou a operação não aprova a própria operação\" | Peça ao dono do sistema ou à Diretoria (a outra pessoa, não você). \"Você não aprova nem recusa operações do Financeiro\" | Por decisão do dono (16/11/2026), só o dono do sistema e a Diretoria decidem as operações acima da alçada. O Financeiro prepara e acompanha em Aprovações pendentes. Régua ou Agenda: \"a lista de títulos da fotografia não está mais na memória do servidor\" | O servidor reiniciou. A rotina refaz a fotografia sozinha (até duas vezes por dia); com pressa, toque em \"Pedir nova fotografia\" e volte em até 15 minutos. Nada é gravado no Omie. \"Atualizar agora\" diz que a fotografia recomeçou | O servidor reiniciou durante a fotografia e ela recomeça do primeiro passo. Espere as próximas rodadas; os números da fotografia anterior continuam na tela. Régua: \"Este título não está na fotografia\" | O título pode ter sido pago, cancelado ou criado depois da fotografia. Atualize o quadro; se faltar, peça nova fotografia em Indicadores. Régua: \"Você não registra esta decisão\" | Protesto, negativação, cobrança jurídica e perda são só da Diretoria."
+     },
+     {
+      "titulo": "Problemas comuns (parte 3)",
+-     "texto": "O relatório semanal não saiu na segunda-feira | Ele espera a fotografia do dia (até 10:00); feriado passa para o primeiro dia útil. A aba Relatórios semanais mostra o próximo horário. Especialista: \"Foram retirados ... trecho(s) da resposta\" | É a conferência de números: a parte com número que o sistema não calculou foi retirada. O restante vale como apoio; confira os números nos quadros. Especialista responde a análise com o texto padrão do sistema | A IA está desligada para dados da empresa, a chave não está cadastrada, o limite de 15 análises do dia foi atingido ou a IA não respondeu. A faixa no topo da aba e o aviso da resposta dizem qual foi. \"A proposta expirou (ela vale 30 minutos) ou já foi usada\" | Nada foi criado. Faça a pergunta de novo e confirme a nova proposta em até 30 minutos. \"proposta(s) da IA foram descartadas pelo sistema\" | O responsável estava fora da lista de sigilo, o prazo fora de 1 a 30 dias úteis, a aba não existe ou havia número fora dos dados. Se a atividade for necessária, crie pelo módulo de Atividades. Contas fixas: \"já foi lançada (título … no Omie)\" | A conta daquele mês já está no Omie. Nada foi preparado. Se foi engano, peça a exclusão do título na Trilha das operações. Trilha: \"Esta baixa não tem o código da baixa do Omie\" | Baixa feita antes da trilha ou sem o código devolvido pelo Omie. Estorne direto no Omie. Trilha: \"Você não confirma nem recusa estorno ou exclusão no Omie\" | Só o dono e a Diretoria confirmam. Acompanhe o pedido em \"Pedidos de estorno e exclusão\". Trilha: \"O Omie não confirmou o envio\" ao confirmar um pedido | Pode ter sido feito. Confira o título no Omie e registre \"foi feito\" ou \"não foi feito\" no pedido. Fechamento: \"Por decisão do dono, só o dono do sistema e a Diretoria ..."
++     "texto": "Encaminhe o título à Diretoria com o motivo. Relatório com \"análise parcialmente substituída pelo texto padrão\" | É a conferência de números: o parágrafo da IA citou número ou nome fora dos dados e foi trocado pelo texto do sistema. Nada a fazer. O relatório semanal não saiu na segunda-feira | Ele espera a fotografia do dia (até 10:00); feriado passa para o primeiro dia útil. A aba Relatórios semanais mostra o próximo horário. Especialista: \"Foram retirados ... trecho(s) da resposta\" | É a conferência de números: a parte com número que o sistema não calculou foi retirada. O restante vale como apoio; confira os números nos quadros. Especialista responde a análise com o texto padrão do sistema | A IA está desligada para dados da empresa, a chave não está cadastrada, o limite de 15 análises do dia foi atingido ou a IA não respondeu. A faixa no topo da aba e o aviso da resposta dizem qual foi. \"A proposta expirou (ela vale 30 minutos) ou já foi usada\" | Nada foi criado. Faça a pergunta de novo e confirme a nova proposta em até 30 minutos. \"proposta(s) da IA foram descartadas pelo sistema\" | O responsável estava fora da lista de sigilo, o prazo fora de 1 a 30 dias úteis, a aba não existe ou havia número fora dos dados. Se a atividade for necessária, crie pelo módulo de Atividades. Contas fixas: \"já foi lançada (título … no Omie)\" | A conta daquele mês já está no Omie. Nada foi preparado. Se foi engano, peça a exclusão do título na Trilha das operações. Trilha: \"Esta baixa não tem o código da baixa do Omie\" | Baixa feita antes da trilha ou sem o código devolvido pelo Omie. Estorne direto no Omie. Trilha: \"Você não confirma nem recusa estorno ou exclusão no Omie\" | Só o dono e a Diretoria confirmam. Acompanhe o pedido em \"Pedidos de estorno e exclusão\". Trilha:"
+     },
+     {
+      "titulo": "Problemas comuns (parte 4)",
+-     "texto": "dispensam item\" | Marque o que foi feito e peça à Diretoria a dispensa do item que não se aplica, com o motivo. Fechamento: \"O mês já está fechado\" | A Diretoria reabre o mês com o motivo; depois, desfaça a marcação do item a refazer. Baixa de conta a pagar: \"ainda não passou pela lista de aprovação\" | Envie o título em Aprovação de pagamentos; aprovado, registre a baixa. Baixa de conta a pagar: \"está aguardando aprovação desde ...\" | A mensagem diz quem aprova. Se for urgente, avise o dono ou a Diretoria; nada foi preparado. Baixa de conta a pagar: \"passa do valor aprovado\" | O valor mudou depois da aprovação. Retire o título da lista com o motivo e envie de novo. Aprovação de pagamentos: \"Você não aprova pagamentos\" | Só o dono e a Diretoria aprovam. O Financeiro envia e acompanha. Orçamento: importação \"categorias não existem no Omie\" | Corrija os códigos na planilha (use \"Carregar categorias\" para ver os válidos) e importe de novo; nada foi importado. Orçamento: \"Já existe uma versão em preparação\" | Continue na versão em preparação, descarte o rascunho ou, se estiver aguardando, retire-o da aprovação. Parcelado: \"Já lançadas no Omie: 1 de 3 parcelas\" | As lançadas não se repetem. Em Envios a conferir, \"Continuar as parcelas\" ou, se lançou o restante direto no Omie, \"Encerrar sem as que faltam\". Compras e Caju no Omie: a compra conferida não aparece | Só entram compras faturadas ou por boleto, conferidas, com vencimento a partir do mês de início. Veja \"Aguardando a origem\": a coluna \"O que falta\" diz o que fazer. Compra no cartão entra pela fatura. \"A referência ... já foi lançada no Omie\" | O item já tem conta a pagar no Omie. Nada foi preparado. Se o título foi excluído no Omie, desfaça o registro com o motivo e lance de novo. Diferenças com o Omie:"
++     "texto": "\"O Omie não confirmou o envio\" ao confirmar um pedido | Pode ter sido feito. Confira o título no Omie e registre \"foi feito\" ou \"não foi feito\" no pedido. Fechamento: \"Por decisão do dono, só o dono do sistema e a Diretoria ... dispensam item\" | Marque o que foi feito e peça à Diretoria a dispensa do item que não se aplica, com o motivo. Fechamento: \"O mês já está fechado\" | A Diretoria reabre o mês com o motivo; depois, desfaça a marcação do item a refazer. Baixa de conta a pagar: \"ainda não passou pela lista de aprovação\" | Envie o título em Aprovação de pagamentos; aprovado, registre a baixa. Baixa de conta a pagar: \"está aguardando aprovação desde ...\" | A mensagem diz quem aprova. Se for urgente, avise o dono ou a Diretoria; nada foi preparado. Baixa de conta a pagar: \"passa do valor aprovado\" | O valor mudou depois da aprovação. Retire o título da lista com o motivo e envie de novo. Aprovação de pagamentos: \"Você não aprova pagamentos\" | Só o dono e a Diretoria aprovam. O Financeiro envia e acompanha. Orçamento: importação \"categorias não existem no Omie\" | Corrija os códigos na planilha (use \"Carregar categorias\" para ver os válidos) e importe de novo; nada foi importado. Orçamento: \"Já existe uma versão em preparação\" | Continue na versão em preparação, descarte o rascunho ou, se estiver aguardando, retire-o da aprovação. Parcelado: \"Já lançadas no Omie: 1 de 3 parcelas\" | As lançadas não se repetem. Em Envios a conferir, \"Continuar as parcelas\" ou, se lançou o restante direto no Omie, \"Encerrar sem as que faltam\". Compras e Caju no Omie: a compra conferida não aparece | Só entram compras faturadas ou por boleto, conferidas, com vencimento a partir do mês de início. Veja \"Aguardando a origem\": a coluna \"O que falta\" diz o que fazer."
+     },
+     {
+      "titulo": "Problemas comuns (parte 5)",
+-     "texto": "\"Paga em Compras > A pagar ..., mas a baixa no Omie ainda não foi registrada\" | Inclua o título na Aprovação de pagamentos e registre a baixa com a data do pagamento; se já foi baixado direto no Omie, toque em \"Conferir com o Omie\". Lançamento avulso: \"não é de despesa\" ou \"não é de receita\" | Saída usa categoria de despesa; entrada, de receita; transferência, vazia ou de transferência."
++     "texto": "Compra no cartão entra pela fatura. \"A referência ... já foi lançada no Omie\" | O item já tem conta a pagar no Omie. Nada foi preparado. Se o título foi excluído no Omie, desfaça o registro com o motivo e lance de novo. Diferenças com o Omie: \"Paga em Compras > A pagar ..., mas a baixa no Omie ainda não foi registrada\" | Inclua o título na Aprovação de pagamentos e registre a baixa com a data do pagamento; se já foi baixado direto no Omie, toque em \"Conferir com o Omie\". Lançamento avulso: \"não é de despesa\" ou \"não é de receita\" | Saída usa categoria de despesa; entrada, de receita; transferência, vazia ou de transferência."
+     },
+     {
+      "titulo": "Como fazer em cada aba (parte 1)",
+diff -ru cand33/SGO_Financeiro_Foto.js cand34/SGO_Financeiro_Foto.js
+--- cand33/SGO_Financeiro_Foto.js	2026-11-19 00:04:11.517081700 -0300
++++ cand34/SGO_Financeiro_Foto.js	2026-11-19 01:52:07.499485100 -0300
+@@ -6,6 +6,10 @@
+  * guarda só NÚMEROS AGREGADOS; a aba Indicadores lê a fotografia, sem chamar o Omie.
+  *
+  * Rotina: FinFoto_rodada_ chamada por Ges_rodada_ (SGO_Gestao_Escada.js, de 15 em 15 minutos), também fora do expediente.
++ * 19/11/2026 (manutenção): a de 18/11 não saiu e não deixou rastro (o servidor foi reiniciado a cada publicação e cada reinício
++ *  apaga da memória o que já tinha sido lido). Agora ficam no registro do servidor, como aviso: o recomeço por memória perdida, a
++ *  leitura que falhou e a fotografia que não terminou no dia. E a lista de títulos de hoje perdida num reinício é refeita sozinha
++ *  (até FIN_FOTO_RECUPERAR_MAX vezes por dia), para a Régua de cobrança e a Agenda não ficarem paradas até alguém pedir.
+  *  - A primeira fotografia do dia sai a partir de FIN_FOTO_HORA (padrão 06:00, antes do expediente). Uma por dia: depois de
+  *    feita, a rodada não chama o Omie de novo no mesmo dia, a não ser que alguém da lista de sigilo toque em "Atualizar agora"
+  *    (pedido, no máximo um a cada 15 minutos; o botão nunca chama o Omie direto: a próxima rodada faz a fotografia).
+@@ -74,6 +78,17 @@
+ function FinFoto_cacheApagar_(k) { var c = FinFoto_cache_(); if (c) { try { c.remove(k); } catch (e) {} } }
+ /** Texto de erro sem números (nada de valor no log nem na tabela): troca algarismos de valores por "…". */
+ function FinFoto_semValor_(t) { return FinFoto_s_(t).replace(/R\$\s?[\d.,]+/g, 'R$ …').slice(0, 220); }
++/** 19/11/2026 (manutenção): aviso no registro do servidor (aparece no log como "aviso"); nunca leva valor em reais. Nunca lança. */
++function FinFoto_avisar_(texto) { try { console.warn(FinFoto_s_(texto).replace(/R\$\s?[\d.,]+/g, 'R$ …').slice(0, 600)); } catch (e) {} }
++/** 19/11/2026: refazer sozinha a fotografia de hoje cuja lista se perdeu da memória (reinício), no máximo FIN_FOTO_RECUPERAR_MAX por dia. */
++var FIN_FOTO_RECUPERAR_MAX = 2, FIN_FOTO_RECUPERAR_PROP = 'FIN_FOTO_RECUPERACAO';
++function FinFoto_podeRecuperar_(dia) {
++  var r = FinFoto_json_(FinFoto_prop_(FIN_FOTO_RECUPERAR_PROP), null);
++  var n = r && r.dia === dia ? Number(r.n) || 0 : 0;
++  if (n >= FIN_FOTO_RECUPERAR_MAX) return false;
++  try { FinFoto_props_().setProperty(FIN_FOTO_RECUPERAR_PROP, JSON.stringify({ dia: dia, n: n + 1 })); } catch (e) { return false; }
++  return true;
++}
+ 
+ function FinFoto_garantir_() {
+   if (typeof CertCal_garantirTabela_ === 'function') {
+@@ -347,14 +362,28 @@
+   try {
+     FinFoto_garantir_();
+     var dia = FinFoto_hoje_(quando), hora = FinFoto_hora_(quando), cur = FinFoto_cursor_();
+-    if (cur && cur.dia !== dia) { FinFoto_limparMemoria_(cur.dia); FinFoto_apagarProp_(FIN_FOTO_CURSOR_PROP); cur = null; }
++    if (cur && cur.dia !== dia) {
++      // 19/11/2026 (manutenção): a fotografia de 18/11 não terminou e não deixou rastro. Agora a virada do dia registra no log
++      // até onde ela chegou e quantas vezes recomeçou (cada reinício do servidor apaga a memória do que já tinha sido lido).
++      FinFoto_avisar_('A fotografia do Financeiro de ' + FinFoto_br_(cur.dia) + ' não terminou: parou em "' + (FIN_FOTO_NOMES_PASSOS[cur.passo] || cur.passo) + '" depois de ' +
++        (cur.rodadas || 0) + ' rodada(s) e ' + (cur.recomecos || 0) + ' recomeço(s) por reinício do servidor. Indicadores, Régua de cobrança e Agenda ficaram com a fotografia anterior; a de hoje sai na rodada automática a partir das ' + FinFoto_horaInicio_() + '.');
++      FinFoto_limparMemoria_(cur.dia); FinFoto_apagarProp_(FIN_FOTO_CURSOR_PROP); cur = null;
++    }
+     if (!cur) {
+-      var pedido = FinFoto_pedido_();
++      var pedido = FinFoto_pedido_(), origem = pedido ? 'PEDIDO' : 'ROTINA';
+       if (!pedido) {
+-        if (FinFoto_doDia_(dia)) { FinFoto_renovarMemoria_(dia); return { fora: 'a fotografia de hoje já foi feita' }; }
+-        if (hora < FinFoto_horaInicio_()) return { fora: 'antes do horário da fotografia (' + FinFoto_horaInicio_() + ')' };
++        var feita = FinFoto_doDia_(dia);
++        if (feita) {
++          FinFoto_renovarMemoria_(dia);
++          // 19/11/2026 (manutenção): o servidor reiniciou (publicação) e a lista dos títulos de hoje se perdeu da memória. Sem ela a
++          // Régua de cobrança, a Agenda e a previsão de caixa param até alguém pedir nova fotografia. A rotina refaz sozinha, no
++          // máximo FIN_FOTO_RECUPERAR_MAX vezes por dia (só leitura do Omie, no mesmo ritmo da rotina).
++          if (FinFoto_titulos_(dia) || FinFoto_json_(feita.FALHAS_JSON, {}).titulos || !FinFoto_podeRecuperar_(dia)) return { fora: 'a fotografia de hoje já foi feita' };
++          origem = 'RECUPERACAO';
++          FinFoto_avisar_('A lista de títulos da fotografia do Financeiro de ' + FinFoto_br_(dia) + ' se perdeu da memória do servidor (reinício). A rotina refaz a fotografia sozinha nas próximas rodadas; até lá a Régua de cobrança e a Agenda mostram o aviso de memória.');
++        } else if (hora < FinFoto_horaInicio_()) return { fora: 'antes do horário da fotografia (' + FinFoto_horaInicio_() + ')' };
+       }
+-      cur = { dia: dia, origem: pedido ? 'PEDIDO' : 'ROTINA', iniciadaEm: quando.toISOString(), passo: 'posicao', pagina: 1, tentativas: 0, rodadas: 0 };
++      cur = { dia: dia, origem: origem, iniciadaEm: quando.toISOString(), passo: 'posicao', pagina: 1, tentativas: 0, rodadas: 0, recomecos: 0 };
+       FinFoto_apagarProp_(FIN_FOTO_PEDIDO_PROP);
+       FinFoto_limparMemoria_(dia);
+       FinFoto_acumGravar_(dia, FinFoto_acumNovo_());
+@@ -364,6 +393,9 @@
+     if (ex && ex.dentro && FinFoto_telaUsando_()) return { adiada: 'a tela do Financeiro consultou o Omie há menos de 3 minutos; a fotografia continua na próxima rodada', passo: cur.passo };
+     var acum = FinFoto_acum_(dia);
+     if (!acum) { // a memória do servidor se perdeu no meio: recomeça do primeiro passo
++      cur.recomecos = (cur.recomecos || 0) + 1;
++      FinFoto_avisar_('A fotografia do Financeiro de ' + FinFoto_br_(dia) + ' recomeçou do primeiro passo (recomeço ' + cur.recomecos + '): a memória do servidor com o que já tinha sido lido se perdeu em "' +
++        (FIN_FOTO_NOMES_PASSOS[cur.passo] || cur.passo) + '" (o servidor reiniciou). Nada foi gravado no Omie.');
+       acum = FinFoto_acumNovo_(); cur.passo = 'posicao'; cur.pagina = 1; FinFoto_cacheApagar_('FIN_FOTO_VISTOS_' + dia);
+     }
+     var ctx = { usadas: 0, limite: ex && ex.dentro ? FIN_FOTO_PAGINAS_EXPEDIENTE : FIN_FOTO_PAGINAS_RODADA };
+@@ -381,6 +413,7 @@
+         } catch (e) {
+           if (e && e.omieNaoExecutado && (cur.tentativas = (cur.tentativas || 0) + 1) < FIN_FOTO_TENTATIVAS) { r.espera = FinFoto_semValor_(e.message); break; }
+           acum.falhas[cur.passo] = FinFoto_semValor_(e && e.message) || 'falha na leitura';
++          FinFoto_avisar_('Fotografia do Financeiro de ' + FinFoto_br_(dia) + ': a leitura de "' + (FIN_FOTO_NOMES_PASSOS[cur.passo] || cur.passo) + '" falhou e fica de fora (o indicador mostra "não calculado"): ' + acum.falhas[cur.passo]);
+           cur.tentativas = 0;
+           if (cur.passo === 'fechar') throw e;
+           FinFoto_avancar_(cur);
+@@ -406,7 +439,11 @@
+   var concl = ult ? new Date(ult.CONCLUIDA_EM).getTime() : 0;
+   if (!r.ligada) { r.podePedir = false; r.motivo = 'A fotografia diária está desligada (Chaves e senhas > Regras do Financeiro > Fotografia diária). Peça ao responsável pelo sistema para ligar.'; }
+   else if (!FinFoto_configurado_()) { r.podePedir = false; r.motivo = 'A conexão com o Omie não está configurada. Peça ao responsável pelo sistema.'; }
+-  else if (cur) { r.podePedir = false; r.motivo = 'Uma fotografia já está em andamento (' + r.passo + '). Ela termina nas próximas rodadas automáticas, de 15 em 15 minutos; volte a esta aba depois.'; }
++  else if (cur) {
++    r.podePedir = false; r.recomecos = Number(cur.recomecos) || 0;
++    r.motivo = 'Uma fotografia já está em andamento (' + r.passo + '). Ela termina nas próximas rodadas automáticas, de 15 em 15 minutos; volte a esta aba depois.' +
++      (r.recomecos ? ' Ela já recomeçou ' + r.recomecos + ' vez(es) hoje porque o servidor do SGO+ foi reiniciado (atualização do sistema); cada recomeço lê o Omie de novo desde o início.' : '');
++  }
+   else if (pedido) { r.podePedir = false; r.motivo = 'A nova fotografia já foi pedida às ' + r.pedidoEm.slice(11) + '. Ela sai na próxima rodada automática (até 15 minutos).'; }
+   else if (concl && agora - concl < FIN_FOTO_PEDIDO_INTERVALO_MS) {
+     r.podePedir = false; r.liberaEm = Utilities.formatDate(new Date(concl + FIN_FOTO_PEDIDO_INTERVALO_MS), FIN_FOTO_FUSO, 'HH:mm');
