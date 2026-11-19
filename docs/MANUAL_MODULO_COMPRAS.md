@@ -166,6 +166,20 @@ Na aba "Minhas compras informadas" ficam as suas compras com o valor, a situaç�
 
 Quem responde por um cartão da empresa vê a aba "Compras a informar": os lançamentos da fatura daquele cartão que ninguém informou. "Informar esta compra" abre o formulário com o valor, a data e o cartão preenchidos. A cobrança fica no Início; depois de 2 dias úteis vai também por e-mail (no expediente) e, no WhatsApp, só entra na contagem do resumo do dia. Depois de 5 dias úteis, a gestão é avisada. Se o lançamento não foi compra (tarifa, assinatura), fale com o Financeiro.
 
+### Compra de contrato de cliente (19/11/2026)
+
+Compra para cumprir o contrato de um cliente (fornecimento recorrente de insumos, comodato, locação, prestação de serviços) tem vínculo próprio, no Informar compra e no pedido de peça ou material: **Contrato de cliente (fornecimento recorrente, comodato, locação)**. Antes, ela acabava como "uso interno" e o custo sumia do cliente. Qualquer pessoa que informa ou pede compra pode marcar; Compras e o Financeiro conferem.
+
+1. Escolha o cliente e a **unidade** atendida (obrigatória; se a unidade não existe, cadastre em Cadastros > Clientes antes).
+2. Escolha o tipo (fornecimento de insumos, comodato, locação, prestação de serviços, outro) e escreva a **referência** do contrato (pelo menos 5 letras, sempre a mesma para o mesmo contrato, por exemplo "Contrato de insumos IMED 2026").
+3. Informe a **competência** (mês e ano a que a compra se refere; em branco vale o mês da compra) e a **natureza**: fornecimento do mês, reposição (erro, avaria ou falta) ou complemento fora do previsto. Na reposição e no complemento, a justificativa é obrigatória (20 letras ou mais).
+
+Conferências (vão ao Financeiro como apontamento e não bloqueiam): segundo "fornecimento do mês" do mesmo cliente, unidade, referência e competência; reposição (entra no indicador de custo de erro); competência a mais de 2 meses do mês da compra (o sistema pede o motivo antes de gravar). O campo do contrato cadastrado fica vazio até o módulo de Contratos, que vai ligar estas compras ao contrato sem perder nada.
+
+**Corrigir o vínculo.** Na ficha da compra, "Corrigir o vínculo" (quem informou ou comprou, Compras, o Financeiro e a gestão) troca só o vínculo, com o motivo (15 letras ou mais). O antes e o depois ficam no histórico, campo a campo; valor, pagamento, itens e comprovantes não mudam. É o caminho para reclassificar uma compra de contrato informada como uso interno.
+
+**Relatórios.** Compras > Relatórios > "Compras de contrato de cliente": por cliente e unidade e por referência e competência, com o total e a quantidade de reposições e de complementos. "Peças compradas em viagem (aditivo de recarga, só leitura)": peças pagas no cartão Caju durante a viagem com aditivo aprovado; não entram nos totais de Compras.
+
 ## Compra feita sem pedido no sistema
 
 A compra registrada antes de 31/10/2026 por "Registrar compra feita fora do sistema" continua como estava: entra na conferência do Financeiro e na Caixa de decisões até a gestão tocar em "Ciente". As novas são informadas pela tela "Informar compra já feita" (seção anterior).

@@ -1,0 +1,166 @@
+diff --git a/campo/prod/app.js b/campo/novo/app.js
+index cd8ef1f..7048261 100644
+--- a/campo/prod/app.js
++++ b/campo/novo/app.js
+@@ -636,6 +636,8 @@ function render() {
+     case "envios": titulo("Envios"); tela.innerHTML = "<p>Carregando...</p>"; telaEnvios().then((h) => { if (rotaAtual().tela === "envios") tela.innerHTML = h; }); break;
+     case "ajuda": titulo("Como usar"); tela.innerHTML = telaAjuda(); break;
+     case "conta": titulo("Minha conta"); tela.innerHTML = telaConta(); break;
++    // 19/11/2026: aditivo de recarga em viagem (pedido aos sócios; precisa de internet)
++    case "aditivo": titulo("Aditivo de recarga"); tela.innerHTML = "<p>Carregando...</p>"; telaAditivo().then((h) => { if (rotaAtual().tela === "aditivo") tela.innerHTML = h; }); break;
+     default: titulo("Meu dia"); tela.innerHTML = telaDia();
+   }
+ }
+@@ -802,6 +804,7 @@ function telaDia() {
+     ${E.campo && E.campo.podeAbrir === false ? "" : `<button type="button" class="bt primario bt-novo" data-acao="novoAtendimento">Novo atendimento</button>
+     <p class="fraco pequeno" style="text-align:center;margin-top:4px">Atendimento que não estava na agenda: localizar ou cadastrar o cliente e abrir a O.S. aqui. Ela fica no seu nome e aparece em "Em aberto".</p>`}
+     <button type="button" class="bt" data-acao="atualizarDia" ${E.baixando ? "disabled" : ""}>${E.baixando ? "Atualizando..." : "Atualizar agenda"}</button>
++    <button type="button" class="bt" data-acao="irAditivo">Em viagem: pedir aditivo de recarga</button>
+     <div class="linha-botoes"><button type="button" class="bt" data-acao="irConta">Minha conta</button><button type="button" class="bt" data-acao="ajuda">Como usar</button></div>`;
+ }
+ 
+@@ -1532,6 +1535,90 @@ async function telaEnvios() {
+     <p class="fraco pequeno">${esc(espaco)}</p>`;
+ }
+ 
++/* ---------------- Aditivo de recarga em viagem (19/11/2026) ----------------
++ * Durante a viagem apareceu um gasto fora do orçamento (peça, usinagem, hotel a mais): o técnico pede aqui um aditivo de recarga no
++ * cartão Caju. Vai NA HORA para os sócios (Viagem_api, ações aditivo* do SGO+); não fica na fila do aparelho porque depende da decisão
++ * deles: sem sinal, o app diz o que fazer. A mesma tela existe no SGO+ (Depósito de viagem > Aditivos de recarga).
++ */
++const ADT = { ctx: null, erro: "" };
++async function telaAditivo() {
++  ADT.erro = "";
++  if (navigator.onLine === false) return `<div class="aviso alerta"><p><strong>Sem internet agora.</strong> O aditivo vai na hora para os sócios, por isso precisa de sinal.</p><p>O que fazer: procure sinal (ou o Wi-Fi do cliente) e toque em "Tentar de novo". Se for urgente e não houver sinal, ligue para o seu gestor.</p></div><button type="button" class="bt primario" data-acao="irAditivo">Tentar de novo</button><button type="button" class="bt" data-acao="irDia">Voltar ao Meu dia</button>`;
++  let r;
++  try { r = await chamar("Viagem_api", [E.sessao.sessionId, "aditivoContexto", {}]); }
++  catch (e) { return `<div class="aviso erro"><p>Não foi possível abrir os aditivos: ${esc(e.message || e)}</p><p>O que fazer: confira o sinal e tente de novo.</p></div><button type="button" class="bt primario" data-acao="irAditivo">Tentar de novo</button><button type="button" class="bt" data-acao="irDia">Voltar ao Meu dia</button>`; }
++  if (!r || r.ok !== true) return `<div class="aviso erro"><p>${esc((r && r.message) || "O servidor não respondeu.")}</p></div><button type="button" class="bt" data-acao="irDia">Voltar ao Meu dia</button>`;
++  ADT.ctx = r;
++  return htmlAditivo();
++}
++function htmlAditivo(msg) {
++  const c = ADT.ctx || {}, vs = c.viagens || [], meus = (c.aditivos || []).filter((a) => (a.grupos || []).indexOf("meus") >= 0);
++  const op = (lista, atual) => lista.map(([v, t]) => `<option value="${esc(v)}"${v === atual ? " selected" : ""}>${esc(t)}</option>`).join("");
++  const cartao = (a) => `<div class="cartao-adt"><p><strong>${esc(a.numero)}</strong> · ${esc(a.situacaoNome)}${a.urgente && a.aberto ? " · parado aguardando" : ""}</p>
++    <p class="fraco pequeno">${esc(a.categoriaNome)}${a.valorTxt ? " · " + esc(a.valorTxt) : ""}${a.valorAprovadoTxt && a.valorAprovadoTxt !== a.valorTxt ? " · aprovado " + esc(a.valorAprovadoTxt) : ""} · ${esc(a.viagem.numero)} (${esc(a.viagem.destino)})</p>
++    <p class="adt-andamento">${esc(a.andamento)}</p>
++    ${a.info && a.situacao === "INFORMACAO" ? `<p class="aviso alerta">${esc(a.info.por)} pediu: ${esc(a.info.texto)}</p>` : ""}
++    ${a.acoes && a.acoes.complementar && a.acoes.complementar.pode ? `<button type="button" class="bt ${a.situacao === "INFORMACAO" ? "primario" : ""}" data-acao="aditivoResponder" data-adt="${esc(a.id)}">${a.situacao === "INFORMACAO" ? "Responder aos sócios" : "Complementar"}</button>` : ""}
++    ${a.acoes && a.acoes.cancelar && a.acoes.cancelar.pode ? `<button type="button" class="bt" data-acao="aditivoCancelar" data-adt="${esc(a.id)}">Cancelar o aditivo</button>` : ""}</div>`;
++  let h = `<p class="fraco">Apareceu na viagem um gasto fora do orçamento (peça, usinagem, hotel a mais)? Peça aqui um aditivo de recarga no cartão Caju. Um dos sócios decide; aprovado, o Financeiro carrega o valor e você recebe o aviso no celular.</p>`;
++  if (msg) h += `<div class="aviso ok"><p>${esc(msg)}</p></div>`;
++  if (meus.length) h += `<h2>Meus aditivos</h2>${meus.map(cartao).join("")}<button type="button" class="bt" data-acao="irAditivo">Atualizar</button>`;
++  if (!vs.length) {
++    h += `<div class="info"><p>${esc(c.semViagemTexto || "Você não tem viagem em andamento.")}</p>${(c.indisponiveis || []).map((v) => `<p class="fraco pequeno">${esc(v.numero)} (${esc(v.destino)}): ${esc(v.motivo)}</p>`).join("")}</div>`;
++    return h + `<button type="button" class="bt" data-acao="irDia">Voltar ao Meu dia</button>`;
++  }
++  const urg = c.urgencias || {}, pol = c.politica || {};
++  h += `<h2>Pedir aditivo</h2><form id="fAditivo" novalidate>
++    <label class="rotulo" for="adV">Viagem</label><select class="campo" id="adV">${op(vs.map((v) => [v.id, v.numero + " · " + v.destino + " · " + v.saida + " a " + v.chegada]), vs[0].id)}</select>
++    <p class="fraco pequeno">O crédito vai para o cartão Caju do responsável pelo dinheiro da viagem (${esc(vs[0].responsavel)}).</p>
++    <label class="rotulo" for="adCat">Categoria</label><select class="campo" id="adCat"><option value="">Escolha</option>${op(c.categorias || [], "")}</select>
++    <label class="rotulo" for="adValor">Valor (R$)</label><input class="campo" id="adValor" inputmode="decimal" placeholder="Ex.: 350,00">
++    <label class="rotulo" for="adJust">Para que é</label><textarea class="campo" id="adJust" rows="4" maxlength="1500" placeholder="Ex.: ${esc(c.exemplo || "")}"></textarea>
++    <p class="fraco pequeno">${esc((c.minimos || {}).justificativa || 20)} letras ou mais. Os sócios decidem por este texto.</p>
++    <fieldset class="adt-urg"><legend class="rotulo">Urgência</legend>${Object.keys(urg).map((k) => `<label><input type="radio" name="adUrg" value="${esc(k)}"> ${esc(urg[k])}</label>`).join("")}</fieldset>
++    <label class="rotulo" for="adRep">Repassar ao cliente?</label><select class="campo" id="adRep">${op(Object.keys(c.repassar || {}).map((k) => [k, c.repassar[k]]), "A_DEFINIR")}</select>
++    <label class="rotulo" for="adRef">O.S. ou chamado (opcional)</label><input class="campo" id="adRef" maxlength="120" value="${esc(vs[0].vinculoRef || "")}">
++    <label class="rotulo" for="adFoto">Foto da peça ou do orçamento${pol.fotoAcimaDeTxt ? " (obrigatória acima de " + esc(pol.fotoAcimaDeTxt) + " e em \"Outro\")" : " (obrigatória só em \"Outro\")"}</label>
++    <input class="campo" id="adFoto" type="file" accept="image/*">
++    ${ADT.erro ? `<div class="aviso erro" id="adErro"><p>${esc(ADT.erro)}</p></div>` : ""}
++    <button type="submit" class="bt primario">Enviar aos sócios</button></form>
++    <button type="button" class="bt" data-acao="irDia">Voltar ao Meu dia</button>`;
++  return h;
++}
++/** Lê a foto (reduzida no aparelho) como base64 para o pedido. */
++async function fotoAditivo(input) {
++  const f = input && input.files && input.files[0];
++  if (!f) return null;
++  const r = await comprimirFoto(f, "Aditivo de recarga · " + new Date().toLocaleString("pt-BR"));
++  const b64 = await new Promise((ok, falha) => { const rd = new FileReader(); rd.onload = () => ok(String(rd.result || "").replace(/^data:[^,]*,/, "")); rd.onerror = () => falha(new Error("O celular não conseguiu ler a foto. Tire de novo.")); rd.readAsDataURL(r.blob); });
++  return { nome: "aditivo-" + Date.now() + ".jpg", tipo: "image/jpeg", base64: b64 };
++}
++async function enviarAditivo(form) {
++  const v = (id) => { const el = $(id); return el ? el.value : ""; };
++  const urg = (form.querySelector('input[name="adUrg"]:checked') || {}).value || "";
++  const btn = form.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
++  try {
++    if (navigator.onLine === false) throw new Error("sem internet agora. Procure sinal e toque em Enviar de novo; o que você escreveu continua na tela.");
++    const foto = await fotoAditivo($("adFoto"));
++    const r = await chamar("Viagem_api", [E.sessao.sessionId, "aditivoPedir", { viagemId: v("adV"), categoria: v("adCat"), valor: v("adValor"), justificativa: v("adJust"), urgencia: urg, repassar: v("adRep"), vinculoRef: v("adRef"), foto }], { prazoMs: 90000 });
++    if (!r || r.ok !== true) throw new Error((r && r.message) || "o servidor não confirmou.");
++    ADT.ctx = r.contexto; ADT.erro = "";
++    if (rotaAtual().tela === "aditivo") $("tela").innerHTML = htmlAditivo(r.message);
++    try { window.scrollTo(0, 0); } catch (e) { /* segue */ }
++  } catch (e) {
++    const m = String((e && e.message) || e);
++    const el = $("adErro") || (() => { const d = document.createElement("div"); d.className = "aviso erro"; d.id = "adErro"; form.insertBefore(d, btn); return d; })();
++    el.innerHTML = `<p>${esc(/^Não foi possível/.test(m) ? m : "Não foi possível enviar: " + m)}</p>`;
++    if (btn) { btn.disabled = false; btn.textContent = "Enviar aos sócios"; }
++  }
++}
++async function acaoAditivo(id, acao, dados) {
++  const r = await chamar("Viagem_api", [E.sessao.sessionId, acao, Object.assign({ id }, dados)], { prazoMs: 90000 });
++  if (!r || r.ok !== true) throw new Error((r && r.message) || "o servidor não confirmou.");
++  ADT.ctx = r.contexto;
++  if (rotaAtual().tela === "aditivo") $("tela").innerHTML = htmlAditivo(r.message);
++}
++
+ function telaConta() {
+   const s = E.sessao, arm = E.arm || {};
+   return `<div class="info"><dl><dt>Nome</dt><dd>${esc(s.nome)}</dd><dt>E-mail</dt><dd>${esc(s.email || "não informado")}</dd>
+@@ -1629,6 +1716,10 @@ function telaAjuda() {
+     <li><strong>Depois de encerrada no servidor</strong>: toque em <strong>Pedir correção</strong> e escreva o motivo. A gestão da área recebe o pedido e, se concordar, reabre a O.S. no SGO+. Atualize o Meu dia: a O.S. aparece como "Reaberta para correção" e os passos ficam liberados.</li>
+     <li>Nada é apagado: o motivo, quem corrigiu e quando ficam no histórico da O.S.; o relatório sai de novo como revisão (Rev. 01, 02...).</li></ul>
+   </section>
++  <section id="aj-aditivo"><h2>Em viagem: aditivo de recarga</h2>
++    <p>Apareceu na viagem um gasto que não estava no orçamento (peça, usinagem, hotel a mais)? No Meu dia, toque em "Em viagem: pedir aditivo de recarga", escolha a viagem, a categoria, o valor e escreva para que é. Marque "Estou parado aguardando" se o serviço depende dele: os sócios recebem o aviso na hora, a qualquer horário.</p>
++    <p>Basta um dos sócios decidir. Aprovado, o Financeiro carrega o valor no cartão Caju do responsável pelo dinheiro e você recebe o aviso. Se os sócios pedirem informação, toque em "Responder aos sócios". O gasto entra na prestação de contas da própria viagem (no SGO+, marque o aditivo no gasto). O pedido precisa de internet: sem sinal, procure sinal e tente de novo.</p>
++  </section>
+   <section id="aj-sem-sinal"><h2>Sem sinal</h2>
+     <ul><li>Trabalhe normalmente: tudo fica guardado no aparelho.</li>
+     <li>A barra de baixo mostra "Pendente de envio (N)". Quando o sinal volta, o app envia sozinho, em ordem, sem registrar nada duas vezes.</li>
+@@ -2239,6 +2330,19 @@ const acoes = {
+   irDia: () => ir("#/dia"),
+   irEnvios: () => ir("#/envios"),
+   irConta: () => ir("#/conta"),
++  // 19/11/2026: aditivo de recarga em viagem
++  irAditivo: () => { if (rotaAtual().tela === "aditivo") render(); else ir("#/aditivo"); },
++  aditivoResponder: async (b) => {
++    const a = ((ADT.ctx || {}).aditivos || []).filter((x) => x.id === b.dataset.adt)[0]; if (!a) return;
++    const txt = await pedirMotivo(a.situacao === "INFORMACAO" ? "Responder aos sócios" : "Complementar o aditivo", a.info && a.situacao === "INFORMACAO" ? a.info.por + " pediu: " + a.info.texto : "Acrescente a informação que ajuda os sócios a decidir. Valor maior pede um aditivo novo.", "Enviar", "Ex.: o orçamento da oficina é de R$ 350,00, foto enviada pelo SGO+");
++    if (txt === null) return;
++    await acaoAditivo(a.id, "aditivoComplementar", { texto: txt });
++  },
++  aditivoCancelar: async (b) => {
++    const txt = await pedirMotivo("Cancelar o aditivo", "O aditivo deixa de valer e os sócios são avisados. Se já foi aprovado, o Financeiro também é avisado para não carregar.", "Cancelar o aditivo", "Ex.: a oficina consertou sem a peça");
++    if (txt === null) return;
++    await acaoAditivo(b.dataset.adt, "aditivoCancelar", { motivo: txt });
++  },
+   irEntrar: () => ir("#/entrar"),
+   // 31/10/2026: etapas do login (código do celular e senha nova)
+   reenviarCodigo: () => reenviarCodigo(""),
+@@ -2834,6 +2938,7 @@ document.addEventListener("submit", (e) => {
+   if (e.target.id === "fEsqueci") return pedirLinkSenha(e).catch((err) => erroEtapa(String((err && err.message) || err)));
+   if (e.target.id === "fCodigo") return enviarCodigo(e).catch((err) => erroEtapa(String((err && err.message) || err)));
+   if (e.target.id === "fSenhaNova") return enviarSenhaNova(e).catch((err) => erroEtapa(String((err && err.message) || err)));
++  if (e.target.id === "fAditivo") { e.preventDefault(); enviarAditivo(e.target); return; } // 19/11/2026
+   if (/^fAtv/.test(e.target.id)) { e.preventDefault(); enviarFormAtv(e.target).catch((err) => recado("Não foi possível: " + (err && err.message || err), 6000)); return; }
+   if (/^fNovo/.test(e.target.id)) { e.preventDefault(); enviarFormNovo(e.target).catch((err) => recado("Não foi possível: " + (err && err.message || err), 6000)); return; }
+   if (e.target.id === "fRondaEquip") { e.preventDefault(); salvarEquipRonda(e.target).catch((err) => recado("Não foi possível: " + (err && err.message || err), 6000)); return; }
+diff --git a/campo/prod/estilo.css b/campo/novo/estilo.css
+index 23ae086..d071305 100644
+--- a/campo/prod/estilo.css
++++ b/campo/novo/estilo.css
+@@ -474,3 +474,10 @@ label.opcao .pequeno { color: var(--texto-3); }
+ .arq-oculto { position: fixed; left: -1000px; top: 0; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+ /* 18/11/2026: quadro de assinatura maior (proporcional à tela) */
+ .quadro-assinatura { height: max(260px, 45vh); height: max(260px, 45dvh); }
++/* 19/11/2026: aditivo de recarga em viagem */
++.cartao-adt { background: var(--fundo-cartao, #fff); border: 1px solid var(--linha, #dcd9cf); border-left: 4px solid var(--alerta, #a87406); border-radius: 10px; padding: 12px 14px; margin: 0 0 10px; }
++.cartao-adt p { margin: 0 0 6px; text-align: justify; overflow-wrap: anywhere; }
++.adt-andamento { font-size: 14px; line-height: 1.5; }
++.adt-urg { border: 0; padding: 0; margin: 6px 0 10px; display: grid; gap: 8px; }
++.adt-urg label { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--linha, #dcd9cf); border-radius: 10px; background: #fff; font-size: 15px; }
++.adt-urg input { width: 20px; height: 20px; margin-top: 2px; flex: 0 0 auto; }

@@ -192,6 +192,25 @@ O relatório que o cliente recebe mostra no topo como o equipamento ficou. Por i
   Se abrir um desses passos antes, o app pergunta "Registrar a chegada agora" ou "Ainda não cheguei". Registro que já foi
   recusado só por falta da chegada volta sozinho para a fila depois do Cheguei.
 
+### Vários equipamentos na mesma visita (19/11/2026)
+
+- Uma visita atende vários equipamentos e tudo sai **numa O.S. e num relatório só** (corretiva, preventiva e os demais
+  serviços técnicos com visita; logística e ronda continuam com as listas próprias).
+- Na O.S., o passo **Equipamentos atendidos nesta visita** mostra o equipamento da O.S. como o 1º. Toque em
+  **+ Acrescentar equipamento** e escolha da lista da unidade (digite TAG, série, tipo ou setor para filtrar) ou toque em
+  **Não está na lista: cadastrar o equipamento** (tipo, fabricante, modelo, série, TAG, setor, patrimônio). Funciona sem
+  sinal: o cadastro e o equipamento sobem com a fila. Equipamento sem série, TAG nem patrimônio também entra (só o tipo é
+  obrigatório); na tela dele, toque em **O equipamento não tem série nem TAG** e a gestão completa o cadastro depois.
+- Em cada equipamento acrescentado: **1.** confira a série ou a TAG da etiqueta; **2.** escreva o **relato dele** (os
+  mesmos campos e mínimos de palavras do relato da O.S., com o resultado do teste e como o equipamento ficou); **3.** tire
+  **pelo menos 1 foto dele**; **4.** lance as peças dele, se houver.
+- A **assinatura do cliente é uma só** e vale para todos. O **Concluí** só libera com todos completos: o app diz o que
+  falta e em qual equipamento ("Equipamento 2 (Lavadora · TAG LV-02): pelo menos 1 foto deste equipamento").
+- No relatório, cada equipamento tem a sua seção (identificação, conferência, resultado, serviço, peças e fotos). O
+  atendimento aparece no histórico, no prontuário e no QR de cada equipamento, sempre com o relato **dele**.
+- Acrescentou por engano: abra o equipamento e use **Acrescentei por engano: tirar este equipamento da O.S.** (com o
+  motivo). A gestão vê os equipamentos da visita na ficha da O.S. (bloco "Equipamentos atendidos nesta visita").
+
 ## 3a. Retirada, entrega e envio de equipamento (03/11/2026)
 
 Nas O.S. de logística (Entrega de equipamento, Entrega de documentação, Entrega de insumos, Retirada de equipamento,
@@ -269,6 +288,12 @@ Depois do encerramento: o equipamento fora de uso vira chamado sozinho (um por e
 - **Antes de a O.S. ser encerrada no servidor** (concluída no aparelho, ou concluída com a documentação ainda pendente): na O.S., toque em **Desfazer conclusão para corrigir** e escreva o motivo (pelo menos 10 letras). A O.S. volta a aceitar fotos, respostas, relato, peças e assinaturas (botão **Refazer** na assinatura). Corrija e toque em **Concluí** de novo.
 - **Depois de encerrada no servidor**: toque em **Pedir correção** e escreva o motivo. A gestão da área recebe o pedido como aviso. Se ela concordar, reabre a O.S. no SGO+ ("Reabrir para correção"); atualize o Meu dia e a O.S. aparece como **Reaberta para correção**, com quem reabriu e o motivo. Corrija e conclua de novo.
 - Nada é apagado: a conclusão anterior, o motivo, quem corrigiu e quando ficam no histórico da O.S. O novo encerramento gera a revisão seguinte do relatório (Rev. 01, 02...), que precisa ser enviada de novo ao cliente.
+
+### Em viagem: aditivo de recarga (19/11/2026)
+
+Na viagem apareceu um gasto que não estava no orçamento (peça, usinagem, hotel a mais)? No Meu dia, toque em **"Em viagem: pedir aditivo de recarga"**. Escolha a viagem, a categoria, o valor e escreva para que é (20 letras ou mais). Marque **"Estou parado aguardando"** quando o serviço depende do dinheiro: os sócios recebem o aviso na hora, a qualquer horário. Anexe a foto da peça ou do orçamento (obrigatória só em "Outro"). Toque em **Enviar aos sócios**.
+
+A tela mostra quando foi enviado, quem foi avisado e a hora do lembrete. Se os sócios pedirem informação, toque em **"Responder aos sócios"**. Antes da decisão, dá para complementar ou cancelar. Aprovado, o Financeiro carrega o valor no cartão Caju do responsável pelo dinheiro e você recebe o aviso. O pedido precisa de internet (não fica guardado no aparelho): sem sinal, o app diz para procurar sinal e tentar de novo. O gasto entra na prestação de contas da viagem, no SGO+.
 
 ## 4. Sem sinal (subsolo, centro cirúrgico, estrada)
 

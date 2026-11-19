@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR" data-versao="__VERSAO__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SGO+ Campo</title>
+<meta name="description" content="Atendimentos do técnico de campo da Metrolabs. Funciona sem internet e envia depois.">
+<meta name="theme-color" content="#1F6B2A">
+<meta name="color-scheme" content="light">
+<meta name="application-name" content="SGO+ Campo">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SGO+ Campo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="/campo/manifest.webmanifest">
+<link rel="icon" href="/campo/icone-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/campo/icone-apple-180.png">
+<link rel="stylesheet" href="/campo/estilo.css">
+<script type="module" src="/campo/app.js"></script>
+</head>
+<body>
+<header class="topo" id="topo">
+  <button class="topo-voltar" id="btVoltar" type="button" data-acao="voltar" hidden>Voltar</button>
+  <a class="topo-logo" href="#/dia" aria-label="Metrolabs: ir para o Meu dia"><img src="/campo/logo.webp" alt="Metrolabs" width="640" height="198"></a>
+  <button class="topo-ajuda" type="button" data-acao="ajuda" aria-label="Como usar">Ajuda</button>
+</header>
+<h1 class="titulo-tela" id="titulo">SGO+ Campo</h1>
+<div id="avisos" class="avisos" aria-live="polite"></div>
+<main id="tela" class="tela" tabindex="-1">
+  <p class="carregando">Abrindo o SGO+ Campo...</p>
+  <noscript><p class="carregando">O SGO+ Campo precisa do JavaScript ligado no navegador.</p></noscript>
+</main>
+<nav class="barra" id="barra" aria-label="Envio">
+  <div class="barra-estado" id="barraEstado">Abrindo...</div>
+  <button type="button" class="barra-botao" id="barraBotao" data-acao="irEnvios">Pendente de envio (0)</button>
+</nav>
+<div id="janela" class="janela" hidden></div>
+<div id="recado" class="recado" role="status" aria-live="assertive" hidden></div>
+<!-- 18/11/2026: fora da vista, mas sem hidden (no iPhone o clique em campo de arquivo escondido pode não abrir a câmera nem a galeria) -->
+<input type="file" id="arqCamera" class="arq-oculto" accept="image/*" capture="environment" tabindex="-1" aria-hidden="true">
+<input type="file" id="arqGaleria" class="arq-oculto" accept="image/*" multiple tabindex="-1" aria-hidden="true">
+</body>
+</html>

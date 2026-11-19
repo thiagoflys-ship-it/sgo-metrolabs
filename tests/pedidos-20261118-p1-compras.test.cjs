@@ -114,7 +114,8 @@ test('P1-2b: destino diferente (matriz x filial) não é duplicidade; o mesmo ar
 
 test('P1-2c: a tela mantém as respostas (o formulário não apaga a primeira ao mostrar a segunda pergunta)', () => {
   const html = fs.readFileSync(path.join(PASTA, 'JS_Compras.html'), 'utf8');
-  assert.match(html, /var resp = \{ atraso: "", dup: "", perguntas: \{\} \}/);
+  // 19/11/2026 (E1a, compra de contrato): a terceira pergunta (competência distante) entrou junto, com a mesma regra
+  assert.match(html, /var resp = \{ atraso: "", dup: "", (comp: "", )?perguntas: \{\} \}/);
   assert.match(html, /atrasoMotivo: resp\.atraso, duplicidadeMotivo: resp\.dup/);
   assert.match(html, /lerResp\(\); montar\(/);
   assert.doesNotMatch(html, /if \(r\.precisa === "ATRASO"\) \{ Cp_msg_/, 'o desenho antigo, que apagava a outra resposta, saiu');

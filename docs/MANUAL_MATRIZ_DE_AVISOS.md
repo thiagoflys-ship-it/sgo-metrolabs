@@ -67,6 +67,10 @@ PEDIDO QUE DEPENDE DA DIRETORIA (11/11/2026, regra do dono: tudo o que fala Dire
 
 GS08 (nova solicitação de compra e, desde 19/11/2026, compra informada depois de feita), GS09 (pedido de aprovação da compra ao aprovador delegado, na escolha do orçamento com a espera 0, que é o padrão), GS10 (decisão do aprovador delegado, ao dono e à Diretoria) e GS11 (pedido de aprovação de preço do Comercial) vão na hora, a qualquer hora, ao dono, à Diretoria e ao Matheus, por WhatsApp e e-mail, e ficam na fila dos avisos da gestão (Meus avisos e o registro de cada envio). A espera antes de o Matheus decidir é configurável em Compras > Regras de compras e em Comercial > Metodologia (padrão 0 desde 19/11/2026). Quem pediu nunca recebe o próprio pedido para decidir.
 
+## 3D. Aditivo de recarga em viagem (19/11/2026)
+
+GS12 (aviso da gestão, modelo sgo_gestao_acao): o pedido de aditivo vai aos sócios (o dono e a Diretoria, menos quem pediu ou viaja), com o valor; com "estou parado aguardando", a qualquer hora; com "pode ser decidido hoje", no expediente. O gestor da área de quem pediu recebe para acompanhar (no expediente; sem o valor quando ele não vê a viagem). Lembrete único aos sócios aos 30 minutos sem decisão; aos 60 minutos, a tarefa de ligar para os sócios vai ao Financeiro e ao gestor da área. Aprovado, o Financeiro recebe a carga a fazer (na hora quando a pessoa está parada). VG01 (matriz): a decisão, o pedido de informação e o crédito no cartão vão a quem pediu e ao portador pelo sistema, e-mail e WhatsApp; parado aguardando, na hora, a qualquer horário (resposta a um pedido da própria pessoa, não cobrança). Nada é aprovado por tempo.
+
 ## 4. Matriz de avisos (Administrador e Diretoria)
 
 1. Abra Menu › Administração › Matriz de avisos.

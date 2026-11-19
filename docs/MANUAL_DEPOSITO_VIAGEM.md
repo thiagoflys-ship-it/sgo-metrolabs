@@ -288,3 +288,25 @@ Embaixo da linha aparece "Como foi calculado", que vai também para quem aprova 
 Para registrar: recolha no portal do Caju e, no quadro "Acerto do saldo", escolha Devolução, "Recolhimento do saldo no Caju", a data do recolhimento e o comprovante. A data fica no registro, no histórico e no A4 de fechamento, e a Conciliação Caju liga o recolhimento ao extrato.
 
 **Política de viagem.** Os campos novos são: quem define o valor da recarga, o percentual da recarga proporcional (vazio), o preço do litro de referência (vazio) e o prazo para recolher a sobra (2 dias úteis). Cada gravação vira uma versão nova, com o motivo.
+
+## 22. Aditivo de recarga em viagem (19/11/2026)
+
+**Para que serve.** Durante a viagem pode aparecer um gasto que não estava no orçamento: uma peça, uma usinagem, uma diária a mais. Antes, o técnico pagava do bolso e pedia reembolso, ou o gestor refazia a solicitação e a aprovação caía. Agora quem viaja pede um **aditivo de recarga**: um pedido próprio, com número próprio (o da viagem com /A1, /A2...), que não mexe na solicitação aprovada. A viagem continua aprovada e carregada.
+
+**Quem pede e quando.** Quem viaja ou quem pediu a viagem, com a viagem aprovada (ou já carregada), da véspera da saída até o dia seguinte à volta, e antes do envio da prestação de contas. O crédito vai para o cartão Caju do responsável pelo dinheiro da viagem. Fora disso, a tela explica o motivo; para gasto da rotina, o caminho é Minha recarga Caju > Pedir recarga.
+
+**Como pedir.** No SGO+, Depósito de viagem > Aditivos de recarga; no celular, também pelo app de campo (Meu dia > "Em viagem: pedir aditivo de recarga"). Escolha a viagem, a categoria (peça, usinagem ou serviço de terceiro, hospedagem extra, alimentação extra, combustível extra, pedágio e estacionamento, transporte local, ferramenta ou material, outro), o valor, para que é (20 letras ou mais), a urgência, se é para repassar ao cliente (a definir, sim ou não), a O.S. ou o chamado e a foto da peça ou do orçamento (obrigatória na categoria "Outro" e acima do valor da política, quando houver). O pedido precisa de internet: ele vai na hora para os sócios.
+
+**Quem decide.** Basta **um** dos sócios (o dono ou a Diretoria). Ninguém decide o aditivo da viagem em que pediu ou viaja. O sócio aprova, aprova com valor menor (com fundamentação), pede informação (o técnico responde pelo SGO+ ou pelo app e o pedido volta na hora) ou nega com o motivo (15 letras ou mais). Não há teto automático: cada aditivo é decidido na hora. O gestor da área de quem pediu recebe o pedido para acompanhar e pode registrar um parecer ("confirmo que é necessário" ou "não vejo necessidade, porque..."), que aparece para os sócios; o parecer não trava. Se o responsável pelo dinheiro tem prestação vencida, o sócio vê o apontamento e, ao aprovar, a liberação da trava para esta viagem fica registrada (2 dias).
+
+**Avisos.** "Estou parado aguardando": os sócios recebem WhatsApp e e-mail (evento GS12, modelo da gestão) e o alerta na tela, a qualquer hora; a resposta a quem pediu (evento VG01) também sai na hora. "Pode ser decidido hoje": o aviso aos sócios sai no expediente. Sem decisão em 30 minutos, um lembrete aos sócios; em 60 minutos, o Financeiro e o gestor da área recebem a tarefa de ligar para os sócios (aviso e pendência na central). Os tempos ficam na política de viagem. **Nada é aprovado por tempo.**
+
+**Carga.** O aditivo aprovado soma ao teto da carga da viagem (aprovado + aditivos). A aprovação da viagem não muda. A carga segue o caminho de sempre: o Financeiro faz pelo Caju (o pedido no Caju se chama "ADT VIA-AAAA-NNNN/A1") ou registra a carga manual com o comprovante. À noite, sem o Financeiro, o outro sócio registra a carga no próprio aditivo; se nenhum outro puder, quem aprovou registra como **exceção**, com o motivo, e o Financeiro confere no dia útil seguinte (pendência "Conferir a carga de exceção"). No expediente, quem aprovou não registra a carga. Carregado, quem pediu e o portador recebem o aviso do crédito.
+
+**Prestação de contas.** Os gastos do aditivo entram na prestação da própria viagem (prazo da política, 3 dias úteis depois da volta). No gasto, escolha "Pago com o crédito de um aditivo" para ligá-lo ao aditivo. A prestação não é enviada com aditivo aguardando decisão (espere ou cancele o aditivo). O quadro e o A4 de fechamento mostram o previsto (orçado + aditivos aprovados) contra o realizado.
+
+**Repasse ao cliente.** Com "Sim", a gestão do Comercial e o Financeiro recebem a tarefa de incluir o gasto no faturamento ou no orçamento do chamado (sem o valor no título) e registram no aditivo como foi tratado.
+
+**Compras.** A peça comprada com aditivo **não** vira compra em Compras (seria contada duas vezes). Compras > Relatórios > "Peças compradas em viagem" mostra, só para leitura, os gastos ligados a aditivo de peça, usinagem ou ferramenta (com valor só para quem vê os valores do Depósito de viagem).
+
+**Relatório.** Relatórios A4 > "Aditivos de recarga em viagem": por mês, categoria, técnico e cliente; tempo até a decisão; aprovados e negados; escalados; cargas de exceção; o que falta repassar ao cliente.
