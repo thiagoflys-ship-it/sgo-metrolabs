@@ -12,6 +12,10 @@
 3. **Financeiro** — PUBLICADO 19/11 (financeiro-auditoria-20261119, cand33, suíte 2687/0). Falta: 1ª baixa real assistida com a Wanessa (roteiro seção 11 do relatório); conferir fotografia diária; decisões: Matheus no sigilo? débito automático/tarifa precisam de aprovação?: mapear e testar o módulo inteiro com dados reais; contas a pagar e a receber por PERÍODO e com os filtros/colunas do Omie (Situação, Nº documento, Parcela, NF, Vencimento, Cliente, Valor da conta, Previsão, Último recebimento, Valor líquido, Impostos retidos, Valor a receber, Desconto, Juros e multa, Valor recebido, Categoria, Operação); conciliação com erro ("Conferência local registrada... permanece sob controle do Omie": não concilia contas atrasadas e o que concilia não baixa no Omie) — fazer a baixa real pela API do Omie.
 4. **Manutenção geral do SGO+** — PUBLICADO 19/11 02:40 (cand34, suíte 2698/0; output/manutencao-geral-20261119/). Pendências: guardar progresso da fotografia no banco (decisão de sigilo); servidor Node: Tuya reconecta a cada ~5 min, representada sem aviso de versão/chat, "sessão expirada" como erro, CertCal lento (medir antes); dados a corrigir pelos responsáveis (U95 de padrão do CertCal, cadastros incompletos, CNH sem validade, abastecimento do GFU5G11).: mapear tudo, procurar erros, corrigir, conferir que os módulos conversam.
 
+## PRÓXIMO (prioridade do dono, 19/11 08:00): Financeiro v2 — refazer o módulo inteiro
+Plano: output/financeiro-v2-20261119/PLANO.md (fases: finanças → design → desenvolvimento; Sicredi + Caju já com chave; Sicoob/Itaú quando chegar; 3 CNPJs: matriz, filial, prestadora).
+Depois dele: correções menores (Tuya reconecta, representada sem aviso de versão/chat, sessão expirada como aviso, CertCal lento, progresso da fotografia no banco, numeração de revisão dos ensaios por equipamento).
+
 ## Pendências do dono / terceiros
 - Decidir: numeração de revisão dos ensaios conta por número em todos os equipamentos ("Rev. 43"); corrigir muda o número impresso nos próximos documentos.
 - Matheus revisar documentos suspeitos (lista em output/qr-equipamento-20261118/RELATORIO.md item 5) e usar o botão Excluir.
