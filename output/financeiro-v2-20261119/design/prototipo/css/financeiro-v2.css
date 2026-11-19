@@ -1,0 +1,403 @@
+/* =====================================================================
+   FINANCEIRO v2 — extensão do padrão do Comercial (prefixo fv-)
+   Base: tokens --bc-* de UI_Estilos.html e classes cm-* de JS_Comercial.html.
+   Nada aqui troca cor, fonte ou raio do sistema; só acrescenta o que o
+   Financeiro precisa (empresa, valores, gráficos, conciliação, aprovação).
+   No legado este bloco vai no <style> de JS_Financeiro_V2.html.
+   ===================================================================== */
+
+:root {
+  /* Empresas: identidade (categórica). Ordem fixa, validada para daltonismo
+     (todas as combinações): nunca reaproveitar para outra coisa. */
+  --fv-matriz: #2a78d6;
+  --fv-filial: #eb6834;
+  --fv-prestadora: #1baf7a;
+  /* Fluxos (entradas × saídas) em tinta neutra: a cor fica reservada para empresa e situação */
+  --fv-entrada: #1f3b57;
+  --fv-saida: #b9b4a6;
+  --fv-previsto: #4A4F4B;
+  /* Sequencial (idade da dívida): um só tom, do claro ao escuro */
+  --fv-seq-1: #f3dfb2;
+  --fv-seq-2: #e3b066;
+  --fv-seq-3: #c47a22;
+  --fv-seq-4: #8a4b0c;
+  --fv-grade: #ECEAE3;
+  --fv-num: var(--bc-sans); /* como o cm-kpi do Comercial: algarismos tabulares, sem fonte mono */
+  --fv-cod: var(--bc-mono); /* só para códigos (TRF-0041, linha digitável) */
+}
+
+/* ---------- barra fixa do módulo: empresa, período, atualização ---------- */
+.fv-barra { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between;
+  background: var(--bc-bg); padding: 8px 0 10px; margin: -4px 0 6px; border-bottom: 1px solid var(--border); }
+.fv-barra-esq, .fv-barra-dir { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; min-width: 0; }
+.fv-atualizado { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.fv-atualizado i { margin-right: 4px; }
+
+/* seletor de empresa (segmentado) */
+.fv-empresas { display: inline-flex; border: 1px solid var(--bc-line-2); border-radius: 6px; background: var(--card); overflow: hidden; max-width: 100%; }
+.fv-empresas button { border: 0; border-right: 1px solid var(--bc-line); background: transparent; color: var(--text); font: inherit; font-size: 13px; font-weight: 600;
+  min-height: 40px; padding: 0 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.fv-empresas button:last-child { border-right: 0; }
+.fv-empresas button:hover { background: var(--bc-surface-2); }
+.fv-empresas button[aria-pressed="true"] { background: var(--bc-text); color: #fff; }
+.fv-empresas button:focus-visible { outline: 3px solid var(--info); outline-offset: -3px; }
+.fv-pt { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; display: inline-block; box-shadow: 0 0 0 2px var(--card); }
+.fv-pt.matriz { background: var(--fv-matriz); } .fv-pt.filial { background: var(--fv-filial); } .fv-pt.prestadora { background: var(--fv-prestadora); }
+.fv-pt.todas { background: conic-gradient(var(--fv-matriz) 0 33%, var(--fv-filial) 0 66%, var(--fv-prestadora) 0); }
+.fv-empresas-sel { display: none; }
+
+/* chip de empresa (em tabelas, cartões e formulários) */
+.fv-emp { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.fv-emp::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.fv-emp.matriz::before { background: var(--fv-matriz); } .fv-emp.filial::before { background: var(--fv-filial); } .fv-emp.prestadora::before { background: var(--fv-prestadora); }
+
+/* faixa de empresa no topo dos formulários que gravam: nunca opera em "Todas" */
+.fv-form-empresa { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); border-left: 6px solid var(--muted); background: var(--card); margin-bottom: 12px; font-size: 13px; }
+.fv-form-empresa.matriz { border-left-color: var(--fv-matriz); } .fv-form-empresa.filial { border-left-color: var(--fv-filial); } .fv-form-empresa.prestadora { border-left-color: var(--fv-prestadora); }
+.fv-form-empresa b { font-size: 14px; }
+
+/* seletor de período */
+.fv-periodo { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.fv-periodo button { border: 1px solid var(--bc-line-2); background: var(--card); color: var(--text); border-radius: 999px; min-height: 36px; padding: 0 12px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.fv-periodo button[aria-pressed="true"] { background: var(--info-bg); border-color: var(--bc-info-line); color: var(--info); }
+
+/* selo de dados fictícios (só no protótipo) */
+.fv-ficticio { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--bc-warn); background: var(--bc-warn-bg); border: 1px dashed var(--bc-warn-line); border-radius: 4px; padding: 3px 8px; white-space: nowrap; }
+
+/* ---------- textos: corrido justificado (regra do dono) ---------- */
+.fv-just, .fv-just p, .cm-faixa, .cm-txt, .fv-trava p, .fv-estado p { text-align: justify; hyphens: auto; }
+.fv-num { font-family: var(--fv-num); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.fv-pos { color: var(--success); } .fv-neg { color: var(--danger); }
+
+/* ---------- grades do painel ---------- */
+.fv-grade { display: grid; gap: 12px; margin-bottom: 12px; }
+.fv-g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fv-g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fv-g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.fv-g-hero { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+.fv-span2 { grid-column: span 2; }
+
+/* caixa (cm-caixa) com cabeçalho e ação */
+.fv-caixa { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.fv-caixa-cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.fv-caixa-cab h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text-strong); }
+.fv-caixa-cab .s { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.fv-caixa-cab a, .fv-link { font-size: 12.5px; font-weight: 600; color: var(--bc-action); text-decoration: none; cursor: pointer; background: none; border: 0; padding: 0; font-family: inherit; }
+.fv-caixa-cab a:hover, .fv-link:hover { text-decoration: underline; }
+
+/* ---------- cartão de indicador ---------- */
+.fv-kpi { display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: var(--card); border: 1px solid var(--border); border-top: 3px solid var(--info); border-radius: 8px; padding: 12px 14px; min-width: 0; cursor: pointer; }
+.fv-kpi:hover { border-color: var(--bc-line-2); box-shadow: var(--shadow-hover); }
+.fv-kpi:focus-visible { outline: 3px solid var(--info); outline-offset: 2px; }
+.fv-kpi.ok { border-top-color: var(--success); } .fv-kpi.aviso { border-top-color: var(--warning); } .fv-kpi.critico { border-top-color: var(--danger); } .fv-kpi.neutro { border-top-color: var(--bc-line-2); }
+.fv-kpi .r { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.fv-kpi .v { display: block; font-family: var(--fv-num); font-size: 22px; font-weight: 800; color: var(--text-strong); margin-top: 4px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; letter-spacing: -.02em; }
+.fv-kpi .d { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+.fv-kpi .d b { color: var(--text); }
+.fv-kpi .ic-sit { font-size: 12px; }
+.fv-kpi .ic-sit.critico { color: var(--danger); } .fv-kpi .ic-sit.aviso { color: var(--warning); } .fv-kpi .ic-sit.ok { color: var(--success); }
+/* trio hoje / semana / mês */
+.fv-trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.fv-trio div { border-left: 2px solid var(--border); padding-left: 8px; min-width: 0; }
+.fv-trio span { display: block; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.fv-trio b { display: block; font-family: var(--fv-num); font-size: 14px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* número principal (caixa agora) */
+.fv-hero .v { font-family: var(--fv-num); font-size: 34px; font-weight: 800; letter-spacing: -.03em; color: var(--text-strong); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.fv-hero .r { font-size: 12.5px; color: var(--muted); }
+.fv-hero .linha { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0 12px; font-size: 12.5px; color: var(--muted); }
+.fv-hero .linha b { color: var(--text); font-family: var(--fv-num); font-weight: 600; }
+
+/* barra empilhada por empresa (100 %) */
+.fv-pilha { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; background: var(--card); }
+.fv-pilha i { display: block; height: 100%; }
+.fv-pilha i.matriz { background: var(--fv-matriz); } .fv-pilha i.filial { background: var(--fv-filial); } .fv-pilha i.prestadora { background: var(--fv-prestadora); }
+.fv-pilha i.s1 { background: var(--fv-seq-1); } .fv-pilha i.s2 { background: var(--fv-seq-2); } .fv-pilha i.s3 { background: var(--fv-seq-3); } .fv-pilha i.s4 { background: var(--fv-seq-4); } .fv-pilha i.s0 { background: #d7dde3; }
+.fv-legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+.fv-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.fv-legenda span b { color: var(--text); font-family: var(--fv-num); font-weight: 600; }
+.fv-legenda i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.fv-legenda i.linha { height: 2px; width: 14px; border-radius: 0; }
+.fv-legenda i.trac { height: 0; width: 14px; border-top: 2px dashed var(--fv-previsto); border-radius: 0; }
+
+/* lista de contas (saldo por banco) */
+.fv-contas { display: flex; flex-direction: column; }
+.fv-conta { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--bc-line-soft); }
+.fv-conta:first-child { border-top: 0; }
+.fv-banco { width: 34px; height: 34px; border-radius: 6px; background: var(--bc-surface-3); color: var(--text); display: flex; align-items: center; justify-content: center; font-family: var(--fv-num); font-size: 11px; font-weight: 600; border: 1px solid var(--border); }
+.fv-conta .n { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.fv-conta .m { font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.fv-conta .s { font-family: var(--fv-num); font-size: 14px; font-weight: 600; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fv-conta .s small { display: block; font-family: var(--bc-sans); font-size: 11px; color: var(--muted); font-weight: 400; }
+
+/* ---------- selo de estado do banco / conector ---------- */
+.fv-con { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; line-height: 1.5; }
+.fv-con::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.fv-con.ligado { color: var(--success); background: var(--success-bg); }
+.fv-con.falta { color: var(--warning); background: var(--warning-bg); }
+.fv-con.erro { color: var(--danger); background: var(--danger-bg); }
+.fv-con.manual { color: var(--muted); background: var(--bc-surface-2); }
+.fv-con.homolog { color: var(--info); background: var(--info-bg); }
+.fv-cap { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.fv-cap span { font-size: 11px; padding: 1px 7px; border-radius: 4px; background: var(--bc-surface-3); color: var(--text-2, var(--bc-text-2)); border: 1px solid var(--border); }
+.fv-cap span.nao { text-decoration: line-through; color: var(--muted); background: transparent; }
+
+/* ---------- aprovação: cartão + linha do tempo ---------- */
+.fv-aprov-dest { border: 1px solid var(--bc-warn-line); background: linear-gradient(180deg, var(--bc-warn-bg), var(--card) 70%); }
+.fv-aprov-dest .v { font-family: var(--fv-num); font-size: 26px; font-weight: 600; }
+.fv-aprov-lista { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 10px; }
+.fv-aprov-lista div { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed var(--bc-warn-line); }
+.fv-aprov-lista div b { font-family: var(--fv-num); font-weight: 600; white-space: nowrap; }
+
+.fv-tempo { list-style: none; margin: 8px 0 0; padding: 0; display: flex; gap: 0; overflow-x: auto; }
+.fv-tempo li { flex: 1 1 0; min-width: 92px; position: relative; padding: 18px 6px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+.fv-tempo li::before { content: ""; position: absolute; top: 5px; left: 0; right: 0; height: 2px; background: var(--border); }
+.fv-tempo li::after { content: ""; position: absolute; top: 0; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--card); border: 2px solid var(--bc-line-2); box-sizing: border-box; }
+.fv-tempo li.feito { color: var(--text); } .fv-tempo li.feito::before { background: var(--success); } .fv-tempo li.feito::after { background: var(--success); border-color: var(--success); }
+.fv-tempo li.agora { color: var(--text-strong); font-weight: 700; } .fv-tempo li.agora::after { border-color: var(--warning); background: var(--warning-bg); box-shadow: 0 0 0 3px var(--bc-warn-bg); }
+.fv-tempo li.erro { color: var(--danger); font-weight: 700; } .fv-tempo li.erro::after { border-color: var(--danger); background: var(--danger-bg); }
+.fv-tempo li small { display: block; font-weight: 400; color: var(--muted); }
+
+.fv-card-op { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--warning); border-radius: 8px; padding: 12px 14px; }
+.fv-card-op.ok { border-left-color: var(--success); } .fv-card-op.erro { border-left-color: var(--danger); } .fv-card-op.info { border-left-color: var(--info); }
+.fv-card-op-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.fv-card-op-cab input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; }
+.fv-card-op .t { font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+.fv-card-op .valor { font-family: var(--fv-num); font-size: 18px; font-weight: 600; text-align: right; white-space: nowrap; }
+.fv-card-op .valor small { display: block; font-family: var(--bc-sans); font-size: 11.5px; color: var(--muted); font-weight: 400; }
+
+/* ---------- conciliação lado a lado ---------- */
+.fv-conc { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1.25fr); gap: 0; border: 1px solid var(--border); border-radius: 8px; background: var(--card); margin-bottom: 10px; overflow: hidden; }
+.fv-conc-lado { padding: 12px 14px; min-width: 0; }
+.fv-conc-lado h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.fv-conc-meio { display: flex; align-items: center; justify-content: center; background: var(--bc-surface-2); border-left: 1px solid var(--border); border-right: 1px solid var(--border); color: var(--muted); }
+.fv-conc-meio .pts { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--fv-num); font-size: 12px; font-weight: 600; }
+.fv-conc.sug .fv-conc-meio { color: var(--info); background: var(--info-bg); }
+.fv-conc.certo .fv-conc-meio { color: var(--success); background: var(--success-bg); }
+.fv-conc.conferir .fv-conc-meio { color: var(--warning); background: var(--warning-bg); }
+.fv-mov-v { font-family: var(--fv-num); font-size: 18px; font-weight: 600; }
+.fv-cand { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; font-size: 12.5px; cursor: pointer; }
+.fv-cand.escolhido { border-color: var(--info); box-shadow: inset 3px 0 0 var(--info); }
+.fv-cand .por { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; }
+.fv-cand .por b { color: var(--success); font-weight: 600; }
+.fv-cand .por s { color: var(--warning); text-decoration: none; }
+.fv-barra-pts { height: 6px; border-radius: 3px; background: var(--bc-surface-3); overflow: hidden; width: 70px; display: inline-block; vertical-align: middle; margin-left: 6px; }
+.fv-barra-pts i { display: block; height: 100%; background: var(--info); }
+
+/* ---------- tabela (sobre cm-tabela) ---------- */
+.fv-tab-ferr { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; justify-content: space-between; margin-bottom: 8px; }
+.fv-tab-ferr .esq, .fv-tab-ferr .dir { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.fv-tab-ferr label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 3px; }
+.fv-tab-ferr select, .fv-tab-ferr input[type="search"] { min-height: 40px; }
+.fv-tab-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
+.fv-tab-wrap .cm-tabela { font-size: 12.5px; }
+.fv-tab-wrap .cm-tabela thead th { position: sticky; top: 0; background: var(--bc-surface-2); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--bc-text-2); white-space: nowrap; }
+.fv-tab-wrap .cm-tabela th button.ord { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+.fv-tab-wrap .cm-tabela th button.ord:focus-visible { outline: 2px solid var(--info); }
+.fv-tab-wrap .cm-tabela tr.fv-filtro th { background: var(--card); padding: 4px 6px; text-transform: none; letter-spacing: 0; }
+.fv-tab-wrap .cm-tabela tr.fv-filtro input { width: 100%; min-width: 60px; min-height: 30px; font-size: 12px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 4px; }
+.fv-tab-wrap .cm-tabela tbody tr:hover td { background: var(--bc-surface-2); }
+.fv-tab-wrap .cm-tabela tr.fv-grupo td { background: var(--bc-surface-3); font-weight: 700; font-size: 12px; }
+.fv-tab-wrap .cm-tabela tfoot td { border-top: 2px solid var(--bc-text); font-weight: 700; background: var(--bc-surface-2); }
+.fv-tab-wrap .cm-tabela td.n, .fv-tab-wrap .cm-tabela th.n { font-family: var(--fv-num); }
+.fv-tab-wrap .cm-tabela td .acoes { display: flex; gap: 4px; flex-wrap: nowrap; }
+.fv-tab-wrap .cm-tabela td .acoes button { min-height: 32px !important; padding: 2px 9px; font-size: 12px; }
+.fv-tab-rod { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); padding: 8px 2px 0; }
+.fv-sel-lote { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 10px 14px; margin-top: 8px; background: var(--bc-text); color: #fff; border-radius: 8px; font-size: 13px; }
+.fv-sel-lote b { font-family: var(--fv-num); }
+
+/* ---------- estados ---------- */
+.fv-estado { border: 1px dashed var(--bc-line-2); border-radius: 8px; padding: 22px 20px; background: var(--card); display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 14px; align-items: start; }
+.fv-estado .ic { grid-row: span 3; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; background: var(--bc-surface-3); color: var(--muted); }
+.fv-estado h4 { margin: 2px 0 0; font-size: 15px; text-transform: none; letter-spacing: 0; }
+.fv-estado p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--bc-text-2); }
+.fv-estado .cm-acoes { margin-top: 6px; }
+.fv-estado.erro { border-style: solid; border-color: var(--bc-danger-line); } .fv-estado.erro .ic { background: var(--danger-bg); color: var(--danger); }
+.fv-estado.credencial { border-style: solid; border-color: var(--bc-warn-line); } .fv-estado.credencial .ic { background: var(--warning-bg); color: var(--warning); }
+.fv-estado.permissao .ic { background: var(--info-bg); color: var(--info); }
+.fv-esqueleto { display: flex; flex-direction: column; gap: 8px; }
+.fv-esqueleto i { display: block; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--bc-surface-3), var(--bc-surface-2), var(--bc-surface-3)); background-size: 200% 100%; animation: fvBrilho 1.4s ease-in-out infinite; }
+.fv-esqueleto i.alto { height: 64px; }
+@keyframes fvBrilho { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .fv-esqueleto i { animation: none; } }
+
+/* trava: o quê, por quê, o que fazer */
+.fv-trava { border: 1px solid var(--bc-warn-line); border-left: 4px solid var(--warning); background: var(--bc-warn-bg); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin: 8px 0; }
+.fv-trava dl { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 3px 10px; margin: 0; }
+.fv-trava dt { font-weight: 700; color: var(--bc-warn); } .fv-trava dd { margin: 0; text-align: justify; }
+.fv-trava.erro { border-color: var(--bc-danger-line); border-left-color: var(--danger); background: var(--danger-bg); } .fv-trava.erro dt { color: var(--danger); }
+
+/* ---------- gráficos SVG ---------- */
+.fv-graf { position: relative; width: 100%; }
+.fv-graf svg { display: block; width: 100%; height: auto; overflow: visible; }
+.fv-graf text { font-family: var(--bc-sans); fill: var(--bc-text-3); font-size: 11px; }
+.fv-graf text.v { fill: var(--bc-text); font-family: var(--fv-num); font-weight: 500; }
+.fv-graf .grade { stroke: var(--fv-grade); stroke-width: 1; }
+.fv-graf .zero { stroke: var(--bc-text-3); stroke-width: 1; }
+.fv-graf .alvo { cursor: crosshair; }
+.fv-dica { position: absolute; pointer-events: none; z-index: 30; background: var(--bc-text); color: #fff; border-radius: 6px; padding: 7px 10px; font-size: 12px; line-height: 1.45; white-space: nowrap; box-shadow: var(--shadow-strong); transform: translate(-50%, calc(-100% - 10px)); }
+.fv-dica b { font-family: var(--fv-num); font-weight: 600; }
+.fv-dica[hidden] { display: none; }
+.fv-graf-tab { margin-top: 6px; font-size: 12px; }
+.fv-graf-tab summary { cursor: pointer; color: var(--bc-action); font-weight: 600; min-height: 32px; display: inline-flex; align-items: center; }
+
+/* barras horizontais com valor (categorias, maiores clientes) */
+.fv-hbar { display: grid; grid-template-columns: minmax(110px, 1.1fr) minmax(0, 2fr) auto; gap: 6px 10px; align-items: center; font-size: 12.5px; padding: 5px 0; }
+.fv-hbar .nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fv-hbar .trilho { height: 10px; background: var(--bc-surface-3); border-radius: 0 4px 4px 0; overflow: hidden; }
+.fv-hbar .trilho i { display: block; height: 100%; background: var(--fv-entrada); border-radius: 0 4px 4px 0; }
+.fv-hbar .trilho.saida i { background: #6f7a74; }
+.fv-hbar .val { font-family: var(--fv-num); font-weight: 600; text-align: right; white-space: nowrap; }
+.fv-hbar .val small { display: block; font-family: var(--bc-sans); font-weight: 600; font-size: 11px; text-align: right; }
+.fv-var-alta { color: var(--danger); } .fv-var-baixa { color: var(--success); }
+
+/* calendário da semana (Wanessa) */
+.fv-semana { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.fv-dia { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--card); min-width: 0; }
+.fv-dia.hoje { border-color: var(--bc-text); box-shadow: inset 0 3px 0 var(--bc-text); }
+.fv-dia h5 { margin: 0 0 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.fv-dia .l { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; padding: 2px 0; }
+.fv-dia .l b { font-family: var(--fv-num); font-weight: 600; white-space: nowrap; }
+.fv-dia .sp { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 11.5px; color: var(--muted); }
+.fv-dia .sp b { display: block; color: var(--text); font-family: var(--fv-num); font-size: 13px; }
+
+/* lista de tarefas do dia */
+.fv-tarefas { display: flex; flex-direction: column; }
+.fv-tarefa { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--bc-line-soft); }
+.fv-tarefa:first-child { border-top: 0; }
+.fv-tarefa .ic { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: var(--bc-surface-3); color: var(--bc-text-2); }
+.fv-tarefa .ic.critico { background: var(--danger-bg); color: var(--danger); } .fv-tarefa .ic.aviso { background: var(--warning-bg); color: var(--warning); } .fv-tarefa .ic.ok { background: var(--success-bg); color: var(--success); } .fv-tarefa .ic.info { background: var(--info-bg); color: var(--info); }
+.fv-tarefa .t { font-size: 13px; font-weight: 600; } .fv-tarefa .m { font-size: 12px; color: var(--muted); }
+.fv-tarefa .q { font-family: var(--fv-num); font-weight: 600; font-size: 14px; text-align: right; white-space: nowrap; }
+.fv-tarefa .q small { display: block; font-family: var(--bc-sans); font-size: 11px; color: var(--muted); font-weight: 400; }
+
+/* faixa de riscos */
+.fv-riscos { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.fv-risco { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-family: inherit; color: var(--text); min-height: 36px; }
+.fv-risco i { font-size: 13px; }
+.fv-risco.critico { border-color: var(--bc-danger-line); background: var(--danger-bg); } .fv-risco.critico i { color: var(--danger); }
+.fv-risco.aviso { border-color: var(--bc-warn-line); background: var(--warning-bg); } .fv-risco.aviso i { color: var(--warning); }
+.fv-risco.ok i { color: var(--success); }
+
+/* checklist do fechamento */
+.fv-check { list-style: none; margin: 0; padding: 0; }
+.fv-check li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 9px 0; border-top: 1px solid var(--bc-line-soft); font-size: 13px; }
+.fv-check li:first-child { border-top: 0; }
+.fv-check li > i { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; margin-top: 1px; }
+.fv-check li.ok > i { background: var(--success); color: #fff; } .fv-check li.pend > i { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--bc-warn-line); } .fv-check li.bloq > i { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--bc-danger-line); }
+.fv-check li small { display: block; color: var(--muted); font-size: 12px; text-align: justify; }
+.fv-prog { height: 8px; background: var(--bc-surface-3); border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+.fv-prog i { display: block; height: 100%; background: var(--success); }
+
+/* área de anexar arquivo */
+.fv-anexar { border: 2px dashed var(--bc-line-2); border-radius: 8px; padding: 18px; text-align: center; font-size: 13px; color: var(--muted); background: var(--bc-surface-2); }
+.fv-anexar i { font-size: 22px; display: block; margin-bottom: 6px; color: var(--bc-text-3); }
+
+/* marca d'água (igual JS_Financeiro_Marca) */
+.fv-marca { position: fixed; inset: 0; pointer-events: none; z-index: 9000; opacity: .045; background-repeat: repeat; }
+
+/* barra de seções no celular (igual cm-nav-mob) + seletor compacto */
+.fv-nav-mob { display: none; }
+.app-shell.modo-mobile .fv-nav-mob { display: flex; }
+.app-shell.modo-mobile .fv-empresas { display: none; }
+.app-shell.modo-mobile .fv-empresas-sel { display: block; width: 100%; }
+.app-shell.modo-mobile .fv-empresas-sel select { width: 100%; min-height: 44px; font-weight: 700; }
+.app-shell.modo-mobile .fv-barra { position: static; }
+.app-shell.modo-mobile .fv-barra-esq, .app-shell.modo-mobile .fv-barra-dir { width: 100%; }
+
+/* ---------- celular ---------- */
+@media (max-width: 1180px) {
+  .fv-g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fv-g-hero { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .fv-g2, .fv-g3, .fv-g-hero { grid-template-columns: 1fr; }
+  .fv-g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fv-span2 { grid-column: auto; }
+  .fv-kpi .v { font-size: 18px; }
+  .fv-hero .v { font-size: 28px; }
+  .fv-conc { grid-template-columns: 1fr; }
+  .fv-conc-meio { border: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 4px; }
+  .fv-conc-meio .pts { writing-mode: horizontal-tb; transform: none; }
+  .fv-semana { grid-template-columns: 1fr; }
+  .fv-dia { display: grid; grid-template-columns: 70px 1fr 1fr; gap: 2px 8px; align-items: center; }
+  .fv-dia h5 { margin: 0; grid-row: span 2; }
+  .fv-dia .sp { grid-column: 2 / -1; margin-top: 2px; }
+  .fv-trava dl { grid-template-columns: 1fr; }
+  .fv-tab-wrap { border: 0; background: transparent; overflow: visible; }
+  .fv-tab-wrap .cm-tabela tr.fv-filtro, .fv-tab-wrap .cm-tabela tfoot tr { display: none; }
+  .fv-tab-wrap .cm-tabela tr.fv-grupo { background: var(--bc-surface-3); }
+  .fv-tab-wrap .cm-tabela tfoot.fv-mostra-mob tr { display: block; }
+  .fv-tab-ferr .esq, .fv-tab-ferr .dir { width: 100%; }
+  .fv-tab-ferr .esq > div { flex: 1 1 140px; }
+  .fv-hbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .fv-hbar .trilho { grid-column: 1 / -1; grid-row: 2; }
+  .fv-estado { grid-template-columns: 1fr; text-align: left; }
+  .fv-estado .ic { grid-row: auto; }
+  .fv-card-op-cab { grid-template-columns: auto minmax(0, 1fr); }
+  .fv-card-op .valor { grid-column: 1 / -1; text-align: left; }
+  .fv-tempo li { min-width: 78px; }
+}
+@media (max-width: 420px) {
+  .fv-g4 { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fv-kpi { padding: 10px; }
+  .fv-kpi .v { font-size: 16px; }
+  .fv-trio b { font-size: 12.5px; }
+}
+
+/* utilitário de acessibilidade (o legado não tem um) */
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* ---------- ajustes depois das capturas (19/11) ---------- */
+.fv-risco { text-align: left; }
+/* tabela larga que continua tabela no celular (rola dentro da caixa, a página não rola para o lado) */
+@media (max-width: 900px) {
+  .fv-rolar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .fv-rolar .cm-tabela { display: table; width: max-content; min-width: 100%; }
+  .fv-rolar .cm-tabela thead { display: table-header-group; }
+  .fv-rolar .cm-tabela tbody { display: table-row-group; }
+  .fv-rolar .cm-tabela tr { display: table-row; border: 0; margin: 0; padding: 0; background: transparent; }
+  .fv-rolar .cm-tabela th, .fv-rolar .cm-tabela td { display: table-cell; width: auto; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .fv-rolar .cm-tabela td[data-r]::before { content: none; }
+  .fv-rolar .cm-tabela td.n { text-align: right !important; }
+  .fv-rolar .cm-tabela th:first-child, .fv-rolar .cm-tabela td:first-child { position: sticky; left: 0; background: var(--card); z-index: 1; max-width: 150px; white-space: normal; }
+  /* trio vira três linhas: rótulo à esquerda, valor à direita */
+  .fv-trio { grid-template-columns: 1fr; gap: 2px; }
+  .fv-trio div { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; border-left: 0; padding-left: 0; border-bottom: 1px dashed var(--bc-line-soft); }
+  /* quem aprova pelo celular vê a fila antes do caixa */
+  .fv-g-hero > .fv-aprov-dest { order: -1; }
+  /* mostra 2 avisos; o resto fica atrás de "mais avisos" */
+  .fv-riscos .fv-risco:nth-child(n+3) { display: none; }
+  .fv-riscos.aberto .fv-risco { display: inline-flex; }
+  .fv-riscos-mais { display: inline-flex !important; }
+}
+.fv-riscos-mais { display: none !important; }
+@media (max-width: 900px) {
+  /* cartão de aprovação: Aprovar e Recusar lado a lado; o terceiro botão ocupa a linha de baixo */
+  .fv-card-op .cm-acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fv-card-op .cm-acoes button { width: 100%; }
+  .fv-card-op .cm-acoes button:nth-child(3) { grid-column: 1 / -1; }
+  .fv-tempo li { min-width: 64px; font-size: 11px; }
+}
+.fv-tab-wrap .cm-tabela td .acoes button { white-space: nowrap; }
+/* rótulo e valor curtos não se justificam (só texto corrido) */
+.cm-det dd, .fv-legenda, .fv-conta .m { text-align: left; }
+/* cartão compacto das tabelas no celular: título e valor em destaque, o resto em duas colunas */
+@media (max-width: 900px) {
+  .fv-tab-wrap .cm-tabela tbody tr { display: grid !important; grid-template-columns: 1fr 1fr; gap: 4px 12px; position: relative; padding: 10px 12px; }
+  .fv-tab-wrap .cm-tabela tbody tr.fv-grupo { display: block !important; padding: 6px 10px; }
+  .fv-tab-wrap .cm-tabela tbody td { font-size: 12.5px; padding: 0; min-width: 0; }
+  .fv-tab-wrap .cm-tabela tbody td[data-r]::before { display: block; content: attr(data-r); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+  .fv-tab-wrap .cm-tabela td.m-titulo { grid-column: 1 / -1; order: -3; font-size: 14px; padding-right: 34px; }
+  .fv-tab-wrap .cm-tabela td.m-valor { grid-column: 1 / -1; order: -2; font-size: 18px; font-weight: 800; }
+  .fv-tab-wrap .cm-tabela td.m-titulo::before, .fv-tab-wrap .cm-tabela td.m-valor::before, .fv-tab-wrap .cm-tabela td.m-sel::before, .fv-tab-wrap .cm-tabela td.m-acoes::before { display: none !important; }
+  .fv-tab-wrap .cm-tabela td.m-oculto { display: none !important; }
+  .fv-tab-wrap .cm-tabela td.m-sel { position: absolute; top: 10px; right: 12px; width: auto !important; }
+  .fv-tab-wrap .cm-tabela td.m-sel input { width: 22px; height: 22px; }
+  .fv-tab-wrap .cm-tabela td.m-acoes { grid-column: 1 / -1; margin-top: 4px; }
+  .fv-tab-wrap .cm-tabela td.m-acoes .acoes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+  .fv-tab-wrap .cm-tabela td.m-acoes .acoes button { min-height: 44px !important; }
+  .fv-tab-ferr .dir { justify-content: flex-end; }
+  .fv-tab-ferr .dir button { width: auto; }
+}

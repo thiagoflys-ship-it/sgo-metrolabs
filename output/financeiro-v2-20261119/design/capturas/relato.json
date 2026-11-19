@@ -1,0 +1,290 @@
+[
+  {
+    "largura": 1366,
+    "nome": "01-painel-diretoria",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "02-painel-meu-dia",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "03-aprovacoes-charles",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "04-aprovacoes-wanessa",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "05-contas-a-receber",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "06-contas-a-pagar",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "07-conciliacao",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "08-cobranca",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "09-bancos-e-saldos",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "10-transferencias",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "11-notas-fiscais",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "12-fornecedores-e-clientes",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "13-impostos-e-guias",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "14-caju",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "15-orcamento",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "16-fechamento",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "17-relatorios",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "18-empresas-e-bancos",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "19-trilha",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "20-componentes-e-estados",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "21-sem-acesso",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "22-janela-confirmar-aprovacao",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "23-janela-nova-conta-a-pagar",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 1366,
+    "nome": "24-painel-so-matriz",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "01-painel-diretoria",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "02-painel-meu-dia",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "03-aprovacoes-charles",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "04-aprovacoes-wanessa",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "05-contas-a-receber",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "06-contas-a-pagar",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "07-conciliacao",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "08-cobranca",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "09-bancos-e-saldos",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "10-transferencias",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "11-notas-fiscais",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "12-fornecedores-e-clientes",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "13-impostos-e-guias",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "14-caju",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "15-orcamento",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "16-fechamento",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "17-relatorios",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "18-empresas-e-bancos",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "19-trilha",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "20-componentes-e-estados",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "21-sem-acesso",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "22-janela-confirmar-aprovacao",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "23-janela-nova-conta-a-pagar",
+    "rolagemLateral": false,
+    "erros": []
+  },
+  {
+    "largura": 390,
+    "nome": "24-painel-so-matriz",
+    "rolagemLateral": false,
+    "erros": []
+  }
+]
