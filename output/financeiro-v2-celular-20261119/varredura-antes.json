@@ -1,0 +1,3279 @@
+[
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 43,
+  "r": {
+   "estreito": [
+    {
+     "el": "td \"16/11/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"23/11/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"30/11/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"07/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"14/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"21/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"28/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"04/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"11/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"18/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"25/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"01/02/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"08/02/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"13/02/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"jun/26\"",
+     "largura": 46,
+     "linhas": 2,
+     "palavras": 1
+    },
+    {
+     "el": "td \"jul/26\"",
+     "largura": 46,
+     "linhas": 2,
+     "palavras": 1
+    },
+    {
+     "el": "td \"ago/26\"",
+     "largura": 46,
+     "linhas": 2,
+     "palavras": 1
+    },
+    {
+     "el": "td \"set/26\"",
+     "largura": 46,
+     "linhas": 2,
+     "palavras": 1
+    },
+    {
+     "el": "td \"out/26\"",
+     "largura": 46,
+     "linhas": 2,
+     "palavras": 1
+    },
+    {
+     "el": "td \"nov/26 (até hoje)\"",
+     "largura": 46,
+     "linhas": 4,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Recebido (entradas)\"",
+     "largura": 18,
+     "linhas": 18,
+     "palavras": 2
+    },
+    {
+     "el": "td \"(−) Pago (saídas)\"",
+     "largura": 18,
+     "linhas": 15,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Resultado de caixa\"",
+     "largura": 18,
+     "linhas": 16,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Margem de caixa\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 3
+    }
+   ],
+   "sobreposto": [
+    {
+     "a": "small \"saldo pelo Omie (Fluxo de caixa)\"",
+     "b": "span.fv-con.manual \"Sem API · arquivo OFX\"",
+     "area": "5x7"
+    },
+    {
+     "a": "td.n \"R$ 1.063.905,00\"",
+     "b": "td.n \"R$ 1.325.215,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.250.480,34\"",
+     "b": "td.n \"R$ 1.355.079,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.051.645,83\"",
+     "b": "td.n \"R$ 1.504.399,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.365.964,43\"",
+     "b": "td.n \"R$ 1.541.729,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.397.396,29\"",
+     "b": "td.n \"R$ 1.541.729,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.397.396,29\"",
+     "b": "td.n \"R$ 1.579.059,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.428.828,15\"",
+     "b": "td.n \"R$ 1.579.059,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.279.508,15\"",
+     "b": "td.n \"R$ 1.429.739,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 3.000,00\"",
+     "b": "td.n \"R$ 2.000,00\"",
+     "area": "5x16"
+    },
+    {
+     "a": "td.n \"R$ 9.000,00\"",
+     "b": "td.n \"R$ 1.000,00\"",
+     "area": "5x16"
+    },
+    {
+     "a": "td.n \"R$ 7.000,00\"",
+     "b": "td.n \"R$ 0,00\"",
+     "area": "5x16"
+    },
+    {
+     "a": "td.n \"R$ 5.000,00\"",
+     "b": "td.n \"R$ 4.200,00\"",
+     "area": "5x16"
+    },
+    {
+     "a": "td.n \"R$ 0,00\"",
+     "b": "td.n \"R$ 186.650,00\"",
+     "area": "11x16"
+    },
+    {
+     "a": "td.n \"R$ 373.300,00\"",
+     "b": "td.n \"R$ 261.310,00\"",
+     "area": "47x16"
+    },
+    {
+     "a": "td.n \"R$ 0,00\"",
+     "b": "td.n \"-R$ 111.990,00\"",
+     "area": "11x16"
+    },
+    {
+     "a": "td.n \"-R$ 335.970,00\"",
+     "b": "td.n \"-R$ 261.310,00\"",
+     "area": "52x16"
+    },
+    {
+     "a": "td.n \"R$ 0,00\"",
+     "b": "td.n \"R$ 74.660,00\"",
+     "area": "14x16"
+    },
+    {
+     "a": "td.n \"R$ 37.330,00\"",
+     "b": "td.n \"R$ 0,00\"",
+     "area": "44x16"
+    }
+   ],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"Vencimento deVencimento de: a primeira data de ven\"",
+     "largura": 366,
+     "linhas": 4,
+     "palavras": 2
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "reajustes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "lancamentos",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"Vencimento deVencimento de: a primeira data de ven\"",
+     "largura": 366,
+     "linhas": 4,
+     "palavras": 2
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "fixas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "espelho",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "comissoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_conciliacao",
+  "titulo": "Conciliação",
+  "aba": "conciliacao",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "regua",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "cobrancas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_bancos",
+  "titulo": "Bancos e saldos",
+  "aba": "v2_bancos",
+  "defeitos": 4,
+  "r": {
+   "estreito": [
+    {
+     "el": "span.cm-meta \"Falta: SICREDI_MATRIZ_CONTA_CLIENT_ID, SICREDI_MAT\"",
+     "largura": 163,
+     "linhas": 39,
+     "palavras": 30
+    },
+    {
+     "el": "span.cm-meta \"Falta: SICREDI_MATRIZ_CONTA_CLIENT_ID, SICREDI_MAT\"",
+     "largura": 163,
+     "linhas": 39,
+     "palavras": 30
+    },
+    {
+     "el": "span.cm-meta \"Falta: ITAU_PRESTADORA_CLIENT_ID, ITAU_PRESTADORA_\"",
+     "largura": 163,
+     "linhas": 12,
+     "palavras": 9
+    }
+   ],
+   "sobreposto": [
+    {
+     "a": "small \"saldo pelo Omie (Fluxo de caixa)\"",
+     "b": "span.fv-con.manual \"Sem API · arquivo OFX\"",
+     "area": "10x7"
+    }
+   ],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_transferencias",
+  "titulo": "Transferências",
+  "aba": "v2_transferencias",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "pedidos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "servicos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "produtos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "notas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_cadastros",
+  "titulo": "Fornecedores e clientes",
+  "aba": "cliente",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_impostos",
+  "titulo": "Impostos e guias",
+  "aba": "v2_impostos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_caju",
+  "titulo": "Caju",
+  "aba": "recarga",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "orcamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "provisoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_fechamento",
+  "titulo": "Fechamento do mês",
+  "aba": "fechamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "relatorios",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "resultado",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "fluxo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "agenda",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "especialista",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 37,
+  "r": {
+   "estreito": [
+    {
+     "el": "b \"Banco do Brasil\"",
+     "largura": 8,
+     "linhas": 13,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 001 · ag. 1841-4 · conta 70685-2 · código Om\"",
+     "largura": 10,
+     "linhas": 43,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 2,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 2,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 20,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"CAIXA FILIAL\"",
+     "largura": 9,
+     "linhas": 11,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 104 · ag. 0303 · conta 555-1 · código Omie 7\"",
+     "largura": 10,
+     "linhas": 39,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 2,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 2,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 20,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"Itaú Unibanco Prestadora\"",
+     "largura": 9,
+     "linhas": 22,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 341 · ag. 0202 · conta 9876-5 · código Omie \"",
+     "largura": 10,
+     "linhas": 40,
+     "palavras": 12
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 2,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Itaú Falta credencial\"",
+     "largura": 20,
+     "linhas": 4,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi matriz\"",
+     "largura": 11,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 12345-6 · código Omie\"",
+     "largura": 10,
+     "linhas": 41,
+     "palavras": 12
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 2,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 20,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi prestadora aplicação\"",
+     "largura": 8,
+     "linhas": 26,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 98765-4 · código Omie\"",
+     "largura": 10,
+     "linhas": 42,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 2,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 2,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 20,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "td \"16/11/2026 10:00\"",
+     "largura": 23,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"DONO DO SISTEMA TESTE\"",
+     "largura": 23,
+     "linhas": 18,
+     "palavras": 4
+    },
+    {
+     "el": "td \"Contas correntes\"",
+     "largura": 23,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"contas conferidas com o gerente do banco\"",
+     "largura": 23,
+     "linhas": 34,
+     "palavras": 7
+    }
+   ],
+   "sobreposto": [
+    {
+     "a": "input.cadx-input \"Banco do Brasil\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Banco do Brasil\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"CAIXA FILIAL\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"CAIXA FILIAL\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"Itaú Unibanco Prestadora\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Itaú Unibanco Prestadora\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi Matriz\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi Matriz\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi prestadora aplicação\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi prestadora aplicação\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    }
+   ],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "trilha",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "sigilo",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"MotivoMotivo: por que a lista muda (ex.: nova pess\"",
+     "largura": 366,
+     "linhas": 4,
+     "palavras": 1
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "errosJs": []
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"Vencimento deVencimento de: a primeira data de ven\"",
+     "largura": 366,
+     "linhas": 4,
+     "palavras": 2
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 32,
+  "r": {
+   "estreito": [
+    {
+     "el": "b \"Banco do Brasil\"",
+     "largura": 8,
+     "linhas": 13,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 001 · ag. 1841-4 · conta 70685-2 · código Om\"",
+     "largura": 10,
+     "linhas": 43,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 2,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "td \"Banco do Brasil\"",
+     "largura": 20,
+     "linhas": 13,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 20,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 20,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"CAIXA FILIAL\"",
+     "largura": 9,
+     "linhas": 11,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 104 · ag. 0303 · conta 555-1 · código Omie 7\"",
+     "largura": 10,
+     "linhas": 39,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 2,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "td \"CAIXA FILIAL\"",
+     "largura": 20,
+     "linhas": 11,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 20,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 20,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"Itaú Unibanco Prestadora\"",
+     "largura": 9,
+     "linhas": 22,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 341 · ag. 0202 · conta 9876-5 · código Omie \"",
+     "largura": 10,
+     "linhas": 40,
+     "palavras": 12
+    },
+    {
+     "el": "td \"Itaú Unibanco Prestadora\"",
+     "largura": 20,
+     "linhas": 22,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 20,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Itaú Falta credencial\"",
+     "largura": 20,
+     "linhas": 4,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi matriz\"",
+     "largura": 11,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 12345-6 · código Omie\"",
+     "largura": 10,
+     "linhas": 41,
+     "palavras": 12
+    },
+    {
+     "el": "td \"Sicredi Matriz\"",
+     "largura": 20,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 20,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 20,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi prestadora aplicação\"",
+     "largura": 8,
+     "linhas": 26,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 98765-4 · código Omie\"",
+     "largura": 10,
+     "linhas": 42,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 2,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "td \"Sicredi prestadora aplicação\"",
+     "largura": 20,
+     "linhas": 26,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Aplicação\"",
+     "largura": 20,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 20,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "td \"16/11/2026 10:00\"",
+     "largura": 23,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"DONO DO SISTEMA TESTE\"",
+     "largura": 23,
+     "linhas": 18,
+     "palavras": 4
+    },
+    {
+     "el": "td \"Contas correntes\"",
+     "largura": 23,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"contas conferidas com o gerente do banco\"",
+     "largura": 23,
+     "linhas": 34,
+     "palavras": 7
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "errosJs": []
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 45,
+  "r": {
+   "estreito": [
+    {
+     "el": "span.n \"CAIXA FILIAL\"",
+     "largura": 37,
+     "linhas": 2,
+     "palavras": 2
+    },
+    {
+     "el": "span.n \"Banco do Brasil\"",
+     "largura": 36,
+     "linhas": 3,
+     "palavras": 3
+    },
+    {
+     "el": "td \"16/11/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"23/11/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"30/11/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"07/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"14/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"21/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"28/12/2026\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"04/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"11/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"18/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"25/01/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"01/02/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"08/02/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"13/02/2027\"",
+     "largura": 18,
+     "linhas": 10,
+     "palavras": 1
+    },
+    {
+     "el": "td \"jun/26\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 1
+    },
+    {
+     "el": "td \"jul/26\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 1
+    },
+    {
+     "el": "td \"ago/26\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 1
+    },
+    {
+     "el": "td \"set/26\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 1
+    },
+    {
+     "el": "td \"out/26\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 1
+    },
+    {
+     "el": "td \"nov/26 (até hoje)\"",
+     "largura": 18,
+     "linhas": 15,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Recebido (entradas)\"",
+     "largura": 18,
+     "linhas": 18,
+     "palavras": 2
+    },
+    {
+     "el": "td \"(−) Pago (saídas)\"",
+     "largura": 18,
+     "linhas": 15,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Resultado de caixa\"",
+     "largura": 18,
+     "linhas": 16,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Margem de caixa\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 3
+    }
+   ],
+   "sobreposto": [
+    {
+     "a": "td.n \"R$ 1.063.905,00\"",
+     "b": "td.n \"R$ 1.325.215,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.250.480,34\"",
+     "b": "td.n \"R$ 1.355.079,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.051.645,83\"",
+     "b": "td.n \"R$ 1.504.399,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.365.964,43\"",
+     "b": "td.n \"R$ 1.541.729,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.397.396,29\"",
+     "b": "td.n \"R$ 1.541.729,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.397.396,29\"",
+     "b": "td.n \"R$ 1.579.059,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.428.828,15\"",
+     "b": "td.n \"R$ 1.579.059,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 1.279.508,15\"",
+     "b": "td.n \"R$ 1.429.739,00\"",
+     "area": "56x16"
+    },
+    {
+     "a": "td.n \"R$ 0,00\"",
+     "b": "td.n \"R$ 0,00\"",
+     "area": "11x16"
+    },
+    {
+     "a": "td.n \"R$ 3.000,00\"",
+     "b": "td.n \"R$ 2.000,00\"",
+     "area": "34x16"
+    },
+    {
+     "a": "td.n \"R$ 9.000,00\"",
+     "b": "td.n \"R$ 1.000,00\"",
+     "area": "34x16"
+    },
+    {
+     "a": "td.n \"R$ 7.000,00\"",
+     "b": "td.n \"R$ 0,00\"",
+     "area": "34x16"
+    },
+    {
+     "a": "td.n \"R$ 5.000,00\"",
+     "b": "td.n \"R$ 4.200,00\"",
+     "area": "34x16"
+    },
+    {
+     "a": "td.n \"R$ 0,00\"",
+     "b": "td.n \"R$ 186.650,00\"",
+     "area": "11x16"
+    },
+    {
+     "a": "td.n \"R$ 373.300,00\"",
+     "b": "td.n \"R$ 261.310,00\"",
+     "area": "47x16"
+    },
+    {
+     "a": "td.n \"R$ 0,00\"",
+     "b": "td.n \"-R$ 111.990,00\"",
+     "area": "11x16"
+    },
+    {
+     "a": "td.n \"-R$ 335.970,00\"",
+     "b": "td.n \"-R$ 261.310,00\"",
+     "area": "52x16"
+    },
+    {
+     "a": "td.n \"R$ 0,00\"",
+     "b": "td.n \"R$ 74.660,00\"",
+     "area": "14x16"
+    },
+    {
+     "a": "td.n \"R$ 37.330,00\"",
+     "b": "td.n \"R$ 0,00\"",
+     "area": "44x16"
+    }
+   ],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "span \"Receber\"",
+     "largura": 20,
+     "linhas": 3,
+     "palavras": 1
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"Vencimento deVencimento de: a primeira data de ven\"",
+     "largura": 296,
+     "linhas": 5,
+     "palavras": 2
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "reajustes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "lancamentos",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"Vencimento deVencimento de: a primeira data de ven\"",
+     "largura": 296,
+     "linhas": 5,
+     "palavras": 2
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "fixas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "espelho",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "comissoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_conciliacao",
+  "titulo": "Conciliação",
+  "aba": "conciliacao",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "regua",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "cobrancas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_bancos",
+  "titulo": "Bancos e saldos",
+  "aba": "v2_bancos",
+  "defeitos": 5,
+  "r": {
+   "estreito": [
+    {
+     "el": "span.n \"Banco do Brasil\"",
+     "largura": 36,
+     "linhas": 3,
+     "palavras": 3
+    },
+    {
+     "el": "span.n \"CAIXA FILIAL\"",
+     "largura": 37,
+     "linhas": 2,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Falta: SICREDI_MATRIZ_CONTA_CLIENT_ID, SICREDI_MAT\"",
+     "largura": 93,
+     "linhas": 57,
+     "palavras": 30
+    },
+    {
+     "el": "span.cm-meta \"Falta: SICREDI_MATRIZ_CONTA_CLIENT_ID, SICREDI_MAT\"",
+     "largura": 93,
+     "linhas": 57,
+     "palavras": 30
+    },
+    {
+     "el": "span.cm-meta \"Falta: ITAU_PRESTADORA_CLIENT_ID, ITAU_PRESTADORA_\"",
+     "largura": 93,
+     "linhas": 18,
+     "palavras": 9
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_transferencias",
+  "titulo": "Transferências",
+  "aba": "v2_transferencias",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "pedidos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "servicos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "produtos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "notas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_cadastros",
+  "titulo": "Fornecedores e clientes",
+  "aba": "cliente",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_impostos",
+  "titulo": "Impostos e guias",
+  "aba": "v2_impostos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_caju",
+  "titulo": "Caju",
+  "aba": "recarga",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "orcamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "provisoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_fechamento",
+  "titulo": "Fechamento do mês",
+  "aba": "fechamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "relatorios",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "resultado",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "fluxo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "agenda",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "especialista",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 37,
+  "r": {
+   "estreito": [
+    {
+     "el": "b \"Banco do Brasil\"",
+     "largura": 8,
+     "linhas": 13,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 001 · ag. 1841-4 · conta 70685-2 · código Om\"",
+     "largura": 10,
+     "linhas": 43,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 0,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 0,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"CAIXA FILIAL\"",
+     "largura": 9,
+     "linhas": 11,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 104 · ag. 0303 · conta 555-1 · código Omie 7\"",
+     "largura": 10,
+     "linhas": 39,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 0,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 0,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"Itaú Unibanco Prestadora\"",
+     "largura": 9,
+     "linhas": 22,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 341 · ag. 0202 · conta 9876-5 · código Omie \"",
+     "largura": 10,
+     "linhas": 40,
+     "palavras": 12
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 0,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Itaú Falta credencial\"",
+     "largura": 18,
+     "linhas": 4,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi matriz\"",
+     "largura": 11,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 12345-6 · código Omie\"",
+     "largura": 10,
+     "linhas": 41,
+     "palavras": 12
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 0,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 18,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi prestadora aplicação\"",
+     "largura": 8,
+     "linhas": 26,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 98765-4 · código Omie\"",
+     "largura": 10,
+     "linhas": 42,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 0,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "label.omie-check \"aplicação\"",
+     "largura": 0,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 18,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "td \"16/11/2026 10:00\"",
+     "largura": 18,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"DONO DO SISTEMA TESTE\"",
+     "largura": 18,
+     "linhas": 18,
+     "palavras": 4
+    },
+    {
+     "el": "td \"Contas correntes\"",
+     "largura": 18,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"contas conferidas com o gerente do banco\"",
+     "largura": 18,
+     "linhas": 34,
+     "palavras": 7
+    }
+   ],
+   "sobreposto": [
+    {
+     "a": "input.cadx-input \"Banco do Brasil\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Banco do Brasil\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"CAIXA FILIAL\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"CAIXA FILIAL\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"Itaú Unibanco Prestadora\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Itaú Unibanco Prestadora\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi Matriz\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi Matriz\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi prestadora aplicação\"",
+     "b": "input \"on\"",
+     "area": "22x22"
+    },
+    {
+     "a": "input.cadx-input \"Sicredi prestadora aplicação\"",
+     "b": "label.omie-check \"aplicação\"",
+     "area": "6x16"
+    }
+   ],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "trilha",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "sigilo",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"MotivoMotivo: por que a lista muda (ex.: nova pess\"",
+     "largura": 296,
+     "linhas": 5,
+     "palavras": 1
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "errosJs": []
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "span \"Receber\"",
+     "largura": 20,
+     "linhas": 3,
+     "palavras": 1
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "span \"Receber\"",
+     "largura": 20,
+     "linhas": 3,
+     "palavras": 1
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 1,
+  "r": {
+   "estreito": [
+    {
+     "el": "label \"Vencimento deVencimento de: a primeira data de ven\"",
+     "largura": 296,
+     "linhas": 5,
+     "palavras": 2
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 32,
+  "r": {
+   "estreito": [
+    {
+     "el": "b \"Banco do Brasil\"",
+     "largura": 8,
+     "linhas": 13,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 001 · ag. 1841-4 · conta 70685-2 · código Om\"",
+     "largura": 10,
+     "linhas": 43,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 0,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "td \"Banco do Brasil\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"CAIXA FILIAL\"",
+     "largura": 9,
+     "linhas": 11,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 104 · ag. 0303 · conta 555-1 · código Omie 7\"",
+     "largura": 10,
+     "linhas": 39,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 0,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "td \"CAIXA FILIAL\"",
+     "largura": 18,
+     "linhas": 11,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Sem API Sem API · arquivo OFX\"",
+     "largura": 18,
+     "linhas": 6,
+     "palavras": 2
+    },
+    {
+     "el": "b \"Itaú Unibanco Prestadora\"",
+     "largura": 9,
+     "linhas": 22,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 341 · ag. 0202 · conta 9876-5 · código Omie \"",
+     "largura": 10,
+     "linhas": 40,
+     "palavras": 12
+    },
+    {
+     "el": "td \"Itaú Unibanco Prestadora\"",
+     "largura": 18,
+     "linhas": 22,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Itaú Falta credencial\"",
+     "largura": 18,
+     "linhas": 4,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi matriz\"",
+     "largura": 11,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 12345-6 · código Omie\"",
+     "largura": 10,
+     "linhas": 41,
+     "palavras": 12
+    },
+    {
+     "el": "td \"Sicredi Matriz\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Conta corrente\"",
+     "largura": 18,
+     "linhas": 13,
+     "palavras": 2
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 18,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "b \"Sicredi prestadora aplicação\"",
+     "largura": 8,
+     "linhas": 26,
+     "palavras": 3
+    },
+    {
+     "el": "span.cm-meta \"Banco 748 · ag. 0101 · conta 98765-4 · código Omie\"",
+     "largura": 10,
+     "linhas": 42,
+     "palavras": 12
+    },
+    {
+     "el": "span.fv-sugestao \"Matriz por padrão (o dono informou em 19/11 que as\"",
+     "largura": 0,
+     "linhas": 59,
+     "palavras": 14
+    },
+    {
+     "el": "td \"Sicredi prestadora aplicação\"",
+     "largura": 18,
+     "linhas": 26,
+     "palavras": 3
+    },
+    {
+     "el": "td \"Aplicação\"",
+     "largura": 18,
+     "linhas": 9,
+     "palavras": 1
+    },
+    {
+     "el": "td \"Sicredi Falta credencial\"",
+     "largura": 18,
+     "linhas": 7,
+     "palavras": 1
+    },
+    {
+     "el": "td \"16/11/2026 10:00\"",
+     "largura": 18,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"DONO DO SISTEMA TESTE\"",
+     "largura": 18,
+     "linhas": 18,
+     "palavras": 4
+    },
+    {
+     "el": "td \"Contas correntes\"",
+     "largura": 18,
+     "linhas": 15,
+     "palavras": 2
+    },
+    {
+     "el": "td \"contas conferidas com o gerente do banco\"",
+     "largura": 18,
+     "linhas": 34,
+     "palavras": 7
+    }
+   ],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "errosJs": []
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "reajustes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "lancamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "fixas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "espelho",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "comissoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_conciliacao",
+  "titulo": "Conciliação",
+  "aba": "conciliacao",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "regua",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "cobrancas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_bancos",
+  "titulo": "Bancos e saldos",
+  "aba": "v2_bancos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_transferencias",
+  "titulo": "Transferências",
+  "aba": "v2_transferencias",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "pedidos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "servicos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "produtos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "notas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_cadastros",
+  "titulo": "Fornecedores e clientes",
+  "aba": "cliente",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_impostos",
+  "titulo": "Impostos e guias",
+  "aba": "v2_impostos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_caju",
+  "titulo": "Caju",
+  "aba": "recarga",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "orcamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "provisoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_fechamento",
+  "titulo": "Fechamento do mês",
+  "aba": "fechamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "relatorios",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "resultado",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "fluxo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "agenda",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "especialista",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "trilha",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "sigilo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "errosJs": []
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "errosJs": []
+ }
+]

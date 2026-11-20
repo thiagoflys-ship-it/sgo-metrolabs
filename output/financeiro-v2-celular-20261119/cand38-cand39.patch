@@ -1,0 +1,138 @@
+diff -ru cand38/JS_Financeiro_V2_Componentes.html cand39/JS_Financeiro_V2_Componentes.html
+--- cand38/JS_Financeiro_V2_Componentes.html	2026-11-19 14:50:48.657963500 -0300
++++ cand39/JS_Financeiro_V2_Componentes.html	2026-11-20 00:01:43.974992900 -0300
+@@ -681,21 +681,21 @@
+ .fv-tab-wrap .cm-tabela td .acoes button { white-space: nowrap; }
+ /* rótulo e valor curtos não se justificam (só texto corrido) */
+ .cm-det dd, .fv-legenda, .fv-conta .m { text-align: left; }
+-/* cartão compacto das tabelas no celular: título e valor em destaque, o resto em duas colunas */
++/* cartão compacto das listas no celular (só as tabelas marcadas fv-cartoes; as de números, fv-rolar, continuam tabela): título e valor em destaque, o resto em duas colunas */
+ @media (max-width: 900px) {
+-  .fv-tab-wrap .cm-tabela tbody tr { display: grid !important; grid-template-columns: 1fr 1fr; gap: 4px 12px; position: relative; padding: 10px 12px; }
+-  .fv-tab-wrap .cm-tabela tbody tr.fv-grupo { display: block !important; padding: 6px 10px; }
+-  .fv-tab-wrap .cm-tabela tbody td { font-size: 12.5px; padding: 0; min-width: 0; }
+-  .fv-tab-wrap .cm-tabela tbody td[data-r]::before { display: block; content: attr(data-r); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
+-  .fv-tab-wrap .cm-tabela td.m-titulo { grid-column: 1 / -1; order: -3; font-size: 14px; padding-right: 34px; }
+-  .fv-tab-wrap .cm-tabela td.m-valor { grid-column: 1 / -1; order: -2; font-size: 18px; font-weight: 800; }
+-  .fv-tab-wrap .cm-tabela td.m-titulo::before, .fv-tab-wrap .cm-tabela td.m-valor::before, .fv-tab-wrap .cm-tabela td.m-sel::before, .fv-tab-wrap .cm-tabela td.m-acoes::before { display: none !important; }
+-  .fv-tab-wrap .cm-tabela td.m-oculto { display: none !important; }
+-  .fv-tab-wrap .cm-tabela td.m-sel { position: absolute; top: 10px; right: 12px; width: auto !important; }
+-  .fv-tab-wrap .cm-tabela td.m-sel input { width: 22px; height: 22px; }
+-  .fv-tab-wrap .cm-tabela td.m-acoes { grid-column: 1 / -1; margin-top: 4px; }
+-  .fv-tab-wrap .cm-tabela td.m-acoes .acoes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+-  .fv-tab-wrap .cm-tabela td.m-acoes .acoes button { min-height: 44px !important; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela tbody tr { display: grid !important; grid-template-columns: 1fr 1fr; gap: 4px 12px; position: relative; padding: 10px 12px; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela tbody tr.fv-grupo { display: block !important; padding: 6px 10px; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela tbody td { font-size: 12.5px; padding: 0; min-width: 0; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela tbody td[data-r]::before { display: block; content: attr(data-r); font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 700; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-titulo { grid-column: 1 / -1; order: -3; font-size: 14px; padding-right: 34px; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-valor { grid-column: 1 / -1; order: -2; font-size: 18px; font-weight: 800; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-titulo::before, .fv-tab-wrap.fv-cartoes .cm-tabela td.m-valor::before, .fv-tab-wrap.fv-cartoes .cm-tabela td.m-sel::before, .fv-tab-wrap.fv-cartoes .cm-tabela td.m-acoes::before { display: none !important; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-oculto { display: none !important; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-sel { position: absolute; top: 10px; right: 12px; width: auto !important; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-sel input { width: 22px; height: 22px; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-acoes { grid-column: 1 / -1; margin-top: 4px; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-acoes .acoes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
++  .fv-tab-wrap.fv-cartoes .cm-tabela td.m-acoes .acoes button { min-height: 44px !important; }
+   .fv-tab-ferr .dir { justify-content: flex-end; }
+   .fv-tab-ferr .dir button { width: auto; }
+ }
+@@ -788,4 +788,62 @@
+ .fv-contas-tab select { min-width: 140px; }
+ .fv-contas-tab input[type="text"] { width: 100%; min-width: 120px; }
+ @media (max-width: 700px) { .fv-emp-cartao dl { grid-template-columns: 1fr; } .fv-emp-cartao dt { margin-top: 4px; } }
++
++/* =====================================================================
++   19/11/2026 (noite): Financeiro no celular, depois das fotos do iPhone do dono (texto em pé letra por letra, valores uns sobre os
++   outros, rótulo espremido ao lado do campo). Causa: três camadas de regras se somavam dentro de #omieTela no modo celular:
++   (1) UI_Estilos põe "overflow-wrap: anywhere" em todo o #conteudo do modo celular; isso deixa a largura mínima de cada palavra em
++       UMA letra, e toda coluna de tabela, item de grade ou de linha flexível que se ajusta ao conteúdo encolhe até uma letra;
++   (2) JS_Omie.html transforma toda tabela de #omieTela em cartão (td em bloco) e todo rótulo em linha (rótulo | campo | explicação);
++   (3) o cartão compacto da etapa (a) (tr em grade com !important) pegava também as tabelas de números (fv-rolar), que deviam rolar.
++   Aqui, só dentro do Financeiro (#omieTela) e só no modo celular do SGO+ (#app.modo-mobile, o mesmo critério do JS_Core: até 900 px
++   ou celular deitado), vale UMA regra por tipo:
++   (a) tabela de números (fv-rolar: DRE, "Ver em tabela" dos gráficos): continua tabela, rola para o lado DENTRO da caixa, 1ª coluna
++       fixa com 120 a 170 px e quebra por palavra, valores à direita numa linha só;
++   (b) lista operacional (fv-cartoes: contas de Empresas e bancos, regras, histórico): cartão com título, pares rótulo/valor e
++       controles na largura toda, com 44 px de toque;
++   (c) rótulo de campo com caixa de texto ou lista: o nome em cima, o campo embaixo, a explicação embaixo do campo.
++   Nada aqui parte palavra em letras: overflow-wrap volta a "break-word" (só parte o que não cabe na linha, sem encolher colunas).
++   ===================================================================== */
++#app.modo-mobile #omieTela { overflow-wrap: break-word; word-break: normal; }
++#app.modo-mobile #omieTela td, #app.modo-mobile #omieTela th { overflow-wrap: break-word; word-break: normal; }
++/* (c) rótulos: em cima do campo */
++#app.modo-mobile #omieTela label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), > select, > textarea) {
++  display: flex; flex-direction: column; align-items: stretch; gap: 4px; flex: 1 1 100%; min-width: 0; max-width: 100%; white-space: normal; }
++#app.modo-mobile #omieTela label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), > select, > textarea) > :is(input, select, textarea) { width: 100%; min-width: 0; box-sizing: border-box; }
++#app.modo-mobile #omieTela label > .omie-dica { margin-top: 0; }
++#app.modo-mobile #omieTela label.omie-check { white-space: normal; }
++/* (a) tabela de números: rola dentro da caixa */
++#app.modo-mobile #omieTela .fv-rolar { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
++#app.modo-mobile #omieTela .fv-rolar > table { display: table; width: max-content; min-width: 100%; max-width: none; border-collapse: separate; border-spacing: 0; table-layout: auto; }
++#app.modo-mobile #omieTela .fv-rolar thead { display: table-header-group; }
++#app.modo-mobile #omieTela .fv-rolar tbody { display: table-row-group; }
++#app.modo-mobile #omieTela .fv-rolar tfoot { display: table-footer-group; }
++#app.modo-mobile #omieTela .fv-rolar tr { display: table-row !important; border: 0; border-radius: 0; margin: 0; padding: 0; background: transparent; position: static; }
++#app.modo-mobile #omieTela .fv-rolar th, #app.modo-mobile #omieTela .fv-rolar td { display: table-cell; width: auto; min-width: 0; padding: 7px 10px; border: 0; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; vertical-align: top; font-size: 12.5px; }
++#app.modo-mobile #omieTela .fv-rolar td.n, #app.modo-mobile #omieTela .fv-rolar th.n { text-align: right !important; white-space: nowrap; font-variant-numeric: tabular-nums; }
++#app.modo-mobile #omieTela .fv-rolar td::before, #app.modo-mobile #omieTela .fv-rolar td[data-r]::before { content: none !important; display: none !important; }
++#app.modo-mobile #omieTela .fv-rolar th:first-child, #app.modo-mobile #omieTela .fv-rolar td:first-child { position: sticky; left: 0; z-index: 1; background: var(--card); min-width: 120px; max-width: 170px; white-space: normal; box-shadow: 1px 0 0 var(--border); }
++#app.modo-mobile #omieTela .fv-rolar thead th:first-child { z-index: 2; background: var(--bc-surface-2); }
++/* (b) lista operacional: cartão */
++#app.modo-mobile #omieTela .fv-cartoes { border: 0; background: transparent; overflow: visible; }
++#app.modo-mobile #omieTela .fv-cartoes > table, #app.modo-mobile #omieTela .fv-cartoes tbody { display: block; width: 100%; }
++#app.modo-mobile #omieTela .fv-cartoes thead { display: none; }
++#app.modo-mobile #omieTela .fv-cartoes tbody tr { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; position: relative; margin: 0 0 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
++#app.modo-mobile #omieTela .fv-cartoes tbody td { display: block; width: auto; min-width: 0; padding: 0; border: 0; text-align: left !important; white-space: normal; font-size: 13px; }
++#app.modo-mobile #omieTela .fv-cartoes tbody td[data-r]::before { display: block; content: attr(data-r); margin: 0 0 2px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
++#app.modo-mobile #omieTela .fv-cartoes tbody td.m-titulo, #app.modo-mobile #omieTela .fv-cartoes tbody td.m-valor, #app.modo-mobile #omieTela .fv-cartoes tbody td.m-largo { grid-column: 1 / -1; }
++#app.modo-mobile #omieTela .fv-cartoes tbody td.m-titulo { font-size: 14px; }
++#app.modo-mobile #omieTela .fv-cartoes tbody td.m-titulo::before, #app.modo-mobile #omieTela .fv-cartoes tbody td.m-valor::before { content: none; display: none; }
++#app.modo-mobile #omieTela .fv-cartoes tbody td :is(select, input[type="text"], input:not([type]), textarea) { display: block; width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; font-size: 16px; }
++#app.modo-mobile #omieTela .fv-cartoes tbody td label.omie-check { display: flex; align-items: center; gap: 10px; min-height: 44px; }
++#app.modo-mobile #omieTela .fv-cartoes tbody td label.omie-check input { width: 22px; height: 22px; flex: 0 0 auto; }
++#app.modo-mobile #omieTela .fv-cartoes tbody td .fv-sugestao, #app.modo-mobile #omieTela .fv-cartoes tbody td .cm-selo { display: inline-block; margin-top: 4px; white-space: normal; }
++/* lista de contas (Painel e Bancos): o saldo vai para baixo do nome, sem cobrir o selo do conector */
++#app.modo-mobile #omieTela .fv-conta { grid-template-columns: 34px minmax(0, 1fr); align-items: start; }
++#app.modo-mobile #omieTela .fv-conta .s { grid-column: 2; text-align: left; white-space: normal; }
++#app.modo-mobile #omieTela .fv-conta .s small { display: inline; margin-left: 6px; }
++#app.modo-mobile #omieTela .fv-conta .n, #app.modo-mobile #omieTela .fv-conta .m { overflow-wrap: break-word; }
++/* lista de nomes de chaves (Empresas e bancos): não é texto corrido; justificada, os nomes longos abriam buracos na linha */
++#app.modo-mobile #omieTela .fv-integ-item :is(ul, li) { text-align: left; }
+ </style>
+diff -ru cand38/JS_Financeiro_V2_Empresas.html cand39/JS_Financeiro_V2_Empresas.html
+--- cand38/JS_Financeiro_V2_Empresas.html	2026-11-19 14:50:49.468271700 -0300
++++ cand39/JS_Financeiro_V2_Empresas.html	2026-11-19 23:56:44.108069400 -0300
+@@ -83,10 +83,10 @@
+     (r.podeEditar ? '<div class="cm-acoes"><a class="btn-secondary" href="' + Fin_esc_(r.ondeGravar) + '#bancos" target="_blank" rel="noopener"><i class="fas fa-key" aria-hidden="true"></i>&nbsp;Abrir Chaves e senhas (só o administrador)</a></div>' : ""));
+   // 4. regras em vigor
+   h += Fin_caixa_("Regras do Financeiro em vigor", "Só leitura nesta página. A alçada e as regras de aprovação mudam em Aprovações > Acima da alçada e regras.",
+-    '<div class="fv-tab-wrap fv-rolar"><table class="cm-tabela"><tbody>' + (r.regras || []).map(function (x) { return '<tr><td data-r="Regra"><b>' + Fin_esc_(x.regra) + '</b></td><td data-r="Em vigor">' + Fin_esc_(x.valor) + "</td></tr>"; }).join("") + "</tbody></table></div>", ["Acima da alçada e regras", "fin_aprovacoes", "regras"]);
++    '<div class="fv-tab-wrap fv-cartoes"><table class="cm-tabela"><tbody>' + (r.regras || []).map(function (x) { return '<tr><td class="m-titulo" data-r="Regra"><b>' + Fin_esc_(x.regra) + '</b></td><td class="m-largo" data-r="Em vigor">' + Fin_esc_(x.valor) + "</td></tr>"; }).join("") + "</tbody></table></div>", ["Acima da alçada e regras", "fin_aprovacoes", "regras"]);
+   // 5. histórico
+-  h += Fin_caixa_("Histórico das alterações", "Quem alterou, quando, o quê e por quê (antes e depois guardados).", (r.historico || []).length ? '<div class="fv-tab-wrap fv-rolar"><table class="cm-tabela"><thead><tr><th>Quando</th><th>Quem</th><th>Empresa</th><th>Campos</th><th>Motivo</th></tr></thead><tbody>' +
+-    r.historico.map(function (x) { return '<tr><td data-r="Quando">' + Fin_esc_(x.em) + '</td><td data-r="Quem">' + Fin_esc_(x.por) + '</td><td data-r="Empresa">' + Fin_esc_(x.empresa === "CONTAS" ? "Contas correntes" : x.empresa) + '</td><td data-r="Campos">' + Fin_esc_((x.campos || []).join(", ") || x.tipo) + '</td><td data-r="Motivo">' + Fin_esc_(x.motivo) + "</td></tr>"; }).join("") + "</tbody></table></div>" : Fin_estado_("vazio", "Nenhuma alteração ainda", "O cadastro das empresas e o vínculo das contas ainda não foram gravados. O dono ou o Charles começam por Editar empresa."));
++  h += Fin_caixa_("Histórico das alterações", "Quem alterou, quando, o quê e por quê (antes e depois guardados).", (r.historico || []).length ? '<div class="fv-tab-wrap fv-cartoes"><table class="cm-tabela"><thead><tr><th>Quando</th><th>Quem</th><th>Empresa</th><th>Campos</th><th>Motivo</th></tr></thead><tbody>' +
++    r.historico.map(function (x) { return '<tr><td data-r="Quando">' + Fin_esc_(x.em) + '</td><td data-r="Quem">' + Fin_esc_(x.por) + '</td><td data-r="Empresa">' + Fin_esc_(x.empresa === "CONTAS" ? "Contas correntes" : x.empresa) + '</td><td class="m-largo" data-r="Campos">' + Fin_esc_((x.campos || []).join(", ") || x.tipo) + '</td><td class="m-largo" data-r="Motivo">' + Fin_esc_(x.motivo) + "</td></tr>"; }).join("") + "</tbody></table></div>" : Fin_estado_("vazio", "Nenhuma alteração ainda", "O cadastro das empresas e o vínculo das contas ainda não foram gravados. O dono ou o Charles começam por Editar empresa."));
+   corpo.innerHTML = h;
+   Fin_ligarAtalhos_(corpo);
+   corpo.querySelectorAll("[data-fv-editar]").forEach(function (b) { b.onclick = function () { FinEmp_editar_(b.getAttribute("data-fv-editar")); }; });
+@@ -101,14 +101,14 @@
+   var opEmp = function (sel) { return ['<option value="">Sem empresa</option>'].concat(r.empresas.map(function (e) { return '<option value="' + e.apelido + '"' + (sel === e.apelido ? " selected" : "") + ">" + Fin_esc_(e.nome) + "</option>"; })).join(""); };
+   var linhas = ativas.map(function (c) {
+     var empSel = c.empresa || c.sugestao || "";
+-    return "<tr><td data-r=\"Conta\"><b>" + Fin_esc_(c.nome) + '</b><br><span class="cm-meta">Banco ' + Fin_esc_(c.banco || "—") + (c.agencia ? " · ag. " + Fin_esc_(c.agencia) : "") + (c.conta ? " · conta " + Fin_esc_(c.conta) : "") + " · código Omie " + Fin_esc_(c.id) + "</span></td>" +
+-      '<td data-r="Empresa">' + (r.podeEditar ? '<select class="cadx-input" data-fv-conta-emp="' + Fin_esc_(c.id) + '" aria-label="Empresa da conta ' + Fin_esc_(c.nome) + '">' + opEmp(empSel) + "</select>" : Fin_emp_(c.empresa)) +
++    return "<tr><td class=\"m-titulo\" data-r=\"Conta\"><b>" + Fin_esc_(c.nome) + '</b><br><span class="cm-meta">Banco ' + Fin_esc_(c.banco || "—") + (c.agencia ? " · ag. " + Fin_esc_(c.agencia) : "") + (c.conta ? " · conta " + Fin_esc_(c.conta) : "") + " · código Omie " + Fin_esc_(c.id) + "</span></td>" +
++      '<td class="m-largo" data-r="Empresa">' + (r.podeEditar ? '<select class="cadx-input" data-fv-conta-emp="' + Fin_esc_(c.id) + '" aria-label="Empresa da conta ' + Fin_esc_(c.nome) + '">' + opEmp(empSel) + "</select>" : Fin_emp_(c.empresa)) +
+         (c.padrao ? '<span class="fv-sugestao">Matriz por padrão (o dono informou em 19/11 que as contas são da matriz)</span>' : "") + (c.conferir ? ' <span class="cm-selo laranja">' + Fin_esc_(c.conferir) + "</span>" : "") + "</td>" +
+-      '<td data-r="Apelido">' + (r.podeEditar ? '<input type="text" class="cadx-input" maxlength="60" data-fv-conta-ap="' + Fin_esc_(c.id) + '" value="' + Fin_esc_(c.apelido || c.nome) + '" aria-label="Apelido da conta ' + Fin_esc_(c.nome) + '">' : Fin_esc_(c.apelido || c.nome)) + "</td>" +
++      '<td class="m-largo" data-r="Apelido">' + (r.podeEditar ? '<input type="text" class="cadx-input" maxlength="60" data-fv-conta-ap="' + Fin_esc_(c.id) + '" value="' + Fin_esc_(c.apelido || c.nome) + '" aria-label="Apelido da conta ' + Fin_esc_(c.nome) + '">' : Fin_esc_(c.apelido || c.nome)) + "</td>" +
+       '<td data-r="Aplicação">' + (r.podeEditar ? '<label class="omie-check"><input type="checkbox" data-fv-conta-apl="' + Fin_esc_(c.id) + '"' + (c.aplicacao ? " checked" : "") + "> aplicação</label>" : (c.aplicacao ? "Aplicação" : "Conta corrente")) + "</td>" +
+       '<td data-r="Conector">' + Fin_esc_(c.conectorNome) + " " + Fin_conector_(c.estado, (c.faltam || []).join(", ")) + "</td></tr>";
+   }).join("");
+-  return '<div class="fv-tab-wrap fv-rolar fv-contas-tab"><table class="cm-tabela"><thead><tr><th>Conta</th><th>Empresa</th><th>Apelido</th><th>Tipo</th><th>Conector</th></tr></thead><tbody>' + linhas + "</tbody></table></div>" +
++  return '<div class="fv-tab-wrap fv-cartoes fv-contas-tab"><table class="cm-tabela"><thead><tr><th>Conta</th><th>Empresa</th><th>Apelido</th><th>Tipo</th><th>Conector</th></tr></thead><tbody>' + linhas + "</tbody></table></div>" +
+     (inativas.length ? '<p class="cm-meta">' + inativas.length + " conta(s) inativa(s) no Omie ficam fora da lista: " + Fin_esc_(inativas.map(function (c) { return c.nome; }).join(", ")) + ".</p>" : "") +
+     (r.podeEditar ? '<div class="fv-form-grade"><label class="largo" for="fvContasMotivo">Motivo da alteração (pelo menos 15 letras; fica no histórico)<textarea class="cadx-input" id="fvContasMotivo" maxlength="300" rows="2" placeholder="Ex.: contas conferidas com o gerente do Sicredi em 20/11"></textarea><span class="fv-dica-campo">Grava só as contas que mudaram. Uma conta "Sem empresa" fica fora dos números por empresa (continua no consolidado).</span></label></div>' +
+       '<div class="cm-acoes"><button type="button" class="btn-primary" id="fvContasGravar"><i class="fas fa-floppy-disk" aria-hidden="true"></i>&nbsp;Gravar os vínculos</button><button type="button" class="btn-secondary" id="fvContasReler"><i class="fas fa-rotate" aria-hidden="true"></i>&nbsp;Ler de novo do Omie</button><span class="cm-meta" id="fvContasMsg" role="status" aria-live="polite"></span></div>' : "");

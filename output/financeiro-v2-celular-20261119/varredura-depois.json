@@ -1,0 +1,1838 @@
+[
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "reajustes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "lancamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "fixas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "espelho",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "comissoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_conciliacao",
+  "titulo": "Conciliação",
+  "aba": "conciliacao",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "regua",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "cobrancas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_bancos",
+  "titulo": "Bancos e saldos",
+  "aba": "v2_bancos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_transferencias",
+  "titulo": "Transferências",
+  "aba": "v2_transferencias",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "pedidos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "servicos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "produtos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "notas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_cadastros",
+  "titulo": "Fornecedores e clientes",
+  "aba": "cliente",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_impostos",
+  "titulo": "Impostos e guias",
+  "aba": "v2_impostos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_caju",
+  "titulo": "Caju",
+  "aba": "recarga",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "orcamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "provisoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_fechamento",
+  "titulo": "Fechamento do mês",
+  "aba": "fechamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "relatorios",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "resultado",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "fluxo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "agenda",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "especialista",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "trilha",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "sigilo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "admin",
+  "errosJs": []
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 390,
+  "login": "wanessa",
+  "errosJs": []
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "reajustes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "lancamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "fixas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "espelho",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "comissoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_conciliacao",
+  "titulo": "Conciliação",
+  "aba": "conciliacao",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "regua",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "cobrancas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_bancos",
+  "titulo": "Bancos e saldos",
+  "aba": "v2_bancos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_transferencias",
+  "titulo": "Transferências",
+  "aba": "v2_transferencias",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "pedidos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "servicos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "produtos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "notas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_cadastros",
+  "titulo": "Fornecedores e clientes",
+  "aba": "cliente",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_impostos",
+  "titulo": "Impostos e guias",
+  "aba": "v2_impostos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_caju",
+  "titulo": "Caju",
+  "aba": "recarga",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "orcamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "provisoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_fechamento",
+  "titulo": "Fechamento do mês",
+  "aba": "fechamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "relatorios",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "resultado",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "fluxo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "agenda",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "especialista",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "trilha",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "sigilo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "admin",
+  "errosJs": []
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 320,
+  "login": "wanessa",
+  "errosJs": []
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_receber",
+  "titulo": "Contas a receber",
+  "aba": "reajustes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "contas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "lancamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "fixas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "espelho",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_pagar",
+  "titulo": "Contas a pagar",
+  "aba": "comissoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_conciliacao",
+  "titulo": "Conciliação",
+  "aba": "conciliacao",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "regua",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_cobranca",
+  "titulo": "Cobrança (Pix e boleto)",
+  "aba": "cobrancas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_bancos",
+  "titulo": "Bancos e saldos",
+  "aba": "v2_bancos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_transferencias",
+  "titulo": "Transferências",
+  "aba": "v2_transferencias",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "pedidos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "servicos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "produtos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_notas",
+  "titulo": "Notas fiscais",
+  "aba": "notas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_cadastros",
+  "titulo": "Fornecedores e clientes",
+  "aba": "cliente",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_impostos",
+  "titulo": "Impostos e guias",
+  "aba": "v2_impostos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_caju",
+  "titulo": "Caju",
+  "aba": "recarga",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "orcamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_orcamento",
+  "titulo": "Orçamento",
+  "aba": "provisoes",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_fechamento",
+  "titulo": "Fechamento do mês",
+  "aba": "fechamento",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "relatorios",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "resultado",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "fluxo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "agenda",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_relatorios",
+  "titulo": "Relatórios",
+  "aba": "especialista",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "trilha",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "mod": "fin_trilha",
+  "titulo": "Trilha",
+  "aba": "sigilo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "admin",
+  "errosJs": []
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_diretoria",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "v2_dia",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "resumo",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_painel",
+  "titulo": "Painel financeiro",
+  "aba": "indicadores",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "pagamentos",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_aprovacoes",
+  "titulo": "Aprovações",
+  "aba": "regras",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "mod": "fin_empresas",
+  "titulo": "Empresas e bancos",
+  "aba": "v2_empresas",
+  "defeitos": 0,
+  "r": {
+   "estreito": [],
+   "sobreposto": [],
+   "rolagemPagina": 0,
+   "cortado": []
+  }
+ },
+ {
+  "largura": 1366,
+  "login": "wanessa",
+  "errosJs": []
+ }
+]

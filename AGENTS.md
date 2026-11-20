@@ -7,10 +7,10 @@
   substituem uma publicação posterior. Não republicar versões antigas.
 - Ponto de partida: `apps-script-imports/METROLABS_SGRH_360/server/ENTREGA_DOSSIE_ATUAL.json`.
   Conferir imagem e manifesto no contêiner em uso antes de preparar mudanças.
-- Última publicação RH registrada nesta revisão: R116, imagem
-  `sha256:8f71a345965123c709fcf415f08b164ed9643f9ba4b758552d1e5f2b319ae053`,
-  tag `metrolabs/rh:cct-fonte-antes-gravacao-20261119-r116`.
-  Evidência: `output/rh360-20261119-r116/PUBLICADO_RH360_R116_20261119.txt`.
+- Última publicação RH registrada nesta revisão: R120, imagem
+  `sha256:141bee36d1204a47c40ee80d13a1f6962c75b2899155f4c83295a2edca4e2d28`,
+  tag `metrolabs/rh:cct-periodos-consulta-integrada-20261119-r120`.
+  Evidência: `output/rh360-20261119-r120/PUBLICADO_RH360_R120_20261119.txt`.
   Preserva as entregas anteriores; 869 pins de fontes/metadados.
 - A ausência de 18 declarações TypeScript relatada na R37 foi corrigida na R38.
   O typecheck ficou limpo sem alterar os arquivos executáveis. Não tratar o
@@ -1418,3 +1418,57 @@ Evidências e limites: output/rh360-20261119-r116/PUBLICADO_RH360_R116_20261119.
 Aceite real adiado; sem dados, concessões ou decisões reais inventados.
 Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
 - 19/11/2026 16:10 — PUBLICADO campo-varios-equip-20261119 (sha 56aa7bbc…; legado cand38, 8 arquivos; base contratos-aditivo-e1-20261119; app de campo f78affc17e5d em dist e src). Vários equipamentos na mesma O.S. (escolha do dono): passo 'Equipamentos atendidos nesta visita', '+ Acrescentar equipamento' (lista da unidade ou cadastro, sem série/TAG ok, sem sinal ok), cada um com conferência, relato, ≥1 foto, peças; assinatura única; Concluí só com todos completos; aba ATEC_OS_EQUIPAMENTOS; relatório com seção por equipamento; PDF da visita só no equipamento principal (regra de não cruzar dados); histórico de cada acrescentado com o relato dele. Suíte 2738/0 + testes afetados após o ajuste. Relatório: output/campo-varios-equip-20261119/RELATORIO.md. Produção atual = cand38.
+
+
+RH360 R117 — publicada/verificada em 19/11/2026 16:24 BRT
+Imagem: sha256:62f8c5afe3ac40a7c199ed119c35d20b2fd66c1b830d9367a0c8a26cb0814918
+Tag: metrolabs/rh:cct-registro-comprovante-20261119-r117
+Manifesto: 79f0f83969d7c1741ef4809c5e7f8eba64c66c28e8846909961eebf6b7f617e3
+Comprovante PDF vinculado ao registro administrativo MTE informado.
+869 pins: três fontes existentes alteradas, nenhuma nova e 862 fontes anteriores preservadas. Chat/login, finalidade e guardas R97/R98/R116 mantidos.
+Seleção nova é opcional no contrato da chamada e explícita na tela; recibos antigos conservam fingerprint/resultado. Fonte/prova verificada não vira aprovação ou percentual do projeto. Projeto integral aberto.
+Evidências e limites: output/rh360-20261119-r117/PUBLICADO_RH360_R117_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R118 — publicada/verificada em 19/11/2026 17:02 BRT
+Imagem: sha256:2d0183a85e07c3ad4beb2925d415d556cd834869b6368d751dd076f3ab266222
+Tag: metrolabs/rh:cct-registro-revisao-20261119-r118
+Manifesto: 15ce07b12aabaed0a826041f3940a9df97907b213697165aa294b5ce239a9181
+Correção, retirada e histórico da referência administrativa de registro CCT.
+R118 em camada sobre R117: quatro fontes existentes, 861 fontes anteriores preservadas e 869 pins. Guardas R97/R98/R116 e chat/login mantidos.
+Projeto integral aberto. Corrigir referência não torna o instrumento homologado nem converte pistas públicas em dados reais.
+Evidências e limites: output/rh360-20261119-r118/PUBLICADO_RH360_R118_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R119 — publicada/verificada em 19/11/2026 17:15 BRT
+Imagem: sha256:b38fbb155032423434399ebc6e905422b61e076b54352592345958fa8384dbee
+Tag: metrolabs/rh:cct-registro-reserva-retirada-20261119-r119
+Manifesto: 62745dfa22ee85f1915c110f1c118ca223a10806c57ef5d596350403ba35ced6
+Reserva da última posição do histórico para retirada explícita da referência CCT.
+R119 em camada sobre R118; somente duas fontes alteradas, 863 preservadas, 869 pins.
+Teste funcional do delta na imagem final; evidências de interface/guardas anteriores herdadas explicitamente, sem afirmar repetição na nova imagem. Projeto integral aberto.
+Evidências e limites: output/rh360-20261119-r119/PUBLICADO_RH360_R119_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+RH360 R120 — publicada/verificada em 19/11/2026 17:28 BRT
+Imagem: sha256:141bee36d1204a47c40ee80d13a1f6962c75b2899155f4c83295a2edca4e2d28
+Tag: metrolabs/rh:cct-periodos-consulta-integrada-20261119-r120
+Manifesto: b452e489f9d5d24ef2a03d85806578643f82226c25a161c54a8aa4d8c8a4bf47
+Consulta de períodos administrativos integrada à conferência de critérios CCT.
+R120 em camada sobre R119, somente duas interfaces e 869 pins. Backend/guardas e módulos anteriores preservados.
+Integração de navegação, sem duplicar módulo de períodos ou preencher fatos. A preparação sintética do ensaio não é contratação, aprovação real ou aceite operacional.
+Evidências e limites: output/rh360-20261119-r120/PUBLICADO_RH360_R120_20261119.txt.
+Aceite real adiado; sem dados, concessões ou decisões reais inventados.
+Preservar esta base ou publicação posterior; não reexecutar publicadores históricos.
+
+
+## RH360 — encerramento da janela de 19/11/2026 às 19:00 BRT
+
+Janela encerrada por limite humano, com base R120 publicada/verificada, 869 pins, aplicação saudável/GET200. Sem publicador ou ensaio próprio ativo no fechamento; backups, reversão, fontes e evidências preservados. Entrega: `output/rh360-jornada-20261119/ENTREGA_ATE_1900.txt`; verificação: `output/rh360-jornada-20261119/VERIFICACAO_ENCERRAMENTO_1900_20261119.json`; relatório total de 26 áreas na mesma pasta. A conclusão desta meta é somente da janela; projeto integral e 21 pacotes com requisitos/aceites pendentes permanecem abertos, com aceite operacional real adiado. Não retomar ciclos de trabalho, implementação ou publicação depois do limite sem nova instrução do usuário. Em eventual nova janela, conferir a produção real e preservar publicação posterior.
+- 20/11/2026 00:50 — PUBLICADO financeiro-v2-celular-20261119 (sha dd0deeff…; legado cand39; base campo-varios-equip-20261119). Financeiro v2 no celular: texto vertical/valores sobrepostos (regras antigas de #omieTela + overflow-wrap:anywhere global em modo celular + cartão compacto pegando tabelas de números). Agora: tabelas de números rolam dentro da caixa com 1ª coluna fixa; listas viram cartões; rótulos acima dos campos. Varredura 43 telas × 390/320/1366: 246 defeitos → 0. Teste novo financeiro-v2-celular-20261119 (detector de texto vertical/sobreposição/rolagem). Suíte 2741/0. Produção atual = cand39.
